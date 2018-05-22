@@ -82,3 +82,4 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
             CONFIG_TIME_FRAME: min_time_frame,
             CONFIG_REFRESH_RATE: TimeFramesMinutes[min_time_frame] / 6 * MINUTE_TO_SECONDS,
         }
+
