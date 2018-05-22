@@ -17,8 +17,8 @@ from talib._ta_lib import CDLINVERTEDHAMMER, CDLDOJI, CDLSHOOTINGSTAR, CDLHAMMER
 from config.cst import *
 from evaluator.TA.TA_evaluator import MomentumEvaluator
 from tools.data_frame_util import DataFrameUtil
-from evaluator.Util.pattern_analysis import PatternAnalyser
-from evaluator.Util.trend_analysis import TrendAnalysis
+from evaluator.Util import PatternAnalyser
+from evaluator.Util import TrendAnalysis
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):

@@ -11,8 +11,8 @@ $package_description: {
 
 from config.cst import *
 from evaluator.Social.social_evaluator import NewsSocialEvaluator
+from evaluator.Util import TextAnalysis
 from evaluator.Util.advanced_manager import AdvancedManager
-from evaluator.Util.text_analysis import TextAnalysis
 from evaluator.Dispatchers.twitter_dispatcher import TwitterDispatcher
 from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 from tools.decoding_encoding import DecoderEncoder
