@@ -15,7 +15,7 @@ import talib
 import math
 
 from evaluator.TA.TA_evaluator import TrendEvaluator
-from evaluator.Util.trend_analysis import TrendAnalysis
+from evaluator.Util import TrendAnalysis
 from tools.data_frame_util import DataFrameUtil
 
 
