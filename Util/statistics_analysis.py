@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "statistics_analysis",
+    "type": "Util",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 import talib
 import numpy
 from config.cst import START_PENDING_EVAL_NOTE

@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "text_analysis",
+    "type": "Util",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from tools.decoding_encoding import DecoderEncoder
 

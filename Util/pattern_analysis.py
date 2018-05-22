@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "pattern_analysis",
+    "type": "Util",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 import numpy
 import math
 
