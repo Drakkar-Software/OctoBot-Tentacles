@@ -2,7 +2,7 @@
 CryptoBot Package
 
 $package_description: {
-    "name": "order_book_evaluator",
+    "name": "orderbook_evaluator",
     "type": "RealTime",
     "version": "1.0.0",
     "requirements": []
