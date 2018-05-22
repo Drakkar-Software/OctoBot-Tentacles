@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "trend_evaluator",
+    "type": "TA",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from config.cst import *
 import numpy
 import talib

@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "instant_fluctuations_evaluator",
+    "type": "RealTime",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from config.cst import *
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
 from tools.time_frame_manager import TimeFrameManager

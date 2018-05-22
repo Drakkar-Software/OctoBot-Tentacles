@@ -1,4 +1,14 @@
-import time
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "order_book_evaluator",
+    "type": "RealTime",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 
 from config.cst import CONFIG_TIME_FRAME, TimeFrames, CONFIG_REFRESH_RATE
 from evaluator.RealTime import RealTimeTAEvaluator

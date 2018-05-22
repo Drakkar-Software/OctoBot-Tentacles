@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "mixed_strategies_evaluator",
+    "type": "Strategies",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from config.cst import *
 from evaluator.RealTime import InstantFluctuationsEvaluator
 from evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator

@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "volatility_evaluator",
+    "type": "TA",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from evaluator.TA.TA_evaluator import VolatilityEvaluator
 
 

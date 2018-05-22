@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "momentum_evaluator",
+    "type": "TA",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 import math
 
 import talib

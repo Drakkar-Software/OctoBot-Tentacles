@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "forum_evaluator",
+    "type": "Social",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 from config.cst import *
 from evaluator.Social.social_evaluator import ForumSocialEvaluator
 from evaluator.Util.advanced_manager import AdvancedManager

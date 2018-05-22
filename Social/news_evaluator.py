@@ -1,4 +1,13 @@
-import time
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "news_evaluator",
+    "type": "Social",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
 
 from config.cst import *
 from evaluator.Social.social_evaluator import NewsSocialEvaluator

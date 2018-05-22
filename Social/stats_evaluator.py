@@ -1,3 +1,14 @@
+"""
+CryptoBot Package
+
+$package_description: {
+    "name": "stats_evaluator",
+    "type": "Social",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 import numpy
 
 from pytrends.exceptions import ResponseError
