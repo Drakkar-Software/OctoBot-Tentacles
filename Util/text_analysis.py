@@ -58,7 +58,7 @@ class TextAnalysis(AbstractUtil):
             "Net Neutrality Ends! Substratum Update 4.23.18",
             "One more test from @SubstratumNet for today. :)",
             "Goldman Sachs hires crypto trader as head of digital assets markets",
-            "Big news coming! Scheduled to be 27th/28th April... Have a guess...😎",
+            "Big news coming! Scheduled to be 27th/28th April... Have a guess...",
             "A great step to safer #exchanges: @WandXDapp Joins REMME’s 2018 Pilot Program for testing functionality of certificate-based signup and login for end users. https://medium.com/remme/wandx-joins-remmes-2018-pilot-program-588379aaea4d … #nomorepasswords #blockchain #crypto $REM"
             "omeone transferred $99 million in litecoin — and it only cost them $0.40 in fees. My bank charges me a hell of a lot more to transfer a hell of a lot less. Can we hurry up with this crypto/blockchain revolution I'm tired of paying fees out of my ass to a bunch of fat cats",
             "This week's Theta Surge on http://SLIVER.tv  isn't just for virtual items... five PlayStation 4s will be given out to viewers that use Theta Tokens to reward the featured #Fortnite streamer! Tune in this Friday at 1pm PST to win!",
