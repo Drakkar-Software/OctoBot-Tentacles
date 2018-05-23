@@ -52,8 +52,6 @@ class TextAnalysis(AbstractUtil):
         texts = [
             "So excited at what I am working on for the future.  I don’t get to talk about what I am actively doing on a daily basis because it’s far ahead of our messaging but I am beyond excited about it! #substratum $sub",
             "Have you read about VeChain and INPI ASIA's integration to bring nanotechnology for digital identity to the VeChainThor blockchain? NDCodes resist high temperature, last over 100 years, are incredibly durable and invisible to the naked eye",
-            "Crypto market update: BTC holds near $9K, ETH rising over $640, BCH grows 85% on the week",
-            "Extremely excited & proud to announce that #Substratum Node is NOW Open Source! https://github.com/SubstratumNetwork/SubstratumNode …#NetNeutrality $SUB #cryptocurrency #bitcoin #blockchain #technology #SubSavesTheInternet",
             "A scientific hypothesis about how cats, infected with toxoplasmosis, are making humans buy Bitcoin was presented at last night's BAHFest at MIT.",
             "Net Neutrality Ends! Substratum Update 4.23.18",
             "One more test from @SubstratumNet for today. :)",
@@ -70,7 +68,6 @@ class TextAnalysis(AbstractUtil):
             "An open letter from Sunny Lu (CEO) on VeChainThor Platform.",
             "VeChain has finished the production of digital intellectual property services with partner iTaotaoke. This solution provides a competitive advantage for an industry in need of trust-free reporting and content protections.#GoVeChain",
             "Special thanks to @GaboritMickael to have invited @vechainofficial to present our solution and make a little demo to @AccentureFrance",
-            "VeChain’s COO, @kfeng027, is invited to ‘Crypto Media Collection Vo.1’ held at DeNA’s campus by Coinjinja in Tokyo, one of the largest cryptocurrency information platforms. Kevin’s speech begins at 16:35 UTC+9, livestreamed via https://ssl.twitcasting.tv/coinjinja ",
             "VeChain will pitch their solutions potentially landing a co-development product with LVMH.  In attendance will be CEOs Bill McDermott (SAP), Chuck Robbins (CISCO), Ginni Rometty (IBM), and Stephane Richard (Orange) as speakers -",
             "As the only blockchain company selected, VeChain is among 30 of 800+ hand-picked startups to compete for the second edition of the LVMH Innovation Award. As a result, VeChain has been invited to join the Luxury Lab LVMH at Viva Technology in Paris from May 24-26, 2018.",
             "VeChain to further its partnership with RFID leader Xiamen Innov and newly announced top enterprise solution provider CoreLink by deploying a VeChainThor enterprise level decentralized application - AssetLink.",
