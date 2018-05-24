@@ -24,6 +24,7 @@ if __name__ == '__main__':
                 if filename.endswith(".py"):
                     with open("{0}/{1}".format(f, filename), "r") as package:
                         parse_package(package.read())
+                        logging.info("Reading package {0}...".format(package))
 
     # Create package list file
     with open(package_list_file, "w") as package_list:
