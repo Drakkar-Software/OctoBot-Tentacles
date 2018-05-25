@@ -8,29 +8,32 @@ $package_description: {
     "requirements": []
 }
 """
+import math
 
 from config.cst import *
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
-from tools.time_frame_manager import TimeFrameManager
 
-
+"""
+Idea moves are lasting approx 12min:
+Check the last 12 candles and compute mean closing prices as well as mean volume with a gradually narrower interval to 
+compute the strength or weakness of the move
+"""
 class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.something_is_happening = False
 
-        self.average_price = 0
+        self.average_prices = {}
         self.last_price = 0
 
         # Volume
-        self.volume_updated = 0
-        self.average_volume = 0
+        self.average_volumes = {}
         self.last_volume = 0
 
         # Constants
-        self.MIN_EVAL_NOTE = 0.5
-        self.VOLUME_HAPPENING_THRESHOLD = 5
-        self.PRICE_HAPPENING_THRESHOLD = 1.01
+        self.VOLUME_HAPPENING_THRESHOLD = 4
+        self.PRICE_HAPPENING_THRESHOLD = 0.0035
+        self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     def _refresh_data(self):
         self.update()
@@ -44,42 +47,44 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
             self.eval_note = START_PENDING_EVAL_NOTE
 
     def evaluate_volume_fluctuations(self):
-        # check volume fluctuation
-        if self.last_volume > self.VOLUME_HAPPENING_THRESHOLD * self.average_volume:
-            # TEMP
-            self.eval_note = self.MIN_EVAL_NOTE if self.last_price > self.average_price else -self.MIN_EVAL_NOTE
-            self.something_is_happening = True
+        volume_trigger = 0
+        price_trigger = 0
 
-        # check price fluctuation
-        if self.last_price > self.PRICE_HAPPENING_THRESHOLD * self.average_price:
-            self.eval_note = self.MIN_EVAL_NOTE
-            self.something_is_happening = True
+        for segment in self.candle_segments:
+            # check volume fluctuation
+            if self.last_volume > self.VOLUME_HAPPENING_THRESHOLD * self.average_volumes[segment]:
+                volume_trigger += 1
+                self.something_is_happening = True
 
-        elif self.last_price < (1 - self.PRICE_HAPPENING_THRESHOLD) * self.average_price:
-            self.eval_note = -self.MIN_EVAL_NOTE
-            self.something_is_happening = True
+            # check price fluctuation
+            segment_average_price = self.average_prices[segment]
+            if self.last_price > (1 + self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
+                price_trigger += 1
+                self.something_is_happening = True
+
+            elif self.last_price < (1 - self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
+                price_trigger -= 1
+                self.something_is_happening = True
+
+        average_volume_trigger = min(1, volume_trigger/len(self.candle_segments) + 0.2)
+        average_price_trigger = price_trigger/len(self.candle_segments)
+
+        if average_price_trigger < 0:
+            # math.cos(1-x) between 0 and 1 starts around 0.5 and smoothly goes up to 1
+            self.eval_note = -1*math.cos(1-(-1*average_price_trigger*average_volume_trigger))
+        elif average_price_trigger > 0:
+            self.eval_note = math.cos(1-average_price_trigger*average_volume_trigger)
+        else:
+            # no price info => high volume but no price move, can't say anything
+            self.something_is_happening = False
 
     def update(self):
-        self.volume_updated += 1
+        candles_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
+                                                       self.candle_segments[0])
+        for segment in self.candle_segments:
+            self.average_volumes[segment] = candles_data[PriceStrings.STR_PRICE_VOL.value][-segment:].mean()
+            self.average_prices[segment] = candles_data[PriceStrings.STR_PRICE_CLOSE.value][-segment:].mean()
 
-        if (self.refresh_time * self.volume_updated) > TimeFramesMinutes[self.specific_config[CONFIG_TIME_FRAME]]:
-            volume_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME], 10)
-            self.average_volume = volume_data[PriceStrings.STR_PRICE_VOL.value].mean()
-            self.average_price = volume_data[PriceStrings.STR_PRICE_CLOSE.value].mean()
-            self.volume_updated = 0
-
-        else:
-            volume_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME], 1)
-
-        self.last_volume = volume_data[PriceStrings.STR_PRICE_VOL.value].tail(1).values[0]
-        self.last_price = volume_data[PriceStrings.STR_PRICE_CLOSE.value].tail(1).values[0]
-
-    def set_default_config(self):
-        time_frames = self.exchange.get_exchange_manager().get_config_time_frame()
-        min_time_frame = TimeFrameManager.find_config_min_time_frame(time_frames)
-
-        self.specific_config = {
-            CONFIG_TIME_FRAME: min_time_frame,
-            CONFIG_REFRESH_RATE: TimeFramesMinutes[min_time_frame] / 6 * MINUTE_TO_SECONDS,
-        }
+        self.last_volume = candles_data[PriceStrings.STR_PRICE_VOL.value].tail(1).values[0]
+        self.last_price = candles_data[PriceStrings.STR_PRICE_CLOSE.value].tail(1).values[0]
 
