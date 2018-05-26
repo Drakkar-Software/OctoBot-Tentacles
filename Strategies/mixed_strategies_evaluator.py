@@ -18,7 +18,7 @@ from tools.evaluators_util import check_valid_eval_note
 
 
 # TEMP strategy
-class TempFullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
+class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
     def __init__(self):
         super().__init__()
         self.create_divergence_analyser()
