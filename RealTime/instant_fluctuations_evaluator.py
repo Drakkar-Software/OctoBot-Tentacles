@@ -32,7 +32,7 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 
         # Constants
         self.VOLUME_HAPPENING_THRESHOLD = 4
-        self.PRICE_HAPPENING_THRESHOLD = 0.0035
+        self.PRICE_HAPPENING_THRESHOLD = 0.01
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     def _refresh_data(self):
