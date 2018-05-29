@@ -1,7 +1,7 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "forum_evaluator",
     "type": "Social",
     "version": "1.0.0",

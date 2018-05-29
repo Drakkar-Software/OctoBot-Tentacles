@@ -1,7 +1,7 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "orderbook_evaluator",
     "type": "RealTime",
     "version": "1.0.0",

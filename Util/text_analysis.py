@@ -1,7 +1,7 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "text_analysis",
     "type": "Util",
     "version": "1.0.0",

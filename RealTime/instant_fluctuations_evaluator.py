@@ -1,7 +1,7 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "instant_fluctuations_evaluator",
     "type": "RealTime",
     "version": "1.0.0",
