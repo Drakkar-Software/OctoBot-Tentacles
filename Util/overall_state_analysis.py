@@ -1,5 +1,5 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
 $package_description: {
     "name": "overall_state_analysis",

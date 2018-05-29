@@ -1,5 +1,5 @@
 """
-CryptoBot Package
+OctoBot Tentacle
 
 $package_description: {
     "name": "orderbook_evaluator",
