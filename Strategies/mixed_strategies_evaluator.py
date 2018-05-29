@@ -1,7 +1,7 @@
 """
 OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "mixed_strategies_evaluator",
     "type": "Strategies",
     "version": "1.0.0",

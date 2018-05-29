@@ -1,7 +1,7 @@
 """
 OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "stats_evaluator",
     "type": "Social",
     "version": "1.0.0",

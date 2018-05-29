@@ -1,7 +1,7 @@
 """
 OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "statistics_analysis",
     "type": "Util",
     "version": "1.0.0",

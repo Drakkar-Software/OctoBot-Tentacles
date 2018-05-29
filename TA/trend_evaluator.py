@@ -1,7 +1,7 @@
 """
 OctoBot Tentacle
 
-$package_description: {
+$tentacle_description: {
     "name": "trend_evaluator",
     "type": "TA",
     "version": "1.0.0",
