@@ -18,6 +18,8 @@ Idea moves are lasting approx 12min:
 Check the last 12 candles and compute mean closing prices as well as mean volume with a gradually narrower interval to 
 compute the strength or weakness of the move
 """
+
+
 class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
@@ -33,6 +35,8 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         # Constants
         self.VOLUME_HAPPENING_THRESHOLD = 4
         self.PRICE_HAPPENING_THRESHOLD = 0.01
+        self.MIN_TRIGGERING_DELTA = 0.2
+        self.last_eval = 0
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     def _refresh_data(self):
@@ -40,8 +44,10 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 
     def eval_impl(self):
         self.evaluate_volume_fluctuations()
-        if self.something_is_happening:
-            self.notify_evaluator_thread_managers(self.__class__.__name__)
+        if self.something_is_happening :
+            if abs(self.last_eval-self.eval_note) >= self.MIN_TRIGGERING_DELTA:
+                self.last_eval = self.eval_note
+                self.notify_evaluator_thread_managers(self.__class__.__name__)
             self.something_is_happening = False
         else:
             self.eval_note = START_PENDING_EVAL_NOTE
