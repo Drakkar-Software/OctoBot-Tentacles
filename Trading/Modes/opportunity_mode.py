@@ -3,8 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "opportunity_mode",
-    "type": "Trading-Modes",
-    "subtype": "",
+    "type": "Trading",
+    "subtype": "Mode",
     "version": "1.0.0",
     "requirements": []
 }

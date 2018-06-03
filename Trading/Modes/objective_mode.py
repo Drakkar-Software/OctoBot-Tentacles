@@ -2,9 +2,9 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "safe_profit_mode",
-    "type": "Trading-Modes",
-    "subtype": "",
+    "name": "objective_mode",
+    "type": "Trading",
+    "subtype": "Mode",
     "version": "1.0.0",
     "requirements": []
 }
@@ -14,19 +14,19 @@ from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecide
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
-class SafeProfitMode(AbstractTradingMode):
+class ObjectiveMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(SafeProfitModeCreator(self))
-        self.set_decider(SafeProfitModeDecider(self, symbol_evaluator, exchange, symbol))
+        self.set_creator(ObjectiveModeCreator(self))
+        self.set_decider(ObjectiveModeDecider(self, symbol_evaluator, exchange, symbol))
 
 
-class SafeProfitModeCreator(AbstractTradingModeCreator):
+class ObjectiveModeCreator(AbstractTradingModeCreator):
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
 
 
-class SafeProfitModeDecider(AbstractTradingModeDecider):
+class ObjectiveModeDecider(AbstractTradingModeDecider):
     def __init__(self, trading_mode, symbol_evaluator, exchange, symbol):
         super().__init__(trading_mode, symbol_evaluator, exchange, symbol)
