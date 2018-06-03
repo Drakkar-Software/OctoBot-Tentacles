@@ -2,7 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": investor_mode",
+    "name": "investor_mode",
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
