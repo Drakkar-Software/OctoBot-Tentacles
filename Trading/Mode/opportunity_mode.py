@@ -18,7 +18,7 @@ class OpportunityMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(OpportunityModeCreator(self))
+        self.add_creator(OpportunityModeCreator(self))
         self.set_decider(OpportunityModeDecider(self, symbol_evaluator, exchange, symbol))
 
 

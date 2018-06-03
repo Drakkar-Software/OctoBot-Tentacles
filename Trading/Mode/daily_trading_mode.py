@@ -24,7 +24,7 @@ class DailyTradingMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(DailyTradingModeCreator(self))
+        self.add_creator(DailyTradingModeCreator(self))
         self.set_decider(DailyTradingModeDecider(self, symbol_evaluator, exchange, symbol))
 
 
@@ -273,4 +273,4 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                         self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
 
                 # call orders creation method
-                self.create_final_state_orders(evaluator_notification)
+                self.create_final_state_orders(evaluator_notification, self.trading_mode.get_only_creator_key())

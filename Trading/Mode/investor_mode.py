@@ -18,7 +18,7 @@ class InvestorMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(InvestorModeCreator(self))
+        self.add_creator(InvestorModeCreator(self))
         self.set_decider(InvestorModeDecider(self, symbol_evaluator, exchange, symbol))
 
 

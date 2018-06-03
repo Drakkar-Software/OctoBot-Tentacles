@@ -18,7 +18,7 @@ class HighFrequencyMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(HighFrequencyModeCreator(self))
+        self.add_creator(HighFrequencyModeCreator(self))
         self.set_decider(HighFrequencyModeDecider(self, symbol_evaluator, exchange, symbol))
 
 

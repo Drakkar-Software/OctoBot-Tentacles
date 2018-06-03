@@ -18,7 +18,7 @@ class ObjectiveMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(ObjectiveModeCreator(self))
+        self.add_creator(ObjectiveModeCreator(self))
         self.set_decider(ObjectiveModeDecider(self, symbol_evaluator, exchange, symbol))
 
 

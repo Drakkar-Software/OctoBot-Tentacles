@@ -18,7 +18,7 @@ class SafeProfitMode(AbstractTradingMode):
     def __init__(self, config, symbol_evaluator, exchange, symbol):
         super().__init__(config)
 
-        self.set_creator(SafeProfitModeCreator(self))
+        self.add_creator(SafeProfitModeCreator(self))
         self.set_decider(SafeProfitModeDecider(self, symbol_evaluator, exchange, symbol))
 
 
