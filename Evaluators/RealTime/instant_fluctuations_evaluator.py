@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "instant_fluctuations_evaluator",
-    "type": "RealTime",
+    "type": "Evaluator",
+    "subtype": "RealTime",
     "version": "1.0.0",
     "requirements": []
 }

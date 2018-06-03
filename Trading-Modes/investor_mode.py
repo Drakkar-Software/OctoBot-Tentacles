@@ -1,3 +1,14 @@
+"""
+OctoBot Tentacle
+
+$tentacle_description: {
+    "name": investor_mode",
+    "type": "Trading-Modes",
+    "subtype": "",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode

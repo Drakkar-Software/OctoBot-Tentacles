@@ -1,3 +1,15 @@
+"""
+OctoBot Tentacle
+
+$tentacle_description: {
+    "name": "daily_trading_mode",
+    "type": "Trading-Modes",
+    "subtype": "",
+    "version": "1.0.0",
+    "requirements": []
+}
+"""
+
 import logging
 
 from config.cst import EvaluatorStates, INIT_EVAL_NOTE, ORDER_CREATION_LAST_TRADES_TO_USE, TraderOrderType

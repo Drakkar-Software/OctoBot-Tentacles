@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "momentum_evaluator",
-    "type": "TA",
+    "type": "Evaluator",
+    "subtype": "TA",
     "version": "1.0.0",
     "requirements": []
 }

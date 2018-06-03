@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "mixed_strategies_evaluator",
-    "type": "Strategies",
+    "type": "Evaluator",
+    "subtype": "Strategies",
     "version": "1.0.0",
     "requirements": []
 }

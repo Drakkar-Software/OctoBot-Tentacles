@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "forum_evaluator",
-    "type": "Social",
+    "type": "Evaluator",
+    "subtype": "Social",
     "version": "1.0.0",
     "requirements": []
 }
