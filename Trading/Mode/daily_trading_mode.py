@@ -92,7 +92,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         factor = self.QUANTITY_MARKET_MIN_PERCENT + (
                 (abs(eval_note) + trader.get_risk()) * self.QUANTITY_MARKET_ATTENUATION)
 
-        # if buy market --> limit market usacge
+        # if buy market --> limit market usage
         if buy:
             factor *= self.QUANTITY_BUY_MARKET_ATTENUATION
 
