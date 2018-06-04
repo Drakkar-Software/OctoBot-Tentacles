@@ -6,7 +6,8 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "Social",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "config_files": ["TwitterNewsEvaluator.json"]
 }
 """
 
