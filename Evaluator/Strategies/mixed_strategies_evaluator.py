@@ -47,6 +47,14 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         # TODO temp with notification
         # self.get_divergence()
 
+    @classmethod
+    def get_required_time_frames(cls):
+        return [TimeFrames.THIRTY_MINUTES,
+                TimeFrames.ONE_HOUR,
+                TimeFrames.TWO_HOURS,
+                TimeFrames.FOUR_HOURS,
+                TimeFrames.ONE_DAY]
+
     def eval_impl(self) -> None:
         # TODO : temp counter without relevance
         self.social_counter = 0
@@ -117,6 +125,11 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
         self.instant_evaluation = 0
         self.social_evaluation = 0
+
+    @classmethod
+    def get_required_time_frames(cls):
+        return [TimeFrames.FIFTEEN_MINUTES,
+                TimeFrames.THIRTY_MINUTES]
 
     def eval_impl(self) -> None:
         self.social_counter = 0
