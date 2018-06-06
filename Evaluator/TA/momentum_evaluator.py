@@ -268,8 +268,9 @@ class OBVMomentumEvaluator(MomentumEvaluator):
         super().__init__()
 
     def eval_impl(self):
-        obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
-                          self.data[PriceStrings.STR_PRICE_VOL.value])
+        # obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
+        #                   self.data[PriceStrings.STR_PRICE_VOL.value])
+        pass
 
 
 # William's % R --> overbought / oversold
@@ -278,9 +279,10 @@ class WilliamsRMomentumEvaluator(MomentumEvaluator):
         super().__init__()
 
     def eval_impl(self):
-        willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
-                              self.data[PriceStrings.STR_PRICE_LOW.value],
-                              self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        # willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
+        #                       self.data[PriceStrings.STR_PRICE_LOW.value],
+        #                       self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        pass
 
 
 # TRIX --> percent rate-of-change trend
@@ -289,7 +291,8 @@ class TRIXMomentumEvaluator(MomentumEvaluator):
         super().__init__()
 
     def eval_impl(self):
-        trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        # trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        pass
 
 
 class MACDMomentumEvaluator(MomentumEvaluator):
@@ -371,13 +374,3 @@ class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
 
     def eval_impl(self):
         pass
-
-
-class StochasticMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    def eval_impl(self):
-        slowk, slowd = talib.STOCH(self.data[PriceStrings.STR_PRICE_HIGH.value],
-                                   self.data[PriceStrings.STR_PRICE_LOW.value],
-                                   self.data[PriceStrings.STR_PRICE_CLOSE.value])

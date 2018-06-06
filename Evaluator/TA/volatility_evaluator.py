@@ -12,6 +12,8 @@ $tentacle_description: {
 
 from evaluator.TA.TA_evaluator import VolatilityEvaluator
 
+import talib
+
 
 # average_true_range
 class ATRVolatilityEvaluator(VolatilityEvaluator):
@@ -30,4 +32,24 @@ class MassIndexVolatilityEvaluator(VolatilityEvaluator):
 class ChaikinVolatilityEvaluator(VolatilityEvaluator):
 
     def eval_impl(self):
+        pass
+
+
+class StochasticVolatilityEvaluator(VolatilityEvaluator):
+    def __init__(self):
+        super().__init__()
+
+    def eval_impl(self):
+        # slowk, slowd = talib.STOCH(self.data[PriceStrings.STR_PRICE_HIGH.value],
+        #                            self.data[PriceStrings.STR_PRICE_LOW.value],
+        #                            self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        pass
+
+
+class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
+    def __init__(self):
+        super().__init__()
+
+    def eval_impl(self):
+        # fastk, fastd = talib.STOCHRSI(self.data[PriceStrings.STR_PRICE_CLOSE.value])
         pass
