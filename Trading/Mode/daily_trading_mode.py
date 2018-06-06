@@ -12,7 +12,8 @@ $tentacle_description: {
 
 import logging
 
-from config.cst import EvaluatorStates, INIT_EVAL_NOTE, ORDER_CREATION_LAST_TRADES_TO_USE, TraderOrderType
+from config.cst import EvaluatorStates, INIT_EVAL_NOTE, ORDER_CREATION_LAST_TRADES_TO_USE, TraderOrderType, \
+    CONFIG_NOTIFICATION_PRICE_ALERTS
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
@@ -263,7 +264,7 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
 
                 # create notification
                 evaluator_notification = None
-                if self.notifier.enabled():
+                if self.notifier.enabled(CONFIG_NOTIFICATION_PRICE_ALERTS):
                     evaluator_notification = self.notifier.notify_state_changed(
                         self.final_eval,
                         self.symbol_evaluator.get_crypto_currency_evaluator(),
