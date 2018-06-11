@@ -55,6 +55,10 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
                 TimeFrames.FOUR_HOURS,
                 TimeFrames.ONE_DAY]
 
+    @classmethod
+    def get_required_evaluators(cls):
+        return CONFIG_EVALUATORS_WILDCARD
+
     def eval_impl(self) -> None:
         # TODO : temp counter without relevance
         self.social_counter = 0
@@ -130,6 +134,12 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
     def get_required_time_frames(cls):
         return [TimeFrames.FIFTEEN_MINUTES,
                 TimeFrames.THIRTY_MINUTES]
+
+    @classmethod
+    def get_required_evaluators(cls):
+        return [InstantFluctuationsEvaluator.__name__,
+                MediumNewsEvaluator.__name__,
+                RedditForumEvaluator.__name__]
 
     def eval_impl(self) -> None:
         self.social_counter = 0
