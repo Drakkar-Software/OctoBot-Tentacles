@@ -247,6 +247,10 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
         else:
             self._set_state(EvaluatorStates.VERY_SHORT)
 
+    @classmethod
+    def get_should_cancel_loaded_orders(cls):
+        return True
+
     def _set_state(self, new_state):
         if new_state != self.state:
             # previous_state = self.state
@@ -257,10 +261,7 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
             if new_state is not EvaluatorStates.NEUTRAL:
 
                 # cancel open orders
-                if self.symbol_evaluator.get_trader(self.exchange).is_enabled():
-                    self.symbol_evaluator.get_trader(self.exchange).cancel_open_orders(self.symbol)
-                if self.symbol_evaluator.get_trader_simulator(self.exchange).is_enabled():
-                    self.symbol_evaluator.get_trader_simulator(self.exchange).cancel_open_orders(self.symbol)
+                self.cancel_symbol_open_orders()
 
                 # create notification
                 evaluator_notification = None

@@ -72,6 +72,10 @@ class HighFrequencyModeDecider(AbstractTradingModeDecider):
 
         self.create_state()
 
+    @classmethod
+    def get_should_cancel_loaded_orders(cls):
+        return True
+
     def create_state(self):
         # TODO : temp
         for creator in self.trading_mode.get_creators().values():
