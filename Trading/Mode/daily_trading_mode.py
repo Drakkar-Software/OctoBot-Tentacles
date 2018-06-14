@@ -19,14 +19,19 @@ from tools.symbol_util import split_symbol
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
+from evaluator.Strategies import FullMixedStrategiesEvaluator
 
 
 class DailyTradingMode(AbstractTradingMode):
-    def __init__(self, config, symbol_evaluator, exchange, symbol):
-        super().__init__(config)
+    def __init__(self, config, symbol_evaluator, exchange):
+        super().__init__(config, symbol_evaluator, exchange)
 
         self.add_creator(DailyTradingModeCreator(self))
-        self.set_decider(DailyTradingModeDecider(self, symbol_evaluator, exchange, symbol))
+        self.set_decider(DailyTradingModeDecider(self, symbol_evaluator, exchange))
+
+    @staticmethod
+    def get_required_strategies():
+        return [FullMixedStrategiesEvaluator]
 
 
 class DailyTradingModeCreator(AbstractTradingModeCreator):
@@ -209,8 +214,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 
 
 class DailyTradingModeDecider(AbstractTradingModeDecider):
-    def __init__(self, trading_mode, symbol_evaluator, exchange, symbol):
-        super().__init__(trading_mode, symbol_evaluator, exchange, symbol)
+    def __init__(self, trading_mode, symbol_evaluator, exchange):
+        super().__init__(trading_mode, symbol_evaluator, exchange)
 
     def set_final_eval(self):
         strategies_analysis_note_counter = 0
