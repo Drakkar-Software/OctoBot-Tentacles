@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "instant_fluctuations_evaluator",
-    "type": "RealTime",
+    "type": "Evaluator",
+    "subtype": "RealTime",
     "version": "1.0.0",
     "requirements": []
 }
@@ -12,6 +13,7 @@ import math
 
 from config.cst import *
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
+from evaluator.abstract_evaluator import AbstractEvaluator
 
 """
 Idea moves are lasting approx 12min:
@@ -24,6 +26,7 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.something_is_happening = False
+        self.last_notification_eval = 0
 
         self.average_prices = {}
         self.last_price = 0
@@ -36,11 +39,18 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         self.VOLUME_HAPPENING_THRESHOLD = 4
         self.PRICE_HAPPENING_THRESHOLD = 0.01
         self.MIN_TRIGGERING_DELTA = 0.15
-        self.last_notification_eval = 0
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     def _refresh_data(self):
         self.update()
+
+    def reset(self):
+        super(InstantFluctuationsEvaluator, self).reset()
+        self.average_prices = {}
+        self.last_price = 0
+        self.average_volumes = {}
+        self.last_volume = 0
+        self.last_notification_eval = 0
 
     def eval_impl(self):
         self.evaluate_volume_fluctuations()

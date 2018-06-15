@@ -3,7 +3,8 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "overall_state_analysis",
-    "type": "Util",
+    "type": "Evaluator",
+    "subtype": "Util",
     "version": "1.0.0",
     "requirements": []
 }

@@ -3,9 +3,11 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "name": "stats_evaluator",
-    "type": "Social",
+    "type": "Evaluator",
+    "subtype": "Social",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "config_files": ["GoogleTrendStatsEvaluator.json"]
 }
 """
 
