@@ -10,7 +10,7 @@ $tentacle_description: {
 }
 """
 
-import numpy
+import numpy as np
 import math
 
 
@@ -23,10 +23,10 @@ class PatternAnalyser:
     # W, M, N and V (ex: for macd)
     # return boolean (pattern found or not), start index and end index
     @staticmethod
-    def find_pattern(data_frame, zero_crossing_indexes, data_frame_max_index):
+    def find_pattern(data, zero_crossing_indexes, data_frame_max_index):
         if len(zero_crossing_indexes) > 1:
 
-            last_move_data = data_frame[zero_crossing_indexes[-1]:]
+            last_move_data = data[zero_crossing_indexes[-1]:]
 
             # if last_move_data is shaped in W
             shape = PatternAnalyser.get_pattern(last_move_data)
@@ -37,15 +37,15 @@ class PatternAnalyser:
                 while backwards_index < len(zero_crossing_indexes) and \
                         zero_crossing_indexes[-1*backwards_index] - zero_crossing_indexes[-1*backwards_index-1] < 4:
                     backwards_index += 1
-                extended_last_move_data = data_frame[zero_crossing_indexes[-1*backwards_index]:]
+                extended_last_move_data = data[zero_crossing_indexes[-1 * backwards_index]:]
                 extended_shape = PatternAnalyser.get_pattern(extended_last_move_data)
 
                 if extended_shape == "W" or extended_shape == "M":
                     # check that values are on the same side (< or >0)
-                    first_part = data_frame[zero_crossing_indexes[-1*backwards_index]:
+                    first_part = data[zero_crossing_indexes[-1 * backwards_index]:
                                             zero_crossing_indexes[-1*backwards_index+1]]
-                    second_part = data_frame[zero_crossing_indexes[-1]:]
-                    if numpy.mean(first_part)*numpy.mean(second_part) > 0:
+                    second_part = data[zero_crossing_indexes[-1]:]
+                    if np.mean(first_part)*np.mean(second_part) > 0:
                         return extended_shape, zero_crossing_indexes[-1*backwards_index], zero_crossing_indexes[-1]
 
             return shape, zero_crossing_indexes[-1], data_frame_max_index
@@ -54,17 +54,20 @@ class PatternAnalyser:
 
             # if last_move_data is shaped in W
             start_pattern_index = 0 if not zero_crossing_indexes else zero_crossing_indexes[0]
-            shape = PatternAnalyser.get_pattern(data_frame[start_pattern_index:])
+            shape = PatternAnalyser.get_pattern(data[start_pattern_index:])
             return shape, start_pattern_index, data_frame_max_index
 
     @staticmethod
-    def get_pattern(data_frame):
-        mean_value = numpy.mean(data_frame)*0.7
+    def get_pattern(data):
+        if len(data) > 0:
+            mean_value = np.mean(data) * 0.7
+        else:
+            mean_value = math.nan
         if math.isnan(mean_value):
             return PatternAnalyser.UNKNOWN_PATTERN
-        indexes_under_mean_value = data_frame.index[data_frame > mean_value] \
+        indexes_under_mean_value = np.where(data > mean_value)[0] \
             if mean_value < 0 \
-            else data_frame.index[data_frame < mean_value]
+            else np.where(data < mean_value)[0]
 
         nb_gaps = 0
         for i in range(len(indexes_under_mean_value)-1):

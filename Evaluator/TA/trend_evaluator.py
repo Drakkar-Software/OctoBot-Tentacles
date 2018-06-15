@@ -9,6 +9,7 @@ $tentacle_description: {
     "requirements": []
 }
 """
+import tulipy
 
 from config.cst import *
 import numpy
@@ -17,7 +18,7 @@ import math
 
 from evaluator.TA.TA_evaluator import TrendEvaluator
 from evaluator.Util import TrendAnalysis
-from tools.data_frame_util import DataFrameUtil
+from tools.data_util import DataUtil
 
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
@@ -27,8 +28,8 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         if len(self.data) > 1:
             time_units = [5, 10]
-            current_moving_average = talib.MA(self.data[PriceStrings.STR_PRICE_CLOSE.value], timeperiod=2, matype=0)
-            results = [self.get_moving_average_analysis(self.data[PriceStrings.STR_PRICE_CLOSE.value],
+            current_moving_average = tulipy.sma(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 2)
+            results = [self.get_moving_average_analysis(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
                                                         current_moving_average,
                                                         i)
                        for i in time_units]
@@ -40,24 +41,27 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
     # < 0 --> Current average bellow other one (computed using time_period)
     # > 0 --> Current average above other one (computed using time_period)
     @staticmethod
-    def get_moving_average_analysis(data_frame, current_moving_average, time_period):
+    def get_moving_average_analysis(data, current_moving_average, time_period):
 
-        time_period_unit_moving_average = talib.MA(data_frame, timeperiod=time_period, matype=0)
+        time_period_unit_moving_average = tulipy.sma(data, time_period)
+
+        # equalize array size
+        min_len_arrays = min(len(time_period_unit_moving_average), len(current_moving_average))
 
         # compute difference between 1 unit values and others ( >0 means currently up the other one)
-        values_difference = (current_moving_average - time_period_unit_moving_average)
-        values_difference = DataFrameUtil.drop_nan_and_reset_index(values_difference)
+        values_difference = (current_moving_average[-min_len_arrays:] - time_period_unit_moving_average[-min_len_arrays:])
+        values_difference = DataUtil.drop_nan(values_difference)
 
         if len(values_difference):
             # indexes where current_unit_moving_average crosses time_period_unit_moving_average
             crossing_indexes = TrendAnalysis.get_threshold_change_indexes(values_difference, 0)
 
-            multiplier = 1 if values_difference.iloc[-1] > 0 else -1
+            multiplier = 1 if values_difference[-1] > 0 else -1
 
             # check at least some data crossed 0
             if crossing_indexes:
-                normalized_data = DataFrameUtil.normalize_data_frame(values_difference)
-                current_value = min(abs(normalized_data.iloc[-1])*2, 1)
+                normalized_data = DataUtil.normalize_data(values_difference)
+                current_value = min(abs(normalized_data[-1])*2, 1)
                 if math.isnan(current_value):
                     return 0
                 # check <= values_difference.count()-1if current value is max/min
