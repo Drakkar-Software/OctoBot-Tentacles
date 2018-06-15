@@ -10,10 +10,9 @@ $tentacle_description: {
 }
 """
 
-import numpy
+import numpy as np
 
 from evaluator.Util.abstract_util import AbstractUtil
-# from config.cst import DIVERGENCE_USED_VALUE
 
 
 class TrendAnalysis(AbstractUtil):
@@ -21,14 +20,14 @@ class TrendAnalysis(AbstractUtil):
     # trend < 0 --> Down trend
     # trend > 0 --> Up trend
     @staticmethod
-    def get_trend(data_frame, averages_to_use):
+    def get_trend(data, averages_to_use):
         trend = 0
         inc = round(1 / len(averages_to_use), 2)
         averages = []
 
         # Get averages
         for average_to_use in averages_to_use:
-            averages.append(data_frame.tail(average_to_use).values.mean())
+            averages.append(np.mean(data[-average_to_use:]))
 
         for a in range(0, len(averages) - 1):
             if averages[a] - averages[a + 1] > 0:
@@ -69,9 +68,9 @@ class TrendAnalysis(AbstractUtil):
             # take double_size_patterns_count into account
             time_averages += [0]*double_size_patterns_count
 
-            time_average = numpy.mean(time_averages)*pattern_move_size if time_averages else 0
+            time_average = np.mean(time_averages)*pattern_move_size if time_averages else 0
 
-            current_move_length = len(current_trend.index) - mean_crossing_indexes[-1]
+            current_move_length = len(current_trend) - mean_crossing_indexes[-1]
             # higher than time_average => high chances to be at half of the move already
             if current_move_length > time_average/2:
                 return 1
@@ -81,10 +80,10 @@ class TrendAnalysis(AbstractUtil):
             return 0
 
     @staticmethod
-    def get_threshold_change_indexes(data_frame, threshold):
+    def get_threshold_change_indexes(data, threshold):
 
         # sub threshold values
-        sub_threshold_indexes = data_frame.index[data_frame <= threshold]
+        sub_threshold_indexes = np.where(data <= threshold)[0]
 
         # remove consecutive sub-threshold values because they are not crosses
         threshold_crossing_indexes = []
@@ -102,8 +101,8 @@ class TrendAnalysis(AbstractUtil):
         # add last index if data_frame ends above threshold and last threshold_crossing_indexes inferior
         # to data_frame size
         if len(sub_threshold_indexes) > 0 \
-                and sub_threshold_indexes[-1] < len(data_frame.index) \
-                and data_frame.iloc[-1] > threshold:
+                and sub_threshold_indexes[-1] < len(data) \
+                and data[-1] > threshold:
             threshold_crossing_indexes.append(sub_threshold_indexes[-1]+1)
 
         return threshold_crossing_indexes

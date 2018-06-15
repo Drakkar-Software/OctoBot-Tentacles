@@ -13,12 +13,13 @@ $tentacle_description: {
 import math
 
 import talib
+import tulipy
 
 from config.cst import *
 from evaluator.TA.TA_evaluator import MomentumEvaluator
 from evaluator.Util import PatternAnalyser
 from evaluator.Util import TrendAnalysis
-from tools.data_frame_util import DataFrameUtil
+from tools.data_util import DataUtil
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):
@@ -29,9 +30,9 @@ class RSIMomentumEvaluator(MomentumEvaluator):
     # TODO : temp analysis
     def eval_impl(self):
         if len(self.data):
-            rsi_v = talib.RSI(self.data[PriceStrings.STR_PRICE_CLOSE.value])
+            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=14)
 
-            if len(rsi_v) and not math.isnan(rsi_v.tail(1)):
+            if len(rsi_v) and not math.isnan(rsi_v[-1]):
                 long_trend = TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
                 short_trend = TrendAnalysis.get_trend(rsi_v, self.short_term_averages)
 
@@ -45,11 +46,11 @@ class RSIMomentumEvaluator(MomentumEvaluator):
                     self.set_eval_note(short_trend)
 
                 # use RSI current value
-                last_rsi_value = rsi_v.tail(1).values[0]
+                last_rsi_value = rsi_v[-1]
                 if last_rsi_value > 50:
-                    self.set_eval_note(rsi_v.tail(1).values[0] / 200)
+                    self.set_eval_note(rsi_v[-1] / 200)
                 else:
-                    self.set_eval_note((rsi_v.tail(1).values[0] - 100) / 200)
+                    self.set_eval_note((rsi_v[-1] - 100) / 200)
 
 
 # bollinger_bands
@@ -61,34 +62,16 @@ class BBMomentumEvaluator(MomentumEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         if len(self.data):
             # compute bollinger bands
-            upper_band, middle_band, lower_band = talib.BBANDS(self.data[PriceStrings.STR_PRICE_CLOSE.value], 20, 2, 2)
+            lower_band, middle_band, upper_band = tulipy.bbands(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 20, 2)
+
             # if close to lower band => low value => bad,
             # therefore if close to middle, value is keeping up => good
             # finally if up the middle one or even close to the upper band => very good
 
-            # indicators_map = [
-            #     {
-            #         "title": "upper_band",
-            #         "data": upper_band,
-            #         "in_graph": True
-            #     },
-            #     {
-            #         "title": "middle_band",
-            #         "data": middle_band,
-            #         "in_graph": True
-            #     },
-            #     {
-            #         "title": "lower_band",
-            #         "data": lower_band,
-            #         "in_graph": True
-            #     }
-            # ]
-            # DataVisualiser.show_candlesticks_dataframe_with_indicators(self.data, indicators_map)
-
-            current_value = self.data[PriceStrings.STR_PRICE_CLOSE.value].iloc[-1]
-            current_up = upper_band.tail(1).values[0]
-            current_middle = middle_band.tail(1).values[0]
-            current_low = lower_band.tail(1).values[0]
+            current_value = self.data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
+            current_up = upper_band[-1]
+            current_middle = middle_band[-1]
+            current_low = lower_band[-1]
             delta_up = current_up - current_middle
             delta_low = current_middle - current_low
 
@@ -134,18 +117,18 @@ class ADXMomentumEvaluator(MomentumEvaluator):
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
-            adx = talib.ADX(self.data[PriceStrings.STR_PRICE_HIGH.value],
-                            self.data[PriceStrings.STR_PRICE_LOW.value],
-                            self.data[PriceStrings.STR_PRICE_CLOSE.value],
-                            timeperiod=14)
-            instant_ema = talib.EMA(self.data[PriceStrings.STR_PRICE_CLOSE.value], timeperiod=2)
-            slow_ema = talib.EMA(self.data[PriceStrings.STR_PRICE_CLOSE.value], timeperiod=20)
-            adx = DataFrameUtil.drop_nan_and_reset_index(adx)
+            adx = tulipy.adx(self.data[PriceIndexes.IND_PRICE_HIGH.value],
+                             self.data[PriceIndexes.IND_PRICE_LOW.value],
+                             self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                             14)
+            instant_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 2)
+            slow_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 20)
+            adx = DataUtil.drop_nan(adx)
 
             if len(adx):
-                current_adx = adx.iloc[-1]
-                current_slows_ema = slow_ema.iloc[-1]
-                current_instant_ema = instant_ema.iloc[-1]
+                current_adx = adx[-1]
+                current_slows_ema = slow_ema[-1]
+                current_instant_ema = instant_ema[-1]
 
                 multiplier = -1 if current_instant_ema < current_slows_ema else 1
 
@@ -153,8 +136,8 @@ class ADXMomentumEvaluator(MomentumEvaluator):
                 if current_adx > neutral_adx:
                     # if max adx already reached => when ADX forms a top and begins to turn down, you should look for a
                     # retracement that causes the price to move toward its 20-day exponential moving average (EMA).
-                    adx_last_values = adx.tail(15)
-                    adx_last_value = adx_last_values.iloc[-1]
+                    adx_last_values = adx[-15:]
+                    adx_last_value = adx_last_values[-1]
 
                     local_max_adx = adx_last_values.max()
                     # max already reached => trend will slow down
@@ -252,16 +235,13 @@ class MACDMomentumEvaluator(MomentumEvaluator):
     def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         if len(self.data):
-            macd, macd_signal, macd_hist = talib.MACD(self.data[PriceStrings.STR_PRICE_CLOSE.value],
-                                                      fastperiod=12,
-                                                      slowperiod=26,
-                                                      signalperiod=9)
+            macd, macd_signal, macd_hist = tulipy.macd(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 12, 26, 9)
 
             # on macd hist => M pattern: bearish movement, W pattern: bullish movement
             #                 max on hist: optimal sell or buy
-            macd_hist = DataFrameUtil.drop_nan_and_reset_index(macd_hist)
+            macd_hist = DataUtil.drop_nan(macd_hist)
             zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(macd_hist, 0)
-            last_index = len(macd_hist.index) - 1
+            last_index = len(macd_hist) - 1
             pattern, start_index, end_index = PatternAnalyser.find_pattern(macd_hist, zero_crossing_indexes, last_index)
 
             if pattern != PatternAnalyser.UNKNOWN_PATTERN:
@@ -274,8 +254,8 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
                 # set weight according to the max value of the pattern and the current value
                 current_pattern_start = start_index
-                price_weight = macd_hist.iloc[-1] / macd_hist[current_pattern_start:].max() if sign_multiplier == 1 \
-                    else macd_hist.iloc[-1] / macd_hist[current_pattern_start:].min()
+                price_weight = macd_hist[-1] / macd_hist[current_pattern_start:].max() if sign_multiplier == 1 \
+                    else macd_hist[-1] / macd_hist[current_pattern_start:].min()
 
                 if not math.isnan(price_weight):
                     self._analyse_pattern(pattern, macd_hist, zero_crossing_indexes, price_weight,

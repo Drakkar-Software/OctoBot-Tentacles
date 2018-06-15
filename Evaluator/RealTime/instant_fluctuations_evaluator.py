@@ -10,10 +10,10 @@ $tentacle_description: {
 }
 """
 import math
+import numpy as np
 
 from config.cst import *
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
-from evaluator.abstract_evaluator import AbstractEvaluator
 
 """
 Idea moves are lasting approx 12min:
@@ -98,9 +98,9 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         candles_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
                                                        self.candle_segments[0])
         for segment in self.candle_segments:
-            self.average_volumes[segment] = candles_data[PriceStrings.STR_PRICE_VOL.value][-segment:].mean()
-            self.average_prices[segment] = candles_data[PriceStrings.STR_PRICE_CLOSE.value][-segment:].mean()
+            self.average_volumes[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:])
+            self.average_prices[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:])
 
-        self.last_volume = candles_data[PriceStrings.STR_PRICE_VOL.value].tail(1).values[0]
-        self.last_price = candles_data[PriceStrings.STR_PRICE_CLOSE.value].tail(1).values[0]
+        self.last_volume = candles_data[PriceIndexes.IND_PRICE_VOL.value][-1]
+        self.last_price = candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
 
