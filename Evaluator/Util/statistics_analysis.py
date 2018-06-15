@@ -9,6 +9,7 @@ $tentacle_description: {
     "requirements": []
 }
 """
+import tulipy
 
 import talib
 import numpy
@@ -22,17 +23,17 @@ class StatisticAnalysis(AbstractUtil):
     # Return linear proximity to the lower or the upper band relatively to the middle band.
     # Linearly compute proximity between middle and delta before linear:
     @staticmethod
-    def analyse_recent_trend_changes(data_frame, delta_function):
+    def analyse_recent_trend_changes(data, delta_function):
         # compute bollinger bands
-        upper_band, middle_band, lower_band = talib.BBANDS(data_frame, 20, 2, 2)
+        lower_band, middle_band, upper_band = tulipy.bbands(data, 20, 2)
         # if close to lower band => low value => bad,
         # therefore if close to middle, value is keeping up => good
         # finally if up the middle one or even close to the upper band => very good
 
-        current_value = data_frame.iloc[-1]
-        current_up = upper_band.tail(1).values[0]
-        current_middle = middle_band.tail(1).values[0]
-        current_low = lower_band.tail(1).values[0]
+        current_value = data[-1]
+        current_up = upper_band[-1]
+        current_middle = middle_band[-1]
+        current_low = lower_band[-1]
         delta_up = current_up - current_middle
         delta_low = current_middle - current_low
 
