@@ -13,7 +13,6 @@ import tulipy
 
 from config.cst import *
 import numpy
-import talib
 import math
 
 from evaluator.TA.TA_evaluator import TrendEvaluator

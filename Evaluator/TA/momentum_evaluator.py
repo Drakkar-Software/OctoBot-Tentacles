@@ -12,7 +12,6 @@ $tentacle_description: {
 
 import math
 
-import talib
 import tulipy
 
 from config.cst import *

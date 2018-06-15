@@ -11,7 +11,6 @@ $tentacle_description: {
 """
 import tulipy
 
-import talib
 import numpy
 from config.cst import START_PENDING_EVAL_NOTE
 
