@@ -12,8 +12,6 @@ $tentacle_description: {
 
 from evaluator.TA.TA_evaluator import VolatilityEvaluator
 
-import talib
-
 
 # average_true_range
 class ATRVolatilityEvaluator(VolatilityEvaluator):
