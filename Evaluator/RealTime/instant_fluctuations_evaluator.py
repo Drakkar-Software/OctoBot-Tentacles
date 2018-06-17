@@ -67,31 +67,35 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         price_trigger = 0
 
         for segment in self.candle_segments:
-            # check volume fluctuation
-            if self.last_volume > self.VOLUME_HAPPENING_THRESHOLD * self.average_volumes[segment]:
-                volume_trigger += 1
-                self.something_is_happening = True
+            if segment in self.average_volumes and segment in self.average_prices:
+                # check volume fluctuation
+                if self.last_volume > self.VOLUME_HAPPENING_THRESHOLD * self.average_volumes[segment]:
+                    volume_trigger += 1
+                    self.something_is_happening = True
 
-            # check price fluctuation
-            segment_average_price = self.average_prices[segment]
-            if self.last_price > (1 + self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
-                price_trigger += 1
-                self.something_is_happening = True
+                # check price fluctuation
+                segment_average_price = self.average_prices[segment]
+                if self.last_price > (1 + self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
+                    price_trigger += 1
+                    self.something_is_happening = True
 
-            elif self.last_price < (1 - self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
-                price_trigger -= 1
-                self.something_is_happening = True
+                elif self.last_price < (1 - self.PRICE_HAPPENING_THRESHOLD) * segment_average_price:
+                    price_trigger -= 1
+                    self.something_is_happening = True
 
-        average_volume_trigger = min(1, volume_trigger/len(self.candle_segments) + 0.2)
-        average_price_trigger = price_trigger/len(self.candle_segments)
+        if self.candle_segments:
+            average_volume_trigger = min(1, volume_trigger/len(self.candle_segments) + 0.2)
+            average_price_trigger = price_trigger/len(self.candle_segments)
 
-        if average_price_trigger < 0:
-            # math.cos(1-x) between 0 and 1 starts around 0.5 and smoothly goes up to 1
-            self.eval_note = -1*math.cos(1-(-1*average_price_trigger*average_volume_trigger))
-        elif average_price_trigger > 0:
-            self.eval_note = math.cos(1-average_price_trigger*average_volume_trigger)
+            if average_price_trigger < 0:
+                # math.cos(1-x) between 0 and 1 starts around 0.5 and smoothly goes up to 1
+                self.eval_note = -1*math.cos(1-(-1*average_price_trigger*average_volume_trigger))
+            elif average_price_trigger > 0:
+                self.eval_note = math.cos(1-average_price_trigger*average_volume_trigger)
+            else:
+                # no price info => high volume but no price move, can't say anything
+                self.something_is_happening = False
         else:
-            # no price info => high volume but no price move, can't say anything
             self.something_is_happening = False
 
     def update(self):
