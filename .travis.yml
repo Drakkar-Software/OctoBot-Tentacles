@@ -1,0 +1,25 @@
+sudo: enabled
+language: python
+python:
+  - 3.6
+  - 3.5
+
+notifications:
+  slack: "cryptobotgroupe:vYDDCLRne52jPGVtN6cMiUkb"
+  email: false
+install:
+  - git clone https://github.com/Drakkar-Software/OctoBot.git
+  - git checkout dev
+  - cd OctoBot
+  - sudo bash ./docs/install/linux_dependencies.sh
+  - python3 setup.py sdist
+  - python3 setup.py install
+  - cp ../octobot_config.json ./config.json
+  - python3 start.py -p install all
+script:
+  - pip3 install -r dev_requirements.txt
+  - pytest --cov=. --cov-config=.coveragerc tentacles/tests/
+after_success:
+  - coveralls
+
+
