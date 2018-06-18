@@ -1,4 +1,4 @@
-# OctoBot-Tentacles [![Code Factor](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/badge)](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/overview/dev)
+# OctoBot-Tentacles [![Build Status](https://api.travis-ci.org/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.org/Drakkar-Software/OctoBot)[![Code Factor](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/badge)](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/overview/dev)
 This repository contains default evaluators, strategies and utilitary modules for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
 Evaluators, utilitary modules and strategies in these tentacles (packages) are automatically installed on OctoBot when using the following command:
