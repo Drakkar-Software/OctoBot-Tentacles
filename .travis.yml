@@ -17,6 +17,11 @@ install:
   - python3 start.py -p install all
 script:
   - pip3 install -r dev_requirements.txt
-  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/RealTime/Default
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Social/Default
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Strategies/Default
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/TA/Default
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Util/Default
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Trading/Mode/Default
 
 
