@@ -8,7 +8,6 @@ notifications:
   email: false
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git
-  - export PYTHONPATH=${PYTHONPATH}:${pwd}/OctoBot
   - cd OctoBot
   - git checkout dev
   - sudo bash ./docs/install/linux_dependencies.sh
@@ -19,7 +18,5 @@ install:
 script:
   - pip3 install -r dev_requirements.txt
   - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/
-after_success:
-  - coveralls
 
 
