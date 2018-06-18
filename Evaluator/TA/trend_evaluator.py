@@ -6,7 +6,8 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "TA",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "tests":["test_double_moving_averages_TA_evaluator"]
 }
 """
 import tulipy
