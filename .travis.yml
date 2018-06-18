@@ -18,7 +18,7 @@ install:
   - python3 start.py -p install all
 script:
   - pip3 install -r dev_requirements.txt
-  - pytest --cov=. --cov-config=.coveragerc OctoBot/tentacles/tests/
+  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/
 after_success:
   - coveralls
 
