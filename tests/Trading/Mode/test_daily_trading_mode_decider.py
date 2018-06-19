@@ -1,6 +1,9 @@
+from time import sleep
+
 import ccxt
 
-from config.cst import EvaluatorStates, INIT_EVAL_NOTE
+from backtesting.collector.data_parser import DataCollectorParser
+from config.cst import EvaluatorStates, INIT_EVAL_NOTE, CONFIG_BACKTESTING_DATA_FILES, CONFIG_BACKTESTING
 from evaluator.Util.advanced_manager import AdvancedManager
 from evaluator.cryptocurrency_evaluator import CryptocurrencyEvaluator
 from evaluator.evaluator_creator import EvaluatorCreator
@@ -20,6 +23,9 @@ def _get_tools():
     AdvancedManager.create_class_list(config)
     exchange_manager = ExchangeManager(config, ccxt.binance, is_simulated=True)
     exchange_inst = exchange_manager.get_exchange()
+    exchange_inst.get_exchange().data[symbol] = DataCollectorParser.parse(
+        config[CONFIG_BACKTESTING][CONFIG_BACKTESTING_DATA_FILES][0],
+        use_legacy_parsing=True)
     trader_inst = TraderSimulator(config, exchange_inst, 0.3)
     trader_inst.stop_order_manager()
     trader_inst2 = TraderSimulator(config, exchange_inst, 0.3)
