@@ -7,7 +7,7 @@
   "exchanges": {
   },
   "services": {},
-  "tentacles": [],
+  "tentacles-packages": [],
   "notification":{
     "global_info": true,
     "price_alerts": true,
