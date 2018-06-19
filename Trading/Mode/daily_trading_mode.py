@@ -217,6 +217,13 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 class DailyTradingModeDecider(AbstractTradingModeDecider):
     def __init__(self, trading_mode, symbol_evaluator, exchange):
         super().__init__(trading_mode, symbol_evaluator, exchange)
+        
+        # If final_eval not is < X_THRESHOLD --> state = X
+        self.VERY_LONG_THRESHOLD = -0.75
+        self.LONG_THRESHOLD = -0.25
+        self.NEUTRAL_THRESHOLD = 0.25
+        self.SHORT_THRESHOLD = 0.75
+        self.RISK_THRESHOLD = 0.2
 
     def set_final_eval(self):
         strategies_analysis_note_counter = 0
