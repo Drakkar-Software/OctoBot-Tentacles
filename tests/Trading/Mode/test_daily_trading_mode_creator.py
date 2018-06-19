@@ -1,8 +1,9 @@
 import ccxt
 import copy
 
+from backtesting.collector.data_parser import DataCollectorParser
 from trading.exchanges.exchange_manager import ExchangeManager
-from config.cst import EvaluatorStates
+from config.cst import EvaluatorStates, CONFIG_BACKTESTING, CONFIG_BACKTESTING_DATA_FILES
 from tests.test_utils.config import load_test_config
 from trading.trader.modes import DailyTradingModeCreator
 from trading.trader.portfolio import Portfolio
@@ -13,8 +14,12 @@ from config.cst import ExchangeConstantsMarketStatusColumns as Ecmsc
 
 def _get_tools():
     config = load_test_config()
+    symbol = "BTC/USDT"
     exchange_manager = ExchangeManager(config, ccxt.binance, is_simulated=True)
     exchange_inst = exchange_manager.get_exchange()
+    exchange_inst.get_exchange().data[symbol] = DataCollectorParser.parse(
+        config[CONFIG_BACKTESTING][CONFIG_BACKTESTING_DATA_FILES][0],
+        use_legacy_parsing=True)
     trader_inst = TraderSimulator(config, exchange_inst, 0.3)
     trader_inst.stop_order_manager()
     trader_inst.portfolio.portfolio["SUB"] = {
@@ -29,7 +34,7 @@ def _get_tools():
         Portfolio.TOTAL: 2000,
         Portfolio.AVAILABLE: 2000
     }
-    symbol = "BTC/USDT"
+
     return config, exchange_inst, trader_inst, symbol
 
 
