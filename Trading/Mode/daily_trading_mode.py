@@ -6,7 +6,7 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": [],
+    "requirements": ["mixed_strategies_evaluator"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
 }
 """
