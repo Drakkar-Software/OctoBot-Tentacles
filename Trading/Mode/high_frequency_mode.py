@@ -6,7 +6,7 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": [high_frequency_strategy_evaluator]
+    "requirements": ["high_frequency_strategy_evaluator"]
 }
 """
 from config.cst import INIT_EVAL_NOTE, EvaluatorStates
