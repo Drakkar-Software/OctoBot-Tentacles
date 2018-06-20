@@ -10,6 +10,8 @@ $tentacle_description: {
 }
 """
 import math
+import tulipy
+
 import numpy as np
 
 from config.cst import *
@@ -84,14 +86,14 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
                     self.something_is_happening = True
 
         if self.candle_segments:
-            average_volume_trigger = min(1, volume_trigger/len(self.candle_segments) + 0.2)
-            average_price_trigger = price_trigger/len(self.candle_segments)
+            average_volume_trigger = min(1, volume_trigger / len(self.candle_segments) + 0.2)
+            average_price_trigger = price_trigger / len(self.candle_segments)
 
             if average_price_trigger < 0:
                 # math.cos(1-x) between 0 and 1 starts around 0.5 and smoothly goes up to 1
-                self.eval_note = -1*math.cos(1-(-1*average_price_trigger*average_volume_trigger))
+                self.eval_note = -1 * math.cos(1 - (-1 * average_price_trigger * average_volume_trigger))
             elif average_price_trigger > 0:
-                self.eval_note = math.cos(1-average_price_trigger*average_volume_trigger)
+                self.eval_note = math.cos(1 - average_price_trigger * average_volume_trigger)
             else:
                 # no price info => high volume but no price move, can't say anything
                 self.something_is_happening = False
@@ -107,4 +109,38 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 
         self.last_volume = candles_data[PriceIndexes.IND_PRICE_VOL.value][-1]
         self.last_price = candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
+
+
+# Returns :
+# 0 when situation is changing
+# -1 when the market is stable
+# 1 when the market is unstable
+
+class InstantVolatilityEvaluator(RealTimeTAEvaluator):
+    STOCH_INSTABILITY_THRESHOLD = 50
+    STOCH_STABILITY_THRESHOLD = 30
+
+    def __init__(self, exchange, symbol):
+        super().__init__(exchange, symbol)
+        self.last_candle_data = None
+
+    def _refresh_data(self):
+        self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
+                                                                limit=10)
+
+    def eval_impl(self):
+        self.eval_note = 0
+        slowk, _ = tulipy.stoch(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value],
+                                self.last_candle_data[PriceIndexes.IND_PRICE_LOW.value],
+                                self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                14,
+                                3,
+                                3)
+
+        if slowk[-1] > self.STOCH_INSTABILITY_THRESHOLD:
+            self.eval_note = 1
+
+        if slowk[-1] < self.STOCH_STABILITY_THRESHOLD:
+            self.eval_note = -1
+
 
