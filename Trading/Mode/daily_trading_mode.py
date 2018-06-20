@@ -140,7 +140,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 
             currency, market = split_symbol(symbol)
 
-            current_portfolio = portfolio.get_currency_portfolio(currency)
+            current_symbol_holding = portfolio.get_currency_portfolio(currency)
             current_market_quantity = portfolio.get_currency_portfolio(market)
 
             market_quantity = current_market_quantity / reference
@@ -153,7 +153,9 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             if state == EvaluatorStates.VERY_SHORT:
                 quantity = self._get_market_quantity_from_risk(eval_note,
                                                                trader,
-                                                               current_portfolio)
+                                                               current_symbol_holding)
+                quantity += self.get_additional_dusts_to_quantity_if_necessary(quantity, price,
+                                                                               symbol_market, current_symbol_holding)
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                                    symbol_market):
                     market = trader.create_order_instance(order_type=TraderOrderType.SELL_MARKET,
@@ -168,7 +170,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             elif state == EvaluatorStates.SHORT:
                 quantity = self._get_limit_quantity_from_risk(eval_note,
                                                               trader,
-                                                              current_portfolio)
+                                                              current_symbol_holding)
                 limit_price = self.adapt_price(symbol_market, price * self._get_limit_price_from_risk(eval_note, trader))
                 stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
@@ -241,10 +243,10 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
         super().__init__(trading_mode, symbol_evaluator, exchange)
         
         # If final_eval not is < X_THRESHOLD --> state = X
-        self.VERY_LONG_THRESHOLD = -0.75
+        self.VERY_LONG_THRESHOLD = -0.85
         self.LONG_THRESHOLD = -0.25
         self.NEUTRAL_THRESHOLD = 0.25
-        self.SHORT_THRESHOLD = 0.75
+        self.SHORT_THRESHOLD = 0.85
         self.RISK_THRESHOLD = 0.2
 
     def set_final_eval(self):

@@ -2,7 +2,7 @@
   "accounts" : {
     "Bitcoin": ["BTCFoundation"],
     "Ethereum": ["ethereum","VitalikButerin"],
-    "Neo": ["NEO_Blockchain","NEOnewstoday","NEO_council","neotogas","NEO_DevCon","RedditBTC","neonexchange","dahongfei"],
+    "Neo": ["NEO_Blockchain","NEOnewstoday","NEO_council","neotogas","NEO_DevCon","neonexchange","dahongfei"],
     "ICON": ["helloiconworld "],
     "NANO": ["nanocurrency"],
     "VeChain": ["sunshinelu24","VechainThorCom","Vechain1"],

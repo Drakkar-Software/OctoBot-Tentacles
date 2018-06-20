@@ -317,6 +317,22 @@ def test_invalid_create_new_order():
     assert len(orders) == 0
 
 
+def test_create_new_order_with_dusts_included():
+    config, exchange, trader, symbol = _get_tools()
+    portfolio = trader.get_portfolio()
+    order_creator = DailyTradingModeCreator(None)
+
+    trader.portfolio.portfolio["BTC"] = {
+        Portfolio.TOTAL: 0.000015,
+        Portfolio.AVAILABLE: 0.000015
+    }
+    # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
+    orders = order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_SHORT)
+    assert len(orders) == 1
+    assert trader.portfolio.portfolio["BTC"][Portfolio.AVAILABLE] == 0
+    assert trader.portfolio.portfolio["BTC"][Portfolio.TOTAL] == orders[0].origin_quantity
+
+
 def test_split_create_new_order():
     config, exchange, trader, symbol = _get_tools()
     portfolio = trader.get_portfolio()
