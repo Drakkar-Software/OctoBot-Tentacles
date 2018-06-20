@@ -15,12 +15,12 @@ import logging
 
 from config.cst import EvaluatorStates, INIT_EVAL_NOTE, ORDER_CREATION_LAST_TRADES_TO_USE, TraderOrderType, \
     CONFIG_NOTIFICATION_PRICE_ALERTS
+from tentacles.Evaluator.Strategies import FullMixedStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
-from evaluator.Strategies import FullMixedStrategiesEvaluator
 
 
 class DailyTradingMode(AbstractTradingMode):
