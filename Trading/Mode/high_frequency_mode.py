@@ -6,10 +6,11 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [market_stability_strategy_evaluator]
 }
 """
 from config.cst import INIT_EVAL_NOTE, EvaluatorStates
+from tentacles.Evaluator.Strategies import MarketStabilityStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
@@ -20,14 +21,18 @@ from trading.trader.sub_portfolio import SubPortfolio
 class HighFrequencyMode(AbstractTradingMode):
     TEMP_CREATOR_TO_USE = 5  # TODO temp cst
 
-    def __init__(self, config, symbol_evaluator, exchange, symbol):
-        super().__init__(config)
+    def __init__(self, config, symbol_evaluator, exchange):
+        super().__init__(config, symbol_evaluator, exchange)
 
-        self.set_decider(HighFrequencyModeDecider(self, symbol_evaluator, exchange, symbol))
+        self.set_decider(HighFrequencyModeDecider(self, symbol_evaluator, exchange))
 
         # create new creators
         for _ in range(0, self.TEMP_CREATOR_TO_USE):
             self.add_creator(HighFrequencyModeCreator(self))
+
+    @staticmethod
+    def get_required_strategies():
+        return [MarketStabilityStrategiesEvaluator]
 
 
 class HighFrequencyModeCreator(AbstractTradingModeCreator):
@@ -51,8 +56,8 @@ class HighFrequencyModeCreator(AbstractTradingModeCreator):
 
 
 class HighFrequencyModeDecider(AbstractTradingModeDecider):
-    def __init__(self, trading_mode, symbol_evaluator, exchange, symbol):
-        super().__init__(trading_mode, symbol_evaluator, exchange, symbol)
+    def __init__(self, trading_mode, symbol_evaluator, exchange):
+        super().__init__(trading_mode, symbol_evaluator, exchange)
 
     def set_final_eval(self):
         # TODO : check changing mode

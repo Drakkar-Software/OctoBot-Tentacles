@@ -126,21 +126,27 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
     def _refresh_data(self):
         self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
-                                                                limit=10)
+                                                                limit=20, return_list=False)
 
     def eval_impl(self):
         self.eval_note = 0
-        slowk, _ = tulipy.stoch(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value],
-                                self.last_candle_data[PriceIndexes.IND_PRICE_LOW.value],
-                                self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value],
-                                14,
-                                3,
-                                3)
+        # slowk --> fastest
+        # slowd --> slowest
+        slowk, slowd = tulipy.stoch(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value],
+                                    self.last_candle_data[PriceIndexes.IND_PRICE_LOW.value],
+                                    self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                    14,
+                                    3,
+                                    3)
 
-        if slowk[-1] > self.STOCH_INSTABILITY_THRESHOLD:
+        last_value = slowd[-1]
+
+        if last_value > self.STOCH_INSTABILITY_THRESHOLD:
             self.eval_note = 1
 
-        if slowk[-1] < self.STOCH_STABILITY_THRESHOLD:
+        if last_value < self.STOCH_STABILITY_THRESHOLD:
             self.eval_note = -1
 
-
+    def set_default_config(self):
+        super().set_default_config()
+        self.specific_config[CONFIG_REFRESH_RATE] = 0.5
