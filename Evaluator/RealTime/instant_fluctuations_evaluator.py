@@ -123,6 +123,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
+        self.last_eval_note = START_PENDING_EVAL_NOTE
 
     def _refresh_data(self):
         self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
@@ -147,6 +148,25 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         if last_value < self.STOCH_STABILITY_THRESHOLD:
             self.eval_note = -1
 
+        if self.last_eval_note != self.eval_note:
+            self.notify_evaluator_thread_managers(self.__class__.__name__)
+
+        self.last_eval_note = self.eval_note
+
     def set_default_config(self):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.5
+
+
+class InstantMAEvaluator(RealTimeTAEvaluator):
+    def __init__(self, exchange, symbol):
+        super().__init__(exchange, symbol)
+        self.last_candle_data = None
+        self.last_eval_note = START_PENDING_EVAL_NOTE
+
+    def _refresh_data(self):
+        self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
+                                                                limit=20, return_list=False)
+
+    def eval_impl(self):
+        pass

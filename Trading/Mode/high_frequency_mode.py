@@ -6,11 +6,11 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": [market_stability_strategy_evaluator]
+    "requirements": [high_frequency_strategy_evaluator]
 }
 """
 from config.cst import INIT_EVAL_NOTE, EvaluatorStates
-from tentacles.Evaluator.Strategies import MarketStabilityStrategiesEvaluator
+from tentacles.Evaluator.Strategies.Default.high_frequency_strategy_evaluator import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
@@ -32,7 +32,7 @@ class HighFrequencyMode(AbstractTradingMode):
 
     @staticmethod
     def get_required_strategies():
-        return [MarketStabilityStrategiesEvaluator]
+        return [HighFrequencyStrategiesEvaluator]
 
 
 class HighFrequencyModeCreator(AbstractTradingModeCreator):
