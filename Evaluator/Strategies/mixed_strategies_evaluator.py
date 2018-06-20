@@ -6,7 +6,7 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "Strategies",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": ["instant_fluctuations_evaluator", "news_evaluator"]
 }
 """
 
