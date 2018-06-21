@@ -52,14 +52,14 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.QUANTITY_MARKET_MAX_PERCENT = 1
         self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
         self.QUANTITY_MARKET_ATTENUATION = (self.QUANTITY_MARKET_MAX_PERCENT - self.QUANTITY_MARKET_MIN_PERCENT) \
-            / self.MAX_SUM_RESULT
+                                           / self.MAX_SUM_RESULT
 
         self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
         self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.98
         self.SELL_LIMIT_ORDER_MIN_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MAX_PERCENT)
         self.SELL_LIMIT_ORDER_MAX_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MIN_PERCENT)
-        self.LIMIT_ORDER_ATTENUATION = (self.BUY_LIMIT_ORDER_MAX_PERCENT - self.BUY_LIMIT_ORDER_MIN_PERCENT)\
-            / self.MAX_SUM_RESULT
+        self.LIMIT_ORDER_ATTENUATION = (self.BUY_LIMIT_ORDER_MAX_PERCENT - self.BUY_LIMIT_ORDER_MIN_PERCENT) \
+                                       / self.MAX_SUM_RESULT
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
@@ -130,23 +130,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
     def create_new_order(self, eval_note, symbol, exchange, trader, portfolio, state):
         try:
-            last_prices = exchange.get_recent_trades(symbol)
-            reference_sum = 0
-
-            for last_price in last_prices[-ORDER_CREATION_LAST_TRADES_TO_USE:]:
-                reference_sum += float(last_price["price"])
-
-            reference = reference_sum / ORDER_CREATION_LAST_TRADES_TO_USE
-
-            currency, market = split_symbol(symbol)
-
-            current_symbol_holding = portfolio.get_currency_portfolio(currency)
-            current_market_quantity = portfolio.get_currency_portfolio(market)
-
-            market_quantity = current_market_quantity / reference
-
-            price = reference
-            symbol_market = exchange.get_market_status(symbol)
+            current_symbol_holding, current_market_quantity, market_quantity, price, symbol_market = \
+                self.get_pre_order_data(exchange, symbol, portfolio)
 
             created_orders = []
 
@@ -171,7 +156,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_limit_quantity_from_risk(eval_note,
                                                               trader,
                                                               current_symbol_holding)
-                limit_price = self.adapt_price(symbol_market, price * self._get_limit_price_from_risk(eval_note, trader))
+                limit_price = self.adapt_price(symbol_market,
+                                               price * self._get_limit_price_from_risk(eval_note, trader))
                 stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
                                                                                                    limit_price,
@@ -201,7 +187,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_limit_quantity_from_risk(eval_note,
                                                               trader,
                                                               market_quantity)
-                limit_price = self.adapt_price(symbol_market, price * self._get_limit_price_from_risk(eval_note, trader))
+                limit_price = self.adapt_price(symbol_market,
+                                               price * self._get_limit_price_from_risk(eval_note, trader))
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
                                                                                                    limit_price,
                                                                                                    symbol_market):
@@ -241,7 +228,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 class DailyTradingModeDecider(AbstractTradingModeDecider):
     def __init__(self, trading_mode, symbol_evaluator, exchange):
         super().__init__(trading_mode, symbol_evaluator, exchange)
-        
+
         # If final_eval not is < X_THRESHOLD --> state = X
         self.VERY_LONG_THRESHOLD = -0.85
         self.LONG_THRESHOLD = -0.25
@@ -303,7 +290,7 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                 # create notification
                 evaluator_notification = None
                 if self.notifier.enabled(CONFIG_NOTIFICATION_PRICE_ALERTS):
-                    evaluator_notification = self.notifier.notify_state_changed(
+                    evaluator_notification = self.notifier.notify_alert(
                         self.final_eval,
                         self.symbol_evaluator.get_crypto_currency_evaluator(),
                         self.symbol_evaluator.get_symbol(),
