@@ -9,14 +9,13 @@ $tentacle_description: {
     "requirements": ["high_frequency_strategy_evaluator"]
 }
 """
-from config.cst import EvaluatorStates, TraderOrderType
+from config.cst import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS
 from tentacles.Evaluator.Strategies.Default.high_frequency_strategy_evaluator import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
-from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
-from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
+from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreatorWithBot
+from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDeciderWithBot
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
-from trading.trader.sub_portfolio import SubPortfolio
 
 
 class HighFrequencyMode(AbstractTradingMode):
@@ -50,24 +49,9 @@ class HighFrequencyMode(AbstractTradingMode):
         return [HighFrequencyStrategiesEvaluator]
 
 
-class HighFrequencyModeCreator(AbstractTradingModeCreator):
+class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
     def __init__(self, trading_mode, trader):
-        super().__init__(trading_mode)
-        self.trader = trader
-        self.parent_portfolio = self.trader.get_portfolio()
-        self.sub_portfolio = SubPortfolio(self.trading_mode.config,
-                                          self.trader,
-                                          self.parent_portfolio,
-                                          1 / self.trading_mode.TEMP_CREATOR_TO_USE,
-                                          is_relative=True)
-
-    def get_portfolio(self):
-        # force portfolio update
-        self.sub_portfolio.update_from_parent()
-        return self.sub_portfolio
-
-    def can_create_order(self, symbol, exchange, state, portfolio):
-        return super().can_create_order(symbol, exchange, state, self.get_portfolio())
+        super().__init__(trading_mode, trader, 1 / trading_mode.TEMP_CREATOR_TO_USE)
 
     def create_new_order(self, eval_note, symbol, exchange, trader, _, state):
         sub_portfolio = self.get_portfolio()
@@ -105,16 +89,16 @@ class HighFrequencyModeCreator(AbstractTradingModeCreator):
         return None
 
 
-class HighFrequencyModeDecider(AbstractTradingModeDecider):
-    LONG_THRESHOLD = -1
-    SHORT_THRESHOLD = 1
+class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
+    # WARNING FEES
+    LONG_THRESHOLD = -0.006/30
+    SHORT_THRESHOLD = 0.006/30
 
     def __init__(self, trading_mode, symbol_evaluator, exchange, trader, creators):
-        super().__init__(trading_mode, symbol_evaluator, exchange)
-        self.trader = trader
-        self.creators = creators
+        super().__init__(trading_mode, symbol_evaluator, exchange, trader, creators)
         self.available_creators = []
         self.pending_creators = []
+        self.blocked_creators = []
 
     def set_final_eval(self):
         evaluated_strategies = self.symbol_evaluator.get_strategies_eval_list(self.exchange)
@@ -133,30 +117,28 @@ class HighFrequencyModeDecider(AbstractTradingModeDecider):
         return True
 
     # TODO add risk
-    # TODO add available creator management
     def create_state(self):
-        if self.final_eval <= self.LONG_THRESHOLD:
+        nb_blocked_creators = len(self.blocked_creators) if len(self.blocked_creators) > 0 else 1
+        if self.final_eval < self.LONG_THRESHOLD * nb_blocked_creators:
             self._set_state(EvaluatorStates.VERY_LONG)
 
-        if self.final_eval >= self.SHORT_THRESHOLD:
+        if self.final_eval > self.SHORT_THRESHOLD:
             self._set_state(EvaluatorStates.VERY_SHORT)
 
     def _set_state(self, new_state):
-        if new_state != self.state:
-            # previous_state = self.state
-            self.state = new_state
-            self.logger.info("{0} ** NEW STATE ** : {1}".format(self.symbol, self.state))
+        self.state = new_state
+        self.logger.info("{0} ** NEW STATE ** : {1}".format(self.symbol, self.state))
 
-            if self.state == EvaluatorStates.VERY_SHORT:
-                for creator_key in self.pending_creators:
-                    self.create_order_if_possible(None, self.trader, creator_key)
+        if self.state == EvaluatorStates.VERY_SHORT:
+            for creator_key in self.pending_creators:
+                self.create_order_if_possible(None, self.get_trader(), creator_key)
 
-            elif self.state == EvaluatorStates.VERY_LONG:
-                order_creator_key = next(iter(self.available_creators))
-                self.create_order_if_possible(None, self.trader, order_creator_key)
+        elif self.state == EvaluatorStates.VERY_LONG and len(self.available_creators) > 0:
+            order_creator_key = next(iter(self.available_creators))
+            self.create_order_if_possible(None, self.get_trader(), order_creator_key)
 
     def _update_available_creators(self):
-        for order_creator_key in self.creators:
+        for order_creator_key in self.get_creators():
             order_creator = self.trading_mode.get_creators()[order_creator_key]
 
             # force portfolio update
@@ -167,8 +149,12 @@ class HighFrequencyModeDecider(AbstractTradingModeDecider):
             market_pf = order_creator_pf.get_currency_portfolio(market)
 
             # TODO : more comparison ( >= 0)
-            if market_pf > currency_pf:
+            if round(currency_pf, CURRENCY_DEFAULT_MAX_PRICE_DIGITS) > 0:
                 self.available_creators.append(order_creator_key)
-            # market < currency
-            else:
+
+            if round(market_pf, CURRENCY_DEFAULT_MAX_PRICE_DIGITS) > 0:
                 self.pending_creators.append(order_creator_key)
+
+            if round(market_pf, CURRENCY_DEFAULT_MAX_PRICE_DIGITS) == 0 and \
+                    round(currency_pf, CURRENCY_DEFAULT_MAX_PRICE_DIGITS) > 0:
+                self.blocked_creators.append(order_creator_key)

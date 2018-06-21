@@ -158,10 +158,6 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
 
 class InstantMAEvaluator(RealTimeTAEvaluator):
-    # WARNING FEES
-    MA_SHORT_THRESHOLD = 0.006
-    MA_LONG_THRESHOLD = 0.006
-
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
@@ -179,15 +175,12 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         last_value = sma_values[-1]
         last_price = close_values[-1]
 
-        if last_price > last_value * (1 + self.MA_SHORT_THRESHOLD):
-            self.eval_note = 1
+        try:
+            self.eval_note = 1-(last_price/last_value)
+        except:
+            self.eval_note = 0
 
-        if last_price < last_value * (1 - self.MA_LONG_THRESHOLD):
-            self.eval_note = -1
-
-        if self.last_eval_note != self.eval_note:
-            self.notify_evaluator_thread_managers(self.__class__.__name__)
-            self.last_eval_note = self.eval_note
+        self.notify_evaluator_thread_managers(self.__class__.__name__)
 
     def set_default_config(self):
         super().set_default_config()
