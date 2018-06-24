@@ -69,7 +69,8 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
                                                       symbol=symbol,
                                                       current_price=order_price,
                                                       quantity=order_quantity,
-                                                      price=order_price)
+                                                      price=order_price,
+                                                      linked_portfolio=sub_portfolio)
                 trader.create_order(market, sub_portfolio)
                 created_orders.append(market)
             return created_orders
@@ -81,7 +82,8 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
                                                       symbol=symbol,
                                                       current_price=order_price,
                                                       quantity=order_quantity,
-                                                      price=order_price)
+                                                      price=order_price,
+                                                      linked_portfolio=sub_portfolio)
                 trader.create_order(market, sub_portfolio)
                 created_orders.append(market)
             return created_orders
@@ -91,8 +93,8 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
 
 class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
     # WARNING FEES
-    LONG_THRESHOLD = -0.006/30
-    SHORT_THRESHOLD = 0.006/30
+    LONG_THRESHOLD = -0.006
+    SHORT_THRESHOLD = 0.006
 
     def __init__(self, trading_mode, symbol_evaluator, exchange, trader, creators):
         super().__init__(trading_mode, symbol_evaluator, exchange, trader, creators)
