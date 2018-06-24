@@ -101,14 +101,18 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
             self.something_is_happening = False
 
     def update(self):
-        candles_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
-                                                       self.candle_segments[0])
+        candles_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+                                                    limit=self.candle_segments[0])
+
         for segment in self.candle_segments:
             self.average_volumes[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:])
             self.average_prices[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:])
 
         self.last_volume = candles_data[PriceIndexes.IND_PRICE_VOL.value][-1]
         self.last_price = candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
+
+    def _should_eval(self):
+        return True
 
 
 # Returns :
@@ -126,8 +130,8 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         self.last_eval_note = START_PENDING_EVAL_NOTE
 
     def _refresh_data(self):
-        self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
-                                                                limit=20, return_list=False)
+        self.last_candle_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+                                                             limit=20, return_list=False)
 
     def eval_impl(self):
         self.eval_note = 0
@@ -156,16 +160,22 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.5
 
+    def _should_eval(self):
+        return True
+
 
 class InstantMAEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
         self.last_eval_note = START_PENDING_EVAL_NOTE
+        self.should_eval = True
 
     def _refresh_data(self):
-        self.last_candle_data = self.exchange.get_symbol_prices(self.symbol, self.specific_config[CONFIG_TIME_FRAME],
-                                                                limit=20, return_list=False)
+        new_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+                                                limit=20, return_list=False)
+        self.should_eval = not self._compare_data(new_data, self.last_candle_data)
+        self.last_candle_data = new_data
 
     def eval_impl(self):
         self.eval_note = 0
@@ -176,7 +186,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         last_price = close_values[-1]
 
         try:
-            self.eval_note = 1-(last_price/last_value)
+            self.eval_note = 1 - (last_price / last_value)
         except:
             self.eval_note = 0
 
@@ -185,3 +195,6 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
     def set_default_config(self):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.3
+
+    def _should_eval(self):
+        return self.should_eval
