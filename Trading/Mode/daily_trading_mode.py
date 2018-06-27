@@ -13,8 +13,7 @@ $tentacle_description: {
 
 import logging
 
-from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType, \
-    CONFIG_NOTIFICATION_PRICE_ALERTS
+from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
 from tentacles.Evaluator.Strategies import FullMixedStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
@@ -287,15 +286,13 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                 self.cancel_symbol_open_orders()
 
                 # create notification
-                evaluator_notification = None
-                if self.notifier.enabled(CONFIG_NOTIFICATION_PRICE_ALERTS):
-                    evaluator_notification = self.notifier.notify_alert(
-                        self.final_eval,
-                        self.symbol_evaluator.get_crypto_currency_evaluator(),
-                        self.symbol_evaluator.get_symbol(),
-                        self.symbol_evaluator.get_trader(self.exchange),
-                        self.state,
-                        self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
-
+                self.notifier.notify_alert(
+                    self.final_eval,
+                    self.symbol_evaluator.get_crypto_currency_evaluator(),
+                    self.symbol_evaluator.get_symbol(),
+                    self.symbol_evaluator.get_trader(self.exchange),
+                    self.state,
+                    self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
+                    
                 # call orders creation method
-                self.create_final_state_orders(evaluator_notification, self.trading_mode.get_only_creator_key())
+                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key())
