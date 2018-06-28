@@ -286,13 +286,14 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                 self.cancel_symbol_open_orders()
 
                 # create notification
-                self.notifier.notify_alert(
-                    self.final_eval,
-                    self.symbol_evaluator.get_crypto_currency_evaluator(),
-                    self.symbol_evaluator.get_symbol(),
-                    self.symbol_evaluator.get_trader(self.exchange),
-                    self.state,
-                    self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
+                if self.symbol_evaluator.matrices:
+                    self.notifier.notify_alert(
+                        self.final_eval,
+                        self.symbol_evaluator.get_crypto_currency_evaluator(),
+                        self.symbol_evaluator.get_symbol(),
+                        self.symbol_evaluator.get_trader(self.exchange),
+                        self.state,
+                        self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
                     
                 # call orders creation method
                 self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key())
