@@ -103,16 +103,14 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         self.blocked_creators = []
 
     def set_final_eval(self):
-        evaluated_strategies = self.symbol_evaluator.get_strategies_eval_list(self.exchange)
-        for strategy in evaluated_strategies:
-            if strategy.get_name() == HighFrequencyStrategiesEvaluator.get_name():
-                strategy_eval = strategy.get_eval_note()
-                if check_valid_eval_note(strategy_eval):
-                    self.final_eval = strategy_eval
+        strategy = self.trading_mode.get_strategy_instances_by_classes()[HighFrequencyStrategiesEvaluator]
+        strategy_eval = strategy.get_eval_note()
 
-                self._update_available_creators()
-                self.create_state()
-                break
+        if check_valid_eval_note(strategy_eval):
+            self.final_eval = strategy_eval
+
+        self._update_available_creators()
+        self.create_state()
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):
