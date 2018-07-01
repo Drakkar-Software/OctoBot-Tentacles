@@ -101,7 +101,7 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
 
 class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
     # WARNING FEES
-    # here values for fees > 0.2%
+    # here values for fees < 0.2%
     LONG_THRESHOLD = -0.002
     SHORT_THRESHOLD = 0.002
 
