@@ -20,18 +20,20 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class HighFrequencyMode(AbstractTradingMode):
-    TEMP_CREATOR_TO_USE = 5  # TODO temp cst
 
     def __init__(self, config, symbol_evaluator, exchange):
         super().__init__(config, symbol_evaluator, exchange)
 
         trader_simulator = symbol_evaluator.get_trader_simulator(exchange)
         trader = symbol_evaluator.get_trader(exchange)
+        self.nb_creators = 0
+
+        self.init_nb_creator_from_exchange(exchange)
 
         if trader_simulator.is_enabled():
             simulated_creators = []
             # create new creators --> simulation
-            for _ in range(0, self.TEMP_CREATOR_TO_USE):
+            for _ in range(0, self.nb_creators):
                 simulated_creators.append(self.add_creator(HighFrequencyModeCreator(self, trader_simulator)))
 
             self.add_decider(
@@ -40,10 +42,28 @@ class HighFrequencyMode(AbstractTradingMode):
         if trader.is_enabled():
             real_creators = []
             # create new creators --> real
-            for _ in range(0, self.TEMP_CREATOR_TO_USE):
+            for _ in range(0, self.nb_creators):
                 real_creators.append(self.add_creator(HighFrequencyModeCreator(self, trader)))
 
             self.add_decider(HighFrequencyModeDecider(self, symbol_evaluator, exchange, trader, real_creators))
+
+    def init_nb_creator_from_exchange(self, exchange):
+        # low fees => can have a lot of creators (more trades)
+        # high fees => less creators (decider will also need a bigger price move to trigger a trade)
+
+        exchange_fees = max(exchange.get_fees(self.symbol))
+        max_creators = (5, 0.001)    # fees <= 0.1% (0.001)
+        min_creators = (2, 0.01)    # fees >= 1% (0.01)
+
+        if exchange_fees <= max_creators[1]:
+            self.nb_creators = max_creators[0]
+        elif exchange_fees >= min_creators[1]:
+            self.nb_creators = min_creators[0]
+        else:
+            if exchange_fees <= min_creators[1]/2:
+                self.nb_creators = 4
+            else:
+                self.nb_creators = 3
 
     @staticmethod
     def get_required_strategies():
@@ -52,7 +72,7 @@ class HighFrequencyMode(AbstractTradingMode):
 
 class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
     def __init__(self, trading_mode, trader):
-        super().__init__(trading_mode, trader, 1 / trading_mode.TEMP_CREATOR_TO_USE)
+        super().__init__(trading_mode, trader, 1 / trading_mode.nb_creators)
         self._market_value = None
 
     def create_new_order(self, eval_note, symbol, exchange, trader, _, state):
@@ -100,16 +120,16 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
 
 
 class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
-    # WARNING FEES
-    # here values for fees < 0.2%
-    LONG_THRESHOLD = -0.002
-    SHORT_THRESHOLD = 0.002
 
     def __init__(self, trading_mode, symbol_evaluator, exchange, trader, creators):
         super().__init__(trading_mode, symbol_evaluator, exchange, trader, creators)
+        exchange_fees = max(exchange.get_fees(self.symbol))
+        self.LONG_THRESHOLD = -2 * exchange_fees
+        self.SHORT_THRESHOLD = 2 * exchange_fees
         self.filled_creators = []
         self.pending_creators = []
         self.blocked_creators = []
+
         self.currency, self.market = split_symbol(self.symbol)
         market_status = exchange.get_market_status(self.symbol)
         self.currency_max_digits = HighFrequencyModeCreator.get_value_or_default(market_status[Ecmsc.PRECISION.value],
