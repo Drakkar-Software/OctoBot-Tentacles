@@ -180,15 +180,26 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
     def eval_impl(self):
         self.eval_note = 0
         close_values = self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value]
-        sma_values = tulipy.sma(close_values, 9)
+        sma_values = tulipy.sma(close_values, 6)
 
-        last_value = sma_values[-1]
-        last_price = close_values[-1]
+        last_ma_value = sma_values[-1]
 
-        try:
-            self.eval_note = 1 - (last_price / last_value)
-        except:
+        if last_ma_value == 0:
             self.eval_note = 0
+        else:
+            last_price = close_values[-1]
+            current_ratio = last_price / last_ma_value
+            if current_ratio > 1:
+                # last_price > last_ma_value => sell ? => eval_note > 0
+                if current_ratio >= 2:
+                    self.eval_note = 1
+                else:
+                    self.eval_note = current_ratio - 1
+            elif current_ratio < 1:
+                # last_price < last_ma_value => buy ? => eval_note < 0
+                self.eval_note = -1 * (1 - current_ratio)
+            else:
+                self.eval_note = 0
 
         self.notify_evaluator_thread_managers(self.__class__.__name__)
 
