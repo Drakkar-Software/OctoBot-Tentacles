@@ -9,6 +9,7 @@ notifications:
   email: false
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git
+  - if [[ $TRAVIS_BRANCH == "dev" ]]; then git checkout dev; fi
   - cd OctoBot
   - sudo bash ./docs/install/linux_dependencies.sh
   - pip3 install -r pre_requirements.txt
