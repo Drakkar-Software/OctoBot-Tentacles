@@ -7,12 +7,12 @@ $tentacle_description: {
     "subtype": "Mode",
     "version": "1.0.0",
     "requirements": ["high_frequency_strategy_evaluator"],
+    "config_files": ["HighFrequencyMode.json"],
     "developing": true
 }
 """
 from config.cst import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
 from config.cst import ExchangeConstantsMarketStatusColumns as Ecmsc
-from tentacles.Evaluator.Strategies.Default.high_frequency_strategy_evaluator import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreatorWithBot
@@ -65,10 +65,6 @@ class HighFrequencyMode(AbstractTradingMode):
                 self.nb_creators = 4
             else:
                 self.nb_creators = 3
-
-    @staticmethod
-    def get_required_strategies():
-        return [HighFrequencyStrategiesEvaluator]
 
 
 class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):

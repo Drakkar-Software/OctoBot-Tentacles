@@ -6,14 +6,12 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "Strategies",
     "version": "1.0.0",
-    "requirements": ["instant_fluctuations_evaluator", "news_evaluator"]
+    "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
+    "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json"]
 }
 """
 
 from config.cst import *
-from evaluator.Strategies import MixedStrategiesEvaluator
-from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
-from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
 
 from tools.evaluators_util import check_valid_eval_note
 
@@ -46,18 +44,6 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
         # TODO temp with notification
         # self.get_divergence()
-
-    @classmethod
-    def get_required_time_frames(cls):
-        return [TimeFrames.THIRTY_MINUTES,
-                TimeFrames.ONE_HOUR,
-                TimeFrames.TWO_HOURS,
-                TimeFrames.FOUR_HOURS,
-                TimeFrames.ONE_DAY]
-
-    @classmethod
-    def get_required_evaluators(cls):
-        return CONFIG_EVALUATORS_WILDCARD
 
     def eval_impl(self) -> None:
         # TODO : temp counter without relevance
@@ -129,17 +115,6 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
         self.instant_evaluation = 0
         self.social_evaluation = 0
-
-    @classmethod
-    def get_required_time_frames(cls):
-        return [TimeFrames.FIFTEEN_MINUTES,
-                TimeFrames.THIRTY_MINUTES]
-
-    @classmethod
-    def get_required_evaluators(cls):
-        return [InstantFluctuationsEvaluator.__name__,
-                MediumNewsEvaluator.__name__,
-                RedditForumEvaluator.__name__]
 
     def eval_impl(self) -> None:
         self.social_counter = 0
