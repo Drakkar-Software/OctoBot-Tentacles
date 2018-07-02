@@ -6,7 +6,8 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": ["daily_trading_mode", "high_frequency_mode", "market_stability_strategy_evaluator"]
+    "requirements": ["daily_trading_mode", "high_frequency_mode", "market_stability_strategy_evaluator"],
+    "developing": true
 }
 """
 from tentacles.Evaluator.Strategies import MarketStabilityStrategiesEvaluator

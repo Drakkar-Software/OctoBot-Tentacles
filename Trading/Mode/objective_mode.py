@@ -6,7 +6,8 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "developing": true
 }
 """
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
