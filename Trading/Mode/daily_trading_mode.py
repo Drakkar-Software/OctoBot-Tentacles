@@ -7,6 +7,7 @@ $tentacle_description: {
     "subtype": "Mode",
     "version": "1.0.0",
     "requirements": ["mixed_strategies_evaluator"],
+    "config_files": ["DailyTradingMode.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
 }
 """
@@ -14,7 +15,6 @@ $tentacle_description: {
 import logging
 
 from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
-from tentacles.Evaluator.Strategies import FullMixedStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
@@ -27,10 +27,6 @@ class DailyTradingMode(AbstractTradingMode):
 
         self.add_creator(DailyTradingModeCreator(self))
         self.add_decider(DailyTradingModeDecider(self, symbol_evaluator, exchange))
-
-    @staticmethod
-    def get_required_strategies():
-        return [FullMixedStrategiesEvaluator]
 
 
 class DailyTradingModeCreator(AbstractTradingModeCreator):
