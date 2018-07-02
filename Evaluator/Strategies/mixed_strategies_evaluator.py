@@ -12,7 +12,7 @@ $tentacle_description: {
 """
 
 from config.cst import *
-
+from evaluator.Strategies import MixedStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 
 
