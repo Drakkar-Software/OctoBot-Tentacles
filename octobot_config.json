@@ -1,0 +1,31 @@
+{
+  "crypto_currencies":{
+    "Bitcoin": {
+      "pairs" : ["BTC/USDT"]
+    }
+  },
+  "exchanges": {
+  },
+  "services": {},
+  "tentacles-packages": [],
+  "notification":{
+    "global_info": true,
+    "price_alerts": true,
+    "trades": true,
+    "type": []
+  },
+  "trader":{
+    "enabled": false,
+    "risk": 0.5,
+    "reference_market": "BTC",
+    "mode": "DailyTradingMode"
+  },
+  "trader_simulator":{
+    "enabled": true,
+    "risk": 0.5,
+    "starting_portfolio": {
+      "BTC": 10,
+      "USDT": 1000
+    }
+  }
+}

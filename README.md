@@ -1,11 +1,11 @@
-# OctoBot-Tentacles [![Code Factor](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/badge)](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/overview/dev)
-This repository contains default evaluators, strategies and utilitary modules for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
+# OctoBot-Tentacles [![Build Status](https://api.travis-ci.org/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.org/Drakkar-Software/OctoBot-Tentacles) [![Code Factor](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/badge)](https://www.codefactor.io/repository/github/Drakkar-Software/OctoBot-Tentacles/overview/master)
+This repository contains default evaluators, strategies, utilitary modules and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
-Evaluators, utilitary modules and strategies in these tentacles (packages) are automatically installed on OctoBot when using the following command:
+Evaluators, utilitary modules, strategies and trading modes in this tentacles package are automatically installed on OctoBot when using the following command:
 ```bash
 python start.py -p install all
 ```
 
-Modules in this tentacles are installed in the **Default** folder of the corresponding module types
+Modules in this tentacles are installed in the **Default** folder of the associated module types
 
 To add custom tentacles to your OctoBot, see the [dedicated wiki page](https://github.com/Drakkar-Software/OctoBot/wiki/Customize-your-OctoBot).

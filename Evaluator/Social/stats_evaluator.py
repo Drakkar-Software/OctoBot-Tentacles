@@ -48,7 +48,7 @@ class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
 
         # compute bollinger bands
         self.eval_note = AdvancedManager.get_class(self.config, StatisticAnalysis).analyse_recent_trend_changes(
-            interest_over_time_df[self.symbol], numpy.sqrt)
+            interest_over_time_df[self.symbol].astype('float64').values, numpy.sqrt)
 
     def run(self):
         pass

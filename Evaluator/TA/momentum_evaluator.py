@@ -6,13 +6,13 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "TA",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "tests":["test_adx_TA_evaluator", "test_bollinger_bands_momentum_TA_evaluator", "test_macd_TA_evaluator", "test_rsi_TA_evaluator"]
 }
 """
 
 import math
 
-import talib
 import tulipy
 
 from config.cst import *

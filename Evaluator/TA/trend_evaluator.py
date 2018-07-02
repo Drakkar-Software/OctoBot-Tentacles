@@ -6,14 +6,14 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "TA",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "tests":["test_double_moving_averages_TA_evaluator"]
 }
 """
 import tulipy
 
 from config.cst import *
 import numpy
-import talib
 import math
 
 from evaluator.TA.TA_evaluator import TrendEvaluator

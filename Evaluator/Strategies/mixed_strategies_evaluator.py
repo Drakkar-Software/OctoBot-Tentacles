@@ -6,14 +6,14 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "Strategies",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": ["instant_fluctuations_evaluator", "news_evaluator"]
 }
 """
 
 from config.cst import *
-from evaluator.RealTime import InstantFluctuationsEvaluator
-from evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
 from evaluator.Strategies import MixedStrategiesEvaluator
+from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
+from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
 
 from tools.evaluators_util import check_valid_eval_note
 
