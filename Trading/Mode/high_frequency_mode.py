@@ -6,7 +6,8 @@ $tentacle_description: {
     "type": "Trading",
     "subtype": "Mode",
     "version": "1.0.0",
-    "requirements": ["high_frequency_strategy_evaluator"]
+    "requirements": ["high_frequency_strategy_evaluator"],
+    "developing": true
 }
 """
 from config.cst import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
