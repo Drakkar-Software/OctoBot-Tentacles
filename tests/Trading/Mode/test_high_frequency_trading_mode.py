@@ -16,6 +16,7 @@ from trading.trader.trader_simulator import TraderSimulator
 from evaluator.Updaters.symbol_time_frames_updater import SymbolTimeFramesDataUpdaterThread
 from evaluator.evaluator_threads_manager import EvaluatorThreadsManager
 from tentacles.Evaluator.Strategies.Default.high_frequency_strategy_evaluator import HighFrequencyStrategiesEvaluator
+from octobot import OctoBot
 
 
 def _get_tools():
@@ -52,9 +53,11 @@ def _get_tools():
     exchange_traders2[exchange_inst.get_name()] = trader_inst2
     symbol_evaluator.set_trader_simulators(exchange_traders)
     symbol_evaluator.set_traders(exchange_traders2)
+    trading_mode_inst = OctoBot.get_trading_mode_class(config)(config, exchange_inst)
     _ = EvaluatorThreadsManager(config, time_frame, symbol_time_frame_updater_thread,
-                                symbol_evaluator, exchange_inst, [])
-    trading_mode = HighFrequencyMode(config, symbol_evaluator, exchange_inst)
+                                symbol_evaluator, exchange_inst, trading_mode_inst, [])
+    trading_mode = HighFrequencyMode(config, exchange_inst)
+    trading_mode.add_symbol_evaluator(symbol_evaluator)
 
     return config, exchange_inst, trader_inst, symbol, trading_mode
 
@@ -64,13 +67,13 @@ def test_trading_mode_init():
 
     # default simulator fees = 0.001
     assert trading_mode.nb_creators == 5
-    assert len(trading_mode.get_creators()) == trading_mode.nb_creators
-    assert len(trading_mode.get_deciders()) == 1
+    assert len(trading_mode.get_creators(symbol)) == trading_mode.nb_creators
+    assert len(trading_mode.get_deciders(symbol)) == 1
 
 
 def test_creator_init():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    creator = trading_mode.get_creator(trading_mode.get_only_creator_key())
+    creator = trading_mode.get_creator(symbol, trading_mode.get_only_creator_key(symbol))
     portfolio = trader.get_portfolio()
     sub_portfolio = creator.get_sub_portfolio()
     assert sub_portfolio
@@ -84,7 +87,7 @@ def test_creator_create_allin_order():
     limit_cost = market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value]
     min_cost = limit_cost[Ecmsc.LIMITS_COST_MIN.value]
 
-    creator = trading_mode.get_creator(trading_mode.get_only_creator_key())
+    creator = trading_mode.get_creator(symbol, trading_mode.get_only_creator_key(symbol))
     portfolio = trader.get_portfolio()
     initial_portfolio = copy.deepcopy(portfolio.portfolio)
     sub_portfolio = creator.get_sub_portfolio()
@@ -117,7 +120,7 @@ def test_creator_create_allin_order():
 
 def test_decider_init():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    decider = trading_mode.get_only_decider_key()
+    decider = trading_mode.get_only_decider_key(symbol)
     assert decider
     assert len(decider.blocked_creators) == 0
     assert len(decider.filled_creators) == trading_mode.nb_creators
@@ -126,9 +129,9 @@ def test_decider_init():
 
 def test_set_final_eval():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    strategy = trading_mode.get_strategy_instances_by_classes()[HighFrequencyStrategiesEvaluator] = \
+    strategy = trading_mode.get_strategy_instances_by_classes(symbol)[HighFrequencyStrategiesEvaluator] = \
         HighFrequencyStrategiesEvaluator()
-    decider = trading_mode.get_only_decider_key()
+    decider = trading_mode.get_only_decider_key(symbol)
 
     strategy.eval_note = 1
     decider.set_final_eval()
@@ -149,7 +152,7 @@ def test_set_final_eval():
 
 def test_get_required_difference_from_risk():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    decider = trading_mode.get_only_decider_key()
+    decider = trading_mode.get_only_decider_key(symbol)
 
     trader.set_risk(0.1)
 
@@ -201,7 +204,7 @@ def test_get_required_difference_from_risk():
 
 def test_create_state():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    decider = trading_mode.get_only_decider_key()
+    decider = trading_mode.get_only_decider_key(symbol)
     init_state = decider.state
 
     decider.final_eval = 0
@@ -216,7 +219,7 @@ def test_create_state():
     assert len(decider.filled_creators) == 5
 
     # now set beneficial bought price
-    for creator in trading_mode.get_creators().values():
+    for creator in trading_mode.get_creators(symbol).values():
         creator.set_market_value(1)
     decider.create_state()
     assert decider.state == EvaluatorStates.VERY_SHORT
@@ -224,7 +227,7 @@ def test_create_state():
     assert len(decider.filled_creators) == 0
 
     decider.final_eval = -0.005
-    for i, _ in enumerate(trading_mode.get_creators()):
+    for i, _ in enumerate(trading_mode.get_creators(symbol)):
         decider.create_state()
         assert decider.state == EvaluatorStates.VERY_LONG
         assert len(decider.pending_creators) == 5-(i+1)
@@ -232,7 +235,7 @@ def test_create_state():
 
 def test_create_state_with_block_creators():
     config, exchange, trader, symbol, trading_mode = _get_tools()
-    decider = trading_mode.get_only_decider_key()
+    decider = trading_mode.get_only_decider_key(symbol)
     trader.set_risk(0.1)
 
     decider.final_eval = -0.005
