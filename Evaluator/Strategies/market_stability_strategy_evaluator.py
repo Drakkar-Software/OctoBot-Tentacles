@@ -13,6 +13,7 @@ $tentacle_description: {
 from config.cst import TimeFrames, EvaluatorMatrixTypes
 
 from evaluator.Strategies import MixedStrategiesEvaluator
+from tentacles.Evaluator.RealTime import InstantVolatilityEvaluator
 
 
 # WARNING : THIS STRATEGY MUST BE USED WITH A WEBSOCKET

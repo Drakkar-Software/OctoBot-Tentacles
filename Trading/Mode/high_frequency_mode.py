@@ -13,6 +13,7 @@ $tentacle_description: {
 """
 from config.cst import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
 from config.cst import ExchangeConstantsMarketStatusColumns as Ecmsc
+from tentacles.Evaluator.Strategies import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreatorWithBot
@@ -22,46 +23,63 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 class HighFrequencyMode(AbstractTradingMode):
 
-    def __init__(self, config, symbol_evaluator, exchange):
-        super().__init__(config, symbol_evaluator, exchange)
-
-        trader_simulator = symbol_evaluator.get_trader_simulator(exchange)
-        trader = symbol_evaluator.get_trader(exchange)
+    def __init__(self, config, exchange):
+        super().__init__(config, exchange)
         self.nb_creators = 0
+        self.simulated_creators = {}
+        self.real_creators = {}
 
-        self.init_nb_creator_from_exchange(exchange)
+    def create_deciders(self, symbol, symbol_evaluator):
+        trader_simulator = symbol_evaluator.get_trader_simulator(self.exchange)
+        trader = symbol_evaluator.get_trader(self.exchange)
 
         if trader_simulator.is_enabled():
-            simulated_creators = []
+            self.add_decider(symbol,
+                             HighFrequencyModeDecider(self,
+                                                      symbol_evaluator,
+                                                      self.exchange,
+                                                      trader_simulator,
+                                                      self.simulated_creators[symbol]))
+        if trader.is_enabled():
+            self.add_decider(symbol, HighFrequencyModeDecider(self,
+                                                              symbol_evaluator,
+                                                              self.exchange,
+                                                              trader,
+                                                              self.real_creators[symbol]))
+
+    def create_creators(self, symbol, symbol_evaluator):
+        trader_simulator = symbol_evaluator.get_trader_simulator(self.exchange)
+        trader = symbol_evaluator.get_trader(self.exchange)
+
+        self.init_nb_creator_from_exchange(symbol, self.exchange)
+
+        if trader_simulator.is_enabled():
+            self.simulated_creators[symbol] = []
             # create new creators --> simulation
             for _ in range(0, self.nb_creators):
-                simulated_creators.append(self.add_creator(HighFrequencyModeCreator(self, trader_simulator)))
-
-            self.add_decider(
-                HighFrequencyModeDecider(self, symbol_evaluator, exchange, trader_simulator, simulated_creators))
+                self.simulated_creators[symbol].append(
+                    self.add_creator(symbol, HighFrequencyModeCreator(self, trader_simulator)))
 
         if trader.is_enabled():
-            real_creators = []
+            self.real_creators[symbol] = []
             # create new creators --> real
             for _ in range(0, self.nb_creators):
-                real_creators.append(self.add_creator(HighFrequencyModeCreator(self, trader)))
+                self.real_creators[symbol].append(self.add_creator(symbol, HighFrequencyModeCreator(self, trader)))
 
-            self.add_decider(HighFrequencyModeDecider(self, symbol_evaluator, exchange, trader, real_creators))
-
-    def init_nb_creator_from_exchange(self, exchange):
+    def init_nb_creator_from_exchange(self, symbol, exchange):
         # low fees => can have a lot of creators (more trades)
         # high fees => less creators (decider will also need a bigger price move to trigger a trade)
 
-        exchange_fees = max(exchange.get_fees(self.symbol))
-        max_creators = (5, 0.001)    # fees <= 0.1% (0.001)
-        min_creators = (2, 0.01)    # fees >= 1% (0.01)
+        exchange_fees = max(exchange.get_fees(symbol))
+        max_creators = (5, 0.001)  # fees <= 0.1% (0.001)
+        min_creators = (2, 0.01)  # fees >= 1% (0.01)
 
         if exchange_fees <= max_creators[1]:
             self.nb_creators = max_creators[0]
         elif exchange_fees >= min_creators[1]:
             self.nb_creators = min_creators[0]
         else:
-            if exchange_fees <= min_creators[1]/2:
+            if exchange_fees <= min_creators[1] / 2:
                 self.nb_creators = 4
             else:
                 self.nb_creators = 3
@@ -137,7 +155,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         self._update_available_creators()
 
     def set_final_eval(self):
-        strategy = self.trading_mode.get_strategy_instances_by_classes()[HighFrequencyStrategiesEvaluator]
+        strategy = self.trading_mode.get_strategy_instances_by_classes(self.symbol)[HighFrequencyStrategiesEvaluator]
         strategy_eval = strategy.get_eval_note()
 
         if check_valid_eval_note(strategy_eval):
@@ -157,7 +175,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
             # return between sqrt(x) (pow(0.5)) (for risk=1) and x*sqrt(x) (pow(1.5)) (for risk=0)
             # difference according to risk
             power = 1.5 - (self.trader.get_risk())
-            return pow(nb_blocked_creators+1, power)
+            return pow(nb_blocked_creators + 1, power)
 
     def create_state(self):
         if self.final_eval > self.SHORT_THRESHOLD:
@@ -169,16 +187,16 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         self._update_available_creators()
 
     def _creator_can_sell(self, creator_key, current_price):
-        creator = self.trading_mode.get_creator(creator_key)
-        current_sell_value = current_price*creator.get_portfolio().get_currency_portfolio(self.currency)
+        creator = self.trading_mode.get_creator(self.symbol, creator_key)
+        current_sell_value = current_price * creator.get_portfolio().get_currency_portfolio(self.currency)
         value_when_bought = creator.get_market_value()
         if current_sell_value and value_when_bought:
-            return current_sell_value/value_when_bought >= self.SHORT_THRESHOLD*2
+            return current_sell_value / value_when_bought >= self.SHORT_THRESHOLD * 2
         else:
             return False
 
     def _register_creator_market_value(self, creator_key):
-        creator = self.trading_mode.get_creator(creator_key)
+        creator = self.trading_mode.get_creator(self.symbol, creator_key)
         creator.set_market_value(creator.get_portfolio().get_currency_portfolio(self.market))
 
     def _set_state(self, new_state):
@@ -199,7 +217,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
 
     def _update_available_creators(self):
         for order_creator_key in self.get_creators():
-            order_creator = self.trading_mode.get_creators()[order_creator_key]
+            order_creator = self.trading_mode.get_creators(self.symbol)[order_creator_key]
 
             # force portfolio update
             order_creator_pf = order_creator.get_portfolio()

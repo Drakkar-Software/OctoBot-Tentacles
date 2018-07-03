@@ -22,11 +22,14 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
-    def __init__(self, config, symbol_evaluator, exchange):
-        super().__init__(config, symbol_evaluator, exchange)
+    def __init__(self, config, exchange):
+        super().__init__(config, exchange)
 
-        self.add_creator(DailyTradingModeCreator(self))
-        self.add_decider(DailyTradingModeDecider(self, symbol_evaluator, exchange))
+    def create_deciders(self, symbol, symbol_evaluator):
+        self.add_decider(symbol, DailyTradingModeDecider(self, symbol_evaluator, self.exchange))
+
+    def create_creators(self, symbol, symbol_evaluator):
+        self.add_creator(symbol, DailyTradingModeCreator(self))
 
 
 class DailyTradingModeCreator(AbstractTradingModeCreator):
@@ -292,4 +295,4 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                         self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
                     
                 # call orders creation method
-                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key())
+                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))
