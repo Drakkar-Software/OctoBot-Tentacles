@@ -295,4 +295,4 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                         self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
                     
                 # call orders creation method
-                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key())
+                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))

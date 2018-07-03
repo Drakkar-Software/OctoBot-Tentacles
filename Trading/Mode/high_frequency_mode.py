@@ -155,7 +155,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         self._update_available_creators()
 
     def set_final_eval(self):
-        strategy = self.trading_mode.get_strategy_instances_by_classes()[HighFrequencyStrategiesEvaluator]
+        strategy = self.trading_mode.get_strategy_instances_by_classes(self.symbol)[HighFrequencyStrategiesEvaluator]
         strategy_eval = strategy.get_eval_note()
 
         if check_valid_eval_note(strategy_eval):
@@ -187,7 +187,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         self._update_available_creators()
 
     def _creator_can_sell(self, creator_key, current_price):
-        creator = self.trading_mode.get_creator(creator_key)
+        creator = self.trading_mode.get_creator(self.symbol, creator_key)
         current_sell_value = current_price * creator.get_portfolio().get_currency_portfolio(self.currency)
         value_when_bought = creator.get_market_value()
         if current_sell_value and value_when_bought:
@@ -196,7 +196,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
             return False
 
     def _register_creator_market_value(self, creator_key):
-        creator = self.trading_mode.get_creator(creator_key)
+        creator = self.trading_mode.get_creator(self.symbol, creator_key)
         creator.set_market_value(creator.get_portfolio().get_currency_portfolio(self.market))
 
     def _set_state(self, new_state):
@@ -217,7 +217,7 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
 
     def _update_available_creators(self):
         for order_creator_key in self.get_creators():
-            order_creator = self.trading_mode.get_creators()[order_creator_key]
+            order_creator = self.trading_mode.get_creators(self.symbol)[order_creator_key]
 
             # force portfolio update
             order_creator_pf = order_creator.get_portfolio()
