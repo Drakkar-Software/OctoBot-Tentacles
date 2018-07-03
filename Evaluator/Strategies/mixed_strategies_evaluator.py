@@ -13,6 +13,8 @@ $tentacle_description: {
 
 from config.cst import *
 from evaluator.Strategies import MixedStrategiesEvaluator
+from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
+from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
 from tools.evaluators_util import check_valid_eval_note
 
 
