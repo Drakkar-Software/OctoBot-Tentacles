@@ -32,9 +32,9 @@ def _get_tools():
     symbol_evaluator.set_traders(exchange_traders2)
     symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()] = EvaluatorCreator.create_strategies_eval_list(config)
 
-    trading_mode = DailyTradingMode(config, symbol_evaluator, exchange_inst)
-    final_evaluator = trading_mode.get_only_decider_key()
-    symbol_evaluator.trading_mode_instances[exchange_inst.get_name()] = trading_mode
+    trading_mode = DailyTradingMode(config, exchange_inst)
+    trading_mode.add_symbol_evaluator(symbol_evaluator)
+    final_evaluator = trading_mode.get_only_decider_key(symbol)
 
     trader_inst.portfolio.portfolio["USDT"] = {
         Portfolio.TOTAL: 2000,

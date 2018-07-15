@@ -37,8 +37,8 @@ class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
         key_words = [self.symbol]
         try:
             # looks like only 1 and 3 months are working ...
-            time_frame = "today " + str(self.social_config[STATS_EVALUATOR_HISTORY_TIME]) + "-m"
-            # Attention apparement limite de request / h assez faible
+            time_frame = f"today {str(self.social_config[STATS_EVALUATOR_HISTORY_TIME])}-m"
+            # Careful, apparently hourly rate limit is low
             self.pytrends.build_payload(kw_list=key_words, cat=0, timeframe=time_frame, geo='', gprop='')
         except ResponseError as e:
             self.logger.warn(str(e))

@@ -47,17 +47,13 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
         return self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TWITTER][CONFIG_SERVICE_INSTANCE]
 
     def _print_tweet(self, tweet_text, tweet_url, note, count=""):
-        self.logger.debug("Current note : {0} | {1} : {2} : Link: {3} Text : {4}".format(note,
-                                                                               count,
-                                                                               self.symbol,
-                                                                               tweet_url,
-                                                                               DecoderEncoder.encode_into_bytes(
-                                                                                   tweet_text)))
+        self.logger.debug(f"Current note : {note} | {count} : {self.symbol} : Link: {tweet_url} Text : "
+                          f"{DecoderEncoder.encode_into_bytes(tweet_text)}")
 
     def receive_notification_data(self, data):
         self.count += 1
         note = self.get_tweet_sentiment(data[CONFIG_TWEET], data[CONFIG_TWEET_DESCRIPTION])
-        tweet_url = "https://twitter.com/ProducToken/status/{0}".format(data["tweet"]["id"])
+        tweet_url = f"https://twitter.com/ProducToken/status/{data['tweet']['id']}"
         if note != START_PENDING_EVAL_NOTE:
             self._print_tweet(data[CONFIG_TWEET_DESCRIPTION], tweet_url, note, str(self.count))
         self._check_eval_note(note)
