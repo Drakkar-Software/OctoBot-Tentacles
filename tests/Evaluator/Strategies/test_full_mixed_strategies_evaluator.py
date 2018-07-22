@@ -19,16 +19,20 @@ class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     def test_slow_downtrend(strategy_tester):
-        strategy_tester.run_test_slow_downtrend(-12)
+        strategy_tester.run_test_slow_downtrend(-12, -21, -7)
 
     @staticmethod
     def test_sharp_downtrend(strategy_tester):
-        strategy_tester.run_test_sharp_downtrend(-18.5)
+        strategy_tester.run_test_sharp_downtrend(-15)
 
     @staticmethod
     def test_flat_markets(strategy_tester):
-        strategy_tester.run_test_flat_markets(-5.5, -2.5)
+        strategy_tester.run_test_flat_markets(-5, -2, 7)
 
     @staticmethod
     def test_slow_uptrend(strategy_tester):
-        strategy_tester.run_test_slow_uptrend(-6.5)
+        strategy_tester.run_test_slow_uptrend(-5, -4)
+
+    @staticmethod
+    def test_sharp_uptrend(strategy_tester):
+        strategy_tester.run_test_sharp_uptrend(6.5, 2)
