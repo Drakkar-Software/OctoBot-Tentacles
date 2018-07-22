@@ -16,3 +16,15 @@ class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
     @staticmethod
     def test_default_run(strategy_tester):
         strategy_tester.run_test_default_run(-12)
+
+    @staticmethod
+    def test_slow_downtrend(strategy_tester):
+        strategy_tester.run_test_slow_downtrend(-12)
+
+    @staticmethod
+    def test_sharp_downtrend(strategy_tester):
+        strategy_tester.run_test_sharp_downtrend(-18.5)
+
+    @staticmethod
+    def test_flat_markets(strategy_tester):
+        strategy_tester.run_test_flat_markets(-5.5, 1.5)
