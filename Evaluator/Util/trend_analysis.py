@@ -95,14 +95,17 @@ class TrendAnalysis(AbstractUtil):
                 if threshold_crossing_indexes[-1] == index - current_move_size:
                     current_move_size += 1
                 else:
-                    threshold_crossing_indexes.append(sub_threshold_indexes[i-1])
-                    threshold_crossing_indexes.append(index)
+                    if sub_threshold_indexes[i-1] not in threshold_crossing_indexes:
+                        threshold_crossing_indexes.append(sub_threshold_indexes[i-1])
+                    if index not in threshold_crossing_indexes:
+                        threshold_crossing_indexes.append(index)
                     current_move_size = 1
         # add last index if data_frame ends above threshold and last threshold_crossing_indexes inferior
         # to data_frame size
         if len(sub_threshold_indexes) > 0 \
                 and sub_threshold_indexes[-1] < len(data) \
-                and data[-1] > threshold:
+                and data[-1] > threshold \
+                and sub_threshold_indexes[-1]+1 not in threshold_crossing_indexes:
             threshold_crossing_indexes.append(sub_threshold_indexes[-1]+1)
 
         return threshold_crossing_indexes

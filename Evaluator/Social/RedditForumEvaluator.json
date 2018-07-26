@@ -6,6 +6,7 @@
     "ICON": ["icon"],
     "NANO": ["nanocurrency"],
     "VeChain": ["Vechain"],
+    "VeChain Thor": ["Vechain"],
     "Substratum": ["SubstratumNetwork"],
     "Ethos": ["ethos_io"],
     "Ontology": ["OntologyNetwork"],

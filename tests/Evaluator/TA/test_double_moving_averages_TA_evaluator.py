@@ -31,13 +31,13 @@ class TestDoubleMovingAveragesTAEvaluator(AbstractTATest):
 
     @staticmethod
     def test_reaction_to_over_bought_then_dip(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_over_bought_then_dip(0, 0.4, 0.7, 0.6, -0.9, -0.1)
+        evaluator_tester.run_test_reactions_to_over_bought_then_dip(0, 0.4, 0.7, 0.6, -0.88, -0.1)
 
     @staticmethod
     def test_reaction_to_flat_trend(evaluator_tester):
         evaluator_tester.run_test_reactions_to_flat_trend(
             # eval_start_move_ending_up_in_a_rise,
-            0.5,
+            0.45,
             # eval_reaches_flat_trend, eval_first_micro_up_p1, eval_first_micro_up_p2,
             1, 0.65, 0.2,
             # eval_micro_down1, eval_micro_up1, eval_micro_down2, eval_micro_up2,

@@ -26,8 +26,9 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 
     def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
-        if len(self.data) > 1:
-            time_units = [5, 10]
+        long_period_length = 10
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > long_period_length:
+            time_units = [5, long_period_length]
             current_moving_average = tulipy.sma(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 2)
             results = [self.get_moving_average_analysis(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
                                                         current_moving_average,
