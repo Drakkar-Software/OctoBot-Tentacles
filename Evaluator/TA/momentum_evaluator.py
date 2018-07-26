@@ -29,8 +29,9 @@ class RSIMomentumEvaluator(MomentumEvaluator):
 
     # TODO : temp analysis
     def eval_impl(self):
-        if len(self.data):
-            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=14)
+        period_length = 14
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > period_length:
+            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=period_length)
 
             if len(rsi_v) and not math.isnan(rsi_v[-1]):
                 long_trend = TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
@@ -60,9 +61,11 @@ class BBMomentumEvaluator(MomentumEvaluator):
 
     def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
-        if len(self.data):
+        period_length = 20
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) >= period_length:
             # compute bollinger bands
-            lower_band, middle_band, upper_band = tulipy.bbands(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 20, 2)
+            lower_band, middle_band, upper_band = tulipy.bbands(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                                                period_length, 2)
 
             # if close to lower band => low value => bad,
             # therefore if close to middle, value is keeping up => good
@@ -113,14 +116,15 @@ class ADXMomentumEvaluator(MomentumEvaluator):
     # idea: adx > 30 => strong trend, < 20 => trend change to come
     def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
-        if len(self.data):
+        period_length = 14
+        if len(self.data[PriceIndexes.IND_PRICE_HIGH.value]) > period_length + 10:
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
             adx = tulipy.adx(self.data[PriceIndexes.IND_PRICE_HIGH.value],
                              self.data[PriceIndexes.IND_PRICE_LOW.value],
                              self.data[PriceIndexes.IND_PRICE_CLOSE.value],
-                             14)
+                             period_length)
             instant_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 2)
             slow_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 20)
             adx = DataUtil.drop_nan(adx)
@@ -234,15 +238,18 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
     def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
-        if len(self.data):
-            macd, macd_signal, macd_hist = tulipy.macd(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 12, 26, 9)
+        long_period_length = 26
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) >= long_period_length:
+            macd, macd_signal, macd_hist = tulipy.macd(self.data[PriceIndexes.IND_PRICE_CLOSE.value], 12,
+                                                       long_period_length, 9)
 
             # on macd hist => M pattern: bearish movement, W pattern: bullish movement
             #                 max on hist: optimal sell or buy
             macd_hist = DataUtil.drop_nan(macd_hist)
             zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(macd_hist, 0)
             last_index = len(macd_hist) - 1
-            pattern, start_index, end_index = PatternAnalyser.find_pattern(macd_hist, zero_crossing_indexes, last_index)
+            pattern, start_index, end_index = PatternAnalyser.find_pattern(macd_hist, zero_crossing_indexes,
+                                                                           last_index)
 
             if pattern != PatternAnalyser.UNKNOWN_PATTERN:
 

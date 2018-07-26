@@ -45,8 +45,8 @@ class TestMACDTAEvaluator(AbstractTATest):
             # eval_micro_down3, eval_back_normal3, eval_micro_down4, eval_back_normal4,
             -0.25, -0.1, -0.1, 0.2,
             # eval_micro_down5, eval_back_up5, eval_micro_up6, eval_back_down6,
-            -0.5, -0.6, 0.25, 0.35,
+            -0.5, -0.6, 0.24, 0.35,
             # eval_back_normal6, eval_micro_down7, eval_back_up7, eval_micro_down8,
-            0.5, -0.1, -0.4, -0.3,
+            0.49, -0.1, -0.4, -0.26,
             # eval_back_up8, eval_micro_down9, eval_back_up9
             -0.31, -0.7, 0.1)
