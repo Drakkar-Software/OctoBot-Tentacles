@@ -27,7 +27,11 @@ class TrendAnalysis(AbstractUtil):
 
         # Get averages
         for average_to_use in averages_to_use:
-            averages.append(np.mean(data[-average_to_use:]))
+            data_to_mean = data[-average_to_use:]
+            if len(data_to_mean):
+                averages.append(np.mean(data_to_mean))
+            else:
+                averages.append(0)
 
         for a in range(0, len(averages) - 1):
             if averages[a] - averages[a + 1] > 0:

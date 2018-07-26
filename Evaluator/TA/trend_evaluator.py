@@ -34,7 +34,10 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
                                                         current_moving_average,
                                                         i)
                        for i in time_units]
-            self.eval_note = numpy.mean(results)
+            if len(results):
+                self.eval_note = numpy.mean(results)
+            else:
+                self.eval_note = START_PENDING_EVAL_NOTE
 
             if self.eval_note == 0:
                 self.eval_note = START_PENDING_EVAL_NOTE
