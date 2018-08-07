@@ -39,4 +39,4 @@ class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     def test_up_then_down(strategy_tester):
-        strategy_tester.run_test_up_then_down(-11)
+        strategy_tester.run_test_up_then_down(-11.5)

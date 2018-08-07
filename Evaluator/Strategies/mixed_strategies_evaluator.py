@@ -19,7 +19,6 @@ from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
 from tools.evaluators_util import check_valid_eval_note
 
 
-# TEMP strategy
 class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
     def __init__(self):
         super().__init__()
