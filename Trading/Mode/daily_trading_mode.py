@@ -23,6 +23,9 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
+
+    DESCRIPTION = "DailyTradingMode is a low risk trading mode adapted to flat markets."
+
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
 
