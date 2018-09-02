@@ -20,6 +20,10 @@ from tools.evaluators_util import check_valid_eval_note
 
 
 class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
+
+    DESCRIPTION = "FullMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
+        "to make the strategy evaluation"
+
     def __init__(self):
         super().__init__()
         self.create_divergence_analyser()
