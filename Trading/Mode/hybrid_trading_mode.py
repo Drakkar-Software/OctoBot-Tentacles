@@ -7,6 +7,7 @@ $tentacle_description: {
     "subtype": "Mode",
     "version": "1.0.0",
     "requirements": ["daily_trading_mode", "high_frequency_mode", "market_stability_strategy_evaluator"],
+    "config_files": ["HybridTradingMode.json"],
     "developing": true
 }
 """

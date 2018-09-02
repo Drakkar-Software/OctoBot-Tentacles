@@ -7,6 +7,7 @@ $tentacle_description: {
     "subtype": "Mode",
     "version": "1.0.0",
     "requirements": [],
+    "config_files": ["ObjectiveMode.json"],
     "developing": true
 }
 """
