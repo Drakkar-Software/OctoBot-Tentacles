@@ -1,7 +1,7 @@
 import copy
 import ccxt
 
-from config.cst import EvaluatorStates
+from config.cst import EvaluatorStates, FeePropertyColumns
 from tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit import check_order_limits, check_linked_order, \
     check_orders, check_portfolio, fill_orders
 from tests.test_utils.config import load_test_config
@@ -152,7 +152,7 @@ def test_valid_create_new_order():
     assert order.status == OrderStatus.OPEN
     assert order.exchange == exchange
     assert order.trader == trader
-    assert order.currency_total_fees == 0
+    assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
     assert order.origin_quantity == 7.6
@@ -179,7 +179,7 @@ def test_valid_create_new_order():
     assert order.status == OrderStatus.OPEN
     assert order.exchange == exchange
     assert order.trader == trader
-    assert order.currency_total_fees == 0
+    assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
     assert order.origin_quantity == 0.21892522
@@ -205,7 +205,7 @@ def test_valid_create_new_order():
     assert order.status == OrderStatus.OPEN
     assert order.exchange == exchange
     assert order.trader == trader
-    assert order.currency_total_fees == 0
+    assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
     assert order.origin_quantity == 0.03540179
@@ -229,7 +229,7 @@ def test_valid_create_new_order():
     assert order.status == OrderStatus.OPEN
     assert order.exchange == exchange
     assert order.trader == trader
-    assert order.currency_total_fees == 0
+    assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
     assert order.origin_quantity == 2.4
@@ -314,7 +314,7 @@ def test_split_create_new_order():
     assert adapted_order.status == OrderStatus.OPEN
     assert adapted_order.exchange == exchange
     assert adapted_order.trader == trader
-    assert adapted_order.currency_total_fees == 0
+    assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
     assert adapted_order.origin_quantity == 51133425.486746
@@ -338,7 +338,7 @@ def test_split_create_new_order():
         assert order.status == adapted_order.status
         assert order.exchange == adapted_order.exchange
         assert order.trader == adapted_order.trader
-        assert order.currency_total_fees == adapted_order.currency_total_fees
+        assert order.fee == adapted_order.fee
         assert order.market_total_fees == adapted_order.market_total_fees
         assert order.filled_price == adapted_order.filled_price
         assert order.origin_quantity == 142886657.52532542
@@ -374,7 +374,7 @@ def test_split_create_new_order():
     assert adapted_order.status == OrderStatus.OPEN
     assert adapted_order.exchange == exchange
     assert adapted_order.trader == trader
-    assert adapted_order.currency_total_fees == 0
+    assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
     assert adapted_order.origin_quantity == 131640311622.76904
@@ -397,7 +397,7 @@ def test_split_create_new_order():
         assert order.status == adapted_order.status
         assert order.exchange == adapted_order.exchange
         assert order.trader == adapted_order.trader
-        assert order.currency_total_fees == adapted_order.currency_total_fees
+        assert order.fee == adapted_order.fee
         assert order.market_total_fees == adapted_order.market_total_fees
         assert order.filled_price == adapted_order.filled_price
         assert order.origin_quantity == 1000000000000.0

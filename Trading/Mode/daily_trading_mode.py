@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
@@ -12,7 +13,7 @@ $tentacle_description: {
 }
 """
 
-import logging
+from tools.logging.logging_util import get_logger
 
 from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
 from tools.evaluators_util import check_valid_eval_note
@@ -22,6 +23,9 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
+
+    DESCRIPTION = "DailyTradingMode is a low risk trading mode adapted to flat markets."
+
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
 
@@ -218,7 +222,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             return None
 
         except Exception as e:
-            logging.getLogger(self.__class__.__name__).error("Failed to create order : {0}".format(e))
+            get_logger(self.__class__.__name__).error("Failed to create order : {0}".format(e))
             return None
 
 
