@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "momentum_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
