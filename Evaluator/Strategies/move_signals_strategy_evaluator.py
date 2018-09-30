@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "move_signals_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
