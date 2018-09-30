@@ -2,12 +2,13 @@ import pytest
 
 from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
 from evaluator.Strategies import FullMixedStrategiesEvaluator
+from trading.trader.modes import DailyTradingMode
 
 
 @pytest.fixture()
 def strategy_tester():
     strategy_tester_instance = TestFullMixedStrategiesEvaluator()
-    strategy_tester_instance.init(FullMixedStrategiesEvaluator)
+    strategy_tester_instance.init(FullMixedStrategiesEvaluator, DailyTradingMode)
     return strategy_tester_instance
 
 

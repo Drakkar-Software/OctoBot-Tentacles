@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "momentum_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
@@ -12,6 +13,7 @@ $tentacle_description: {
 """
 
 import math
+import numpy
 
 import tulipy
 
@@ -275,3 +277,44 @@ class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
 
     def eval_impl(self):
         pass
+
+
+class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
+    def __init__(self):
+        super().__init__()
+
+    def eval_impl(self):
+        eval_proposition = START_PENDING_EVAL_NOTE
+        short_period = 35    # standard with klinger
+        long_period = 55     # standard with klinger
+        ema_signal_period = 13  # standard ema signal for klinger
+        kvo = tulipy.kvo(self.data[PriceIndexes.IND_PRICE_HIGH.value],
+                         self.data[PriceIndexes.IND_PRICE_LOW.value],
+                         self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                         self.data[PriceIndexes.IND_PRICE_VOL.value],
+                         short_period,
+                         long_period)
+        kvo = DataUtil.drop_nan(kvo)
+        if len(kvo) >= ema_signal_period:
+            kvo_ema = tulipy.ema(kvo, ema_signal_period)
+
+            ema_difference = kvo-kvo_ema
+
+            if len(ema_difference) > 1:
+                zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
+
+                current_difference = ema_difference[-1]
+                significant_move_threshhold = numpy.std(ema_difference)
+
+                if TrendAnalysis.peak_has_been_reached_already(ema_difference[zero_crossing_indexes[-1]:]):
+                    if abs(current_difference) > significant_move_threshhold:
+                        factor = 1
+                    else:
+                        factor = 0.5
+
+                    eval_proposition = current_difference*factor/(significant_move_threshhold)
+
+                    if abs(eval_proposition) > 1:
+                        eval_proposition = 1 if eval_proposition > 0 else -1
+
+        self.eval_note = eval_proposition
