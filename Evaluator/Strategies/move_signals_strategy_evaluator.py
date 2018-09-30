@@ -14,7 +14,7 @@ $tentacle_description: {
 
 from config.cst import *
 from evaluator.Strategies import MixedStrategiesEvaluator
-from tentacles.Evaluator.TA import KlingerOscillatorMomentumEvaluator, BBMomentumEvaluator
+from evaluator.TA import KlingerOscillatorMomentumEvaluator, BBMomentumEvaluator
 
 
 class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):

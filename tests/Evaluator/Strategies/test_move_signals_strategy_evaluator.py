@@ -7,12 +7,12 @@ from trading.trader.modes import SignalTradingMode
 
 @pytest.fixture()
 def strategy_tester():
-    strategy_tester_instance = TestMoveSignalsStrategiesEvaluator()
+    strategy_tester_instance = TestMoveSignalsStrategyEvaluator()
     strategy_tester_instance.init(MoveSignalsStrategyEvaluator, SignalTradingMode)
     return strategy_tester_instance
 
 
-class TestMoveSignalsStrategiesEvaluator(AbstractStrategyTest):
+class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
 
     @staticmethod
     def test_default_run(strategy_tester):
