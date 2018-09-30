@@ -59,7 +59,7 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         if self.something_is_happening and self.eval_note != START_PENDING_EVAL_NOTE:
             if abs(self.last_notification_eval - self.eval_note) >= self.MIN_TRIGGERING_DELTA:
                 self.last_notification_eval = self.eval_note
-                self.notify_evaluator_thread_managers(self.__class__.__name__)
+                self.notify_evaluator_thread_managers(self.__class__.__name__, force_TA_refresh=True)
             self.something_is_happening = False
         else:
             self.eval_note = START_PENDING_EVAL_NOTE
