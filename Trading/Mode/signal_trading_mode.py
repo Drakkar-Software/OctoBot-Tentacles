@@ -30,7 +30,21 @@ class SignalTradingMode(AbstractTradingMode):
 
 
 class SignalTradingModeCreator(DailyTradingModeCreator):
-    pass
+    def __init__(self, trading_mode):
+        super().__init__(trading_mode)
+
+        self.STOP_LOSS_ORDER_MAX_PERCENT = 0.99
+        self.STOP_LOSS_ORDER_MIN_PERCENT = 0.95
+
+        self.QUANTITY_MIN_PERCENT = 0.1
+        self.QUANTITY_MAX_PERCENT = 0.9
+
+        self.QUANTITY_MARKET_MIN_PERCENT = 0.5
+        self.QUANTITY_MARKET_MAX_PERCENT = 1
+        self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
+
+        self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
+        self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.99
 
 
 class SignalTradingModeDecider(DailyTradingModeDecider):
@@ -38,8 +52,8 @@ class SignalTradingModeDecider(DailyTradingModeDecider):
         super().__init__(trading_mode, symbol_evaluator, exchange)
 
         # If final_eval not is < X_THRESHOLD --> state = X
-        self.VERY_LONG_THRESHOLD = -0.9
-        self.LONG_THRESHOLD = -0.45
-        self.NEUTRAL_THRESHOLD = 0.45
-        self.SHORT_THRESHOLD = 0.9
+        self.VERY_LONG_THRESHOLD = -0.88
+        self.LONG_THRESHOLD = -0.4
+        self.NEUTRAL_THRESHOLD = 0.4
+        self.SHORT_THRESHOLD = 0.88
         self.RISK_THRESHOLD = 0.15

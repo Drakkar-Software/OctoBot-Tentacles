@@ -303,17 +303,19 @@ class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
                 zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
 
                 current_difference = ema_difference[-1]
-                significant_move_threshhold = numpy.std(ema_difference)
+                significant_move_threshold = numpy.std(ema_difference)
+
+                factor = 0.2
 
                 if TrendAnalysis.peak_has_been_reached_already(ema_difference[zero_crossing_indexes[-1]:]):
-                    if abs(current_difference) > significant_move_threshhold:
+                    if abs(current_difference) > significant_move_threshold:
                         factor = 1
                     else:
                         factor = 0.5
 
-                    eval_proposition = current_difference*factor/(significant_move_threshhold)
+                eval_proposition = current_difference*factor/significant_move_threshold
 
-                    if abs(eval_proposition) > 1:
-                        eval_proposition = 1 if eval_proposition > 0 else -1
+                if abs(eval_proposition) > 1:
+                    eval_proposition = 1 if eval_proposition > 0 else -1
 
         self.eval_note = eval_proposition
