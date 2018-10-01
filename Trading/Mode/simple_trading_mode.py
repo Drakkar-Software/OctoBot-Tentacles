@@ -8,7 +8,8 @@ $tentacle_description: {
     "version": "1.0.0",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["SimpleTradingMode.json"],
-    "tests":[]
+    "tests":[],
+    "developing": true
 }
 """
 
