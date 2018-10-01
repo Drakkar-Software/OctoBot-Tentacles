@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
@@ -213,6 +214,9 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
 
 
 class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
+    MARKET_PRICE = "regulated_market_price"
+    MARKET_RANGE = "regulated_market_range"
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
@@ -231,9 +235,21 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
         last_price = close_values[-1]
 
-        self.eval_note = 0
+        # TODO
+        # should sell
+        if last_price > self.specific_config[self.MARKET_PRICE] + self.specific_config[self.MARKET_RANGE]:
+            self.eval_note = 1
 
-        self.notify_evaluator_thread_managers(self.__class__.__name__)
+        # should buy
+        elif last_price < self.specific_config[self.MARKET_PRICE] + self.specific_config[self.MARKET_RANGE]:
+            self.eval_note = -1
+
+        else:
+            self.eval_note = 0
+
+        if self.last_eval_note != self.eval_note:
+            self.notify_evaluator_thread_managers(self.__class__.__name__)
+            self.last_eval_note = self.eval_note
 
     def set_default_config(self):
         super().set_default_config()

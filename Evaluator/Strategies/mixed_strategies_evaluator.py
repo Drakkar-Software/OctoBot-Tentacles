@@ -215,4 +215,4 @@ class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
     def finalize(self):
         if self.counter > 0:
-            self.eval_note += self.evaluation / self.counter
+            self.eval_note = self.evaluation / self.counter
