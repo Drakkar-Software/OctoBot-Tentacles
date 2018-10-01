@@ -32,7 +32,7 @@ class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):
                   "balance decisions). It is using KlingerOscillatorMomentumEvaluator (momentum evaluator) " \
                   "to know when to start a trade and BBMomentumEvaluator (bollinger momentum evaluator) " \
                   "to know how much weight giving to this trade. Uses InstantFluctuationsEvaluator to spot " \
-                  "sudden market changes within timeframes. Warning: Works only on liquid markets"
+                  "sudden market changes within timeframes. Warning: Works only on liquid markets."
 
     def __init__(self):
         super().__init__()
