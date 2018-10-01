@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",

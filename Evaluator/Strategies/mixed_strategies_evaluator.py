@@ -7,7 +7,7 @@ $tentacle_description: {
     "subtype": "Strategies",
     "version": "1.0.0",
     "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
-    "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json"],
+    "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json", "SimpleMixedStrategiesEvaluator.json"],
     "tests":["test_full_mixed_strategies_evaluator"]
 }
 """
@@ -20,9 +20,8 @@ from tools.evaluators_util import check_valid_eval_note
 
 
 class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
-
     DESCRIPTION = "FullMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
-        "to make the strategy evaluation"
+                  "to make the strategy evaluation"
 
     def __init__(self):
         super().__init__()
@@ -132,7 +131,7 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         # TODO : This is an example
         if InstantFluctuationsEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
             if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][
-                    InstantFluctuationsEvaluator.get_name()]):
+                                         InstantFluctuationsEvaluator.get_name()]):
                 self.instant_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][
                     InstantFluctuationsEvaluator.get_name()]
                 self.inc_instant_counter()
@@ -173,3 +172,47 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
         if category > 0:
             self.eval_note = eval_temp / category
+
+
+class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
+    DESCRIPTION = "SimpleMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
+                  "to make the strategy evaluation"
+
+    def __init__(self):
+        super().__init__()
+        self.create_divergence_analyser()
+        self.counter = 0
+        self.evaluation = 0
+
+    def set_matrix(self, matrix):
+        super().set_matrix(matrix)
+
+        # TODO temp with notification
+        # self.get_divergence()
+
+    def eval_impl(self) -> None:
+        self.counter = 0
+        self.evaluation = 0
+
+        for rt in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
+            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]):
+                self.evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]
+                self.counter += 1
+
+        for ta in self.matrix[EvaluatorMatrixTypes.TA]:
+            if self.matrix[EvaluatorMatrixTypes.TA][ta]:
+                for ta_time_frame in self.matrix[EvaluatorMatrixTypes.TA][ta]:
+                    if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame]):
+                        self.evaluation += self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame]
+                        self.counter += 1
+
+        for social in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
+            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][social]):
+                self.evaluation += self.matrix[EvaluatorMatrixTypes.SOCIAL][social]
+                self.counter += 1
+
+        self.finalize()
+
+    def finalize(self):
+        if self.counter > 0:
+            self.eval_note += self.evaluation / self.counter

@@ -42,6 +42,17 @@ class TrendAnalysis(AbstractUtil):
         return trend
 
     @staticmethod
+    def peak_has_been_reached_already(data):
+        if len(data) > 1:
+            min_val = min(data)
+            max_val = max(data)
+            current_val = data[-1] / 0.8
+            return current_val > min_val or current_val < max_val
+        else:
+            return False
+
+
+    @staticmethod
     # TODO
     def detect_divergence(data_frame, indicator_data_frame):
         pass
