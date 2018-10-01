@@ -218,7 +218,6 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
         self.last_candle_data = None
         self.last_eval_note = START_PENDING_EVAL_NOTE
         self.should_eval = True
-        self.regulated_market_config = None
 
     def _refresh_data(self):
         new_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
@@ -239,7 +238,6 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
     def set_default_config(self):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.3
-        self.regulated_market_config = super().get_evaluator_config()
 
     def _should_eval(self):
         return self.should_eval
