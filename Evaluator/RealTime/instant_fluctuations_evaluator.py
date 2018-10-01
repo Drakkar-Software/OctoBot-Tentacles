@@ -212,6 +212,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         return self.should_eval
 
 
+# This RT evaluator should be used on regulated markets like USDT/USD or TUSD/USDT...
 class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
