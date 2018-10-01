@@ -2,11 +2,13 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
     "version": "1.0.0",
-    "requirements": []
+    "requirements": [],
+    "config_files": ["InstantRegulatedMarketEvaluator.json"]
 }
 """
 import math
@@ -202,6 +204,54 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
                 self.eval_note = 0
 
         self.notify_evaluator_thread_managers(self.__class__.__name__)
+
+    def set_default_config(self):
+        super().set_default_config()
+        self.specific_config[CONFIG_REFRESH_RATE] = 0.3
+
+    def _should_eval(self):
+        return self.should_eval
+
+
+class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
+    MARKET_PRICE = "regulated_market_price"
+    MARKET_RANGE = "regulated_market_range"
+
+    def __init__(self, exchange, symbol):
+        super().__init__(exchange, symbol)
+        self.last_candle_data = None
+        self.last_eval_note = START_PENDING_EVAL_NOTE
+        self.should_eval = True
+
+    def _refresh_data(self):
+        new_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+                                                limit=20, return_list=False)
+        self.should_eval = not self._compare_data(new_data, self.last_candle_data)
+        self.last_candle_data = new_data
+
+    def eval_impl(self):
+        self.eval_note = 0
+        close_values = self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value]
+
+        last_price = close_values[-1]
+
+        # TODO
+        # should sell
+        if last_price > self.specific_config[self.MARKET_PRICE] + \
+                self.specific_config[self.MARKET_PRICE] * self.specific_config[self.MARKET_RANGE]:
+            self.eval_note = 1
+
+        # should buy
+        elif last_price < self.specific_config[self.MARKET_PRICE] - \
+                self.specific_config[self.MARKET_PRICE] * self.specific_config[self.MARKET_RANGE]:
+            self.eval_note = -1
+
+        else:
+            self.eval_note = 0
+
+        if self.last_eval_note != self.eval_note:
+            self.notify_evaluator_thread_managers(self.__class__.__name__)
+            self.last_eval_note = self.eval_note
 
     def set_default_config(self):
         super().set_default_config()
