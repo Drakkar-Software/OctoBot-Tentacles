@@ -237,11 +237,13 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
         # TODO
         # should sell
-        if last_price > self.specific_config[self.MARKET_PRICE] + self.specific_config[self.MARKET_RANGE]:
+        if last_price > self.specific_config[self.MARKET_PRICE] + \
+                self.specific_config[self.MARKET_PRICE] * self.specific_config[self.MARKET_RANGE]:
             self.eval_note = 1
 
         # should buy
-        elif last_price < self.specific_config[self.MARKET_PRICE] + self.specific_config[self.MARKET_RANGE]:
+        elif last_price < self.specific_config[self.MARKET_PRICE] - \
+                self.specific_config[self.MARKET_PRICE] * self.specific_config[self.MARKET_RANGE]:
             self.eval_note = -1
 
         else:
