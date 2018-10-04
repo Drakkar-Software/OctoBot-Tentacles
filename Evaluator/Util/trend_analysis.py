@@ -47,7 +47,10 @@ class TrendAnalysis(AbstractUtil):
             min_val = min(data)
             max_val = max(data)
             current_val = data[-1] / 0.8
-            return current_val > min_val or current_val < max_val
+            if current_val > 0:
+                return current_val < max_val
+            else:
+                return current_val > min_val
         else:
             return False
 

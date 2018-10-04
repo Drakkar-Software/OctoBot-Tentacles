@@ -16,28 +16,28 @@ class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
 
     @staticmethod
     def test_default_run(strategy_tester):
-        strategy_tester.run_test_default_run(-13)
+        strategy_tester.run_test_default_run(-8)
 
     @staticmethod
     def test_slow_downtrend(strategy_tester):
-        strategy_tester.run_test_slow_downtrend(-13, -5, -17.5, 0)
+        strategy_tester.run_test_slow_downtrend(-8, -7, -22, 0)
 
     @staticmethod
     def test_sharp_downtrend(strategy_tester):
-        strategy_tester.run_test_sharp_downtrend(-12, -18)
+        strategy_tester.run_test_sharp_downtrend(-9.5, -15)
 
     @staticmethod
     def test_flat_markets(strategy_tester):
-        strategy_tester.run_test_flat_markets(-3, -0.5, -15, -6)
+        strategy_tester.run_test_flat_markets(-2, 1, -13.5, 0.1)
 
     @staticmethod
     def test_slow_uptrend(strategy_tester):
-        strategy_tester.run_test_slow_uptrend(-4, 5)
+        strategy_tester.run_test_slow_uptrend(-2, 2.5)
 
     @staticmethod
     def test_sharp_uptrend(strategy_tester):
-        strategy_tester.run_test_sharp_uptrend(20, 14)
+        strategy_tester.run_test_sharp_uptrend(27, 14)
 
     @staticmethod
     def test_up_then_down(strategy_tester):
-        strategy_tester.run_test_up_then_down(-3.5)
+        strategy_tester.run_test_up_then_down(-6)
