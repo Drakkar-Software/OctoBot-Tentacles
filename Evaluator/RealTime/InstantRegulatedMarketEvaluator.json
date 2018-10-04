@@ -1,5 +1,4 @@
 {
   "regulated_market_price": 1,
-  "regulated_market_range": 0.003,
-  "refresh_rate_seconds": 60
+  "regulated_market_range": 0.003
 }
