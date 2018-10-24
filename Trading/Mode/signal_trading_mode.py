@@ -7,8 +7,7 @@ $tentacle_description: {
     "subtype": "Mode",
     "version": "1.0.0",
     "requirements": ["move_signals_strategy_evaluator", "daily_trading_mode"],
-    "config_files": ["SignalTradingMode.json"],
-    "developing": true
+    "config_files": ["SignalTradingMode.json"]
 }
 """
 from tentacles.Trading.Mode.Default.daily_trading_mode import DailyTradingModeCreator
