@@ -12,6 +12,8 @@ $tentacle_description: {
 }
 """
 
+from ccxt import InsufficientFunds
+
 from tools.logging.logging_util import get_logger
 
 from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
@@ -219,6 +221,9 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 
             # if nothing go returned, return None
             return None
+
+        except InsufficientFunds as e:
+            raise e
 
         except Exception as e:
             get_logger(self.__class__.__name__).error("Failed to create order : {0}".format(e))
