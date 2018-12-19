@@ -12,7 +12,7 @@ $tentacle_description: {
 }
 """
 
-from config.cst import *
+from config import *
 from evaluator.Strategies import MixedStrategiesEvaluator
 from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
 from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator

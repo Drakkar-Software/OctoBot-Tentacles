@@ -16,7 +16,7 @@ from ccxt import InsufficientFunds
 
 from tools.logging.logging_util import get_logger
 
-from config.cst import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
+from config import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider

@@ -1,6 +1,6 @@
 import ccxt
 
-from config.cst import EvaluatorStates, INIT_EVAL_NOTE
+from config import EvaluatorStates, INIT_EVAL_NOTE
 from evaluator.Util.advanced_manager import AdvancedManager
 from evaluator.cryptocurrency_evaluator import CryptocurrencyEvaluator
 from evaluator.evaluator_creator import EvaluatorCreator

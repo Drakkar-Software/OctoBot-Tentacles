@@ -1,8 +1,8 @@
 import copy
 import ccxt
 
-from config.cst import EvaluatorStates, START_PENDING_EVAL_NOTE, TimeFrames
-from config.cst import ExchangeConstantsMarketStatusColumns as Ecmsc
+from config import EvaluatorStates, START_PENDING_EVAL_NOTE, TimeFrames
+from config import ExchangeConstantsMarketStatusColumns as Ecmsc
 from tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit import check_order_limits,\
     check_orders, check_portfolio
 from tests.test_utils.config import load_test_config

@@ -16,7 +16,7 @@ import tulipy
 
 import numpy as np
 
-from config.cst import *
+from config import *
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
 
 """

@@ -12,7 +12,7 @@ $tentacle_description: {
 import tulipy
 
 import numpy
-from config.cst import START_PENDING_EVAL_NOTE
+from config import START_PENDING_EVAL_NOTE
 
 from evaluator.Util.abstract_util import AbstractUtil
 
