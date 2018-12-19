@@ -2,7 +2,7 @@ import pytest
 
 from tests.unit_tests.TA_evaluators_tests.abstract_TA_test import AbstractTATest
 from evaluator.TA import KlingerOscillatorMomentumEvaluator
-from config.cst import START_PENDING_EVAL_NOTE
+from config import START_PENDING_EVAL_NOTE
 
 
 @pytest.fixture()

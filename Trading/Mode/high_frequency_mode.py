@@ -11,8 +11,8 @@ $tentacle_description: {
     "developing": true
 }
 """
-from config.cst import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
-from config.cst import ExchangeConstantsMarketStatusColumns as Ecmsc
+from config import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
+from config import ExchangeConstantsMarketStatusColumns as Ecmsc
 from tentacles.Evaluator.Strategies import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol

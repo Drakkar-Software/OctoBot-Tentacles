@@ -16,7 +16,7 @@ import numpy
 from pytrends.exceptions import ResponseError
 from pytrends.request import TrendReq
 
-from config.cst import *
+from config import *
 from evaluator.Social.social_evaluator import StatsSocialEvaluator
 from evaluator.Util import StatisticAnalysis
 from evaluator.Util.advanced_manager import AdvancedManager

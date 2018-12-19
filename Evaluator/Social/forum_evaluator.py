@@ -11,7 +11,7 @@ $tentacle_description: {
 }
 """
 
-from config.cst import *
+from config import *
 from evaluator.Social.social_evaluator import ForumSocialEvaluator
 from evaluator.Util.advanced_manager import AdvancedManager
 from evaluator.Util import TextAnalysis

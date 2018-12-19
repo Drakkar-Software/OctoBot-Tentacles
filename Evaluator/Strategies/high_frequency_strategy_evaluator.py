@@ -10,7 +10,7 @@ $tentacle_description: {
     "config_files": ["HighFrequencyStrategiesEvaluator.json"]
 }
 """
-from config.cst import TimeFrames, EvaluatorMatrixTypes
+from config import TimeFrames, EvaluatorMatrixTypes
 
 from evaluator.Strategies import MixedStrategiesEvaluator
 from tentacles.Evaluator.RealTime import InstantMAEvaluator

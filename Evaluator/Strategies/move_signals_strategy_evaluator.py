@@ -12,7 +12,7 @@ $tentacle_description: {
 }
 """
 
-from config.cst import *
+from config import *
 from evaluator.Strategies import MixedStrategiesEvaluator
 from evaluator.TA import KlingerOscillatorMomentumEvaluator, BBMomentumEvaluator
 
