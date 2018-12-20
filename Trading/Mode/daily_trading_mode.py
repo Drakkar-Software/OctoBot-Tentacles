@@ -242,7 +242,9 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             raise e
 
         except Exception as e:
-            get_logger(self.__class__.__name__).error("Failed to create order : {0}".format(e))
+            logger = get_logger(self.__class__.__name__)
+            logger.error(f"Failed to create order : {e}")
+            logger.exception(e)
             return None
 
 
