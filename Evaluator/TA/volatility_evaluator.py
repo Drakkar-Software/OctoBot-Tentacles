@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "volatility_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
@@ -32,20 +33,20 @@ from evaluator.TA.TA_evaluator import VolatilityEvaluator
 # average_true_range
 class ATRVolatilityEvaluator(VolatilityEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # mass index
 class MassIndexVolatilityEvaluator(VolatilityEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 class ChaikinVolatilityEvaluator(VolatilityEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
@@ -53,7 +54,7 @@ class StochasticVolatilityEvaluator(VolatilityEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         # slowk, slowd = talib.STOCH(self.data[PriceStrings.STR_PRICE_HIGH.value],
         #                            self.data[PriceStrings.STR_PRICE_LOW.value],
         #                            self.data[PriceStrings.STR_PRICE_CLOSE.value])
@@ -64,6 +65,6 @@ class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         # fastk, fastd = talib.STOCHRSI(self.data[PriceStrings.STR_PRICE_CLOSE.value])
         pass

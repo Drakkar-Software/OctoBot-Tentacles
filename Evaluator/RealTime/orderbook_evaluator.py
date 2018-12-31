@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "orderbook_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
@@ -38,7 +39,7 @@ class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
     def _refresh_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
     def set_default_config(self):

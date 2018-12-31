@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "stats_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
@@ -42,7 +43,6 @@ class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
     def __init__(self):
         super().__init__()
         self.pytrends = None
-        self.is_threaded = False
 
     # Use pytrends lib (https://github.com/GeneralMills/pytrends)
     # https://github.com/GeneralMills/pytrends/blob/master/examples/example.py
@@ -59,12 +59,14 @@ class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
         except ResponseError as e:
             self.logger.warn(str(e))
 
-    def eval_impl(self):
-        interest_over_time_df = self.pytrends.interest_over_time()
+    async def eval_impl(self):
+        # interest_over_time_df = self.pytrends.interest_over_time()
 
         # compute bollinger bands
-        self.eval_note = AdvancedManager.get_class(self.config, StatisticAnalysis).analyse_recent_trend_changes(
-            interest_over_time_df[self.symbol].astype('float64').values, numpy.sqrt)
+        # self.eval_note = AdvancedManager.get_class(self.config, StatisticAnalysis).analyse_recent_trend_changes(
+        #     interest_over_time_df[self.symbol].astype('float64').values, numpy.sqrt)
+
+        self.eval_note = 0.5
 
     def run(self):
         pass

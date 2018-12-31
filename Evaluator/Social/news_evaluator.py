@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "news_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
@@ -45,7 +46,6 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
     def __init__(self):
         NewsSocialEvaluator.__init__(self)
         DispatcherAbstractClient.__init__(self)
-        self.is_threaded = False
         self.count = 0
         self.symbol = ""
         self.sentiment_analyser = None
@@ -66,21 +66,21 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
         self.logger.debug(f"Current note : {note} | {count} : {self.symbol} : Link: {tweet_url} Text : "
                           f"{DecoderEncoder.encode_into_bytes(tweet_text)}")
 
-    def receive_notification_data(self, data):
+    async def receive_notification_data(self, data):
         self.count += 1
         note = self.get_tweet_sentiment(data[CONFIG_TWEET], data[CONFIG_TWEET_DESCRIPTION])
         tweet_url = f"https://twitter.com/ProducToken/status/{data['tweet']['id']}"
         if note != START_PENDING_EVAL_NOTE:
             self._print_tweet(data[CONFIG_TWEET_DESCRIPTION], tweet_url, note, str(self.count))
-        self._check_eval_note(note)
+        await self._check_eval_note(note)
 
     # only set eval note when something is happening
-    def _check_eval_note(self, note):
+    async def _check_eval_note(self, note):
         if note != START_PENDING_EVAL_NOTE:
             if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
                 self.eval_note = note
                 self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                self.notify_evaluator_thread_managers(self.__class__.__name__)
+                await self.notify_evaluator_thread_managers(self.__class__.__name__)
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
@@ -148,7 +148,7 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
     def get_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
     def run(self):
@@ -158,12 +158,11 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
 class MediumNewsEvaluator(NewsSocialEvaluator):
     def __init__(self):
         super().__init__()
-        self.is_threaded = False
 
     def get_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.notify_evaluator_thread_managers(self.__class__.__name__)
 
     def run(self):

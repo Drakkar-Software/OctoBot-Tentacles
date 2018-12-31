@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
@@ -146,10 +147,10 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         return self.check_factor(self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor) * quantity
 
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
-    def create_new_order(self, eval_note, symbol, exchange, trader, portfolio, state):
+    async def create_new_order(self, eval_note, symbol, exchange, trader, portfolio, state):
         try:
             current_symbol_holding, current_market_quantity, market_quantity, price, symbol_market = \
-                self.get_pre_order_data(exchange, symbol, portfolio)
+                await self.get_pre_order_data(exchange, symbol, portfolio)
 
             created_orders = []
 
@@ -166,7 +167,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                           current_price=order_price,
                                                           quantity=order_quantity,
                                                           price=order_price)
-                    trader.create_order(market, portfolio)
+                    await trader.create_order(market, portfolio)
                     created_orders.append(market)
                 return created_orders
 
@@ -185,7 +186,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                          current_price=price,
                                                          quantity=order_quantity,
                                                          price=order_price)
-                    updated_limit = trader.create_order(limit, portfolio)
+                    updated_limit = await trader.create_order(limit, portfolio)
                     created_orders.append(updated_limit)
 
                     stop = trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
@@ -194,7 +195,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                         quantity=order_quantity,
                                                         price=stop_price,
                                                         linked_to=updated_limit)
-                    trader.create_order(stop, portfolio)
+                    await trader.create_order(stop, portfolio)
                 return created_orders
 
             elif state == EvaluatorStates.NEUTRAL:
@@ -215,7 +216,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                          current_price=price,
                                                          quantity=order_quantity,
                                                          price=order_price)
-                    trader.create_order(limit, portfolio)
+                    await trader.create_order(limit, portfolio)
                     created_orders.append(limit)
                 return created_orders
 
@@ -231,7 +232,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                           current_price=order_price,
                                                           quantity=order_quantity,
                                                           price=order_price)
-                    trader.create_order(market, portfolio)
+                    await trader.create_order(market, portfolio)
                     created_orders.append(market)
                 return created_orders
 
@@ -242,9 +243,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             raise e
 
         except Exception as e:
-            logger = get_logger(self.__class__.__name__)
-            logger.error(f"Failed to create order : {e}")
-            logger.exception(e)
+            get_logger(self.__class__.__name__).error(f"Failed to create order : {e}")
+            get_logger(self.__class__.__name__).exception(e)
             return None
 
 
@@ -276,29 +276,29 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
     def _get_delta_risk(self):
         return self.RISK_THRESHOLD * self.symbol_evaluator.get_trader(self.exchange).get_risk()
 
-    def create_state(self):
+    async def create_state(self):
         delta_risk = self._get_delta_risk()
 
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
-            self._set_state(EvaluatorStates.VERY_LONG)
+            await self._set_state(EvaluatorStates.VERY_LONG)
 
         elif self.final_eval < self.LONG_THRESHOLD + delta_risk:
-            self._set_state(EvaluatorStates.LONG)
+            await self._set_state(EvaluatorStates.LONG)
 
         elif self.final_eval < self.NEUTRAL_THRESHOLD - delta_risk:
-            self._set_state(EvaluatorStates.NEUTRAL)
+            await self._set_state(EvaluatorStates.NEUTRAL)
 
         elif self.final_eval < self.SHORT_THRESHOLD - delta_risk:
-            self._set_state(EvaluatorStates.SHORT)
+            await self._set_state(EvaluatorStates.SHORT)
 
         else:
-            self._set_state(EvaluatorStates.VERY_SHORT)
+            await self._set_state(EvaluatorStates.VERY_SHORT)
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):
         return True
 
-    def _set_state(self, new_state):
+    async def _set_state(self, new_state):
         if new_state != self.state:
             # previous_state = self.state
             self.state = new_state
@@ -308,7 +308,7 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
             if new_state is not EvaluatorStates.NEUTRAL:
 
                 # cancel open orders
-                self.cancel_symbol_open_orders()
+                await self.cancel_symbol_open_orders()
 
                 # create notification
                 if self.symbol_evaluator.matrices:
@@ -321,4 +321,4 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                         self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
                     
                 # call orders creation method
-                self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))
+                await self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))

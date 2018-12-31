@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "mixed_strategies_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
@@ -66,7 +67,7 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         # TODO temp with notification
         # self.get_divergence()
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         # TODO : temp counter without relevance
         self.social_counter = 0
         self.rt_counter = 0
@@ -137,7 +138,7 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         self.instant_evaluation = 0
         self.social_evaluation = 0
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         self.social_counter = 0
         self.instant_counter = 0
 
@@ -206,7 +207,7 @@ class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         # TODO temp with notification
         # self.get_divergence()
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         self.counter = 0
         self.evaluation = 0
 

@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "high_frequency_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
@@ -37,7 +38,7 @@ class HighFrequencyStrategiesEvaluator(MixedStrategiesEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         matrix_note = self.matrix[EvaluatorMatrixTypes.REAL_TIME][InstantMAEvaluator.get_name()]
         self.eval_note = matrix_note
 

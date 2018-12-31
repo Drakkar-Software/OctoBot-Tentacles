@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "market_stability_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
@@ -37,6 +38,6 @@ class MarketStabilityStrategiesEvaluator(MixedStrategiesEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         matrix_note = self.matrix[EvaluatorMatrixTypes.REAL_TIME][InstantVolatilityEvaluator.get_name()]
         self.eval_note = matrix_note

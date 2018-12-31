@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "trend_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
@@ -40,7 +41,7 @@ from tools.data_util import DataUtil
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 10
         if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > long_period_length:
@@ -101,26 +102,26 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 # https://mrjbq7.github.io/ta-lib/func_groups/overlap_studies.html
 class CandleAnalysisTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # directional_movement_index --> trend strength
 class DMITrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # bollinger_bands
 class BBTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # ease_of_movement --> ease to change trend --> trend strength
 class EOMTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass

@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "signal_trading_mode",
     "type": "Trading",
     "subtype": "Mode",

@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "forum_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
@@ -43,7 +44,6 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
         ForumSocialEvaluator.__init__(self)
         DispatcherAbstractClient.__init__(self)
         self.overall_state_analyser = OverallStateAnalyser()
-        self.is_threaded = False
         self.count = 0
         self.symbol = ""
         self.sentiment_analyser = None
@@ -60,7 +60,7 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
     def _print_entry(self, entry_text, entry_note, count=""):
         self.logger.debug(f"New reddit entry ! : {entry_note} | {count} : {self.symbol} : Link : {entry_text}")
 
-    def receive_notification_data(self, data):
+    async def receive_notification_data(self, data):
         self.count += 1
         entry_note = self._get_sentiment(data[CONFIG_REDDIT_ENTRY])
         if entry_note != START_PENDING_EVAL_NOTE:
@@ -106,7 +106,7 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
     def get_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
     def run(self):
@@ -116,12 +116,11 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
 class BTCTalkForumEvaluator(ForumSocialEvaluator):
     def __init__(self):
         super().__init__()
-        self.is_threaded = False
 
     def get_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
     def run(self):

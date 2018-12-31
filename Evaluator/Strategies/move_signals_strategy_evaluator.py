@@ -2,6 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "move_signals_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
@@ -56,7 +57,7 @@ class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):
         self.medium_period_eval = SignalWithWeight(TimeFrames.ONE_HOUR)   # 1h
         self.long_period_eval = SignalWithWeight(TimeFrames.FOUR_HOURS)     # 4h
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         TA_evaluations = self.matrix[EvaluatorMatrixTypes.TA]
         if self.SIGNAL_CLASS_NAME in TA_evaluations and self.WEIGHT_CLASS_NAME in TA_evaluations:
             self._refresh_evaluations(TA_evaluations)
