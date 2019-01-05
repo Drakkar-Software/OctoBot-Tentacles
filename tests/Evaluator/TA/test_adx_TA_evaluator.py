@@ -21,37 +21,37 @@ from evaluator.TA import ADXMomentumEvaluator
 
 
 @pytest.fixture()
-def evaluator_tester():
+async def evaluator_tester():
     evaluator_tester_instance = TestADXTAEvaluator()
-    evaluator_tester_instance.init(ADXMomentumEvaluator)
+    await evaluator_tester_instance.initialize(ADXMomentumEvaluator)
     return evaluator_tester_instance
 
 
 class TestADXTAEvaluator(AbstractTATest):
 
     @staticmethod
-    def test_stress_test(evaluator_tester):
-        evaluator_tester.run_stress_test_without_exceptions(0.7)
+    async def test_stress_test(evaluator_tester):
+        await evaluator_tester.run_stress_test_without_exceptions(0.7)
 
     @staticmethod
-    def test_reactions_to_dump(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_dump(0.2, 0.35, -0.2, -0.1, 0)
+    async def test_reactions_to_dump(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_dump(0.2, 0.35, -0.2, -0.1, 0)
 
     @staticmethod
-    def test_reactions_to_pump(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_pump(0, 0.1, 0.45, 0.7, 0.6, 0.65, 0.75)
+    async def test_reactions_to_pump(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_pump(0, 0.1, 0.45, 0.7, 0.6, 0.65, 0.75)
 
     @staticmethod
-    def test_reaction_to_rise_after_over_sold(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_rise_after_over_sold(0.8, -0.1, -0.5, -0.52, 0.8)
+    async def test_reaction_to_rise_after_over_sold(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_rise_after_over_sold(0.8, -0.1, -0.5, -0.52, 0.8)
 
     @staticmethod
-    def test_reaction_to_over_bought_then_dip(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_over_bought_then_dip(0.1, 0.1, 0.3, 0.4, -0.4, 0.2)
+    async def test_reaction_to_over_bought_then_dip(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_over_bought_then_dip(0.1, 0.1, 0.3, 0.4, -0.4, 0.2)
 
     @staticmethod
-    def test_reaction_to_flat_trend(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_flat_trend(
+    async def test_reaction_to_flat_trend(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_flat_trend(
             # eval_start_move_ending_up_in_a_rise,
             0.4,
             # eval_reaches_flat_trend, eval_first_micro_up_p1, eval_first_micro_up_p2,

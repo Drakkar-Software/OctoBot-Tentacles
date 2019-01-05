@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "stats_evaluator",
     "type": "Evaluator",
     "subtype": "Social",

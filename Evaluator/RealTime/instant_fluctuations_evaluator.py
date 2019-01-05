@@ -2,8 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
-    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",

@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "trend_evaluator",
     "type": "Evaluator",
     "subtype": "TA",

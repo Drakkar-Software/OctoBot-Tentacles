@@ -21,39 +21,43 @@ from evaluator.Strategies import FullMixedStrategiesEvaluator
 from trading.trader.modes import DailyTradingMode
 
 
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
+
+
 @pytest.fixture()
 def strategy_tester():
     strategy_tester_instance = TestFullMixedStrategiesEvaluator()
-    strategy_tester_instance.init(FullMixedStrategiesEvaluator, DailyTradingMode)
+    strategy_tester_instance.initialize(FullMixedStrategiesEvaluator, DailyTradingMode)
     return strategy_tester_instance
 
 
 class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
-    def test_default_run(strategy_tester):
-        strategy_tester.run_test_default_run(-12)
+    async def test_default_run(strategy_tester):
+        await strategy_tester.run_test_default_run(-10)
 
     @staticmethod
-    def test_slow_downtrend(strategy_tester):
-        strategy_tester.run_test_slow_downtrend(-9.5, -10.5, -20.5, 0)
+    async def test_slow_downtrend(strategy_tester):
+        await strategy_tester.run_test_slow_downtrend(-9.7, -9, -21.5, 0)
 
     @staticmethod
-    def test_sharp_downtrend(strategy_tester):
-        strategy_tester.run_test_sharp_downtrend(-14, -21.5)
+    async def test_sharp_downtrend(strategy_tester):
+        await strategy_tester.run_test_sharp_downtrend(-14.5, -21.5)
 
     @staticmethod
-    def test_flat_markets(strategy_tester):
-        strategy_tester.run_test_flat_markets(-3.5, 0.5, 7, 26.5)
+    async def test_flat_markets(strategy_tester):
+        await strategy_tester.run_test_flat_markets(-3.5, 0.5, 8, 26)
 
     @staticmethod
-    def test_slow_uptrend(strategy_tester):
-        strategy_tester.run_test_slow_uptrend(-5, -4)
+    async def test_slow_uptrend(strategy_tester):
+        await strategy_tester.run_test_slow_uptrend(-5, -4)
 
     @staticmethod
-    def test_sharp_uptrend(strategy_tester):
-        strategy_tester.run_test_sharp_uptrend(10, 7.5)
+    async def test_sharp_uptrend(strategy_tester):
+        await strategy_tester.run_test_sharp_uptrend(10.5, 7.5)
 
     @staticmethod
-    def test_up_then_down(strategy_tester):
-        strategy_tester.run_test_up_then_down(-13)
+    async def test_up_then_down(strategy_tester):
+        await strategy_tester.run_test_up_then_down(-12)

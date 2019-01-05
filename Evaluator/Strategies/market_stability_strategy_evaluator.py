@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "market_stability_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",

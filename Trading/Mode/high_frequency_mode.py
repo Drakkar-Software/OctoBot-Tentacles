@@ -27,11 +27,12 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes
+from config import EvaluatorStates, TraderOrderType, CURRENCY_DEFAULT_MAX_PRICE_DIGITS, PriceIndexes, TimeFrames
 from config import ExchangeConstantsMarketStatusColumns as Ecmsc
 from tentacles.Evaluator.Strategies import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
+from tools.initializable import Initializable
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreatorWithBot
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDeciderWithBot
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
@@ -86,7 +87,7 @@ class HighFrequencyMode(AbstractTradingMode):
         # low fees => can have a lot of creators (more trades)
         # high fees => less creators (decider will also need a bigger price move to trigger a trade)
 
-        exchange_fees = max(exchange.get_fees(symbol))
+        exchange_fees = max(exchange.get_fees(symbol).values())
         max_creators = (5, 0.001)  # fees <= 0.1% (0.001)
         min_creators = (2, 0.01)  # fees >= 1% (0.01)
 
@@ -106,11 +107,11 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
         super().__init__(trading_mode, trader, 1 / trading_mode.nb_creators)
         self._market_value = None
 
-    def create_new_order(self, eval_note, symbol, exchange, trader, _, state):
+    async def create_new_order(self, eval_note, symbol, exchange, trader, _, state):
         sub_portfolio = self.get_portfolio()
 
         current_symbol_holding, current_market_quantity, market_quantity, price, symbol_market = \
-            self.get_pre_order_data(exchange, symbol, sub_portfolio)
+            await self.get_pre_order_data(exchange, symbol, sub_portfolio)
 
         created_orders = []
 
@@ -124,7 +125,7 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
                                                       quantity=order_quantity,
                                                       price=order_price,
                                                       linked_portfolio=sub_portfolio)
-                trader.create_order(market, sub_portfolio)
+                await trader.create_order(market, sub_portfolio)
                 created_orders.append(market)
             return created_orders
 
@@ -137,7 +138,7 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
                                                       quantity=order_quantity,
                                                       price=order_price,
                                                       linked_portfolio=sub_portfolio)
-                trader.create_order(market, sub_portfolio)
+                await trader.create_order(market, sub_portfolio)
                 created_orders.append(market)
             return created_orders
 
@@ -150,11 +151,12 @@ class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):
         return self._market_value
 
 
-class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
+class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot, Initializable):
 
     def __init__(self, trading_mode, symbol_evaluator, exchange, trader, creators):
-        super().__init__(trading_mode, symbol_evaluator, exchange, trader, creators)
-        exchange_fees = max(exchange.get_fees(self.symbol))
+        AbstractTradingModeDeciderWithBot.__init__(self, trading_mode, symbol_evaluator, exchange, trader, creators)
+        Initializable.__init__(self)
+        exchange_fees = max(exchange.get_fees(self.symbol).values())
         self.LONG_THRESHOLD = -2 * exchange_fees
         self.SHORT_THRESHOLD = 2 * exchange_fees
         self.filled_creators = []
@@ -168,6 +170,11 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
                                                                                  CURRENCY_DEFAULT_MAX_PRICE_DIGITS)
         limit_cost = market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value]
         self.currency_min_cost = HighFrequencyModeCreator.get_value_or_default(limit_cost, Ecmsc.LIMITS_COST_MIN.value)
+
+    async def initialize_impl(self):
+        for order_creator_key in self.get_creators():
+            order_creator = self.trading_mode.get_creators(self.symbol)[order_creator_key]
+            await order_creator.initialize()
         self._update_available_creators()
 
     def set_final_eval(self):
@@ -193,12 +200,15 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
             power = 1.5 - (self.trader.get_risk())
             return pow(nb_blocked_creators + 1, power)
 
-    def create_state(self):
+    async def create_state(self):
+        # initialize if necessary
+        await self.initialize()
+
         if self.final_eval > self.SHORT_THRESHOLD:
-            self._set_state(EvaluatorStates.VERY_SHORT)
+            await self._set_state(EvaluatorStates.VERY_SHORT)
 
         elif self.final_eval < self.LONG_THRESHOLD * self.get_required_difference_from_risk():
-            self._set_state(EvaluatorStates.VERY_LONG)
+            await self._set_state(EvaluatorStates.VERY_LONG)
 
         self._update_available_creators()
 
@@ -215,21 +225,22 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot):
         creator = self.trading_mode.get_creator(self.symbol, creator_key)
         creator.set_market_value(creator.get_portfolio().get_currency_portfolio(self.market))
 
-    def _set_state(self, new_state):
+    async def _set_state(self, new_state):
         self.state = new_state
         self.logger.info("{0} ** NEW STATE ** : {1}".format(self.symbol, self.state))
-        current_price = self.exchange.get_symbol_prices(self.symbol, None, limit=None, return_list=True) \
+        current_price = (await self.exchange.get_symbol_prices(self.symbol, TimeFrames.ONE_HOUR
+                                                               , limit=None, return_list=True)) \
             [PriceIndexes.IND_PRICE_CLOSE.value][-1]
 
         if self.state == EvaluatorStates.VERY_SHORT:
             for creator_key in self.filled_creators:
                 if self._creator_can_sell(creator_key, current_price):
-                    self.create_order_if_possible(None, self.get_trader(), creator_key)
+                    await self.create_order_if_possible(None, self.get_trader(), creator_key)
 
         elif self.state == EvaluatorStates.VERY_LONG and len(self.pending_creators) > 0:
             order_creator_key = next(iter(self.pending_creators))
             self._register_creator_market_value(order_creator_key)
-            self.create_order_if_possible(None, self.get_trader(), order_creator_key)
+            await self.create_order_if_possible(None, self.get_trader(), order_creator_key)
 
     def _update_available_creators(self):
         for order_creator_key in self.get_creators():

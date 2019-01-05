@@ -22,38 +22,38 @@ from config import START_PENDING_EVAL_NOTE
 
 
 @pytest.fixture()
-def evaluator_tester():
+async def evaluator_tester():
     evaluator_tester_instance = TestKlingerTAEvaluator()
-    evaluator_tester_instance.init(KlingerOscillatorMomentumEvaluator)
+    await evaluator_tester_instance.initialize(KlingerOscillatorMomentumEvaluator)
     return evaluator_tester_instance
 
 
 class TestKlingerTAEvaluator(AbstractTATest):
 
     @staticmethod
-    def test_stress_test(evaluator_tester):
-        evaluator_tester.run_stress_test_without_exceptions(0.7, False)
+    async def test_stress_test(evaluator_tester):
+        await evaluator_tester.run_stress_test_without_exceptions(0.7, False)
 
     @staticmethod
-    def test_reactions_to_dump(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_dump(0, 0, -0.2, -0.4, -0.55)
+    async def test_reactions_to_dump(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_dump(0, 0, -0.2, -0.4, -0.55)
 
     @staticmethod
-    def test_reactions_to_pump(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_pump(-0.1, -0.1, 0, 0.1, 0.2,
-                                                    0, -0.5)
+    async def test_reactions_to_pump(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_pump(-0.1, -0.1, 0, 0.1, 0.2,
+                                                          0, -0.5)
 
     @staticmethod
-    def test_reaction_to_rise_after_over_sold(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_rise_after_over_sold(-0.2, -0.6, -1, -1, 0.1)
+    async def test_reaction_to_rise_after_over_sold(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_rise_after_over_sold(-0.2, -0.6, -1, -1, 0.1)
 
     @staticmethod
-    def test_reaction_to_over_bought_then_dip(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_over_bought_then_dip(-1, 0, 0.5, 0.5, -0.8, -1)
+    async def test_reaction_to_over_bought_then_dip(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_over_bought_then_dip(-1, 0, 0.5, 0.5, -0.8, -1)
 
     @staticmethod
-    def test_reaction_to_flat_trend(evaluator_tester):
-        evaluator_tester.run_test_reactions_to_flat_trend(
+    async def test_reaction_to_flat_trend(evaluator_tester):
+        await evaluator_tester.run_test_reactions_to_flat_trend(
             # eval_start_move_ending_up_in_a_rise,
             0.9,
             # eval_reaches_flat_trend, eval_first_micro_up_p1, eval_first_micro_up_p2,

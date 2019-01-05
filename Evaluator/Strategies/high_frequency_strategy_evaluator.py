@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "high_frequency_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
