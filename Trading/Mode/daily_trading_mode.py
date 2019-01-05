@@ -311,13 +311,13 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
 
                 # create notification
                 if self.symbol_evaluator.matrices:
-                    self.notifier.notify_alert(
-                        self.final_eval,
-                        self.symbol_evaluator.get_crypto_currency_evaluator(),
-                        self.symbol_evaluator.get_symbol(),
-                        self.symbol_evaluator.get_trader(self.exchange),
-                        self.state,
-                        self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
+                    await self.notifier.notify_alert(
+                          self.final_eval,
+                          self.symbol_evaluator.get_crypto_currency_evaluator(),
+                          self.symbol_evaluator.get_symbol(),
+                          self.symbol_evaluator.get_trader(self.exchange),
+                          self.state,
+                          self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
                     
                 # call orders creation method
                 await self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))
