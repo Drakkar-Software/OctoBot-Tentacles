@@ -20,6 +20,10 @@ from tests.unit_tests.TA_evaluators_tests.abstract_TA_test import AbstractTATest
 from evaluator.TA import BBMomentumEvaluator
 
 
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
+
+
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestBollingerBandsMomentumTAEvaluator()

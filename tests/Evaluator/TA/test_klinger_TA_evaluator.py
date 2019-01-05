@@ -18,7 +18,10 @@ import pytest
 
 from tests.unit_tests.TA_evaluators_tests.abstract_TA_test import AbstractTATest
 from evaluator.TA import KlingerOscillatorMomentumEvaluator
-from config import START_PENDING_EVAL_NOTE
+
+
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture()

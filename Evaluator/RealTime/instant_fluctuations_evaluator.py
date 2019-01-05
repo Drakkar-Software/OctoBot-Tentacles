@@ -76,7 +76,7 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         if self.something_is_happening and self.eval_note != START_PENDING_EVAL_NOTE:
             if abs(self.last_notification_eval - self.eval_note) >= self.MIN_TRIGGERING_DELTA:
                 self.last_notification_eval = self.eval_note
-                await self.notify_evaluator_thread_managers(self.get_name(), force_TA_refresh=True)
+                await self.notify_evaluator_task_managers(self.get_name(), force_TA_refresh=True)
             self.something_is_happening = False
         else:
             self.eval_note = START_PENDING_EVAL_NOTE
@@ -170,7 +170,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
             self.eval_note = -1
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_thread_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.__class__.__name__)
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
@@ -218,7 +218,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
             else:
                 self.eval_note = 0
 
-        await self.notify_evaluator_thread_managers(self.__class__.__name__)
+        await self.notify_evaluator_task_managers(self.__class__.__name__)
 
     def set_default_config(self):
         super().set_default_config()
@@ -265,7 +265,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
             self.eval_note = 0
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_thread_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.__class__.__name__)
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):

@@ -79,7 +79,7 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
             if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
                 self.eval_note = note
                 self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                await self.notify_evaluator_thread_managers(self.__class__.__name__)
+                await self.notify_evaluator_task_managers(self.__class__.__name__)
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
@@ -150,7 +150,8 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
     async def eval_impl(self):
         pass
 
-    def run(self):
+    # not standalone task
+    async def start_task(self):
         pass
 
 
@@ -162,9 +163,9 @@ class MediumNewsEvaluator(NewsSocialEvaluator):
         pass
 
     async def eval_impl(self):
-        self.notify_evaluator_thread_managers(self.__class__.__name__)
+        await self.notify_evaluator_task_managers(self.__class__.__name__)
 
-    def run(self):
+    async def start_task(self):
         pass
 
     def set_default_config(self):

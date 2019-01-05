@@ -108,7 +108,8 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
     async def eval_impl(self):
         pass
 
-    def run(self):
+    # not standalone task
+    async def start_task(self):
         pass
 
 
@@ -122,5 +123,5 @@ class BTCTalkForumEvaluator(ForumSocialEvaluator):
     async def eval_impl(self):
         pass
 
-    def run(self):
+    async def start_task(self):
         pass
