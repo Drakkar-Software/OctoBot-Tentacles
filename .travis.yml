@@ -21,7 +21,10 @@ install:
 jobs:
   include:
     - stage: test
-    - script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/TA/Default
-    - script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Strategies/Default
-    - script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Trading/Mode/Default
-    - script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/RealTime/Default ./tentacles/tests/Evaluator/Social/Defaults ./tentacles/tests/Evaluator/Util/Default
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/TA/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Strategies/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Trading/Mode/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/RealTime/Default ./tentacles/tests/Evaluator/Social/Default ./tentacles/tests/Evaluator/Util/Default
