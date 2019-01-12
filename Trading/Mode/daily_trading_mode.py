@@ -147,6 +147,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
 
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
     async def create_new_order(self, eval_note, symbol, exchange, trader, portfolio, state):
+        current_order = None
         try:
             current_symbol_holding, current_market_quantity, market_quantity, price, symbol_market = \
                 await self.get_pre_order_data(exchange, symbol, portfolio)
@@ -161,13 +162,13 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                                                symbol_market, current_symbol_holding)
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                                    symbol_market):
-                    market = trader.create_order_instance(order_type=TraderOrderType.SELL_MARKET,
-                                                          symbol=symbol,
-                                                          current_price=order_price,
-                                                          quantity=order_quantity,
-                                                          price=order_price)
-                    await trader.create_order(market, portfolio)
-                    created_orders.append(market)
+                    current_order = trader.create_order_instance(order_type=TraderOrderType.SELL_MARKET,
+                                                                 symbol=symbol,
+                                                                 current_price=order_price,
+                                                                 quantity=order_quantity,
+                                                                 price=order_price)
+                    await trader.create_order(current_order, portfolio)
+                    created_orders.append(current_order)
                 return created_orders
 
             elif state == EvaluatorStates.SHORT:
@@ -180,21 +181,21 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
                                                                                                    limit_price,
                                                                                                    symbol_market):
-                    limit = trader.create_order_instance(order_type=TraderOrderType.SELL_LIMIT,
-                                                         symbol=symbol,
-                                                         current_price=price,
-                                                         quantity=order_quantity,
-                                                         price=order_price)
-                    updated_limit = await trader.create_order(limit, portfolio)
+                    current_order = trader.create_order_instance(order_type=TraderOrderType.SELL_LIMIT,
+                                                                 symbol=symbol,
+                                                                 current_price=price,
+                                                                 quantity=order_quantity,
+                                                                 price=order_price)
+                    updated_limit = await trader.create_order(current_order, portfolio)
                     created_orders.append(updated_limit)
 
-                    stop = trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
-                                                        symbol=symbol,
-                                                        current_price=price,
-                                                        quantity=order_quantity,
-                                                        price=stop_price,
-                                                        linked_to=updated_limit)
-                    await trader.create_order(stop, portfolio)
+                    current_order = trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
+                                                                 symbol=symbol,
+                                                                 current_price=price,
+                                                                 quantity=order_quantity,
+                                                                 price=stop_price,
+                                                                 linked_to=updated_limit)
+                    await trader.create_order(current_order, portfolio)
                 return created_orders
 
             elif state == EvaluatorStates.NEUTRAL:
@@ -210,13 +211,13 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
                                                                                                    limit_price,
                                                                                                    symbol_market):
-                    limit = trader.create_order_instance(order_type=TraderOrderType.BUY_LIMIT,
-                                                         symbol=symbol,
-                                                         current_price=price,
-                                                         quantity=order_quantity,
-                                                         price=order_price)
-                    await trader.create_order(limit, portfolio)
-                    created_orders.append(limit)
+                    current_order = trader.create_order_instance(order_type=TraderOrderType.BUY_LIMIT,
+                                                                 symbol=symbol,
+                                                                 current_price=price,
+                                                                 quantity=order_quantity,
+                                                                 price=order_price)
+                    await trader.create_order(current_order, portfolio)
+                    created_orders.append(current_order)
                 return created_orders
 
             elif state == EvaluatorStates.VERY_LONG:
@@ -226,13 +227,13 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                                True)
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                                    symbol_market):
-                    market = trader.create_order_instance(order_type=TraderOrderType.BUY_MARKET,
-                                                          symbol=symbol,
-                                                          current_price=order_price,
-                                                          quantity=order_quantity,
-                                                          price=order_price)
-                    await trader.create_order(market, portfolio)
-                    created_orders.append(market)
+                    current_order = trader.create_order_instance(order_type=TraderOrderType.BUY_MARKET,
+                                                                 symbol=symbol,
+                                                                 current_price=order_price,
+                                                                 quantity=order_quantity,
+                                                                 price=order_price)
+                    await trader.create_order(current_order, portfolio)
+                    created_orders.append(current_order)
                 return created_orders
 
             # if nothing go returned, return None
@@ -242,7 +243,9 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             raise e
 
         except Exception as e:
-            get_logger(self.__class__.__name__).error(f"Failed to create order : {e}")
+            get_logger(self.__class__.__name__).error(f"Failed to create order : {e}. "
+                                                      f"Order: "
+                                                      f"{current_order.get_string_info() if current_order else None}")
             get_logger(self.__class__.__name__).exception(e)
             return None
 
