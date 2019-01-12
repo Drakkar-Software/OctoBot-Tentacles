@@ -175,6 +175,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_limit_quantity_from_risk(eval_note,
                                                               trader,
                                                               current_symbol_holding)
+                quantity += self.get_additional_dusts_to_quantity_if_necessary(quantity, price,
+                                                                               symbol_market, current_symbol_holding)
                 limit_price = self.adapt_price(symbol_market,
                                                price * self._get_limit_price_from_risk(eval_note, trader))
                 stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
