@@ -309,7 +309,7 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
         if new_state != self.state:
             # previous_state = self.state
             self.state = new_state
-            self.logger.info("{0} ** NEW FINAL STATE ** : {1}".format(self.symbol, self.state))
+            self.logger.info(f"{self.symbol} ** NEW FINAL STATE ** : {self.state}")
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not EvaluatorStates.NEUTRAL:
