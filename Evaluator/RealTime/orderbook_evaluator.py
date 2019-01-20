@@ -46,3 +46,6 @@ class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
             CONFIG_REFRESH_RATE: 5,
             CONFIG_TIME_FRAME: TimeFrames.FIVE_MINUTES
         }
+
+    def _should_eval(self):
+        pass

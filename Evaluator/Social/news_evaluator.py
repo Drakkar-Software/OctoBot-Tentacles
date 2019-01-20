@@ -91,7 +91,8 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
                 return -1 * self.sentiment_analyser.analyse(tweet_text)
             else:
                 stupid_useless_name = "########"
-                author_screen_name = tweet['user']['screen_name'] if "screen_name" in tweet['user'] else stupid_useless_name
+                author_screen_name = tweet['user']['screen_name'] if "screen_name" in tweet['user'] \
+                    else stupid_useless_name
                 author_name = tweet['user']['name'] if "name" in tweet['user'] else stupid_useless_name
                 if self.social_config[CONFIG_TWITTERS_ACCOUNTS]:
                     if author_screen_name in self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol] \

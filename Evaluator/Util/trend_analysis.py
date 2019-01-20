@@ -70,7 +70,6 @@ class TrendAnalysis(AbstractUtil):
         else:
             return False
 
-
     @staticmethod
     # TODO
     def detect_divergence(data_frame, indicator_data_frame):

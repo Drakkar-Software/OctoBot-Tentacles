@@ -171,8 +171,7 @@ class ADXMomentumEvaluator(MomentumEvaluator):
                         crossing_indexes = TrendAnalysis.get_threshold_change_indexes(adx, neutral_adx)
                         chances_to_be_max = \
                             TrendAnalysis.get_estimation_of_move_state_relatively_to_previous_moves_length(
-                                crossing_indexes, adx) if len(crossing_indexes) > 2 \
-                                else 0.75
+                                crossing_indexes, adx) if len(crossing_indexes) > 2 else 0.75
                         proximity_to_max = min(1, current_adx / max_adx)
                         self.eval_note = multiplier * proximity_to_max * chances_to_be_max
 
@@ -238,10 +237,10 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
             average_pattern_period = TrendAnalysis. \
                 get_estimation_of_move_state_relatively_to_previous_moves_length(
-                zero_crossing_indexes,
-                macd_hist,
-                pattern_move_time,
-                double_patterns_count)
+                    zero_crossing_indexes,
+                    macd_hist,
+                    pattern_move_time,
+                    double_patterns_count)
 
         # if we have few data but wave is growing => set higher value
         if len(zero_crossing_indexes) <= 1 and price_weight == 1:

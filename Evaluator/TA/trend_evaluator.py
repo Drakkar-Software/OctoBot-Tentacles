@@ -69,7 +69,8 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
         min_len_arrays = min(len(time_period_unit_moving_average), len(current_moving_average))
 
         # compute difference between 1 unit values and others ( >0 means currently up the other one)
-        values_difference = (current_moving_average[-min_len_arrays:] - time_period_unit_moving_average[-min_len_arrays:])
+        values_difference = \
+            (current_moving_average[-min_len_arrays:] - time_period_unit_moving_average[-min_len_arrays:])
         values_difference = DataUtil.drop_nan(values_difference)
 
         if len(values_difference):

@@ -104,7 +104,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     """
     Starting point : self.STOP_LOSS_ORDER_MAX_PERCENT
     trader.get_risk() --> low risk : stop level close to the current price
-    self.STOP_LOSS_ORDER_ATTENUATION --> try to contains the result between self.STOP_LOSS_ORDER_MIN_PERCENT and self.STOP_LOSS_ORDER_MAX_PERCENT
+    self.STOP_LOSS_ORDER_ATTENUATION --> try to contains the result between self.STOP_LOSS_ORDER_MIN_PERCENT 
+    and self.STOP_LOSS_ORDER_MAX_PERCENT
     """
 
     def _get_stop_price_from_risk(self, trader):
@@ -118,7 +119,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     abs(eval_note) --> confirmation level --> high : sell/buy more quantity
     trader.get_risk() --> high risk : sell / buy more quantity
     abs(eval_note) + trader.get_risk() --> result between 0 and 2 --> self.MAX_SUM_RESULT
-    self.QUANTITY_ATTENUATION --> try to contains the result between self.QUANTITY_MIN_PERCENT and self.QUANTITY_MAX_PERCENT
+    self.QUANTITY_ATTENUATION --> try to contains the result between self.QUANTITY_MIN_PERCENT 
+    and self.QUANTITY_MAX_PERCENT
     """
 
     def _get_limit_quantity_from_risk(self, eval_note, trader, quantity):
@@ -132,7 +134,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     abs(eval_note) --> confirmation level --> high : sell/buy more quantity
     trader.get_risk() --> high risk : sell / buy more quantity
     abs(eval_note) + trader.get_risk() --> result between 0 and 2 --> self.MAX_SUM_RESULT
-    self.QUANTITY_MARKET_ATTENUATION --> try to contains the result between self.QUANTITY_MARKET_MIN_PERCENT and self.QUANTITY_MARKET_MAX_PERCENT
+    self.QUANTITY_MARKET_ATTENUATION --> try to contains the result between self.QUANTITY_MARKET_MIN_PERCENT 
+    and self.QUANTITY_MARKET_MAX_PERCENT
     """
 
     def _get_market_quantity_from_risk(self, eval_note, trader, quantity, buy=False):

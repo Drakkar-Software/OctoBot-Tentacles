@@ -26,7 +26,7 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import TimeFrames, EvaluatorMatrixTypes
+from config import EvaluatorMatrixTypes
 
 from evaluator.Strategies import MixedStrategiesEvaluator
 from tentacles.Evaluator.RealTime import InstantMAEvaluator

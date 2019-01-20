@@ -18,7 +18,7 @@ import pytest
 import copy
 import ccxt
 
-from config import EvaluatorStates, FeePropertyColumns
+from config import EvaluatorStates
 from tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit import check_order_limits, check_linked_order, \
     check_orders, check_portfolio, fill_orders
 from tests.test_utils.config import load_test_config
