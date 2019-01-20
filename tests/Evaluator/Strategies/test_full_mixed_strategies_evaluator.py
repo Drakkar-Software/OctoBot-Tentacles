@@ -40,7 +40,7 @@ class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        await strategy_tester.run_test_slow_downtrend(-9.7, -9, -21.5, 0)
+        await strategy_tester.run_test_slow_downtrend(-9.7, -9, -21.5, -16)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
