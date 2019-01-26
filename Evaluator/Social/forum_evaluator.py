@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "forum_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "config_files": ["RedditForumEvaluator.json"]
 }

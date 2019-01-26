@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "mixed_strategies_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
     "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json", "SimpleMixedStrategiesEvaluator.json"],
     "tests":["test_full_mixed_strategies_evaluator"]

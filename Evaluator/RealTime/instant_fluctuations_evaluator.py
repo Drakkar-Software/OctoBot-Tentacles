@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "config_files": ["InstantRegulatedMarketEvaluator.json"]
 }

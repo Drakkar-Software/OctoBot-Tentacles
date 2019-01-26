@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "signal_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["move_signals_strategy_evaluator", "daily_trading_mode"],
     "config_files": ["SignalTradingMode.json"]
 }

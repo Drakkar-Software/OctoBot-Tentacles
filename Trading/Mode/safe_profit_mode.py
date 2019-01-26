@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "safe_profit_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "config_files": ["SafeProfitMode.json"],
     "developing": true

@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "market_stability_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator"],
     "config_files": ["MarketStabilityStrategiesEvaluator.json"]
 }

@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]

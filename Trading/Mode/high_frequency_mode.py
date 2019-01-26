@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "high_frequency_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["high_frequency_strategy_evaluator"],
     "config_files": ["HighFrequencyMode.json"],
     "developing": true

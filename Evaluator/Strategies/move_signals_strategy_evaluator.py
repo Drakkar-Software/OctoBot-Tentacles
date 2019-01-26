@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "move_signals_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["momentum_evaluator", "trend_evaluator", "instant_fluctuations_evaluator"],
     "config_files": ["MoveSignalsStrategyEvaluator.json"],
     "tests":["test_move_signals_strategy_evaluator"]

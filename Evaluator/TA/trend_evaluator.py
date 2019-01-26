@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "trend_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "tests":["test_double_moving_averages_TA_evaluator"]
 }
