@@ -14,10 +14,11 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+import pytest
 import copy
 import ccxt
 
-from config import EvaluatorStates, FeePropertyColumns
+from config import EvaluatorStates
 from tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit import check_order_limits, check_linked_order, \
     check_orders, check_portfolio, fill_orders
 from tests.test_utils.config import load_test_config
@@ -28,12 +29,18 @@ from trading.trader.portfolio import Portfolio
 from trading.trader.trader_simulator import TraderSimulator
 
 
-def _get_tools():
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
+
+
+async def _get_tools():
     config = load_test_config()
     symbol = "BTC/USDT"
     exchange_manager = ExchangeManager(config, ccxt.binance, is_simulated=True)
+    await exchange_manager.initialize()
     exchange_inst = exchange_manager.get_exchange()
     trader_inst = TraderSimulator(config, exchange_inst, 0.3)
+    await trader_inst.portfolio.initialize()
     trader_inst.stop_order_manager()
     trader_inst.portfolio.portfolio["SUB"] = {
         Portfolio.TOTAL: 0.000000000000000000005,
@@ -51,8 +58,8 @@ def _get_tools():
     return config, exchange_inst, trader_inst, symbol
 
 
-def test_can_create_order():
-    config, exchange, trader, symbol = _get_tools()
+async def test_can_create_order():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     # portfolio: "BTC": 10 "USD": 1000
     not_owned_symbol = "ETH/BTC"
@@ -61,84 +68,84 @@ def test_can_create_order():
     min_trigger_market = "ADA/BNB"
 
     # order from neutral state => false
-    assert not DailyTradingModeCreator(None).can_create_order(symbol, exchange,
-                                                              EvaluatorStates.NEUTRAL, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(symbol, exchange,
+                                                                    EvaluatorStates.NEUTRAL, portfolio)
 
     # sell order using a currency with 0 available
-    assert not DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
-                                                              EvaluatorStates.SHORT, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
-                                                              EvaluatorStates.VERY_SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
+                                                                    EvaluatorStates.SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
+                                                                    EvaluatorStates.VERY_SHORT, portfolio)
 
     # sell order using a currency with < min available
-    assert not DailyTradingModeCreator(None).can_create_order(min_trigger_symbol, exchange,
-                                                              EvaluatorStates.SHORT, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(min_trigger_symbol, exchange,
-                                                              EvaluatorStates.VERY_SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(min_trigger_symbol, exchange,
+                                                                    EvaluatorStates.SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(min_trigger_symbol, exchange,
+                                                                    EvaluatorStates.VERY_SHORT, portfolio)
 
     # sell order using a currency with > min available
-    assert DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
-                                                          EvaluatorStates.SHORT, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
-                                                          EvaluatorStates.VERY_SHORT, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
+                                                                EvaluatorStates.SHORT, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
+                                                                EvaluatorStates.VERY_SHORT, portfolio)
 
     # buy order using a market with 0 available
-    assert not DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
-                                                              EvaluatorStates.LONG, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
-                                                              EvaluatorStates.VERY_LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
+                                                                    EvaluatorStates.LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(not_owned_market, exchange,
+                                                                    EvaluatorStates.VERY_LONG, portfolio)
 
     # buy order using a market with < min available
-    assert not DailyTradingModeCreator(None).can_create_order(min_trigger_market, exchange,
-                                                              EvaluatorStates.LONG, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(min_trigger_market, exchange,
-                                                              EvaluatorStates.VERY_LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(min_trigger_market, exchange,
+                                                                    EvaluatorStates.LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(min_trigger_market, exchange,
+                                                                    EvaluatorStates.VERY_LONG, portfolio)
 
     # buy order using a market with > min available
-    assert DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
-                                                          EvaluatorStates.LONG, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
-                                                          EvaluatorStates.VERY_LONG, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
+                                                                EvaluatorStates.LONG, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(not_owned_symbol, exchange,
+                                                                EvaluatorStates.VERY_LONG, portfolio)
 
 
-def test_can_create_order_unknown_symbols():
-    config, exchange, trader, symbol = _get_tools()
+async def test_can_create_order_unknown_symbols():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     unknown_symbol = "VI?/BTC"
     unknown_market = "BTC/*s?"
     unknown_everything = "VI?/*s?"
 
     # buy order with unknown market
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
-                                                              EvaluatorStates.LONG, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
-                                                              EvaluatorStates.VERY_LONG, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
-                                                          EvaluatorStates.SHORT, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
-                                                          EvaluatorStates.VERY_SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
+                                                                    EvaluatorStates.LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
+                                                                    EvaluatorStates.VERY_LONG, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
+                                                                EvaluatorStates.SHORT, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
+                                                                EvaluatorStates.VERY_SHORT, portfolio)
 
     # sell order with unknown symbol
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
-                                                              EvaluatorStates.SHORT, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
-                                                              EvaluatorStates.VERY_SHORT, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
-                                                          EvaluatorStates.LONG, portfolio)
-    assert DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
-                                                          EvaluatorStates.VERY_LONG, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
+                                                                    EvaluatorStates.SHORT, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
+                                                                    EvaluatorStates.VERY_SHORT, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
+                                                                EvaluatorStates.LONG, portfolio)
+    assert await DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
+                                                                EvaluatorStates.VERY_LONG, portfolio)
 
     # neutral state with unknown symbol, market and everything
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
-                                                              EvaluatorStates.NEUTRAL, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
-                                                              EvaluatorStates.NEUTRAL, portfolio)
-    assert not DailyTradingModeCreator(None).can_create_order(unknown_everything, exchange,
-                                                              EvaluatorStates.NEUTRAL, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_symbol, exchange,
+                                                                    EvaluatorStates.NEUTRAL, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_market, exchange,
+                                                                    EvaluatorStates.NEUTRAL, portfolio)
+    assert not await DailyTradingModeCreator(None).can_create_order(unknown_everything, exchange,
+                                                                    EvaluatorStates.NEUTRAL, portfolio)
 
 
-def test_valid_create_new_order():
-    config, exchange, trader, symbol = _get_tools()
+async def test_valid_create_new_order():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
 
@@ -148,14 +155,19 @@ def test_valid_create_new_order():
     last_btc_price = 6943.01
 
     # order from neutral state
-    assert order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) is None
-    assert order_creator.create_new_order(0.5, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) is None
-    assert order_creator.create_new_order(0, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) is None
-    assert order_creator.create_new_order(-0.5, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) is None
-    assert order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) is None
+    assert await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
+        is None
+    assert await order_creator.create_new_order(0.5, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
+        is None
+    assert await order_creator.create_new_order(0, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
+        is None
+    assert await order_creator.create_new_order(-0.5, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
+        is None
+    assert await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
+        is None
 
     # valid sell limit order (price adapted)
-    orders = order_creator.create_new_order(0.65, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
+    orders = await order_creator.create_new_order(0.65, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellLimitOrder)
@@ -182,7 +194,7 @@ def test_valid_create_new_order():
     check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
 
     # valid buy limit order with (price and quantity adapted)
-    orders = order_creator.create_new_order(-0.65, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
+    orders = await order_creator.create_new_order(-0.65, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyLimitOrder)
@@ -208,7 +220,7 @@ def test_valid_create_new_order():
     # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     # valid buy market order with (price and quantity adapted)
-    orders = order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_LONG)
+    orders = await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_LONG)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyMarketOrder)
@@ -232,7 +244,7 @@ def test_valid_create_new_order():
     check_order_limits(order, market_status)
 
     # valid buy market order with (price and quantity adapted)
-    orders = order_creator.create_new_order(1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_SHORT)
+    orders = await order_creator.create_new_order(1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_SHORT)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellMarketOrder)
@@ -256,8 +268,8 @@ def test_valid_create_new_order():
     check_order_limits(order, market_status)
 
 
-def test_invalid_create_new_order():
-    config, exchange, trader, symbol = _get_tools()
+async def test_invalid_create_new_order():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
 
@@ -265,7 +277,8 @@ def test_invalid_create_new_order():
     min_trigger_market = "ADA/BNB"
 
     # invalid buy order with not trade data
-    orders = order_creator.create_new_order(0.6, min_trigger_market, exchange, trader, portfolio, EvaluatorStates.SHORT)
+    orders = await order_creator.create_new_order(0.6, min_trigger_market, exchange,
+                                                  trader, portfolio, EvaluatorStates.SHORT)
     assert orders is None
 
     trader.portfolio.portfolio["BTC"] = {
@@ -274,7 +287,7 @@ def test_invalid_create_new_order():
     }
 
     # invalid buy order with not enough currency to sell
-    orders = order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
+    orders = await order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
     assert len(orders) == 0
 
     trader.portfolio.portfolio["USDT"] = {
@@ -283,12 +296,12 @@ def test_invalid_create_new_order():
     }
 
     # invalid buy order with not enough currency to buy
-    orders = order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
+    orders = await order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
     assert len(orders) == 0
 
 
-def test_create_new_order_with_dusts_included():
-    config, exchange, trader, symbol = _get_tools()
+async def test_create_new_order_with_dusts_included():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
 
@@ -297,14 +310,14 @@ def test_create_new_order_with_dusts_included():
         Portfolio.AVAILABLE: 0.000015
     }
     # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
-    orders = order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_SHORT)
+    orders = await order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_SHORT)
     assert len(orders) == 1
     assert trader.portfolio.portfolio["BTC"][Portfolio.AVAILABLE] == 0
     assert trader.portfolio.portfolio["BTC"][Portfolio.TOTAL] == orders[0].origin_quantity
 
 
-def test_split_create_new_order():
-    config, exchange, trader, symbol = _get_tools()
+async def test_split_create_new_order():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
     last_btc_price = 6943.01
@@ -315,7 +328,7 @@ def test_split_create_new_order():
         Portfolio.AVAILABLE: 2000000001
     }
     # split orders because order too big and coin price too high
-    orders = order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
+    orders = await order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
     assert len(orders) == 11
     adapted_order = orders[0]
     identical_orders = orders[1:]
@@ -341,7 +354,8 @@ def test_split_create_new_order():
     check_order_limits(adapted_order, market_status)
 
     assert len(adapted_order.linked_orders) == 1
-    check_linked_order(adapted_order, adapted_order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
+    check_linked_order(adapted_order, adapted_order.linked_orders[0],
+                       TraderOrderType.STOP_LOSS, 6595.8595, market_status)
 
     for order in identical_orders:
         assert isinstance(order, SellLimitOrder)
@@ -375,7 +389,7 @@ def test_split_create_new_order():
     # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
     exchange.get_exchange().set_recent_trades_multiplier_factor(0.000001)
     # split orders because order too big and too many coins
-    orders = order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
+    orders = await order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
     assert len(orders) == 3
     adapted_order = orders[0]
     identical_orders = orders[1:]
@@ -451,8 +465,8 @@ def _reset_portfolio(portfolio):
     }
 
 
-def test_create_order_using_a_lot_of_different_inputs_with_portfolio_reset():
-    config, exchange, trader, symbol = _get_tools()
+async def test_create_order_using_a_lot_of_different_inputs_with_portfolio_reset():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
     gradient_step = 0.001
@@ -466,38 +480,40 @@ def test_create_order_using_a_lot_of_different_inputs_with_portfolio_reset():
         for evaluation in _get_evaluations_gradient(gradient_step):
             _reset_portfolio(portfolio)
             # orders are possible
-            orders = order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, nb_orders, market_status)
             check_portfolio(portfolio, initial_portfolio, orders)
             # orders are impossible
-            orders = order_creator.create_new_order(evaluation, min_trigger_market, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, min_trigger_market, exchange,
+                                                          trader, portfolio, state)
             check_orders(orders, evaluation, state, 0, market_status)
             check_portfolio(portfolio, initial_portfolio, orders)
 
         for evaluation in _get_irrationnal_numbers():
             # orders are possible
             _reset_portfolio(portfolio)
-            orders = order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, nb_orders, market_status)
             check_portfolio(portfolio, initial_portfolio, orders)
             # orders are impossible
-            orders = order_creator.create_new_order(evaluation, min_trigger_market, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, min_trigger_market, exchange,
+                                                          trader, portfolio, state)
             check_orders(orders, evaluation, state, 0, market_status)
             check_portfolio(portfolio, initial_portfolio, orders)
 
         _reset_portfolio(portfolio)
         # orders are possible
-        orders = order_creator.create_new_order(math.nan, symbol, exchange, trader, portfolio, state)
+        orders = await order_creator.create_new_order(math.nan, symbol, exchange, trader, portfolio, state)
         check_orders(orders, math.nan, state, nb_orders, market_status)
         check_portfolio(portfolio, initial_portfolio, orders)
         # orders are impossible
-        orders = order_creator.create_new_order(math.nan, min_trigger_market, exchange, trader, portfolio, state)
+        orders = await order_creator.create_new_order(math.nan, min_trigger_market, exchange, trader, portfolio, state)
         check_orders(orders, math.nan, state, 0, market_status)
         check_portfolio(portfolio, initial_portfolio, orders)
 
 
-def test_create_order_using_a_lot_of_different_inputs_without_portfolio_reset():
-    config, exchange, trader, symbol = _get_tools()
+async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_reset():
+    config, exchange, trader, symbol = await _get_tools()
     portfolio = trader.get_portfolio()
     order_creator = DailyTradingModeCreator(None)
     gradient_step = 0.001
@@ -511,41 +527,43 @@ def test_create_order_using_a_lot_of_different_inputs_without_portfolio_reset():
     for state in _get_states_gradient_with_invald_states():
         for evaluation in _get_evaluations_gradient(gradient_step):
             # orders are possible
-            orders = order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, nb_orders, market_status)
             check_portfolio(portfolio, initial_portfolio, orders, True)
-            fill_orders(orders, trader)
+            await fill_orders(orders, trader)
             # orders are impossible
-            orders = order_creator.create_new_order(evaluation, min_trigger_market, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, min_trigger_market,
+                                                          exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, 0, market_status)
             check_portfolio(portfolio, initial_portfolio, orders, True)
-            fill_orders(orders, trader)
+            await fill_orders(orders, trader)
 
     _reset_portfolio(portfolio)
     initial_portfolio = portfolio.portfolio
     for state in _get_states_gradient_with_invald_states():
         for evaluation in _get_irrationnal_numbers():
             # orders are possible
-            orders = order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, symbol, exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, nb_orders, market_status)
             check_portfolio(portfolio, initial_portfolio, orders, True)
-            fill_orders(orders, trader)
+            await fill_orders(orders, trader)
             # orders are impossible
-            orders = order_creator.create_new_order(evaluation, min_trigger_market, exchange, trader, portfolio, state)
+            orders = await order_creator.create_new_order(evaluation, min_trigger_market,
+                                                          exchange, trader, portfolio, state)
             check_orders(orders, evaluation, state, 0, market_status)
             check_portfolio(portfolio, initial_portfolio, orders, True)
-            fill_orders(orders, trader)
+            await fill_orders(orders, trader)
 
     _reset_portfolio(portfolio)
     initial_portfolio = portfolio.portfolio
     for state in _get_states_gradient_with_invald_states():
         # orders are possible
-        orders = order_creator.create_new_order(math.nan, symbol, exchange, trader, portfolio, state)
+        orders = await order_creator.create_new_order(math.nan, symbol, exchange, trader, portfolio, state)
         check_orders(orders, math.nan, state, nb_orders, market_status)
         check_portfolio(portfolio, initial_portfolio, orders, True)
-        fill_orders(orders, trader)
+        await fill_orders(orders, trader)
         # orders are impossible
-        orders = order_creator.create_new_order(math.nan, min_trigger_market, exchange, trader, portfolio, state)
+        orders = await order_creator.create_new_order(math.nan, min_trigger_market, exchange, trader, portfolio, state)
         check_orders(orders, math.nan, state, 0, market_status)
         check_portfolio(portfolio, initial_portfolio, orders, True)
-        fill_orders(orders, trader)
+        await fill_orders(orders, trader)

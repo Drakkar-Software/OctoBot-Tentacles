@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "momentum_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "tests":["test_adx_TA_evaluator", "test_bollinger_bands_momentum_TA_evaluator", "test_macd_TA_evaluator", "test_rsi_TA_evaluator", "test_klinger_TA_evaluator"]
 }
@@ -45,7 +45,7 @@ class RSIMomentumEvaluator(MomentumEvaluator):
         self.pertinence = 1
 
     # TODO : temp analysis
-    def eval_impl(self):
+    async def eval_impl(self):
         period_length = 14
         if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > period_length:
             rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=period_length)
@@ -76,7 +76,7 @@ class BBMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         period_length = 20
         if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) >= period_length:
@@ -131,7 +131,7 @@ class ADXMomentumEvaluator(MomentumEvaluator):
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
     # idea: adx > 30 => strong trend, < 20 => trend change to come
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         period_length = 14
         if len(self.data[PriceIndexes.IND_PRICE_HIGH.value]) > period_length + 10:
@@ -171,8 +171,7 @@ class ADXMomentumEvaluator(MomentumEvaluator):
                         crossing_indexes = TrendAnalysis.get_threshold_change_indexes(adx, neutral_adx)
                         chances_to_be_max = \
                             TrendAnalysis.get_estimation_of_move_state_relatively_to_previous_moves_length(
-                                crossing_indexes, adx) if len(crossing_indexes) > 2 \
-                                else 0.75
+                                crossing_indexes, adx) if len(crossing_indexes) > 2 else 0.75
                         proximity_to_max = min(1, current_adx / max_adx)
                         self.eval_note = multiplier * proximity_to_max * chances_to_be_max
 
@@ -185,7 +184,7 @@ class OBVMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         # obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
         #                   self.data[PriceStrings.STR_PRICE_VOL.value])
         pass
@@ -196,7 +195,7 @@ class WilliamsRMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         # willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
         #                       self.data[PriceStrings.STR_PRICE_LOW.value],
         #                       self.data[PriceStrings.STR_PRICE_CLOSE.value])
@@ -208,7 +207,7 @@ class TRIXMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         # trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
         pass
 
@@ -238,10 +237,10 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
             average_pattern_period = TrendAnalysis. \
                 get_estimation_of_move_state_relatively_to_previous_moves_length(
-                zero_crossing_indexes,
-                macd_hist,
-                pattern_move_time,
-                double_patterns_count)
+                    zero_crossing_indexes,
+                    macd_hist,
+                    pattern_move_time,
+                    double_patterns_count)
 
         # if we have few data but wave is growing => set higher value
         if len(zero_crossing_indexes) <= 1 and price_weight == 1:
@@ -253,7 +252,7 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
         self.eval_note = sign_multiplier * weight * average_pattern_period
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 26
         if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) >= long_period_length:
@@ -290,7 +289,7 @@ class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
@@ -298,7 +297,7 @@ class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
     def __init__(self):
         super().__init__()
 
-    def eval_impl(self):
+    async def eval_impl(self):
         eval_proposition = START_PENDING_EVAL_NOTE
         short_period = 35    # standard with klinger
         long_period = 55     # standard with klinger

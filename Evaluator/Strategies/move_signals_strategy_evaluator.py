@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "move_signals_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": ["momentum_evaluator", "trend_evaluator", "instant_fluctuations_evaluator"],
     "config_files": ["MoveSignalsStrategyEvaluator.json"],
     "tests":["test_move_signals_strategy_evaluator"]
@@ -56,7 +56,7 @@ class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):
         self.medium_period_eval = SignalWithWeight(TimeFrames.ONE_HOUR)   # 1h
         self.long_period_eval = SignalWithWeight(TimeFrames.FOUR_HOURS)     # 4h
 
-    def eval_impl(self) -> None:
+    async def eval_impl(self) -> None:
         TA_evaluations = self.matrix[EvaluatorMatrixTypes.TA]
         if self.SIGNAL_CLASS_NAME in TA_evaluations and self.WEIGHT_CLASS_NAME in TA_evaluations:
             self._refresh_evaluations(TA_evaluations)

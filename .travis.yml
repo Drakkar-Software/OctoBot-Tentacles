@@ -1,11 +1,12 @@
 sudo: enabled
 language: python
 python:
-  - 3.6
+  - "nightly"
 
 notifications:
   slack: "cryptobotgroupe:vYDDCLRne52jPGVtN6cMiUkb"
   email: false
+
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git
   - cd OctoBot
@@ -15,6 +16,15 @@ install:
   - pip3 install -r requirements.txt
   - cp ../octobot_config.json ./config.json
   - python3 start.py -p install all
-script:
   - pip3 install -r dev_requirements.txt
-  - pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/RealTime/Default ./tentacles/tests/Evaluator/Social/Default ./tentacles/tests/Evaluator/Strategies/Default ./tentacles/tests/Evaluator/TA/Default ./tentacles/tests/Evaluator/Util/Default ./tentacles/tests/Trading/Mode/Default
+
+jobs:
+  include:
+    - stage: test
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/TA/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/Strategies/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Trading/Mode/Default
+    -
+      script: pytest --cov=. --cov-config=.coveragerc ./tentacles/tests/Evaluator/RealTime/Default ./tentacles/tests/Evaluator/Social/Default ./tentacles/tests/Evaluator/Util/Default

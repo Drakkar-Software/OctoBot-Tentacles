@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "trend_analysis",
     "type": "Evaluator",
     "subtype": "Util",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": []
 }
 """
@@ -69,7 +69,6 @@ class TrendAnalysis(AbstractUtil):
                 return current_val > min_val
         else:
             return False
-
 
     @staticmethod
     # TODO

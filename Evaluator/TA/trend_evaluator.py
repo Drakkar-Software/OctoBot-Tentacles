@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "trend_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "tests":["test_double_moving_averages_TA_evaluator"]
 }
@@ -40,7 +40,7 @@ from tools.data_util import DataUtil
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 10
         if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > long_period_length:
@@ -69,7 +69,8 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
         min_len_arrays = min(len(time_period_unit_moving_average), len(current_moving_average))
 
         # compute difference between 1 unit values and others ( >0 means currently up the other one)
-        values_difference = (current_moving_average[-min_len_arrays:] - time_period_unit_moving_average[-min_len_arrays:])
+        values_difference = \
+            (current_moving_average[-min_len_arrays:] - time_period_unit_moving_average[-min_len_arrays:])
         values_difference = DataUtil.drop_nan(values_difference)
 
         if len(values_difference):
@@ -101,26 +102,26 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 # https://mrjbq7.github.io/ta-lib/func_groups/overlap_studies.html
 class CandleAnalysisTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # directional_movement_index --> trend strength
 class DMITrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # bollinger_bands
 class BBTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
 
 # ease_of_movement --> ease to change trend --> trend strength
 class EOMTrendEvaluator(TrendEvaluator):
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass

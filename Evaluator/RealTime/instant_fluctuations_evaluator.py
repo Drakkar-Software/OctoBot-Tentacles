@@ -2,11 +2,10 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": [],
     "config_files": ["InstantRegulatedMarketEvaluator.json"]
 }
@@ -61,8 +60,8 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         self.MIN_TRIGGERING_DELTA = 0.15
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
-    def _refresh_data(self):
-        self.update()
+    async def _refresh_data(self):
+        await self.update()
 
     def reset(self):
         super(InstantFluctuationsEvaluator, self).reset()
@@ -72,12 +71,12 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         self.last_volume = 0
         self.last_notification_eval = 0
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.evaluate_volume_fluctuations()
         if self.something_is_happening and self.eval_note != START_PENDING_EVAL_NOTE:
             if abs(self.last_notification_eval - self.eval_note) >= self.MIN_TRIGGERING_DELTA:
                 self.last_notification_eval = self.eval_note
-                self.notify_evaluator_thread_managers(self.__class__.__name__, force_TA_refresh=True)
+                await self.notify_evaluator_task_managers(self.get_name(), force_TA_refresh=True)
             self.something_is_happening = False
         else:
             self.eval_note = START_PENDING_EVAL_NOTE
@@ -118,9 +117,9 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
         else:
             self.something_is_happening = False
 
-    def update(self):
-        candles_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                    limit=self.candle_segments[0])
+    async def update(self):
+        candles_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+                                                          limit=self.candle_segments[0])
 
         for segment in self.candle_segments:
             self.average_volumes[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:])
@@ -147,11 +146,11 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         self.last_candle_data = None
         self.last_eval_note = START_PENDING_EVAL_NOTE
 
-    def _refresh_data(self):
-        self.last_candle_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+    async def _refresh_data(self):
+        self.last_candle_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
                                                              limit=20, return_list=False)
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = 0
         # slowk --> fastest
         # slowd --> slowest
@@ -171,7 +170,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
             self.eval_note = -1
 
         if self.last_eval_note != self.eval_note:
-            self.notify_evaluator_thread_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.__class__.__name__)
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
@@ -189,13 +188,13 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         self.last_eval_note = START_PENDING_EVAL_NOTE
         self.should_eval = True
 
-    def _refresh_data(self):
-        new_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+    async def _refresh_data(self):
+        new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
                                                 limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = 0
         close_values = self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value]
         sma_values = tulipy.sma(close_values, 6)
@@ -219,7 +218,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
             else:
                 self.eval_note = 0
 
-        self.notify_evaluator_thread_managers(self.__class__.__name__)
+        await self.notify_evaluator_task_managers(self.__class__.__name__)
 
     def set_default_config(self):
         super().set_default_config()
@@ -239,13 +238,13 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
         self.last_eval_note = START_PENDING_EVAL_NOTE
         self.should_eval = True
 
-    def _refresh_data(self):
-        new_data = self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
+    async def _refresh_data(self):
+        new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
                                                 limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
-    def eval_impl(self):
+    async def eval_impl(self):
         self.eval_note = 0
         close_values = self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value]
 
@@ -266,7 +265,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
             self.eval_note = 0
 
         if self.last_eval_note != self.eval_note:
-            self.notify_evaluator_thread_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.__class__.__name__)
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):

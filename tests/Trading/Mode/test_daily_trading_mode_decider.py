@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+import pytest
 import ccxt
 
 from config import EvaluatorStates, INIT_EVAL_NOTE
@@ -28,17 +29,24 @@ from trading.trader.portfolio import Portfolio
 from trading.trader.trader_simulator import TraderSimulator
 
 
-def _get_tools():
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
+
+
+async def _get_tools():
     symbol = "BTC/USDT"
     exchange_traders = {}
     exchange_traders2 = {}
     config = load_test_config()
     AdvancedManager.create_class_list(config)
     exchange_manager = ExchangeManager(config, ccxt.binance, is_simulated=True)
+    await exchange_manager.initialize()
     exchange_inst = exchange_manager.get_exchange()
     trader_inst = TraderSimulator(config, exchange_inst, 0.3)
+    await trader_inst.initialize()
     trader_inst.stop_order_manager()
     trader_inst2 = TraderSimulator(config, exchange_inst, 0.3)
+    await trader_inst2.initialize()
     trader_inst2.stop_order_manager()
     crypto_currency_evaluator = CryptocurrencyEvaluator(config, "Bitcoin", [])
     symbol_evaluator = SymbolEvaluator(config, symbol, crypto_currency_evaluator)
@@ -46,7 +54,8 @@ def _get_tools():
     exchange_traders2[exchange_inst.get_name()] = trader_inst2
     symbol_evaluator.set_trader_simulators(exchange_traders)
     symbol_evaluator.set_traders(exchange_traders2)
-    symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()] = EvaluatorCreator.create_strategies_eval_list(config)
+    symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()] = \
+        EvaluatorCreator.create_strategies_eval_list(config)
 
     trading_mode = DailyTradingMode(config, exchange_inst)
     trading_mode.add_symbol_evaluator(symbol_evaluator)
@@ -59,8 +68,8 @@ def _get_tools():
     return final_evaluator, trader_inst
 
 
-def test_default_values():
-    final_evaluator, trader_inst = _get_tools()
+async def test_default_values():
+    final_evaluator, trader_inst = await _get_tools()
     assert final_evaluator.state is None
     assert final_evaluator.queue.empty()
     final_evaluator.final_eval = 1211161
@@ -69,43 +78,43 @@ def test_default_values():
     assert final_evaluator.get_state() == "plop"
 
 
-def test_set_state():
-    final_evaluator, trader_inst = _get_tools()
-    final_evaluator._set_state(EvaluatorStates.NEUTRAL)
+async def test_set_state():
+    final_evaluator, trader_inst = await _get_tools()
+    await final_evaluator._set_state(EvaluatorStates.NEUTRAL)
     assert final_evaluator.state == EvaluatorStates.NEUTRAL
-    final_evaluator._set_state(EvaluatorStates.VERY_LONG)
+    await final_evaluator._set_state(EvaluatorStates.VERY_LONG)
     assert final_evaluator.state == EvaluatorStates.VERY_LONG
     assert len(trader_inst.order_manager.order_list) == 1
-    final_evaluator._set_state(EvaluatorStates.NEUTRAL)
-    final_evaluator._set_state(EvaluatorStates.VERY_SHORT)
+    await final_evaluator._set_state(EvaluatorStates.NEUTRAL)
+    await final_evaluator._set_state(EvaluatorStates.VERY_SHORT)
     assert final_evaluator.state == EvaluatorStates.VERY_SHORT
     assert len(trader_inst.order_manager.order_list) == 1
-    final_evaluator._set_state(EvaluatorStates.NEUTRAL)
-    final_evaluator._set_state(EvaluatorStates.LONG)
+    await final_evaluator._set_state(EvaluatorStates.NEUTRAL)
+    await final_evaluator._set_state(EvaluatorStates.LONG)
     assert final_evaluator.state == EvaluatorStates.LONG
     assert len(trader_inst.order_manager.order_list) == 1
-    final_evaluator._set_state(EvaluatorStates.NEUTRAL)
-    final_evaluator._set_state(EvaluatorStates.SHORT)
+    await final_evaluator._set_state(EvaluatorStates.NEUTRAL)
+    await final_evaluator._set_state(EvaluatorStates.SHORT)
     assert final_evaluator.state == EvaluatorStates.SHORT
     assert len(trader_inst.order_manager.order_list) == 2  # has stop loss
-    final_evaluator._set_state(EvaluatorStates.NEUTRAL)
+    await final_evaluator._set_state(EvaluatorStates.NEUTRAL)
     assert final_evaluator.state == EvaluatorStates.NEUTRAL
     assert len(trader_inst.order_manager.order_list) == 2  # has not reset
 
 
-def test_get_delta_risk():
-    final_evaluator, trader_inst = _get_tools()
+async def test_get_delta_risk():
+    final_evaluator, trader_inst = await _get_tools()
     for i in range(0, 100, 1):
         final_evaluator.symbol_evaluator.get_trader(final_evaluator.exchange).risk = i/100
         assert round(final_evaluator._get_delta_risk(), 6) == round(final_evaluator.RISK_THRESHOLD*i/100, 6)
 
 
-def test_create_state():
-    final_evaluator, trader_inst = _get_tools()
+async def test_create_state():
+    final_evaluator, trader_inst = await _get_tools()
     delta_risk = final_evaluator._get_delta_risk()
     for i in range(-100, 100, 1):
         final_evaluator.final_eval = i/100
-        final_evaluator.create_state()
+        await final_evaluator.create_state()
         if final_evaluator.final_eval < final_evaluator.VERY_LONG_THRESHOLD + delta_risk:
             assert final_evaluator.state == EvaluatorStates.VERY_LONG
         elif final_evaluator.final_eval < final_evaluator.LONG_THRESHOLD + delta_risk:
@@ -118,9 +127,9 @@ def test_create_state():
             assert final_evaluator.state == EvaluatorStates.VERY_SHORT
 
 
-def test_prepare():
-    final_evaluator, trader_inst = _get_tools()
-    final_evaluator._set_state(EvaluatorStates.SHORT)
+async def test_prepare():
+    final_evaluator, trader_inst = await _get_tools()
+    await final_evaluator._set_state(EvaluatorStates.SHORT)
     assert final_evaluator.state == EvaluatorStates.SHORT
     assert len(trader_inst.order_manager.order_list) == 2  # has stop loss
     final_evaluator.final_eval = None
@@ -130,17 +139,17 @@ def test_prepare():
     assert final_evaluator.final_eval == INIT_EVAL_NOTE
 
 
-def test_finalize():
-    final_evaluator, trader_inst = _get_tools()
+async def test_finalize():
+    final_evaluator, trader_inst = await _get_tools()
     final_evaluator.final_eval = None
-    final_evaluator.finalize()
+    await final_evaluator.finalize()
     assert final_evaluator.final_eval == INIT_EVAL_NOTE
 
-    final_evaluator._set_state(EvaluatorStates.SHORT)
+    await final_evaluator._set_state(EvaluatorStates.SHORT)
     assert final_evaluator.state == EvaluatorStates.SHORT
     assert len(trader_inst.order_manager.order_list) == 2  # has stop loss
 
-    final_evaluator.finalize()
+    await final_evaluator.finalize()
     assert final_evaluator.final_eval == INIT_EVAL_NOTE
     assert final_evaluator.state == EvaluatorStates.NEUTRAL  # ensure changed EvaluatorStates
     assert len(trader_inst.order_manager.order_list) == 2  # ensure did not change orders because neutral state

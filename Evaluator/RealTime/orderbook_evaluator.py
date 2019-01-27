@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "orderbook_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "requirements": []
 }
 """
@@ -38,7 +38,7 @@ class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
     def _refresh_data(self):
         pass
 
-    def eval_impl(self):
+    async def eval_impl(self):
         pass
 
     def set_default_config(self):
@@ -46,3 +46,6 @@ class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
             CONFIG_REFRESH_RATE: 5,
             CONFIG_TIME_FRAME: TimeFrames.FIVE_MINUTES
         }
+
+    def _should_eval(self):
+        pass
