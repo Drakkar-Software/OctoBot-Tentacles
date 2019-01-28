@@ -29,8 +29,8 @@ $tentacle_description: {
 
 import numpy
 
-from pytrends.exceptions import ResponseError
-from pytrends.request import TrendReq
+from simplifiedpytrends.exceptions import ResponseError
+from simplifiedpytrends.request import TrendReq
 
 from config import *
 from evaluator.Social.social_evaluator import StatsSocialEvaluator
@@ -41,29 +41,30 @@ from evaluator.Util.advanced_manager import AdvancedManager
 class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
     def __init__(self):
         super().__init__()
-        self.pytrends = None
+        self.simplified_pytrends = None
 
-    # Use pytrends lib (https://github.com/GeneralMills/pytrends)
-    # https://github.com/GeneralMills/pytrends/blob/master/examples/example.py
+    # Use simmplifiedpytrends lib (https://github.com/Drakkar-Software/simplifiedpytrends)
+    # https://github.com/Drakkar-Software/simplifiedpytrends/blob/master/examples/example.py
     def get_data(self):
-        self.pytrends = TrendReq(hl='en-US', tz=0)
-        # self.pytrends.GENERAL_URL = "https://trends.google.com/trends/explore"
+        self.simplified_pytrends = TrendReq(hl='en-US', tz=0)
+        # self.simmplifiedpytrends.GENERAL_URL = "https://trends.google.com/trends/explore"
         # self.symbol
         key_words = [self.symbol]
         try:
             # looks like only 1 and 3 months are working ...
             time_frame = f"today {str(self.social_config[STATS_EVALUATOR_HISTORY_TIME])}-m"
             # Careful, apparently hourly rate limit is low
-            self.pytrends.build_payload(kw_list=key_words, cat=0, timeframe=time_frame, geo='', gprop='')
+            self.simplified_pytrends.build_payload(kw_list=key_words, cat=0, timeframe=time_frame, geo='', gprop='')
         except ResponseError as e:
             self.logger.warn(str(e))
 
     async def eval_impl(self):
-        interest_over_time_df = self.pytrends.interest_over_time()
+        interest_over_time = self.simplified_pytrends.interest_over_time()
+        trend = numpy.array([d["data"] for d in interest_over_time])
 
         # compute bollinger bands
         self.eval_note = AdvancedManager.get_class(self.config, StatisticAnalysis).analyse_recent_trend_changes(
-            interest_over_time_df[self.symbol].astype('float64').values, numpy.sqrt)
+            trend, numpy.sqrt)
 
     # check if history is not too high
     def load_config(self):
