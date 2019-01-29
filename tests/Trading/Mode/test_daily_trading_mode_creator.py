@@ -315,6 +315,18 @@ async def test_create_new_order_with_dusts_included():
     assert trader.portfolio.portfolio["BTC"][Portfolio.AVAILABLE] == 0
     assert trader.portfolio.portfolio["BTC"][Portfolio.TOTAL] == orders[0].origin_quantity
 
+    test_currency = "NEO"
+    test_pair = f"{test_currency}/BTC"
+    trader.portfolio.portfolio[test_currency] = {
+        Portfolio.TOTAL: 0.88,
+        Portfolio.AVAILABLE: 0.88
+    }
+    # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
+    orders = await order_creator.create_new_order(0.75445456165478, test_pair,
+                                                  exchange, trader, portfolio, EvaluatorStates.SHORT)
+    assert len(orders) == 1
+    assert trader.portfolio.portfolio[test_currency][Portfolio.AVAILABLE] == 0
+    assert trader.portfolio.portfolio[test_currency][Portfolio.TOTAL] == orders[0].origin_quantity
 
 async def test_split_create_new_order():
     config, exchange, trader, symbol = await _get_tools()

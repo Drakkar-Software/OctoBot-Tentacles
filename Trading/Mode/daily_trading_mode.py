@@ -161,8 +161,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_market_quantity_from_risk(eval_note,
                                                                trader,
                                                                current_symbol_holding)
-                quantity += self.get_additional_dusts_to_quantity_if_necessary(quantity, price,
-                                                                               symbol_market, current_symbol_holding)
+                quantity = self.add_dusts_to_quantity_if_necessary(quantity, price,
+                                                                   symbol_market, current_symbol_holding)
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                                    symbol_market):
                     current_order = trader.create_order_instance(order_type=TraderOrderType.SELL_MARKET,
@@ -178,8 +178,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_limit_quantity_from_risk(eval_note,
                                                               trader,
                                                               current_symbol_holding)
-                quantity += self.get_additional_dusts_to_quantity_if_necessary(quantity, price,
-                                                                               symbol_market, current_symbol_holding)
+                quantity = self.add_dusts_to_quantity_if_necessary(quantity, price,
+                                                                   symbol_market, current_symbol_holding)
                 limit_price = self.adapt_price(symbol_market,
                                                price * self._get_limit_price_from_risk(eval_note, trader))
                 stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
