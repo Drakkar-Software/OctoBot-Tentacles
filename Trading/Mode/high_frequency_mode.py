@@ -33,6 +33,7 @@ from tentacles.Evaluator.Strategies import HighFrequencyStrategiesEvaluator
 from tools.evaluators_util import check_valid_eval_note
 from tools.symbol_util import split_symbol
 from tools.initializable import Initializable
+from tools.dict_util import get_value_or_default
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreatorWithBot
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDeciderWithBot
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
@@ -165,11 +166,11 @@ class HighFrequencyModeDecider(AbstractTradingModeDeciderWithBot, Initializable)
 
         self.currency, self.market = split_symbol(self.symbol)
         market_status = exchange.get_market_status(self.symbol)
-        self.currency_max_digits = HighFrequencyModeCreator.get_value_or_default(market_status[Ecmsc.PRECISION.value],
-                                                                                 Ecmsc.PRECISION_PRICE.value,
-                                                                                 CURRENCY_DEFAULT_MAX_PRICE_DIGITS)
+        self.currency_max_digits = get_value_or_default(market_status[Ecmsc.PRECISION.value],
+                                                        Ecmsc.PRECISION_PRICE.value,
+                                                        CURRENCY_DEFAULT_MAX_PRICE_DIGITS)
         limit_cost = market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value]
-        self.currency_min_cost = HighFrequencyModeCreator.get_value_or_default(limit_cost, Ecmsc.LIMITS_COST_MIN.value)
+        self.currency_min_cost = get_value_or_default(limit_cost, Ecmsc.LIMITS_COST_MIN.value)
 
     async def initialize_impl(self):
         for order_creator_key in self.get_creators():
