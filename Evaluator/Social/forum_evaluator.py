@@ -111,17 +111,3 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
     # not standalone task
     async def start_task(self):
         pass
-
-
-class BTCTalkForumEvaluator(ForumSocialEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    def get_data(self):
-        pass
-
-    async def eval_impl(self):
-        pass
-
-    async def start_task(self):
-        pass

@@ -154,22 +154,3 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
     # not standalone task
     async def start_task(self):
         pass
-
-
-class MediumNewsEvaluator(NewsSocialEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    def get_data(self):
-        pass
-
-    async def eval_impl(self):
-        await self.notify_evaluator_task_managers(self.__class__.__name__)
-
-    async def start_task(self):
-        pass
-
-    def set_default_config(self):
-        self.social_config = {
-            CONFIG_REFRESH_RATE: 2
-        }

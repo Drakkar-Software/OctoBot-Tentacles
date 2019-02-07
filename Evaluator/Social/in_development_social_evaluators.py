@@ -2,14 +2,15 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "orderbook_evaluator",
+    "name": "in_development_social_evaluators",
     "type": "Evaluator",
-    "subtype": "RealTime",
+    "subtype": "Social",
     "version": "1.1.0",
-    "requirements": []
+    "requirements": [],
+    "config_files": [],
+    "developing": true
 }
 """
-
 
 #  Drakkar-Software OctoBot
 #  Copyright (c) Drakkar-Software, All rights reserved.
@@ -27,25 +28,35 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import CONFIG_TIME_FRAME, TimeFrames, CONFIG_REFRESH_RATE
-from evaluator.RealTime import RealTimeTAEvaluator
+
+from config import *
+from evaluator.Social.social_evaluator import ForumSocialEvaluator, NewsSocialEvaluator
 
 
-class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
-    def __init__(self, exchange_inst, symbol):
-        super().__init__(exchange_inst, symbol)
+class BTCTalkForumEvaluator(ForumSocialEvaluator):
 
-    def _refresh_data(self):
+    def get_data(self):
         pass
 
     async def eval_impl(self):
         pass
 
-    def set_default_config(self):
-        self.specific_config = {
-            CONFIG_REFRESH_RATE: 5,
-            CONFIG_TIME_FRAME: TimeFrames.FIVE_MINUTES
-        }
-
-    def _should_eval(self):
+    async def start_task(self):
         pass
+
+
+class MediumNewsEvaluator(NewsSocialEvaluator):
+
+    def get_data(self):
+        pass
+
+    async def eval_impl(self):
+        await self.notify_evaluator_task_managers(self.__class__.__name__)
+
+    async def start_task(self):
+        pass
+
+    def set_default_config(self):
+        self.social_config = {
+            CONFIG_REFRESH_RATE: 2
+        }

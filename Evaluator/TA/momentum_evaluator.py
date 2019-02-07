@@ -73,8 +73,6 @@ class RSIMomentumEvaluator(MomentumEvaluator):
 
 # bollinger_bands
 class BBMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
@@ -125,8 +123,6 @@ class BBMomentumEvaluator(MomentumEvaluator):
 
 # ADX --> trend_strength
 class ADXMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
@@ -178,38 +174,6 @@ class ADXMomentumEvaluator(MomentumEvaluator):
                 # weak adx => change to come
                 else:
                     self.eval_note = multiplier * min(1, ((neutral_adx - current_adx) / (neutral_adx - min_adx)))
-
-
-class OBVMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
-        #                   self.data[PriceStrings.STR_PRICE_VOL.value])
-        pass
-
-
-# William's % R --> overbought / oversold
-class WilliamsRMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
-        #                       self.data[PriceStrings.STR_PRICE_LOW.value],
-        #                       self.data[PriceStrings.STR_PRICE_CLOSE.value])
-        pass
-
-
-# TRIX --> percent rate-of-change trend
-class TRIXMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
-        pass
 
 
 class MACDMomentumEvaluator(MomentumEvaluator):
@@ -285,17 +249,7 @@ class MACDMomentumEvaluator(MomentumEvaluator):
                                           pattern_move_time, sign_multiplier)
 
 
-class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        pass
-
-
 class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
 
     async def eval_impl(self):
         eval_proposition = START_PENDING_EVAL_NOTE

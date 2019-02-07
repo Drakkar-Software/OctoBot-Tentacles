@@ -2,11 +2,13 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "volatility_evaluator",
+    "name": "in_development_TA_evaluators",
     "type": "Evaluator",
     "subtype": "TA",
     "version": "1.1.0",
-    "requirements": []
+    "requirements": [],
+    "tests":[],
+    "developing": true
 }
 """
 
@@ -26,7 +28,68 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from evaluator.TA.TA_evaluator import VolatilityEvaluator
+
+from evaluator.TA.TA_evaluator import MomentumEvaluator, TrendEvaluator, VolatilityEvaluator
+
+
+class OBVMomentumEvaluator(MomentumEvaluator):
+
+    async def eval_impl(self):
+        # obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
+        #                   self.data[PriceStrings.STR_PRICE_VOL.value])
+        pass
+
+
+# William's % R --> overbought / oversold
+class WilliamsRMomentumEvaluator(MomentumEvaluator):
+
+    async def eval_impl(self):
+        # willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
+        #                       self.data[PriceStrings.STR_PRICE_LOW.value],
+        #                       self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        pass
+
+
+# TRIX --> percent rate-of-change trend
+class TRIXMomentumEvaluator(MomentumEvaluator):
+
+    async def eval_impl(self):
+        # trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
+        pass
+
+
+class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
+
+    async def eval_impl(self):
+        pass
+
+
+# https://mrjbq7.github.io/ta-lib/func_groups/overlap_studies.html
+class CandleAnalysisTrendEvaluator(TrendEvaluator):
+
+    async def eval_impl(self):
+        pass
+
+
+# directional_movement_index --> trend strength
+class DMITrendEvaluator(TrendEvaluator):
+
+    async def eval_impl(self):
+        pass
+
+
+# bollinger_bands
+class BBTrendEvaluator(TrendEvaluator):
+
+    async def eval_impl(self):
+        pass
+
+
+# ease_of_movement --> ease to change trend --> trend strength
+class EOMTrendEvaluator(TrendEvaluator):
+
+    async def eval_impl(self):
+        pass
 
 
 # average_true_range
@@ -50,8 +113,6 @@ class ChaikinVolatilityEvaluator(VolatilityEvaluator):
 
 
 class StochasticVolatilityEvaluator(VolatilityEvaluator):
-    def __init__(self):
-        super().__init__()
 
     async def eval_impl(self):
         # slowk, slowd = talib.STOCH(self.data[PriceStrings.STR_PRICE_HIGH.value],
@@ -61,8 +122,6 @@ class StochasticVolatilityEvaluator(VolatilityEvaluator):
 
 
 class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
-    def __init__(self):
-        super().__init__()
 
     async def eval_impl(self):
         # fastk, fastd = talib.STOCHRSI(self.data[PriceStrings.STR_PRICE_CLOSE.value])

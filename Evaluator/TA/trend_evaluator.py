@@ -97,31 +97,3 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 
         # just crossed the average => neutral
         return 0
-
-
-# https://mrjbq7.github.io/ta-lib/func_groups/overlap_studies.html
-class CandleAnalysisTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# directional_movement_index --> trend strength
-class DMITrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# bollinger_bands
-class BBTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# ease_of_movement --> ease to change trend --> trend strength
-class EOMTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
