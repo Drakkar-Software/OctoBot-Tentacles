@@ -31,7 +31,7 @@ $tentacle_description: {
 from config import *
 from evaluator.Strategies import MixedStrategiesEvaluator
 from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
-from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
+from tentacles.Evaluator.Social import RedditForumEvaluator
 from tools.evaluators_util import check_valid_eval_note
 
 
@@ -151,12 +151,6 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
                 self.instant_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][
                     InstantFluctuationsEvaluator.get_name()]
                 self.inc_instant_counter()
-
-        if MediumNewsEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][
-                                         MediumNewsEvaluator.get_name()]):
-                self.social_evaluation += self.matrix[EvaluatorMatrixTypes.SOCIAL][MediumNewsEvaluator.get_name()]
-                self.inc_social_counter()
 
         if RedditForumEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
             if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][
