@@ -10,7 +10,7 @@ $tentacle_description: {
     "tests":["test_double_moving_averages_TA_evaluator"]
 }
 """
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
