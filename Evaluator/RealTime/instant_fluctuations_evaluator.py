@@ -31,7 +31,8 @@ import tulipy
 
 import numpy as np
 
-from config import *
+from config import ExchangeConstantsOrderBookInfoColumns, CONFIG_REFRESH_RATE, PriceIndexes, CONFIG_TIME_FRAME, \
+    START_PENDING_EVAL_NOTE
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
 
 """
@@ -148,7 +149,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         self.last_candle_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                             limit=20, return_list=False)
+                                                                   limit=20, return_list=False)
 
     async def eval_impl(self):
         self.eval_note = 0
@@ -190,7 +191,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                limit=20, return_list=False)
+                                                      limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
@@ -240,7 +241,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                limit=20, return_list=False)
+                                                      limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
@@ -271,6 +272,43 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
     def set_default_config(self):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.3
+
+    def _should_eval(self):
+        return self.should_eval
+
+
+class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
+    def __init__(self, exchange, symbol):
+        super().__init__(exchange, symbol)
+        self.last_best_bid = None
+        self.last_best_ask = None
+        self.last_order_book_data = None
+        self.should_eval = True
+
+    async def _refresh_data(self):
+        self.last_order_book_data = await self._get_order_book_from_exchange(limit=5)
+
+    async def eval_impl(self):
+        self.eval_note = ""
+        best_bid = self.last_best_bid
+        best_ask = self.last_best_ask
+
+        if self.last_order_book_data is not None:
+            best_bid = self.last_order_book_data[ExchangeConstantsOrderBookInfoColumns.BIDS.value][-1]
+            best_ask = self.last_order_book_data[ExchangeConstantsOrderBookInfoColumns.ASKS.value][-1]
+
+        if self.last_best_ask != best_ask or self.last_best_bid != best_bid:
+            self.eval_note = {
+                ExchangeConstantsOrderBookInfoColumns.BIDS.value: best_bid,
+                ExchangeConstantsOrderBookInfoColumns.ASKS.value: best_ask
+            }
+            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            self.last_best_ask = best_ask
+            self.last_best_bid = best_bid
+
+    def set_default_config(self):
+        super().set_default_config()
+        self.specific_config[CONFIG_REFRESH_RATE] = 60
 
     def _should_eval(self):
         return self.should_eval

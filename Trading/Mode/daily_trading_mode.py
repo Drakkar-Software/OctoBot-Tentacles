@@ -40,7 +40,6 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
-
     DESCRIPTION = "DailyTradingMode is a low risk trading mode adapted to flat markets."
 
     def __init__(self, config, exchange):
@@ -248,10 +247,10 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             raise e
 
         except Exception as e:
-            get_logger(self.__class__.__name__).error(f"Failed to create order : {e}. "
-                                                      f"Order: "
-                                                      f"{current_order.get_string_info() if current_order else None}")
-            get_logger(self.__class__.__name__).exception(e)
+            self.logger.error(f"Failed to create order : {e}. "
+                              f"Order: "
+                              f"{current_order.get_string_info() if current_order else None}")
+            self.logger.exception(e)
             return None
 
 
@@ -320,12 +319,12 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                 # create notification
                 if self.symbol_evaluator.matrices:
                     await self.notifier.notify_alert(
-                          self.final_eval,
-                          self.symbol_evaluator.get_crypto_currency_evaluator(),
-                          self.symbol_evaluator.get_symbol(),
-                          self.symbol_evaluator.get_trader(self.exchange),
-                          self.state,
-                          self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
-                    
+                        self.final_eval,
+                        self.symbol_evaluator.get_crypto_currency_evaluator(),
+                        self.symbol_evaluator.get_symbol(),
+                        self.symbol_evaluator.get_trader(self.exchange),
+                        self.state,
+                        self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
+
                 # call orders creation method
                 await self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))
