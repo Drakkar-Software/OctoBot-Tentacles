@@ -1,29 +1,40 @@
 {
-  "crypto_currencies":{
+  "backtesting": {
+      "enabled": false,
+      "files": []
+  },
+  "crypto-currencies":{
     "Bitcoin": {
       "pairs" : ["BTC/USDT"]
     }
   },
   "exchanges": {
+    "binance": {
+      "api-key": "your-api-key-here",
+      "api-secret": "your-api-secret-here"
+    }
   },
   "services": {},
-  "tentacles-packages": [],
   "notification":{
-    "global_info": true,
-    "price_alerts": true,
+    "global-info": true,
+    "price-alerts": true,
     "trades": true,
-    "type": []
+    "notification-type": []
+  },
+  "trading":{
+    "risk": 0.5,
+    "reference-market": "BTC"
   },
   "trader":{
-    "enabled": false,
-    "risk": 0.5,
-    "reference_market": "BTC",
-    "mode": "DailyTradingMode"
+    "enabled": false
   },
-  "trader_simulator":{
+  "trader-simulator":{
     "enabled": true,
-    "risk": 0.5,
-    "starting_portfolio": {
+    "fees": {
+        "maker": 0.1,
+        "taker": 0.1
+    },
+    "starting-portfolio": {
       "BTC": 10,
       "USDT": 1000
     }
