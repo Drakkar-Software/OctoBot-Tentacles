@@ -1,0 +1,5 @@
+{
+  "delta_ask": 0.00001,
+  "delta_bid": 0.00001,
+  "required_strategies": ["SimpleMarketMakingStrategiesEvaluator"]
+}
