@@ -37,6 +37,10 @@ from tools.decoding_encoding import DecoderEncoder
 
 
 class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
+    DESCRIPTION = "Triggers when a new tweet appears from the Twitter accounts in TwitterNewsEvaluator.json. " \
+                  "If the evaluation a new tweet is significant enough, triggers strategies re-evaluation. Otherwise " \
+                  "acts as a background evaluator."
+
     # max time to live for a pulse is 10min
     _EVAL_MAX_TIME_TO_LIVE = 10 * MINUTE_TO_SECONDS
     # absolute value above which a notification is triggered

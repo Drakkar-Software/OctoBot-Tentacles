@@ -39,6 +39,10 @@ from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 # RedditForumEvaluator is used to get an overall state of a market, it will not trigger a trade
 # (notify its evaluators) but is used to measure hype and trend of a market.
 class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
+    DESCRIPTION = "First initialises using the recent history of the subreddits in RedditForumEvaluator.json then " \
+                  "watches for new posts to update its evaluation. Never triggers strategies re-evaluations, " \
+                  "acts as a background evaluator."
+
     def __init__(self):
         ForumSocialEvaluator.__init__(self)
         DispatcherAbstractClient.__init__(self)
