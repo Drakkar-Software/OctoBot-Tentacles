@@ -43,6 +43,9 @@ compute the strength or weakness of the move
 
 
 class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
+    DESCRIPTION = "Triggers when a change of price ( > 1%) or of volume ( > x4) from recent average happens." \
+                  "The price distance from recent average is defining the evaluation."
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.something_is_happening = False
@@ -139,6 +142,9 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 # 1 when the market is unstable
 
 class InstantVolatilityEvaluator(RealTimeTAEvaluator):
+    DESCRIPTION = "Triggers when the stochastic indicator crosses stability and instability thresholds. " \
+                  "Evaluation is respectively -1 or 1."
+
     STOCH_INSTABILITY_THRESHOLD = 50
     STOCH_STABILITY_THRESHOLD = 30
 
@@ -183,6 +189,8 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
 
 class InstantMAEvaluator(RealTimeTAEvaluator):
+    DESCRIPTION = "Triggers systematically. Uses the slow moving average (on a length of 6) to set its evaluation."
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
@@ -230,6 +238,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
 
 
 class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
+
     MARKET_PRICE = "regulated_market_price"
     MARKET_RANGE = "regulated_market_range"
 
@@ -278,6 +287,9 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
 
 class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
+    DESCRIPTION = "Triggers on order book change. Uses the slow moving average (on a length of 6) to set its " \
+                  "evaluation."
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_best_bid = None

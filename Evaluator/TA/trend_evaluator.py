@@ -39,6 +39,9 @@ from tools.data_util import DataUtil
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
+    DESCRIPTION = "Uses two moving averages (length of 5 and length of 10) to find reversals. " \
+                  "Evaluates -1 to 1 relatively to the computed reversal probability and the current price " \
+                  "distance from moving averages."
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE

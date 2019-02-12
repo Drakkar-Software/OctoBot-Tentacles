@@ -39,6 +39,9 @@ from evaluator.Util.advanced_manager import AdvancedManager
 
 
 class GoogleTrendStatsEvaluator(StatsSocialEvaluator):
+    DESCRIPTION = "Analyses the trend of the given currencies using their names to compute the evaluation. " \
+                  "Never triggers strategies re-evaluations, acts as a background evaluator."
+
     def __init__(self):
         super().__init__()
         self.simplified_pytrends = None

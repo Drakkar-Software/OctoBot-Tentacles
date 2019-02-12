@@ -40,6 +40,9 @@ from tools.data_util import DataUtil
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Relative Strength Index (length of 14) to find trend reversals. When found, evaluates -1 to 1" \
+                  " according to the strength of the RSI."
+
     def __init__(self):
         super().__init__()
         self.pertinence = 1
@@ -73,6 +76,8 @@ class RSIMomentumEvaluator(MomentumEvaluator):
 
 # bollinger_bands
 class BBMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Bollinger bands (length of 20) to evaluates -1 to 1 according to the current price " \
+                  "relatively to the current Bollinger bands values."
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
@@ -123,6 +128,9 @@ class BBMomentumEvaluator(MomentumEvaluator):
 
 # ADX --> trend_strength
 class ADXMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Average Directional Index (length of 14) to find reversals. " \
+                  "Evaluates -1 to 1 according to the current price using exponential moving averages (length of 20) " \
+                  "coupled with ADX."
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
@@ -177,6 +185,10 @@ class ADXMomentumEvaluator(MomentumEvaluator):
 
 
 class MACDMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Moving Average Convergence Divergence (length of 26) to find reversals. " \
+                  "Tries to find patterns in the MACD histogram and returns -1 to 1 according to the price and " \
+                  "identified pattern strength."
+
     def __init__(self):
         super().__init__()
         self.previous_note = None
@@ -250,6 +262,8 @@ class MACDMomentumEvaluator(MomentumEvaluator):
 
 
 class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses Klinger Oscillator (short period of 35 and long period of 55) to find reversals. " \
+                  "Evaluates -1 to 1 using klinger reversal estimation."
 
     async def eval_impl(self):
         eval_proposition = START_PENDING_EVAL_NOTE
