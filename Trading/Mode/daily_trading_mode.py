@@ -40,7 +40,10 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
-    DESCRIPTION = "DailyTradingMode is a low risk trading mode adapted to flat markets."
+    DESCRIPTION = "DailyTradingMode is a low risk versatile trading mode that reacts only the its state changes to " \
+                  "a state that is different from the previous one and that is not NEUTRAL. " \
+                  "When triggered for a given symbol, it will cancel previously created (and unfilled) orders " \
+                  "and create new ones according to its new state."
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)

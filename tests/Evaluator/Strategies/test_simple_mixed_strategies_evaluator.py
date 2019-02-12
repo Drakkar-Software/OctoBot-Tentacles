@@ -17,7 +17,7 @@
 import pytest
 
 from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
-from evaluator.Strategies import FullMixedStrategiesEvaluator
+from evaluator.Strategies import SimpleMixedStrategiesEvaluator
 from trading.trader.modes import DailyTradingMode
 
 
@@ -27,12 +27,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 def strategy_tester():
-    strategy_tester_instance = TestFullMixedStrategiesEvaluator()
-    strategy_tester_instance.initialize(FullMixedStrategiesEvaluator, DailyTradingMode)
+    strategy_tester_instance = TestSimpleMixedStrategiesEvaluator()
+    strategy_tester_instance.initialize(SimpleMixedStrategiesEvaluator, DailyTradingMode)
     return strategy_tester_instance
 
 
-class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
+class TestSimpleMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_default_run(strategy_tester):

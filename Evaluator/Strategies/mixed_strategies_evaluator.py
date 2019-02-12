@@ -36,8 +36,13 @@ from tools.evaluators_util import check_valid_eval_note
 
 
 class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
-    DESCRIPTION = "FullMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
-                  "to make the strategy evaluation"
+    DESCRIPTION = "FullMixedStrategiesEvaluator a flexible strategy. Meant to be customized, it is using " \
+                  "every activated technical evaluator and averages the evaluation notes of " \
+                  "each to compute its final evaluation. This strategy can be used to make simple trading strategies " \
+                  "using for example only one evaluator or more complex ones using a multi-evaluator setup. " \
+                  "FullMixedStrategiesEvaluator can also handle InstantFluctuationsEvaluator and " \
+                  "RedditForumEvaluator if activated." \
+                  "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
         super().__init__()
@@ -185,8 +190,11 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
 
 class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
-    DESCRIPTION = "SimpleMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
-                  "to make the strategy evaluation"
+    DESCRIPTION = "SimpleMixedStrategiesEvaluator is the most flexible strategy. Meant to be customized, it is using " \
+                  "every activated technical, social and real time evaluator, and averages the evaluation notes of " \
+                  "each to compute its final evaluation. This strategy can be used to make simple trading strategies " \
+                  "using for example only one evaluator or more complex ones using a multi-evaluator setup." \
+                  "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
         super().__init__()

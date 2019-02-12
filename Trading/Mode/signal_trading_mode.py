@@ -32,7 +32,7 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class SignalTradingMode(AbstractTradingMode):
-    DESCRIPTION = "SignalTradingMode is a low risk trading mode adapted to relatively flat markets. " \
+    DESCRIPTION = "SignalTradingMode is a middle risk trading mode adapted to relatively flat markets. " \
                   "SignalTradingMode is using the daily trading mode orders system with adapted parameters. " \
                   "Warning: Works only on liquid markets."
 
