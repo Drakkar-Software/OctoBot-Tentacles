@@ -189,7 +189,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
 
 class InstantMAEvaluator(RealTimeTAEvaluator):
-    DESCRIPTION = "Triggers systematically. Uses the slow moving average (on a length of 6) to set its evaluation."
+    DESCRIPTION = "Triggers systematically. Uses the simple moving average (on a length of 6) to set its evaluation."
 
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
@@ -287,7 +287,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
 
 class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
-    DESCRIPTION = "Triggers on order book change. Uses the slow moving average (on a length of 6) to set its " \
+    DESCRIPTION = "Triggers on order book change. Uses the simple moving average (on a length of 6) to set its " \
                   "evaluation."
 
     def __init__(self, exchange, symbol):
