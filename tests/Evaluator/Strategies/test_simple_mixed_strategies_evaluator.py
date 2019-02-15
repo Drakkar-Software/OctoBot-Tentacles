@@ -40,24 +40,24 @@ class TestSimpleMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        await strategy_tester.run_test_slow_downtrend(-9.7, -9, -21.5, -16)
+        await strategy_tester.run_test_slow_downtrend(-8, -35, -39, -27.5)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
-        await strategy_tester.run_test_sharp_downtrend(-14.5, -21.5)
+        await strategy_tester.run_test_sharp_downtrend(-25.5, -22.5)
 
     @staticmethod
     async def test_flat_markets(strategy_tester):
-        await strategy_tester.run_test_flat_markets(-3.5, 0.5, 8, 26)
+        await strategy_tester.run_test_flat_markets(-8.5, 3.5, -4, -9)
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        await strategy_tester.run_test_slow_uptrend(-5, -4)
+        await strategy_tester.run_test_slow_uptrend(-12, -0.5)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
-        await strategy_tester.run_test_sharp_uptrend(10.5, 7.5)
+        await strategy_tester.run_test_sharp_uptrend(17, 19)
 
     @staticmethod
     async def test_up_then_down(strategy_tester):
-        await strategy_tester.run_test_up_then_down(-12)
+        await strategy_tester.run_test_up_then_down(-5.5)
