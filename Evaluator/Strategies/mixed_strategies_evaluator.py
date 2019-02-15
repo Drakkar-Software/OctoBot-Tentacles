@@ -8,7 +8,7 @@ $tentacle_description: {
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
     "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json", "SimpleMixedStrategiesEvaluator.json"],
-    "tests":["test_full_mixed_strategies_evaluator"]
+    "tests":["test_simple_mixed_strategies_evaluator"]
 }
 """
 
