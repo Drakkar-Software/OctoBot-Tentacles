@@ -8,7 +8,7 @@ $tentacle_description: {
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
     "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json", "SimpleMixedStrategiesEvaluator.json"],
-    "tests":["test_simple_mixed_strategies_evaluator"]
+    "tests":["test_simple_mixed_strategies_evaluator", "test_full_mixed_strategies_evaluator"]
 }
 """
 
@@ -42,6 +42,9 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
                   "using for example only one evaluator or more complex ones using a multi-evaluator setup. " \
                   "FullMixedStrategiesEvaluator can also handle InstantFluctuationsEvaluator and " \
                   "RedditForumEvaluator if activated." \
+                  "This strategy is similar to SimpleMixedStrategiesEvaluator except for the detail that it assigns " \
+                  "weights to time frames in order to try to make the final evaluation more accurate. " \
+                  "Used time frames are 30m, 1h, 2h, 4h and 1d. " \
                   "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
@@ -193,7 +196,8 @@ class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
     DESCRIPTION = "SimpleMixedStrategiesEvaluator is the most flexible strategy. Meant to be customized, it is using " \
                   "every activated technical, social and real time evaluator, and averages the evaluation notes of " \
                   "each to compute its final evaluation. This strategy can be used to make simple trading strategies " \
-                  "using for example only one evaluator or more complex ones using a multi-evaluator setup." \
+                  "using for example only one evaluator or more complex ones using a multi-evaluator setup. " \
+                  "Used time frames are 1h, 4h and 1d. " \
                   "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
