@@ -8,7 +8,8 @@ $tentacle_description: {
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator", "market_making_startegy_evaluator"],
     "config_files": ["MarketMakerTradingMode.json"],
-    "tests":["test_market_marker_trading_mode"]
+    "tests":["test_market_marker_trading_mode"],
+    "developing": true
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
