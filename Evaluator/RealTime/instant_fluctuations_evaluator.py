@@ -28,11 +28,12 @@ $tentacle_description: {
 
 import math
 import tulipy
+from typing import Dict
 
 import numpy as np
 
 from config import ExchangeConstantsOrderBookInfoColumns, CONFIG_REFRESH_RATE, PriceIndexes, CONFIG_TIME_FRAME, \
-    START_PENDING_EVAL_NOTE, EvaluatorEvalTypes
+    START_PENDING_EVAL_NOTE
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
 
 """
@@ -299,7 +300,7 @@ class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
 
     @staticmethod
     def get_eval_type():
-        return EvaluatorEvalTypes.ORDER_BOOK_INFO
+        return Dict[str, float]
 
     async def _refresh_data(self):
         self.last_order_book_data = await self._get_order_book_from_exchange(limit=5)
