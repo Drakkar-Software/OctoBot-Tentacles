@@ -32,7 +32,7 @@ import tulipy
 import numpy as np
 
 from config import ExchangeConstantsOrderBookInfoColumns, CONFIG_REFRESH_RATE, PriceIndexes, CONFIG_TIME_FRAME, \
-    START_PENDING_EVAL_NOTE
+    START_PENDING_EVAL_NOTE, EvaluatorEvalTypes
 from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
 
 """
@@ -288,7 +288,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
 class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
     DESCRIPTION = "Triggers on order book change. Uses the simple moving average (on a length of 6) to set its " \
-                  "evaluation."
+                  "evaluation. Warning: sets an order book evaluation which can only be used by specific strategies."
 
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
@@ -296,6 +296,10 @@ class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
         self.last_best_ask = None
         self.last_order_book_data = None
         self.should_eval = True
+
+    @classmethod
+    def get_eval_type(cls):
+        return EvaluatorEvalTypes.ORDER_BOOK_INFO
 
     async def _refresh_data(self):
         self.last_order_book_data = await self._get_order_book_from_exchange(limit=5)
