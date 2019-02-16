@@ -297,8 +297,8 @@ class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
         self.last_order_book_data = None
         self.should_eval = True
 
-    @classmethod
-    def get_eval_type(cls):
+    @staticmethod
+    def get_eval_type():
         return EvaluatorEvalTypes.ORDER_BOOK_INFO
 
     async def _refresh_data(self):
