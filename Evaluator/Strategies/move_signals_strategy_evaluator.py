@@ -49,7 +49,7 @@ class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):
                   "to know when to start a trade and BBMomentumEvaluator (technical evaluator) " \
                   "to know how much weight to give to this trade. MoveSignalsStrategyEvaluator also uses " \
                   "InstantFluctuationsEvaluator (real time evaluator) to spot sudden market changes within " \
-                  "timeframes. Warning: Works only on liquid markets."
+                  "time frames. Used time frames are 30m, 1h and 4h. Warning: Works only on liquid markets."
 
     def __init__(self):
         super().__init__()
