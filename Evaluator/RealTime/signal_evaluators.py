@@ -7,8 +7,7 @@ $tentacle_description: {
     "subtype": "RealTime",
     "version": "1.1.0",
     "requirements": [],
-    "config_files": ["TelegramSignalEvaluator.json"],
-    "developing": true
+    "config_files": ["TelegramSignalEvaluator.json"]
 }
 """
 #  Drakkar-Software OctoBot
