@@ -37,21 +37,19 @@ from evaluator.RealTime.realtime_evaluator import RealTimeSignalEvaluator
 
 class TelegramSignalEvaluator(RealTimeSignalEvaluator):
     DESCRIPTION = "Very simple evaluator designed to be an example for an evaluator using Telegram signals. " \
-                  "Triggers on a telegram signal from any group in listed in TelegramSignalEvaluator.json in which " \
-                  "your telegram bot is invited and analyse it to make a move. " \
-                  "Signals format is: SYMBOL[evaluation]. Example: BTC/USDT[-0.45] " \
-                  "SYMBOL has to be in current watched symbols (in config.json) " \
-                  "and evaluation must be between -1 and 1."
-
-    @staticmethod
-    def get_eval_type():
-        return Dict[str, Any]
+                  "Triggers on a Telegram signal from any group or channel listed in TelegramSignalEvaluator.json " \
+                  "in which your Telegram bot is invited and analyses it to make a move. " \
+                  "Signal format for this implementation is: SYMBOL[evaluation]. Example: BTC/USDT[-0.45] " \
+                  "SYMBOL has to be in current watched symbols (in configuration) " \
+                  "and evaluation must be between -1 and 1. Remember that OctoBot can only see messages from a " \
+                  "chat/group where its Telegram bot (in configuration) has been invited. Keep also in mind that you " \
+                  "need to disable the privacy mode of your Telegram bot to allow it to see group messages. " \
+                  "See OctoBot wiki about Telegram interface for more information."
 
     def set_dispatcher(self, dispatcher):
         super().set_dispatcher(dispatcher)
-        self.dispatcher.update_social_config(self.specific_config)
+        self.dispatcher.update_channel_config(self.specific_config)
 
-    @abstractmethod
     async def receive_notification_data(self, data) -> None:
         await self.analyse_notification(data)
 
