@@ -51,7 +51,8 @@ from evaluator.RealTime.realtime_evaluator import RealTimeSignalEvaluator
 
 class TelegramSignalEvaluator(RealTimeSignalEvaluator):
     DESCRIPTION = "Very simple evaluator designed to be an example for an evaluator using Telegram signals. " \
-                  "Triggers on a telegram signal and analyse it to make a move. " \
+                  "Triggers on a telegram signal from any group in listed in TelegramSignalEvaluator.json in which " \
+                  "your telegram bot is invited and analyse it to make a move. " \
                   "Signals format is: SYMBOL[evaluation]. Example: BTC/USDT[-0.45] " \
                   "SYMBOL has to be in current watched symbols (in config.json) " \
                   "and evaluation must be between -1 and 1."

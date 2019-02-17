@@ -30,10 +30,10 @@ $tentacle_description: {
 
 
 from config import CONFIG_TIME_FRAME, TimeFrames, CONFIG_REFRESH_RATE
-from evaluator.RealTime import RealTimeTAEvaluator
+from evaluator.RealTime import RealTimeExchangeEvaluator
 
 
-class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
+class WhalesOrderBookEvaluator(RealTimeExchangeEvaluator):
 
     def _refresh_data(self):
         pass
