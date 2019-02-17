@@ -32,8 +32,8 @@ from evaluator.Social.social_evaluator import ForumSocialEvaluator
 from evaluator.Util.advanced_manager import AdvancedManager
 from evaluator.Util import TextAnalysis
 from evaluator.Util import OverallStateAnalyser
-from evaluator.Dispatchers.reddit_dispatcher import RedditDispatcher
-from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
+from services.Dispatchers.reddit_dispatcher import RedditDispatcher
+from services.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 
 
 # RedditForumEvaluator is used to get an overall state of a market, it will not trigger a trade

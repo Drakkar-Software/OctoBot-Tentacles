@@ -34,7 +34,7 @@ import numpy as np
 
 from config import ExchangeConstantsOrderBookInfoColumns, CONFIG_REFRESH_RATE, PriceIndexes, CONFIG_TIME_FRAME, \
     START_PENDING_EVAL_NOTE
-from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
+from evaluator.RealTime.realtime_evaluator import RealTimeExchangeEvaluator
 
 """
 Idea moves are lasting approx 12min:
@@ -43,7 +43,7 @@ compute the strength or weakness of the move
 """
 
 
-class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
+class InstantFluctuationsEvaluator(RealTimeExchangeEvaluator):
     DESCRIPTION = "Triggers when a change of price ( > 1%) or of volume ( > x4) from recent average happens." \
                   "The price distance from recent average is defining the evaluation."
 
@@ -142,7 +142,7 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 # -1 when the market is stable
 # 1 when the market is unstable
 
-class InstantVolatilityEvaluator(RealTimeTAEvaluator):
+class InstantVolatilityEvaluator(RealTimeExchangeEvaluator):
     DESCRIPTION = "Triggers when the stochastic indicator crosses stability and instability thresholds. " \
                   "Evaluation is respectively -1 or 1."
 
@@ -189,7 +189,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         return True
 
 
-class InstantMAEvaluator(RealTimeTAEvaluator):
+class InstantMAEvaluator(RealTimeExchangeEvaluator):
     DESCRIPTION = "Triggers systematically. Uses the simple moving average (on a length of 6) to set its evaluation."
 
     def __init__(self, exchange, symbol):
@@ -238,7 +238,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         return self.should_eval
 
 
-class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
+class InstantRegulatedMarketEvaluator(RealTimeExchangeEvaluator):
 
     MARKET_PRICE = "regulated_market_price"
     MARKET_RANGE = "regulated_market_range"
@@ -287,7 +287,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
         return self.should_eval
 
 
-class InstantMarketMakingEvaluator(RealTimeTAEvaluator):
+class InstantMarketMakingEvaluator(RealTimeExchangeEvaluator):
     DESCRIPTION = "Triggers on order book change. Uses the simple moving average (on a length of 6) to set its " \
                   "evaluation. Warning: sets an order book evaluation which can only be used by specific strategies."
 

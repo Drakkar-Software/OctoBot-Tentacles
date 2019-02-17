@@ -31,8 +31,8 @@ from config import *
 from evaluator.Social.social_evaluator import NewsSocialEvaluator
 from evaluator.Util import TextAnalysis
 from evaluator.Util.advanced_manager import AdvancedManager
-from evaluator.Dispatchers.twitter_dispatcher import TwitterDispatcher
-from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
+from services.Dispatchers.twitter_dispatcher import TwitterDispatcher
+from services.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 from tools.decoding_encoding import DecoderEncoder
 
 
@@ -83,7 +83,7 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
             if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
                 self.eval_note = note
                 self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                await self.notify_evaluator_task_managers(self.__class__.__name__)
+                await self.notify_evaluator_task_managers(self.get_name())
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
