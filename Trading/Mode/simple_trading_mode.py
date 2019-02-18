@@ -100,7 +100,7 @@ class SimpleTradingModeCreator(AbstractTradingModeCreator):
 
         except Exception as e:
             logger = get_logger(self.__class__.__name__)
-            logger.warning(f"Failed to create order : {e}")
+            logger.error(f"Failed to create order : {e}")
             logger.exception(e)
             return None
 
