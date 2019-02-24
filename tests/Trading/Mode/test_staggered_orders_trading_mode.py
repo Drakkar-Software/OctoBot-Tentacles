@@ -17,6 +17,7 @@
 import pytest
 import ccxt
 import time
+import copy
 
 from config import ExchangeConstantsTickersInfoColumns, INIT_EVAL_NOTE, CONFIG_EVALUATOR, CONFIG_TRADING_TENTACLES, \
     EvaluatorStates, TradeOrderSide
@@ -109,14 +110,73 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes(
     await _test_mode(StrategyModes.SELL_SLOPE)
 
 
+async def test_start_with_existing_valid_orders():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    assert not trader_inst.get_order_manager().get_open_orders()
+
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+
+    # new evaluation, same price
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    # did nothing
+    assert original_orders[0] is trader_inst.get_order_manager().get_open_orders()[0]
+    assert original_orders[-1] is trader_inst.get_order_manager().get_open_orders()[-1]
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+
+    # new evaluation, price changed
+    # -2 order would be filled
+    to_fill_order = original_orders[-2]
+    await _fill_order(to_fill_order, trader_inst, 95)
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 95}
+    await final_evaluator.finalize()
+    # did nothing
+    assert len(original_orders) == len(trader_inst.get_order_manager().get_open_orders())
+
+    # a orders gets cancelled
+    open_orders = trader_inst.get_order_manager().get_open_orders()
+    to_cancel = [open_orders[20], open_orders[19], open_orders[40]]
+    for order in to_cancel:
+        await trader_inst.cancel_order(order)
+    post_available = portfolio["USD"][Portfolio.AVAILABLE]
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth - len(to_cancel)
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 95}
+    await final_evaluator.finalize()
+    # restored orders
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+    assert 0 < portfolio["USD"][Portfolio.AVAILABLE] <= post_available
+
+
+async def test_redistribute_benefits():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    assert not trader_inst.get_order_manager().get_open_orders()
+
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+
+    # 100 USD as benefits
+    portfolio["USD"][Portfolio.AVAILABLE] += 100
+
+    # redistribute benefits in orders
+    await final_evaluator.finalize()
+    # assert 0 < portfolio["USD"][Portfolio.AVAILABLE] <= 100
+
+
 async def test_order_fill_callback():
     # create orders
-    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    final_evaluator, trader_inst, _ = await _get_tools()
     final_evaluator.final_eval = 100
     final_evaluator.mode = StrategyModes.NEUTRAL
     previous_total = _get_total_usd(trader_inst, 100)
 
     await final_evaluator.create_state()
+    price_increment = final_evaluator._get_prince_increment(trader_inst)
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
     assert len(open_orders) == final_evaluator.operational_depth
@@ -131,7 +191,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price * (1 - final_evaluator.increment)
+    price = closest_order_with_price.origin_price - price_increment
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -150,15 +210,15 @@ async def test_order_fill_callback():
     # instantly create buy order at price * (1 + increment)
     assert len(open_orders) == final_evaluator.operational_depth
     assert to_fill_order not in open_orders
-    newly_created_sell_order = open_orders[-1]
-    assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price * (1 + final_evaluator.increment)
-    assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
-    assert newly_created_sell_order.origin_quantity == \
+    newly_created_buy_order = open_orders[-1]
+    assert newly_created_buy_order.symbol == to_fill_order.symbol
+    price = closest_order_with_price.origin_price + price_increment
+    assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
+    assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
             to_fill_order.origin_quantity * (1 + (final_evaluator.increment - final_evaluator.fees)),
             8)
-    assert newly_created_sell_order.side == TradeOrderSide.BUY
+    assert newly_created_buy_order.side == TradeOrderSide.BUY
     assert trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL] > 10
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total < current_total
@@ -174,7 +234,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price * (1 - final_evaluator.increment)
+    price = closest_order_with_price.origin_price - price_increment
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -192,15 +252,15 @@ async def test_order_fill_callback():
     # instantly create buy order at price * (1 + increment)
     assert len(open_orders) == final_evaluator.operational_depth
     assert to_fill_order not in open_orders
-    newly_created_sell_order = open_orders[-1]
-    assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price * (1 + final_evaluator.increment)
-    assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
-    assert newly_created_sell_order.origin_quantity == \
+    newly_created_buy_order = open_orders[-1]
+    assert newly_created_buy_order.symbol == to_fill_order.symbol
+    price = closest_order_with_price.origin_price + price_increment
+    assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
+    assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
             to_fill_order.origin_quantity * (1 + (final_evaluator.increment - final_evaluator.fees)),
             8)
-    assert newly_created_sell_order.side == TradeOrderSide.BUY
+    assert newly_created_buy_order.side == TradeOrderSide.BUY
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total_sell < current_total
 
@@ -210,8 +270,9 @@ def _get_total_usd(trader, btc_price):
     return pf["USD"][Portfolio.TOTAL] + pf["BTC"][Portfolio.TOTAL] * btc_price
 
 
-async def _fill_order(order, trader):
-    trigger_price = order.origin_price*0.99 if order.side == TradeOrderSide.BUY else order.origin_price*1.01
+async def _fill_order(order, trader, trigger_price=None):
+    if trigger_price is None:
+        trigger_price = order.origin_price*0.99 if order.side == TradeOrderSide.BUY else order.origin_price*1.01
     recent_trades = [{"price": trigger_price, "timestamp": time.time()}]
     order.last_prices = recent_trades
     errors = []
@@ -222,18 +283,18 @@ async def _fill_order(order, trader):
 
 
 async def _test_mode(mode):
-    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    final_evaluator, trader_inst, _ = await _get_tools()
     final_evaluator.final_eval = 100
     final_evaluator.mode = mode
 
-    await check_generate_orders(trader_inst, final_evaluator)
+    await _check_generate_orders(trader_inst, final_evaluator)
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
     assert len(open_orders) == final_evaluator.operational_depth
     _check_orders(open_orders, mode, final_evaluator, trader_inst)
 
 
-async def check_generate_orders(trader, decider):
+async def _check_generate_orders(trader, decider):
     async with trader.get_portfolio().get_lock():
         buy_orders, sell_orders = await decider._generate_staggered_orders(decider.final_eval, trader)
         assert len(buy_orders) < decider.operational_depth
