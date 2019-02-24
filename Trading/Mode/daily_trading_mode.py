@@ -30,8 +30,6 @@ $tentacle_description: {
 
 from ccxt import InsufficientFunds
 
-from tools.logging.logging_util import get_logger
-
 from config import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
@@ -46,9 +44,6 @@ class DailyTradingMode(AbstractTradingMode):
                   "and create new ones according to its new state. " \
                   "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
                   "each state."
-
-    def __init__(self, config, exchange):
-        super().__init__(config, exchange)
 
     def create_deciders(self, symbol, symbol_evaluator):
         self.add_decider(symbol, DailyTradingModeDecider(self, symbol_evaluator, self.exchange))

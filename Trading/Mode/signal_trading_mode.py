@@ -36,9 +36,6 @@ class SignalTradingMode(AbstractTradingMode):
                   "SignalTradingMode is using the daily trading mode orders system with adapted parameters. " \
                   "Warning: Works only on liquid markets."
 
-    def __init__(self, config, exchange):
-        super().__init__(config, exchange)
-
     def create_deciders(self, symbol, symbol_evaluator):
         self.add_decider(symbol, SignalTradingModeDecider(self, symbol_evaluator, self.exchange))
 

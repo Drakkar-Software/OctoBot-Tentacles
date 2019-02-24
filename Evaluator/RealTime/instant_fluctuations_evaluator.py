@@ -178,7 +178,7 @@ class InstantVolatilityEvaluator(RealTimeExchangeEvaluator):
             self.eval_note = -1
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.get_name())
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
@@ -228,7 +228,7 @@ class InstantMAEvaluator(RealTimeExchangeEvaluator):
             else:
                 self.eval_note = 0
 
-        await self.notify_evaluator_task_managers(self.__class__.__name__)
+        await self.notify_evaluator_task_managers(self.get_name())
 
     def set_default_config(self):
         super().set_default_config()
@@ -276,7 +276,7 @@ class InstantRegulatedMarketEvaluator(RealTimeExchangeEvaluator):
             self.eval_note = 0
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.get_name())
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
@@ -319,7 +319,7 @@ class InstantMarketMakingEvaluator(RealTimeExchangeEvaluator):
                 ExchangeConstantsOrderBookInfoColumns.BIDS.value: best_bid,
                 ExchangeConstantsOrderBookInfoColumns.ASKS.value: best_ask
             }
-            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.get_name())
             self.last_best_ask = best_ask
             self.last_best_bid = best_bid
 
