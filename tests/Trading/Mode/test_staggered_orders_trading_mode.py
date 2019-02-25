@@ -102,12 +102,35 @@ async def test_finalize():
     assert trader_inst.get_order_manager().get_open_orders()
 
 
-async def test_create_orders_without_existing_orders_symmetrical_case_all_modes():
-    await _test_mode(StrategyModes.NEUTRAL)
-    await _test_mode(StrategyModes.MOUNTAIN)
-    await _test_mode(StrategyModes.VALLEY)
-    await _test_mode(StrategyModes.BUY_SLOPE)
-    await _test_mode(StrategyModes.SELL_SLOPE)
+async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_100():
+    price = 100
+    await _test_mode(StrategyModes.NEUTRAL, 25, 90, price)
+    await _test_mode(StrategyModes.MOUNTAIN, 25, 121, price)
+    await _test_mode(StrategyModes.VALLEY, 25, 26, price)
+    await _test_mode(StrategyModes.BUY_SLOPE, 25, 121, price)
+    await _test_mode(StrategyModes.SELL_SLOPE, 25, 26, price)
+
+
+async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_347():
+    price = 347
+    await _test_mode(StrategyModes.NEUTRAL, 25, 89, price)
+    await _test_mode(StrategyModes.MOUNTAIN, 25, 113, price)
+    await _test_mode(StrategyModes.VALLEY, 25, 30, price)
+    await _test_mode(StrategyModes.BUY_SLOPE, 25, 113, price)
+    await _test_mode(StrategyModes.SELL_SLOPE, 25, 30, price)
+
+
+async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_0_347():
+    price = 0.347
+    # await _test_mode(StrategyModes.NEUTRAL, 0, 0, price)
+    lowest_buy = 0.001
+    highest_sell = 400
+    btc_holdings = 400
+    await _test_mode(StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
+    await _test_mode(StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
+    await _test_mode(StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
+    await _test_mode(StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
+    await _test_mode(StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
 
 
 async def test_start_with_existing_valid_orders():
@@ -151,21 +174,41 @@ async def test_start_with_existing_valid_orders():
     assert 0 < portfolio["USD"][Portfolio.AVAILABLE] <= post_available
 
 
-async def test_redistribute_benefits():
+async def test_start_without_enough_funds_to_buy():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     portfolio = trader_inst.get_portfolio().get_portfolio()
-    assert not trader_inst.get_order_manager().get_open_orders()
-
+    portfolio["USD"][Portfolio.AVAILABLE] = 0.00005
+    portfolio["USD"][Portfolio.TOTAL] = 0.00005
     staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
     await final_evaluator.finalize()
-    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == final_evaluator.operational_depth
+    assert all([o.side == TradeOrderSide.SELL for o in orders])
 
-    # 100 USD as benefits
-    portfolio["USD"][Portfolio.AVAILABLE] += 100
 
-    # redistribute benefits in orders
+async def test_start_without_enough_funds_to_sell():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    portfolio["BTC"][Portfolio.AVAILABLE] = 0.00001
+    portfolio["BTC"][Portfolio.TOTAL] = 0.00001
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
     await final_evaluator.finalize()
-    # assert 0 < portfolio["USD"][Portfolio.AVAILABLE] <= 100
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == 25
+    assert all([o.side == TradeOrderSide.BUY for o in orders])
+
+
+async def test_start_without_enough_funds_at_all():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    portfolio["BTC"][Portfolio.AVAILABLE] = 0.00001
+    portfolio["BTC"][Portfolio.TOTAL] = 0.00001
+    portfolio["USD"][Portfolio.AVAILABLE] = 0.00005
+    portfolio["USD"][Portfolio.TOTAL] = 0.00005
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == 0
 
 
 async def test_order_fill_callback():
@@ -195,7 +238,7 @@ async def test_order_fill_callback():
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 - (final_evaluator.increment - final_evaluator.fees)),
+            to_fill_order.origin_quantity * (1 - final_evaluator.increment),
             8)
     assert newly_created_sell_order.side == TradeOrderSide.SELL
     current_total = _get_total_usd(trader_inst, 100)
@@ -216,7 +259,7 @@ async def test_order_fill_callback():
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 + (final_evaluator.increment - final_evaluator.fees)),
+            to_fill_order.origin_quantity * (1 + final_evaluator.increment),
             8)
     assert newly_created_buy_order.side == TradeOrderSide.BUY
     assert trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL] > 10
@@ -238,7 +281,7 @@ async def test_order_fill_callback():
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 - (final_evaluator.increment - final_evaluator.fees)),
+            to_fill_order.origin_quantity * (1 - final_evaluator.increment),
             8)
     assert newly_created_sell_order.side == TradeOrderSide.SELL
     current_total = _get_total_usd(trader_inst, 100)
@@ -258,7 +301,7 @@ async def test_order_fill_callback():
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 + (final_evaluator.increment - final_evaluator.fees)),
+            to_fill_order.origin_quantity * (1 + final_evaluator.increment),
             8)
     assert newly_created_buy_order.side == TradeOrderSide.BUY
     current_total = _get_total_usd(trader_inst, 100)
@@ -282,26 +325,43 @@ async def _fill_order(order, trader, trigger_price=None):
         await trader.get_order_manager().trader.call_order_update_callback(order)
 
 
-async def _test_mode(mode):
+async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowest_buy=None, highest_sell=None,
+                     btc_holdings=None):
     final_evaluator, trader_inst, _ = await _get_tools()
-    final_evaluator.final_eval = 100
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    if btc_holdings is not None:
+        portfolio["BTC"][Portfolio.AVAILABLE] = btc_holdings
+        portfolio["BTC"][Portfolio.TOTAL] = btc_holdings
+    if lowest_buy is not None:
+        final_evaluator.lowest_buy = lowest_buy
+    if highest_sell is not None:
+        final_evaluator.highest_sell = highest_sell
+    final_evaluator.final_eval = price
     final_evaluator.mode = mode
 
-    await _check_generate_orders(trader_inst, final_evaluator)
+    await _check_generate_orders(trader_inst, final_evaluator, expected_buy_count, expected_sell_count, price)
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
-    assert len(open_orders) == final_evaluator.operational_depth
+    if expected_buy_count or expected_sell_count:
+        assert len(open_orders) <= final_evaluator.operational_depth
     _check_orders(open_orders, mode, final_evaluator, trader_inst)
 
 
-async def _check_generate_orders(trader, decider):
+async def _check_generate_orders(trader, decider, expected_buy_count, expected_sell_count, price):
     async with trader.get_portfolio().get_lock():
+        decider._refresh_symbol_data()
         buy_orders, sell_orders = await decider._generate_staggered_orders(decider.final_eval, trader)
-        assert len(buy_orders) < decider.operational_depth
-        assert len(sell_orders) > decider.operational_depth
+        assert len(buy_orders) == expected_buy_count
+        assert len(sell_orders) == expected_sell_count
 
-        assert not any(order for order in buy_orders if order.is_virtual)
-        assert any(order for order in sell_orders if order.is_virtual)
+        assert all(o.price < price for o in buy_orders)
+        assert all(o.price > price for o in sell_orders)
+
+        if buy_orders:
+            assert not any(order for order in buy_orders if order.is_virtual)
+
+        if sell_orders:
+            assert any(order for order in sell_orders if order.is_virtual)
 
         buy_holdings = trader.get_portfolio().get_portfolio()["USD"][Portfolio.AVAILABLE]
         assert sum(order.price*order.quantity for order in buy_orders) <= buy_holdings
@@ -310,7 +370,8 @@ async def _check_generate_orders(trader, decider):
         assert sum(order.price*order.quantity for order in sell_orders) <= sell_holdings
 
         staggered_orders = decider._alternate_not_virtual_orders(buy_orders, sell_orders)
-        assert not any(order for order in staggered_orders if order.is_virtual)
+        if staggered_orders:
+            assert not any(order for order in staggered_orders if order.is_virtual)
 
         await decider._create_multiple_not_virtual_orders(staggered_orders, trader)
 
@@ -368,31 +429,33 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                                                               final_evaluator.lowest_buy,
                                                               final_evaluator.final_eval,
                                                               order_limiting_currency_amount)
-    if buy_increase_towards_center:
-        assert round(current_buy.origin_quantity * current_buy.origin_price -
-                     first_buy.origin_quantity * first_buy.origin_price) == multiplier * average_order_quantity
-    else:
-        assert round(first_buy.origin_quantity * first_buy.origin_price -
-                     current_buy.origin_quantity * current_buy.origin_price) == multiplier * average_order_quantity
+    if orders:
+        if buy_increase_towards_center:
+            assert round(current_buy.origin_quantity * current_buy.origin_price -
+                         first_buy.origin_quantity * first_buy.origin_price) == round(multiplier * average_order_quantity)
+        else:
+            assert round(first_buy.origin_quantity * first_buy.origin_price -
+                         current_buy.origin_quantity * current_buy.origin_price) == round(multiplier *
+                                                                                          average_order_quantity)
 
-    order_limiting_currency_amount = trader_inst.get_portfolio().portfolio["BTC"][Portfolio.TOTAL]
-    _, average_order_quantity = \
-        final_evaluator._get_order_count_and_average_quantity(final_evaluator.final_eval,
-                                                              True,
-                                                              final_evaluator.final_eval,
-                                                              final_evaluator.highest_sell,
-                                                              order_limiting_currency_amount)
+        order_limiting_currency_amount = trader_inst.get_portfolio().portfolio["BTC"][Portfolio.TOTAL]
+        _, average_order_quantity = \
+            final_evaluator._get_order_count_and_average_quantity(final_evaluator.final_eval,
+                                                                  True,
+                                                                  final_evaluator.final_eval,
+                                                                  final_evaluator.highest_sell,
+                                                                  order_limiting_currency_amount)
 
-    # not exactly multiplier because of virtual orders and rounds
-    if sell_increase_towards_center:
-        expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            average_order_quantity * (1 + multiplier/2),
-            8)
-        assert abs(current_sell.origin_quantity * current_sell.origin_price - expected_quantity) < \
-            multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
-    else:
-        expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            average_order_quantity * (1 - multiplier/2),
-            8)
-        assert abs(current_sell.origin_quantity * current_sell.origin_price == expected_quantity) < \
-            multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
+        # not exactly multiplier because of virtual orders and rounds
+        if sell_increase_towards_center:
+            expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
+                average_order_quantity * (1 + multiplier/2),
+                8)
+            assert abs(current_sell.origin_quantity * current_sell.origin_price - expected_quantity) < \
+                multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
+        else:
+            expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
+                average_order_quantity * (1 - multiplier/2),
+                8)
+            assert abs(current_sell.origin_quantity * current_sell.origin_price == expected_quantity) < \
+                multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
