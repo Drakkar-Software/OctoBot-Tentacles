@@ -317,8 +317,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                        max_quant_per_order / missing_order_price)
                         orders.append(OrderData(missing_order_side, quantity, missing_order_price, self.symbol, False))
 
-        else:
-            # state == self.ERROR
+        elif state == self.ERROR:
             self.logger.error("Impossible to create staggered orders when incompatible order are already in place. "
                               "Cancel these orders of you want to use this trading mode.")
         return orders
@@ -495,7 +494,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             multiplier_price_ratio = 1 - iteration/(max_iteration - 1)
         if price <= 0:
             return None
-        quantity = (min_quantity + (delta * multiplier_price_ratio)) / price
+        quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
+        quantity = quantity_with_delta / price if side == TradeOrderSide.BUY else quantity_with_delta
 
         if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:
             return None

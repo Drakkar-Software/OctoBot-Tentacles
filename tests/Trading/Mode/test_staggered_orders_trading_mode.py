@@ -80,6 +80,8 @@ async def _get_tools():
     final_evaluator.lowest_buy = 1
     final_evaluator.highest_sell = 10000
     final_evaluator.operational_depth = 50
+    final_evaluator.spread = 0.06
+    final_evaluator.increment = 0.04
 
     return final_evaluator, trader_inst, staggered_strategy_evaluator
 
@@ -104,20 +106,20 @@ async def test_finalize():
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_100():
     price = 100
-    await _test_mode(StrategyModes.NEUTRAL, 25, 90, price)
-    await _test_mode(StrategyModes.MOUNTAIN, 25, 121, price)
-    await _test_mode(StrategyModes.VALLEY, 25, 26, price)
-    await _test_mode(StrategyModes.BUY_SLOPE, 25, 121, price)
-    await _test_mode(StrategyModes.SELL_SLOPE, 25, 26, price)
+    await _test_mode(StrategyModes.NEUTRAL, 25, 2475, price)
+    await _test_mode(StrategyModes.MOUNTAIN, 25, 2475, price)
+    await _test_mode(StrategyModes.VALLEY, 25, 2475, price)
+    await _test_mode(StrategyModes.BUY_SLOPE, 25, 2475, price)
+    await _test_mode(StrategyModes.SELL_SLOPE, 25, 2475, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_347():
     price = 347
-    await _test_mode(StrategyModes.NEUTRAL, 25, 89, price)
-    await _test_mode(StrategyModes.MOUNTAIN, 25, 113, price)
-    await _test_mode(StrategyModes.VALLEY, 25, 30, price)
-    await _test_mode(StrategyModes.BUY_SLOPE, 25, 113, price)
-    await _test_mode(StrategyModes.SELL_SLOPE, 25, 30, price)
+    await _test_mode(StrategyModes.NEUTRAL, 25, 695, price)
+    await _test_mode(StrategyModes.MOUNTAIN, 25, 695, price)
+    await _test_mode(StrategyModes.VALLEY, 25, 695, price)
+    await _test_mode(StrategyModes.BUY_SLOPE, 25, 695, price)
+    await _test_mode(StrategyModes.SELL_SLOPE, 25, 695, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_0_347():
@@ -367,7 +369,7 @@ async def _check_generate_orders(trader, decider, expected_buy_count, expected_s
         assert sum(order.price*order.quantity for order in buy_orders) <= buy_holdings
 
         sell_holdings = trader.get_portfolio().get_portfolio()["BTC"][Portfolio.AVAILABLE]
-        assert sum(order.price*order.quantity for order in sell_orders) <= sell_holdings
+        assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
         staggered_orders = decider._alternate_not_virtual_orders(buy_orders, sell_orders)
         if staggered_orders:
@@ -411,15 +413,7 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
             if current_sell is None:
                 current_sell = order
             else:
-                # place sell orders from the highest price down to the current price
-                # round because of python accuracy with small numbers combined with virtual orders
                 assert current_sell.origin_price > order.origin_price
-                if sell_increase_towards_center:
-                    assert round(current_sell.origin_quantity * current_sell.origin_price, 5) <= \
-                        round(order.origin_quantity * order.origin_price, 5)
-                else:
-                    assert round(current_sell.origin_quantity * current_sell.origin_price, 5) >= \
-                        round(order.origin_quantity * order.origin_price, 5)
                 current_sell = order
 
     order_limiting_currency_amount = trader_inst.get_portfolio().portfolio["USD"][Portfolio.TOTAL]
@@ -446,16 +440,17 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                                                                   final_evaluator.highest_sell,
                                                                   order_limiting_currency_amount)
 
-        # not exactly multiplier because of virtual orders and rounds
-        if sell_increase_towards_center:
-            expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-                average_order_quantity * (1 + multiplier/2),
-                8)
-            assert abs(current_sell.origin_quantity * current_sell.origin_price - expected_quantity) < \
-                multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
-        else:
-            expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-                average_order_quantity * (1 - multiplier/2),
-                8)
-            assert abs(current_sell.origin_quantity * current_sell.origin_price == expected_quantity) < \
-                multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
+        if strategy_mode not in [StrategyModes.NEUTRAL, StrategyModes.VALLEY, StrategyModes.SELL_SLOPE]:
+            # not exactly multiplier because of virtual orders and rounds
+            if sell_increase_towards_center:
+                expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
+                    average_order_quantity * (1 + multiplier/2),
+                    8)
+                assert abs(current_sell.origin_quantity - expected_quantity) < \
+                    multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
+            else:
+                expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
+                    average_order_quantity * (1 - multiplier/2),
+                    8)
+                assert abs(current_sell.origin_quantity == expected_quantity) < \
+                    multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
