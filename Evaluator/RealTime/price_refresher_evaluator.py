@@ -6,8 +6,7 @@ $tentacle_description: {
     "type": "Evaluator",
     "subtype": "RealTime",
     "version": "1.1.0",
-    "requirements": [],
-    "config_files": ["InstantRegulatedMarketEvaluator.json"]
+    "config_files": ["PeriodicPriceTickerEvaluator.json"]
 }
 """
 #  Drakkar-Software OctoBot
