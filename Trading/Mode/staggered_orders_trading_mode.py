@@ -99,14 +99,18 @@ class OrderData:
 
 class StaggeredOrdersTradingMode(AbstractTradingMode):
 
-    DESCRIPTION = 'Places a large amount of buy and sell orders at certain intervals, covering the orderbook from ' \
+    DESCRIPTION = 'Places a large amount of buy and sell orders at fixed intervals, covering the order book from ' \
                   'very low prices to very high prices. The range is supposed to cover all conceivable prices for as ' \
                   'long as the user intends to run the strategy. That could be from -100x to +100x ' \
                   '(-99% to +10000%). Profits will be made from price movements, and the strategy introduces ' \
                   'friction to such movements. It gives markets depth, and makes them look better. It never ' \
                   '"sells at a loss", but always at a profit. Description from ' \
                   'https://github.com/Codaone/DEXBot/wiki/The-Staggered-Orders-strategy. Full documentation ' \
-                  'available there.'
+                  'available there. In order to never sell at a loss, OctoBot never ' \
+                  'cancels orders, in order to change the staggered orders mode, you will have to manually cancel ' \
+                  'orders and restart the strategy. This trading mode instantly places opposite side orders when an ' \
+                  'order is filled and checks the current orders every 6 hours to replace any missing one. Only ' \
+                  'works on single currency and trading pair configuration.'
     CONFIG_MODE = "mode"
     CONFIG_SPREAD = "spread_percent"
     CONFIG_INCREMENT_PERCENT = "increment_percent"

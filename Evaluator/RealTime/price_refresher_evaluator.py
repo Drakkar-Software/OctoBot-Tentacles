@@ -33,15 +33,9 @@ from config import ExchangeConstantsTickersInfoColumns, PriceIndexes, CONFIG_TIM
     START_PENDING_EVAL_NOTE
 from evaluator.RealTime.realtime_evaluator import RealTimeExchangeEvaluator
 
-"""
-Idea moves are lasting approx 12min:
-Check the last 12 candles and compute mean closing prices as well as mean volume with a gradually narrower interval to 
-compute the strength or weakness of the move
-"""
-
 
 class PeriodicPriceTickerEvaluator(RealTimeExchangeEvaluator):
-    DESCRIPTION = "Triggers on a specific interval an notifies ."
+    DESCRIPTION = "Triggers on a specific interval an notifies the listening strategy with the current price."
 
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
