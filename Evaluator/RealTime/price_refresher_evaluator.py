@@ -2,7 +2,7 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "instant_fluctuations_evaluator",
+    "name": "price_refresher_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
     "version": "1.1.0",
