@@ -100,7 +100,9 @@ class OrderData:
 class StaggeredOrdersTradingMode(AbstractTradingMode):
 
     DESCRIPTION = 'Places a large amount of buy and sell orders at fixed intervals, covering the order book from ' \
-                  'very low prices to very high prices. The range is supposed to cover all conceivable prices for as ' \
+                  'very low prices to very high prices. The range ' \
+                  '(specified in tentacles/Trading/Mode/config/StaggeredOrdersTradingMode.json) is supposed to ' \
+                  'cover all conceivable prices for as ' \
                   'long as the user intends to run the strategy. That could be from -100x to +100x ' \
                   '(-99% to +10000%). Profits will be made from price movements, and the strategy introduces ' \
                   'friction to such movements. It gives markets depth, and makes them look better. It never ' \
