@@ -110,7 +110,8 @@ class StaggeredOrdersTradingMode(AbstractTradingMode):
                   'cancels orders, in order to change the staggered orders mode, you will have to manually cancel ' \
                   'orders and restart the strategy. This trading mode instantly places opposite side orders when an ' \
                   'order is filled and checks the current orders every 6 hours to replace any missing one. Only ' \
-                  'works on single currency and trading pair configuration.'
+                  'works on single currency and trading pair configuration. ' \
+                  f'Modes are {", ".join([m.value for m in StrategyModes])}.'
     CONFIG_MODE = "mode"
     CONFIG_SPREAD = "spread_percent"
     CONFIG_INCREMENT_PERCENT = "increment_percent"
@@ -192,7 +193,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.min_max_order_details = {}
 
         # staggered orders strategy parameters
-        self.mode = StrategyModes(self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_MODE))
+        try:
+            mode = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_MODE)
+            self.mode = StrategyModes(mode)
+        except ValueError as e:
+            self.logger.error(f"Invalid staggered orders strategy mode: {mode} "
+                              f"supported modes are {[m.value for m in StrategyModes]}")
+            raise e
         self.spread = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_SPREAD) / 100
         self.increment = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_INCREMENT_PERCENT) / 100
         self.operational_depth = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_OPERATIONAL_DEPTH)
