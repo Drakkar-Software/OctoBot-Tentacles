@@ -195,6 +195,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.min_max_order_details = {}
 
         # staggered orders strategy parameters
+        mode = ""
         try:
             mode = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_MODE)
             self.mode = StrategyModes(mode)
@@ -262,11 +263,11 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         portfolio = trader.get_portfolio().get_portfolio()
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, increment = await self._analyse_current_orders_situation(sorted_orders)
+        missing_orders, state, increment = self._analyse_current_orders_situation(sorted_orders)
 
-        buy_orders = await self._create_orders(self.lowest_buy, current_price, TradeOrderSide.BUY,
+        buy_orders = self._create_orders(self.lowest_buy, current_price, TradeOrderSide.BUY,
                                                sorted_orders, portfolio, current_price, missing_orders, state)
-        sell_orders = await self._create_orders(current_price, self.highest_sell, TradeOrderSide.SELL,
+        sell_orders = self._create_orders(current_price, self.highest_sell, TradeOrderSide.SELL,
                                                 sorted_orders, portfolio, current_price, missing_orders, state)
 
         if state == self.NEW:
@@ -274,14 +275,14 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
         return buy_orders, sell_orders
 
-    async def _analyse_current_orders_situation(self, sorted_orders):
+    def _analyse_current_orders_situation(self, sorted_orders):
         if not sorted_orders:
             return None, self.NEW, None
         # check if orders are staggered orders
         return self._bootstrap_parameters(sorted_orders)
 
-    async def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                             portfolio, current_price, missing_orders, state):
+    def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
+                       portfolio, current_price, missing_orders, state):
         orders = []
         selling = side == TradeOrderSide.SELL
         self.total_orders_count = self.highest_sell - self.lowest_buy
