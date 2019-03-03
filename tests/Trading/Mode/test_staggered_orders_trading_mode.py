@@ -28,7 +28,7 @@ from evaluator.symbol_evaluator import SymbolEvaluator
 from tests.test_utils.config import load_test_config
 from trading.exchanges.exchange_manager import ExchangeManager
 from trading.trader.modes import StaggeredOrdersTradingMode, StrategyModes, StrategyModeMultipliersDetails, \
-    MULTIPLIER, INCREASING, AbstractTradingModeCreator
+    MULTIPLIER, INCREASING, AbstractTradingModeCreator, OrderData
 from trading.trader.trader_simulator import TraderSimulator
 from trading.trader.portfolio import Portfolio
 
@@ -162,7 +162,7 @@ async def test_start_with_existing_valid_orders():
     # did nothing
     assert len(original_orders) == len(trader_inst.get_order_manager().get_open_orders())
 
-    # a orders gets cancelled
+    # an orders gets cancelled
     open_orders = trader_inst.get_order_manager().get_open_orders()
     to_cancel = [open_orders[20], open_orders[19], open_orders[40]]
     for order in to_cancel:
@@ -173,7 +173,37 @@ async def test_start_with_existing_valid_orders():
     await final_evaluator.finalize()
     # restored orders
     assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
-    assert 0 < portfolio["USD"][Portfolio.AVAILABLE] <= post_available
+    assert 0 <= portfolio["USD"][Portfolio.AVAILABLE] <= post_available
+    assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
+
+
+async def test_start_after_offline_filled_orders():
+    # first start: setup orders
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+    pre_portfolio = portfolio["USD"][Portfolio.AVAILABLE]
+
+    # offline simulation: orders get filled but not replaced => price got up to 110 and not down to 90, now is 96s
+    open_orders = trader_inst.get_order_manager().get_open_orders()
+    offline_filled = [o for o in open_orders if 90 <= o.get_origin_price() <= 110]
+    for order in offline_filled:
+        await _fill_order(order, trader_inst, order_update_callback=False)
+    post_portfolio = portfolio["USD"][Portfolio.AVAILABLE]
+    assert pre_portfolio < post_portfolio
+    assert len(trader_inst.get_order_manager().get_open_orders()) == \
+        final_evaluator.operational_depth - len(offline_filled)
+
+    # back online: restore orders according to current price
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 96}
+    await final_evaluator.finalize()
+    # restored orders
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+    assert 0 <= portfolio["USD"][Portfolio.AVAILABLE] <= post_portfolio
+    assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
 
 
 async def test_start_without_enough_funds_to_buy():
@@ -220,13 +250,16 @@ async def test_order_fill_callback():
     final_evaluator.mode = StrategyModes.NEUTRAL
     previous_total = _get_total_usd(trader_inst, 100)
 
+    now_btc = trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL]
+    now_usd = trader_inst.get_portfolio().get_portfolio()["USD"][Portfolio.TOTAL]
+
     await final_evaluator.create_state()
     price_increment = final_evaluator._get_prince_increment(trader_inst)
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
     assert len(open_orders) == final_evaluator.operational_depth
 
-    # closest to centre buy order is filled
+    # closest to centre buy order is filled => bought btc
     to_fill_order = open_orders[-2]
     closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
@@ -240,14 +273,16 @@ async def test_order_fill_callback():
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 - final_evaluator.increment),
+            to_fill_order.filled_quantity * (1 - final_evaluator.max_fees),
             8)
     assert newly_created_sell_order.side == TradeOrderSide.SELL
+    assert trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL] > now_btc
+    now_btc = trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL]
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total < current_total
     previous_total_buy = current_total
 
-    # now this new sell order is filled
+    # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
     closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
@@ -261,15 +296,16 @@ async def test_order_fill_callback():
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 + final_evaluator.increment),
+            to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - final_evaluator.max_fees),
             8)
     assert newly_created_buy_order.side == TradeOrderSide.BUY
-    assert trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL] > 10
+    assert trader_inst.get_portfolio().get_portfolio()["USD"][Portfolio.TOTAL] > now_usd
+    now_usd = trader_inst.get_portfolio().get_portfolio()["USD"][Portfolio.TOTAL]
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total < current_total
     previous_total_sell = current_total
 
-    # now this new buy order is filled
+    # now this new buy order is filled => bought btc
     to_fill_order = open_orders[-1]
     closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
@@ -283,13 +319,14 @@ async def test_order_fill_callback():
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 - final_evaluator.increment),
+            to_fill_order.filled_quantity * (1 - final_evaluator.max_fees),
             8)
     assert newly_created_sell_order.side == TradeOrderSide.SELL
+    assert trader_inst.get_portfolio().get_portfolio()["BTC"][Portfolio.TOTAL] > now_btc
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total_buy < current_total
 
-    # now this new sell order is filled
+    # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
     closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
@@ -303,11 +340,110 @@ async def test_order_fill_callback():
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
-            to_fill_order.origin_quantity * (1 + final_evaluator.increment),
+            to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - final_evaluator.max_fees),
             8)
     assert newly_created_buy_order.side == TradeOrderSide.BUY
+    assert trader_inst.get_portfolio().get_portfolio()["USD"][Portfolio.TOTAL] > now_usd
     current_total = _get_total_usd(trader_inst, 100)
     assert previous_total_sell < current_total
+
+
+async def test_create_order():
+    final_evaluator, trader_inst, _ = await _get_tools()
+    symbol = "BTC/USD"
+    portfolio = trader_inst.get_portfolio()
+    creator_key = final_evaluator.trading_mode.get_only_creator_key(final_evaluator.symbol)
+    creator = final_evaluator.trading_mode.get_creator(final_evaluator.symbol, creator_key)
+    final_evaluator._refresh_symbol_data()
+    symbol_market = final_evaluator.symbol_market
+
+    # SELL
+
+    # enough quantity in portfolio
+    price = 100
+    quantity = 1
+    side = TradeOrderSide.SELL
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order.origin_quantity == quantity
+    assert created_order is not None
+
+    # not enough quantity in portfolio
+    price = 100
+    quantity = 10
+    side = TradeOrderSide.SELL
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order is None
+
+    # just enough quantity in portfolio
+    price = 100
+    quantity = 9
+    side = TradeOrderSide.SELL
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order.origin_quantity == quantity
+    assert portfolio.get_portfolio()["BTC"][Portfolio.AVAILABLE] == 0
+    assert created_order is not None
+
+    # not enough quantity anymore
+    price = 100
+    quantity = 0.0001
+    side = TradeOrderSide.SELL
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert portfolio.get_portfolio()["BTC"][Portfolio.AVAILABLE] == 0
+    assert created_order is None
+
+    # BUY
+
+    # enough quantity in portfolio
+    price = 100
+    quantity = 1
+    side = TradeOrderSide.BUY
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order.origin_quantity == quantity
+    assert portfolio.get_portfolio()["USD"][Portfolio.AVAILABLE] == 900
+    assert created_order is not None
+
+    # not enough quantity in portfolio
+    price = 585
+    quantity = 2
+    side = TradeOrderSide.BUY
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert portfolio.get_portfolio()["USD"][Portfolio.AVAILABLE] == 900
+    assert created_order is None
+
+    # enough quantity in portfolio
+    price = 40
+    quantity = 2
+    side = TradeOrderSide.BUY
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order.origin_quantity == quantity
+    assert portfolio.get_portfolio()["USD"][Portfolio.AVAILABLE] == 820
+    assert created_order is not None
+
+    # enough quantity in portfolio
+    price = 205
+    quantity = 4
+    side = TradeOrderSide.BUY
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert created_order.origin_quantity == quantity
+    assert portfolio.get_portfolio()["USD"][Portfolio.AVAILABLE] == 0
+    assert created_order is not None
+
+    # not enough quantity in portfolio anymore
+    price = 205
+    quantity = 1
+    side = TradeOrderSide.BUY
+    to_create_order = OrderData(side, quantity, price, symbol, False)
+    created_order = await creator.create_order(to_create_order, price, symbol_market, trader_inst, portfolio)
+    assert portfolio.get_portfolio()["USD"][Portfolio.AVAILABLE] == 0
+    assert created_order is None
 
 
 def _get_total_usd(trader, btc_price):
@@ -315,7 +451,7 @@ def _get_total_usd(trader, btc_price):
     return pf["USD"][Portfolio.TOTAL] + pf["BTC"][Portfolio.TOTAL] * btc_price
 
 
-async def _fill_order(order, trader, trigger_price=None):
+async def _fill_order(order, trader, trigger_price=None, order_update_callback=True):
     if trigger_price is None:
         trigger_price = order.origin_price*0.99 if order.side == TradeOrderSide.BUY else order.origin_price*1.01
     recent_trades = [{"price": trigger_price, "timestamp": time.time()}]
@@ -324,7 +460,8 @@ async def _fill_order(order, trader, trigger_price=None):
     initial_len = len(trader.get_order_manager().get_open_orders())
     if await trader.get_order_manager()._update_order_status(order, errors):
         assert len(trader.get_order_manager().get_open_orders()) == initial_len - 1
-        await trader.get_order_manager().trader.call_order_update_callback(order)
+        if order_update_callback:
+            await trader.get_order_manager().trader.call_order_update_callback(order)
 
 
 async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowest_buy=None, highest_sell=None,
@@ -347,6 +484,9 @@ async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowes
     if expected_buy_count or expected_sell_count:
         assert len(open_orders) <= final_evaluator.operational_depth
     _check_orders(open_orders, mode, final_evaluator, trader_inst)
+
+    assert portfolio["BTC"][Portfolio.AVAILABLE] >= 0
+    assert portfolio["USD"][Portfolio.AVAILABLE] >= 0
 
 
 async def _check_generate_orders(trader, decider, expected_buy_count, expected_sell_count, price):
