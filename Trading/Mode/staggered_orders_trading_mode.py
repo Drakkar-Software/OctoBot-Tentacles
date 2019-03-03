@@ -281,6 +281,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
         missing_orders, state, self.flat_increment = self._analyse_current_orders_situation(sorted_orders)
+        if self.flat_increment:
+            self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market, self.flat_increment)
 
         buy_orders = self._create_orders(self.lowest_buy, current_price, TradeOrderSide.BUY, sorted_orders,
                                          portfolio, current_price, missing_orders, state)
@@ -316,7 +318,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             orders_count, average_order_quantity = \
                 self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                            upper_bound, order_limiting_currency_amount)
-            self.flat_increment = current_price * self.increment
+            self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                         current_price * self.increment)
             for i in range(orders_count):
                 price = self._get_price_from_iteration(starting_bound, selling, i)
                 if price is not None:
