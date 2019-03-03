@@ -254,7 +254,7 @@ async def test_order_fill_callback():
     now_usd = trader_inst.get_portfolio().get_portfolio()["USD"][Portfolio.TOTAL]
 
     await final_evaluator.create_state()
-    price_increment = final_evaluator._get_prince_increment(trader_inst)
+    price_increment = final_evaluator.flat_increment
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
     assert len(open_orders) == final_evaluator.operational_depth
