@@ -127,8 +127,10 @@ class InstantFluctuationsEvaluator(RealTimeExchangeEvaluator):
                                                           limit=self.candle_segments[0])
 
         for segment in self.candle_segments:
-            self.average_volumes[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:])
-            self.average_prices[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:])
+            volume_data = [d for d in candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:] if d is not None]
+            price_data = [d for d in candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:] if d is not None]
+            self.average_volumes[segment] = np.mean(volume_data)
+            self.average_prices[segment] = np.mean(price_data)
 
         self.last_volume = candles_data[PriceIndexes.IND_PRICE_VOL.value][-1]
         self.last_price = candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
