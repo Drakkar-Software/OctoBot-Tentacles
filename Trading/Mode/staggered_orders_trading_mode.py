@@ -109,7 +109,7 @@ class StaggeredOrdersTradingMode(AbstractTradingMode):
                   '"sells at a loss", but always at a profit. Description from ' \
                   'https://github.com/Codaone/DEXBot/wiki/The-Staggered-Orders-strategy. Full documentation ' \
                   'available there. In order to never sell at a loss, OctoBot never ' \
-                  'cancels orders, in order to change the staggered orders mode, you will have to manually cancel ' \
+                  'cancels orders. To change the staggered orders mode settings, you will have to manually cancel ' \
                   'orders and restart the strategy. This trading mode instantly places opposite side orders when an ' \
                   'order is filled and checks the current orders every 6 hours to replace any missing one. Only ' \
                   'works on single currency and trading pair configuration. ' \
