@@ -12,7 +12,7 @@ $tentacle_description: {
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -30,8 +30,6 @@ $tentacle_description: {
 
 from ccxt import InsufficientFunds
 
-from tools.logging.logging_util import get_logger
-
 from config import EvaluatorStates, INIT_EVAL_NOTE, TraderOrderType
 from tools.evaluators_util import check_valid_eval_note
 from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreator
@@ -40,11 +38,12 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
-
-    DESCRIPTION = "DailyTradingMode is a low risk trading mode adapted to flat markets."
-
-    def __init__(self, config, exchange):
-        super().__init__(config, exchange)
+    DESCRIPTION = "DailyTradingMode is a low risk versatile trading mode that reacts only the its state changes to " \
+                  "a state that is different from the previous one and that is not NEUTRAL. " \
+                  "When triggered for a given symbol, it will cancel previously created (and unfilled) orders " \
+                  "and create new ones according to its new state. " \
+                  "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
+                  "each state."
 
     def create_deciders(self, symbol, symbol_evaluator):
         self.add_decider(symbol, DailyTradingModeDecider(self, symbol_evaluator, self.exchange))
@@ -248,10 +247,10 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             raise e
 
         except Exception as e:
-            get_logger(self.__class__.__name__).error(f"Failed to create order : {e}. "
-                                                      f"Order: "
-                                                      f"{current_order.get_string_info() if current_order else None}")
-            get_logger(self.__class__.__name__).exception(e)
+            self.logger.error(f"Failed to create order : {e}. "
+                              f"Order: "
+                              f"{current_order.get_string_info() if current_order else None}")
+            self.logger.exception(e)
             return None
 
 
@@ -320,12 +319,12 @@ class DailyTradingModeDecider(AbstractTradingModeDecider):
                 # create notification
                 if self.symbol_evaluator.matrices:
                     await self.notifier.notify_alert(
-                          self.final_eval,
-                          self.symbol_evaluator.get_crypto_currency_evaluator(),
-                          self.symbol_evaluator.get_symbol(),
-                          self.symbol_evaluator.get_trader(self.exchange),
-                          self.state,
-                          self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
-                    
+                        self.final_eval,
+                        self.symbol_evaluator.get_crypto_currency_evaluator(),
+                        self.symbol_evaluator.get_symbol(),
+                        self.symbol_evaluator.get_trader(self.exchange),
+                        self.state,
+                        self.symbol_evaluator.get_matrix(self.exchange).get_matrix())
+
                 # call orders creation method
                 await self.create_final_state_orders(self.notifier, self.trading_mode.get_only_creator_key(self.symbol))

@@ -11,7 +11,7 @@ $tentacle_description: {
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -31,12 +31,16 @@ from config import *
 from evaluator.Social.social_evaluator import NewsSocialEvaluator
 from evaluator.Util import TextAnalysis
 from evaluator.Util.advanced_manager import AdvancedManager
-from evaluator.Dispatchers.twitter_dispatcher import TwitterDispatcher
-from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
+from services.Dispatchers.twitter_dispatcher import TwitterDispatcher
+from services.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 from tools.decoding_encoding import DecoderEncoder
 
 
 class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
+    DESCRIPTION = "Triggers when a new tweet appears from the Twitter accounts in TwitterNewsEvaluator.json. " \
+                  "If the evaluation a new tweet is significant enough, triggers strategies re-evaluation. Otherwise " \
+                  "acts as a background evaluator."
+
     # max time to live for a pulse is 10min
     _EVAL_MAX_TIME_TO_LIVE = 10 * MINUTE_TO_SECONDS
     # absolute value above which a notification is triggered
@@ -79,7 +83,7 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
             if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
                 self.eval_note = note
                 self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                await self.notify_evaluator_task_managers(self.__class__.__name__)
+                await self.notify_evaluator_task_managers(self.get_name())
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
@@ -154,22 +158,3 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
     # not standalone task
     async def start_task(self):
         pass
-
-
-class MediumNewsEvaluator(NewsSocialEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    def get_data(self):
-        pass
-
-    async def eval_impl(self):
-        await self.notify_evaluator_task_managers(self.__class__.__name__)
-
-    async def start_task(self):
-        pass
-
-    def set_default_config(self):
-        self.social_config = {
-            CONFIG_REFRESH_RATE: 2
-        }

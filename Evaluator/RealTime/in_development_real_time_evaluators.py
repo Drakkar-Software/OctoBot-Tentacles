@@ -2,16 +2,17 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "orderbook_evaluator",
+    "name": "in_development_real_time_evaluators",
     "type": "Evaluator",
     "subtype": "RealTime",
     "version": "1.1.0",
-    "requirements": []
+    "requirements": [],
+    "developing": true
 }
 """
 
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -27,13 +28,12 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+
 from config import CONFIG_TIME_FRAME, TimeFrames, CONFIG_REFRESH_RATE
-from evaluator.RealTime import RealTimeTAEvaluator
+from evaluator.RealTime import RealTimeExchangeEvaluator
 
 
-class WhalesOrderBookEvaluator(RealTimeTAEvaluator):
-    def __init__(self, exchange_inst, symbol):
-        super().__init__(exchange_inst, symbol)
+class WhalesOrderBookEvaluator(RealTimeExchangeEvaluator):
 
     def _refresh_data(self):
         pass

@@ -2,14 +2,15 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "high_frequency_strategy_evaluator",
+    "name": "market_making_startegy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator"],
-    "config_files": ["HighFrequencyStrategiesEvaluator.json"]
+    "config_files": ["SimpleMarketMakingStrategiesEvaluator.json"]
 }
 """
+
 #  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -27,17 +28,18 @@ $tentacle_description: {
 #  License along with this library.
 
 from config import EvaluatorMatrixTypes
+from evaluator.Strategies import MarketMakingStrategiesEvaluator
+from tentacles.Evaluator.RealTime import InstantMarketMakingEvaluator
 
-from evaluator.Strategies import MixedStrategiesEvaluator
-from tentacles.Evaluator.RealTime import InstantMAEvaluator
 
+class SimpleMarketMakingStrategiesEvaluator(MarketMakingStrategiesEvaluator):
+    DESCRIPTION = "SimpleMarketMakingStrategiesEvaluator uses to pass up to date bid and ask price to MM TM"
 
-# WARNING : THIS STRATEGY MUST BE USED WITH A WEBSOCKET
-class HighFrequencyStrategiesEvaluator(MixedStrategiesEvaluator):
-    def __init__(self):
-        super().__init__()
+    INSTANT_MM_CLASS_NAME = InstantMarketMakingEvaluator.get_name()
 
     async def eval_impl(self) -> None:
-        matrix_note = self.matrix[EvaluatorMatrixTypes.REAL_TIME][InstantMAEvaluator.get_name()]
-        self.eval_note = matrix_note
+        self.finalize()
 
+    def finalize(self):
+        self.eval_note = self.matrix[EvaluatorMatrixTypes.REAL_TIME][
+            SimpleMarketMakingStrategiesEvaluator.INSTANT_MM_CLASS_NAME]

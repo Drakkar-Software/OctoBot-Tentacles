@@ -9,7 +9,7 @@ $tentacle_description: {
     "requirements": []
 }
 """
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or

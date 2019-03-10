@@ -8,11 +8,11 @@ $tentacle_description: {
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator", "news_evaluator"],
     "config_files": ["FullMixedStrategiesEvaluator.json", "InstantSocialReactionMixedStrategiesEvaluator.json", "SimpleMixedStrategiesEvaluator.json"],
-    "tests":["test_full_mixed_strategies_evaluator"]
+    "tests":["test_simple_mixed_strategies_evaluator", "test_full_mixed_strategies_evaluator"]
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -28,16 +28,24 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import *
+from config import EvaluatorMatrixTypes, TimeFramesRelevance
 from evaluator.Strategies import MixedStrategiesEvaluator
 from tentacles.Evaluator.RealTime import InstantFluctuationsEvaluator
-from tentacles.Evaluator.Social import MediumNewsEvaluator, RedditForumEvaluator
+from tentacles.Evaluator.Social import RedditForumEvaluator
 from tools.evaluators_util import check_valid_eval_note
 
 
 class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
-    DESCRIPTION = "FullMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
-                  "to make the strategy evaluation"
+    DESCRIPTION = "FullMixedStrategiesEvaluator a flexible strategy. Meant to be customized, it is using " \
+                  "every activated technical evaluator and averages the evaluation notes of " \
+                  "each to compute its final evaluation. This strategy can be used to make simple trading strategies " \
+                  "using for example only one evaluator or more complex ones using a multi-evaluator setup. " \
+                  "FullMixedStrategiesEvaluator can also handle InstantFluctuationsEvaluator and " \
+                  "RedditForumEvaluator if activated." \
+                  "This strategy is similar to SimpleMixedStrategiesEvaluator except for the detail that it assigns " \
+                  "weights to time frames in order to try to make the final evaluation more accurate. " \
+                  "Used time frames are 30m, 1h, 2h, 4h and 1d. " \
+                  "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
         super().__init__()
@@ -86,14 +94,16 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         #         RSIMomentumEvaluator.get_name())
 
         for rt in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]):
+            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt],
+                                     self.evaluator_types_matrix.get_evaluator_eval_type(rt)):
                 self.rt_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]
                 self.inc_rt_counter()
 
         for ta in self.matrix[EvaluatorMatrixTypes.TA]:
             if self.matrix[EvaluatorMatrixTypes.TA][ta]:
                 for ta_time_frame in self.matrix[EvaluatorMatrixTypes.TA][ta]:
-                    if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame]):
+                    if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame],
+                                             self.evaluator_types_matrix.get_evaluator_eval_type(ta)):
                         time_frame_relevance = TimeFramesRelevance[ta_time_frame]
                         self.ta_evaluation += self.matrix[EvaluatorMatrixTypes.TA][ta][
                                                   ta_time_frame] * time_frame_relevance
@@ -101,7 +111,7 @@ class FullMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
         for social in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
             eval_note = self.matrix[EvaluatorMatrixTypes.SOCIAL][social]
-            if check_valid_eval_note(eval_note):
+            if check_valid_eval_note(eval_note, self.evaluator_types_matrix.get_evaluator_eval_type(social)):
                 self.social_evaluation += eval_note
                 self.inc_social_counter()
 
@@ -147,20 +157,18 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         # TODO : This is an example
         if InstantFluctuationsEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
             if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][
-                                         InstantFluctuationsEvaluator.get_name()]):
+                                         InstantFluctuationsEvaluator.get_name()],
+                                     self.evaluator_types_matrix.get_evaluator_eval_type(
+                                         InstantFluctuationsEvaluator.get_name())):
                 self.instant_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][
                     InstantFluctuationsEvaluator.get_name()]
                 self.inc_instant_counter()
 
-        if MediumNewsEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][
-                                         MediumNewsEvaluator.get_name()]):
-                self.social_evaluation += self.matrix[EvaluatorMatrixTypes.SOCIAL][MediumNewsEvaluator.get_name()]
-                self.inc_social_counter()
-
         if RedditForumEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
             if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][
-                                         RedditForumEvaluator.get_name()]):
+                                         RedditForumEvaluator.get_name()],
+                                     self.evaluator_types_matrix.get_evaluator_eval_type(
+                                         RedditForumEvaluator.get_name())):
                 self.social_evaluation += \
                     self.matrix[EvaluatorMatrixTypes.SOCIAL][RedditForumEvaluator.get_name()]
                 self.inc_social_counter()
@@ -191,8 +199,12 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
 
 
 class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
-    DESCRIPTION = "SimpleMixedStrategiesEvaluator uses all activated evaluators and averages their evaluation \n" \
-                  "to make the strategy evaluation"
+    DESCRIPTION = "SimpleMixedStrategiesEvaluator is the most flexible strategy. Meant to be customized, it is using " \
+                  "every activated technical, social and real time evaluator, and averages the evaluation notes of " \
+                  "each to compute its final evaluation. This strategy can be used to make simple trading strategies " \
+                  "using for example only one evaluator or more complex ones using a multi-evaluator setup. " \
+                  "Used time frames are 1h, 4h and 1d. " \
+                  "Warning: this strategy only considers evaluators computing evaluations between -1 and 1."
 
     def __init__(self):
         super().__init__()
@@ -211,19 +223,22 @@ class SimpleMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         self.evaluation = 0
 
         for rt in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]):
+            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt],
+                                     self.evaluator_types_matrix.get_evaluator_eval_type(rt)):
                 self.evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][rt]
                 self.counter += 1
 
         for ta in self.matrix[EvaluatorMatrixTypes.TA]:
             if self.matrix[EvaluatorMatrixTypes.TA][ta]:
                 for ta_time_frame in self.matrix[EvaluatorMatrixTypes.TA][ta]:
-                    if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame]):
+                    if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame],
+                                             self.evaluator_types_matrix.get_evaluator_eval_type(ta)):
                         self.evaluation += self.matrix[EvaluatorMatrixTypes.TA][ta][ta_time_frame]
                         self.counter += 1
 
         for social in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][social]):
+            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][social],
+                                     self.evaluator_types_matrix.get_evaluator_eval_type(social)):
                 self.evaluation += self.matrix[EvaluatorMatrixTypes.SOCIAL][social]
                 self.counter += 1
 

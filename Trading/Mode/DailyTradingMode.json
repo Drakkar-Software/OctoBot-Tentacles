@@ -1,3 +1,5 @@
 {
-  "required_strategies": ["FullMixedStrategiesEvaluator"]
+  "required_strategies": ["SimpleMixedStrategiesEvaluator", "FullMixedStrategiesEvaluator"],
+  "required_strategies_min_count": 1,
+  "default_config": ["SimpleMixedStrategiesEvaluator"]
 }

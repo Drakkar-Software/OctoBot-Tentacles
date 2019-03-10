@@ -10,7 +10,7 @@ $tentacle_description: {
     "config_files": ["InstantRegulatedMarketEvaluator.json"]
 }
 """
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -28,11 +28,13 @@ $tentacle_description: {
 
 import math
 import tulipy
+from typing import Dict
 
 import numpy as np
 
-from config import *
-from evaluator.RealTime.realtime_evaluator import RealTimeTAEvaluator
+from config import ExchangeConstantsOrderBookInfoColumns, CONFIG_REFRESH_RATE, PriceIndexes, CONFIG_TIME_FRAME, \
+    START_PENDING_EVAL_NOTE
+from evaluator.RealTime.realtime_evaluator import RealTimeExchangeEvaluator
 
 """
 Idea moves are lasting approx 12min:
@@ -41,7 +43,10 @@ compute the strength or weakness of the move
 """
 
 
-class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
+class InstantFluctuationsEvaluator(RealTimeExchangeEvaluator):
+    DESCRIPTION = "Triggers when a change of price ( > 1%) or of volume ( > x4) from recent average happens." \
+                  "The price distance from recent average is defining the evaluation."
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.something_is_happening = False
@@ -122,8 +127,10 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
                                                           limit=self.candle_segments[0])
 
         for segment in self.candle_segments:
-            self.average_volumes[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:])
-            self.average_prices[segment] = np.mean(candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:])
+            volume_data = [d for d in candles_data[PriceIndexes.IND_PRICE_VOL.value][-segment:] if d is not None]
+            price_data = [d for d in candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-segment:] if d is not None]
+            self.average_volumes[segment] = np.mean(volume_data)
+            self.average_prices[segment] = np.mean(price_data)
 
         self.last_volume = candles_data[PriceIndexes.IND_PRICE_VOL.value][-1]
         self.last_price = candles_data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
@@ -137,7 +144,10 @@ class InstantFluctuationsEvaluator(RealTimeTAEvaluator):
 # -1 when the market is stable
 # 1 when the market is unstable
 
-class InstantVolatilityEvaluator(RealTimeTAEvaluator):
+class InstantVolatilityEvaluator(RealTimeExchangeEvaluator):
+    DESCRIPTION = "Triggers when the stochastic indicator crosses stability and instability thresholds. " \
+                  "Evaluation is respectively -1 or 1."
+
     STOCH_INSTABILITY_THRESHOLD = 50
     STOCH_STABILITY_THRESHOLD = 30
 
@@ -148,7 +158,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         self.last_candle_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                             limit=20, return_list=False)
+                                                                   limit=20, return_list=False)
 
     async def eval_impl(self):
         self.eval_note = 0
@@ -170,7 +180,7 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
             self.eval_note = -1
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.get_name())
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
@@ -181,7 +191,9 @@ class InstantVolatilityEvaluator(RealTimeTAEvaluator):
         return True
 
 
-class InstantMAEvaluator(RealTimeTAEvaluator):
+class InstantMAEvaluator(RealTimeExchangeEvaluator):
+    DESCRIPTION = "Triggers systematically. Uses the simple moving average (on a length of 6) to set its evaluation."
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.last_candle_data = None
@@ -190,7 +202,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                limit=20, return_list=False)
+                                                      limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
@@ -218,7 +230,7 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
             else:
                 self.eval_note = 0
 
-        await self.notify_evaluator_task_managers(self.__class__.__name__)
+        await self.notify_evaluator_task_managers(self.get_name())
 
     def set_default_config(self):
         super().set_default_config()
@@ -228,7 +240,8 @@ class InstantMAEvaluator(RealTimeTAEvaluator):
         return self.should_eval
 
 
-class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
+class InstantRegulatedMarketEvaluator(RealTimeExchangeEvaluator):
+
     MARKET_PRICE = "regulated_market_price"
     MARKET_RANGE = "regulated_market_range"
 
@@ -240,7 +253,7 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
 
     async def _refresh_data(self):
         new_data = await self._get_data_from_exchange(self.specific_config[CONFIG_TIME_FRAME],
-                                                limit=20, return_list=False)
+                                                      limit=20, return_list=False)
         self.should_eval = not self._compare_data(new_data, self.last_candle_data)
         self.last_candle_data = new_data
 
@@ -265,12 +278,56 @@ class InstantRegulatedMarketEvaluator(RealTimeTAEvaluator):
             self.eval_note = 0
 
         if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_task_managers(self.__class__.__name__)
+            await self.notify_evaluator_task_managers(self.get_name())
             self.last_eval_note = self.eval_note
 
     def set_default_config(self):
         super().set_default_config()
         self.specific_config[CONFIG_REFRESH_RATE] = 0.3
+
+    def _should_eval(self):
+        return self.should_eval
+
+
+class InstantMarketMakingEvaluator(RealTimeExchangeEvaluator):
+    DESCRIPTION = "Triggers on order book change. Uses the simple moving average (on a length of 6) to set its " \
+                  "evaluation. Warning: sets an order book evaluation which can only be used by specific strategies."
+
+    def __init__(self, exchange, symbol):
+        super().__init__(exchange, symbol)
+        self.last_best_bid = None
+        self.last_best_ask = None
+        self.last_order_book_data = None
+        self.should_eval = True
+
+    @staticmethod
+    def get_eval_type():
+        return Dict[str, float]
+
+    async def _refresh_data(self):
+        self.last_order_book_data = await self._get_order_book_from_exchange(limit=5)
+
+    async def eval_impl(self):
+        self.eval_note = ""
+        best_bid = self.last_best_bid
+        best_ask = self.last_best_ask
+
+        if self.last_order_book_data is not None:
+            best_bid = self.last_order_book_data[ExchangeConstantsOrderBookInfoColumns.BIDS.value][-1]
+            best_ask = self.last_order_book_data[ExchangeConstantsOrderBookInfoColumns.ASKS.value][-1]
+
+        if self.last_best_ask != best_ask or self.last_best_bid != best_bid:
+            self.eval_note = {
+                ExchangeConstantsOrderBookInfoColumns.BIDS.value: best_bid,
+                ExchangeConstantsOrderBookInfoColumns.ASKS.value: best_ask
+            }
+            await self.notify_evaluator_task_managers(self.get_name())
+            self.last_best_ask = best_ask
+            self.last_best_bid = best_bid
+
+    def set_default_config(self):
+        super().set_default_config()
+        self.specific_config[CONFIG_REFRESH_RATE] = 60
 
     def _should_eval(self):
         return self.should_eval

@@ -2,14 +2,16 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "name": "high_frequency_strategy_evaluator",
+    "name": "in_development_social_evaluators",
     "type": "Evaluator",
-    "subtype": "Strategies",
+    "subtype": "Social",
     "version": "1.1.0",
-    "requirements": ["instant_fluctuations_evaluator"],
-    "config_files": ["HighFrequencyStrategiesEvaluator.json"]
+    "requirements": [],
+    "config_files": [],
+    "developing": true
 }
 """
+
 #  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -26,18 +28,35 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import EvaluatorMatrixTypes
 
-from evaluator.Strategies import MixedStrategiesEvaluator
-from tentacles.Evaluator.RealTime import InstantMAEvaluator
+from config import *
+from evaluator.Social.social_evaluator import ForumSocialEvaluator, NewsSocialEvaluator
 
 
-# WARNING : THIS STRATEGY MUST BE USED WITH A WEBSOCKET
-class HighFrequencyStrategiesEvaluator(MixedStrategiesEvaluator):
-    def __init__(self):
-        super().__init__()
+class BTCTalkForumEvaluator(ForumSocialEvaluator):
 
-    async def eval_impl(self) -> None:
-        matrix_note = self.matrix[EvaluatorMatrixTypes.REAL_TIME][InstantMAEvaluator.get_name()]
-        self.eval_note = matrix_note
+    def get_data(self):
+        pass
 
+    async def eval_impl(self):
+        pass
+
+    async def start_task(self):
+        pass
+
+
+class MediumNewsEvaluator(NewsSocialEvaluator):
+
+    def get_data(self):
+        pass
+
+    async def eval_impl(self):
+        await self.notify_evaluator_task_managers(self.__class__.__name__)
+
+    async def start_task(self):
+        pass
+
+    def set_default_config(self):
+        self.social_config = {
+            CONFIG_REFRESH_RATE: 2
+        }

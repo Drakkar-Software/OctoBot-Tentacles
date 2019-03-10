@@ -11,7 +11,7 @@ $tentacle_description: {
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -40,6 +40,9 @@ from tools.data_util import DataUtil
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Relative Strength Index (length of 14) to find trend reversals. When found, evaluates -1 to 1" \
+                  " according to the strength of the RSI."
+
     def __init__(self):
         super().__init__()
         self.pertinence = 1
@@ -73,8 +76,8 @@ class RSIMomentumEvaluator(MomentumEvaluator):
 
 # bollinger_bands
 class BBMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
+    DESCRIPTION = "Uses the Bollinger bands (length of 20) to evaluates -1 to 1 according to the current price " \
+                  "relatively to the current Bollinger bands values."
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
@@ -125,8 +128,9 @@ class BBMomentumEvaluator(MomentumEvaluator):
 
 # ADX --> trend_strength
 class ADXMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
+    DESCRIPTION = "Uses the Average Directional Index (length of 14) to find reversals. " \
+                  "Evaluates -1 to 1 according to the current price using exponential moving averages (length of 20) " \
+                  "coupled with ADX."
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
@@ -180,39 +184,11 @@ class ADXMomentumEvaluator(MomentumEvaluator):
                     self.eval_note = multiplier * min(1, ((neutral_adx - current_adx) / (neutral_adx - min_adx)))
 
 
-class OBVMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # obv_v = talib.OBV(self.data[PriceStrings.STR_PRICE_CLOSE.value],
-        #                   self.data[PriceStrings.STR_PRICE_VOL.value])
-        pass
-
-
-# William's % R --> overbought / oversold
-class WilliamsRMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # willr_v = talib.WILLR(self.data[PriceStrings.STR_PRICE_HIGH.value],
-        #                       self.data[PriceStrings.STR_PRICE_LOW.value],
-        #                       self.data[PriceStrings.STR_PRICE_CLOSE.value])
-        pass
-
-
-# TRIX --> percent rate-of-change trend
-class TRIXMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        # trix_v = talib.TRIX(self.data[PriceStrings.STR_PRICE_CLOSE.value])
-        pass
-
-
 class MACDMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Moving Average Convergence Divergence (length of 26) to find reversals. " \
+                  "Tries to find patterns in the MACD histogram and returns -1 to 1 according to the price and " \
+                  "identified pattern strength."
+
     def __init__(self):
         super().__init__()
         self.previous_note = None
@@ -285,17 +261,9 @@ class MACDMomentumEvaluator(MomentumEvaluator):
                                           pattern_move_time, sign_multiplier)
 
 
-class ChaikinOscillatorMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    async def eval_impl(self):
-        pass
-
-
 class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
-    def __init__(self):
-        super().__init__()
+    DESCRIPTION = "Uses Klinger Oscillator (short period of 35 and long period of 55) to find reversals. " \
+                  "Evaluates -1 to 1 using klinger reversal estimation."
 
     async def eval_impl(self):
         eval_proposition = START_PENDING_EVAL_NOTE

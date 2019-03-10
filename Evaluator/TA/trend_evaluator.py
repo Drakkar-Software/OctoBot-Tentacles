@@ -10,7 +10,7 @@ $tentacle_description: {
     "tests":["test_double_moving_averages_TA_evaluator"]
 }
 """
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -39,6 +39,9 @@ from tools.data_util import DataUtil
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
+    DESCRIPTION = "Uses two moving averages (length of 5 and length of 10) to find reversals. " \
+                  "Evaluates -1 to 1 relatively to the computed reversal probability and the current price " \
+                  "distance from moving averages."
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
@@ -97,31 +100,3 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
 
         # just crossed the average => neutral
         return 0
-
-
-# https://mrjbq7.github.io/ta-lib/func_groups/overlap_studies.html
-class CandleAnalysisTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# directional_movement_index --> trend strength
-class DMITrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# bollinger_bands
-class BBTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass
-
-
-# ease_of_movement --> ease to change trend --> trend strength
-class EOMTrendEvaluator(TrendEvaluator):
-
-    async def eval_impl(self):
-        pass

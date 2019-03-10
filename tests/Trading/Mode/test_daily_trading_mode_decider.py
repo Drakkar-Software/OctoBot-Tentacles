@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -71,7 +71,6 @@ async def _get_tools():
 async def test_default_values():
     final_evaluator, trader_inst = await _get_tools()
     assert final_evaluator.state is None
-    assert final_evaluator.queue.empty()
     final_evaluator.final_eval = 1211161
     assert final_evaluator.get_final_eval() == 1211161
     final_evaluator.state = "plop"

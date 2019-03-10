@@ -10,7 +10,7 @@ $tentacle_description: {
     "config_files": ["SignalTradingMode.json"]
 }
 """
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -32,12 +32,9 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class SignalTradingMode(AbstractTradingMode):
-    DESCRIPTION = "SignalTradingMode is a low risk trading mode adapted to relatively flat markets. " \
+    DESCRIPTION = "SignalTradingMode is a middle risk trading mode adapted to relatively flat markets. " \
                   "SignalTradingMode is using the daily trading mode orders system with adapted parameters. " \
                   "Warning: Works only on liquid markets."
-
-    def __init__(self, config, exchange):
-        super().__init__(config, exchange)
 
     def create_deciders(self, symbol, symbol_evaluator):
         self.add_decider(symbol, SignalTradingModeDecider(self, symbol_evaluator, self.exchange))

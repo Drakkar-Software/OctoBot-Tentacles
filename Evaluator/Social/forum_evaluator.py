@@ -11,7 +11,7 @@ $tentacle_description: {
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -32,13 +32,17 @@ from evaluator.Social.social_evaluator import ForumSocialEvaluator
 from evaluator.Util.advanced_manager import AdvancedManager
 from evaluator.Util import TextAnalysis
 from evaluator.Util import OverallStateAnalyser
-from evaluator.Dispatchers.reddit_dispatcher import RedditDispatcher
-from evaluator.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
+from services.Dispatchers.reddit_dispatcher import RedditDispatcher
+from services.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 
 
 # RedditForumEvaluator is used to get an overall state of a market, it will not trigger a trade
 # (notify its evaluators) but is used to measure hype and trend of a market.
 class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
+    DESCRIPTION = "First initialises using the recent history of the subreddits in RedditForumEvaluator.json then " \
+                  "watches for new posts to update its evaluation. Never triggers strategies re-evaluations, " \
+                  "acts as a background evaluator."
+
     def __init__(self):
         ForumSocialEvaluator.__init__(self)
         DispatcherAbstractClient.__init__(self)
@@ -109,19 +113,5 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
         pass
 
     # not standalone task
-    async def start_task(self):
-        pass
-
-
-class BTCTalkForumEvaluator(ForumSocialEvaluator):
-    def __init__(self):
-        super().__init__()
-
-    def get_data(self):
-        pass
-
-    async def eval_impl(self):
-        pass
-
     async def start_task(self):
         pass

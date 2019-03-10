@@ -12,7 +12,7 @@ $tentacle_description: {
 }
 """
 
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -45,10 +45,11 @@ class MoveSignalsStrategyEvaluator(MixedStrategiesEvaluator):
     SIGNAL_MINIMUM_THRESHOLD = 0.15
 
     DESCRIPTION = "MoveSignalsStrategyEvaluator is a fractal strategy (strategy using different time frames to " \
-                  "balance decisions). It is using KlingerOscillatorMomentumEvaluator (momentum evaluator) " \
-                  "to know when to start a trade and BBMomentumEvaluator (bollinger momentum evaluator) " \
-                  "to know how much weight giving to this trade. Uses InstantFluctuationsEvaluator to spot " \
-                  "sudden market changes within timeframes. Warning: Works only on liquid markets."
+                  "balance decisions). It is using the KlingerOscillatorMomentumEvaluator (technical evaluator) " \
+                  "to know when to start a trade and BBMomentumEvaluator (technical evaluator) " \
+                  "to know how much weight to give to this trade. MoveSignalsStrategyEvaluator also uses " \
+                  "InstantFluctuationsEvaluator (real time evaluator) to spot sudden market changes within " \
+                  "time frames. Used time frames are 30m, 1h and 4h. Warning: Works only on liquid markets."
 
     def __init__(self):
         super().__init__()
