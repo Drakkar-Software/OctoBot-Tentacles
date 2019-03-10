@@ -8,8 +8,7 @@ $tentacle_description: {
     "version": "1.1.0",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
-    "tests":["test_staggered_orders_trading_mode"],
-    "developing": true
+    "tests":["test_staggered_orders_trading_mode"]
 }
 """
 

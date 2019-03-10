@@ -7,8 +7,7 @@ $tentacle_description: {
     "subtype": "Strategies",
     "version": "1.1.0",
     "requirements": ["price_refresher_evaluator"],
-    "config_files": ["StaggeredOrdersStrategiesEvaluator.json"],
-    "developing": true
+    "config_files": ["StaggeredOrdersStrategiesEvaluator.json"]
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
