@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -327,9 +327,9 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                     if quantity is not None:
                         orders.append(OrderData(side, quantity, price, self.symbol))
             if not orders:
-                self.logger.warning(f"Not enough {order_limiting_currency} to create {side.name} orders. "
-                                    f"For the strategy to work better, add {order_limiting_currency} funds or "
-                                    f"change change the strategy settings to make less but bigger orders.")
+                self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
+                                  f"For the strategy to work better, add {order_limiting_currency} funds or "
+                                  f"change change the strategy settings to make less but bigger orders.")
 
         if state == self.FILL:
             # complete missing orders
@@ -561,13 +561,21 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         order_count_divisor = bootstrapped_increment if bootstrapped_increment else current_price * self.increment
         orders_count = order_distance / order_count_divisor + 1
         average_order_quantity = holdings / orders_count
-        if self.min_max_order_details[self.min_quantity] and \
-           average_order_quantity < self.min_max_order_details[self.min_quantity]:
-            if holdings < average_order_quantity:
+        min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
+        if self.min_max_order_details[self.min_quantity] is not None \
+                and self.min_max_order_details[self.min_cost] is not None:
+            min_quantity = self.min_max_order_details[self.min_quantity] if selling \
+                else self.min_max_order_details[self.min_cost]
+            if min_order_quantity < min_quantity:
+                if holdings < average_order_quantity:
+                    return 0, 0
+                else:
+                    self.logger.error(f"Impossible to create staggered "
+                                      f"{TradeOrderSide.SELL.name if selling else TradeOrderSide.BUY.name} orders: "
+                                      f"minimum quantity for {self.mode.value} mode is lower than the minimum allowed "
+                                      f"for this tradig pair on this exchange: requested minimum: {min_order_quantity} "
+                                      f"and exchange minimum is {min_quantity}.")
                 return 0, 0
-            else:
-                order_count = holdings / self.min_max_order_details[self.min_quantity]
-                return floor(order_count), self.min_max_order_details[self.min_quantity]
         return floor(orders_count), average_order_quantity
 
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):
@@ -579,9 +587,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     def _get_quantity_from_iteration(self, average_order_quantity, mode, side, iteration, max_iteration, price):
         multiplier_price_ratio = 1
-        mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
-        min_quantity = average_order_quantity * (1 - mode_multiplier/2)
-        max_quantity = average_order_quantity * (1 + mode_multiplier/2)
+        min_quantity, max_quantity = self._get_min_max_quantity(average_order_quantity, mode)
         delta = max_quantity - min_quantity
 
         if max_iteration == 1:
@@ -601,6 +607,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         if self.min_max_order_details[self.min_cost] and cost < self.min_max_order_details[self.min_cost]:
             return None
         return quantity
+
+    @staticmethod
+    def _get_min_max_quantity(average_order_quantity, mode):
+        mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
+        min_quantity = average_order_quantity * (1 - mode_multiplier/2)
+        max_quantity = average_order_quantity * (1 + mode_multiplier/2)
+        return min_quantity, max_quantity
 
     async def _create_multiple_not_virtual_orders(self, orders_to_create, trader):
         creator_key = self.trading_mode.get_only_creator_key(self.symbol)

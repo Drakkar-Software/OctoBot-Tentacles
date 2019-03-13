@@ -135,6 +135,93 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     await _test_mode(StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell, btc_holdings)
 
 
+async def test_create_orders_from_different_markets():
+    final_evaluator, trader_inst, _ = await _get_tools()
+    portfolio = trader_inst.get_portfolio()
+    portfolio.get_portfolio()["RDN"] = {
+        Portfolio.AVAILABLE: 6740,
+        Portfolio.TOTAL: 6740
+    }
+    portfolio.get_portfolio()["ETH"] = {
+        Portfolio.AVAILABLE: 10,
+        Portfolio.TOTAL: 10
+    }
+    final_evaluator.symbol = "RDN/ETH"
+    final_evaluator._refresh_symbol_data()
+    final_evaluator.min_max_order_details[final_evaluator.min_cost] = 0.01
+    final_evaluator.min_max_order_details[final_evaluator.min_quantity] = 1.0
+    final_evaluator.min_max_order_details[final_evaluator.max_quantity] = 90000000.0
+    final_evaluator.min_max_order_details[final_evaluator.max_cost] = None
+    final_evaluator.min_max_order_details[final_evaluator.max_price] = None
+    final_evaluator.min_max_order_details[final_evaluator.min_price] = None
+
+    price = 0.0024161
+    # await _test_mode(StrategyModes.NEUTRAL, 0, 0, price)
+    lowest_buy = 0.0013
+    highest_sell = 0.0043
+    expected_buy_count = 46
+    expected_sell_count = 78
+
+    final_evaluator.lowest_buy = lowest_buy
+    final_evaluator.highest_sell = highest_sell
+    final_evaluator.increment = 0.01
+    final_evaluator.spread = 0.01
+    final_evaluator.operational_depth = 10
+    final_evaluator.final_eval = price
+    final_evaluator.mode = StrategyModes.MOUNTAIN
+
+    await _light_check_orders(final_evaluator, trader_inst, expected_buy_count, expected_sell_count, price, portfolio)
+
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+
+    # test trigger refresh
+    final_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.0024161}
+    await final_evaluator.finalize()
+    # did nothing
+    assert original_orders[0] is trader_inst.get_order_manager().get_open_orders()[0]
+    assert original_orders[-1] is trader_inst.get_order_manager().get_open_orders()[-1]
+    assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+
+
+async def test_create_orders_from_different_markets_not_enough_market_to_create_all_orders():
+    final_evaluator, trader_inst, _ = await _get_tools()
+    portfolio = trader_inst.get_portfolio()
+    portfolio.get_portfolio()["RDN"] = {
+        Portfolio.AVAILABLE: 6740,
+        Portfolio.TOTAL: 6740
+    }
+    portfolio.get_portfolio()["ETH"] = {
+        Portfolio.AVAILABLE: 10,
+        Portfolio.TOTAL: 10
+    }
+    final_evaluator.symbol = "RDN/ETH"
+    final_evaluator._refresh_symbol_data()
+    final_evaluator.min_max_order_details[final_evaluator.min_cost] = 1.0
+    final_evaluator.min_max_order_details[final_evaluator.min_quantity] = 1.0
+    final_evaluator.min_max_order_details[final_evaluator.max_quantity] = 90000000.0
+    final_evaluator.min_max_order_details[final_evaluator.max_cost] = None
+    final_evaluator.min_max_order_details[final_evaluator.max_price] = None
+    final_evaluator.min_max_order_details[final_evaluator.min_price] = None
+
+    price = 0.0024161
+    # await _test_mode(StrategyModes.NEUTRAL, 0, 0, price)
+    lowest_buy = 0.0013
+    highest_sell = 0.0043
+    expected_buy_count = 0
+    expected_sell_count = 0
+
+    final_evaluator.lowest_buy = lowest_buy
+    final_evaluator.highest_sell = highest_sell
+    final_evaluator.increment = 0.01
+    final_evaluator.spread = 0.01
+    final_evaluator.operational_depth = 10
+    final_evaluator.final_eval = price
+    final_evaluator.mode = StrategyModes.MOUNTAIN
+
+    await _light_check_orders(final_evaluator, trader_inst, expected_buy_count, expected_sell_count, price, portfolio)
+
+
 async def test_start_with_existing_valid_orders():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     portfolio = trader_inst.get_portfolio().get_portfolio()
@@ -594,3 +681,69 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                     8)
                 assert abs(current_sell.origin_quantity == expected_quantity) < \
                     multiplier*final_evaluator.increment/(2*final_evaluator.final_eval)
+
+
+async def _light_check_orders(final_evaluator, trader_inst, expected_buy_count, expected_sell_count, price, portfolio):
+
+    buy_orders, sell_orders = await final_evaluator._generate_staggered_orders(final_evaluator.final_eval, trader_inst)
+    assert len(buy_orders) == expected_buy_count
+    assert len(sell_orders) == expected_sell_count
+
+    assert all(o.price < price for o in buy_orders)
+    assert all(o.price > price for o in sell_orders)
+
+    buy_holdings = trader_inst.get_portfolio().get_portfolio()["ETH"][Portfolio.AVAILABLE]
+    assert sum(order.price * order.quantity for order in buy_orders) <= buy_holdings
+
+    sell_holdings = trader_inst.get_portfolio().get_portfolio()["RDN"][Portfolio.AVAILABLE]
+    assert sum(order.quantity for order in sell_orders) <= sell_holdings
+
+    staggered_orders = final_evaluator._alternate_not_virtual_orders(buy_orders, sell_orders)
+    if staggered_orders:
+        assert not any(order for order in staggered_orders if order.is_virtual)
+
+    creator_key = final_evaluator.trading_mode.get_only_creator_key("BTC/USD")
+    final_evaluator.trading_mode.creators[final_evaluator.symbol] = final_evaluator.trading_mode.creators["BTC/USD"]
+    await final_evaluator._create_not_virtual_orders(final_evaluator.notifier, trader_inst,
+                                                     staggered_orders, creator_key)
+
+    open_orders = trader_inst.get_order_manager().get_open_orders()
+    if expected_buy_count or expected_sell_count:
+        assert len(open_orders) <= final_evaluator.operational_depth
+
+    strategy_mode = final_evaluator.mode
+    buy_increase_towards_center = StrategyModeMultipliersDetails[strategy_mode][TradeOrderSide.BUY] == INCREASING
+
+    current_buy = None
+    current_sell = None
+    last_order_side = None
+    for order in open_orders:
+
+        if last_order_side is not None:
+            # alternate sell and buy orders
+            assert last_order_side == (TradeOrderSide.BUY if order.side == TradeOrderSide.SELL else TradeOrderSide.SELL)
+        last_order_side = order.side
+
+        if order.side == TradeOrderSide.BUY:
+            if current_buy is None:
+                current_buy = order
+            else:
+                # place buy orders from the lowest price up to the current price
+                assert current_buy.origin_price < order.origin_price
+                if buy_increase_towards_center:
+                    assert current_buy.origin_quantity * current_buy.origin_price < \
+                        order.origin_quantity * order.origin_price
+                else:
+                    assert current_buy.origin_quantity * current_buy.origin_price > \
+                        order.origin_quantity * order.origin_price
+                current_buy = order
+
+        if order.side == TradeOrderSide.SELL:
+            if current_sell is None:
+                current_sell = order
+            else:
+                assert current_sell.origin_price > order.origin_price
+                current_sell = order
+
+    assert portfolio.get_portfolio()["ETH"][Portfolio.AVAILABLE] >= 0
+    assert portfolio.get_portfolio()["RDN"][Portfolio.AVAILABLE] >= 0
