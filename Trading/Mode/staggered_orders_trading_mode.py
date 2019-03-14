@@ -308,12 +308,12 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         currency, market = split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
 
-        starting_bound = upper_bound if selling else lower_bound
         order_limiting_currency_amount = portfolio[order_limiting_currency][Portfolio.AVAILABLE] \
             if order_limiting_currency in portfolio else 0
         if state == self.NEW:
             # create staggered orders
 
+            starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
             orders_count, average_order_quantity = \
                 self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                            upper_bound, order_limiting_currency_amount)
@@ -330,6 +330,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
                                   f"For the strategy to work better, add {order_limiting_currency} funds or "
                                   f"change change the strategy settings to make less but bigger orders.")
+            else:
+                orders.reverse()
 
         if state == self.FILL:
             # complete missing orders
@@ -359,6 +361,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
                 if missing_orders_around_spread:
                     # missing order next to spread
+                    starting_bound = upper_bound if selling else lower_bound
                     increment_window = self.flat_increment/2
                     order_limiting_currency_available_amount = \
                         portfolio[order_limiting_currency][Portfolio.AVAILABLE] \
@@ -580,7 +583,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):
         price_step = self.flat_increment * iteration
-        price = starting_bound - price_step if is_selling else starting_bound + price_step
+        price = starting_bound + price_step if is_selling else starting_bound - price_step
         if self.min_max_order_details[self.min_price] and price < self.min_max_order_details[self.min_price]:
             return None
         return price
@@ -593,9 +596,9 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         if max_iteration == 1:
             max_iteration = 2
         if StrategyModeMultipliersDetails[mode][side] == INCREASING:
-            multiplier_price_ratio = iteration/(max_iteration - 1)
-        elif StrategyModeMultipliersDetails[mode][side] == DECREASING:
             multiplier_price_ratio = 1 - iteration/(max_iteration - 1)
+        elif StrategyModeMultipliersDetails[mode][side] == DECREASING:
+            multiplier_price_ratio = iteration/(max_iteration - 1)
         if price <= 0:
             return None
         quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
