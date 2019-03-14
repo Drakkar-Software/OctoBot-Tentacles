@@ -136,7 +136,7 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
 
 
 async def test_create_orders_from_different_markets():
-    final_evaluator, trader_inst, _ = await _get_tools()
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     portfolio = trader_inst.get_portfolio()
     portfolio.get_portfolio()["RDN"] = {
         Portfolio.AVAILABLE: 6740,
@@ -176,12 +176,69 @@ async def test_create_orders_from_different_markets():
     assert len(original_orders) == final_evaluator.operational_depth
 
     # test trigger refresh
-    final_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.0024161}
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.0024161}
     await final_evaluator.finalize()
     # did nothing
     assert original_orders[0] is trader_inst.get_order_manager().get_open_orders()[0]
     assert original_orders[-1] is trader_inst.get_order_manager().get_open_orders()[-1]
     assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+
+
+async def test_create_orders_from_different_very_close_refresh():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio()
+    portfolio.get_portfolio()["RDN"] = {
+        Portfolio.AVAILABLE: 6740,
+        Portfolio.TOTAL: 6740
+    }
+    portfolio.get_portfolio()["ETH"] = {
+        Portfolio.AVAILABLE: 10,
+        Portfolio.TOTAL: 10
+    }
+    final_evaluator.symbol = "RDN/ETH"
+    final_evaluator._refresh_symbol_data()
+    final_evaluator.min_max_order_details[final_evaluator.min_cost] = 0.01
+    final_evaluator.min_max_order_details[final_evaluator.min_quantity] = 1.0
+    final_evaluator.min_max_order_details[final_evaluator.max_quantity] = 90000000.0
+    final_evaluator.min_max_order_details[final_evaluator.max_cost] = None
+    final_evaluator.min_max_order_details[final_evaluator.max_price] = None
+    final_evaluator.min_max_order_details[final_evaluator.min_price] = None
+
+    price = 0.00231
+    # await _test_mode(StrategyModes.NEUTRAL, 0, 0, price)
+    lowest_buy = 0.00221
+    highest_sell = 0.00242
+    expected_buy_count = 2
+    expected_sell_count = 2
+
+    final_evaluator.lowest_buy = lowest_buy
+    final_evaluator.highest_sell = highest_sell
+    final_evaluator.increment = 0.02
+    final_evaluator.spread = 0.02
+    final_evaluator.operational_depth = 10
+    final_evaluator.final_eval = price
+    final_evaluator.mode = StrategyModes.MOUNTAIN
+
+    await _light_check_orders(final_evaluator, trader_inst, expected_buy_count, expected_sell_count, price, portfolio)
+
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    original_length = len(original_orders)
+
+    # test trigger refresh
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.0023185}
+    await final_evaluator.finalize()
+    # did nothing
+    assert original_orders[0] is trader_inst.get_order_manager().get_open_orders()[0]
+    assert original_orders[-1] is trader_inst.get_order_manager().get_open_orders()[-1]
+    assert original_length == len(trader_inst.get_order_manager().get_open_orders())
+
+    # test more trigger refresh
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.0022991}
+    await final_evaluator.finalize()
+    # did nothing
+    assert original_orders[0] is trader_inst.get_order_manager().get_open_orders()[0]
+    assert original_orders[-1] is trader_inst.get_order_manager().get_open_orders()[-1]
+    assert original_length == len(trader_inst.get_order_manager().get_open_orders())
 
 
 async def test_create_orders_from_different_markets_not_enough_market_to_create_all_orders():
