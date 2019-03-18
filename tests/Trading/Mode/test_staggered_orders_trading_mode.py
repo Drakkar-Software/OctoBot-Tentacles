@@ -361,6 +361,11 @@ async def test_start_without_enough_funds_to_buy():
     assert len(orders) == final_evaluator.operational_depth
     assert all([o.side == TradeOrderSide.SELL for o in orders])
 
+    # trigger health check
+    await final_evaluator.create_state()
+
+    await _fill_order(orders[5], trader_inst)
+
 
 async def test_start_without_enough_funds_to_sell():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
@@ -372,6 +377,11 @@ async def test_start_without_enough_funds_to_sell():
     orders = trader_inst.get_order_manager().get_open_orders()
     assert len(orders) == 25
     assert all([o.side == TradeOrderSide.BUY for o in orders])
+
+    # trigger health check
+    await final_evaluator.create_state()
+
+    await _fill_order(orders[5], trader_inst)
 
 
 async def test_start_without_enough_funds_at_all():
@@ -405,7 +415,7 @@ async def test_order_fill_callback():
 
     # closest to centre buy order is filled => bought btc
     to_fill_order = open_orders[-2]
-    closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.SELL)
+    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create sell order at price * (1 + increment)
@@ -413,7 +423,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price - price_increment
+    price = closest_price - price_increment
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -428,7 +438,7 @@ async def test_order_fill_callback():
 
     # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
-    closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.BUY)
+    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create buy order at price * (1 + increment)
@@ -436,7 +446,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_buy_order = open_orders[-1]
     assert newly_created_buy_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price + price_increment
+    price = closest_price + price_increment
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -451,7 +461,7 @@ async def test_order_fill_callback():
 
     # now this new buy order is filled => bought btc
     to_fill_order = open_orders[-1]
-    closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.SELL)
+    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create sell order at price * (1 + increment)
@@ -459,7 +469,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price - price_increment
+    price = closest_price - price_increment
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -472,7 +482,7 @@ async def test_order_fill_callback():
 
     # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
-    closest_order_with_price = final_evaluator._get_closest_price_order(trader_inst, TradeOrderSide.BUY)
+    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create buy order at price * (1 + increment)
@@ -480,7 +490,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_buy_order = open_orders[-1]
     assert newly_created_buy_order.symbol == to_fill_order.symbol
-    price = closest_order_with_price.origin_price + price_increment
+    price = closest_price + price_increment
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(

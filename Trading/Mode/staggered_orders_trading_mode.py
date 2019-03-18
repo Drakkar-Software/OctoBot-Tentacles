@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.2",
+    "version": "1.1.3",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -202,6 +202,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.max_fees = max(fees[ExchangeConstantsMarketPropertyColumns.TAKER.value],
                             fees[ExchangeConstantsMarketPropertyColumns.MAKER.value])
         self.flat_increment = None
+        self.flat_spread = None
 
         # staggered orders strategy parameters
         mode = ""
@@ -245,13 +246,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         now_selling = filled_order.get_side() == TradeOrderSide.BUY
         new_side = TradeOrderSide.SELL if now_selling else TradeOrderSide.BUY
         trader = filled_order.trader
-        closest_order_with_price = self._get_closest_price_order(trader, new_side)
+        closest_price = self._get_closest_price(trader, new_side)
         if self.flat_increment is None:
             self.logger.error("Impossible to create symmetrical order: self.flat_increment is unset.")
             return
         price_increment = self.flat_increment
-        price = closest_order_with_price.origin_price - price_increment if now_selling \
-            else closest_order_with_price.origin_price + price_increment
+        price = closest_price - price_increment if now_selling \
+            else closest_price + price_increment
         new_order_quantity = filled_order.filled_quantity
         if not now_selling:
             # buying => adapt order quantity
@@ -280,6 +281,10 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
         missing_orders, state, self.flat_increment = self._analyse_current_orders_situation(sorted_orders)
+        if self.flat_increment is not None:
+            self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                      self.spread * self.flat_increment / self.increment)
+
         if self.flat_increment:
             self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market, self.flat_increment)
 
@@ -319,6 +324,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                                            upper_bound, order_limiting_currency_amount)
             self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market,
                                                                          current_price * self.increment)
+            self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                      current_price * self.spread)
             for i in range(orders_count):
                 price = self._get_price_from_iteration(starting_bound, selling, i)
                 if price is not None:
@@ -416,96 +423,132 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         missing_orders = []
 
         previous_order = None
-        for order in sorted_orders:
-            if order.symbol != self.symbol:
-                return None, self.ERROR, None
-            spread_point = False
-            if previous_order is None:
-                previous_order = order
-            else:
-                if previous_order.side != order.side:
-                    if spread is None:
-                        spread_point = True
-                        delta_spread = order.origin_price - previous_order.origin_price
 
-                        if increment is None:
-                            return None, self.ERROR, None
-                        else:
-                            inferred_spread = self.spread*increment/self.increment
-                            missing_orders_count = (delta_spread-inferred_spread)/increment
-                            if missing_orders_count > 1*0.8:
-                                # missing orders around spread point: symmetrical orders were not created when orders
-                                # were filled => re-create them
-                                next_missing_order_price = previous_order.origin_price + increment
-                                half_spread = inferred_spread/2
-                                spread_lower_boundary = self.final_eval - half_spread
-                                spread_higher_boundary = self.final_eval + half_spread
+        only_sell = False
+        only_buy = False
+        if sorted_orders:
+            if sorted_orders[0].get_side() == TradeOrderSide.SELL:
+                # only sell orders
+                self.logger.warning("Only sell orders are online, now waiting for the price to go up to create "
+                                    "new buy orders.")
+                first_sell = sorted_orders[0]
+                only_sell = True
+            if sorted_orders[-1].get_side() == TradeOrderSide.BUY:
+                # only buy orders
+                self.logger.warning("Only buy orders are online, now waiting for the price to go down to create "
+                                    "new sell orders.")
+                only_buy = True
+            for order in sorted_orders:
+                if order.symbol != self.symbol:
+                    return None, self.ERROR, None
+                spread_point = False
+                if previous_order is None:
+                    previous_order = order
+                else:
+                    if previous_order.side != order.side:
+                        if spread is None:
+                            spread_point = True
+                            delta_spread = order.origin_price - previous_order.origin_price
 
-                                # re-create buy orders starting from the closest buy up to spread
-                                while next_missing_order_price <= spread_lower_boundary:
-                                    # missing buy order
-                                    missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
-                                    next_missing_order_price += increment
-
-                                next_missing_order_price = order.origin_price - increment
-                                # re-create sell orders starting from the closest sell down to spread
-                                while next_missing_order_price >= spread_higher_boundary:
-                                    # missing sell order
-                                    missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
-                                    next_missing_order_price -= increment
-
-                                spread = inferred_spread
+                            if increment is None:
+                                return None, self.ERROR, None
                             else:
-                                spread = delta_spread
+                                inferred_spread = self.spread*increment/self.increment
+                                missing_orders_count = (delta_spread-inferred_spread)/increment
+                                if missing_orders_count > 1*0.8:
+                                    # missing orders around spread point: symmetrical orders were not created when
+                                    # orders were filled => re-create them
+                                    next_missing_order_price = previous_order.origin_price + increment
+                                    half_spread = inferred_spread/2
+                                    spread_lower_boundary = self.final_eval - half_spread
+                                    spread_higher_boundary = self.final_eval + half_spread
 
-                        # calculations to infer ratio
-                        last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
-                        first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
-                        bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
-                        first_sell = order
-                        ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
-                            else first_buy_cost / last_buy_cost
+                                    # re-create buy orders starting from the closest buy up to spread
+                                    while next_missing_order_price <= spread_lower_boundary:
+                                        # missing buy order
+                                        missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
+                                        next_missing_order_price += increment
+
+                                    next_missing_order_price = order.origin_price - increment
+                                    # re-create sell orders starting from the closest sell down to spread
+                                    while next_missing_order_price >= spread_higher_boundary:
+                                        # missing sell order
+                                        missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
+                                        next_missing_order_price -= increment
+
+                                    spread = inferred_spread
+                                else:
+                                    spread = delta_spread
+
+                            # calculations to infer ratio
+                            last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
+                            first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
+                            bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
+                            first_sell = order
+                            ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
+                                else first_buy_cost / last_buy_cost
+                        else:
+                            return None, self.ERROR, None
+                    if increment is None:
+                        increment = order.origin_price - previous_order.origin_price
+                        if increment == 0:
+                            return None, self.ERROR, None
+                    elif not spread_point:
+                        delta_increment = order.origin_price - previous_order.origin_price
+                        missing_orders_count = delta_increment/increment
+                        if missing_orders_count > 2.2:
+                            return None, self.ERROR, None
+                        elif missing_orders_count > 1.1:
+                            missing_orders.append((previous_order.origin_price+increment, order.side))
+                    previous_order = order
+
+            if ratio is not None:
+                first_sell_cost = first_sell.origin_price*first_sell.origin_quantity
+                last_sell_cost = sorted_orders[-1].origin_price * sorted_orders[-1].origin_quantity
+                bigger_sells_closer_to_center = first_sell_cost - last_sell_cost > 0
+
+                if bigger_buys_closer_to_center is not None and bigger_sells_closer_to_center is not None:
+                    if bigger_buys_closer_to_center:
+                        if bigger_sells_closer_to_center:
+                            mode = StrategyModes.NEUTRAL if 0.1 < ratio - 1 < 0.5 else StrategyModes.MOUNTAIN
+                        else:
+                            mode = StrategyModes.SELL_SLOPE
                     else:
-                        return None, self.ERROR, None
-                if increment is None:
-                    increment = order.origin_price - previous_order.origin_price
-                    if increment == 0:
-                        return None, self.ERROR, None
-                elif not spread_point:
-                    delta_increment = order.origin_price - previous_order.origin_price
-                    missing_orders_count = delta_increment/increment
-                    if missing_orders_count > 2.2:
-                        return None, self.ERROR, None
-                    elif missing_orders_count > 1.1:
-                        missing_orders.append((previous_order.origin_price+increment, order.side))
-                previous_order = order
+                        if bigger_sells_closer_to_center:
+                            mode = StrategyModes.BUY_SLOPE
+                        else:
+                            mode = StrategyModes.VALLEY
 
-        first_sell_cost = first_sell.origin_price*first_sell.origin_quantity
-        last_sell_cost = sorted_orders[-1].origin_price * sorted_orders[-1].origin_quantity
-        bigger_sells_closer_to_center = first_sell_cost - last_sell_cost > 0
-
-        if bigger_buys_closer_to_center is not None and bigger_sells_closer_to_center is not None:
-            if bigger_buys_closer_to_center:
-                if bigger_sells_closer_to_center:
-                    mode = StrategyModes.NEUTRAL if 0.1 < ratio - 1 < 0.5 else StrategyModes.MOUNTAIN
-                else:
-                    mode = StrategyModes.SELL_SLOPE
-            else:
-                if bigger_sells_closer_to_center:
-                    mode = StrategyModes.BUY_SLOPE
-                else:
-                    mode = StrategyModes.VALLEY
-
-        if mode is None or increment is None or spread is None:
+                if mode is None or increment is None or spread is None:
+                    return None, self.ERROR, None
+            if increment is None or (not(only_sell or only_buy) and spread is None):
+                return None, self.ERROR, None
+            return missing_orders, state, increment
+        else:
+            # no orders
             return None, self.ERROR, None
 
-        return missing_orders, state, increment
-
-    @staticmethod
-    def _get_closest_price_order(trader, side):
+    def _get_closest_price(self, trader, side):
         order_list = [order for order in copy(trader.get_order_manager().get_open_orders()) if order.side == side]
-        invert_sorting = side == TradeOrderSide.BUY
-        return sorted(order_list, key=lambda order: order.origin_price, reverse=invert_sorting)[0]
+        buying = side == TradeOrderSide.BUY
+        if order_list:
+            return sorted(order_list, key=lambda order: order.origin_price, reverse=buying)[0].origin_price
+        else:
+            # no order on this side => use spread to define price
+            other_side_order_list = [order for order in copy(trader.get_order_manager().get_open_orders())
+                                     if order.side != side]
+            if other_side_order_list:
+                closest_other_side_price = sorted(other_side_order_list,
+                                                  key=lambda order: order.origin_price,
+                                                  reverse=not buying)[0].origin_price
+                if self.flat_spread is None:
+                    self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                              self.spread * self.flat_increment
+                                                                              / self.increment)
+                if buying:
+                    return closest_other_side_price - self.flat_spread
+                else:
+                    return closest_other_side_price + self.flat_spread
 
     @staticmethod
     def _alternate_not_virtual_orders(buy_orders, sell_orders):
