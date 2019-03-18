@@ -219,6 +219,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.lowest_buy = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_LOWER_BOUND)
         self.highest_sell = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_UPPER_BOUND)
 
+        self._check_params()
+
     def set_final_eval(self):
         # Strategies analysis
         for evaluated_strategies in self.symbol_evaluator.get_strategies_eval_list(self.exchange):
@@ -297,6 +299,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
         return buy_orders, sell_orders
+
+    def _check_params(self):
+        if self.increment >= self.spread:
+            self.logger.error("Your spread_percent parameter should always be higher than your increment_percent"
+                              " parameter: average profit is spread-increment.")
+        if self.lowest_buy >= self.highest_sell:
+            self.logger.error("Your lower_bound should always be lower than your upper_bound")
 
     def _analyse_current_orders_situation(self, sorted_orders):
         if not sorted_orders:
