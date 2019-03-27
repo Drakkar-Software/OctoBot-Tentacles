@@ -409,13 +409,13 @@ async def test_order_fill_callback():
 
     await final_evaluator.create_state()
     price_increment = final_evaluator.flat_increment
+    price_spread = final_evaluator.flat_spread
 
     open_orders = trader_inst.get_order_manager().get_open_orders()
     assert len(open_orders) == final_evaluator.operational_depth
 
     # closest to centre buy order is filled => bought btc
     to_fill_order = open_orders[-2]
-    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create sell order at price * (1 + increment)
@@ -423,7 +423,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_price - price_increment
+    price = to_fill_order.origin_price + (price_spread - price_increment)
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -438,7 +438,6 @@ async def test_order_fill_callback():
 
     # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
-    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create buy order at price * (1 + increment)
@@ -446,7 +445,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_buy_order = open_orders[-1]
     assert newly_created_buy_order.symbol == to_fill_order.symbol
-    price = closest_price + price_increment
+    price = to_fill_order.origin_price - (price_spread - price_increment)
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -461,7 +460,6 @@ async def test_order_fill_callback():
 
     # now this new buy order is filled => bought btc
     to_fill_order = open_orders[-1]
-    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.SELL)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create sell order at price * (1 + increment)
@@ -469,7 +467,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_sell_order = open_orders[-1]
     assert newly_created_sell_order.symbol == to_fill_order.symbol
-    price = closest_price - price_increment
+    price = to_fill_order.origin_price + (price_spread - price_increment)
     assert newly_created_sell_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_sell_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -482,7 +480,6 @@ async def test_order_fill_callback():
 
     # now this new sell order is filled => sold btc
     to_fill_order = open_orders[-1]
-    closest_price = final_evaluator._get_closest_price(trader_inst, TradeOrderSide.BUY)
     await _fill_order(to_fill_order, trader_inst)
 
     # instantly create buy order at price * (1 + increment)
@@ -490,7 +487,7 @@ async def test_order_fill_callback():
     assert to_fill_order not in open_orders
     newly_created_buy_order = open_orders[-1]
     assert newly_created_buy_order.symbol == to_fill_order.symbol
-    price = closest_price + price_increment
+    price = to_fill_order.origin_price - (price_spread - price_increment)
     assert newly_created_buy_order.origin_price == AbstractTradingModeCreator._trunc_with_n_decimal_digits(price, 8)
     assert newly_created_buy_order.origin_quantity == \
         AbstractTradingModeCreator._trunc_with_n_decimal_digits(

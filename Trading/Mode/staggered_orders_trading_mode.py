@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -248,17 +248,20 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         now_selling = filled_order.get_side() == TradeOrderSide.BUY
         new_side = TradeOrderSide.SELL if now_selling else TradeOrderSide.BUY
         trader = filled_order.trader
-        closest_price = self._get_closest_price(trader, new_side)
         if self.flat_increment is None:
             self.logger.error("Impossible to create symmetrical order: self.flat_increment is unset.")
             return
-        price_increment = self.flat_increment
-        price = closest_price - price_increment if now_selling \
-            else closest_price + price_increment
+        if self.flat_spread is None:
+            self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                      self.spread * self.flat_increment
+                                                                      / self.increment)
+        price_increment = self.flat_spread - self.flat_increment
+        price = filled_order.origin_price + price_increment if now_selling \
+            else filled_order.origin_price - price_increment
         new_order_quantity = filled_order.filled_quantity
         if not now_selling:
             # buying => adapt order quantity
-            new_order_quantity = filled_order.filled_price / price * filled_order.filled_quantity
+            new_order_quantity = filled_order.origin_price / price * filled_order.filled_quantity
         quantity_change = self.max_fees
         quantity = new_order_quantity * (1 - quantity_change)
         new_order = OrderData(new_side, quantity, price, self.symbol)
@@ -536,28 +539,6 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         else:
             # no orders
             return None, self.ERROR, None
-
-    def _get_closest_price(self, trader, side):
-        order_list = [order for order in copy(trader.get_order_manager().get_open_orders()) if order.side == side]
-        buying = side == TradeOrderSide.BUY
-        if order_list:
-            return sorted(order_list, key=lambda order: order.origin_price, reverse=buying)[0].origin_price
-        else:
-            # no order on this side => use spread to define price
-            other_side_order_list = [order for order in copy(trader.get_order_manager().get_open_orders())
-                                     if order.side != side]
-            if other_side_order_list:
-                closest_other_side_price = sorted(other_side_order_list,
-                                                  key=lambda order: order.origin_price,
-                                                  reverse=not buying)[0].origin_price
-                if self.flat_spread is None:
-                    self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
-                                                                              self.spread * self.flat_increment
-                                                                              / self.increment)
-                if buying:
-                    return closest_other_side_price - self.flat_spread
-                else:
-                    return closest_other_side_price + self.flat_spread
 
     @staticmethod
     def _alternate_not_virtual_orders(buy_orders, sell_orders):
