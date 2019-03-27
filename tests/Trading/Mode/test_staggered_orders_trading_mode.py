@@ -381,7 +381,22 @@ async def test_start_without_enough_funds_to_sell():
     # trigger health check
     await final_evaluator.create_state()
 
-    await _fill_order(orders[5], trader_inst)
+    # check order fill callback recreates spread
+    to_fill_order = orders[5]
+    second_to_fill_order = orders[4]
+    await _fill_order(to_fill_order, trader_inst)
+    newly_created_sell_order = orders[-1]
+    assert newly_created_sell_order.side == TradeOrderSide.SELL
+    assert newly_created_sell_order.origin_price == to_fill_order.origin_price + \
+        (final_evaluator.flat_spread - final_evaluator.flat_increment)
+
+    await _fill_order(second_to_fill_order, trader_inst)
+    second_newly_created_sell_order = orders[-1]
+    assert second_newly_created_sell_order.side == TradeOrderSide.SELL
+    assert second_newly_created_sell_order.origin_price == second_to_fill_order.origin_price + \
+        (final_evaluator.flat_spread - final_evaluator.flat_increment)
+    assert abs(second_newly_created_sell_order.origin_price - newly_created_sell_order.origin_price) == \
+        final_evaluator.flat_increment
 
 
 async def test_start_without_enough_funds_at_all():
