@@ -119,10 +119,3 @@ class StochasticVolatilityEvaluator(VolatilityEvaluator):
         #                            self.data[PriceStrings.STR_PRICE_LOW.value],
         #                            self.data[PriceStrings.STR_PRICE_CLOSE.value])
         pass
-
-
-class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
-
-    async def eval_impl(self):
-        # fastk, fastd = talib.STOCHRSI(self.data[PriceStrings.STR_PRICE_CLOSE.value])
-        pass
