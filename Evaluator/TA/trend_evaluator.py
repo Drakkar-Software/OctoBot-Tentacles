@@ -85,18 +85,44 @@ class DoubleMovingAverageTrendEvaluator(TrendEvaluator):
             # check at least some data crossed 0
             if crossing_indexes:
                 normalized_data = DataUtil.normalize_data(values_difference)
-                current_value = min(abs(normalized_data[-1])*2, 1)
+                current_value = min(abs(normalized_data[-1]) * 2, 1)
                 if math.isnan(current_value):
                     return 0
                 # check <= values_difference.count()-1if current value is max/min
                 if current_value == 0 or current_value == 1:
                     chances_to_be_max = TrendAnalysis.get_estimation_of_move_state_relatively_to_previous_moves_length(
-                                                                                                    crossing_indexes,
-                                                                                                    values_difference)
-                    return multiplier*current_value*chances_to_be_max
+                        crossing_indexes,
+                        values_difference)
+                    return multiplier * current_value * chances_to_be_max
                 # other case: maxima already reached => return distance to max
                 else:
-                    return multiplier*current_value
+                    return multiplier * current_value
 
         # just crossed the average => neutral
         return 0
+
+
+# evaluates position of the current ema to detect divergences
+class EMADivergenceTrendEvaluator(TrendEvaluator):
+    DESCRIPTION = "Uses ema to find divergences. " \
+                  "Evaluates -1 to 1 relatively to the computed divergence probability."
+
+    EMA_SIZE = "size"
+    SHORT_VALUE = "short"
+    LONG_VALUE = "long"
+
+    def __init__(self):
+        super().__init__()
+        self.evaluator_config = self.get_evaluator_config()
+
+    async def eval_impl(self):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        current_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                 self.get_evaluator_config()[self.EMA_SIZE])[-1]
+        current_price_close = self.data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
+        diff = (current_price_close / current_ema * 100) - 100
+
+        if diff <= self.get_evaluator_config()[self.LONG_VALUE]:
+            self.eval_note = -1
+        elif diff >= self.get_evaluator_config()[self.SHORT_VALUE]:
+            self.eval_note = 1
