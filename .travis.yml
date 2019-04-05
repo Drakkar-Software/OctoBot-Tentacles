@@ -6,8 +6,8 @@ language: python
 cache: pip
 python: 3.7-dev
 install:
-  - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
-  - if [[ $TRAVIS_BRANCH == "dev" ]]; then git checkout dev; fi
+  - git clone https://github.com/Werdor/OctoBot.git && cd OctoBot
+  - git checkout -b fix/tentacles-tests
   - if [[ $TRAVIS_OS_NAME = "linux" ]]; then sudo bash ./docs/install/linux_dependencies.sh; fi
   - python3 -m pip install -r pre_requirements.txt
   - python3 -m pip install -r requirements.txt -r dev_requirements.txt
