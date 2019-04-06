@@ -183,7 +183,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 7.6
+    assert order.origin_quantity == 4.4
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -210,7 +210,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.21892522
+    assert order.origin_quantity == 0.12674618
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -236,7 +236,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.03540179
+    assert order.origin_quantity == 0.11684142
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -260,7 +260,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 2.4
+    assert order.origin_quantity == 4.032
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -318,8 +318,8 @@ async def test_create_new_order_with_dusts_included():
     test_currency = "NEO"
     test_pair = f"{test_currency}/BTC"
     trader.portfolio.portfolio[test_currency] = {
-        Portfolio.TOTAL: 0.88,
-        Portfolio.AVAILABLE: 0.88
+        Portfolio.TOTAL: 0.44,
+        Portfolio.AVAILABLE: 0.44
     }
     # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
     orders = await order_creator.create_new_order(0.75445456165478, test_pair,
@@ -327,6 +327,7 @@ async def test_create_new_order_with_dusts_included():
     assert len(orders) == 1
     assert trader.portfolio.portfolio[test_currency][Portfolio.AVAILABLE] == 0
     assert trader.portfolio.portfolio[test_currency][Portfolio.TOTAL] == orders[0].origin_quantity
+
 
 async def test_split_create_new_order():
     config, exchange, trader, symbol = await _get_tools()
@@ -341,7 +342,7 @@ async def test_split_create_new_order():
     }
     # split orders because order too big and coin price too high
     orders = await order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
-    assert len(orders) == 11
+    assert len(orders) == 6
     adapted_order = orders[0]
     identical_orders = orders[1:]
 
@@ -358,7 +359,7 @@ async def test_split_create_new_order():
     assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 51133425.486746
+    assert adapted_order.origin_quantity == 125566712.79337285
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.is_simulated is True
     assert adapted_order.linked_to is None
@@ -394,8 +395,8 @@ async def test_split_create_new_order():
         check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
 
     trader.portfolio.portfolio["USDT"] = {
-        Portfolio.TOTAL: 20000000000,
-        Portfolio.AVAILABLE: 20000000000
+        Portfolio.TOTAL: 40000000000,
+        Portfolio.AVAILABLE: 40000000000
     }
 
     # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
@@ -419,7 +420,7 @@ async def test_split_create_new_order():
     assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 131640311622.76904
+    assert adapted_order.origin_quantity == 419699813193.4136
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.is_simulated is True
     assert adapted_order.linked_to is None
@@ -579,3 +580,42 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
         check_orders(orders, math.nan, state, 0, market_status)
         check_portfolio(portfolio, initial_portfolio, orders, True)
         await fill_orders(orders, trader)
+
+
+async def test_create_multiple_buy_orders_after_fill():
+    config, exchange, trader, symbol = await _get_tools()
+    await trader.trades_manager.initialize()
+    order_creator = DailyTradingModeCreator(None)
+    nb_traded_symbols = order_creator.get_number_of_traded_assets(trader)
+    assert nb_traded_symbols > 2
+    portfolio = trader.get_portfolio()
+
+    # with BTC/USDT
+    await ensure_smaller_orders(order_creator, symbol, exchange, trader, portfolio)
+
+    # with another symbol with 0 quantity when start
+    await ensure_smaller_orders(order_creator, "ADA/BTC", exchange, trader, portfolio)
+
+
+async def ensure_smaller_orders(order_creator, symbol, exchange, trader, portfolio):
+    state = EvaluatorStates.VERY_LONG
+
+    # first call: biggest order
+    orders1 = (await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, state))
+    await fill_orders(orders1, trader)
+
+    state = EvaluatorStates.LONG
+    # second call: smaller order (same with very long as with long)
+    orders2 = (await order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, state))
+    assert orders1[0].origin_quantity > orders2[0].origin_quantity
+    await fill_orders(orders2, trader)
+
+    # third call: even smaller order
+    orders3 = (await order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, state))
+    assert orders2[0].origin_quantity > orders3[0].origin_quantity
+    await fill_orders(orders3, trader)
+
+    # third call: even-even smaller order
+    orders4 = (await order_creator.create_new_order(-0.6, symbol, exchange, trader, portfolio, state))
+    assert orders3[0].origin_quantity > orders4[0].origin_quantity
+    await fill_orders(orders4, trader)
