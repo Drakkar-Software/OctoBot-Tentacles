@@ -36,28 +36,28 @@ class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_default_run(strategy_tester):
-        await strategy_tester.run_test_default_run(-8)
+        await strategy_tester.run_test_default_run(-6)
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        await strategy_tester.run_test_slow_downtrend(-8, -7.2, -23, -15.5)
+        await strategy_tester.run_test_slow_downtrend(-6, -9.5, -20.5, -13)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
-        await strategy_tester.run_test_sharp_downtrend(-9.7, -15)
+        await strategy_tester.run_test_sharp_downtrend(-9.5, -17.5)
 
     @staticmethod
     async def test_flat_markets(strategy_tester):
-        await strategy_tester.run_test_flat_markets(-2, 1, -13, 0.2)
+        await strategy_tester.run_test_flat_markets(-1.5, -0.5, -11, 2)
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        await strategy_tester.run_test_slow_uptrend(-3, 2.5)
+        await strategy_tester.run_test_slow_uptrend(-2, 1)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
-        await strategy_tester.run_test_sharp_uptrend(26, 14)
+        await strategy_tester.run_test_sharp_uptrend(15, 10)
 
     @staticmethod
     async def test_up_then_down(strategy_tester):
-        await strategy_tester.run_test_up_then_down(-6)
+        await strategy_tester.run_test_up_then_down(-9.5)
