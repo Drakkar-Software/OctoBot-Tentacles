@@ -350,6 +350,42 @@ async def test_start_after_offline_filled_orders():
     assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
 
 
+async def test_compute_minimum_funds_1():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN)
+    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN)
+    assert buy_min_funds == 0.05
+    assert sell_min_funds == 0.04950500000000001
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    portfolio["USD"][Portfolio.AVAILABLE] = buy_min_funds
+    portfolio["USD"][Portfolio.TOTAL] = buy_min_funds
+    portfolio["BTC"][Portfolio.AVAILABLE] = sell_min_funds
+    portfolio["BTC"][Portfolio.TOTAL] = sell_min_funds
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == final_evaluator.operational_depth
+    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 25
+    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 25
+
+
+async def test_compute_minimum_funds_2():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN)
+    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN)
+    assert buy_min_funds == 0.05
+    assert sell_min_funds == 0.04950500000000001
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    portfolio["USD"][Portfolio.AVAILABLE] = buy_min_funds*0.99999
+    portfolio["USD"][Portfolio.TOTAL] = buy_min_funds*0.99999
+    portfolio["BTC"][Portfolio.AVAILABLE] = sell_min_funds*0.99999
+    portfolio["BTC"][Portfolio.TOTAL] = sell_min_funds*0.99999
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == 0
+
+
 async def test_start_without_enough_funds_to_buy():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     portfolio = trader_inst.get_portfolio().get_portfolio()
