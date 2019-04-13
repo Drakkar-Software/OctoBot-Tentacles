@@ -32,7 +32,6 @@ from ccxt import InsufficientFunds
 from enum import Enum
 from dataclasses import dataclass
 from math import floor
-from copy import copy
 
 from config import EvaluatorStates, TraderOrderType, ExchangeConstantsTickersInfoColumns, INIT_EVAL_NOTE, \
     START_PENDING_EVAL_NOTE, TradeOrderSide, ExchangeConstantsMarketPropertyColumns
@@ -333,7 +332,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
             orders_count, average_order_quantity = \
                 self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
-                                                           upper_bound, order_limiting_currency_amount)
+                                                           upper_bound, order_limiting_currency_amount,
+                                                           currency=order_limiting_currency)
             self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market,
                                                                          current_price * self.increment)
             self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
@@ -392,7 +392,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                         orders_count, average_order_quantity = \
                             self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                                        upper_bound, portfolio_total,
-                                                                       self.flat_increment)
+                                                                       self.flat_increment,
+                                                                       currency=order_limiting_currency)
                         for missing_order_price, missing_order_side in missing_orders_around_spread:
                             limiting_amount_from_this_order = order_limiting_currency_amount
                             price = starting_bound
@@ -586,7 +587,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         sell_orders.reverse()
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
-                                              bootstrapped_increment=None):
+                                              bootstrapped_increment=None, currency=None):
         if lower_bound >= upper_bound:
             self.logger.error("Bounds invalid: too close to the current price")
             return 0, 0
@@ -606,11 +607,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 if holdings < average_order_quantity:
                     return 0, 0
                 else:
-                    self.logger.error(f"Impossible to create staggered "
+                    min_funds = self._get_min_funds(orders_count, min_quantity, self.mode)
+                    self.logger.error(f"Impossible to create {self.symbol} staggered "
                                       f"{TradeOrderSide.SELL.name if selling else TradeOrderSide.BUY.name} orders: "
                                       f"minimum quantity for {self.mode.value} mode is lower than the minimum allowed "
-                                      f"for this tradig pair on this exchange: requested minimum: {min_order_quantity} "
-                                      f"and exchange minimum is {min_quantity}.")
+                                      f"for this trading pair on this exchange: requested minimum: {min_order_quantity}"
+                                      f" and exchange minimum is {min_quantity}. "
+                                      f"Minimum required funds are {min_funds}{f' {currency}' if currency else ''}.")
                 return 0, 0
         return floor(orders_count), average_order_quantity
 
@@ -643,6 +646,12 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         if self.min_max_order_details[self.min_cost] and cost < self.min_max_order_details[self.min_cost]:
             return None
         return quantity
+
+    @staticmethod
+    def _get_min_funds(orders_count, min_order_quantity, mode):
+        mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
+        required_average_quantity = min_order_quantity / (1 - mode_multiplier/2)
+        return orders_count * required_average_quantity
 
     @staticmethod
     def _get_min_max_quantity(average_order_quantity, mode):
