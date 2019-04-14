@@ -37,6 +37,21 @@ from trading.trader.portfolio import Portfolio
 pytestmark = pytest.mark.asyncio
 
 
+def _add_symbol(crypto, symbol, config, exchange_traders, exchange_traders2, exchange_inst, trading_mode):
+    crypto_currency_evaluator = CryptocurrencyEvaluator(config, crypto, [])
+    symbol_evaluator = SymbolEvaluator(config, symbol, crypto_currency_evaluator)
+    symbol_evaluator.set_trader_simulators(exchange_traders)
+    symbol_evaluator.set_traders(exchange_traders2)
+    symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()] = \
+        EvaluatorCreator.create_strategies_eval_list(config)
+
+    trading_mode.add_symbol_evaluator(symbol_evaluator)
+
+    staggered_strategy_evaluator = symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()][0]
+
+    return trading_mode.get_only_decider_key(symbol), staggered_strategy_evaluator
+
+
 async def _get_tools():
     symbol = "BTC/USD"
     exchange_traders = {}
@@ -53,21 +68,14 @@ async def _get_tools():
     trader_inst = TraderSimulator(config, exchange_inst, 0.3)
     await trader_inst.initialize()
     trader_inst.stop_order_manager()
-    crypto_currency_evaluator = CryptocurrencyEvaluator(config, "Bitcoin", [])
-    symbol_evaluator = SymbolEvaluator(config, symbol, crypto_currency_evaluator)
     exchange_traders[exchange_inst.get_name()] = trader_inst
-    symbol_evaluator.set_trader_simulators(exchange_traders)
-    symbol_evaluator.set_traders(exchange_traders2)
-    symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()] = \
-        EvaluatorCreator.create_strategies_eval_list(config)
 
     trading_mode = StaggeredOrdersTradingMode(config, exchange_inst)
-    trading_mode.add_symbol_evaluator(symbol_evaluator)
-    final_evaluator = trading_mode.get_only_decider_key(symbol)
-
+    trading_mode.trading_config = _get_multi_symbol_staggered_config()
     trader_inst.register_trading_mode(trading_mode)
 
-    staggered_strategy_evaluator = symbol_evaluator.strategies_eval_lists[exchange_inst.get_name()][0]
+    final_evaluator, staggered_strategy_evaluator = _add_symbol("Bitcoin", symbol, config, exchange_traders,
+                                                                exchange_traders2, exchange_inst, trading_mode)
 
     trader_inst.portfolio.portfolio["USD"] = {
         Portfolio.TOTAL: 1000,
@@ -86,6 +94,81 @@ async def _get_tools():
     return final_evaluator, trader_inst, staggered_strategy_evaluator
 
 
+async def _get_tools_multi_symbol():
+    exchange_traders = {}
+    exchange_traders2 = {}
+    config = load_test_config()
+    config[CONFIG_EVALUATOR]["FullMixedStrategiesEvaluator"] = False
+    config[CONFIG_EVALUATOR]["StaggeredStrategiesEvaluator"] = True
+    config[CONFIG_TRADING_TENTACLES]["DailyTradingMode"] = False
+    config[CONFIG_TRADING_TENTACLES]["StaggeredOrdersTradingMode"] = True
+    AdvancedManager.create_class_list(config)
+    exchange_manager = ExchangeManager(config, ccxt.binance, is_simulated=True)
+    await exchange_manager.initialize()
+    exchange_inst = exchange_manager.get_exchange()
+    trader_inst = TraderSimulator(config, exchange_inst, 0.3)
+    await trader_inst.initialize()
+    trader_inst.stop_order_manager()
+    exchange_traders[exchange_inst.get_name()] = trader_inst
+
+    trading_mode = StaggeredOrdersTradingMode(config, exchange_inst)
+    trading_mode.trading_config = _get_multi_symbol_staggered_config()
+    trader_inst.register_trading_mode(trading_mode)
+
+    btcusd_final_evaluator, btcusd_staggered_strategy_evaluator = _add_symbol("Bitcoin", "BTC/USD", config,
+                                                                              exchange_traders, exchange_traders2,
+                                                                              exchange_inst, trading_mode)
+    eth_usdt_final_evaluator, eth_usdt_staggered_strategy_evaluator = _add_symbol("Ethereum", "ETH/USDT", config,
+                                                                                  exchange_traders, exchange_traders2,
+                                                                                  exchange_inst, trading_mode)
+
+    nano_usdt_final_evaluator, nano_usdt_staggered_strategy_evaluator = _add_symbol("NANO", "NANO/USDT", config,
+                                                                                    exchange_traders, exchange_traders2,
+                                                                                    exchange_inst, trading_mode)
+
+    trader_inst.portfolio.portfolio["USD"] = {
+        Portfolio.TOTAL: 1000,
+        Portfolio.AVAILABLE: 1000
+    }
+    trader_inst.portfolio.portfolio["USDT"] = {
+        Portfolio.TOTAL: 2000,
+        Portfolio.AVAILABLE: 2000
+    }
+    trader_inst.portfolio.portfolio["BTC"] = {
+        Portfolio.TOTAL: 10,
+        Portfolio.AVAILABLE: 10
+    }
+    trader_inst.portfolio.portfolio["ETH"] = {
+        Portfolio.TOTAL: 20,
+        Portfolio.AVAILABLE: 20
+    }
+    trader_inst.portfolio.portfolio["NANO"] = {
+        Portfolio.TOTAL: 2000,
+        Portfolio.AVAILABLE: 2000
+    }
+    btcusd_final_evaluator.lowest_buy = 1
+    btcusd_final_evaluator.highest_sell = 10000
+    btcusd_final_evaluator.operational_depth = 50
+    btcusd_final_evaluator.spread = 0.06
+    btcusd_final_evaluator.increment = 0.04
+
+    eth_usdt_final_evaluator.lowest_buy = 20
+    eth_usdt_final_evaluator.highest_sell = 5000
+    eth_usdt_final_evaluator.operational_depth = 30
+    eth_usdt_final_evaluator.spread = 0.07
+    eth_usdt_final_evaluator.increment = 0.03
+
+    nano_usdt_final_evaluator.lowest_buy = 20
+    nano_usdt_final_evaluator.highest_sell = 5000
+    nano_usdt_final_evaluator.operational_depth = 30
+    nano_usdt_final_evaluator.spread = 0.07
+    nano_usdt_final_evaluator.increment = 0.03
+
+    return btcusd_final_evaluator, eth_usdt_final_evaluator, nano_usdt_final_evaluator, trader_inst, \
+        btcusd_staggered_strategy_evaluator, eth_usdt_staggered_strategy_evaluator, \
+        nano_usdt_staggered_strategy_evaluator
+
+
 async def test_finalize():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     assert final_evaluator.state == EvaluatorStates.NEUTRAL
@@ -102,6 +185,45 @@ async def test_finalize():
     assert final_evaluator.final_eval == 4000
     assert final_evaluator.state == EvaluatorStates.NEUTRAL
     assert trader_inst.get_order_manager().get_open_orders()
+
+
+async def test_multi_symbol():
+    btcusd_final_evaluator, eth_usdt_final_evaluator, nano_usdt_final_evaluator, trader_inst, \
+        btcusd_staggered_strategy_evaluator, eth_usdt_staggered_strategy_evaluator, \
+        nano_usdt_staggered_strategy_evaluator = await _get_tools_multi_symbol()
+
+    btcusd_staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await btcusd_final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == btcusd_final_evaluator.operational_depth
+    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 25
+    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 25
+
+    eth_usdt_staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 200}
+    await eth_usdt_final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == btcusd_final_evaluator.operational_depth + eth_usdt_final_evaluator.operational_depth
+    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 40
+    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 40
+
+    nano_usdt_staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 200}
+    await nano_usdt_final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len(orders) == btcusd_final_evaluator.operational_depth + eth_usdt_final_evaluator.operational_depth
+    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 40
+    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 40
+
+    assert nano_usdt_final_evaluator._get_interfering_orders_pairs(orders) == {"ETH/USDT"}
+
+    # new ETH USDT evaluation, price changed
+    # -2 order would be filled
+    original_orders = copy.copy(orders)
+    to_fill_order = original_orders[-2]
+    await _fill_order(to_fill_order, trader_inst, 190)
+    eth_usdt_staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 190}
+    await eth_usdt_final_evaluator.finalize()
+    # did nothing
+    assert len(original_orders) == len(trader_inst.get_order_manager().get_open_orders())
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_100():
@@ -352,8 +474,8 @@ async def test_start_after_offline_filled_orders():
 
 async def test_compute_minimum_funds_1():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
-    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN)
-    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN)
+    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN, 100)
+    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN, 100)
     assert buy_min_funds == 0.05
     assert sell_min_funds == 0.04950500000000001
     portfolio = trader_inst.get_portfolio().get_portfolio()
@@ -371,8 +493,9 @@ async def test_compute_minimum_funds_1():
 
 async def test_compute_minimum_funds_2():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
-    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN)
-    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN)
+    final_evaluator._refresh_symbol_data()
+    buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN, 100)
+    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN, 100)
     assert buy_min_funds == 0.05
     assert sell_min_funds == 0.04950500000000001
     portfolio = trader_inst.get_portfolio().get_portfolio()
@@ -862,3 +985,36 @@ async def _light_check_orders(final_evaluator, trader_inst, expected_buy_count, 
 
     assert portfolio.get_portfolio()["ETH"][Portfolio.AVAILABLE] >= 0
     assert portfolio.get_portfolio()["RDN"][Portfolio.AVAILABLE] >= 0
+
+
+def _get_multi_symbol_staggered_config():
+    return {
+        "required_strategies": ["StaggeredOrdersStrategiesEvaluator"],
+        "BTC/USD": {
+            "mode": "mountain",
+            "spread_percent": 4,
+            "increment_percent": 3,
+            "lower_bound": 4300,
+            "upper_bound": 5500,
+            "allow_instant_fill": True,
+            "operational_depth": 100
+        },
+        "ETH/USDT": {
+            "mode": "mountain",
+            "spread_percent": 4,
+            "increment_percent": 3,
+            "lower_bound": 4300,
+            "upper_bound": 5500,
+            "allow_instant_fill": True,
+            "operational_depth": 100
+        },
+        "NANO/USDT": {
+            "mode": "mountain",
+            "spread_percent": 4,
+            "increment_percent": 3,
+            "lower_bound": 4300,
+            "upper_bound": 5500,
+            "allow_instant_fill": True,
+            "operational_depth": 100
+        }
+    }
