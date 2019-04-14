@@ -183,7 +183,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 4.4
+    assert order.origin_quantity == 7.6
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -260,7 +260,7 @@ async def test_valid_create_new_order():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 4.032
+    assert order.origin_quantity == 2.4
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -342,7 +342,7 @@ async def test_split_create_new_order():
     }
     # split orders because order too big and coin price too high
     orders = await order_creator.create_new_order(0.6, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
-    assert len(orders) == 6
+    assert len(orders) == 11
     adapted_order = orders[0]
     identical_orders = orders[1:]
 
@@ -359,7 +359,7 @@ async def test_split_create_new_order():
     assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 125566712.79337285
+    assert adapted_order.origin_quantity == 51133425.486746
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.is_simulated is True
     assert adapted_order.linked_to is None
