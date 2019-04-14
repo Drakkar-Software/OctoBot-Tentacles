@@ -210,7 +210,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             self.trading_mode.get_symbol_trading_config_value(self.symbol, self.trading_mode.CONFIG_MODE)
         except KeyError:
             error_message = f"Impossible to start staggered orders for {self.symbol}: missing configuration in " \
-                f"trading mode config file."
+                f"trading mode config file. See Default/StaggeredOrdersTradingMode.json for a config example."
             self.logger.error(error_message)
             raise KeyError(error_message)
         mode = ""
