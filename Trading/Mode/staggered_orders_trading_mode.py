@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -99,19 +99,21 @@ class StaggeredOrdersTradingMode(AbstractTradingMode):
 
     DESCRIPTION = 'Places a large amount of buy and sell orders at fixed intervals, covering the order book from ' \
                   'very low prices to very high prices. The range ' \
-                  '(specified in tentacles/Trading/Mode/config/StaggeredOrdersTradingMode.json) is supposed to ' \
-                  'cover all conceivable prices for as ' \
-                  'long as the user intends to run the strategy. That could be from -100x to +100x ' \
-                  '(-99% to +10000%). Profits will be made from price movements, and the strategy introduces ' \
-                  'friction to such movements. It gives markets depth, and makes them look better. It never ' \
+                  '(specified in tentacles/Trading/Mode/config/StaggeredOrdersTradingMode.json) ' \
+                  'is supposed to cover all conceivable prices for as ' \
+                  'long as the user intends to run the strategy, and this for each traded pair. ' \
+                  'That could be from -100x to +100x ' \
+                  '(-99% to +10000%). Profits will be made from price movements. It never ' \
                   '"sells at a loss", but always at a profit. Description from ' \
                   'https://github.com/Codaone/DEXBot/wiki/The-Staggered-Orders-strategy. Full documentation ' \
                   'available there. In order to never sell at a loss, OctoBot never ' \
                   'cancels orders. To change the staggered orders mode settings, you will have to manually cancel ' \
                   'orders and restart the strategy. This trading mode instantly places opposite side orders when an ' \
                   'order is filled and checks the current orders every 6 hours to replace any missing one. Only ' \
-                  'works on single currency and trading pair configuration. ' \
+                  'works with independent quotes and bases: ETH/USDT and ADA/BTC are possible together but ETH/USDT ' \
+                  'and BTC/USDT are not working together for the same OctoBot instance (same base). ' \
                   f'Modes are {", ".join([m.value for m in StrategyModes])}.'
+
     CONFIG_MODE = "mode"
     CONFIG_SPREAD = "spread_percent"
     CONFIG_INCREMENT_PERCENT = "increment_percent"
@@ -159,8 +161,8 @@ class StaggeredOrdersTradingModeCreator(AbstractTradingModeCreator):
                 if selling:
                     if portfolio.get_portfolio()[currency][Portfolio.AVAILABLE] < order_quantity:
                         return None
-                elif portfolio.get_portfolio()[market][Portfolio.AVAILABLE] < order_quantity*order_price:
-                        return None
+                elif portfolio.get_portfolio()[market][Portfolio.AVAILABLE] < order_quantity * order_price:
+                    return None
                 order_type = TraderOrderType.SELL_LIMIT if selling else TraderOrderType.BUY_LIMIT
                 created_order = trader.create_order_instance(order_type=order_type,
                                                              symbol=order_data.symbol,
@@ -204,19 +206,33 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.flat_spread = None
 
         # staggered orders strategy parameters
+        try:
+            self.trading_mode.get_symbol_trading_config_value(self.symbol, self.trading_mode.CONFIG_MODE)
+        except KeyError:
+            error_message = f"Impossible to start staggered orders for {self.symbol}: missing configuration in " \
+                f"trading mode config file."
+            self.logger.error(error_message)
+            raise KeyError(error_message)
         mode = ""
         try:
-            mode = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_MODE)
+            mode = self.trading_mode.get_symbol_trading_config_value(self.symbol, self.trading_mode.CONFIG_MODE)
             self.mode = StrategyModes(mode)
         except ValueError as e:
             self.logger.error(f"Invalid staggered orders strategy mode: {mode} "
                               f"supported modes are {[m.value for m in StrategyModes]}")
             raise e
-        self.spread = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_SPREAD) / 100
-        self.increment = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_INCREMENT_PERCENT) / 100
-        self.operational_depth = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_OPERATIONAL_DEPTH)
-        self.lowest_buy = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_LOWER_BOUND)
-        self.highest_sell = self.trading_mode.get_trading_config_value(self.trading_mode.CONFIG_UPPER_BOUND)
+        self.spread = self.trading_mode.get_symbol_trading_config_value(self.symbol,
+                                                                        self.trading_mode.CONFIG_SPREAD) / 100
+        self.increment = \
+            self.trading_mode.get_symbol_trading_config_value(self.symbol,
+                                                              self.trading_mode.CONFIG_INCREMENT_PERCENT) / 100
+        self.operational_depth = \
+            self.trading_mode.get_symbol_trading_config_value(self.symbol,
+                                                              self.trading_mode.CONFIG_OPERATIONAL_DEPTH)
+        self.lowest_buy = self.trading_mode.get_symbol_trading_config_value(self.symbol,
+                                                                            self.trading_mode.CONFIG_LOWER_BOUND)
+        self.highest_sell = self.trading_mode.get_symbol_trading_config_value(self.symbol,
+                                                                              self.trading_mode.CONFIG_UPPER_BOUND)
 
         self._check_params()
 
@@ -280,7 +296,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             await self._create_multiple_not_virtual_orders(staggered_orders, trader)
 
     async def _generate_staggered_orders(self, current_price, trader):
-        existing_orders = trader.get_open_orders()
+        interfering_orders_pairs = self._get_interfering_orders_pairs(trader.get_open_orders())
+        if interfering_orders_pairs:
+            self.logger.error(f"Impossible to create staggered orders with interfering orders using pair(s): "
+                              f"{interfering_orders_pairs}. Staggered orders require no other orders in both "
+                              f"quote and base.")
+            return [], []
+        existing_orders = trader.get_open_orders(self.symbol)
         portfolio = trader.get_portfolio().get_portfolio()
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
@@ -301,6 +323,17 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
         return buy_orders, sell_orders
+
+    def _get_interfering_orders_pairs(self, orders):
+        current_base, current_quote = split_symbol(self.symbol)
+        interfering_pairs = set()
+        for order in orders:
+            order_symbol = order.get_order_symbol()
+            if order_symbol != self.symbol:
+                base, quote = split_symbol(order_symbol)
+                if current_base == base or current_base == quote or current_quote == base or current_quote == quote:
+                    interfering_pairs.add(order_symbol)
+        return interfering_pairs
 
     def _check_params(self):
         if self.increment >= self.spread:
@@ -601,13 +634,14 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
         if self.min_max_order_details[self.min_quantity] is not None \
                 and self.min_max_order_details[self.min_cost] is not None:
-            min_quantity = self.min_max_order_details[self.min_quantity] if selling \
+            min_quantity = max(self.min_max_order_details[self.min_quantity],
+                               self.min_max_order_details[self.min_cost]/current_price) if selling \
                 else self.min_max_order_details[self.min_cost]
             if min_order_quantity < min_quantity:
                 if holdings < average_order_quantity:
                     return 0, 0
                 else:
-                    min_funds = self._get_min_funds(orders_count, min_quantity, self.mode)
+                    min_funds = self._get_min_funds(orders_count, min_quantity, self.mode, current_price)
                     self.logger.error(f"Impossible to create {self.symbol} staggered "
                                       f"{TradeOrderSide.SELL.name if selling else TradeOrderSide.BUY.name} orders: "
                                       f"minimum quantity for {self.mode.value} mode is lower than the minimum allowed "
@@ -647,10 +681,17 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             return None
         return quantity
 
-    @staticmethod
-    def _get_min_funds(orders_count, min_order_quantity, mode):
+    def _get_min_funds(self, orders_count, min_order_quantity, mode, current_price):
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
         required_average_quantity = min_order_quantity / (1 - mode_multiplier/2)
+
+        if self.min_cost in self.min_max_order_details:
+            average_cost = current_price * required_average_quantity
+            if self.min_max_order_details[self.min_cost]:
+                min_cost = self.min_max_order_details[self.min_cost]
+                if average_cost < min_cost:
+                    required_average_quantity = min_cost/current_price
+
         return orders_count * required_average_quantity
 
     @staticmethod
@@ -664,7 +705,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         creator_key = self.trading_mode.get_only_creator_key(self.symbol)
         await self._create_not_virtual_orders(self.notifier, trader, orders_to_create, creator_key)
 
-    async def _create_order(self, order, trader, order_creator, new_orders, portfolio):
+    async def _create_order(self, order, trader, order_creator, new_orders, portfolio, retry=True):
         try:
             created_order = await order_creator.create_order(order, self.final_eval, self.symbol_market,
                                                              trader, portfolio)
@@ -681,6 +722,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                         new_orders.append(created_order)
                 except InsufficientFunds as e:
                     self.logger.error(f"Failed to create order on second attempt : {e})")
+        except Exception as e:
+            # retry once if failed to create order
+            if retry:
+                await self._create_order(order, trader, order_creator, new_orders, portfolio, retry=False)
+            else:
+                self.logger.error(f"Error while creating order: {e}")
+                raise e
 
     async def _create_not_virtual_orders(self, notifier, trader, orders_to_create, creator_key):
         order_creator = self.trading_mode.get_creator(self.symbol, creator_key)
