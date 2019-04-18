@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -306,7 +306,9 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         portfolio = trader.get_portfolio().get_portfolio()
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, self.flat_increment = self._analyse_current_orders_situation(sorted_orders)
+        missing_orders, state, candidate_flat_increment = self._analyse_current_orders_situation(sorted_orders)
+        if candidate_flat_increment is not None:
+            self.flat_increment = candidate_flat_increment
         if self.flat_increment is not None:
             self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
                                                                       self.spread * self.flat_increment / self.increment)
