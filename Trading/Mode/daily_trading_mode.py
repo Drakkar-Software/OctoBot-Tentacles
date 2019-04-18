@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.2",
+    "version": "1.1.3",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
@@ -131,8 +131,11 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     and self.QUANTITY_MAX_PERCENT
     """
 
-    def _get_buy_limit_quantity_from_risk(self, eval_note, trader, quantity):
+    def _get_buy_limit_quantity_from_risk(self, eval_note, trader, quantity, quote):
         weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT
+        # consider buy quantity like a sell if quote is the reference market
+        if quote == trader.get_reference_market():
+            weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
         checked_factor = self.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
         return checked_factor * quantity
@@ -148,9 +151,12 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     and self.QUANTITY_MAX_PERCENT
     """
 
-    async def _get_sell_limit_quantity_from_risk(self, eval_note, trader, quantity, portfolio, currency):
-        weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT * self.SELL_MULTIPLIER
-        if await self.get_holdings_ratio(trader, portfolio, currency) < self.FULL_SELL_MIN_RATIO:
+    async def _get_sell_limit_quantity_from_risk(self, eval_note, trader, quantity, portfolio, quote):
+        weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT
+        # consider sell quantity like a buy if base is the reference market
+        if quote != trader.get_reference_market():
+            weighted_risk *= self.SELL_MULTIPLIER
+        if await self.get_holdings_ratio(trader, portfolio, quote) < self.FULL_SELL_MIN_RATIO:
             return quantity
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
         checked_factor = self.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
@@ -166,9 +172,10 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     and self.QUANTITY_MARKET_MAX_PERCENT
     """
 
-    def _get_market_quantity_from_risk(self, eval_note, trader, quantity, selling=False):
+    def _get_market_quantity_from_risk(self, eval_note, trader, quantity, quote, selling=False):
         weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT
-        if selling:
+        ref_market = trader.get_reference_market()
+        if (selling and quote != ref_market) or (not selling and quote == ref_market):
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MARKET_MIN_PERCENT + (
                 (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION)
@@ -200,6 +207,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                 quantity = self._get_market_quantity_from_risk(eval_note,
                                                                trader,
                                                                current_symbol_holding,
+                                                               quote,
                                                                True)
                 quantity = self.add_dusts_to_quantity_if_necessary(quantity, price,
                                                                    symbol_market, current_symbol_holding)
@@ -252,7 +260,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             elif state == EvaluatorStates.LONG:
                 quantity = self._get_buy_limit_quantity_from_risk(eval_note,
                                                                   trader,
-                                                                  market_quantity)
+                                                                  market_quantity,
+                                                                  quote)
                 quantity = quantity * await self._get_quantity_ratio(trader, portfolio, quote)
                 limit_price = self.adapt_price(symbol_market,
                                                price * self._get_limit_price_from_risk(eval_note, trader))
@@ -271,7 +280,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
             elif state == EvaluatorStates.VERY_LONG:
                 quantity = self._get_market_quantity_from_risk(eval_note,
                                                                trader,
-                                                               market_quantity)
+                                                               market_quantity,
+                                                               quote)
                 quantity = quantity * await self._get_quantity_ratio(trader, portfolio, quote)
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                                    symbol_market):
