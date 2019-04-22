@@ -495,46 +495,50 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 else:
                     if previous_order.side != order.side:
                         if spread is None:
-                            spread_point = True
-                            delta_spread = order.origin_price - previous_order.origin_price
+                            if self.lowest_buy < self.final_eval < self.highest_sell:
+                                spread_point = True
+                                delta_spread = order.origin_price - previous_order.origin_price
 
-                            if increment is None:
-                                return None, self.ERROR, None
-                            else:
-                                inferred_spread = self.spread*increment/self.increment
-                                missing_orders_count = (delta_spread-inferred_spread)/increment
-                                if missing_orders_count > 1*0.8:
-                                    # missing orders around spread point: symmetrical orders were not created when
-                                    # orders were filled => re-create them
-                                    next_missing_order_price = previous_order.origin_price + increment
-                                    half_spread = inferred_spread/2
-                                    spread_lower_boundary = self.final_eval - half_spread
-                                    spread_higher_boundary = self.final_eval + half_spread
-
-                                    # re-create buy orders starting from the closest buy up to spread
-                                    while next_missing_order_price <= spread_lower_boundary:
-                                        # missing buy order
-                                        missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
-                                        next_missing_order_price += increment
-
-                                    next_missing_order_price = order.origin_price - increment
-                                    # re-create sell orders starting from the closest sell down to spread
-                                    while next_missing_order_price >= spread_higher_boundary:
-                                        # missing sell order
-                                        missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
-                                        next_missing_order_price -= increment
-
-                                    spread = inferred_spread
+                                if increment is None:
+                                    return None, self.ERROR, None
                                 else:
-                                    spread = delta_spread
+                                    inferred_spread = self.spread*increment/self.increment
+                                    missing_orders_count = (delta_spread-inferred_spread)/increment
+                                    if missing_orders_count > 1*0.8:
+                                        # missing orders around spread point: symmetrical orders were not created when
+                                        # orders were filled => re-create them
+                                        next_missing_order_price = previous_order.origin_price + increment
+                                        half_spread = inferred_spread/2
+                                        spread_lower_boundary = self.final_eval - half_spread
+                                        spread_higher_boundary = self.final_eval + half_spread
 
-                            # calculations to infer ratio
-                            last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
-                            first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
-                            bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
-                            first_sell = order
-                            ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
-                                else first_buy_cost / last_buy_cost
+                                        # re-create buy orders starting from the closest buy up to spread
+                                        while next_missing_order_price <= spread_lower_boundary:
+                                            # missing buy order
+                                            missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
+                                            next_missing_order_price += increment
+
+                                        next_missing_order_price = order.origin_price - increment
+                                        # re-create sell orders starting from the closest sell down to spread
+                                        while next_missing_order_price >= spread_higher_boundary:
+                                            # missing sell order
+                                            missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
+                                            next_missing_order_price -= increment
+
+                                        spread = inferred_spread
+                                    else:
+                                        spread = delta_spread
+
+                                # calculations to infer ratio
+                                last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
+                                first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
+                                bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
+                                first_sell = order
+                                ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
+                                    else first_buy_cost / last_buy_cost
+                            else:
+                                self.logger.info(f"Current price ({self.final_eval}) is out of range.")
+                                return None, self.ERROR, None
                         else:
                             return None, self.ERROR, None
                     if increment is None:
