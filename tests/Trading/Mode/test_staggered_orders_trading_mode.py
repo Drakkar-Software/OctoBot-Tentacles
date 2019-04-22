@@ -443,7 +443,45 @@ async def test_start_with_existing_valid_orders():
     assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
 
 
-async def test_price_out_of_range():
+async def test_price_initially_out_of_range_1():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    assert not trader_inst.get_order_manager().get_open_orders()
+
+    # new evaluation: price in range
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.1}
+    portfolio["BTC"] = {
+        Portfolio.AVAILABLE: 100000000,
+        Portfolio.TOTAL: 100000000
+    }
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+    assert all(o.side == TradeOrderSide.SELL for o in original_orders)
+    assert all(final_evaluator.highest_sell >= o.get_origin_price() >= final_evaluator.lowest_buy
+               for o in original_orders)
+
+
+async def test_price_initially_out_of_range_2():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    assert not trader_inst.get_order_manager().get_open_orders()
+
+    # new evaluation: price in range
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100000}
+    portfolio["USD"] = {
+        Portfolio.AVAILABLE: 10000000,
+        Portfolio.TOTAL: 10000000
+    }
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == 3
+    assert all(o.side == TradeOrderSide.BUY for o in original_orders)
+    assert all(final_evaluator.highest_sell >= o.get_origin_price() >= final_evaluator.lowest_buy
+               for o in original_orders)
+
+
+async def test_price_going_out_of_range():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     assert not trader_inst.get_order_manager().get_open_orders()
 
@@ -872,6 +910,12 @@ async def _check_generate_orders(trader, decider, expected_buy_count, expected_s
             assert not any(order for order in staggered_orders if order.is_virtual)
 
         await decider._create_multiple_not_virtual_orders(staggered_orders, trader)
+
+        assert all(decider.highest_sell >= o.price >= decider.lowest_buy
+                   for o in sell_orders)
+
+        assert all(decider.highest_sell >= o.price >= decider.lowest_buy
+                   for o in buy_orders)
 
 
 def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
