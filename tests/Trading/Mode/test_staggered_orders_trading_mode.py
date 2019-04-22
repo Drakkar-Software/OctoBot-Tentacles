@@ -443,6 +443,37 @@ async def test_start_with_existing_valid_orders():
     assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
 
 
+async def test_price_out_of_range():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    assert not trader_inst.get_order_manager().get_open_orders()
+
+    # new evaluation: price in range
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+
+    # new evaluation: price out of range: >
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100000}
+    final_evaluator.set_final_eval()
+    existing_orders = trader_inst.get_open_orders(final_evaluator.symbol)
+    sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
+    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders)
+    assert missing_orders is None
+    assert candidate_flat_increment is None
+    assert state == final_evaluator.ERROR
+
+    # new evaluation: price out of range: <
+    final_evaluator.set_final_eval()
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.1}
+    existing_orders = trader_inst.get_open_orders(final_evaluator.symbol)
+    sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
+    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders)
+    assert missing_orders is None
+    assert candidate_flat_increment is None
+    assert state == final_evaluator.ERROR
+
+
 async def test_start_after_offline_filled_orders():
     # first start: setup orders
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
