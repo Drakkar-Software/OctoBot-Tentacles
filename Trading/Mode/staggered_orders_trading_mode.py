@@ -316,9 +316,11 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         if self.flat_increment:
             self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market, self.flat_increment)
 
-        buy_orders = self._create_orders(self.lowest_buy, current_price, TradeOrderSide.BUY, sorted_orders,
+        buy_high = min(current_price, self.highest_sell)
+        sell_low = max(current_price, self.lowest_buy)
+        buy_orders = self._create_orders(self.lowest_buy, buy_high, TradeOrderSide.BUY, sorted_orders,
                                          portfolio, current_price, missing_orders, state)
-        sell_orders = self._create_orders(current_price, self.highest_sell, TradeOrderSide.SELL, sorted_orders,
+        sell_orders = self._create_orders(sell_low, self.highest_sell, TradeOrderSide.SELL, sorted_orders,
                                           portfolio, current_price, missing_orders, state)
 
         if state == self.NEW:
@@ -352,6 +354,11 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
                        portfolio, current_price, missing_orders, state):
+
+        if lower_bound >= upper_bound:
+            self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
+            return []
+
         orders = []
         selling = side == TradeOrderSide.SELL
         self.total_orders_count = self.highest_sell - self.lowest_buy
@@ -628,7 +635,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
                                               bootstrapped_increment=None, currency=None):
         if lower_bound >= upper_bound:
-            self.logger.error("Bounds invalid: too close to the current price")
+            self.logger.error("Invalid bounds: too close to the current price")
             return 0, 0
         if selling:
             order_distance = upper_bound - lower_bound * (1 + self.spread / 2)
