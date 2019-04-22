@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -631,7 +631,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         else:
             order_distance = upper_bound * (1 - self.spread / 2) - lower_bound
         order_count_divisor = bootstrapped_increment if bootstrapped_increment else current_price * self.increment
-        orders_count = order_distance / order_count_divisor + 1
+        orders_count = floor(order_distance / order_count_divisor + 1)
         average_order_quantity = holdings / orders_count
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
         if self.min_max_order_details[self.min_quantity] is not None \
@@ -651,7 +651,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                       f" and exchange minimum is {min_quantity}. "
                                       f"Minimum required funds are {min_funds}{f' {currency}' if currency else ''}.")
                 return 0, 0
-        return floor(orders_count), average_order_quantity
+        return orders_count, average_order_quantity
 
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):
         price_step = self.flat_increment * iteration
@@ -675,6 +675,10 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             return None
         quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
         quantity = quantity_with_delta / price if side == TradeOrderSide.BUY else quantity_with_delta
+
+        # reduce last order quantity to avoid python float representation issues
+        if iteration == max_iteration - 1:
+            quantity = quantity * 0.999
 
         if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:
             return None

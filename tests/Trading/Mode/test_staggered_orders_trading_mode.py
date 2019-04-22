@@ -487,17 +487,17 @@ async def test_compute_minimum_funds_1():
     await final_evaluator.finalize()
     orders = trader_inst.get_order_manager().get_open_orders()
     assert len(orders) == final_evaluator.operational_depth
-    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 25
-    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 25
+    assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 26
+    assert len([o for o in orders if o.side == TradeOrderSide.BUY]) == 24
 
 
 async def test_compute_minimum_funds_2():
     final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
     final_evaluator._refresh_symbol_data()
     buy_min_funds = final_evaluator._get_min_funds(25, 0.001, StrategyModes.MOUNTAIN, 100)
-    sell_min_funds = final_evaluator._get_min_funds(2475.25, 0.00001, StrategyModes.MOUNTAIN, 100)
+    sell_min_funds = final_evaluator._get_min_funds(2475, 0.00001, StrategyModes.MOUNTAIN, 100)
     assert buy_min_funds == 0.05
-    assert sell_min_funds == 0.04950500000000001
+    assert sell_min_funds == 0.0495
     portfolio = trader_inst.get_portfolio().get_portfolio()
     portfolio["USD"][Portfolio.AVAILABLE] = buy_min_funds*0.99999
     portfolio["USD"][Portfolio.TOTAL] = buy_min_funds*0.99999
