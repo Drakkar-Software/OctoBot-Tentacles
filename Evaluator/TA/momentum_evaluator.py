@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "momentum_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
     "tests":["test_adx_TA_evaluator", "test_bollinger_bands_momentum_TA_evaluator", "test_macd_TA_evaluator", "test_rsi_TA_evaluator", "test_klinger_TA_evaluator"]
 }
@@ -40,8 +40,8 @@ from tools.data_util import DataUtil
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):
-    DESCRIPTION = "Uses the Relative Strength Index (length of 14) to find trend reversals. When found, evaluates -1 to 1" \
-                  " according to the strength of the RSI."
+    DESCRIPTION = "Uses the Relative Strength Index (length of 14) to find trend reversals. When found, evaluates " \
+                  "-1 to 1 according to the strength of the RSI."
 
     def __init__(self):
         super().__init__()
@@ -73,6 +73,91 @@ class RSIMomentumEvaluator(MomentumEvaluator):
                 else:
                     self.set_eval_note((rsi_v[-1] - 100) / 200)
 
+
+# double RSI analysis
+class RSIWeightMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses the Relative Strength Index (lengths of 14) to find dips and give them weight according to " \
+                  "the trend."
+
+    @staticmethod
+    def get_eval_type():
+        return Dict[str, int]
+
+    def _get_rsi_averages(self):
+        # compute the slow and fast RSI average
+        period_length = 14
+        slow_eval_count = 16
+        fast_eval_count = 4
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > period_length:
+            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=period_length)
+            rsi_v = DataUtil.drop_nan(rsi_v)
+            if len(rsi_v) and not math.isnan(rsi_v[-1]):
+                slow_average = numpy.mean(rsi_v[-slow_eval_count:])
+                fast_average = numpy.mean(rsi_v[-fast_eval_count:])
+                return slow_average, fast_average, rsi_v
+        return None, None, None
+
+    @staticmethod
+    def _check_inferior(bound, val1, val2):
+        return val1 < bound and val2 < bound
+
+    @staticmethod
+    def _analyse_dip_weight(slow_rsi, fast_rsi, current_rsi):
+        # returns price weight, volume weight
+        # hard downtrends
+        if slow_rsi < 30:
+            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
+                return 2, 2
+            elif RSIWeightMomentumEvaluator._check_inferior(30, fast_rsi, current_rsi):
+                return 1, 1
+        # downtrends
+        elif slow_rsi < 35:
+            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
+                return 3, 3
+            elif RSIWeightMomentumEvaluator._check_inferior(35, fast_rsi, current_rsi):
+                return 1, 1
+        # medium downtrends
+        elif slow_rsi < 45:
+            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
+                return 3, 3
+            elif RSIWeightMomentumEvaluator._check_inferior(40, fast_rsi, current_rsi):
+                return 2, 1
+        # neutral trends
+        elif slow_rsi < 55:
+            if RSIWeightMomentumEvaluator._check_inferior(45, fast_rsi, current_rsi):
+                return 1, 1
+        # medium uptrends
+        elif slow_rsi < 65:
+            if RSIWeightMomentumEvaluator._check_inferior(45, fast_rsi, current_rsi):
+                return 1, 1
+            elif RSIWeightMomentumEvaluator._check_inferior(55, fast_rsi, current_rsi):
+                return 3, 2
+            elif RSIWeightMomentumEvaluator._check_inferior(60, fast_rsi, current_rsi):
+                return 2, 1
+        # uptrends
+        elif slow_rsi < 70:
+            if RSIWeightMomentumEvaluator._check_inferior(55, fast_rsi, current_rsi):
+                return 3, 2
+            elif RSIWeightMomentumEvaluator._check_inferior(70, fast_rsi, current_rsi):
+                return 2, 2
+        return None, None
+
+    async def eval_impl(self):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        # compute the slow and fast RSI average
+        slow_rsi, fast_rsi, rsi_v = self._get_rsi_averages()
+        if slow_rsi is not None and fast_rsi is not None and rsi_v is not None:
+            last_rsi_values_to_consider = 5
+            analysed_rsi = rsi_v[-last_rsi_values_to_consider:]
+            peak_reached = TrendAnalysis.min_has_just_been_reached(analysed_rsi, acceptance_window=0.95, delay=2)
+            if peak_reached:
+                price_weight, volume_weight = self._analyse_dip_weight(slow_rsi, fast_rsi, rsi_v[-1])
+                if price_weight is not None and volume_weight is not None:
+                    self.eval_note = {
+                        "price_weight": price_weight,
+                        "volume_weight": volume_weight,
+                        "current_candle_time": self.data[PriceIndexes.IND_PRICE_TIME.value][-1]
+                    }
 
 # bollinger_bands
 class BBMomentumEvaluator(MomentumEvaluator):
@@ -302,3 +387,36 @@ class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
                     eval_proposition = 1 if eval_proposition > 0 else -1
 
         self.eval_note = eval_proposition
+
+
+class KlingerOscillatorReversalConfirmationMomentumEvaluator(MomentumEvaluator):
+    DESCRIPTION = "Uses Klinger Oscillator (short period of 35 and long period of 55) to find reversals. " \
+                  "Returns true on reversal confirmation."
+
+    @staticmethod
+    def get_eval_type():
+        return bool
+
+    async def eval_impl(self):
+        self.eval_note = False
+        short_period = 35    # standard with klinger
+        long_period = 55     # standard with klinger
+        ema_signal_period = 13  # standard ema signal for klinger
+        kvo = tulipy.kvo(self.data[PriceIndexes.IND_PRICE_HIGH.value],
+                         self.data[PriceIndexes.IND_PRICE_LOW.value],
+                         self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                         self.data[PriceIndexes.IND_PRICE_VOL.value],
+                         short_period,
+                         long_period)
+        kvo = DataUtil.drop_nan(kvo)
+        if len(kvo) >= ema_signal_period:
+
+            kvo_ema = tulipy.ema(kvo, ema_signal_period)
+            ema_difference = kvo-kvo_ema
+
+            if len(ema_difference) > 1:
+                zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
+                max_elements = 7
+                to_consider_kvo = min(max_elements, len(ema_difference)-zero_crossing_indexes[-1])
+                self.eval_note = TrendAnalysis.min_has_just_been_reached(ema_difference[-to_consider_kvo:],
+                                                                         acceptance_window=0.9, delay=1)
