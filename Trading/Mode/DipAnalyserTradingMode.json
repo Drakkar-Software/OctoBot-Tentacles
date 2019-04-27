@@ -1,0 +1,4 @@
+{
+  "required_strategies": ["DipAnalyserStrategyEvaluator"],
+  "sell_orders_count": 3
+}

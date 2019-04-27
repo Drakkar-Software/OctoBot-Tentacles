@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "trend_analysis",
     "type": "Evaluator",
     "subtype": "Util",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": []
 }
 """
@@ -58,15 +58,25 @@ class TrendAnalysis(AbstractUtil):
         return trend
 
     @staticmethod
-    def peak_has_been_reached_already(data):
+    def peak_has_been_reached_already(data, neutral_val=0):
         if len(data) > 1:
             min_val = min(data)
             max_val = max(data)
             current_val = data[-1] / 0.8
-            if current_val > 0:
+            if current_val > neutral_val:
                 return current_val < max_val
             else:
                 return current_val > min_val
+        else:
+            return False
+
+    @staticmethod
+    def min_has_just_been_reached(data, acceptance_window=0.8, delay=1):
+        if len(data) > 1:
+            min_val = min(data)
+            current_val = data[-1] / acceptance_window
+            accepted_delayed_min = data[-(delay+1):]
+            return min_val in accepted_delayed_min and current_val > min_val
         else:
             return False
 
