@@ -197,7 +197,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     async def create_new_order(self, eval_note, symbol, exchange, trader, portfolio, state):
         current_order = None
         try:
-            current_symbol_holding, current_market_quantity, market_quantity, price, symbol_market = \
+            current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await self.get_pre_order_data(exchange, symbol, portfolio)
 
             quote, _ = split_symbol(symbol)

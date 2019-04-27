@@ -28,7 +28,7 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import *
+from config import START_PENDING_EVAL_NOTE, EvaluatorMatrixTypes, TimeFrames
 from evaluator.Strategies import MixedStrategiesEvaluator
 from evaluator.TA import KlingerOscillatorMomentumEvaluator, BBMomentumEvaluator
 
