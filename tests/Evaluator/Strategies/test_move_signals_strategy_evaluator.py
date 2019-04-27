@@ -52,7 +52,7 @@ class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        await strategy_tester.run_test_slow_uptrend(-5, 2)
+        await strategy_tester.run_test_slow_uptrend(8.5, 2)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
