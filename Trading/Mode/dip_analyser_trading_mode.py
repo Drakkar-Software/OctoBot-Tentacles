@@ -74,16 +74,26 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
 
     DELTA_RATIO = 0.8
 
-    VOLUME_WEIGH_TO_VOLUME_PERCENT = {
-       1: 0.5,
-       2: 0.7,
-       3: 1
-    }
-    PRICE_WEIGH_TO_PRICE_PERCENT = {
-       1: 1.04,
-       2: 1.07,
-       3: 1.1
-    }
+    LIGHT_VOLUME_WEIGHT = "light_weight_volume_multiplier"
+    MEDIUM_VOLUME_WEIGHT = "medium_weight_volume_multiplier"
+    HEAVY_VOLUME_WEIGHT = "heavy_weight_volume_multiplier"
+    VOLUME_WEIGH_TO_VOLUME_PERCENT = {}
+
+    LIGHT_PRICE_WEIGHT = "light_weight_price_multiplier"
+    MEDIUM_PRICE_WEIGHT = "medium_weight_price_multiplier"
+    HEAVY_PRICE_WEIGHT = "heavy_weight_price_multiplier"
+    PRICE_WEIGH_TO_PRICE_PERCENT = {}
+
+    def __init__(self, trading_mode):
+        super().__init__(trading_mode)
+
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = self.trading_mode.get_trading_config_value(self.LIGHT_PRICE_WEIGHT)
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[2] = self.trading_mode.get_trading_config_value(self.MEDIUM_PRICE_WEIGHT)
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[3] = self.trading_mode.get_trading_config_value(self.HEAVY_PRICE_WEIGHT)
+
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[1] = self.trading_mode.get_trading_config_value(self.LIGHT_VOLUME_WEIGHT)
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[2] = self.trading_mode.get_trading_config_value(self.MEDIUM_VOLUME_WEIGHT)
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[3] = self.trading_mode.get_trading_config_value(self.HEAVY_VOLUME_WEIGHT)
 
     async def create_buy_order(self, volume_weight, trader, portfolio, symbol, exchange):
 
