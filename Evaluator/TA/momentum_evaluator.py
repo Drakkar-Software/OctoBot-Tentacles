@@ -37,6 +37,7 @@ from evaluator.TA.TA_evaluator import MomentumEvaluator
 from evaluator.Util import PatternAnalyser
 from evaluator.Util import TrendAnalysis
 from tools.data_util import DataUtil
+from tools.errors import ConfigError
 
 
 class RSIMomentumEvaluator(MomentumEvaluator):
@@ -79,21 +80,45 @@ class RSIWeightMomentumEvaluator(MomentumEvaluator):
     DESCRIPTION = "Uses the Relative Strength Index (lengths of 14) to find dips and give them weight according to " \
                   "the trend."
 
+    PERIOD = "period"
+    SLOW_EVAL_COUNT = "slow_eval_count"
+    FAST_EVAL_COUNT = "fast_eval_count"
+    RSI_TO_WEIGHTS = "RSI_to_weight"
+    SLOW_THRESHOLD = "slow_threshold"
+    FAST_THRESHOLD = "fast_threshold"
+    FAST_THRESHOLDS = "fast_thresholds"
+    WEIGHTS = "weights"
+    PRICE = "price"
+    VOLUME = "volume"
+
     @staticmethod
     def get_eval_type():
         return Dict[str, int]
 
+    def __init__(self):
+        super().__init__()
+        self.evaluator_config = self.get_evaluator_config()
+        self.period_length = self.evaluator_config[self.PERIOD]
+        self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
+        self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]
+
+        try:
+            # ensure rsi weights are sorted
+            self.weights = sorted(self.evaluator_config[self.RSI_TO_WEIGHTS], key=lambda a: a[self.SLOW_THRESHOLD])
+            for i, fast_threshold in enumerate(self.weights):
+                fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
+                                                              key=lambda a: a[self.FAST_THRESHOLD])
+        except KeyError as e:
+            raise ConfigError(self.get_config_file_error_message(e))
+
     def _get_rsi_averages(self):
         # compute the slow and fast RSI average
-        period_length = 14
-        slow_eval_count = 16
-        fast_eval_count = 4
-        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > period_length:
-            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=period_length)
+        if len(self.data[PriceIndexes.IND_PRICE_CLOSE.value]) > self.period_length:
+            rsi_v = tulipy.rsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value], period=self.period_length)
             rsi_v = DataUtil.drop_nan(rsi_v)
-            if len(rsi_v) and not math.isnan(rsi_v[-1]):
-                slow_average = numpy.mean(rsi_v[-slow_eval_count:])
-                fast_average = numpy.mean(rsi_v[-fast_eval_count:])
+            if len(rsi_v):
+                slow_average = numpy.mean(rsi_v[-self.slow_eval_count:])
+                fast_average = numpy.mean(rsi_v[-self.fast_eval_count:])
                 return slow_average, fast_average, rsi_v
         return None, None, None
 
@@ -101,45 +126,19 @@ class RSIWeightMomentumEvaluator(MomentumEvaluator):
     def _check_inferior(bound, val1, val2):
         return val1 < bound and val2 < bound
 
-    @staticmethod
-    def _analyse_dip_weight(slow_rsi, fast_rsi, current_rsi):
+    def _analyse_dip_weight(self, slow_rsi, fast_rsi, current_rsi):
         # returns price weight, volume weight
-        # hard downtrends
-        if slow_rsi < 30:
-            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
-                return 2, 2
-            elif RSIWeightMomentumEvaluator._check_inferior(30, fast_rsi, current_rsi):
-                return 1, 1
-        # downtrends
-        elif slow_rsi < 35:
-            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
-                return 3, 3
-            elif RSIWeightMomentumEvaluator._check_inferior(35, fast_rsi, current_rsi):
-                return 1, 1
-        # medium downtrends
-        elif slow_rsi < 45:
-            if RSIWeightMomentumEvaluator._check_inferior(20, fast_rsi, current_rsi):
-                return 3, 3
-            elif RSIWeightMomentumEvaluator._check_inferior(40, fast_rsi, current_rsi):
-                return 2, 1
-        # neutral trends
-        elif slow_rsi < 55:
-            if RSIWeightMomentumEvaluator._check_inferior(45, fast_rsi, current_rsi):
-                return 1, 1
-        # medium uptrends
-        elif slow_rsi < 65:
-            if RSIWeightMomentumEvaluator._check_inferior(45, fast_rsi, current_rsi):
-                return 1, 1
-            elif RSIWeightMomentumEvaluator._check_inferior(55, fast_rsi, current_rsi):
-                return 3, 2
-            elif RSIWeightMomentumEvaluator._check_inferior(60, fast_rsi, current_rsi):
-                return 2, 1
-        # uptrends
-        elif slow_rsi < 70:
-            if RSIWeightMomentumEvaluator._check_inferior(55, fast_rsi, current_rsi):
-                return 3, 2
-            elif RSIWeightMomentumEvaluator._check_inferior(70, fast_rsi, current_rsi):
-                return 2, 2
+        try:
+            for slow_rsi_weight in self.weights:
+                if slow_rsi < slow_rsi_weight[self.SLOW_THRESHOLD]:
+                    for fast_rsi_weight in slow_rsi_weight[self.FAST_THRESHOLDS]:
+                        if self._check_inferior(fast_rsi_weight[self.FAST_THRESHOLD], fast_rsi, current_rsi):
+                            return fast_rsi_weight[self.WEIGHTS][self.PRICE], \
+                                   fast_rsi_weight[self.WEIGHTS][self.VOLUME]
+                    # exit loop since the target RSI has been found
+                    break
+        except KeyError as e:
+            self.logger.error(self.get_config_file_error_message(e))
         return None, None
 
     async def eval_impl(self):
@@ -158,6 +157,7 @@ class RSIWeightMomentumEvaluator(MomentumEvaluator):
                         "volume_weight": volume_weight,
                         "current_candle_time": self.data[PriceIndexes.IND_PRICE_TIME.value][-1]
                     }
+
 
 # bollinger_bands
 class BBMomentumEvaluator(MomentumEvaluator):

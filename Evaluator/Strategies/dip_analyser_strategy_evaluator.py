@@ -51,11 +51,9 @@ class DipAnalyserStrategyEvaluator(MixedStrategiesEvaluator):
 
     async def eval_impl(self) -> None:
         self.eval_note = START_PENDING_EVAL_NOTE
-        TA_evaluations = self.matrix[EvaluatorMatrixTypes.TA]
-        if self.REVERSAL_CONFIRMATION_CLASS_NAME in TA_evaluations \
-                and self.REVERSAL_WEIGHT_CLASS_NAME in TA_evaluations:
-            if self.time_frame in TA_evaluations[self.REVERSAL_CONFIRMATION_CLASS_NAME] \
-                    and self.time_frame in TA_evaluations[self.REVERSAL_WEIGHT_CLASS_NAME]:
-                confirmation = TA_evaluations[self.REVERSAL_CONFIRMATION_CLASS_NAME][self.time_frame]
-                if not isinstance(confirmation, str) and confirmation:
-                    self.eval_note = TA_evaluations[self.REVERSAL_WEIGHT_CLASS_NAME][self.time_frame]
+        try:
+            TA_evaluations = self.matrix[EvaluatorMatrixTypes.TA]
+            if TA_evaluations[self.REVERSAL_CONFIRMATION_CLASS_NAME][self.time_frame]:
+                self.eval_note = TA_evaluations[self.REVERSAL_WEIGHT_CLASS_NAME][self.time_frame]
+        except KeyError:
+            self.eval_note = START_PENDING_EVAL_NOTE
