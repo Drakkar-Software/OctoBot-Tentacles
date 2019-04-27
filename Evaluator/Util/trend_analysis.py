@@ -76,7 +76,7 @@ class TrendAnalysis(AbstractUtil):
             min_val = min(data)
             current_val = data[-1] / acceptance_window
             accepted_delayed_min = data[-(delay+1):]
-            return min_val in accepted_delayed_min and current_val > min_val
+            return bool(min_val in accepted_delayed_min and current_val > min_val)
         else:
             return False
 

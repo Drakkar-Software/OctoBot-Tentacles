@@ -2,7 +2,6 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "dip_analyser_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
@@ -46,7 +45,9 @@ class DipAnalyserTradingMode(AbstractTradingMode):
                   "than this of the filled buy order. The number of sell orders created after each buy is specified " \
                   "in DipAnalyserTradingMode.json. A higher risk will make larger buy orders. Make sure to have the " \
                   "base of each traded pair to be traded otherwise the DipAnalyserTradingMode won't trade: it will " \
-                  "never be able to place the initial buy orders."
+                  "never be able to place the initial buy orders. Sell orders are never cancelled by the strategy, " \
+                  "therefore it is not advised to use it on continued downtrends or funds might get stuck in " \
+                  "unfilled sell orders."
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -225,7 +226,7 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
                             min_quantity, min_cost, min_price,
                             max_quantity, max_cost, max_price):
         increment = (sell_max - sell_base) / sell_orders_count
-        first_sell = sell_base+increment
+        first_sell = sell_base + increment
         order_vol = quantity / sell_orders_count
 
         if DipAnalyserTradingModeCreator.orders_too_small(min_quantity, min_cost, min_price, first_sell, order_vol):
