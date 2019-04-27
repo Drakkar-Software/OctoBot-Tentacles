@@ -52,7 +52,7 @@ class TestSimpleMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        await strategy_tester.run_test_slow_uptrend(-16, 0)
+        await strategy_tester.run_test_slow_uptrend(10.5, 0)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
