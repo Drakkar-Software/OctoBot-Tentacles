@@ -640,6 +640,15 @@ async def test_start_without_enough_funds_at_all():
     assert len(orders) == 0
 
 
+async def test_settings_for_just_one_order_on_a_side():
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    final_evaluator.highest_sell = 106
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    orders = trader_inst.get_order_manager().get_open_orders()
+    assert len([o for o in orders if o.get_side() == TradeOrderSide.SELL]) == 1
+
+
 async def test_order_fill_callback():
     # create orders
     final_evaluator, trader_inst, _ = await _get_tools()
