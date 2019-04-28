@@ -186,10 +186,10 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
 
     def _generate_sell_orders(self, sell_orders_count, quantity, sell_weight, sell_base, symbol_market):
         volume_with_price = []
-        order_volume = quantity / sell_orders_count
         sell_max = sell_base * self.PRICE_WEIGH_TO_PRICE_PERCENT[sell_weight]
         adapted_sell_orders_count, increment = \
             self._check_limits(sell_base, sell_max, quantity, sell_orders_count, symbol_market)
+        order_volume = quantity / adapted_sell_orders_count
 
         for i in range(adapted_sell_orders_count):
             order_price = sell_base + (increment * (i + 1))
@@ -237,11 +237,12 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
                             max_quantity, max_cost, max_price):
         increment = (sell_max - sell_base) / sell_orders_count
         first_sell = sell_base + increment
+        last_sell = sell_base + (increment * sell_orders_count)
         order_vol = quantity / sell_orders_count
 
         if DipAnalyserTradingModeCreator.orders_too_small(min_quantity, min_cost, min_price, first_sell, order_vol):
             return 1
-        elif DipAnalyserTradingModeCreator.orders_too_large(max_quantity, max_cost, max_price, first_sell, order_vol):
+        elif DipAnalyserTradingModeCreator.orders_too_large(max_quantity, max_cost, max_price, last_sell, order_vol):
             return 2
         return 0
 
@@ -274,10 +275,7 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
 
     def set_final_eval(self):
         # Strategies analysis
-        for evaluated_strategies in self.symbol_evaluator.get_strategies_eval_list(self.exchange):
-            if isinstance(evaluated_strategies, DipAnalyserStrategyEvaluator) or \
-               evaluated_strategies.has_class_in_parents(DipAnalyserStrategyEvaluator):
-                self.final_eval = evaluated_strategies.get_eval_note()
+        self.final_eval = self.get_strategy_evaluation(DipAnalyserStrategyEvaluator)
 
     async def create_state(self):
         if self.first_trigger:
@@ -307,11 +305,11 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
         self.logger.info(f"** New buy order for ** : {self.symbol}")
         # call orders creation method
         if self.symbol_evaluator.has_trader_simulator(self.exchange):
-            await self._create_order_if_enabled(self.symbol_evaluator.get_trader(self.exchange),
+            await self._create_order_if_enabled(self.symbol_evaluator.get_trader_simulator(self.exchange),
                                                 notification_candle_time)
 
         if self.symbol_evaluator.has_trader(self.exchange):
-            await self._create_order_if_enabled(self.symbol_evaluator.get_trader_simulator(self.exchange),
+            await self._create_order_if_enabled(self.symbol_evaluator.get_trader(self.exchange),
                                                 notification_candle_time)
 
     async def _create_order_if_enabled(self, trader, notification_candle_time):

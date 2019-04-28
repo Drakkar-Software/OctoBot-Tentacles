@@ -238,13 +238,9 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     def set_final_eval(self):
         # Strategies analysis
-        for evaluated_strategies in self.symbol_evaluator.get_strategies_eval_list(self.exchange):
-            if isinstance(evaluated_strategies, StaggeredStrategiesEvaluator) or \
-               evaluated_strategies.has_class_in_parents(StaggeredStrategiesEvaluator):
-                evaluation = evaluated_strategies.get_eval_note()
-                if evaluation != START_PENDING_EVAL_NOTE:
-                    self.final_eval = evaluation[ExchangeConstantsTickersInfoColumns.LAST_PRICE.value]
-                    return
+        strategy_evaluation = self.get_strategy_evaluation(StaggeredStrategiesEvaluator)
+        if strategy_evaluation != START_PENDING_EVAL_NOTE:
+            self.final_eval = strategy_evaluation[ExchangeConstantsTickersInfoColumns.LAST_PRICE.value]
 
     async def create_state(self):
         if self.final_eval != INIT_EVAL_NOTE:
