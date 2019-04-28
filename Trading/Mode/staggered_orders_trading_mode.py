@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "tests":["test_staggered_orders_trading_mode"]
@@ -673,15 +673,16 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         delta = max_quantity - min_quantity
 
         if max_iteration == 1:
-            max_iteration = 2
-        if StrategyModeMultipliersDetails[mode][side] == INCREASING:
-            multiplier_price_ratio = 1 - iteration/(max_iteration - 1)
-        elif StrategyModeMultipliersDetails[mode][side] == DECREASING:
-            multiplier_price_ratio = iteration/(max_iteration - 1)
-        if price <= 0:
-            return None
-        quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
-        quantity = quantity_with_delta / price if side == TradeOrderSide.BUY else quantity_with_delta
+            quantity = average_order_quantity
+        else:
+            if StrategyModeMultipliersDetails[mode][side] == INCREASING:
+                multiplier_price_ratio = 1 - iteration/(max_iteration - 1)
+            elif StrategyModeMultipliersDetails[mode][side] == DECREASING:
+                multiplier_price_ratio = iteration/(max_iteration - 1)
+            if price <= 0:
+                return None
+            quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
+            quantity = quantity_with_delta / price if side == TradeOrderSide.BUY else quantity_with_delta
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1:
