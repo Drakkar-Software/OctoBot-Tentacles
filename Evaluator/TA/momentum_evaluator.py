@@ -7,6 +7,7 @@ $tentacle_description: {
     "subtype": "TA",
     "version": "1.1.1",
     "requirements": [],
+    "config_files": ["RSIWeightMomentumEvaluator.json"],
     "tests":["test_adx_TA_evaluator", "test_bollinger_bands_momentum_TA_evaluator", "test_macd_TA_evaluator", "test_rsi_TA_evaluator", "test_klinger_TA_evaluator"]
 }
 """
