@@ -1,3 +1,5 @@
 {
-  "telegram-channels": ["test_telegram_signal_strat"]
+    "telegram-channels": [
+        "test_telegram_signal_strat"
+    ]
 }

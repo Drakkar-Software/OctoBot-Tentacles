@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "forum_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
-    "config_files": ["RedditForumEvaluator.json"]
+    "config_files": ["RedditForumEvaluator.json"],
+    "config_schema_files": ["RedditForumEvaluator_schema.json"]
 }
 """
 
@@ -93,17 +94,18 @@ class RedditForumEvaluator(ForumSocialEvaluator, DispatcherAbstractClient):
                     return True
         return False
 
-    def _purify_config(self):
+    def _get_config_elements(self, key):
+        if CONFIG_CRYPTO_CURRENCIES in self.social_config and self.social_config[CONFIG_CRYPTO_CURRENCIES]:
+            return {cc[CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in self.social_config[CONFIG_CRYPTO_CURRENCIES]
+                    if cc[CONFIG_CRYPTO_CURRENCY] == self.symbol}
+        return {}
+
+    def _format_config(self):
         # remove other symbols data to avoid unnecessary entries
-        if CONFIG_REDDIT_SUBREDDITS in self.social_config \
-                and self.symbol in self.social_config[CONFIG_REDDIT_SUBREDDITS]:
-            self.social_config[CONFIG_REDDIT_SUBREDDITS] = \
-                {self.symbol: self.social_config[CONFIG_REDDIT_SUBREDDITS][self.symbol]}
-        else:
-            self.social_config[CONFIG_REDDIT_SUBREDDITS] = {}
+        self.social_config[CONFIG_REDDIT_SUBREDDITS] = self._get_config_elements(CONFIG_REDDIT_SUBREDDITS)
 
     def prepare(self):
-        self._purify_config()
+        self._format_config()
         self.sentiment_analyser = AdvancedManager.get_util_instance(self.config, TextAnalysis)
 
     def get_data(self):

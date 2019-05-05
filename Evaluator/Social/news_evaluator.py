@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "news_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
-    "config_files": ["TwitterNewsEvaluator.json"]
+    "config_files": ["TwitterNewsEvaluator.json"],
+    "config_schema_files": ["TwitterNewsEvaluator_schema.json"]
 }
 """
 
@@ -27,7 +28,9 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from config import *
+from config import CONFIG_CRYPTO_CURRENCIES, CONFIG_CRYPTO_CURRENCY, MINUTE_TO_SECONDS, CONFIG_CATEGORY_SERVICES, \
+CONFIG_TWITTER, CONFIG_SERVICE_INSTANCE, CONFIG_TWEET, CONFIG_TWEET_DESCRIPTION, START_PENDING_EVAL_NOTE, \
+    CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS_HASHTAGS
 from evaluator.Social.social_evaluator import NewsSocialEvaluator
 from evaluator.Util import TextAnalysis
 from evaluator.Util.advanced_manager import AdvancedManager
@@ -130,23 +133,19 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
                     return True
             return False
 
-    def _purify_config(self):
+    def _get_config_elements(self, key):
+        if CONFIG_CRYPTO_CURRENCIES in self.social_config and self.social_config[CONFIG_CRYPTO_CURRENCIES]:
+            return {cc[CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in self.social_config[CONFIG_CRYPTO_CURRENCIES]
+                    if cc[CONFIG_CRYPTO_CURRENCY] == self.symbol}
+        return {}
+
+    def _format_config(self):
         # remove other symbols data to avoid unnecessary tweets
-        if CONFIG_TWITTERS_ACCOUNTS in self.social_config \
-                and self.symbol in self.social_config[CONFIG_TWITTERS_ACCOUNTS]:
-            self.social_config[CONFIG_TWITTERS_ACCOUNTS] = \
-                {self.symbol: self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol]}
-        else:
-            self.social_config[CONFIG_TWITTERS_ACCOUNTS] = {}
-        if CONFIG_TWITTERS_HASHTAGS in self.social_config \
-                and self.symbol in self.social_config[CONFIG_TWITTERS_HASHTAGS]:
-            self.social_config[CONFIG_TWITTERS_HASHTAGS] = \
-                {self.symbol: self.social_config[CONFIG_TWITTERS_HASHTAGS][self.symbol]}
-        else:
-            self.social_config[CONFIG_TWITTERS_HASHTAGS] = {}
+        self.social_config[CONFIG_TWITTERS_ACCOUNTS] = self._get_config_elements(CONFIG_TWITTERS_ACCOUNTS)
+        self.social_config[CONFIG_TWITTERS_HASHTAGS] = self._get_config_elements(CONFIG_TWITTERS_HASHTAGS)
 
     def prepare(self):
-        self._purify_config()
+        self._format_config()
         self.sentiment_analyser = AdvancedManager.get_util_instance(self.config, TextAnalysis)
 
     def get_data(self):

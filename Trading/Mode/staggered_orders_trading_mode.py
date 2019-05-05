@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.8",
+    "version": "1.1.9",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
+    "config_schema_files": ["StaggeredOrdersTradingMode_schema.json"],
     "tests":["test_staggered_orders_trading_mode"]
 }
 """
@@ -98,22 +99,24 @@ class OrderData:
 class StaggeredOrdersTradingMode(AbstractTradingMode):
 
     DESCRIPTION = 'Places a large amount of buy and sell orders at fixed intervals, covering the order book from ' \
-                  'very low prices to very high prices. The range ' \
+                  'very low prices to very high prices.\nThe range ' \
                   '(specified in tentacles/Trading/Mode/config/StaggeredOrdersTradingMode.json) ' \
                   'is supposed to cover all conceivable prices for as ' \
                   'long as the user intends to run the strategy, and this for each traded pair. ' \
                   'That could be from -100x to +100x ' \
-                  '(-99% to +10000%). Profits will be made from price movements. It never ' \
-                  '"sells at a loss", but always at a profit. Description from ' \
+                  '(-99% to +10000%).\nProfits will be made from price movements. It never ' \
+                  '"sells at a loss", but always at a profit.\nDescription from ' \
                   'https://github.com/Codaone/DEXBot/wiki/The-Staggered-Orders-strategy. Full documentation ' \
-                  'available there. In order to never sell at a loss, OctoBot never ' \
+                  'available there.\nIn order to never sell at a loss, OctoBot never ' \
                   'cancels orders. To change the staggered orders mode settings, you will have to manually cancel ' \
-                  'orders and restart the strategy. This trading mode instantly places opposite side orders when an ' \
-                  'order is filled and checks the current orders every 6 hours to replace any missing one. Only ' \
+                  'orders and restart the strategy.\nThis trading mode instantly places opposite side orders when an ' \
+                  'order is filled and checks the current orders every 6 hours to replace any missing one.\nOnly ' \
                   'works with independent quotes and bases: ETH/USDT and ADA/BTC are possible together but ETH/USDT ' \
                   'and BTC/USDT are not working together for the same OctoBot instance (same base). ' \
                   f'Modes are {", ".join([m.value for m in StrategyModes])}.'
 
+    CONFIG_PAIR_SETTINGS = "pair_settings"
+    CONFIG_PAIR = "pair"
     CONFIG_MODE = "mode"
     CONFIG_SPREAD = "spread_percent"
     CONFIG_INCREMENT_PERCENT = "increment_percent"
@@ -206,8 +209,11 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         self.flat_spread = None
 
         # staggered orders strategy parameters
+        self.symbol_trading_config = None
         try:
-            self.trading_mode.get_symbol_trading_config_value(self.symbol, self.trading_mode.CONFIG_MODE)
+            for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
+                if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
+                    self.symbol_trading_config = config
         except KeyError:
             error_message = f"Impossible to start staggered orders for {self.symbol}: missing configuration in " \
                 f"trading mode config file. See Default/StaggeredOrdersTradingMode.json for a config example."
@@ -215,24 +221,17 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             raise KeyError(error_message)
         mode = ""
         try:
-            mode = self.trading_mode.get_symbol_trading_config_value(self.symbol, self.trading_mode.CONFIG_MODE)
+            mode = self.symbol_trading_config[self.trading_mode.CONFIG_MODE]
             self.mode = StrategyModes(mode)
         except ValueError as e:
             self.logger.error(f"Invalid staggered orders strategy mode: {mode} "
                               f"supported modes are {[m.value for m in StrategyModes]}")
             raise e
-        self.spread = self.trading_mode.get_symbol_trading_config_value(self.symbol,
-                                                                        self.trading_mode.CONFIG_SPREAD) / 100
-        self.increment = \
-            self.trading_mode.get_symbol_trading_config_value(self.symbol,
-                                                              self.trading_mode.CONFIG_INCREMENT_PERCENT) / 100
-        self.operational_depth = \
-            self.trading_mode.get_symbol_trading_config_value(self.symbol,
-                                                              self.trading_mode.CONFIG_OPERATIONAL_DEPTH)
-        self.lowest_buy = self.trading_mode.get_symbol_trading_config_value(self.symbol,
-                                                                            self.trading_mode.CONFIG_LOWER_BOUND)
-        self.highest_sell = self.trading_mode.get_symbol_trading_config_value(self.symbol,
-                                                                              self.trading_mode.CONFIG_UPPER_BOUND)
+        self.spread = self.symbol_trading_config[self.trading_mode.CONFIG_SPREAD] / 100
+        self.increment = self.symbol_trading_config[self.trading_mode.CONFIG_INCREMENT_PERCENT] / 100
+        self.operational_depth = self.symbol_trading_config[self.trading_mode.CONFIG_OPERATIONAL_DEPTH]
+        self.lowest_buy = self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]
+        self.highest_sell = self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]
 
         self._check_params()
 
