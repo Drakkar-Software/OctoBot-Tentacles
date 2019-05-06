@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "title": "TelegramSignalEvaluator",
+  "properties": {
+    "telegram-channels": {
+        "title": "Name of the watched channels",
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+            "title": "Channel name",
+            "type": "string",
+            "minLength": 2
+        }
+    }
+  }
+}

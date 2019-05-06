@@ -1,6 +1,8 @@
 {
   "required_strategies": ["StaggeredOrdersStrategiesEvaluator"],
-  "BTC/USDT": {
+  "pair_settings": [
+    {
+    "pair": "BTC/USDT",
     "mode": "mountain",
     "spread_percent": 6,
     "increment_percent": 3,
@@ -9,7 +11,8 @@
     "allow_instant_fill": true,
     "operational_depth": 100
   },
-  "ADA/ETH": {
+  {
+    "pair": "ADA/ETH",
     "mode": "mountain",
     "spread_percent": 6,
     "increment_percent": 3,
@@ -18,4 +21,5 @@
     "allow_instant_fill": true,
     "operational_depth": 50
   }
+  ]
 }

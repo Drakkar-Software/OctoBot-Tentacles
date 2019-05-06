@@ -5,9 +5,11 @@ $tentacle_description: {
     "name": "stats_evaluator",
     "type": "Evaluator",
     "subtype": "Social",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
-    "config_files": ["GoogleTrendStatsEvaluator.json"]
+    "config_files": ["GoogleTrendStatsEvaluator.json"],
+    "config_schema_files": ["GoogleTrendStatsEvaluator_schema.json"]
+
 }
 """
 

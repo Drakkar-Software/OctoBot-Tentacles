@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
@@ -40,9 +40,9 @@ from tools.symbol_util import split_symbol
 
 class DailyTradingMode(AbstractTradingMode):
     DESCRIPTION = "DailyTradingMode is a low risk versatile trading mode that reacts only the its state changes to " \
-                  "a state that is different from the previous one and that is not NEUTRAL. " \
+                  "a state that is different from the previous one and that is not NEUTRAL.\n" \
                   "When triggered for a given symbol, it will cancel previously created (and unfilled) orders " \
-                  "and create new ones according to its new state. " \
+                  "and create new ones according to its new state.\n" \
                   "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
                   "each state."
 

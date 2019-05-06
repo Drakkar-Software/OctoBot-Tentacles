@@ -5,8 +5,9 @@ $tentacle_description: {
     "name": "price_refresher_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.1.0",
-    "config_files": ["PeriodicPriceTickerEvaluator.json"]
+    "version": "1.1.1",
+    "config_files": ["PeriodicPriceTickerEvaluator.json"],
+    "config_schema_files": ["PeriodicPriceTickerEvaluator_schema.json"]
 }
 """
 #  Drakkar-Software OctoBot

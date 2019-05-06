@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "dip_analyser_strategy_evaluator",
     "type": "Evaluator",
     "subtype": "Strategies",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": ["momentum_evaluator", "instant_fluctuations_evaluator"],
     "config_files": ["DipAnalyserStrategyEvaluator.json"],
+    "config_schema_files": ["DipAnalyserStrategyEvaluator_schema.json"],
     "tests":["test_dip_analyser_strategy_evaluator"]
 }
 """
@@ -39,7 +40,7 @@ class DipAnalyserStrategyEvaluator(MixedStrategiesEvaluator):
     REVERSAL_WEIGHT_CLASS_NAME = RSIWeightMomentumEvaluator.get_name()
 
     DESCRIPTION = "DipAnalyserStrategyEvaluator is a strategy analysing market dips using RSI averages and Klinger " \
-                  "oscillator for confirmations. It focuses on the 4h time frame only."
+                  "oscillator for confirmations. It focuses on the one time frame only."
 
     @staticmethod
     def get_eval_type():
@@ -47,7 +48,7 @@ class DipAnalyserStrategyEvaluator(MixedStrategiesEvaluator):
 
     def __init__(self):
         super().__init__()
-        self.time_frame = TimeFrames(self.get_evaluator_config()[STRATEGIES_REQUIRED_TIME_FRAME][0])
+        self.time_frame = TimeFrames(self.get_specific_config()[STRATEGIES_REQUIRED_TIME_FRAME][0])
 
     async def eval_impl(self) -> None:
         self.eval_note = START_PENDING_EVAL_NOTE

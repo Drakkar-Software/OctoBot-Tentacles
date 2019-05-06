@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "title": "PeriodicPriceTickerEvaluator",
+  "properties": {
+    "refresh_rate_seconds": {
+        "title": "Number of seconds between each refresh",
+        "type": "number",
+        "minimum": 1
+    }
+  }
+}

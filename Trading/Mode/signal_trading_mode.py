@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "signal_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": ["move_signals_strategy_evaluator", "daily_trading_mode"],
     "config_files": ["SignalTradingMode.json"]
 }
@@ -32,8 +32,8 @@ from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 
 
 class SignalTradingMode(AbstractTradingMode):
-    DESCRIPTION = "SignalTradingMode is a middle risk trading mode adapted to relatively flat markets. " \
-                  "SignalTradingMode is using the daily trading mode orders system with adapted parameters. " \
+    DESCRIPTION = "SignalTradingMode is a middle risk trading mode adapted to relatively flat markets.\n" \
+                  "SignalTradingMode is using the daily trading mode orders system with adapted parameters.\n" \
                   "Warning: Works only on liquid markets."
 
     def create_deciders(self, symbol, symbol_evaluator):
