@@ -116,8 +116,8 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
                                                              current_price=price,
                                                              quantity=order_quantity,
                                                              price=order_price)
-                await trader.create_order(current_order, portfolio)
-                created_orders.append(current_order)
+                created_order = await trader.create_order(current_order, portfolio)
+                created_orders.append(created_order)
             return created_orders
 
         except InsufficientFunds as e:
@@ -147,8 +147,8 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
                                                              current_price=sell_base,
                                                              quantity=order_quantity,
                                                              price=order_price)
-                await trader.create_order(current_order, portfolio)
-                created_orders.append(current_order)
+                created_order = await trader.create_order(current_order, portfolio)
+                created_orders.append(created_order)
             return created_orders
 
         except InsufficientFunds as e:
@@ -266,9 +266,16 @@ class DipAnalyserTradingModeCreator(AbstractTradingModeCreator):
 
 class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
 
+    SIMUALTOR_KEY = "Simulator"
+    REAL_KEY = "Real"
+
     def __init__(self, trading_mode, symbol_evaluator, exchange):
         super().__init__(trading_mode, symbol_evaluator, exchange)
         self.volume_weight = self.price_weight = self.last_buy_candle = None
+        self.last_buy_candle = {
+            self.SIMUALTOR_KEY: None,
+            self.REAL_KEY: None
+        }
         self.first_trigger = True
         self.sell_targets_by_order = {}
         self.quote, _ = split_symbol(self.symbol)
@@ -316,16 +323,18 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
     async def _create_order_if_enabled(self, trader, notification_candle_time):
 
         if trader.is_enabled():
+            last_candle_key = self.SIMUALTOR_KEY if trader.get_simulate() else self.REAL_KEY
             # cancel previous by orders if any
             cancelled_orders = await self._cancel_buy_orders_for_trader(trader)
-            if self.last_buy_candle == notification_candle_time and cancelled_orders or \
-                    self.last_buy_candle != notification_candle_time:
+            if self.last_buy_candle[last_candle_key] == notification_candle_time and cancelled_orders or \
+                    self.last_buy_candle[last_candle_key] != notification_candle_time:
                 # if subsequent notification from the same candle: only create order if able to cancel the previous buy
                 # to avoid multiple order on the same candle
                 await self._create_order(trader)
-                self.last_buy_candle = notification_candle_time
+                self.last_buy_candle[last_candle_key] = notification_candle_time
             else:
-                self.logger.debug(f"Ignored buy signal for {self.symbol}: buy order already filled.")
+                self.logger.debug(f"{last_candle_key} trader ignored buy signal for {self.symbol}: "
+                                  f"buy order already filled.")
 
     async def _create_order(self, trader, buy=True, total_sell=None, sell_target=None, buy_price=None):
         creator_key = self.trading_mode.get_only_creator_key(self.symbol)

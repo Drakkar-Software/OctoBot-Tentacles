@@ -84,7 +84,11 @@ async def test_init():
 
     # decider
     assert decider.volume_weight is None
-    assert decider.volume_weight == decider.price_weight == decider.last_buy_candle
+    assert decider.volume_weight == decider.price_weight
+    assert decider.last_buy_candle == {
+        "Simulator": None,
+        "Real": None
+    }
     assert decider.first_trigger
     assert decider.sell_targets_by_order == {}
     assert decider.sell_orders_per_buy == 3
