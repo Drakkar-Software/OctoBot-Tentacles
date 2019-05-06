@@ -2,12 +2,12 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "volatility_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "config_files": ["StochasticRSIVolatilityEvaluator.json"],
+    "config_schema_files": ["StochasticRSIVolatilityEvaluator_schema.json"],
     "requirements": []
 }
 """
@@ -44,7 +44,7 @@ class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
 
     def __init__(self):
         super().__init__()
-        self.evaluator_config = self.get_evaluator_config()
+        self.evaluator_config = self.get_specific_config()
 
     async def eval_impl(self):
         stochrsi_value = tulipy.stochrsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value],

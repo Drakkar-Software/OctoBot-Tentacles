@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "momentum_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "requirements": [],
     "config_files": ["RSIWeightMomentumEvaluator.json"],
+    "config_schema_files": ["RSIWeightMomentumEvaluator_schema.json"],
     "tests":["test_adx_TA_evaluator", "test_bollinger_bands_momentum_TA_evaluator", "test_macd_TA_evaluator", "test_rsi_TA_evaluator", "test_klinger_TA_evaluator"]
 }
 """
@@ -98,7 +99,7 @@ class RSIWeightMomentumEvaluator(MomentumEvaluator):
 
     def __init__(self):
         super().__init__()
-        self.evaluator_config = self.get_evaluator_config()
+        self.evaluator_config = self.get_specific_config()
         self.period_length = self.evaluator_config[self.PERIOD]
         self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
         self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]

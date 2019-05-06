@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "trend_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
     "config_files": ["EMADivergenceTrendEvaluator.json"],
+    "config_schema_files": ["EMADivergenceTrendEvaluator_schema.json"],
     "tests":["test_double_moving_averages_TA_evaluator"]
 }
 """
@@ -114,16 +115,16 @@ class EMADivergenceTrendEvaluator(TrendEvaluator):
 
     def __init__(self):
         super().__init__()
-        self.evaluator_config = self.get_evaluator_config()
+        self.evaluator_config = self.get_specific_config()
 
     async def eval_impl(self):
         self.eval_note = START_PENDING_EVAL_NOTE
         current_ema = tulipy.ema(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
-                                 self.get_evaluator_config()[self.EMA_SIZE])[-1]
+                                 self.get_specific_config()[self.EMA_SIZE])[-1]
         current_price_close = self.data[PriceIndexes.IND_PRICE_CLOSE.value][-1]
         diff = (current_price_close / current_ema * 100) - 100
 
-        if diff <= self.get_evaluator_config()[self.LONG_VALUE]:
+        if diff <= self.evaluator_config[self.LONG_VALUE]:
             self.eval_note = -1
-        elif diff >= self.get_evaluator_config()[self.SHORT_VALUE]:
+        elif diff >= self.evaluator_config[self.SHORT_VALUE]:
             self.eval_note = 1

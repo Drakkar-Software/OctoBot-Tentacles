@@ -1074,31 +1074,36 @@ async def _light_check_orders(final_evaluator, trader_inst, expected_buy_count, 
 def _get_multi_symbol_staggered_config():
     return {
         "required_strategies": ["StaggeredOrdersStrategiesEvaluator"],
-        "BTC/USD": {
-            "mode": "mountain",
-            "spread_percent": 4,
-            "increment_percent": 3,
-            "lower_bound": 4300,
-            "upper_bound": 5500,
-            "allow_instant_fill": True,
-            "operational_depth": 100
-        },
-        "ETH/USDT": {
-            "mode": "mountain",
-            "spread_percent": 4,
-            "increment_percent": 3,
-            "lower_bound": 4300,
-            "upper_bound": 5500,
-            "allow_instant_fill": True,
-            "operational_depth": 100
-        },
-        "NANO/USDT": {
-            "mode": "mountain",
-            "spread_percent": 4,
-            "increment_percent": 3,
-            "lower_bound": 4300,
-            "upper_bound": 5500,
-            "allow_instant_fill": True,
-            "operational_depth": 100
-        }
+        "pair_settings": [
+            {
+                "pair": "BTC/USD",
+                "mode": "mountain",
+                "spread_percent": 4,
+                "increment_percent": 3,
+                "lower_bound": 4300,
+                "upper_bound": 5500,
+                "allow_instant_fill": True,
+                "operational_depth": 100
+            },
+            {
+                "pair": "ETH/USDT",
+                "mode": "mountain",
+                "spread_percent": 4,
+                "increment_percent": 3,
+                "lower_bound": 4300,
+                "upper_bound": 5500,
+                "allow_instant_fill": True,
+                "operational_depth": 100
+            },
+            {
+                "pair": "NANO/USDT",
+                "mode": "mountain",
+                "spread_percent": 4,
+                "increment_percent": 3,
+                "lower_bound": 4300,
+                "upper_bound": 5500,
+                "allow_instant_fill": True,
+                "operational_depth": 100
+            }
+        ]
     }

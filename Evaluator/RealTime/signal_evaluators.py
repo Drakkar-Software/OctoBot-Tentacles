@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "signal_evaluators",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
-    "config_files": ["TelegramSignalEvaluator.json"]
+    "config_files": ["TelegramSignalEvaluator.json"],
+    "config_schema_files": ["TelegramSignalEvaluator_schema.json"]
 }
 """
 #  Drakkar-Software OctoBot

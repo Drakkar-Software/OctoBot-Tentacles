@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "FullMixedStrategiesEvaluator",
+  "properties": {
+    "required_time_frames": {
+        "type": "array",
+        "title": "Analysed time frames",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+            "title": "Time frame",
+            "type": "string",
+            "default": "1h",
+            "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
+        }
+    }
+  }
+}
