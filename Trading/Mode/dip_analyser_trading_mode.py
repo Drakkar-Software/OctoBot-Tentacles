@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "dip_analyser_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "requirements": ["dip_analyser_strategy_evaluator"],
     "config_files": ["DipAnalyserTradingMode.json"],
     "config_schema_files": ["DipAnalyserTradingMode_schema.json"],
@@ -268,6 +268,7 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
 
     SIMUALTOR_KEY = "Simulator"
     REAL_KEY = "Real"
+    DEFAULT_SELL_TARGET = 1
 
     def __init__(self, trading_mode, symbol_evaluator, exchange):
         super().__init__(trading_mode, symbol_evaluator, exchange)
@@ -299,15 +300,11 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
 
     async def order_filled_callback(self, filled_order):
         if filled_order.get_side() == TradeOrderSide.BUY:
-            order_identifier = self._get_order_identifier(filled_order)
-            if order_identifier in self.sell_targets_by_order:
-                sell_target = self.sell_targets_by_order[order_identifier]
-                trader = filled_order.trader
-                sell_quantity = filled_order.get_filled_quantity() - filled_order.get_total_fees(self.quote)
-                buy_price = filled_order.get_origin_price()
-                await self._create_order(trader, False, sell_quantity, sell_target, buy_price)
-            else:
-                self.logger.error(f"No sell target from order {filled_order}. Can't create sell orders.")
+            sell_target = self._get_sell_target_for_registered_order(filled_order)
+            trader = filled_order.trader
+            sell_quantity = filled_order.get_filled_quantity() - filled_order.get_total_fees(self.quote)
+            buy_price = filled_order.get_origin_price()
+            await self._create_order(trader, False, sell_quantity, sell_target, buy_price)
 
     async def _create_bottom_order(self, notification_candle_time):
         self.logger.info(f"** New buy order for ** : {self.symbol}")
@@ -385,6 +382,19 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
         order_identifier = self._get_order_identifier(order)
         if order_identifier in self.sell_targets_by_order:
             self.sell_targets_by_order.pop(order_identifier)
+
+    def _get_sell_target_for_registered_order(self, order):
+        order_identifier = self._get_order_identifier(order)
+        if order_identifier in self.sell_targets_by_order:
+            return self.sell_targets_by_order[order_identifier]
+        else:
+            if not self.sell_targets_by_order:
+                self.logger.warning(f"No registered buy orders, therefore no sell target for order {order}. "
+                                    f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
+            else:
+                self.logger.warning(f"No sell target for order {order}. "
+                                    f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
+            return self.DEFAULT_SELL_TARGET
 
     @staticmethod
     def _get_order_identifier(order):
