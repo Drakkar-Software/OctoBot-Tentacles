@@ -21,7 +21,7 @@ import copy
 
 from config import ExchangeConstantsTickersInfoColumns, INIT_EVAL_NOTE, CONFIG_EVALUATOR, CONFIG_TRADING_TENTACLES, \
     EvaluatorStates, TradeOrderSide
-from evaluator.Util.advanced_manager import AdvancedManager
+from tentacles_management.advanced_manager import AdvancedManager
 from evaluator.cryptocurrency_evaluator import CryptocurrencyEvaluator
 from evaluator.evaluator_creator import EvaluatorCreator
 from evaluator.symbol_evaluator import SymbolEvaluator

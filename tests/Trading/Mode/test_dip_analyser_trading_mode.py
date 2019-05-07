@@ -21,7 +21,7 @@ import time
 import asyncio
 
 from config import OrderStatus, TradeOrderSide
-from evaluator.Util.advanced_manager import AdvancedManager
+from tentacles_management.advanced_manager import AdvancedManager
 from evaluator.cryptocurrency_evaluator import CryptocurrencyEvaluator
 from evaluator.evaluator_creator import EvaluatorCreator
 from evaluator.symbol_evaluator import SymbolEvaluator
