@@ -33,7 +33,7 @@ CONFIG_TWITTER, CONFIG_SERVICE_INSTANCE, CONFIG_TWEET, CONFIG_TWEET_DESCRIPTION,
     CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS_HASHTAGS
 from evaluator.Social.social_evaluator import NewsSocialEvaluator
 from evaluator.Util import TextAnalysis
-from evaluator.Util.advanced_manager import AdvancedManager
+from tentacles_management.advanced_manager import AdvancedManager
 from services.Dispatchers.twitter_dispatcher import TwitterDispatcher
 from services.Dispatchers.abstract_dispatcher import DispatcherAbstractClient
 from tools.decoding_encoding import DecoderEncoder

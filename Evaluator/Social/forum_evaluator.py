@@ -30,7 +30,7 @@ $tentacle_description: {
 
 from config import *
 from evaluator.Social.social_evaluator import ForumSocialEvaluator
-from evaluator.Util.advanced_manager import AdvancedManager
+from tentacles_management.advanced_manager import AdvancedManager
 from evaluator.Util import TextAnalysis
 from evaluator.Util import OverallStateAnalyser
 from services.Dispatchers.reddit_dispatcher import RedditDispatcher
