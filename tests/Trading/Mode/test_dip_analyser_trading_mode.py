@@ -20,7 +20,7 @@ import ccxt
 import time
 import asyncio
 
-from config import OrderStatus, TradeOrderSide
+from config import OrderStatus, TradeOrderSide, TraderOrderType
 from tentacles_management.advanced_manager import AdvancedManager
 from evaluator.cryptocurrency_evaluator import CryptocurrencyEvaluator
 from evaluator.evaluator_creator import EvaluatorCreator
@@ -30,6 +30,8 @@ from trading.exchanges.exchange_manager import ExchangeManager
 from trading.trader.modes import DipAnalyserTradingMode
 from trading.trader.portfolio import Portfolio
 from trading.trader.trader_simulator import TraderSimulator
+from trading.trader.order import BuyLimitOrder
+from trading.trader.order_notifier import OrderNotifier
 
 
 # All test coroutines will be treated as marked.
@@ -403,7 +405,29 @@ async def test_order_fill_callback():
     assert len(open_orders) == decider.sell_orders_per_buy
 
 
-async def _fill_order(order, trader, trigger_price=None, order_update_callback=True):
+async def test_order_fill_callback_not_in_db():
+    decider, creator, _, trader = await _get_tools()
+    filled_order = BuyLimitOrder(trader)
+    filled_order.new(TraderOrderType.BUY_LIMIT, "BTC/USDT", 100, 1, price=100)
+    filled_order.order_notifier = OrderNotifier(trader.config, filled_order)
+    await _fill_order(filled_order, trader, ignore_open_orders=True)
+
+    open_orders = trader.get_order_manager().get_open_orders()
+    assert len(open_orders) == 3
+    assert all(o.get_status() == OrderStatus.OPEN for o in open_orders)
+    assert all(o.get_side() == TradeOrderSide.SELL for o in open_orders)
+    total_sell_quantity = sum(o.get_origin_quantity() for o in open_orders)
+    assert filled_order.get_origin_quantity()*0.9999 <= total_sell_quantity <= filled_order.get_origin_quantity()
+
+    price = filled_order.get_filled_price()
+    max_price = price * creator.PRICE_WEIGH_TO_PRICE_PERCENT[decider.DEFAULT_SELL_TARGET]
+    increment = (max_price - price) / decider.sell_orders_per_buy
+    assert round(open_orders[0].get_origin_price(), 7) == round(price + increment, 7)
+    assert round(open_orders[1].get_origin_price(), 7) == round(price + 2 * increment, 7)
+    assert round(open_orders[2].get_origin_price(), 7) == round(price + 3 * increment, 7)
+
+
+async def _fill_order(order, trader, trigger_price=None, order_update_callback=True, ignore_open_orders=False):
     if trigger_price is None:
         trigger_price = order.origin_price * 0.99 if order.side == TradeOrderSide.BUY else order.origin_price * 1.01
     recent_trades = [{"price": trigger_price, "timestamp": time.time()}]
@@ -411,6 +435,7 @@ async def _fill_order(order, trader, trigger_price=None, order_update_callback=T
     errors = []
     initial_len = len(trader.get_order_manager().get_open_orders())
     if await trader.get_order_manager()._update_order_status(order, errors):
-        assert len(trader.get_order_manager().get_open_orders()) == initial_len - 1
+        if not ignore_open_orders:
+            assert len(trader.get_order_manager().get_open_orders()) == initial_len - 1
         if order_update_callback:
             await trader.get_order_manager().trader.call_order_update_callback(order)
