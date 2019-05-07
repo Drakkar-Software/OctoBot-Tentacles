@@ -2,10 +2,11 @@
 OctoBot Tentacle
 
 $tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "requirements": [],
     "config_files": ["InstantRegulatedMarketEvaluator.json"]
 }
@@ -164,24 +165,28 @@ class InstantVolatilityEvaluator(RealTimeExchangeEvaluator):
         self.eval_note = 0
         # slowk --> fastest
         # slowd --> slowest
-        slowk, slowd = tulipy.stoch(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value],
-                                    self.last_candle_data[PriceIndexes.IND_PRICE_LOW.value],
-                                    self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value],
-                                    14,
-                                    3,
-                                    3)
+        pct_k_period = 14
+        pct_k_slowing_period = 3
+        pct_d_period = 3
+        if len(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value] > pct_k_period):
+            slowk, slowd = tulipy.stoch(self.last_candle_data[PriceIndexes.IND_PRICE_HIGH.value],
+                                        self.last_candle_data[PriceIndexes.IND_PRICE_LOW.value],
+                                        self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                        pct_k_period,
+                                        pct_k_slowing_period,
+                                        pct_d_period)
 
-        last_value = slowd[-1]
+            last_value = slowd[-1]
 
-        if last_value > self.STOCH_INSTABILITY_THRESHOLD:
-            self.eval_note = 1
+            if last_value > self.STOCH_INSTABILITY_THRESHOLD:
+                self.eval_note = 1
 
-        if last_value < self.STOCH_STABILITY_THRESHOLD:
-            self.eval_note = -1
+            if last_value < self.STOCH_STABILITY_THRESHOLD:
+                self.eval_note = -1
 
-        if self.last_eval_note != self.eval_note:
-            await self.notify_evaluator_task_managers(self.get_name())
-            self.last_eval_note = self.eval_note
+            if self.last_eval_note != self.eval_note:
+                await self.notify_evaluator_task_managers(self.get_name())
+                self.last_eval_note = self.eval_note
 
     def set_default_config(self):
         super().set_default_config()
@@ -208,29 +213,31 @@ class InstantMAEvaluator(RealTimeExchangeEvaluator):
 
     async def eval_impl(self):
         self.eval_note = 0
+        period = 6
         close_values = self.last_candle_data[PriceIndexes.IND_PRICE_CLOSE.value]
-        sma_values = tulipy.sma(close_values, 6)
+        if len(close_values) > period:
+            sma_values = tulipy.sma(close_values, period)
 
-        last_ma_value = sma_values[-1]
+            last_ma_value = sma_values[-1]
 
-        if last_ma_value == 0:
-            self.eval_note = 0
-        else:
-            last_price = close_values[-1]
-            current_ratio = last_price / last_ma_value
-            if current_ratio > 1:
-                # last_price > last_ma_value => sell ? => eval_note > 0
-                if current_ratio >= 2:
-                    self.eval_note = 1
-                else:
-                    self.eval_note = current_ratio - 1
-            elif current_ratio < 1:
-                # last_price < last_ma_value => buy ? => eval_note < 0
-                self.eval_note = -1 * (1 - current_ratio)
-            else:
+            if last_ma_value == 0:
                 self.eval_note = 0
+            else:
+                last_price = close_values[-1]
+                current_ratio = last_price / last_ma_value
+                if current_ratio > 1:
+                    # last_price > last_ma_value => sell ? => eval_note > 0
+                    if current_ratio >= 2:
+                        self.eval_note = 1
+                    else:
+                        self.eval_note = current_ratio - 1
+                elif current_ratio < 1:
+                    # last_price < last_ma_value => buy ? => eval_note < 0
+                    self.eval_note = -1 * (1 - current_ratio)
+                else:
+                    self.eval_note = 0
 
-        await self.notify_evaluator_task_managers(self.get_name())
+            await self.notify_evaluator_task_managers(self.get_name())
 
     def set_default_config(self):
         super().set_default_config()
