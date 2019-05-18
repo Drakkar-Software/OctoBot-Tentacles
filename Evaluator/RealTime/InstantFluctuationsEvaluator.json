@@ -1,0 +1,4 @@
+{
+    "price_difference_threshold_percent": 0.05,
+    "volume_difference_threshold_percent": 50
+}

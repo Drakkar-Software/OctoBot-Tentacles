@@ -2,13 +2,12 @@
 OctoBot Tentacle
 
 $tentacle_description: {
-    "package_name": "OctoBot-Tentacles",
     "name": "instant_fluctuations_evaluator",
     "type": "Evaluator",
     "subtype": "RealTime",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "requirements": [],
-    "config_files": ["InstantRegulatedMarketEvaluator.json"]
+    "config_files": ["InstantRegulatedMarketEvaluator.json", "InstantFluctuationsEvaluator.json"]
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
@@ -48,6 +47,9 @@ class InstantFluctuationsEvaluator(RealTimeExchangeEvaluator):
     DESCRIPTION = "Triggers when a change of price ( > 1%) or of volume ( > x4) from recent average happens." \
                   "The price distance from recent average is defining the evaluation."
 
+    PRICE_THRESHOLD_KEY = "price_difference_threshold_percent"
+    VOLUME_THRESHOLD_KEY = "volume_difference_threshold_percent"
+
     def __init__(self, exchange, symbol):
         super().__init__(exchange, symbol)
         self.something_is_happening = False
@@ -61,8 +63,9 @@ class InstantFluctuationsEvaluator(RealTimeExchangeEvaluator):
         self.last_volume = 0
 
         # Constants
-        self.VOLUME_HAPPENING_THRESHOLD = 4
-        self.PRICE_HAPPENING_THRESHOLD = 0.01
+        self.evaluator_config = self.get_specific_config()
+        self.VOLUME_HAPPENING_THRESHOLD = 1 + (self.evaluator_config[self.VOLUME_THRESHOLD_KEY] / 100)
+        self.PRICE_HAPPENING_THRESHOLD = self.evaluator_config[self.PRICE_THRESHOLD_KEY] / 100
         self.MIN_TRIGGERING_DELTA = 0.15
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
