@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.9",
+    "version": "1.1.10",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "config_schema_files": ["StaggeredOrdersTradingMode_schema.json"],
@@ -223,6 +223,14 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 f"trading mode config file. See Default/StaggeredOrdersTradingMode.json for a config example."
             self.logger.error(error_message)
             raise KeyError(error_message)
+        if self.symbol_trading_config is None:
+            configured_staggered_pairs = \
+                [c[self.trading_mode.CONFIG_PAIR]
+                 for c in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]]
+            self.logger.error(f"No staggered orders configuration for trading pair: {self.symbol}. Add this pair's "
+                              f"details into your staggered orders configuration or remove it from current traded "
+                              f"pairs. Configured staggered orders pairs are {', '.join(configured_staggered_pairs)}")
+            raise KeyError(self.symbol)
         mode = ""
         try:
             mode = self.symbol_trading_config[self.trading_mode.CONFIG_MODE]
