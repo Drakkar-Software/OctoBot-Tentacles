@@ -475,7 +475,7 @@ async def test_price_initially_out_of_range_2():
     }
     await final_evaluator.finalize()
     original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
-    assert len(original_orders) == 3
+    assert len(original_orders) == 2
     assert all(o.side == TradeOrderSide.BUY for o in original_orders)
     assert all(final_evaluator.highest_sell >= o.get_origin_price() >= final_evaluator.lowest_buy
                for o in original_orders)
@@ -496,7 +496,8 @@ async def test_price_going_out_of_range():
     final_evaluator.set_final_eval()
     existing_orders = trader_inst.get_open_orders(final_evaluator.symbol)
     sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders)
+    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders,
+                                                                                                        [])
     assert missing_orders is None
     assert candidate_flat_increment is None
     assert state == final_evaluator.ERROR
@@ -506,7 +507,8 @@ async def test_price_going_out_of_range():
     staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 0.1}
     existing_orders = trader_inst.get_open_orders(final_evaluator.symbol)
     sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders)
+    missing_orders, state, candidate_flat_increment = final_evaluator._analyse_current_orders_situation(sorted_orders,
+                                                                                                        [])
     assert missing_orders is None
     assert candidate_flat_increment is None
     assert state == final_evaluator.ERROR
@@ -537,6 +539,36 @@ async def test_start_after_offline_filled_orders():
     await final_evaluator.finalize()
     # restored orders
     assert len(trader_inst.get_order_manager().get_open_orders()) == final_evaluator.operational_depth
+    assert 0 <= portfolio["USD"][Portfolio.AVAILABLE] <= post_portfolio
+    assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
+
+
+async def test_health_check_during_filled_orders():
+    # first start: setup orders
+    final_evaluator, trader_inst, staggered_strategy_evaluator = await _get_tools()
+    portfolio = trader_inst.get_portfolio().get_portfolio()
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 100}
+    await final_evaluator.finalize()
+    original_orders = copy.copy(trader_inst.get_order_manager().get_open_orders())
+    assert len(original_orders) == final_evaluator.operational_depth
+    pre_portfolio = portfolio["USD"][Portfolio.AVAILABLE]
+
+    # offline simulation: orders get filled but not replaced => price got up to 110 and not down to 90, now is 96s
+    open_orders = trader_inst.get_order_manager().get_open_orders()
+    offline_filled = [o for o in open_orders if 90 <= o.get_origin_price() <= 110]
+    for order in offline_filled:
+        await _fill_order(order, trader_inst, order_update_callback=False, reset_recently_closed_orders=False)
+    post_portfolio = portfolio["USD"][Portfolio.AVAILABLE]
+    assert pre_portfolio < post_portfolio
+    assert len(trader_inst.get_order_manager().get_open_orders()) == \
+        final_evaluator.operational_depth - len(offline_filled)
+
+    # back online: restore orders according to current price
+    staggered_strategy_evaluator.eval_note = {ExchangeConstantsTickersInfoColumns.LAST_PRICE.value: 96}
+    await final_evaluator.finalize()
+    # did not restore orders: they are being closed and callback will proceed
+    assert len(trader_inst.get_order_manager().get_open_orders()) == \
+        final_evaluator.operational_depth - len(offline_filled)
     assert 0 <= portfolio["USD"][Portfolio.AVAILABLE] <= post_portfolio
     assert 0 <= portfolio["BTC"][Portfolio.AVAILABLE]
 
@@ -854,7 +886,7 @@ def _get_total_usd(trader, btc_price):
     return pf["USD"][Portfolio.TOTAL] + pf["BTC"][Portfolio.TOTAL] * btc_price
 
 
-async def _fill_order(order, trader, trigger_price=None, order_update_callback=True):
+async def _fill_order(order, trader, trigger_price=None, order_update_callback=True, reset_recently_closed_orders=True):
     if trigger_price is None:
         trigger_price = order.origin_price*0.99 if order.side == TradeOrderSide.BUY else order.origin_price*1.01
     recent_trades = [{"price": trigger_price, "timestamp": time.time()}]
@@ -865,6 +897,8 @@ async def _fill_order(order, trader, trigger_price=None, order_update_callback=T
         assert len(trader.get_order_manager().get_open_orders()) == initial_len - 1
         if order_update_callback:
             await trader.get_order_manager().trader.call_order_update_callback(order)
+    if reset_recently_closed_orders:
+        trader.get_order_manager().recently_closed_orders = []
 
 
 async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowest_buy=None, highest_sell=None,
