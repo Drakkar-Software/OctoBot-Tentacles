@@ -7,7 +7,8 @@ $tentacle_description: {
     "subtype": "RealTime",
     "version": "1.1.2",
     "requirements": [],
-    "config_files": ["InstantRegulatedMarketEvaluator.json", "InstantFluctuationsEvaluator.json"]
+    "config_files": ["InstantRegulatedMarketEvaluator.json", "InstantFluctuationsEvaluator.json"],
+    "config_schema_files": ["InstantFluctuationsEvaluator_schema.json"]
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
