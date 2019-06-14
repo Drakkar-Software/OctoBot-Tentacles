@@ -7,7 +7,8 @@ $tentacle_description: {
     "subtype": "Strategies",
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator"],
-    "config_files": ["SimpleMarketMakingStrategiesEvaluator.json"]
+    "config_files": ["SimpleMarketMakingStrategiesEvaluator.json"],
+    "developing": true
 }
 """
 
