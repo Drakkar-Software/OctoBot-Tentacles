@@ -7,7 +7,8 @@ $tentacle_description: {
     "subtype": "Strategies",
     "version": "1.1.0",
     "requirements": ["instant_fluctuations_evaluator"],
-    "config_files": ["MarketStabilityStrategiesEvaluator.json"]
+    "config_files": ["MarketStabilityStrategiesEvaluator.json"],
+    "developing": true
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
