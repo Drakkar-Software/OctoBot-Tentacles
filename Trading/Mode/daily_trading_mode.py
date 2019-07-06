@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
@@ -83,9 +83,17 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.MAX_QUANTITY_RATIO = 1
         self.MIN_QUANTITY_RATIO = 0.2
         self.DELTA_RATIO = self.MAX_QUANTITY_RATIO - self.MIN_QUANTITY_RATIO
+        # If USE_HOLDINGS_FOR_RATIO is True: orders quantity is computed using current holdings ratio, otherwise it
+        # is computed using the count of total traded assets
+        self.USE_HOLDINGS_FOR_RATIO = True
 
         self.SELL_MULTIPLIER = 5
         self.FULL_SELL_MIN_RATIO = 0.05
+
+        self.USE_CLOSE_TO_CURRENT_PRICE = False
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = 0.995
+        self.USE_MAXIMUM_SIZE_ORDERS = False
+        self.USE_STOP_ORDERS = True
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
@@ -96,6 +104,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     """
 
     def _get_limit_price_from_risk(self, eval_note, trader):
+        if self.USE_CLOSE_TO_CURRENT_PRICE:
+            return self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
         if eval_note > 0:
             factor = self.SELL_LIMIT_ORDER_MIN_PERCENT + \
                      ((1 - abs(eval_note) + 1 - trader.get_risk()) * self.LIMIT_ORDER_ATTENUATION)
@@ -132,6 +142,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     """
 
     def _get_buy_limit_quantity_from_risk(self, eval_note, trader, quantity, quote):
+        if self.USE_MAXIMUM_SIZE_ORDERS:
+            return quantity
         weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT
         # consider buy quantity like a sell if quote is the reference market
         if quote == trader.get_reference_market():
@@ -152,6 +164,8 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     """
 
     async def _get_sell_limit_quantity_from_risk(self, eval_note, trader, quantity, portfolio, quote):
+        if self.USE_MAXIMUM_SIZE_ORDERS:
+            return quantity
         weighted_risk = trader.get_risk() * self.QUANTITY_RISK_WEIGHT
         # consider sell quantity like a buy if base is the reference market
         if quote != trader.get_reference_market():
@@ -184,12 +198,16 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         return checked_factor * quantity
 
     async def _get_quantity_ratio(self, trader, portfolio, currency):
-        if self.get_number_of_traded_assets(trader) > 2:
-            ratio = await self.get_holdings_ratio(trader, portfolio, currency)
-            # returns a linear result between self.MIN_QUANTITY_RATIO and self.MAX_QUANTITY_RATIO: closer to
-            # self.MAX_QUANTITY_RATIO when holdings are lower in % and to self.MIN_QUANTITY_RATIO when holdings
-            # are higher in %
-            return 1 - min(ratio * self.DELTA_RATIO, 1)
+        traded_assets_count = self.get_number_of_traded_assets(trader)
+        if traded_assets_count > 2:
+            if self.USE_HOLDINGS_FOR_RATIO:
+                ratio = await self.get_holdings_ratio(trader, portfolio, currency)
+                # returns a linear result between self.MIN_QUANTITY_RATIO and self.MAX_QUANTITY_RATIO: closer to
+                # self.MAX_QUANTITY_RATIO when holdings are lower in % and to self.MIN_QUANTITY_RATIO when holdings
+                # are higher in %
+                return 1 - min(ratio * self.DELTA_RATIO, 1)
+            else:
+                return 1 / traded_assets_count
         else:
             return 1
 
@@ -232,7 +250,6 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                                                                    symbol_market, current_symbol_holding)
                 limit_price = self.adapt_price(symbol_market,
                                                price * self._get_limit_price_from_risk(eval_note, trader))
-                stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
                 for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(quantity,
                                                                                                    limit_price,
                                                                                                    symbol_market):
@@ -244,13 +261,15 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
                     updated_limit = await trader.create_order(current_order, portfolio)
                     created_orders.append(updated_limit)
 
-                    current_order = trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
-                                                                 symbol=symbol,
-                                                                 current_price=price,
-                                                                 quantity=order_quantity,
-                                                                 price=stop_price,
-                                                                 linked_to=updated_limit)
-                    await trader.create_order(current_order, portfolio)
+                    if self.USE_STOP_ORDERS:
+                        stop_price = self.adapt_price(symbol_market, price * self._get_stop_price_from_risk(trader))
+                        current_order = trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
+                                                                     symbol=symbol,
+                                                                     current_price=price,
+                                                                     quantity=order_quantity,
+                                                                     price=stop_price,
+                                                                     linked_to=updated_limit)
+                        await trader.create_order(current_order, portfolio)
                 return created_orders
 
             elif state == EvaluatorStates.NEUTRAL:

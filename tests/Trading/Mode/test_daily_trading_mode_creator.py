@@ -586,6 +586,51 @@ async def test_split_create_new_order():
         # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
 
 
+async def test_valid_create_new_order_without_stop_order():
+    config, exchange, trader, symbol = await _get_tools()
+
+    # change reference market to USDT
+    trader.get_trades_manager().reference_market = "USDT"
+
+    portfolio = trader.get_portfolio()
+    order_creator = DailyTradingModeCreator(None)
+
+    # force no stop orders
+    order_creator.USE_STOP_ORDERS = False
+
+    market_status = exchange.get_market_status(symbol)
+
+    # portfolio: "BTC": 10 "USD": 1000
+    last_btc_price = 6943.01
+
+    # valid sell limit order (price adapted)
+    orders = await order_creator.create_new_order(0.65, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
+    assert len(orders) == 1
+    order = orders[0]
+    assert isinstance(order, SellLimitOrder)
+    assert order.currency == "BTC"
+    assert order.symbol == "BTC/USDT"
+    assert order.origin_price == 6995.95045125
+    assert order.created_last_price == last_btc_price
+    assert order.order_type == TraderOrderType.SELL_LIMIT
+    assert order.side == TradeOrderSide.SELL
+    assert order.status == OrderStatus.OPEN
+    assert order.exchange == exchange
+    assert order.trader == trader
+    assert order.fee is None
+    assert order.market_total_fees == 0
+    assert order.filled_price == 0
+    assert order.origin_quantity == 7.6
+    assert order.filled_quantity == order.origin_quantity
+    assert order.is_simulated is True
+    assert order.linked_to is None
+
+    check_order_limits(order, market_status)
+
+    # assert no stop orders
+    assert len(order.linked_orders) == 0
+
+
 def _get_evaluations_gradient(step):
     nb_steps = 1/step
     return [i/nb_steps for i in range(int(-nb_steps), int(nb_steps+1), 1)]

@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "trend_analysis",
     "type": "Evaluator",
     "subtype": "Util",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "requirements": []
 }
 """
@@ -152,3 +152,12 @@ class TrendAnalysis(AbstractUtil):
             threshold_crossing_indexes.append(sub_threshold_indexes[-1]+1)
 
         return threshold_crossing_indexes
+
+    @staticmethod
+    def have_just_crossed_over(list_1, list_2):
+        # returns True if the last value of list_1 is higher than the last value of list_2 but the immediately
+        # preceding list_1 value is lower than the one from list_2
+        try:
+            return list_1[-1] > list_2[-1] and list_1[-2] < list_2[-2]
+        except KeyError:
+            return False
