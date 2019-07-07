@@ -91,7 +91,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.FULL_SELL_MIN_RATIO = 0.05
 
         self.USE_CLOSE_TO_CURRENT_PRICE = False
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = 0.995
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = 0.005
         self.USE_MAXIMUM_SIZE_ORDERS = False
         self.USE_STOP_ORDERS = True
 
@@ -104,17 +104,19 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
     """
 
     def _get_limit_price_from_risk(self, eval_note, trader):
-        if self.USE_CLOSE_TO_CURRENT_PRICE:
-            return self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
         if eval_note > 0:
+            if self.USE_CLOSE_TO_CURRENT_PRICE:
+                return 1 + self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
             factor = self.SELL_LIMIT_ORDER_MIN_PERCENT + \
-                     ((1 - abs(eval_note) + 1 - trader.get_risk()) * self.LIMIT_ORDER_ATTENUATION)
+                ((1 - abs(eval_note) + 1 - trader.get_risk()) * self.LIMIT_ORDER_ATTENUATION)
             return self.check_factor(self.SELL_LIMIT_ORDER_MIN_PERCENT,
                                      self.SELL_LIMIT_ORDER_MAX_PERCENT,
                                      factor)
         else:
+            if self.USE_CLOSE_TO_CURRENT_PRICE:
+                return 1 - self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
             factor = self.BUY_LIMIT_ORDER_MAX_PERCENT - \
-                     ((1 - abs(eval_note) + 1 - trader.get_risk()) * self.LIMIT_ORDER_ATTENUATION)
+                ((1 - abs(eval_note) + 1 - trader.get_risk()) * self.LIMIT_ORDER_ATTENUATION)
             return self.check_factor(self.BUY_LIMIT_ORDER_MIN_PERCENT,
                                      self.BUY_LIMIT_ORDER_MAX_PERCENT,
                                      factor)
