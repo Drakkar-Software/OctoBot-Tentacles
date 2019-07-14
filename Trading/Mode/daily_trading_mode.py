@@ -8,6 +8,7 @@ $tentacle_description: {
     "version": "1.1.5",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
+    "config_schema_files": ["DailyTradingMode_schema.json"],
     "tests":["test_daily_trading_mode_creator", "test_daily_trading_mode_decider"]
 }
 """
@@ -36,6 +37,7 @@ from trading.trader.modes.abstract_mode_creator import AbstractTradingModeCreato
 from trading.trader.modes.abstract_mode_decider import AbstractTradingModeDecider
 from trading.trader.modes.abstract_trading_mode import AbstractTradingMode
 from tools.symbol_util import split_symbol
+from tools.dict_util import get_value_or_default
 
 
 class DailyTradingMode(AbstractTradingMode):
@@ -90,10 +92,14 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.SELL_MULTIPLIER = 5
         self.FULL_SELL_MIN_RATIO = 0.05
 
-        self.USE_CLOSE_TO_CURRENT_PRICE = False
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = 0.005
-        self.USE_MAXIMUM_SIZE_ORDERS = False
-        self.USE_STOP_ORDERS = True
+        self.USE_CLOSE_TO_CURRENT_PRICE = \
+            get_value_or_default(self.trading_mode.trading_config, "use_prices_close_to_current_price", False)
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = \
+            get_value_or_default(self.trading_mode.trading_config, "close_to_current_price_difference", 0.005)
+        self.USE_MAXIMUM_SIZE_ORDERS =  \
+            get_value_or_default(self.trading_mode.trading_config, "use_maximum_size_orders", False)
+        self.USE_STOP_ORDERS =  \
+            get_value_or_default(self.trading_mode.trading_config, "use_stop_orders", True)
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
