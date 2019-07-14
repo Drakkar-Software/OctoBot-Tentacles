@@ -5,9 +5,10 @@ $tentacle_description: {
     "name": "signal_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "requirements": ["move_signals_strategy_evaluator", "daily_trading_mode"],
-    "config_files": ["SignalTradingMode.json"]
+    "config_files": ["SignalTradingMode.json"],
+    "config_schema_files": ["SignalTradingMode_schema.json"]
 }
 """
 #  Drakkar-Software OctoBot-Tentacles
