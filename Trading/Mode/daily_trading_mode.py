@@ -48,6 +48,10 @@ class DailyTradingMode(AbstractTradingMode):
                   "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
                   "each state."
 
+    def __init__(self, config, exchange):
+        super().__init__(config, exchange)
+        self.load_config()
+
     def create_deciders(self, symbol, symbol_evaluator):
         self.add_decider(symbol, DailyTradingModeDecider(self, symbol_evaluator, self.exchange))
 
@@ -93,13 +97,15 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.FULL_SELL_MIN_RATIO = 0.05
 
         self.USE_CLOSE_TO_CURRENT_PRICE = \
-            get_value_or_default(self.trading_mode.trading_config, "use_prices_close_to_current_price", False)
+            get_value_or_default(self.trading_mode.trading_config, "use_prices_close_to_current_price", False,
+                                 strict=True)
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = \
-            get_value_or_default(self.trading_mode.trading_config, "close_to_current_price_difference", 0.005)
+            get_value_or_default(self.trading_mode.trading_config, "close_to_current_price_difference", 0.005,
+                                 strict=True)
         self.USE_MAXIMUM_SIZE_ORDERS =  \
-            get_value_or_default(self.trading_mode.trading_config, "use_maximum_size_orders", False)
+            get_value_or_default(self.trading_mode.trading_config, "use_maximum_size_orders", False, strict=True)
         self.USE_STOP_ORDERS =  \
-            get_value_or_default(self.trading_mode.trading_config, "use_stop_orders", True)
+            get_value_or_default(self.trading_mode.trading_config, "use_stop_orders", True, strict=True)
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
