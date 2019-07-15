@@ -96,16 +96,16 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.SELL_MULTIPLIER = 5
         self.FULL_SELL_MIN_RATIO = 0.05
 
+        trading_config = self.trading_mode.trading_config if self.trading_mode else {}
+
         self.USE_CLOSE_TO_CURRENT_PRICE = \
-            get_value_or_default(self.trading_mode.trading_config, "use_prices_close_to_current_price", False,
-                                 strict=True)
+            get_value_or_default(trading_config, "use_prices_close_to_current_price", False, strict=True)
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = \
-            get_value_or_default(self.trading_mode.trading_config, "close_to_current_price_difference", 0.005,
-                                 strict=True)
+            get_value_or_default(trading_config, "close_to_current_price_difference", 0.005, strict=True)
         self.USE_MAXIMUM_SIZE_ORDERS =  \
-            get_value_or_default(self.trading_mode.trading_config, "use_maximum_size_orders", False, strict=True)
+            get_value_or_default(trading_config, "use_maximum_size_orders", False, strict=True)
         self.USE_STOP_ORDERS =  \
-            get_value_or_default(self.trading_mode.trading_config, "use_stop_orders", True, strict=True)
+            get_value_or_default(trading_config, "use_stop_orders", True, strict=True)
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
