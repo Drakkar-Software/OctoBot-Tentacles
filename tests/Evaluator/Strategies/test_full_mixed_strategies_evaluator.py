@@ -36,28 +36,44 @@ class TestFullMixedStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_default_run(strategy_tester):
-        await strategy_tester.run_test_default_run(-6.5)
+        # market: -13.325377883850436
+        await strategy_tester.run_test_default_run(-6)
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        await strategy_tester.run_test_slow_downtrend(-6.5, -4, -14, -7.5)
+        # market: -13.325377883850436
+        # market: -13.737528779739065
+        # market: -29.04611614724287
+        # market: -28.89908256880733
+        await strategy_tester.run_test_slow_downtrend(-6, -4.6, -18, -11.5)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
-        await strategy_tester.run_test_sharp_downtrend(-11, -17.5)
+        # market: -20.281292481438868
+        # market: -31.28953771289538
+        await strategy_tester.run_test_sharp_downtrend(-12.9, -21.7)
 
     @staticmethod
     async def test_flat_markets(strategy_tester):
-        await strategy_tester.run_test_flat_markets(-1.5, 1, 1.5, 26.5)
+        # market: -11.246861924686186
+        # market: -5.834160873882809
+        # market: -9.92366412213741
+        # market: -4.723991507431009
+        await strategy_tester.run_test_flat_markets(-1, 0.4, -9, 26.1)
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        await strategy_tester.run_test_slow_uptrend(7, -2)
+        # market: 14.688152888099395
+        # market: 10.797424467558201
+        await strategy_tester.run_test_slow_uptrend(7.5, -1.4)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
-        await strategy_tester.run_test_sharp_uptrend(5, 4)
+        # market: 35.989104528430374
+        # market: 16.12679315131882
+        await strategy_tester.run_test_sharp_uptrend(3.7, 0.9)
 
     @staticmethod
     async def test_up_then_down(strategy_tester):
-        await strategy_tester.run_test_up_then_down(-10)
+        # market: -9.085623368955268
+        await strategy_tester.run_test_up_then_down(-8.5)
