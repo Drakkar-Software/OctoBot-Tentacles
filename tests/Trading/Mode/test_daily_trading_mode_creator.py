@@ -156,7 +156,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     market_status = exchange.get_market_status(symbol)
 
     # portfolio: "BTC": 10 "USD": 1000
-    last_btc_price = 6943.01
+    last_btc_price = 7009.194999999998
 
     # order from neutral state
     assert await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
@@ -177,7 +177,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert isinstance(order, SellLimitOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6995.95045125
+    assert order.origin_price == 7062.64011187
     assert order.created_last_price == last_btc_price
     assert order.order_type == TraderOrderType.SELL_LIMIT
     assert order.side == TradeOrderSide.SELL
@@ -195,7 +195,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     check_order_limits(order, market_status)
 
     assert len(order.linked_orders) == 1
-    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
+    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await order_creator.create_new_order(-0.65, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
@@ -204,7 +204,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert isinstance(order, BuyLimitOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6890.06954875
+    assert order.origin_price == 6955.74988812
     assert order.created_last_price == last_btc_price
     assert order.order_type == TraderOrderType.BUY_LIMIT
     assert order.side == TradeOrderSide.BUY
@@ -214,7 +214,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.12674618
+    assert order.origin_quantity == 0.12554936
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -223,6 +223,8 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
 
     # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
+    truncated_last_price = order_creator._trunc_with_n_decimal_digits(last_btc_price, 8)
+
     # valid buy market order with (price and quantity adapted)
     orders = await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_LONG)
     assert len(orders) == 1
@@ -230,8 +232,8 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert isinstance(order, BuyMarketOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == last_btc_price
-    assert order.created_last_price == last_btc_price
+    assert order.origin_price == truncated_last_price
+    assert order.created_last_price == truncated_last_price
     assert order.order_type == TraderOrderType.BUY_MARKET
     assert order.side == TradeOrderSide.BUY
     assert order.status == OrderStatus.OPEN
@@ -240,7 +242,7 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.11684142
+    assert order.origin_quantity == 0.11573814
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -254,8 +256,8 @@ async def test_valid_create_new_order_no_ref_market_as_quote():
     assert isinstance(order, SellMarketOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == last_btc_price
-    assert order.created_last_price == last_btc_price
+    assert order.origin_price == truncated_last_price
+    assert order.created_last_price == truncated_last_price
     assert order.order_type == TraderOrderType.SELL_MARKET
     assert order.side == TradeOrderSide.SELL
     assert order.status == OrderStatus.OPEN
@@ -280,7 +282,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     market_status = exchange.get_market_status(symbol)
 
     # portfolio: "BTC": 10 "USD": 1000
-    last_btc_price = 6943.01
+    last_btc_price = 7009.194999999998
 
     # order from neutral state
     assert await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.NEUTRAL) \
@@ -301,7 +303,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert isinstance(order, SellLimitOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6995.95045125
+    assert order.origin_price == 7062.64011187
     assert order.created_last_price == last_btc_price
     assert order.order_type == TraderOrderType.SELL_LIMIT
     assert order.side == TradeOrderSide.SELL
@@ -319,7 +321,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     check_order_limits(order, market_status)
 
     assert len(order.linked_orders) == 1
-    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
+    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await order_creator.create_new_order(-0.65, symbol, exchange, trader, portfolio, EvaluatorStates.LONG)
@@ -328,7 +330,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert isinstance(order, BuyLimitOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6890.06954875
+    assert order.origin_price == 6955.74988812
     assert order.created_last_price == last_btc_price
     assert order.order_type == TraderOrderType.BUY_LIMIT
     assert order.side == TradeOrderSide.BUY
@@ -338,7 +340,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.21892522
+    assert order.origin_quantity == 0.21685799
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -347,6 +349,8 @@ async def test_valid_create_new_order_ref_market_as_quote():
 
     # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
+    truncated_last_price = order_creator._trunc_with_n_decimal_digits(last_btc_price, 8)
+
     # valid buy market order with (price and quantity adapted)
     orders = await order_creator.create_new_order(-1, symbol, exchange, trader, portfolio, EvaluatorStates.VERY_LONG)
     assert len(orders) == 1
@@ -354,8 +358,8 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert isinstance(order, BuyMarketOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == last_btc_price
-    assert order.created_last_price == last_btc_price
+    assert order.origin_price == truncated_last_price
+    assert order.created_last_price == truncated_last_price
     assert order.order_type == TraderOrderType.BUY_MARKET
     assert order.side == TradeOrderSide.BUY
     assert order.status == OrderStatus.OPEN
@@ -364,7 +368,7 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert order.fee is None
     assert order.market_total_fees == 0
     assert order.filled_price == 0
-    assert order.origin_quantity == 0.07080358
+    assert order.origin_quantity == 0.07013502
     assert order.filled_quantity == order.origin_quantity
     assert order.is_simulated is True
     assert order.linked_to is None
@@ -378,8 +382,8 @@ async def test_valid_create_new_order_ref_market_as_quote():
     assert isinstance(order, SellMarketOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == last_btc_price
-    assert order.created_last_price == last_btc_price
+    assert order.origin_price == truncated_last_price
+    assert order.created_last_price == truncated_last_price
     assert order.order_type == TraderOrderType.SELL_MARKET
     assert order.side == TradeOrderSide.SELL
     assert order.status == OrderStatus.OPEN
@@ -465,7 +469,7 @@ async def test_split_create_new_order():
     trader.get_trades_manager().reference_market = "USDT"
 
     order_creator = DailyTradingModeCreator(None)
-    last_btc_price = 6943.01
+    last_btc_price = 7009.194999999998
 
     market_status = exchange.get_market_status(symbol)
     trader.portfolio.portfolio["BTC"] = {
@@ -481,7 +485,7 @@ async def test_split_create_new_order():
     assert isinstance(adapted_order, SellLimitOrder)
     assert adapted_order.currency == "BTC"
     assert adapted_order.symbol == "BTC/USDT"
-    assert adapted_order.origin_price == 6998.55407999
+    assert adapted_order.origin_price == 7065.26855999
     assert adapted_order.created_last_price == last_btc_price
     assert adapted_order.order_type == TraderOrderType.SELL_LIMIT
     assert adapted_order.side == TradeOrderSide.SELL
@@ -491,7 +495,7 @@ async def test_split_create_new_order():
     assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 51133425.486746
+    assert adapted_order.origin_quantity == 64625635.97358092
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.is_simulated is True
     assert adapted_order.linked_to is None
@@ -500,7 +504,7 @@ async def test_split_create_new_order():
 
     assert len(adapted_order.linked_orders) == 1
     check_linked_order(adapted_order, adapted_order.linked_orders[0],
-                       TraderOrderType.STOP_LOSS, 6595.8595, market_status)
+                       TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     for order in identical_orders:
         assert isinstance(order, SellLimitOrder)
@@ -516,7 +520,7 @@ async def test_split_create_new_order():
         assert order.fee == adapted_order.fee
         assert order.market_total_fees == adapted_order.market_total_fees
         assert order.filled_price == adapted_order.filled_price
-        assert order.origin_quantity == 142886657.52532542
+        assert order.origin_quantity == 141537436.47664192
         assert order.origin_quantity > adapted_order.origin_quantity
         assert order.filled_quantity > adapted_order.filled_quantity
         assert order.is_simulated == adapted_order.is_simulated
@@ -524,7 +528,7 @@ async def test_split_create_new_order():
         assert len(order.linked_orders) == 1
 
         check_order_limits(order, market_status)
-        check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6595.8595, market_status)
+        check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     trader.portfolio.portfolio["USDT"] = {
         Portfolio.TOTAL: 40000000000,
@@ -542,8 +546,8 @@ async def test_split_create_new_order():
     assert isinstance(adapted_order, BuyLimitOrder)
     assert adapted_order.currency == "BTC"
     assert adapted_order.symbol == "BTC/USDT"
-    assert adapted_order.origin_price == 0.00688746
-    assert adapted_order.created_last_price == 0.0069430099999999995
+    assert adapted_order.origin_price == 0.00695312
+    assert adapted_order.created_last_price == 0.0070091949999999984
     assert adapted_order.order_type == TraderOrderType.BUY_LIMIT
     assert adapted_order.side == TradeOrderSide.BUY
     assert adapted_order.status == OrderStatus.OPEN
@@ -552,7 +556,7 @@ async def test_split_create_new_order():
     assert adapted_order.fee is None
     assert adapted_order.market_total_fees == 0
     assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 419699813193.4136
+    assert adapted_order.origin_quantity == 396851564266.65326
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.is_simulated is True
     assert adapted_order.linked_to is None
@@ -601,7 +605,7 @@ async def test_valid_create_new_order_without_stop_order():
     market_status = exchange.get_market_status(symbol)
 
     # portfolio: "BTC": 10 "USD": 1000
-    last_btc_price = 6943.01
+    last_btc_price = 7009.194999999998
 
     # valid sell limit order (price adapted)
     orders = await order_creator.create_new_order(0.65, symbol, exchange, trader, portfolio, EvaluatorStates.SHORT)
@@ -610,7 +614,7 @@ async def test_valid_create_new_order_without_stop_order():
     assert isinstance(order, SellLimitOrder)
     assert order.currency == "BTC"
     assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6995.95045125
+    assert order.origin_price == 7062.64011187
     assert order.created_last_price == last_btc_price
     assert order.order_type == TraderOrderType.SELL_LIMIT
     assert order.side == TradeOrderSide.SELL
