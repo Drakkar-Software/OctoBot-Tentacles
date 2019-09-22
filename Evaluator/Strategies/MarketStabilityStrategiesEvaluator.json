@@ -1,4 +1,0 @@
-{
-  "required_time_frames" : ["5m"],
-  "required_evaluators" : ["InstantVolatilityEvaluator"]
-}

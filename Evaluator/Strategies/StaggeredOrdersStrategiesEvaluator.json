@@ -1,4 +1,0 @@
-{
-  "required_time_frames" : [],
-  "required_evaluators" : ["PeriodicPriceTickerEvaluator"]
-}
