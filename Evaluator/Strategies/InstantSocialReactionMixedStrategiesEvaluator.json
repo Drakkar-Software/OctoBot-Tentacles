@@ -1,4 +1,0 @@
-{
-  "required_time_frames" : ["15m", "30m"],
-  "required_evaluators" : ["InstantFluctuationsEvaluator", "MediumNewsEvaluator", "RedditForumEvaluator"]
-}
