@@ -51,6 +51,7 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                               evaluator_name,
                               evaluator_type,
                               eval_note,
+                              eval_note_type,
                               exchange_name,
                               symbol,
                               time_frame):
