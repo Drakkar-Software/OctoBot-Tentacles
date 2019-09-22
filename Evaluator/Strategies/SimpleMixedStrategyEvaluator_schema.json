@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "title": "FullMixedStrategiesEvaluator",
+  "title": "SimpleMixedStrategiesEvaluator",
   "properties": {
     "required_time_frames": {
         "type": "array",

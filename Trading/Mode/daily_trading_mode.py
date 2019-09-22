@@ -28,6 +28,7 @@ $tentacle_description: {
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import random
 
 from ccxt import InsufficientFunds
 from octobot_commons.constants import INIT_EVAL_NOTE
@@ -201,7 +202,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             return 1
 
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
-    async def perform(self, trading_mode_name, symbol, final_note, state, is_wildcard=False):
+    async def internal_callback(self, trading_mode_name, symbol, final_note, state):
         current_order = None
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
@@ -312,6 +313,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
 
     async def set_final_eval(self, symbol):
         strategies_analysis_note_counter = 0
+        self.final_eval = random.randint(-1, 1)  # temp
         # Strategies analysis
         # for evaluated_strategies in self.symbol_evaluator.get_strategies_eval_list(self.exchange_manager):
         #     strategy_eval = evaluated_strategies.get_eval_note()
@@ -325,11 +327,11 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         #     self.final_eval = INIT_EVAL_NOTE
         await self.create_state(symbol=symbol)
 
-    async def submit_trading_evaluation(self, symbol=None, final_note=INIT_EVAL_NOTE, state=EvaluatorStates.NEUTRAL):
-        await super().send_with_wildcard(trading_mode_name=self.trading_mode.get_name(),
-                                         symbol=symbol,
-                                         final_note=final_note,
-                                         state=state)
+    async def submit_trading_evaluation(self, symbol, final_note=INIT_EVAL_NOTE, state=EvaluatorStates.NEUTRAL):
+        await self.send(trading_mode_name=self.trading_mode.get_name(),
+                        symbol=symbol,
+                        final_note=final_note,
+                        state=state)
 
     def __get_delta_risk(self):
         return self.RISK_THRESHOLD * self.exchange_manager.trader.risk
@@ -353,7 +355,6 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         return True
 
     async def __set_state(self, symbol, new_state):
-        new_state = EvaluatorStates.VERY_SHORT  # TODO test
         if new_state != self.state:
             # previous_state = self.state
             self.state = new_state
