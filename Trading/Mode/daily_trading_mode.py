@@ -32,7 +32,9 @@ import random
 
 from ccxt import InsufficientFunds
 from octobot_commons.constants import INIT_EVAL_NOTE
+from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
+from octobot_evaluators.data.matrix import EvaluatorMatrix
 
 from octobot_trading.channels import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
@@ -103,7 +105,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     self.QUANTITY_ATTENUATION --> try to contains the result between self.XXX_MIN_PERCENT and self.XXX_MAX_PERCENT
     """
 
-    def _get_limit_price_from_risk(self, eval_note):
+    def __get_limit_price_from_risk(self, eval_note):
         if eval_note > 0:
             factor = self.SELL_LIMIT_ORDER_MIN_PERCENT + \
                      ((1 - abs(eval_note) + 1 - self.trader.risk) * self.LIMIT_ORDER_ATTENUATION)
@@ -124,7 +126,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     and self.STOP_LOSS_ORDER_MAX_PERCENT
     """
 
-    def _get_stop_price_from_risk(self):
+    def __get_stop_price_from_risk(self):
         factor = self.STOP_LOSS_ORDER_MAX_PERCENT - (self.trader.risk * self.STOP_LOSS_ORDER_ATTENUATION)
         return check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT,
                             self.STOP_LOSS_ORDER_MAX_PERCENT,
@@ -139,10 +141,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     and self.QUANTITY_MAX_PERCENT
     """
 
-    def _get_buy_limit_quantity_from_risk(self, eval_note, quantity, quote):
+    def __get_buy_limit_quantity_from_risk(self, eval_note, quantity, quote):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider buy quantity like a sell if quote is the reference market
-        if quote == self.trader.get_reference_market():
+        if quote == self.exchange_portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
         checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
@@ -159,10 +161,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     and self.QUANTITY_MAX_PERCENT
     """
 
-    async def _get_sell_limit_quantity_from_risk(self, eval_note, quantity, quote):
+    async def __get_sell_limit_quantity_from_risk(self, eval_note, quantity, quote):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider sell quantity like a buy if base is the reference market
-        if quote != self.trader.get_reference_market():
+        if quote != self.exchange_portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
         if await self.get_holdings_ratio(quote) < self.FULL_SELL_MIN_RATIO:
             return quantity
@@ -180,10 +182,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     and self.QUANTITY_MARKET_MAX_PERCENT
     """
 
-    def _get_market_quantity_from_risk(self, eval_note, quantity, quote, selling=False):
+    def __get_market_quantity_from_risk(self, eval_note, quantity, quote, selling=False):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
-        ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-        if (selling and quote != ref_market) or (not selling and quote == ref_market):
+        if (selling and quote != self.exchange_portfolio_manager.reference_market) \
+                or (not selling and quote == self.exchange_portfolio_manager.reference_market):
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MARKET_MIN_PERCENT + (
                 (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION)
@@ -191,7 +193,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         checked_factor = check_factor(self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor)
         return checked_factor * quantity
 
-    async def _get_quantity_ratio(self, currency):
+    async def __get_quantity_ratio(self, currency):
         if self.get_number_of_traded_assets() > 2:
             ratio = await self.get_holdings_ratio(currency)
             # returns a linear result between self.MIN_QUANTITY_RATIO and self.MAX_QUANTITY_RATIO: closer to
@@ -212,7 +214,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             created_orders = []
 
             if state == EvaluatorStates.VERY_SHORT:
-                quantity = self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
+                quantity = self.__get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
                 quantity = add_dusts_to_quantity_if_necessary(quantity, price, symbol_market, current_symbol_holding)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                               symbol_market):
@@ -226,10 +228,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 return created_orders
 
             elif state == EvaluatorStates.SHORT:
-                quantity = await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
+                quantity = await self.__get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
                 quantity = add_dusts_to_quantity_if_necessary(quantity, price, symbol_market, current_symbol_holding)
-                limit_price = adapt_price(symbol_market, price * self._get_limit_price_from_risk(final_note))
-                stop_price = adapt_price(symbol_market, price * self._get_stop_price_from_risk())
+                limit_price = adapt_price(symbol_market, price * self.__get_limit_price_from_risk(final_note))
+                stop_price = adapt_price(symbol_market, price * self.__get_stop_price_from_risk())
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity,
                                                                                               limit_price,
                                                                                               symbol_market):
@@ -255,9 +257,9 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
             # TODO : stop loss
             elif state == EvaluatorStates.LONG:
-                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
-                quantity = quantity * await self._get_quantity_ratio(quote)
-                limit_price = adapt_price(symbol_market, price * self._get_limit_price_from_risk(final_note))
+                quantity = self.__get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
+                quantity = quantity * await self.__get_quantity_ratio(quote)
+                limit_price = adapt_price(symbol_market, price * self.__get_limit_price_from_risk(final_note))
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity,
                                                                                               limit_price,
                                                                                               symbol_market):
@@ -271,8 +273,8 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 return created_orders
 
             elif state == EvaluatorStates.VERY_LONG:
-                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
-                quantity = quantity * await self._get_quantity_ratio(quote)
+                quantity = self.__get_market_quantity_from_risk(final_note, market_quantity, quote)
+                quantity = quantity * await self.__get_quantity_ratio(quote)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                               symbol_market):
                     current_order = self.trader.create_order_instance(order_type=TraderOrderType.BUY_MARKET,
@@ -311,20 +313,30 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         self.SHORT_THRESHOLD = 0.85
         self.RISK_THRESHOLD = 0.2
 
-    async def set_final_eval(self, symbol):
+    async def set_final_eval(self, symbol, time_frame):
+        if time_frame is None:
+            # Do nothing, requires a time frame
+            return
+
         strategies_analysis_note_counter = 0
-        self.final_eval = random.randint(-1, 1)  # temp
+
         # Strategies analysis
-        # for evaluated_strategies in self.symbol_evaluator.get_strategies_eval_list(self.exchange_manager):
-        #     strategy_eval = evaluated_strategies.get_eval_note()
-        #     if check_valid_eval_note(strategy_eval):
-        #         self.final_eval += strategy_eval * evaluated_strategies.get_pertinence()
-        #         strategies_analysis_note_counter += evaluated_strategies.get_pertinence()
-        #
-        # if strategies_analysis_note_counter > 0:
-        #     self.final_eval /= strategies_analysis_note_counter
-        # else:
-        #     self.final_eval = INIT_EVAL_NOTE
+        for evaluated_strategy_names in EvaluatorMatrix.instance() \
+                .get_evaluators_name_from_symbol_exchange_and_time_frame(symbol,
+                                                                         self.exchange_name,
+                                                                         time_frame):
+            strategy_eval = EvaluatorMatrix.instance().get_eval_note(evaluated_strategy_names,
+                                                                     exchange_name=self.exchange_name,
+                                                                     symbol=symbol,
+                                                                     time_frame=time_frame)
+            if check_valid_eval_note(strategy_eval):
+                self.final_eval += strategy_eval  # TODO * evaluated_strategies.get_pertinence()
+                strategies_analysis_note_counter += 1  # TODO evaluated_strategies.get_pertinence()
+
+        if strategies_analysis_note_counter > 0:
+            self.final_eval /= strategies_analysis_note_counter
+        else:
+            self.final_eval = INIT_EVAL_NOTE
         await self.create_state(symbol=symbol)
 
     async def submit_trading_evaluation(self, symbol, final_note=INIT_EVAL_NOTE, state=EvaluatorStates.NEUTRAL):
