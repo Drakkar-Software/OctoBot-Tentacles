@@ -1,0 +1,15 @@
+{
+    "required_time_frames": [
+        "1m",
+        "1h",
+        "4h",
+        "1d"
+    ],
+    "required_evaluators": [
+        "*"
+    ],
+    "default_config": [
+        "DoubleMovingAverageTrendEvaluator",
+        "RSIMomentumEvaluator"
+    ]
+}
