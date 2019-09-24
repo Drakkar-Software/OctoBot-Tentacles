@@ -67,8 +67,8 @@ class ExchangeHistoryDataCollector(ExchangeDataCollector):
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         candles: list = await self.exchange.get_symbol_prices(symbol, time_frame)
-        self.save_ohlcv(exchange=exchange, symbol=symbol, time_frame=time_frame, candle=candles,
-                        timestamp=[candle[0] for candle in candles], multiple=True)
+        await self.save_ohlcv(exchange=exchange, symbol=symbol, time_frame=time_frame, candle=candles,
+                              timestamp=[candle[0] for candle in candles], multiple=True)
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
