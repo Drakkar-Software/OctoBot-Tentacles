@@ -40,7 +40,7 @@ from octobot_trading.channels import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
 from octobot_trading.enums import EvaluatorStates, TraderOrderType
-from octobot_trading.modes import AbstractTradingMode
+from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.modes.trading_mode_orders import check_factor, add_dusts_to_quantity_if_necessary, \
     check_and_adapt_order_details_if_necessary, adapt_price
 from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
