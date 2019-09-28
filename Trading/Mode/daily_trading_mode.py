@@ -374,7 +374,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not EvaluatorStates.NEUTRAL:
                 # cancel open orders
-                await self.cancel_symbol_open_orders(symbol=symbol)
+                await self.cancel_symbol_open_orders(symbol)
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(symbol=symbol, final_note=self.final_eval, state=self.state)
