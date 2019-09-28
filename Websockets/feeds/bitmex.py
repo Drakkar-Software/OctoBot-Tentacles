@@ -26,10 +26,11 @@ from datetime import datetime as dt
 from enum import Enum
 
 from ccxt.async_support import bitmex
+
+from octobot_commons.constants import MSECONDS_TO_MINUTE, MSECONDS_TO_SECONDS
 from octobot_commons.enums import TimeFramesMinutes, TimeFrames
 
-from octobot_websockets.constants import BUY, SELL, MSECONDS_TO_MINUTE, \
-    MSECONDS_TO_SECONDS, Feeds
+from octobot_websockets.constants import BUY, SELL, Feeds
 from octobot_websockets.data.book import Book
 from octobot_websockets.feeds.feed import Feed
 from octobot_websockets.constructors.candle_constructor import CandleConstructor
