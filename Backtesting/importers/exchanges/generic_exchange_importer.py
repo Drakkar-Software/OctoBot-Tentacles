@@ -16,5 +16,5 @@
 from octobot_backtesting.importers.exchanges.exchange_importer import ExchangeDataImporter
 
 
-class CcxtExchangeDataImporter(ExchangeDataImporter):
+class GenericExchangeDataImporter(ExchangeDataImporter):
     pass

@@ -19,7 +19,7 @@ import time
 
 from octobot_backtesting.collectors.exchanges.exchange_collector import ExchangeDataCollector
 from octobot_commons.channels_name import OctoBotTradingChannelsName
-from tentacles.Backtesting.importers.exchanges.ccxt_exchange_importer import CcxtExchangeDataImporter
+from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
 try:
     from octobot_trading.channels.exchange_channel import get_chan
@@ -29,7 +29,7 @@ except ImportError:
 
 
 class ExchangeLiveDataCollector(ExchangeDataCollector):
-    IMPORTER = CcxtExchangeDataImporter
+    IMPORTER = GenericExchangeDataImporter
 
     async def start(self):
         exchange_factory = create_new_exchange(self.config, self.exchange_name, is_simulated=True, is_rest_only=True,

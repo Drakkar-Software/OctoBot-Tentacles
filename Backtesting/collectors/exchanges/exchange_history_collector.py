@@ -16,7 +16,7 @@
 import logging
 
 from octobot_backtesting.collectors.exchanges.exchange_collector import ExchangeDataCollector
-from tentacles.Backtesting.importers.exchanges.ccxt_exchange_importer import CcxtExchangeDataImporter
+from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
 try:
     from octobot_trading.api.exchange import create_new_exchange
@@ -25,7 +25,7 @@ except ImportError:
 
 
 class ExchangeHistoryDataCollector(ExchangeDataCollector):
-    IMPORTER = CcxtExchangeDataImporter
+    IMPORTER = GenericExchangeDataImporter
 
     def __init__(self, config, exchange_name, symbols, time_frames):
         super().__init__(config, exchange_name, symbols, time_frames)
