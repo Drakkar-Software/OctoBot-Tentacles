@@ -16,5 +16,5 @@
 #  License along with this library.
 from octobot_backtesting.importers.exchanges.exchange_importer cimport ExchangeDataImporter
 
-cdef class CcxtExchangeDataImporter(ExchangeDataImporter):
+cdef class GenericExchangeDataImporter(ExchangeDataImporter):
     pass
