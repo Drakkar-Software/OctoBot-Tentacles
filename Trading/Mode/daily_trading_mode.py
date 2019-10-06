@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "daily_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "requirements": ["mixed_strategies_evaluator"],
     "config_files": ["DailyTradingMode.json"],
     "config_schema_files": ["DailyTradingMode_schema.json"],
@@ -101,7 +101,7 @@ class DailyTradingModeCreator(AbstractTradingModeCreator):
         self.USE_CLOSE_TO_CURRENT_PRICE = \
             get_value_or_default(trading_config, "use_prices_close_to_current_price", False, strict=True)
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = \
-            get_value_or_default(trading_config, "close_to_current_price_difference", 0.005, strict=True)
+            get_value_or_default(trading_config, "close_to_current_price_difference", 0.02, strict=True)
         self.USE_MAXIMUM_SIZE_ORDERS =  \
             get_value_or_default(trading_config, "use_maximum_size_orders", False, strict=True)
         self.USE_STOP_ORDERS =  \
