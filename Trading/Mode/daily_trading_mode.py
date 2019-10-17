@@ -34,9 +34,8 @@ from ccxt import InsufficientFunds
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
-from octobot_evaluators.data.matrix import EvaluatorMatrix
 
-from octobot_trading.channels import MODE_CHANNEL
+from octobot_trading.constants import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
 from octobot_trading.enums import EvaluatorStates, TraderOrderType
@@ -317,6 +316,12 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
             return
 
         strategies_analysis_note_counter = 0
+
+        try:
+            from octobot_evaluators.data.matrix import EvaluatorMatrix
+        except ImportError:
+            self.logger.error("octobot_evaluators.data.matrix.EvaluatorMatrix cannot be imported")
+            return
 
         # Strategies analysis
         for evaluated_strategy_names in EvaluatorMatrix.instance() \
