@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.10",
+    "version": "1.1.11",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "config_schema_files": ["StaggeredOrdersTradingMode_schema.json"],
@@ -327,13 +327,15 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                                                                                  recently_closed_orders)
         if self.flat_increment is None and candidate_flat_increment is not None:
             self.flat_increment = candidate_flat_increment
+        elif self.flat_increment is None:
+            self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market,
+                                                                         current_price * self.increment)
         if self.flat_spread is None and self.flat_increment is not None:
             self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
                                                                       self.spread * self.flat_increment / self.increment
                                                                       )
 
-        if self.flat_increment:
-            self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market, self.flat_increment)
+        self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market, self.flat_increment)
 
         buy_high = min(current_price, self.highest_sell)
         sell_low = max(current_price, self.lowest_buy)
@@ -380,7 +382,6 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
         orders = []
         selling = side == TradeOrderSide.SELL
-        self.total_orders_count = self.highest_sell - self.lowest_buy
 
         currency, market = split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
@@ -391,8 +392,6 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             # create staggered orders
 
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
-            self.flat_increment = AbstractTradingModeCreator.adapt_price(self.symbol_market,
-                                                                         current_price * self.increment)
             self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
                                                                       current_price * self.spread)
             orders_count, average_order_quantity = \
@@ -515,6 +514,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 only_buy = True
             for order in sorted_orders:
                 if order.symbol != self.symbol:
+                    self.logger.warning("Error when analyzing orders: order.symbol != self.symbol.")
                     return None, self.ERROR, None
                 spread_point = False
                 if previous_order is None:
@@ -527,6 +527,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                 delta_spread = order.origin_price - previous_order.origin_price
 
                                 if increment is None:
+                                    self.logger.warning("Error when analyzing orders: increment is None.")
                                     return None, self.ERROR, None
                                 else:
                                     inferred_spread = self.flat_spread or self.spread*increment/self.increment
@@ -573,6 +574,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                     if increment is None:
                         increment = self.flat_increment or order.origin_price - previous_order.origin_price
                         if increment <= 0:
+                            self.logger.warning("Error when analyzing orders: increment <= 0.")
                             return None, self.ERROR, None
                     elif not spread_point:
                         delta_increment = order.origin_price - previous_order.origin_price
@@ -580,6 +582,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                         if previous_order.side == order.side:
                             missing_orders_count = delta_increment/increment
                             if missing_orders_count > 2.5:
+                                self.logger.warning("Error when analyzing orders: missing_orders_count > 2.5.")
                                 if not self._is_just_closed_order(previous_order.origin_price+increment,
                                                                   recently_closed_orders):
                                     return None, self.ERROR, None
@@ -608,8 +611,12 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                             mode = StrategyModes.VALLEY
 
                 if mode is None or increment is None or spread is None:
+                    self.logger.warning("Error when analyzing orders: mode is None or increment is None or "
+                                        "spread is None.")
                     return None, self.ERROR, None
             if increment is None or (not(only_sell or only_buy) and spread is None):
+                self.logger.warning("Error when analyzing orders: increment is None or (not(only_sell or only_buy) "
+                                    "and spread is None).")
                 return None, self.ERROR, None
             return missing_orders, state, increment
         else:
