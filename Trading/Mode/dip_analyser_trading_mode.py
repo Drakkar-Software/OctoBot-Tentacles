@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "dip_analyser_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.2",
+    "version": "1.1.3",
     "requirements": ["dip_analyser_strategy_evaluator"],
     "config_files": ["DipAnalyserTradingMode.json"],
     "config_schema_files": ["DipAnalyserTradingMode_schema.json"],
@@ -307,7 +307,7 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
             await self._create_order(trader, False, sell_quantity, sell_target, buy_price)
 
     async def _create_bottom_order(self, notification_candle_time):
-        self.logger.info(f"** New buy order for ** : {self.symbol}")
+        self.logger.info(f"** New buy signal for ** : {self.symbol}")
         # call orders creation method
         if self.symbol_evaluator.has_trader_simulator(self.exchange):
             await self._create_order_if_enabled(self.symbol_evaluator.get_trader_simulator(self.exchange),
@@ -373,6 +373,8 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
                                                               portfolio, self.symbol, self.exchange)
         for order in created_orders:
             self._register_buy_order(order)
+        if not created_orders:
+            self.logger.info(f"Not enough funds to create any buy order for {self.symbol}.")
         await self.push_order_notification_if_possible(created_orders, self.notifier)
 
     def _register_buy_order(self, order):
