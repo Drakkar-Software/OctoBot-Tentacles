@@ -1,5 +1,5 @@
 # cython: language_level=3
-#  Drakkar-Software OctoBot-Websockets
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
