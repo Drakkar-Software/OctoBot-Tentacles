@@ -53,12 +53,8 @@ class WebService(AbstractService):
         return CONFIG_WEB in config[CONFIG_CATEGORY_SERVICES] \
                 and CONFIG_SERVICE_INSTANCE in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB]
 
-    # If this service is enabled
-    def get_is_enabled(self, config):
-        return super().get_is_enabled(config) and self._check_enabled_option(config)
-
     @staticmethod
-    def _check_enabled_option(config):
+    def get_is_enabled(config):
         return CONFIG_CATEGORY_SERVICES in config \
             and CONFIG_WEB in config[CONFIG_CATEGORY_SERVICES] \
             and config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION]
@@ -69,7 +65,7 @@ class WebService(AbstractService):
                config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION]
 
     def has_required_configuration(self):
-        return self._check_enabled_option(self.config)
+        return self.get_is_enabled(self.config)
 
     def get_endpoint(self) -> None:
         return self.web_app

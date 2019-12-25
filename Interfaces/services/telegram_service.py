@@ -130,13 +130,8 @@ class TelegramService(AbstractService):
             self.telegram_updater.dispatcher.running = False
             self.telegram_updater.running = False
 
-    # If this service is enabled
-    def get_is_enabled(self, config):
-        return super().get_is_enabled(config) \
-            and self._check_enabled_option(config)
-
     @staticmethod
-    def _check_enabled_option(config):
+    def get_is_enabled(config):
         return CONFIG_INTERFACES in config \
             and CONFIG_TELEGRAM in config[CONFIG_INTERFACES] \
             and CONFIG_ENABLED_OPTION in config[CONFIG_INTERFACES][CONFIG_TELEGRAM] \
@@ -148,11 +143,11 @@ class TelegramService(AbstractService):
         return CONFIG_CATEGORY_SERVICES in self.config \
                and CONFIG_TELEGRAM in self.config[CONFIG_CATEGORY_SERVICES] \
                and self.check_required_config(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM]) \
-               and self._check_enabled_option(self.config)
+               and self.get_is_enabled(self.config)
 
     @classmethod
     def should_be_ready(cls, config):
-        return super().should_be_ready(config) and cls._check_enabled_option(config)
+        return super().should_be_ready(config) and cls.get_is_enabled(config)
 
     async def send_message(self, content, markdown=False):
         kwargs = {}
