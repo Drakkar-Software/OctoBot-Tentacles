@@ -19,10 +19,9 @@ from octobot_commons.logging.logging_util import get_logger
 import threading
 from time import sleep
 
-from config import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT
-from interfaces import get_bot
-from interfaces.web import server_instance
-from interfaces.web.controllers import load_routes
+from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.controllers import load_routes
 
 from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
 
@@ -48,7 +47,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
     def run(self):
         # wait bot is ready
-        while get_bot() is None or not get_bot().is_ready():
+        while not self.is_bot_ready():
             sleep(0.1)
 
         # Define the WSGI server object

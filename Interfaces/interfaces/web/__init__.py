@@ -19,15 +19,12 @@ import logging
 import time
 
 import flask
-import numpy
-
-from config import PriceIndexes
-from interfaces.web.api import api
+from tentacles.Interfaces.interfaces.web.api import api
 from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATABASE, LOG_NEW_ERRORS_COUNT
 
 server_instance = flask.Flask(__name__)
 
-from interfaces.web.advanced_controllers import advanced
+from tentacles.Interfaces.interfaces.web.advanced_controllers import advanced
 
 server_instance.register_blueprint(advanced)
 server_instance.register_blueprint(api)
@@ -63,40 +60,44 @@ def add_to_portfolio_value_history(real_value, simulated_value):
     portfolio_value_history["timestamp"].append(time.time())
 
 
-def add_to_symbol_data_history(symbol, data, time_frame, force_data_reset=False):
-    if symbol not in symbol_data_history:
-        symbol_data_history[symbol] = {}
-
-    if force_data_reset or time_frame not in symbol_data_history[symbol]:
-        symbol_data_history[symbol][time_frame] = data
-    else:
-        # merge new data into current data
-        # find index from where data is new
-        new_data_index = 0
-        candle_times = data[PriceIndexes.IND_PRICE_TIME.value]
-        current_candle_list = symbol_data_history[symbol][time_frame]
-        for i in range(1, len(candle_times)):
-            if candle_times[-i] > current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1]:
-                new_data_index = i
-            else:
-                # update last candle if necessary, then break loop
-                if current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1] == candle_times[-i]:
-                    current_candle_list[PriceIndexes.IND_PRICE_CLOSE.value][-1] = \
-                        data[PriceIndexes.IND_PRICE_CLOSE.value][-i]
-                    current_candle_list[PriceIndexes.IND_PRICE_HIGH.value][-1] = \
-                        data[PriceIndexes.IND_PRICE_HIGH.value][-i]
-                    current_candle_list[PriceIndexes.IND_PRICE_LOW.value][-1] = \
-                        data[PriceIndexes.IND_PRICE_LOW.value][-i]
-                    current_candle_list[PriceIndexes.IND_PRICE_VOL.value][-1] = \
-                        data[PriceIndexes.IND_PRICE_VOL.value][-i]
-                break
-        if new_data_index > 0:
-            data_list = [None] * len(PriceIndexes)
-            for i, _ in enumerate(data):
-                data_list[i] = data[i][-new_data_index:]
-            new_data = numpy.array(data_list)
-            symbol_data_history[symbol][time_frame] = numpy.concatenate((symbol_data_history[symbol][time_frame],
-                                                                         new_data), axis=1)
+# TODO: handle candles history (display candles on old trades,
+#  a way to solve this would be to keep more candle before flushing them)
+# import numpy
+# from config import PriceIndexes
+# def add_to_symbol_data_history(symbol, data, time_frame, force_data_reset=False):
+#     if symbol not in symbol_data_history:
+#         symbol_data_history[symbol] = {}
+#
+#     if force_data_reset or time_frame not in symbol_data_history[symbol]:
+#         symbol_data_history[symbol][time_frame] = data
+#     else:
+#         # merge new data into current data
+#         # find index from where data is new
+#         new_data_index = 0
+#         candle_times = data[PriceIndexes.IND_PRICE_TIME.value]
+#         current_candle_list = symbol_data_history[symbol][time_frame]
+#         for i in range(1, len(candle_times)):
+#             if candle_times[-i] > current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1]:
+#                 new_data_index = i
+#             else:
+#                 # update last candle if necessary, then break loop
+#                 if current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1] == candle_times[-i]:
+#                     current_candle_list[PriceIndexes.IND_PRICE_CLOSE.value][-1] = \
+#                         data[PriceIndexes.IND_PRICE_CLOSE.value][-i]
+#                     current_candle_list[PriceIndexes.IND_PRICE_HIGH.value][-1] = \
+#                         data[PriceIndexes.IND_PRICE_HIGH.value][-i]
+#                     current_candle_list[PriceIndexes.IND_PRICE_LOW.value][-1] = \
+#                         data[PriceIndexes.IND_PRICE_LOW.value][-i]
+#                     current_candle_list[PriceIndexes.IND_PRICE_VOL.value][-1] = \
+#                         data[PriceIndexes.IND_PRICE_VOL.value][-i]
+#                 break
+#         if new_data_index > 0:
+#             data_list = [None] * len(PriceIndexes)
+#             for i, _ in enumerate(data):
+#                 data_list[i] = data[i][-new_data_index:]
+#             new_data = numpy.array(data_list)
+#             symbol_data_history[symbol][time_frame] = numpy.concatenate((symbol_data_history[symbol][time_frame],
+#                                                                          new_data), axis=1)
 
 
 async def add_notification(level, title, message):

@@ -16,9 +16,9 @@
 
 from flask import request, jsonify
 
-from interfaces.web import server_instance
-from interfaces.web.models.interface_settings import add_watched_symbol, remove_watched_symbol
-from interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.interface_settings import add_watched_symbol, remove_watched_symbol
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
 
 
 @server_instance.route("/watched_symbols")

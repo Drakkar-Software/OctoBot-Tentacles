@@ -18,14 +18,16 @@ import datetime
 
 from flask import render_template, request, jsonify
 
-from interfaces.trading_util import get_open_orders, get_trades_history, get_global_portfolio_currencies_amounts, \
-    get_currencies_with_status, get_portfolio_current_value, get_portfolio_holdings, has_real_and_or_simulated_traders
-from interfaces import get_reference_market
-from interfaces.web import server_instance
-from trading.trader.portfolio import Portfolio
-from interfaces.web.models.configuration import get_in_backtesting_mode
-from interfaces.web.models.trading import get_exchange_time_frames, get_evaluation
-from interfaces.web.models.interface_settings import get_watched_symbols
+from octobot_interfaces.util.order import get_open_orders
+from octobot_interfaces.util.trader import get_trades_history, get_currencies_with_status, \
+    has_real_and_or_simulated_traders, get_reference_market
+from octobot_interfaces.util.portfolio import get_global_portfolio_currencies_amounts, get_portfolio_current_value, \
+    get_portfolio_holdings
+from tentacles.Interfaces.interfaces.web import server_instance
+from octobot_trading.constants import CONFIG_PORTFOLIO_TOTAL
+from tentacles.Interfaces.interfaces.web.models.configuration import get_in_backtesting_mode
+from tentacles.Interfaces.interfaces.web.models.trading import get_exchange_time_frames, get_evaluation
+from tentacles.Interfaces.interfaces.web.models.interface_settings import get_watched_symbols
 
 
 @server_instance.route("/portfolio")
@@ -36,10 +38,10 @@ def portfolio():
 
     filtered_real_portfolio = {currency: amounts
                                for currency, amounts in real_portfolio.items()
-                               if amounts[Portfolio.TOTAL] > 0}
+                               if amounts[CONFIG_PORTFOLIO_TOTAL] > 0}
     filtered_simulated_portfolio = {currency: amounts
                                     for currency, amounts in simulated_portfolio.items()
-                                    if amounts[Portfolio.TOTAL] > 0}
+                                    if amounts[CONFIG_PORTFOLIO_TOTAL] > 0}
 
     _, _, portfolio_real_current_value, portfolio_simulated_current_value = get_portfolio_current_value()
     reference_market = get_reference_market()

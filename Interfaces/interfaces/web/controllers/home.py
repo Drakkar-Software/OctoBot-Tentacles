@@ -16,9 +16,10 @@
 
 from flask import render_template, request, redirect
 
-from interfaces.web import server_instance
-from interfaces.web.models.configuration import get_in_backtesting_mode, accepted_terms, accept_terms
-from interfaces.web.models.interface_settings import get_watched_symbols
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.configuration import get_in_backtesting_mode, accepted_terms, \
+    accept_terms
+from tentacles.Interfaces.interfaces.web.models.interface_settings import get_watched_symbols
 
 
 @server_instance.route("/")

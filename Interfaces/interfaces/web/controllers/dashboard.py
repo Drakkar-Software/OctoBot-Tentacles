@@ -16,10 +16,10 @@
 
 from flask import jsonify
 
-from interfaces.web import server_instance
-from interfaces.web.models.dashboard import get_currency_price_graph_update, get_value_from_dict_or_string, \
-    get_first_symbol_data, get_watched_symbol_data
-from interfaces.trading_util import get_global_profitability
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.dashboard import get_currency_price_graph_update, \
+    get_value_from_dict_or_string, get_first_symbol_data, get_watched_symbol_data
+from octobot_interfaces.util.profitability import get_global_profitability
 from octobot_commons.pretty_printer import PrettyPrinter
 
 

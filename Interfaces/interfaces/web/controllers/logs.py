@@ -16,7 +16,7 @@
 
 from flask import render_template
 
-from interfaces.web import server_instance, get_logs, flush_errors_count
+from tentacles.Interfaces.interfaces.web import server_instance, get_logs, flush_errors_count
 
 
 @server_instance.route("/logs")

@@ -16,9 +16,9 @@
 
 from flask import render_template, request, jsonify
 
-from interfaces.web import server_instance
-from interfaces.web.util.flask_util import get_rest_reply
-from interfaces.web.models.tentacles import get_tentacles_packages, \
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web.models.tentacles import get_tentacles_packages, \
     get_tentacles, get_tentacles_package_description, \
     register_and_install, install_packages, update_packages, reset_packages, update_modules, uninstall_modules
 

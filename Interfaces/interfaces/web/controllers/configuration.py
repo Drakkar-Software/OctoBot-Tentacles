@@ -16,20 +16,23 @@
 
 from flask import render_template, request, jsonify
 
-from config import CONFIG_EXCHANGES, CONFIG_CATEGORY_SERVICES, CONFIG_CATEGORY_NOTIFICATION, CONFIG_TRADING, \
-    CONFIG_TRADER, CONFIG_SIMULATOR, CONFIG_CRYPTO_CURRENCIES, GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, \
-    CONFIG_TRADER_REFERENCE_MARKET, TRADING_CONFIG_KEY, DEACTIVATE_OTHERS
-from interfaces.web import server_instance
-from interfaces.web.models.configuration import get_strategy_config, update_evaluator_config, \
+from octobot_trading.constants import CONFIG_EXCHANGES, CONFIG_TRADING, CONFIG_TRADER, CONFIG_SIMULATOR, \
+    CONFIG_CRYPTO_CURRENCIES, CONFIG_TRADER_REFERENCE_MARKET
+from octobot_services.constants import CONFIG_CATEGORY_SERVICES
+from octobot_notifications.constants import CONFIG_CATEGORY_NOTIFICATION
+from tentacles.Interfaces.interfaces.web.constants import GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, TRADING_CONFIG_KEY, \
+    DEACTIVATE_OTHERS
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.configuration import get_strategy_config, update_evaluator_config, \
     get_evaluator_startup_config, get_services_list, get_symbol_list, update_global_config, get_all_symbol_list, \
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, get_edited_config, \
     update_trading_config, get_trading_startup_config, reset_trading_history, is_trading_persistence_activated, \
     manage_metrics, get_tentacle_from_string, update_tentacle_config, reset_config_to_default, \
     get_evaluator_detailed_config, REQUIREMENTS_KEY, get_config_activated_trading_mode
-from interfaces.web.models.backtesting import get_data_files_with_description
-from interfaces.web.util.flask_util import get_rest_reply
-from interfaces.trading_util import has_real_and_or_simulated_traders
-from backtesting import backtesting_enabled
+from tentacles.Interfaces.interfaces.web.models.backtesting import get_data_files_with_description
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
+from octobot_backtesting.api.backtesting import is_backtesting_enabled
+from octobot_interfaces.util.trader import has_real_and_or_simulated_traders
 
 
 @server_instance.route('/config', methods=['GET', 'POST'])
@@ -112,7 +115,7 @@ def config():
                                trading_startup_config=get_trading_startup_config(),
 
                                is_trading_persistence_activated=is_trading_persistence_activated(),
-                               in_backtesting=backtesting_enabled(display_config)
+                               in_backtesting=is_backtesting_enabled(display_config)
                                )
 
 

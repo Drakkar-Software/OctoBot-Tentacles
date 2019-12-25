@@ -18,8 +18,8 @@
 from flask import render_template
 
 from config.disclaimer import DISCLAIMER
-from interfaces.web import server_instance
-from interfaces.web.models.configuration import accepted_terms
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.configuration import accepted_terms
 
 
 @server_instance.route("/terms")

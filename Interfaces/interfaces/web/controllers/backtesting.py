@@ -17,13 +17,14 @@
 from flask import render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
-from interfaces.web import server_instance
-from interfaces.web.models.backtesting import get_data_files_with_description, start_backtesting_using_specific_files, \
-    get_backtesting_report, get_backtesting_status, get_delete_data_file, collect_data_file, save_data_file
+from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.models.backtesting import get_data_files_with_description, \
+    start_backtesting_using_specific_files, get_backtesting_report, get_backtesting_status, get_delete_data_file, \
+    collect_data_file, save_data_file
 
-from interfaces.web.models.configuration import get_symbol_list, get_full_exchange_list, get_current_exchange, \
-    get_config_activated_trading_mode
-from interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web.models.configuration import get_symbol_list, get_full_exchange_list, \
+    get_current_exchange, get_config_activated_trading_mode
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
 
 
 @server_instance.route("/backtesting")

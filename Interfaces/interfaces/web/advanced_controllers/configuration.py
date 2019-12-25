@@ -16,11 +16,11 @@
 
 from flask import render_template, request, jsonify
 
-from config import EVALUATOR_CONFIG_KEY
+from tentacles.Interfaces.interfaces.web.constants import EVALUATOR_CONFIG_KEY
 from . import advanced
-from interfaces.web.models.configuration import get_evaluator_detailed_config, update_evaluator_config, \
-    get_evaluator_startup_config
-from interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web.models.configuration import get_evaluator_detailed_config, \
+    update_evaluator_config, get_evaluator_startup_config
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
 
 
 @advanced.route("/evaluator_config")

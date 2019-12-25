@@ -16,7 +16,7 @@
 
 from flask import render_template
 
-from interfaces.trading_util import get_matrix_list
+from octobot_interfaces.util.trader import get_matrix_list
 from . import advanced
 
 

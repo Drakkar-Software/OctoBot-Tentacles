@@ -19,10 +19,10 @@ from copy import copy
 from flask import render_template, jsonify
 
 from config.disclaimer import DISCLAIMER
-from interfaces.web import server_instance, get_notifications, flush_notifications, get_errors_count
-from interfaces import get_bot
-from tools.commands import Commands
-from interfaces.web.models.configuration import get_metrics_enabled
+from octobot_interfaces.base.abstract_interface import AbstractInterface
+from tentacles.Interfaces.interfaces.web import server_instance, get_notifications, flush_notifications, get_errors_count
+# from tools.commands import Commands
+from tentacles.Interfaces.interfaces.web.models.configuration import get_metrics_enabled
 
 
 logger = get_logger("ServerInstance Controller")
@@ -32,11 +32,15 @@ logger = get_logger("ServerInstance Controller")
 @server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
 def commands(cmd=None):
     if cmd == "restart":
-        Commands.restart_bot()
+        logger.error("Commands.restart_bot() is not implemented yet")
+        # TODO
+        # Commands.restart_bot()
         return jsonify("Success")
 
     elif cmd == "stop":
-        Commands.stop_bot(get_bot())
+        logger.error("Commands.stop_bot() is not implemented yet")
+        # TODO
+        # Commands.stop_bot(AbstractInterface.bot)
         return jsonify("Success")
 
     return render_template('commands.html',

@@ -17,16 +17,15 @@
 from flask import render_template, request, jsonify
 
 from . import advanced
-from interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
 
 
 @advanced.route("/strategy-optimizer")
 @advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
 def strategy_optimizer():
-    from interfaces.web.models.strategy_optimizer import get_strategies_list, get_current_strategy, \
-        get_time_frames_list, \
-        get_evaluators_list, get_risks_list, start_optimizer, get_optimizer_results, get_optimizer_status, \
-        get_optimizer_report, get_current_run_params, get_trading_mode
+    from tentacles.Interfaces.interfaces.web.models.strategy_optimizer import get_strategies_list, \
+        get_current_strategy,get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
+        get_optimizer_results, get_optimizer_status, get_optimizer_report, get_current_run_params, get_trading_mode
 
     if request.method == 'POST':
         update_type = request.args["update_type"]

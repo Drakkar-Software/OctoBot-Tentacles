@@ -14,18 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template
 
-from tentacles.Interfaces.interfaces.web import server_instance
-from tentacles.Interfaces.interfaces.web.models.community import can_get_community_metrics, \
-    get_community_metrics_to_display
-
-
-@server_instance.route("/community")
-def community():
-    can_get_metrics = can_get_community_metrics()
-    community_metrics = get_community_metrics_to_display() if can_get_metrics else None
-    return render_template('community.html',
-                           can_get_metrics=can_get_metrics,
-                           community_metrics=community_metrics
-                           )
+GLOBAL_CONFIG_KEY = "global_config"
+EVALUATOR_CONFIG_KEY = "evaluator_config"
+DEACTIVATE_OTHERS = "deactivate_others"
+TRADING_CONFIG_KEY = "trading_config"

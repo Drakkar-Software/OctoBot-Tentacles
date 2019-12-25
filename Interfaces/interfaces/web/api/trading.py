@@ -17,9 +17,9 @@
 import json
 from flask import request, jsonify
 
-from interfaces.trading_util import get_open_orders, cancel_orders
+from octobot_interfaces.util.order import get_open_orders, cancel_orders
 from . import api
-from interfaces.web.util.flask_util import get_rest_reply
+from tentacles.Interfaces.interfaces.web.util.flask_util import get_rest_reply
 
 
 @api.route("/orders", methods=['GET', 'POST'])
