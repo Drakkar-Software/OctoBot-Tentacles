@@ -32,16 +32,22 @@ class TelegramBotInterface(AbstractBotInterface):
     REQUIRED_SERVICE = TelegramService
     HANDLED_CHATS = ["private"]
 
-    async def _post_initialize(self):
-        telegram_service = TelegramService.instance()
-        telegram_service.register_user(self.get_name())
-        telegram_service.add_handlers(self.get_bot_handlers())
-        telegram_service.add_error_handler(self.command_error)
-        telegram_service.register_text_polling_handler(self.HANDLED_CHATS, self.echo)
+    def __init__(self, config):
+        super().__init__(config)
+        self.telegram_service = None
 
-    @classmethod
-    def get_name(cls):
-        return cls.__name__
+    async def _post_initialize(self):
+        self.telegram_service = TelegramService.instance()
+        self.telegram_service.register_user(self.get_name())
+        self.telegram_service.add_handlers(self.get_bot_handlers())
+        self.telegram_service.add_error_handler(self.command_error)
+        self.telegram_service.register_text_polling_handler(self.HANDLED_CHATS, self.echo)
+
+    def start(self):
+        self.telegram_service.start_dispatcher()
+
+    def stop(self):
+        self.telegram_service.stop()
 
     def get_bot_handlers(self):
         return [
@@ -66,13 +72,13 @@ class TelegramBotInterface(AbstractBotInterface):
         ]
 
     @staticmethod
-    def command_unknown(_, update):
+    def command_unknown(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, f"`Unfortunately, I don't know the command:` "
                                               f"{escape_markdown(update.effective_message.text)}.")
 
     @staticmethod
-    def command_help(_, update):
+    def command_help(update, _):
         if TelegramBotInterface._is_valid_user(update):
             message = "* - My OctoBot skills - *" + EOL + EOL
             message += "/start: `Displays my startup message.`" + EOL
@@ -107,25 +113,25 @@ class TelegramBotInterface(AbstractBotInterface):
         return update.message.text.replace(command_name, "").strip()
 
     @staticmethod
-    def command_start(_, update):
+    def command_start(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_start(markdown=True))
         elif TelegramBotInterface._is_authorized_chat(update):
             TelegramBotInterface._send_message(update, UNAUTHORIZED_USER_MESSAGE)
 
     @staticmethod
-    def command_stop(_, update):
+    def command_stop(update, _):
         # TODO add confirmation
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, "_I'm leaving this world..._")
             AbstractBotInterface.set_command_stop()
 
     @staticmethod
-    def command_version(_, update):
+    def command_version(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, f"`{AbstractBotInterface.get_command_version()}`")
 
-    def command_pause_resume(self, _, update):
+    def command_pause_resume(self, update, _):
         if TelegramBotInterface._is_valid_user(update):
             if self.paused:
                 TelegramBotInterface._send_message(update,
@@ -136,12 +142,12 @@ class TelegramBotInterface(AbstractBotInterface):
                 self.set_command_pause()
 
     @staticmethod
-    def command_ping(_, update):
+    def command_ping(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, f"`{AbstractBotInterface.get_command_ping()}`")
 
     @staticmethod
-    def command_risk(_, update):
+    def command_risk(update, _):
         if TelegramBotInterface._is_valid_user(update):
             try:
                 result_risk = AbstractBotInterface.set_command_risk(
@@ -152,22 +158,22 @@ class TelegramBotInterface(AbstractBotInterface):
                                                    "`Failed to set new risk, please provide a number between 0 and 1.`")
 
     @staticmethod
-    def command_profitability(_, update):
+    def command_profitability(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_profitability(markdown=True))
 
     @staticmethod
-    def command_fees(_, update):
+    def command_fees(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_fees(markdown=True))
 
     @staticmethod
-    def command_sell_all_currencies(_, update):
+    def command_sell_all_currencies(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, f"`{AbstractBotInterface.get_command_sell_all_currencies()}`")
 
     @staticmethod
-    def command_sell_all(_, update):
+    def command_sell_all(update, _):
         if TelegramBotInterface._is_valid_user(update):
             currency = TelegramBotInterface.get_command_param("/sell_all", update)
             if not currency:
@@ -176,23 +182,23 @@ class TelegramBotInterface(AbstractBotInterface):
                 TelegramBotInterface._send_message(update, f"`{AbstractBotInterface.get_command_sell_all(currency)}`")
 
     @staticmethod
-    def command_portfolio(_, update):
+    def command_portfolio(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_portfolio(markdown=True))
 
     @staticmethod
-    def command_open_orders(_, update):
+    def command_open_orders(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_open_orders(markdown=True))
 
     @staticmethod
-    def command_trades_history(_, update):
+    def command_trades_history(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_trades_history(markdown=True))
 
     # refresh current order lists and portfolios and reload tham from exchanges
     @staticmethod
-    def command_real_traders_refresh(_, update):
+    def command_real_traders_refresh(update, _):
         if TelegramBotInterface._is_valid_user(update):
             result = "Refresh"
             try:
@@ -203,7 +209,7 @@ class TelegramBotInterface(AbstractBotInterface):
 
     # Displays my trades, exchanges, evaluators, strategies and trading
     @staticmethod
-    def command_configuration(_, update):
+    def command_configuration(update, _):
         if TelegramBotInterface._is_valid_user(update):
             try:
                 TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_configuration(markdown=True))
@@ -213,7 +219,7 @@ class TelegramBotInterface(AbstractBotInterface):
                                                   "Please wait for my initialization to complete.`")
 
     @staticmethod
-    def command_market_status(_, update):
+    def command_market_status(update, _):
         if TelegramBotInterface._is_valid_user(update):
             try:
                 TelegramBotInterface._send_message(update,
@@ -223,7 +229,7 @@ class TelegramBotInterface(AbstractBotInterface):
                                                   "evaluations, please retry in a few seconds.`")
 
     @staticmethod
-    def command_error(_, update, error):
+    def command_error(update, _, error=None):
         TelegramBotInterface.get_logger().exception(error)
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,

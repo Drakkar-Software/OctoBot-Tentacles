@@ -18,11 +18,9 @@ import telegram
 from telegram.ext import Updater, MessageHandler, Filters  # , Dispatcher
 import logging
 
-from octobot_commons.constants import CONFIG_ENABLED_OPTION
 from octobot_commons.logging.logging_util import set_logging_level
 from octobot_services.constants import CONFIG_TOKEN, CONFIG_USERNAMES_WHITELIST, CONFIG_CATEGORY_SERVICES, CONFIG_TELEGRAM, \
-    CONFIG_SERVICE_INSTANCE, MESSAGE_PARSE_MODE, CONFIG_INTERFACES
-# from interfaces.bots.telegram.bot import TelegramApp
+    CONFIG_SERVICE_INSTANCE, MESSAGE_PARSE_MODE
 from octobot_services.services.abstract_service import AbstractService
 
 
@@ -35,7 +33,6 @@ class TelegramService(AbstractService):
         super().__init__()
         self.telegram_api = None
         self.chat_id = None
-        self.telegram_app = None
         self.telegram_updater = None
         self.users = []
         self.text_chat_dispatcher = {}
@@ -73,14 +70,11 @@ class TelegramService(AbstractService):
             self.telegram_api = telegram.Bot(
                 token=self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM][CONFIG_TOKEN])
 
-        if not self.telegram_app:
-            if not self.telegram_updater:
-                self.telegram_updater = Updater(
-                    self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM][CONFIG_TOKEN]
-                )
-
-            # if TelegramApp.is_enabled(self.config):
-            #     self.telegram_app = TelegramApp(self.config, self)
+        if not self.telegram_updater:
+            self.telegram_updater = Updater(
+                self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM][CONFIG_TOKEN],
+                use_context=True
+            )
 
         set_logging_level(self.LOGGERS, logging.WARNING)
 
@@ -88,7 +82,7 @@ class TelegramService(AbstractService):
         for chat_type in chat_types:
             self.text_chat_dispatcher[chat_type] = handler
 
-    def text_handler(self, _, update):
+    def text_handler(self, update, _):
         chat_type = update.effective_chat["type"]
         if chat_type in self.text_chat_dispatcher:
             self.text_chat_dispatcher[chat_type](_, update)
@@ -129,14 +123,11 @@ class TelegramService(AbstractService):
         if self.telegram_updater:
             self.telegram_updater.dispatcher.running = False
             self.telegram_updater.running = False
+            self.telegram_updater.stop()
 
     @staticmethod
     def get_is_enabled(config):
-        return CONFIG_INTERFACES in config \
-            and CONFIG_TELEGRAM in config[CONFIG_INTERFACES] \
-            and CONFIG_ENABLED_OPTION in config[CONFIG_INTERFACES][CONFIG_TELEGRAM] \
-            and config[CONFIG_INTERFACES][CONFIG_TELEGRAM][CONFIG_ENABLED_OPTION] \
-            and CONFIG_CATEGORY_SERVICES in config \
+        return CONFIG_CATEGORY_SERVICES in config \
             and CONFIG_TELEGRAM in config[CONFIG_CATEGORY_SERVICES]
 
     def has_required_configuration(self):
