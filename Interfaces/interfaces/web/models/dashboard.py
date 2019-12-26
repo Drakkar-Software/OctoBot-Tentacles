@@ -188,7 +188,11 @@ def get_currency_price_graph_update(exchange_name, symbol, time_frame, list_arra
 
     if time_frame is not None:
         symbol_data = get_symbol_data(exchange_manager, symbol)
-        data = get_symbol_candles_manager(symbol_data, time_frame).get_symbol_prices()
-        if data is not None:
-            return _create_candles_data(symbol, time_frame, data, bot, list_arrays, in_backtesting)
+        try:
+            data = get_symbol_candles_manager(symbol_data, time_frame).get_symbol_prices()
+            if data is not None:
+                return _create_candles_data(symbol, time_frame, data, bot, list_arrays, in_backtesting)
+        except KeyError:
+            # not started yet
+            return None
     return None
