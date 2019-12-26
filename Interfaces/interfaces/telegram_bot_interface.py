@@ -134,8 +134,9 @@ class TelegramBotInterface(AbstractBotInterface):
     def command_pause_resume(self, update, _):
         if TelegramBotInterface._is_valid_user(update):
             if self.paused:
-                TelegramBotInterface._send_message(update,
-                                          f"_Resuming..._{EOL}`I will restart trading when I see opportunities !`")
+                TelegramBotInterface._send_message(
+                    update,
+                    f"_Resuming..._{EOL}`I will restart trading when I see opportunities !`")
                 self.set_command_resume()
             else:
                 TelegramBotInterface._send_message(update, f"_Pausing..._{EOL}`I'm cancelling my orders.`")
@@ -212,11 +213,12 @@ class TelegramBotInterface(AbstractBotInterface):
     def command_configuration(update, _):
         if TelegramBotInterface._is_valid_user(update):
             try:
-                TelegramBotInterface._send_message(update, AbstractBotInterface.get_command_configuration(markdown=True))
+                TelegramBotInterface._send_message(update,
+                                                   AbstractBotInterface.get_command_configuration(markdown=True))
             except Exception:
                 TelegramBotInterface._send_message(update,
                                                    "`I'm unfortunately currently unable to show you my configuration. "
-                                                  "Please wait for my initialization to complete.`")
+                                                   "Please wait for my initialization to complete.`")
 
     @staticmethod
     def command_market_status(update, _):
@@ -226,14 +228,14 @@ class TelegramBotInterface(AbstractBotInterface):
                                                    AbstractBotInterface.get_command_market_status(markdown=True))
             except Exception:
                 TelegramBotInterface._send_message(update, "`I'm unfortunately currently unable to show you my market "
-                                                  "evaluations, please retry in a few seconds.`")
+                                                           "evaluations, please retry in a few seconds.`")
 
     @staticmethod
     def command_error(update, _, error=None):
         TelegramBotInterface.get_logger().exception(error)
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,
-                                      f"Failed to perform this command {update.message.text} : `{error}`")
+                                               f"Failed to perform this command {update.message.text} : `{error}`")
 
     @staticmethod
     def echo(_, update):
@@ -264,9 +266,9 @@ class TelegramBotInterface(AbstractBotInterface):
         is_valid, white_list = AbstractBotInterface._is_valid_user(update_username, associated_config=associated_config)
 
         if white_list and not is_valid:
-            TelegramBotInterface.get_logger().error(f"An unauthorized Telegram user is trying to talk to me: username: "
-                                           f"{update_username}, first_name: {update.effective_chat['first_name']}, "
-                                           f"text: {update.effective_message['text']}")
+            TelegramBotInterface.get_logger().error(
+                f"An unauthorized Telegram user is trying to talk to me: username: {update_username}, "
+                f"first_name: {update.effective_chat['first_name']}, text: {update.effective_message['text']}")
 
         return is_valid
 

@@ -121,8 +121,6 @@ class TelegramService(AbstractService):
 
     def stop(self):
         if self.telegram_updater:
-            self.telegram_updater.dispatcher.running = False
-            self.telegram_updater.running = False
             self.telegram_updater.stop()
 
     @staticmethod
