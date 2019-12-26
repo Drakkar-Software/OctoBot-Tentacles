@@ -47,6 +47,7 @@ body:before {
 
 .nav-item.active  {
     border-bottom: 2px solid white;
+    font-weight: bolder;
 }
 
 /* Cards */
@@ -164,6 +165,10 @@ body:before {
 
 .card a:hover {
     color: #42a5f5 !important;
+}
+
+.card a:link.button {
+    color: inherit;
 }
 
 .modal-text {

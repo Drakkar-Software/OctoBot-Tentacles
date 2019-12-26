@@ -13,18 +13,16 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+from flask import render_template
+
+from tentacles.Interfaces.interfaces.web import server_instance
 
 
-def load_routes():
-    from . import errors
-    from . import tentacles
-    from . import backtesting
-    from . import commands
-    from . import configuration
-    from . import home
-    from . import dashboard
-    from . import trading
-    from . import logs
-    from . import interface_settings
-    from . import community
-    from . import terms
+@server_instance.errorhandler(404)
+def not_found(_):
+    return render_template("404.html")
+
+
+@server_instance.errorhandler(500)
+def internal_error(_):
+    return render_template("500.html")
