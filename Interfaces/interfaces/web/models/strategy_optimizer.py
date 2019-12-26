@@ -16,22 +16,21 @@
 
 import threading
 
-
-from interfaces import get_bot
-from octobot_commons.tentacles_management import AdvancedManager
-from evaluator.Strategies.strategies_evaluator import StrategiesEvaluator
-from evaluator.evaluator_creator import EvaluatorCreator
-from evaluator import Strategies
+from octobot_evaluators.api import get_relevant_TAs_for_strategy
+from octobot_interfaces.util.bot import get_bot
+from octobot_commons.tentacles_management.advanced_manager import get_all_classes
+from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
+from tentacles.Evaluator import Strategies
 from octobot_commons.tentacles_management.class_inspector import get_class_from_string, evaluator_parent_inspection
-from octobot_commons.time_frame_manager import TimeFrameManager
-from config import BOT_TOOLS_STRATEGY_OPTIMIZER, BOT_TOOLS_BACKTESTING
+from octobot_commons.time_frame_manager import parse_time_frames
+from tentacles.Interfaces.interfaces.web.constants import BOT_TOOLS_STRATEGY_OPTIMIZER, BOT_TOOLS_BACKTESTING
 from backtesting.strategy_optimizer.strategy_optimizer import StrategyOptimizer
 
 
 def get_strategies_list():
     try:
         config = get_bot().get_config()
-        classes = AdvancedManager.get_all_classes(StrategiesEvaluator, config)
+        classes = get_all_classes(StrategyEvaluator, config)
         return set(strategy.get_name() for strategy in classes)
     except Exception:
         return []
@@ -39,7 +38,7 @@ def get_strategies_list():
 
 def get_time_frames_list(strategy_name):
     if strategy_name:
-        strategy_class = get_class_from_string(strategy_name, StrategiesEvaluator,
+        strategy_class = get_class_from_string(strategy_name, StrategyEvaluator,
                                                Strategies, evaluator_parent_inspection)
         return [tf.value for tf in strategy_class.get_required_time_frames(get_bot().get_config())]
     else:
@@ -48,9 +47,9 @@ def get_time_frames_list(strategy_name):
 
 def get_evaluators_list(strategy_name):
     if strategy_name:
-        strategy_class = get_class_from_string(strategy_name, StrategiesEvaluator,
+        strategy_class = get_class_from_string(strategy_name, StrategyEvaluator,
                                                Strategies, evaluator_parent_inspection)
-        evaluators = EvaluatorCreator.get_relevant_TAs_for_strategy(strategy_class, get_bot().get_config())
+        evaluators = get_relevant_TAs_for_strategy(strategy_class, get_bot().get_config())
         return set(evaluator.get_name() for evaluator in evaluators)
     else:
         return []
@@ -80,7 +79,7 @@ def start_optimizer(strategy, time_frames, evaluators, risks):
     elif backtester and backtester.get_is_computing():
         return False, "A backtesting is already running"
     else:
-        formatted_time_frames = TimeFrameManager.parse_time_frames(time_frames)
+        formatted_time_frames = parse_time_frames(time_frames)
         float_risks = [float(risk) for risk in risks]
         thread = threading.Thread(target=optimizer.find_optimal_configuration, args=(evaluators,
                                                                                      formatted_time_frames,

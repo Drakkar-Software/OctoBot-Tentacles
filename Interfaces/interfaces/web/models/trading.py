@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from interfaces import get_bot
+from octobot_interfaces.util.bot import get_bot
 
 
 def get_exchange_time_frames(exchange_name):

@@ -27,8 +27,12 @@ from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
 
 
 class WebInterface(AbstractWebInterface, threading.Thread):
+
+    tools = {}
+
     def __init__(self, config):
-        super().__init__(config)
+        AbstractWebInterface.__init__(self, config)
+        threading.Thread.__init__(self)
         self.app = None
         self.srv = None
         self.ctx = None
@@ -60,7 +64,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
     def start(self):
         # start thread
-        self.run()
+        threading.Thread.start(self)
 
     def _prepare_stop(self):
         self.srv.server_close()

@@ -16,14 +16,22 @@
 
 from copy import copy
 
-
+from octobot_backtesting.api.backtesting import create_backtesting, initialize_created_backtesting, \
+    get_backtesting_progress, is_backtesting_in_progress, get_backtesting_run_report
+from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
+from octobot_backtesting.constants import BACKTESTING_FILE_PATH
+from octobot_commons.constants import CONFIG_TRADING_FILE_PATH, CONFIG_EVALUATOR_FILE_PATH
 from octobot_commons.logging.logging_util import get_logger
-from backtesting.collector.data_file_manager import get_all_available_data_files, get_file_description, delete_data_file
-from backtesting.backtester import Backtester
-from backtesting.collector.data_collector import DataCollector
-from interfaces import get_bot
-from config import BOT_TOOLS_STRATEGY_OPTIMIZER, BOT_TOOLS_BACKTESTING, CONFIG_DATA_COLLECTOR_PATH
+from octobot_backtesting.api.data_file import get_all_available_data_files, get_file_description, delete_data_file
 
+from octobot_commons.tentacles_management.config_manager import reload_tentacle_config
+from octobot_evaluators.constants import CONFIG_EVALUATOR
+from octobot_interfaces.util.bot import get_bot
+from octobot_interfaces.util.util import run_in_bot_main_loop
+from octobot_trading.constants import CONFIG_TRADING_TENTACLES
+from tentacles.Interfaces.interfaces.web.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
+    BOT_TOOLS_STRATEGY_OPTIMIZER
+from tentacles.Interfaces.interfaces.web.web_interface import WebInterface
 
 LOGGER = get_logger("DataCollectorWebInterfaceModel")
 
@@ -38,42 +46,43 @@ def get_data_files_with_description():
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False):
     try:
-        tools = get_bot().get_tools()
+        tools = WebInterface.tools
         if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and tools[BOT_TOOLS_STRATEGY_OPTIMIZER].get_is_computing():
             return False, "Optimizer already running"
         elif tools[BOT_TOOLS_BACKTESTING] and tools[BOT_TOOLS_BACKTESTING].get_is_computing():
             return False, "A backtesting is already running"
         else:
-            backtester = Backtester(get_bot().get_config(), source, files, reset_tentacle_config=reset_tentacle_config)
-            tools[BOT_TOOLS_BACKTESTING] = backtester
-            if get_bot().run_in_main_asyncio_loop(backtester.start_backtesting(in_thread=True)):
-                ignored_files = backtester.get_ignored_files()
-                ignored_files_info = "" if not ignored_files else f" ignored files: {ignored_files}"
-                return True, f"Backtesting started{ignored_files_info}"
+            if reset_tentacle_config:
+                config = reload_tentacle_config(copy(get_bot().config), CONFIG_EVALUATOR, CONFIG_EVALUATOR_FILE_PATH)
+                config = reload_tentacle_config(config, CONFIG_TRADING_TENTACLES, CONFIG_TRADING_FILE_PATH)
             else:
-                return False, "Impossible to start backtesting"
+                config = get_bot().config
+            backtesting = create_backtesting(config, files)
+            run_in_bot_main_loop(initialize_created_backtesting(backtesting), blocking=False)
+            tools[BOT_TOOLS_BACKTESTING] = backtesting
+            tools[BOT_TOOLS_BACKTESTING_SOURCE] = source
+            return True, "Backtesting started"
     except Exception as e:
         LOGGER.exception(e)
         return False, f"Error when starting backtesting: {e}"
 
 
 def get_backtesting_status():
-    tools = get_bot().get_tools()
-    if tools[BOT_TOOLS_BACKTESTING]:
-        backtester = tools[BOT_TOOLS_BACKTESTING]
-        if backtester.get_is_computing():
-            return "computing", backtester.get_progress()
+    if WebInterface.tools[BOT_TOOLS_BACKTESTING]:
+        backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
+        if is_backtesting_in_progress(backtesting):
+            return "computing", get_backtesting_progress(backtesting) * 100
         return "finished", 100
     else:
         return "not started", 0
 
 
 def get_backtesting_report(source):
-    tools = get_bot().get_tools()
+    tools = WebInterface.tools
     if tools[BOT_TOOLS_BACKTESTING]:
-        backtester = tools[BOT_TOOLS_BACKTESTING]
-        if backtester.get_finished_source() == source:
-            return get_bot().run_in_main_asyncio_loop(backtester.get_report())
+        backtesting = tools[BOT_TOOLS_BACKTESTING]
+        if tools[BOT_TOOLS_BACKTESTING_SOURCE] == source:
+            return get_backtesting_run_report(backtesting)
     return {}
 
 
@@ -87,13 +96,10 @@ def get_delete_data_file(file_name):
 
 def collect_data_file(exchange, symbol):
     success = False
-    data_collector = DataCollector(copy(get_bot().get_config()), False)
-
     try:
-        result = get_bot().run_in_main_asyncio_loop(data_collector.execute_with_specific_target(exchange, symbol))
+        result = run_in_bot_main_loop(collect_exchange_historical_data(get_bot().config, exchange, [symbol]))
         success = True
     except Exception as e:
-        data_collector.stop()
         result = f"data collector error: {e}"
 
     if success:
@@ -104,7 +110,7 @@ def collect_data_file(exchange, symbol):
 
 def save_data_file(name, file):
     try:
-        file.save(CONFIG_DATA_COLLECTOR_PATH+name)
+        file.save(f"{BACKTESTING_FILE_PATH}/{name}")
         message = f"{name} saved"
         LOGGER.info(message)
         return True, message

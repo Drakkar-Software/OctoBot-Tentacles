@@ -29,7 +29,7 @@ def currency_price_graph_update(exchange_name, symbol, time_frame, mode="live"):
     backtesting = mode != "live"
     return jsonify(get_currency_price_graph_update(exchange_name,
                                                    get_value_from_dict_or_string(symbol),
-                                                   get_value_from_dict_or_string(time_frame, True),
+                                                   time_frame,
                                                    backtesting=backtesting))
 
 

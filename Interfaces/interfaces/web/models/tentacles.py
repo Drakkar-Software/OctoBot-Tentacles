@@ -21,8 +21,9 @@ from tentacles_manager.tentacle_package_util import get_octobot_tentacle_public_
 from octobot_commons.logging.logging_util import get_logger
 
 
-from config import CONFIG_TENTACLES_KEY, TENTACLE_PACKAGE_DESCRIPTION, TENTACLES_DEFAULT_BRANCH
-from interfaces import get_bot
+from tentacles_manager import CONFIG_TENTACLES_KEY, TENTACLE_PACKAGE_DESCRIPTION, TENTACLES_DEFAULT_BRANCH
+from octobot_interfaces.util.bot import get_bot
+
 
 logger = get_logger("TentaclesModel")
 

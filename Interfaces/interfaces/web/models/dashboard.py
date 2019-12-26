@@ -14,15 +14,17 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from backtesting import backtesting_enabled
-from config import TimeFrames, PriceIndexes, PriceStrings, BOT_TOOLS_BACKTESTING, CONFIG_WILDCARD
-from interfaces import get_bot, get_default_time_frame, get_global_config
-from interfaces.web import add_to_symbol_data_history, \
-    get_symbol_data_history
+from octobot_backtesting.api.backtesting import is_backtesting_enabled
+from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name, get_exchange_names
+from octobot_trading.api.symbol_data import get_symbol_candles_manager, get_symbol_data
+from tentacles.Interfaces.interfaces.web import add_to_symbol_data_history, get_symbol_data_history
+from tentacles.Interfaces.interfaces.web.constants import DEFAULT_TIMEFRAME
 from octobot_commons.timestamp_util import convert_timestamps_to_datetime, convert_timestamp_to_datetime
-from octobot_commons.time_frame_manager import TimeFrameManager
-from interfaces.trading_util import get_trades_history
-from interfaces.web.models.trading import get_exchange_time_frames
+from octobot_commons.time_frame_manager import get_display_time_frame
+from octobot_commons.constants import CONFIG_WILDCARD
+from octobot_commons.enums import PriceIndexes, PriceStrings, TimeFrames
+from octobot_interfaces.util.trader import get_trades_history
 
 GET_SYMBOL_SEPARATOR = "|"
 
@@ -31,20 +33,11 @@ def parse_get_symbol(get_symbol):
     return get_symbol.replace(GET_SYMBOL_SEPARATOR, "/")
 
 
-def get_value_from_dict_or_string(data, is_time_frame=False):
+def get_value_from_dict_or_string(data):
     if isinstance(data, dict):
-        if is_time_frame:
-            return TimeFrames(data["value"])
-        else:
-            return data["value"]
+        return data["value"]
     else:
-        if is_time_frame:
-            if data is None:
-                return get_default_time_frame()
-            else:
-                return TimeFrames(data)
-        else:
-            return data
+        return data
 
 
 def _format_trades(trade_history):
@@ -73,27 +66,22 @@ def remove_invalid_chars(string):
     return string.split("[")[0]
 
 
-def _get_candles_reply(exchange, symbol_evaluator, time_frame):
+def _get_candles_reply(exchange, symbol, time_frame):
     return {
-        "exchange": remove_invalid_chars(exchange.get_name()),
-        "symbol": symbol_evaluator.get_symbol(),
+        "exchange": remove_invalid_chars(exchange),
+        "symbol": symbol,
         "time_frame": time_frame.value
     }
 
 
 def get_watched_symbol_data(symbol):
-    bot = get_bot()
-    exchanges = bot.get_exchanges_list()
+    exchanges = get_exchange_names()
     symbol = parse_get_symbol(symbol)
-
     try:
         if exchanges:
-            exchange = next(iter(exchanges.values()))
-            evaluators = bot.get_symbol_evaluator_list()
-            if evaluators and symbol in evaluators:
-                symbol_evaluator = evaluators[symbol]
-                time_frame = TimeFrameManager.get_display_time_frame(bot.get_config())
-                return _get_candles_reply(exchange, symbol_evaluator, time_frame)
+            exchange = next(iter(exchanges))
+            time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+            return _get_candles_reply(exchange, symbol, time_frame)
     except KeyError:
         return {}
     return {}
@@ -124,14 +112,19 @@ def get_first_symbol_data():
             evaluators = bot.get_symbol_evaluator_list()
             if evaluators:
                 symbol_evaluator = _find_symbol_evaluator_with_data(evaluators, exchange)
-                time_frame = TimeFrameManager.get_display_time_frame(bot.get_config())
+                time_frame = get_display_time_frame(bot.get_config())
                 return _get_candles_reply(exchange, symbol_evaluator, time_frame)
     except KeyError:
         return {}
     return {}
 
 
-def create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_backtesting):
+# TODO remove this function and its calls when https://github.com/Drakkar-Software/OctoBot-Trading/issues/31 is fixed
+def _filter_invalid_values(data_array):
+    return [val for val in data_array if val != -1]
+
+
+def _create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_backtesting):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
@@ -147,7 +140,7 @@ def create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_backt
     else:
         data = new_data
 
-    data_x = convert_timestamps_to_datetime(data[PriceIndexes.IND_PRICE_TIME.value],
+    data_x = convert_timestamps_to_datetime(_filter_invalid_values(data[PriceIndexes.IND_PRICE_TIME.value]),
                                             time_format="%y-%m-%d %H:%M:%S",
                                             force_timezone=False)
 
@@ -161,59 +154,41 @@ def create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_backt
 
     if list_arrays:
         result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: data_x,
-            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value].tolist(),
-            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value].tolist(),
-            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value].tolist(),
-            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value].tolist(),
-            PriceStrings.STR_PRICE_VOL.value: data[PriceIndexes.IND_PRICE_VOL.value].tolist()
+            PriceStrings.STR_PRICE_TIME.value: _filter_invalid_values(data_x),
+            PriceStrings.STR_PRICE_CLOSE.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_CLOSE.value].tolist()),
+            PriceStrings.STR_PRICE_LOW.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_LOW.value].tolist()),
+            PriceStrings.STR_PRICE_OPEN.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_OPEN.value].tolist()),
+            PriceStrings.STR_PRICE_HIGH.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_HIGH.value].tolist()),
+            PriceStrings.STR_PRICE_VOL.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_VOL.value].tolist())
         }
     else:
         result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: data_x,
-            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value],
-            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value],
-            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value],
-            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value]
+            PriceStrings.STR_PRICE_TIME.value: _filter_invalid_values(data_x),
+            PriceStrings.STR_PRICE_CLOSE.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_CLOSE.value]),
+            PriceStrings.STR_PRICE_LOW.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_LOW.value]),
+            PriceStrings.STR_PRICE_OPEN.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_OPEN.value]),
+            PriceStrings.STR_PRICE_HIGH.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_HIGH.value])
         }
     return result_dict
 
 
 def get_currency_price_graph_update(exchange_name, symbol, time_frame, list_arrays=True, backtesting=False):
     bot = get_bot()
-    if backtesting and bot.get_tools() and bot.get_tools()[BOT_TOOLS_BACKTESTING]:
-        bot = bot.get_tools()[BOT_TOOLS_BACKTESTING].get_bot()
+    # TODO: handle on the fly backtesting price graph
+    # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
+    #     bot = WebInterface.tools[BOT_TOOLS_BACKTESTING].get_bot()
     symbol = parse_get_symbol(symbol)
-    symbol_evaluator_list = bot.get_symbol_evaluator_list()
-    in_backtesting = backtesting_enabled(get_global_config()) or backtesting
+    in_backtesting = is_backtesting_enabled(get_global_config()) or backtesting
 
-    exchange = exchange_name
-    exchange_list = bot.get_exchanges_list()
+    exchange_manager = get_exchange_manager_from_exchange_name(exchange_name)
     if backtesting:
-        exchanges = [key for key in exchange_list if exchange_name in key]
+        exchanges = get_exchange_names()
         if exchanges:
-            exchange = exchanges[0]
+            exchange_manager =  get_exchange_manager_from_exchange_name(exchanges[0])
 
     if time_frame is not None:
-        if symbol_evaluator_list:
-            evaluator_thread_managers = symbol_evaluator_list[symbol].get_evaluator_task_managers(
-                exchange_list[exchange])
-
-            data = None
-
-            if time_frame in evaluator_thread_managers:
-                if backtesting:
-                    exchange_simulator = exchange_list[exchange].get_exchange()
-                    data = exchange_simulator.get_full_candles_data(symbol, time_frame)
-                else:
-                    evaluator_thread_manager = evaluator_thread_managers[time_frame]
-                    data = evaluator_thread_manager.get_evaluator().get_data()
-            elif not backtesting and time_frame in get_exchange_time_frames(exchange_name)[0]:
-                # might be the real-time evaluator time frame => check in symbol data
-                data = get_bot().run_in_main_asyncio_loop(
-                    exchange_list[exchange].get_symbol_prices(symbol, time_frame, return_list=False)
-                )
-
-            if data is not None:
-                return create_candles_data(symbol, time_frame, data, bot, list_arrays, in_backtesting)
+        symbol_data = get_symbol_data(exchange_manager, symbol)
+        data = get_symbol_candles_manager(symbol_data, time_frame).get_symbol_prices()
+        if data is not None:
+            return _create_candles_data(symbol, time_frame, data, bot, list_arrays, in_backtesting)
     return None

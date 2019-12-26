@@ -16,8 +16,9 @@
 
 from flask import render_template, request, jsonify
 
+from octobot_commons.constants import CONFIG_CRYPTO_CURRENCIES
 from octobot_trading.constants import CONFIG_EXCHANGES, CONFIG_TRADING, CONFIG_TRADER, CONFIG_SIMULATOR, \
-    CONFIG_CRYPTO_CURRENCIES, CONFIG_TRADER_REFERENCE_MARKET
+    CONFIG_TRADER_REFERENCE_MARKET
 from octobot_services.constants import CONFIG_CATEGORY_SERVICES
 from octobot_notifications.constants import CONFIG_CATEGORY_NOTIFICATION
 from tentacles.Interfaces.interfaces.web.constants import GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, TRADING_CONFIG_KEY, \

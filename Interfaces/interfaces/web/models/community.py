@@ -14,14 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-
-from interfaces import get_bot
-from tools.metrics.metrics_analysis import can_read_metrics, get_community_metrics
+from octobot_interfaces.util.bot import get_bot
+# TODO: find a way to handle metrics
+# from tools.metrics.metrics_analysis import can_read_metrics, get_community_metrics
 
 
 def get_community_metrics_to_display():
-    return get_community_metrics()
+    # TODO: find a way to handle metrics
+    # return get_community_metrics()
+    return {}
 
 
 def can_get_community_metrics():
-    return can_read_metrics(get_bot().edited_config)
+    # TODO: find a way to handle metrics
+    # return can_read_metrics(get_bot().edited_config)
+    return True

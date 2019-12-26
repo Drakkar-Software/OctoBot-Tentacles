@@ -40,7 +40,7 @@ def commands(cmd=None):
     elif cmd == "stop":
         logger.error("Commands.stop_bot() is not implemented yet")
         # TODO
-        # Commands.stop_bot(AbstractInterface.bot)
+        # Commands.stop_bot(get_bot())
         return jsonify("Success")
 
     return render_template('commands.html',

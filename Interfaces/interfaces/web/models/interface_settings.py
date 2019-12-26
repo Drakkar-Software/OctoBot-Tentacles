@@ -16,10 +16,10 @@
 
 import copy
 
-from interfaces import get_bot
-from config import CONFIG_WATCHED_SYMBOLS, CONFIG_FILE, TEMP_RESTORE_CONFIG_FILE, CONFIG_CRYPTO_CURRENCIES, \
-    CONFIG_CRYPTO_PAIRS
-from tools.config_manager import ConfigManager
+from octobot_commons.constants import CONFIG_CRYPTO_PAIRS, CONFIG_CRYPTO_CURRENCIES
+from octobot_interfaces.util.bot import get_bot
+import octobot_commons.config_manager as config_manager
+from tentacles.Interfaces.interfaces.web.constants import CONFIG_WATCHED_SYMBOLS
 
 
 def _get_config():
@@ -56,5 +56,5 @@ def remove_watched_symbol(symbol):
 
 
 def _save_edition():
-    ConfigManager.simple_save_config_update(_get_config())
+    config_manager.simple_save_config_update(_get_config())
     return True

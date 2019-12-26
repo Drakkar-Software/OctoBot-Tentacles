@@ -21,17 +21,22 @@ from copy import copy
 import ccxt
 import requests
 
-from config import CONFIG_EVALUATOR, COIN_MARKET_CAP_CURRENCIES_LIST_URL, CONFIG_EXCHANGES, TESTED_EXCHANGES, \
-    UPDATED_CONFIG_SEPARATOR, CONFIG_TRADING_TENTACLES, EVALUATOR_ACTIVATION, EVALUATOR_EVAL_DEFAULT_TYPE, \
-    SIMULATOR_TESTED_EXCHANGES, CONFIG_METRICS, CONFIG_ENABLED_OPTION, CONFIG_ADVANCED_CLASSES
-from interfaces import get_bot
-from services import AbstractService
-from tools.config_manager import ConfigManager
+from octobot_trading.api.modes import get_activated_trading_mode
+from tentacles.Interfaces.interfaces.web.constants import UPDATED_CONFIG_SEPARATOR, EVALUATOR_ACTIVATION, \
+    COIN_MARKET_CAP_CURRENCIES_LIST_URL
+from octobot_evaluators.constants import CONFIG_EVALUATOR, EVALUATOR_EVAL_DEFAULT_TYPE
+from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES, \
+    CONFIG_TRADING_TENTACLES
+from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION, CONFIG_ADVANCED_CLASSES
+from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_services.api.services import get_available_services
+import octobot_commons.config_manager as config_manager
 from octobot_commons.tentacles_management.class_inspector import get_class_from_string, evaluator_parent_inspection, \
     trading_mode_parent_inspection
-from evaluator.abstract_evaluator import AbstractEvaluator
-from backtesting import backtesting_enabled
-from tools.metrics.metrics_manager import MetricsManager
+from octobot_evaluators.evaluator.abstract_evaluator import AbstractEvaluator
+from octobot_backtesting.api.backtesting import is_backtesting_enabled
+# TODO: manage metrics
+# from tools.metrics.metrics_manager import MetricsManager
 
 
 NAME_KEY = "name"
@@ -91,10 +96,10 @@ def is_trading_persistence_activated():
 
 
 def _get_advanced_class_details(class_name, klass, is_trading_mode=False, is_strategy=False):
-    from octobot_commons.tentacles_management import AdvancedManager
+    from octobot_commons.tentacles_management.advanced_manager import get_class
     details = {}
     config = get_bot().get_config()
-    advanced_class = AdvancedManager.get_class(config, klass)
+    advanced_class = get_class(config, klass)
     if advanced_class and advanced_class.get_name() != class_name:
         details[NAME_KEY] = advanced_class.get_name()
         details[DESCRIPTION_KEY] = advanced_class.get_description()
@@ -110,8 +115,8 @@ def _get_advanced_class_details(class_name, klass, is_trading_mode=False, is_str
 
 
 def _get_strategy_activation_state(with_trading_modes):
-    import trading.modes as modes
-    import evaluator.Strategies as strategies
+    import tentacles.Trading.modes as modes
+    import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
         TRADING_MODES_KEY: {},
         STRATEGIES_KEY: {}
@@ -149,15 +154,15 @@ def _get_strategy_activation_state(with_trading_modes):
 
 
 def _get_tentacle_packages():
-    import trading.modes as modes
+    import tentacles.Trading.modes as modes
     yield modes, modes.AbstractTradingMode, TRADING_MODE_KEY
-    import evaluator.Strategies as strategies
+    import tentacles.Evaluator.Strategies as strategies
     yield strategies, strategies.StrategiesEvaluator, STRATEGY_KEY
-    import evaluator.TA as ta
+    import tentacles.Evaluator.TA as ta
     yield ta, AbstractEvaluator, TA_EVALUATOR_KEY
-    import evaluator.Social as social
+    import tentacles.Evaluator.Social as social
     yield social, AbstractEvaluator, SOCIAL_EVALUATOR_KEY
-    import evaluator.RealTime as rt
+    import tentacles.Evaluator.RealTime as rt
     yield rt, AbstractEvaluator, RT_EVALUATOR_KEY
 
 
@@ -200,7 +205,7 @@ def get_tentacle_from_string(name, with_info=True):
 def update_tentacle_config(tentacle_name, config_update):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, with_info=False)
-        ConfigManager.update_tentacle_config(klass, config_update)
+        config_manager.update_tentacle_config(klass, config_update)
         return True, f"{tentacle_name} updated"
     except Exception as e:
         LOGGER.exception(e)
@@ -210,7 +215,7 @@ def update_tentacle_config(tentacle_name, config_update):
 def reset_config_to_default(tentacle_name):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, with_info=False)
-        ConfigManager.factory_reset_tentacle_config(klass)
+        config_manager.factory_reset_tentacle_config(klass)
         return True, f"{tentacle_name} configuration reset to default values"
     except Exception as e:
         LOGGER.exception(e)
@@ -276,15 +281,15 @@ def get_strategy_config(with_trading_modes=True):
 
 
 def get_in_backtesting_mode():
-    return backtesting_enabled(get_bot().get_config())
+    return is_backtesting_enabled(get_global_config())
 
 
 def accepted_terms():
-    return ConfigManager.accepted_terms(get_edited_config())
+    return config_manager.accepted_terms(get_edited_config())
 
 
 def accept_terms(accepted):
-    return ConfigManager.accept_terms(get_edited_config(), accepted)
+    return config_manager.accept_terms(get_edited_config(), accepted)
 
 
 def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
@@ -303,10 +308,10 @@ def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
 
 
 def get_evaluator_detailed_config():
-    import evaluator.Strategies as strategies
-    import evaluator.TA as ta
-    import evaluator.Social as social
-    import evaluator.RealTime as rt
+    import tentacles.Evaluator.Strategies as strategies
+    import tentacles.Evaluator.TA as ta
+    import tentacles.Evaluator.Social as social
+    import tentacles.Evaluator.RealTime as rt
     detailed_config = {
         SOCIAL_KEY: {},
         TA_KEY: {},
@@ -341,7 +346,6 @@ def get_evaluator_detailed_config():
 
 
 def get_config_activated_trading_mode(edited_config=False):
-    from trading.util.trading_config_util import get_activated_trading_mode
     config = get_bot().get_config()
     if edited_config:
         config = copy(get_edited_config())
@@ -353,7 +357,7 @@ def get_config_activated_trading_mode(edited_config=False):
 def update_evaluator_config(new_config, deactivate_others=False):
     current_config = _get_evaluator_config()
     try:
-        ConfigManager.update_evaluator_config(new_config, current_config, deactivate_others)
+        config_manager.update_evaluator_config(new_config, current_config, deactivate_others)
         return True
     except Exception:
         return False
@@ -362,7 +366,7 @@ def update_evaluator_config(new_config, deactivate_others=False):
 def update_trading_config(new_config):
     current_config = _get_trading_config()
     try:
-        ConfigManager.update_trading_config(new_config, current_config)
+        config_manager.update_trading_config(new_config, current_config)
         return True
     except Exception:
         return False
@@ -370,7 +374,12 @@ def update_trading_config(new_config):
 
 def update_global_config(new_config, delete=False):
     current_edited_config = get_edited_config()
-    ConfigManager.update_global_config(new_config, current_edited_config, update_input=True, delete=delete)
+    config_manager.update_global_config(new_config,
+                                        current_edited_config,
+                                        is_backtesting_enabled(current_edited_config),
+                                        UPDATED_CONFIG_SEPARATOR,
+                                        update_input=True,
+                                        delete=delete)
     return True
 
 
@@ -380,20 +389,21 @@ def manage_metrics(enable_metrics):
         current_edited_config[CONFIG_METRICS] = {CONFIG_ENABLED_OPTION: enable_metrics}
     else:
         current_edited_config[CONFIG_METRICS][CONFIG_ENABLED_OPTION] = enable_metrics
-    if enable_metrics and MetricsManager.should_register_bot(current_edited_config):
-        MetricsManager.background_get_id_and_register_bot(get_bot())
-    ConfigManager.simple_save_config_update(current_edited_config)
+    # TODO: manager metrics
+    # if enable_metrics and MetricsManager.should_register_bot(current_edited_config):
+    #     MetricsManager.background_get_id_and_register_bot(get_bot())
+    config_manager.simple_save_config_update(current_edited_config)
 
 
 def get_metrics_enabled():
-    return ConfigManager.get_metrics_enabled(get_edited_config())
+    return config_manager.get_metrics_enabled(get_edited_config())
 
 
 def get_services_list():
     services = {}
     services_names = []
-    for service in AbstractService.__subclasses__():
-        srv = service()
+    for service in get_available_services():
+        srv = service.instance()
         services[srv.get_type()] = srv
         services_names.append(srv.get_type())
     return services, services_names
