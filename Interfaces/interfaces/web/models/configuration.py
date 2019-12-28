@@ -21,14 +21,16 @@ from copy import copy
 import ccxt
 import requests
 
-from octobot_trading.api.modes import get_activated_trading_mode
+from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
+from octobot_evaluators.api import get_evaluator_config
+from octobot_trading.api.modes import get_activated_trading_mode, get_trading_config
 from tentacles.Interfaces.interfaces.web.constants import UPDATED_CONFIG_SEPARATOR, EVALUATOR_ACTIVATION, \
     COIN_MARKET_CAP_CURRENCIES_LIST_URL
 from octobot_evaluators.constants import CONFIG_EVALUATOR, EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES, \
     CONFIG_TRADING_TENTACLES
 from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION, CONFIG_ADVANCED_CLASSES
-from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_interfaces.util.bot import get_bot, get_global_config, get_startup_config
 from octobot_services.api.services import get_available_services
 import octobot_commons.config_manager as config_manager
 from octobot_commons.tentacles_management.class_inspector import get_class_from_string, evaluator_parent_inspection, \
@@ -70,19 +72,23 @@ def get_edited_config():
 
 
 def _get_evaluator_config():
-    return get_edited_config()[CONFIG_EVALUATOR]
+    # TODO: use editing config
+    return get_evaluator_config(get_global_config())
 
 
 def get_evaluator_startup_config():
-    return get_bot().startup_config[CONFIG_EVALUATOR]
+    # TODO: use startup config
+    return get_evaluator_config(get_global_config())
 
 
 def _get_trading_config():
-    return get_edited_config()[CONFIG_TRADING_TENTACLES]
+    # TODO: use editing config
+    return get_trading_config(get_global_config())
 
 
 def get_trading_startup_config():
-    return get_bot().startup_config[CONFIG_TRADING_TENTACLES]
+    # TODO: use startup config
+    return get_trading_config(get_global_config())
 
 
 def reset_trading_history():
@@ -98,7 +104,7 @@ def is_trading_persistence_activated():
 def _get_advanced_class_details(class_name, klass, is_trading_mode=False, is_strategy=False):
     from octobot_commons.tentacles_management.advanced_manager import get_class
     details = {}
-    config = get_bot().get_config()
+    config = get_global_config()
     advanced_class = get_class(config, klass)
     if advanced_class and advanced_class.get_name() != class_name:
         details[NAME_KEY] = advanced_class.get_name()
@@ -115,7 +121,7 @@ def _get_advanced_class_details(class_name, klass, is_trading_mode=False, is_str
 
 
 def _get_strategy_activation_state(with_trading_modes):
-    import tentacles.Trading.modes as modes
+    import tentacles.Trading.Mode as modes
     import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
         TRADING_MODES_KEY: {},
@@ -140,7 +146,7 @@ def _get_strategy_activation_state(with_trading_modes):
 
     evaluator_config = _get_evaluator_config()
     for key, val in evaluator_config.items():
-        config_class = get_class_from_string(key, strategies.StrategiesEvaluator,
+        config_class = get_class_from_string(key, StrategyEvaluator,
                                              strategies, evaluator_parent_inspection)
         if config_class:
             strategy_config[STRATEGIES_KEY][key] = {}
@@ -154,10 +160,10 @@ def _get_strategy_activation_state(with_trading_modes):
 
 
 def _get_tentacle_packages():
-    import tentacles.Trading.modes as modes
+    import tentacles.Trading.Mode as modes
     yield modes, modes.AbstractTradingMode, TRADING_MODE_KEY
     import tentacles.Evaluator.Strategies as strategies
-    yield strategies, strategies.StrategiesEvaluator, STRATEGY_KEY
+    yield strategies, StrategyEvaluator, STRATEGY_KEY
     import tentacles.Evaluator.TA as ta
     yield ta, AbstractEvaluator, TA_EVALUATOR_KEY
     import tentacles.Evaluator.Social as social
@@ -195,7 +201,7 @@ def get_tentacle_from_string(name, with_info=True):
                 if is_trading_mode:
                     _add_trading_mode_requirements_and_default_config(info, klass)
                 elif tentacle_type == STRATEGY_KEY:
-                    _add_strategy_requirements_and_default_config(info, klass, get_bot().get_config())
+                    _add_strategy_requirements_and_default_config(info, klass, get_global_config())
                 return klass, tentacle_type, info
             else:
                 return klass, tentacle_type, None
@@ -255,7 +261,7 @@ def _add_trading_mode_requirements_and_default_config(desc, klass):
 
 
 def _add_strategies_requirements(strategies, strategy_config):
-    config = get_bot().get_config()
+    config = get_global_config()
     required_elements = _get_required_element(strategy_config)
     for classKey, klass in strategies.items():
         if not strategy_config[STRATEGIES_KEY][classKey][ADVANCED_CLASS_KEY]:
@@ -346,11 +352,11 @@ def get_evaluator_detailed_config():
 
 
 def get_config_activated_trading_mode(edited_config=False):
-    config = get_bot().get_config()
+    config = get_global_config()
     if edited_config:
         config = copy(get_edited_config())
         # rebind advanced classes to use in get_activated_trading_mode
-        config[CONFIG_ADVANCED_CLASSES] = get_bot().get_config()[CONFIG_ADVANCED_CLASSES]
+        config[CONFIG_ADVANCED_CLASSES] = get_global_config()[CONFIG_ADVANCED_CLASSES]
     return get_activated_trading_mode(config)
 
 
@@ -439,7 +445,7 @@ def get_all_symbol_list():
 
 
 def get_full_exchange_list(remove_config_exchanges=False):
-    g_config = get_bot().get_config()
+    g_config = get_global_config()
     if remove_config_exchanges:
         user_exchanges = [e for e in g_config[CONFIG_EXCHANGES]]
         full_exchange_list = list(set(ccxt.exchanges) - set(user_exchanges))
@@ -466,7 +472,7 @@ def get_other_exchange_list(remove_config_exchanges=False):
 
 
 def get_current_exchange():
-    g_config = get_bot().get_config()
+    g_config = get_global_config()
     exchanges = g_config[CONFIG_EXCHANGES]
     if exchanges:
         return next(iter(exchanges))

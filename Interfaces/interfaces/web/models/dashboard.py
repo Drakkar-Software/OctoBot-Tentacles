@@ -16,7 +16,9 @@
 
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_bot, get_global_config
-from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name, get_exchange_names
+from octobot_interfaces.util.util import get_exchange_managers
+from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name, get_exchange_names, get_trading_pairs, \
+    get_exchange_name
 from octobot_trading.api.symbol_data import get_symbol_candles_manager, get_symbol_data
 from tentacles.Interfaces.interfaces.web import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Interfaces.interfaces.web.constants import DEFAULT_TIMEFRAME
@@ -103,17 +105,13 @@ def _find_symbol_evaluator_with_data(evaluators, exchange):
 
 
 def get_first_symbol_data():
-    bot = get_bot()
-    exchanges = bot.get_exchanges_list()
-
+    exchanges = get_exchange_managers()
     try:
         if exchanges:
-            exchange = next(iter(exchanges.values()))
-            evaluators = bot.get_symbol_evaluator_list()
-            if evaluators:
-                symbol_evaluator = _find_symbol_evaluator_with_data(evaluators, exchange)
-                time_frame = get_display_time_frame(bot.get_config())
-                return _get_candles_reply(exchange, symbol_evaluator, time_frame)
+            exchange = next(iter(exchanges))
+            symbol = get_trading_pairs(exchange)[0]
+            time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+            return _get_candles_reply(get_exchange_name(exchange), symbol, time_frame)
     except KeyError:
         return {}
     return {}

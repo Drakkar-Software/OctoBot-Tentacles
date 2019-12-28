@@ -21,6 +21,8 @@ from time import sleep
 
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT
 from tentacles.Interfaces.interfaces.web import server_instance
+from tentacles.Interfaces.interfaces.web.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
+    BOT_TOOLS_STRATEGY_OPTIMIZER
 from tentacles.Interfaces.interfaces.web.controllers import load_routes
 
 from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
@@ -28,7 +30,11 @@ from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
 
 class WebInterface(AbstractWebInterface, threading.Thread):
 
-    tools = {}
+    tools = {
+        BOT_TOOLS_BACKTESTING: None,
+        BOT_TOOLS_BACKTESTING_SOURCE: None,
+        BOT_TOOLS_STRATEGY_OPTIMIZER: None
+    }
 
     def __init__(self, config):
         AbstractWebInterface.__init__(self, config)

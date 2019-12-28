@@ -18,7 +18,7 @@ import datetime
 
 from flask import render_template, request, jsonify
 
-from octobot_interfaces.util.order import get_open_orders
+from octobot_interfaces.util.order import get_open_orders, get_all_open_orders
 from octobot_interfaces.util.trader import get_trades_history, get_currencies_with_status, \
     has_real_and_or_simulated_traders, get_reference_market
 from octobot_interfaces.util.portfolio import get_global_portfolio_currencies_amounts, get_portfolio_current_value, \
@@ -85,7 +85,8 @@ def symbol_market_status():
 
 @server_instance.route("/trading")
 def trading():
-    real_open_orders, simulated_open_orders = get_open_orders()
+
+    real_open_orders, simulated_open_orders = get_all_open_orders()
     has_real_trader, _ = has_real_and_or_simulated_traders()
     return render_template('trading.html',
                            real_open_orders=real_open_orders,
