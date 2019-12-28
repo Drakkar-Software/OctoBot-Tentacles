@@ -11,7 +11,8 @@ install:
   - if [[ $TRAVIS_OS_NAME = "linux" ]]; then sudo bash ./docs/install/linux_dependencies.sh; fi
   - python3 -m pip install -r pre_requirements.txt
   - python3 -m pip install -r requirements.txt -r dev_requirements.txt
-  - cp ../octobot_config.json ./config.json
+  - mkdir user
+  - cp ../octobot_config.json ./user/config.json
   - python3 start.py -p install all
 
 matrix:
