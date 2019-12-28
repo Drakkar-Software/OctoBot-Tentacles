@@ -33,16 +33,21 @@ function get_update(){
 function manage_alert(data){
     try{
         const errors_count = data["errors_count"];
-        if(errors_count > 0){
-            $("#errors-count-badge").text(errors_count);
-        }else{
-            $("#errors-count-badge").cleanData();
+        const errorBadge = $("#errors-count-badge");
+        if(errorBadge.length){
+            if(errors_count > 0){
+                errorBadge.text(errors_count);
+            }else{
+                errorBadge.text("");
+            }
         }
         $.each(data["notifications"], function(i, item) {
             create_alert(item["Level"], item["Title"], item["Message"]);
         })
     }
-    catch(error) {}
+    catch(error) {
+        console.log(error);
+    }
 }
 
 function handle_route_button(){

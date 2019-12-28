@@ -138,6 +138,7 @@ class TwitterService(AbstractService):
                 counter = 1
 
             # post the current tweet
+            # no async call possible yet
             post = self.twitter_api.PostUpdate(status=content[:CHARACTER_LIMIT], in_reply_to_status_id=tweet_id)
 
             # recursive call for all post while content > CHARACTER_LIMIT

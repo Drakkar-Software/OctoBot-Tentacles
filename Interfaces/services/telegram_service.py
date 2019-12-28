@@ -144,10 +144,12 @@ class TelegramService(AbstractService):
             kwargs[MESSAGE_PARSE_MODE] = telegram.parsemode.ParseMode.MARKDOWN
         try:
             if content:
+                # no async call possible yet
                 self.telegram_api.send_message(chat_id=self.chat_id, text=content, **kwargs)
         except telegram.error.TimedOut:
             # retry on failing
             try:
+                # no async call possible yet
                 self.telegram_api.send_message(chat_id=self.chat_id, text=content, **kwargs)
             except telegram.error.TimedOut as e:
                 self.logger.error(f"Failed to send message : {e}")
