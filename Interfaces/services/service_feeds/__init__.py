@@ -14,6 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from .reddit_dispatcher import *
-from .telegram_dispatcher import *
-from .twitter_dispatcher import *
+from .reddit_service_feed import *
+from .telegram_service_feed import *
+from .twitter_service_feed import *

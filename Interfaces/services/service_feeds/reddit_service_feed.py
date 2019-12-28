@@ -18,15 +18,20 @@ import time
 
 from octobot_commons.constants import HOURS_TO_SECONDS, DAYS_TO_SECONDS
 from prawcore.exceptions import RequestException, ResponseException, OAuthException, InvalidToken, ServerError
-
-from octobot_services.constants import CONFIG_CATEGORY_SERVICES, CONFIG_REDDIT, CONFIG_SERVICE_INSTANCE, \
-    CONFIG_REDDIT_SUBREDDITS, CONFIG_REDDIT_ENTRY, CONFIG_REDDIT_ENTRY_WEIGHT
-
-from octobot_services.dispatchers.abstract_dispatcher import AbstractDispatcher
+from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
+from octobot_services.constants import CONFIG_REDDIT_SUBREDDITS, CONFIG_REDDIT_ENTRY, CONFIG_REDDIT_ENTRY_WEIGHT, \
+    FEED_METADATA
+from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
 from tentacles.Interfaces.services import RedditService
 
 
-class RedditDispatcher(AbstractDispatcher):
+class RedditServiceFeedChannel(AbstractServiceFeedChannel):
+    pass
+
+
+class RedditServiceFeed(AbstractServiceFeed):
+    FEED_CHANNEL = RedditServiceFeedChannel
+    REQUIRED_SERVICE = RedditService
 
     MAX_CONNECTION_ATTEMPTS = 10
 
@@ -35,42 +40,51 @@ class RedditDispatcher(AbstractDispatcher):
         self.subreddits = None
         self.counter = 0
         self.connect_attempts = 0
-        self.social_config = {}
         self.credentials_ok = False
 
-        # check presence of twitter instance
-        if RedditService.is_setup_correctly(self.config):
-            self.service = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_REDDIT][CONFIG_SERVICE_INSTANCE]
-            self.is_setup_correctly = True
-        else:
-            if RedditService.should_be_ready(config):
-                self.logger.warning(self.REQUIRED_SERVICE_ERROR_MESSAGE)
-            self.is_setup_correctly = False
-
     # merge new config into existing config
-    def update_social_config(self, config):
-        if CONFIG_REDDIT_SUBREDDITS in self.social_config:
-            self.social_config[CONFIG_REDDIT_SUBREDDITS] = {**self.social_config[CONFIG_REDDIT_SUBREDDITS],
+    def update_feed_config(self, config):
+        if CONFIG_REDDIT_SUBREDDITS in self.feed_config:
+            self.feed_config[CONFIG_REDDIT_SUBREDDITS] = {**self.feed_config[CONFIG_REDDIT_SUBREDDITS],
                                                             **config[CONFIG_REDDIT_SUBREDDITS]}
         else:
-            self.social_config[CONFIG_REDDIT_SUBREDDITS] = config[CONFIG_REDDIT_SUBREDDITS]
+            self.feed_config[CONFIG_REDDIT_SUBREDDITS] = config[CONFIG_REDDIT_SUBREDDITS]
 
     def _init_subreddits(self):
         self.subreddits = ""
-        for symbol in self.social_config[CONFIG_REDDIT_SUBREDDITS]:
-            for subreddit in self.social_config[CONFIG_REDDIT_SUBREDDITS][symbol]:
+        for symbol in self.feed_config[CONFIG_REDDIT_SUBREDDITS]:
+            for subreddit in self.feed_config[CONFIG_REDDIT_SUBREDDITS][symbol]:
                 if subreddit not in self.subreddits:
                     if self.subreddits:
                         self.subreddits = self.subreddits + "+" + subreddit
                     else:
                         self.subreddits = self.subreddits + subreddit
 
-    def _get_data(self):
+    def _initialize(self):
         if not self.subreddits:
             self._init_subreddits()
 
     def _something_to_watch(self):
-        return CONFIG_REDDIT_SUBREDDITS in self.social_config and self.social_config[CONFIG_REDDIT_SUBREDDITS]
+        return CONFIG_REDDIT_SUBREDDITS in self.feed_config and self.feed_config[CONFIG_REDDIT_SUBREDDITS]
+
+    @staticmethod
+    def _get_entry_weight(entry_age):
+        if entry_age > 0:
+            # entry in history => weight proportional to entry's age
+            # last 12 hours: weight = 4
+            # last 2 days: weight = 3
+            # last 7 days: weight = 2
+            # older: weight = 1
+            if entry_age / HOURS_TO_SECONDS <= 12:
+                return 4
+            elif entry_age / DAYS_TO_SECONDS <= 2:
+                return 3
+            elif entry_age / DAYS_TO_SECONDS <= 7:
+                return 2
+            else:
+                return 1
+        # new entry => max weight
+        return 5
 
     def _start_listener(self):
         subreddit = self.service.get_endpoint().subreddit(self.subreddits)
@@ -81,33 +95,18 @@ class RedditDispatcher(AbstractDispatcher):
             self.counter += 1
             # check if we are in the 100 history or if it's a new entry (new posts are more valuables)
             # the older the entry is, the les weight it gets
-            entry_age_when_dispatcher_started_in_sec = start_time - entry.created_utc
-            # entry_weight = 0
-            if entry_age_when_dispatcher_started_in_sec > 0:
-                # entry in history => weight proportional to entry's age
-                # last 12 hours: weight = 4
-                # last 2 days: weight = 3
-                # last 7 days: weight = 2
-                # older: weight = 1
-                if entry_age_when_dispatcher_started_in_sec / HOURS_TO_SECONDS <= 12:
-                    entry_weight = 4
-                elif entry_age_when_dispatcher_started_in_sec / DAYS_TO_SECONDS <= 2:
-                    entry_weight = 3
-                elif entry_age_when_dispatcher_started_in_sec / DAYS_TO_SECONDS <= 7:
-                    entry_weight = 2
-                else:
-                    entry_weight = 1
-            else:
-                # new entry => max weight
-                entry_weight = 5
-            subreddit_name = entry.subreddit.display_name.lower()
-            self.notify_registered_clients_if_interested(subreddit_name,
-                                                         {CONFIG_REDDIT_ENTRY: entry,
-                                                          CONFIG_REDDIT_ENTRY_WEIGHT: entry_weight}
-                                                         )
+            entry_age_when_feed_started_in_sec = start_time - entry.created_utc
+            entry_weight = self._get_entry_weight(entry_age_when_feed_started_in_sec)
+            self._notify_consumers(
+                {
+                     FEED_METADATA: entry.subreddit.display_name.lower(),
+                     CONFIG_REDDIT_ENTRY: entry,
+                     CONFIG_REDDIT_ENTRY_WEIGHT: entry_weight
+                }
+            )
 
-    def _start_dispatcher(self):
-        while self.keep_running and self.connect_attempts < self.MAX_CONNECTION_ATTEMPTS:
+    def _start_service_feed(self):
+        while not self.should_stop and self.connect_attempts < self.MAX_CONNECTION_ATTEMPTS:
             try:
                 self._start_listener()
             except RequestException:

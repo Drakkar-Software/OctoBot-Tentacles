@@ -110,6 +110,9 @@ class TelegramService(AbstractService):
             self.add_text_handler()
             self.telegram_updater.start_polling()
 
+    def is_running(self):
+        return self.telegram_updater and self.telegram_updater.running
+
     def get_type(self):
         return CONFIG_TELEGRAM
 

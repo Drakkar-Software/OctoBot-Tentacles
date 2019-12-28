@@ -18,4 +18,4 @@ from .reddit_service import *
 from .telegram_service import *
 from .twitter_service import *
 from .web_service import *
-from .dispatchers import *
+from .service_feeds import *

@@ -16,48 +16,45 @@
 
 import twitter
 
-from octobot_services.constants import CONFIG_CATEGORY_SERVICES, CONFIG_TWITTERS_ACCOUNTS, CONFIG_SERVICE_INSTANCE, \
-    CONFIG_TWITTER, CONFIG_TWITTERS_HASHTAGS, CONFIG_TWEET, CONFIG_TWEET_DESCRIPTION
-from octobot_services.dispatchers.abstract_dispatcher import AbstractDispatcher
+from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
+from octobot_services.constants import CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS_HASHTAGS, CONFIG_TWEET, \
+    CONFIG_TWEET_DESCRIPTION, FEED_METADATA
+from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
 from tentacles.Interfaces.services import TwitterService
 
 
-class TwitterDispatcher(AbstractDispatcher):
+class TwitterServiceFeedChannel(AbstractServiceFeedChannel):
+    pass
+
+
+class TwitterServiceFeed(AbstractServiceFeed):
+    FEED_CHANNEL = TwitterServiceFeedChannel
+    REQUIRED_SERVICE = TwitterService
 
     def __init__(self, config, main_async_loop):
         super().__init__(config, main_async_loop)
         self.user_ids = []
         self.hashtags = []
         self.counter = 0
-        self.social_config = {}
-
-        # check presence of twitter instance
-        if TwitterService.is_setup_correctly(self.config):
-            self.service = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TWITTER][CONFIG_SERVICE_INSTANCE]
-            self.is_setup_correctly = True
-        else:
-            if TwitterService.should_be_ready(config):
-                self.logger.warning(self.REQUIRED_SERVICE_ERROR_MESSAGE)
-            self.is_setup_correctly = False
 
     # merge new config into existing config
     def update_social_config(self, config):
-        if CONFIG_TWITTERS_ACCOUNTS in self.social_config:
-            self.social_config[CONFIG_TWITTERS_ACCOUNTS] = {**self.social_config[CONFIG_TWITTERS_ACCOUNTS],
-                                                            **config[CONFIG_TWITTERS_ACCOUNTS]}
+        if CONFIG_TWITTERS_ACCOUNTS in self.feed_config:
+            self.feed_config[CONFIG_TWITTERS_ACCOUNTS] = {**self.feed_config[CONFIG_TWITTERS_ACCOUNTS],
+                                                          **config[CONFIG_TWITTERS_ACCOUNTS]}
         else:
-            self.social_config[CONFIG_TWITTERS_ACCOUNTS] = config[CONFIG_TWITTERS_ACCOUNTS]
+            self.feed_config[CONFIG_TWITTERS_ACCOUNTS] = config[CONFIG_TWITTERS_ACCOUNTS]
 
-        if CONFIG_TWITTERS_HASHTAGS in self.social_config:
-            self.social_config[CONFIG_TWITTERS_HASHTAGS] = {**self.social_config[CONFIG_TWITTERS_HASHTAGS],
-                                                            **config[CONFIG_TWITTERS_HASHTAGS]}
+        if CONFIG_TWITTERS_HASHTAGS in self.feed_config:
+            self.feed_config[CONFIG_TWITTERS_HASHTAGS] = {**self.feed_config[CONFIG_TWITTERS_HASHTAGS],
+                                                          **config[CONFIG_TWITTERS_HASHTAGS]}
         else:
-            self.social_config[CONFIG_TWITTERS_HASHTAGS] = config[CONFIG_TWITTERS_HASHTAGS]
+            self.feed_config[CONFIG_TWITTERS_HASHTAGS] = config[CONFIG_TWITTERS_HASHTAGS]
 
     def _init_users_accounts(self):
         tempo_added_accounts = []
-        for symbol in self.social_config[CONFIG_TWITTERS_ACCOUNTS]:
-            for account in self.social_config[CONFIG_TWITTERS_ACCOUNTS][symbol]:
+        for symbol in self.feed_config[CONFIG_TWITTERS_ACCOUNTS]:
+            for account in self.feed_config[CONFIG_TWITTERS_ACCOUNTS][symbol]:
                 if account not in tempo_added_accounts:
                     tempo_added_accounts.append(account)
                     try:
@@ -66,22 +63,22 @@ class TwitterDispatcher(AbstractDispatcher):
                         self.logger.error(account + " : " + str(e))
 
     def _init_hashtags(self):
-        for symbol in self.social_config[CONFIG_TWITTERS_HASHTAGS]:
-            for hashtag in self.social_config[CONFIG_TWITTERS_HASHTAGS][symbol]:
+        for symbol in self.feed_config[CONFIG_TWITTERS_HASHTAGS]:
+            for hashtag in self.feed_config[CONFIG_TWITTERS_HASHTAGS][symbol]:
                 if hashtag not in self.hashtags:
                     self.hashtags.append(hashtag)
 
-    def _get_data(self):
+    def _initialize(self):
         if not self.user_ids:
             self._init_users_accounts()
         if not self.hashtags:
             self._init_hashtags()
 
     def _something_to_watch(self):
-        return (CONFIG_TWITTERS_HASHTAGS in self.social_config
-                and self.social_config[CONFIG_TWITTERS_HASHTAGS]) \
-               or (CONFIG_TWITTERS_ACCOUNTS in self.social_config
-                   and self.social_config[CONFIG_TWITTERS_ACCOUNTS])
+        return (CONFIG_TWITTERS_HASHTAGS in self.feed_config
+                and self.feed_config[CONFIG_TWITTERS_HASHTAGS]) \
+               or (CONFIG_TWITTERS_ACCOUNTS in self.feed_config
+                   and self.feed_config[CONFIG_TWITTERS_ACCOUNTS])
 
     def _start_listener(self):
         for tweet in self.service.get_endpoint().GetStreamFilter(follow=self.user_ids,
@@ -91,14 +88,16 @@ class TwitterDispatcher(AbstractDispatcher):
             string_tweet = self.service.get_tweet_text(tweet)
             if string_tweet:
                 tweet_desc = str(tweet).lower()
-                self.notify_registered_clients_if_interested(tweet_desc,
-                                                             {CONFIG_TWEET: tweet,
-                                                              CONFIG_TWEET_DESCRIPTION: string_tweet.lower()
-                                                              }
-                                                             )
+                self._notify_consumers(
+                    {
+                         FEED_METADATA: tweet_desc,
+                         CONFIG_TWEET: tweet,
+                         CONFIG_TWEET_DESCRIPTION: string_tweet.lower()
+                    }
+                )
 
-    def _start_dispatcher(self):
-        while self.keep_running:
+    def _start_service_feed(self):
+        while not self.should_stop:
             try:
                 self._start_listener()
             except twitter.error.TwitterError as e:
