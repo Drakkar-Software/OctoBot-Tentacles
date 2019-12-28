@@ -44,7 +44,12 @@ class TelegramBotInterface(AbstractBotInterface):
         self.telegram_service.register_text_polling_handler(self.HANDLED_CHATS, self.echo)
 
     def start(self):
-        self.telegram_service.start_dispatcher()
+        if self.telegram_service:
+            self.telegram_service.start_dispatcher()
+        else:
+            # debug level log only: error log is already produced in initialize()
+            self.get_logger().debug(f"Impossible to start bot interface: "
+                                    f"{self.REQUIRED_SERVICE.get_name()} is unavailable.")
 
     def stop(self):
         self.telegram_service.stop()
