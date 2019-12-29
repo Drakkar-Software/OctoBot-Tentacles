@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import threading
 import time
 
 from octobot_commons.constants import HOURS_TO_SECONDS, DAYS_TO_SECONDS
@@ -29,18 +29,22 @@ class RedditServiceFeedChannel(AbstractServiceFeedChannel):
     pass
 
 
-class RedditServiceFeed(AbstractServiceFeed):
+class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
     FEED_CHANNEL = RedditServiceFeedChannel
     REQUIRED_SERVICE = RedditService
 
     MAX_CONNECTION_ATTEMPTS = 10
 
     def __init__(self, config, main_async_loop):
-        super().__init__(config, main_async_loop)
+        AbstractServiceFeed.__init__(self, config, main_async_loop)
+        threading.Thread.__init__(self)
         self.subreddits = None
         self.counter = 0
         self.connect_attempts = 0
         self.credentials_ok = False
+
+    def start(self) -> None:
+        threading.Thread.start(self)
 
     # merge new config into existing config
     def update_feed_config(self, config):

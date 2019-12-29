@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import threading
 import twitter
 
 from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
@@ -27,15 +27,19 @@ class TwitterServiceFeedChannel(AbstractServiceFeedChannel):
     pass
 
 
-class TwitterServiceFeed(AbstractServiceFeed):
+class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
     FEED_CHANNEL = TwitterServiceFeedChannel
     REQUIRED_SERVICE = TwitterService
 
     def __init__(self, config, main_async_loop):
         super().__init__(config, main_async_loop)
+        threading.Thread.__init__(self)
         self.user_ids = []
         self.hashtags = []
         self.counter = 0
+
+    def start(self) -> None:
+        threading.Thread.start(self)
 
     # merge new config into existing config
     def update_social_config(self, config):
