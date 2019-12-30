@@ -36,12 +36,13 @@ class TelegramBotInterface(AbstractBotInterface):
         super().__init__(config)
         self.telegram_service = None
 
-    async def _post_initialize(self):
+    async def _post_initialize(self, _):
         self.telegram_service = TelegramService.instance()
         self.telegram_service.register_user(self.get_name())
         self.telegram_service.add_handlers(self.get_bot_handlers())
         self.telegram_service.add_error_handler(self.command_error)
         self.telegram_service.register_text_polling_handler(self.HANDLED_CHATS, self.echo)
+        return True
 
     def start(self):
         if self.telegram_service:

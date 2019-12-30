@@ -137,10 +137,6 @@ class TelegramService(AbstractService):
                and self.check_required_config(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM]) \
                and self.get_is_enabled(self.config)
 
-    @classmethod
-    def should_be_ready(cls, config):
-        return super().should_be_ready(config) and cls.get_is_enabled(config)
-
     async def send_message(self, content, markdown=False):
         kwargs = {}
         if markdown:
