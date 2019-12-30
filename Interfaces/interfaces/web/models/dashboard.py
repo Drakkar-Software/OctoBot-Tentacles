@@ -22,10 +22,11 @@ from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name
 from octobot_trading.api.symbol_data import get_symbol_candles_manager, get_symbol_data
 from tentacles.Interfaces.interfaces.web import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Interfaces.interfaces.web.constants import DEFAULT_TIMEFRAME
+from tentacles.Interfaces.interfaces.web.enums import PriceStrings
 from octobot_commons.timestamp_util import convert_timestamps_to_datetime, convert_timestamp_to_datetime
 from octobot_commons.time_frame_manager import get_display_time_frame
 from octobot_commons.constants import CONFIG_WILDCARD
-from octobot_commons.enums import PriceIndexes, PriceStrings, TimeFrames
+from octobot_commons.enums import PriceIndexes, TimeFrames
 from octobot_interfaces.util.trader import get_trades_history
 
 GET_SYMBOL_SEPARATOR = "|"
