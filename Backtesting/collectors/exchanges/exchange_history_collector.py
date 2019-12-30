@@ -53,6 +53,9 @@ class ExchangeHistoryDataCollector(ExchangeDataCollector):
 
         await self.stop()
 
+    def use_all_available_timeframes(self):
+        self.time_frames = self.exchange.client.timeframes.keys() if hasattr(self.exchange.client, "timeframes") else []
+
     async def stop(self):
         await self.exchange_manager.stop()
 
