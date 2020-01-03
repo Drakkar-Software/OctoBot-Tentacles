@@ -33,7 +33,6 @@ $tentacle_description: {
 import math
 
 import tulipy
-from octobot_commons.enums import PriceIndexes
 
 from octobot_evaluators.evaluator import TAEvaluator
 from tentacles.Evaluator.Util import TrendAnalysis
@@ -49,7 +48,7 @@ class RSIMomentumEvaluator(TAEvaluator):
 
     async def ohlcv_callback(self, exchange, symbol, time_frame, candle):
         period_length = 14
-        candle_data = self.get_candle_manager(exchange, symbol, time_frame).get_symbol_close_candles(period_length).base
+        candle_data = self.get_candle_manager(exchange, symbol, time_frame).get_symbol_close_candles().base
         if candle_data is not None and len(candle_data) > period_length:
             rsi_v = tulipy.rsi(candle_data, period=period_length)
 
