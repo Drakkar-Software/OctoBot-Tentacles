@@ -43,8 +43,9 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
         self.connect_attempts = 0
         self.credentials_ok = False
 
-    def start(self) -> None:
+    async def _inner_start(self) -> bool:
         threading.Thread.start(self)
+        return True
 
     # merge new config into existing config
     def update_feed_config(self, config):
@@ -90,7 +91,7 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
         # new entry => max weight
         return 5
 
-    def _start_listener(self):
+    async def _start_listener(self):
         subreddit = self.service.get_endpoint().subreddit(self.subreddits)
         start_time = time.time()
         for entry in subreddit.stream.submissions():
@@ -109,10 +110,10 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
                 }
             )
 
-    def _start_service_feed(self):
+    async def _start_service_feed(self):
         while not self.should_stop and self.connect_attempts < self.MAX_CONNECTION_ATTEMPTS:
             try:
-                self._start_listener()
+                await self._start_listener()
             except RequestException:
                 # probably a connexion loss, try again
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)

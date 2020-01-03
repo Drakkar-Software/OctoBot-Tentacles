@@ -38,8 +38,9 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
         self.hashtags = []
         self.counter = 0
 
-    def start(self) -> None:
+    async def _inner_start(self) -> bool:
         threading.Thread.start(self)
+        return True
 
     # merge new config into existing config
     def update_social_config(self, config):
@@ -84,7 +85,7 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
                or (CONFIG_TWITTERS_ACCOUNTS in self.feed_config
                    and self.feed_config[CONFIG_TWITTERS_ACCOUNTS])
 
-    def _start_listener(self):
+    async def _start_listener(self):
         for tweet in self.service.get_endpoint().GetStreamFilter(follow=self.user_ids,
                                                                  track=self.hashtags,
                                                                  stall_warnings=True):
@@ -100,10 +101,10 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
                     }
                 )
 
-    def _start_service_feed(self):
+    async def _start_service_feed(self):
         while not self.should_stop:
             try:
-                self._start_listener()
+                await self._start_listener()
             except twitter.error.TwitterError as e:
                 self.logger.error(f"Error when receiving Twitter feed: {e.message} ({e})")
                 self.logger.exception(e)
