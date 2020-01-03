@@ -31,6 +31,8 @@ $tentacle_description: {
 import random
 
 from ccxt import InsufficientFunds
+from octobot_evaluators.enums import EvaluatorMatrixTypes
+
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
@@ -40,8 +42,10 @@ from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
 from octobot_trading.enums import EvaluatorStates, TraderOrderType
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
-from octobot_trading.modes.trading_mode_orders import check_factor, add_dusts_to_quantity_if_necessary, \
+from octobot_trading.orders.order_adapter import add_dusts_to_quantity_if_necessary, \
     check_and_adapt_order_details_if_necessary, adapt_price
+from octobot_trading.orders.order_factory import create_order_instance
+from octobot_trading.orders.order_util import get_pre_order_data
 from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
 
 
@@ -65,6 +69,8 @@ class DailyTradingMode(AbstractTradingMode):
 class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
+        self.trader = self.exchange_manager.trader
+
         self.MAX_SUM_RESULT = 2
 
         self.STOP_LOSS_ORDER_MAX_PERCENT = 0.99
@@ -108,15 +114,15 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         if eval_note > 0:
             factor = self.SELL_LIMIT_ORDER_MIN_PERCENT + \
                      ((1 - abs(eval_note) + 1 - self.trader.risk) * self.LIMIT_ORDER_ATTENUATION)
-            return check_factor(self.SELL_LIMIT_ORDER_MIN_PERCENT,
-                                self.SELL_LIMIT_ORDER_MAX_PERCENT,
-                                factor)
+            return AbstractTradingModeConsumer.check_factor(self.SELL_LIMIT_ORDER_MIN_PERCENT,
+                                                            self.SELL_LIMIT_ORDER_MAX_PERCENT,
+                                                            factor)
         else:
             factor = self.BUY_LIMIT_ORDER_MAX_PERCENT - \
                      ((1 - abs(eval_note) + 1 - self.trader.risk) * self.LIMIT_ORDER_ATTENUATION)
-            return check_factor(self.BUY_LIMIT_ORDER_MIN_PERCENT,
-                                self.BUY_LIMIT_ORDER_MAX_PERCENT,
-                                factor)
+            return AbstractTradingModeConsumer.check_factor(self.BUY_LIMIT_ORDER_MIN_PERCENT,
+                                                            self.BUY_LIMIT_ORDER_MAX_PERCENT,
+                                                            factor)
 
     """
     Starting point : self.STOP_LOSS_ORDER_MAX_PERCENT
@@ -127,9 +133,9 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
     def __get_stop_price_from_risk(self):
         factor = self.STOP_LOSS_ORDER_MAX_PERCENT - (self.trader.risk * self.STOP_LOSS_ORDER_ATTENUATION)
-        return check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT,
-                            self.STOP_LOSS_ORDER_MAX_PERCENT,
-                            factor)
+        return AbstractTradingModeConsumer.check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT,
+                                                        self.STOP_LOSS_ORDER_MAX_PERCENT,
+                                                        factor)
 
     """
     Starting point : self.QUANTITY_MIN_PERCENT
@@ -143,10 +149,11 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     def __get_buy_limit_quantity_from_risk(self, eval_note, quantity, quote):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider buy quantity like a sell if quote is the reference market
-        if quote == self.exchange_portfolio_manager.reference_market:
+        if quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
+        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT,
+                                                                  factor)
         return checked_factor * quantity
 
     """
@@ -163,12 +170,14 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     async def __get_sell_limit_quantity_from_risk(self, eval_note, quantity, quote):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider sell quantity like a buy if base is the reference market
-        if quote != self.exchange_portfolio_manager.reference_market:
+        if quote != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
         if await self.get_holdings_ratio(quote) < self.FULL_SELL_MIN_RATIO:
             return quantity
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
+        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MIN_PERCENT,
+                                                                  self.QUANTITY_MAX_PERCENT,
+                                                                  factor)
         return checked_factor * quantity
 
     """
@@ -183,13 +192,16 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
     def __get_market_quantity_from_risk(self, eval_note, quantity, quote, selling=False):
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
-        if (selling and quote != self.exchange_portfolio_manager.reference_market) \
-                or (not selling and quote == self.exchange_portfolio_manager.reference_market):
+        if (selling and quote != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market) \
+                or (
+                not selling and quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market):
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MARKET_MIN_PERCENT + (
                 (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION)
 
-        checked_factor = check_factor(self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor)
+        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MARKET_MIN_PERCENT,
+                                                                  self.QUANTITY_MARKET_MAX_PERCENT,
+                                                                  factor)
         return checked_factor * quantity
 
     async def __get_quantity_ratio(self, currency):
@@ -207,7 +219,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         current_order = None
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
-                await self.get_pre_order_data(symbol)
+                await get_pre_order_data(self.exchange_manager, symbol=symbol)
 
             quote, _ = split_symbol(symbol)
             created_orders = []
@@ -217,11 +229,12 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 quantity = add_dusts_to_quantity_if_necessary(quantity, price, symbol_market, current_symbol_holding)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                               symbol_market):
-                    current_order = self.trader.create_order_instance(order_type=TraderOrderType.SELL_MARKET,
-                                                                      symbol=symbol,
-                                                                      current_price=order_price,
-                                                                      quantity=order_quantity,
-                                                                      price=order_price)
+                    current_order = create_order_instance(trader=self.trader,
+                                                          order_type=TraderOrderType.SELL_MARKET,
+                                                          symbol=symbol,
+                                                          current_price=order_price,
+                                                          quantity=order_quantity,
+                                                          price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
                 return created_orders
@@ -234,20 +247,22 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity,
                                                                                               limit_price,
                                                                                               symbol_market):
-                    current_order = self.trader.create_order_instance(order_type=TraderOrderType.SELL_LIMIT,
-                                                                      symbol=symbol,
-                                                                      current_price=price,
-                                                                      quantity=order_quantity,
-                                                                      price=order_price)
+                    current_order = create_order_instance(trader=self.trader,
+                                                          order_type=TraderOrderType.SELL_LIMIT,
+                                                          symbol=symbol,
+                                                          current_price=price,
+                                                          quantity=order_quantity,
+                                                          price=order_price)
                     updated_limit = await self.trader.create_order(current_order)
                     created_orders.append(updated_limit)
 
-                    current_order = self.trader.create_order_instance(order_type=TraderOrderType.STOP_LOSS,
-                                                                      symbol=symbol,
-                                                                      current_price=price,
-                                                                      quantity=order_quantity,
-                                                                      price=stop_price,
-                                                                      linked_to=updated_limit)
+                    current_order = create_order_instance(trader=self.trader,
+                                                          order_type=TraderOrderType.STOP_LOSS,
+                                                          symbol=symbol,
+                                                          current_price=price,
+                                                          quantity=order_quantity,
+                                                          price=stop_price,
+                                                          linked_to=updated_limit)
                     await self.trader.create_order(current_order)
                 return created_orders
 
@@ -262,11 +277,12 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity,
                                                                                               limit_price,
                                                                                               symbol_market):
-                    current_order = self.trader.create_order_instance(order_type=TraderOrderType.BUY_LIMIT,
-                                                                      symbol=symbol,
-                                                                      current_price=price,
-                                                                      quantity=order_quantity,
-                                                                      price=order_price)
+                    current_order = create_order_instance(trader=self.trader,
+                                                          order_type=TraderOrderType.BUY_LIMIT,
+                                                          symbol=symbol,
+                                                          current_price=price,
+                                                          quantity=order_quantity,
+                                                          price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
                 return created_orders
@@ -276,11 +292,12 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 quantity = quantity * await self.__get_quantity_ratio(quote)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
                                                                                               symbol_market):
-                    current_order = self.trader.create_order_instance(order_type=TraderOrderType.BUY_MARKET,
-                                                                      symbol=symbol,
-                                                                      current_price=order_price,
-                                                                      quantity=order_quantity,
-                                                                      price=order_price)
+                    current_order = create_order_instance(trader=self.trader,
+                                                          order_type=TraderOrderType.BUY_MARKET,
+                                                          symbol=symbol,
+                                                          current_price=order_price,
+                                                          quantity=order_quantity,
+                                                          price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
                 return created_orders
@@ -292,8 +309,8 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             raise e
 
         except Exception as e:
-            self.logger.error(f"Failed to create order : {e}.")
-            self.logger.exception(e)
+            self._logger.error(f"Failed to create order : {e}.")
+            self._logger.exception(e)
             return None
 
 
@@ -318,22 +335,20 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         strategies_analysis_note_counter = 0
 
         try:
-            from octobot_evaluators.data.matrix import EvaluatorMatrix
+            from octobot_evaluators.data.matrix import Matrix
         except ImportError:
             self.logger.error("octobot_evaluators.data.matrix.EvaluatorMatrix cannot be imported")
             return
 
         # Strategies analysis
-        for evaluated_strategy_names in EvaluatorMatrix.instance() \
-                .get_evaluators_name_from_symbol_exchange_and_time_frame(symbol,
-                                                                         self.exchange_name,
-                                                                         time_frame):
-            strategy_eval = EvaluatorMatrix.instance().get_eval_note(evaluated_strategy_names,
-                                                                     exchange_name=self.exchange_name,
-                                                                     symbol=symbol,
-                                                                     time_frame=time_frame)
-            if check_valid_eval_note(strategy_eval):
-                self.final_eval += strategy_eval  # TODO * evaluated_strategies.get_pertinence()
+        for evaluated_strategy_node in Matrix.instance().get_tentacles_value_nodes(Matrix.instance().get_tentacle_nodes(
+                exchange_name=self.exchange_name,
+                tentacle_type=EvaluatorMatrixTypes.STRATEGIES.value),
+                symbol=symbol,
+                time_frame=time_frame):
+
+            if evaluated_strategy_node and check_valid_eval_note(evaluated_strategy_node.node_value):
+                self.final_eval += evaluated_strategy_node.node_value  # TODO * evaluated_strategies.get_pertinence()
                 strategies_analysis_note_counter += 1  # TODO evaluated_strategies.get_pertinence()
 
         if strategies_analysis_note_counter > 0:
