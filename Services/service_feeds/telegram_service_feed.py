@@ -87,5 +87,5 @@ class TelegramServiceFeed(AbstractServiceFeed):
     def _initialize(self):
         pass
 
-    def _start_service_feed(self):
+    async def _start_service_feed(self):
         return True
