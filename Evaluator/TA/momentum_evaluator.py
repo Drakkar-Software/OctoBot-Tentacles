@@ -46,9 +46,9 @@ class RSIMomentumEvaluator(TAEvaluator):
         super().__init__()
         self.pertinence = 1
 
-    async def ohlcv_callback(self, exchange, symbol, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str,  time_frame, candle):
         period_length = 14
-        candle_data = self.get_candle_manager(exchange, symbol, time_frame).get_symbol_close_candles().base
+        candle_data = self.get_candle_manager(exchange, exchange_id, symbol, time_frame).get_symbol_close_candles().base
         if candle_data is not None and len(candle_data) > period_length:
             rsi_v = tulipy.rsi(candle_data, period=period_length)
 
