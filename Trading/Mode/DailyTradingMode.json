@@ -1,11 +1,11 @@
 {
     "close_to_current_price_difference": 0.02,
     "default_config": [
-        "SimpleMixedStrategiesEvaluator"
+        "SimpleMixedStrategyEvaluator"
     ],
     "required_strategies": [
-        "SimpleMixedStrategiesEvaluator",
-        "FullMixedStrategiesEvaluator"
+        "SimpleMixedStrategyEvaluator",
+        "FullMixedStrategyEvaluator"
     ],
     "required_strategies_min_count": 1,
     "use_maximum_size_orders": false,
