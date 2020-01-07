@@ -69,15 +69,16 @@ def portfolio_holdings():
 @server_instance.route("/symbol_market_status")
 @server_instance.route('/symbol_market_status', methods=['GET', 'POST'])
 def symbol_market_status():
-    exchange = request.args["exchange"]
+    exchange_id = request.args["exchange_id"]
     symbol = request.args["symbol"]
-    symbol_time_frames, exchange = get_exchange_time_frames(exchange)
+    symbol_time_frames, exchange = get_exchange_time_frames(exchange_id)
     time_frames = list(symbol_time_frames)
     time_frames.reverse()
     symbol_evaluation = get_evaluation(symbol, exchange)
     return render_template('symbol_market_status.html',
                            symbol=symbol,
                            exchange=exchange,
+                           exchange_id=exchange_id,
                            symbol_evaluation=symbol_evaluation,
                            time_frames=time_frames,
                            backtesting_mode=get_in_backtesting_mode())
