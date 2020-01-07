@@ -23,11 +23,11 @@ from octobot_interfaces.util.profitability import get_global_profitability
 from octobot_commons.pretty_printer import PrettyPrinter
 
 
-@server_instance.route('/dashboard/currency_price_graph_update/<exchange_name>/<symbol>/<time_frame>/<mode>',
+@server_instance.route('/dashboard/currency_price_graph_update/<exchange_id>/<symbol>/<time_frame>/<mode>',
                        methods=['GET', 'POST'])
-def currency_price_graph_update(exchange_name, symbol, time_frame, mode="live"):
+def currency_price_graph_update(exchange_id, symbol, time_frame, mode="live"):
     backtesting = mode != "live"
-    return jsonify(get_currency_price_graph_update(exchange_name,
+    return jsonify(get_currency_price_graph_update(exchange_id,
                                                    get_value_from_dict_or_string(symbol),
                                                    time_frame,
                                                    backtesting=backtesting))
