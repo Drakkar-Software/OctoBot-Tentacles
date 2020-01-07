@@ -28,8 +28,8 @@ $tentacle_description: {
 
 import numpy
 
-from evaluator.Util.abstract_util import AbstractUtil
-from config import START_PENDING_EVAL_NOTE
+from octobot_evaluators.evaluator.abstract_util import AbstractUtil
+from octobot_commons.constants import START_PENDING_EVAL_NOTE
 
 
 class OverallStateAnalyser(AbstractUtil):

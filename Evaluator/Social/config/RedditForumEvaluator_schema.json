@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "title": "RedditForumEvaluator",
+  "properties": {
+    "crypto-currencies": {
+        "type": "array",
+        "title": "Crypto currencies to watch",
+        "uniqueItems": true,
+        "items": {
+          "type": "object",
+          "title": "Crypto currency",
+          "properties": {
+            "crypto-currency": {
+              "type": "string",
+              "title": "Crypto currency name",
+              "options": {
+                "inputAttributes": {
+                  "placeholder": "NANO"
+                }
+              },
+              "minLength": 2
+            },
+            "subreddits": {
+              "type": "array",
+              "title": "Subreddits to watch",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "title": "Subreddit name",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder": "nanocurrency"
+                  }
+                },
+                "minLength": 2
+              }
+            }
+          }
+        }
+    }
+  }
+}
