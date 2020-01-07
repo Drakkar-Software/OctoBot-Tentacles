@@ -167,6 +167,10 @@ body:before {
     color: #33b5e5;
 }
 
+.card a:link.btn-primary{
+    color: #fff;
+}
+
 .card a:hover {
     color: #42a5f5 !important;
 }
