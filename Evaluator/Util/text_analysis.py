@@ -27,15 +27,18 @@ $tentacle_description: {
 #  License along with this library.
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from tools.decoding_encoding import DecoderEncoder
 
-from evaluator.Util.abstract_util import AbstractUtil
+from octobot_evaluators.evaluator.abstract_util import AbstractUtil
 from newspaper import Article
-from config import IMAGE_ENDINGS
 
 
 class TextAnalysis(AbstractUtil):
+    IMAGE_ENDINGS = ["png", "jpg", "jpeg", "gif", "jfif", "tiff", "bmp", "ppm", "pgm", "pbm", "pnm", "webp", "hdr",
+                     "heif",
+                     "bat", "bpg", "svg", "cgm"]
+
     def __init__(self):
+        super().__init__()
         self.analyzer = SentimentIntensityAnalyzer()
         # self.test()
 
@@ -62,7 +65,7 @@ class TextAnalysis(AbstractUtil):
     @staticmethod
     def is_analysable_url(url):
         url_ending = str(url).split(".")[-1]
-        return url_ending.lower() not in IMAGE_ENDINGS
+        return url_ending.lower() not in TextAnalysis.IMAGE_ENDINGS
 
     # official account tweets that can be used for testing purposes
     def test(self):
@@ -90,4 +93,4 @@ class TextAnalysis(AbstractUtil):
             "Talked about TOTO at the blockchain seminar in R University of Science and Technology business school last Saturday. It covered 3000 MBA students across business schools in China."
         ]
         for text in texts:
-            print(str(self.analyse(text)) + " => "+str(DecoderEncoder.encode_into_bytes(text)))
+            print(str(self.analyse(text)) + " => "+str(text.encode("utf-8", "ignore")))
