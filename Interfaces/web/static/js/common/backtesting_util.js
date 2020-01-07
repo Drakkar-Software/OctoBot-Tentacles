@@ -112,7 +112,7 @@ function add_graphs(symbols_with_time_frames){
         const graph_card = target_template.html().replace(new RegExp(config_default_value,"g"), symbol);
         result_graphs.append(graph_card);
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
-        get_symbol_price_graph(graph_symbol_price_id+symbol, "ExchangeSimulator", formated_symbol, time_frame, true);
+        get_symbol_price_graph(graph_symbol_price_id+symbol, "#TODO", "ExchangeSimulator", formated_symbol, time_frame, true);
     })
 }
 

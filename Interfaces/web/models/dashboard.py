@@ -17,8 +17,9 @@
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_bot, get_global_config
 from octobot_interfaces.util.util import get_exchange_managers
-from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name, get_exchange_names, get_trading_pairs, \
-    get_exchange_name
+from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, \
+    get_exchange_name, get_exchange_manager_from_exchange_id, get_exchange_configurations_from_exchange_name, \
+    get_exchange_manager_id
 from octobot_trading.api.symbol_data import get_symbol_candles_manager, get_symbol_data
 from tentacles.Interfaces.web import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Interfaces.web.constants import DEFAULT_TIMEFRAME
@@ -65,29 +66,37 @@ def _format_trades(trade_history):
     return trades
 
 
-def remove_invalid_chars(string):
+def _remove_invalid_chars(string):
     return string.split("[")[0]
 
 
-def _get_candles_reply(exchange, symbol, time_frame):
+def _get_candles_reply(exchange, exchange_id, symbol, time_frame):
     return {
-        "exchange": remove_invalid_chars(exchange),
+        "exchange_name": _remove_invalid_chars(exchange),
+        "exchange_id": exchange_id,
         "symbol": symbol,
         "time_frame": time_frame.value
     }
 
 
-def get_watched_symbol_data(symbol):
+def _get_first_exchange_identifiers():
     exchanges = get_exchange_names()
+    if exchanges:
+        first_exchange_name = next(iter(exchanges))
+        exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(first_exchange_name).values()))\
+            .exchange_manager
+        return exchange_manager, first_exchange_name, get_exchange_manager_id(exchange_manager)
+    raise KeyError("No exchange to be found")
+
+
+def get_watched_symbol_data(symbol):
     symbol = parse_get_symbol(symbol)
     try:
-        if exchanges:
-            exchange = next(iter(exchanges))
-            time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
-            return _get_candles_reply(exchange, symbol, time_frame)
+        time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+        _, exchange_name, exchange_id = _get_first_exchange_identifiers()
+        return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except KeyError:
         return {}
-    return {}
 
 
 def _find_symbol_evaluator_with_data(evaluators, exchange):
@@ -106,16 +115,13 @@ def _find_symbol_evaluator_with_data(evaluators, exchange):
 
 
 def get_first_symbol_data():
-    exchanges = get_exchange_managers()
     try:
-        if exchanges:
-            exchange = next(iter(exchanges))
-            symbol = get_trading_pairs(exchange)[0]
-            time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
-            return _get_candles_reply(get_exchange_name(exchange), symbol, time_frame)
+        exchange, exchange_name, exchange_id = _get_first_exchange_identifiers()
+        symbol = get_trading_pairs(exchange)[0]
+        time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+        return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except KeyError:
         return {}
-    return {}
 
 
 # TODO remove this function and its calls when https://github.com/Drakkar-Software/OctoBot-Trading/issues/31 is fixed
@@ -171,7 +177,7 @@ def _create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_back
     return result_dict
 
 
-def get_currency_price_graph_update(exchange_name, symbol, time_frame, list_arrays=True, backtesting=False):
+def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False):
     bot = get_bot()
     # TODO: handle on the fly backtesting price graph
     # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
@@ -179,11 +185,12 @@ def get_currency_price_graph_update(exchange_name, symbol, time_frame, list_arra
     symbol = parse_get_symbol(symbol)
     in_backtesting = is_backtesting_enabled(get_global_config()) or backtesting
 
-    exchange_manager = get_exchange_manager_from_exchange_name(exchange_name)
+    exchange_manager = get_exchange_manager_from_exchange_id(exchange_id)
     if backtesting:
         exchanges = get_exchange_names()
         if exchanges:
-            exchange_manager =  get_exchange_manager_from_exchange_name(exchanges[0])
+            exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(exchanges[0]).values()))\
+                .exchange_manager
 
     if time_frame is not None:
         symbol_data = get_symbol_data(exchange_manager, symbol)
