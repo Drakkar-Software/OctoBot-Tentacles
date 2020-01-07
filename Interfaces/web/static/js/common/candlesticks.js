@@ -16,9 +16,9 @@
  * License along with this library.
  */
 
-function get_symbol_price_graph(element_id, exchange_name, symbol, time_frame, backtesting=false, replace=false, should_retry=false, attempts=0){
+function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting=false, replace=false, should_retry=false, attempts=0){
     const backtesting_enabled = backtesting ? "backtesting" : "live";
-    const ajax_url = "/dashboard/currency_price_graph_update/"+ exchange_name +"/" + symbol + "/"
+    const ajax_url = "/dashboard/currency_price_graph_update/"+ exchange_id +"/" + symbol + "/"
         + time_frame + "/" + backtesting_enabled;
     $.ajax({
         url: ajax_url,
@@ -32,7 +32,7 @@ function get_symbol_price_graph(element_id, exchange_name, symbol, time_frame, b
                     marketsElement.removeClass(disabled_item_class);
                     setTimeout(function(){
                         marketsElement.addClass(disabled_item_class);
-                        get_symbol_price_graph(element_id, exchange_name, symbol, time_frame, backtesting, replace, should_retry,attempts+1);
+                        get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting, replace, should_retry,attempts+1);
                     }, 3000);
                 }
             }else{
@@ -55,7 +55,7 @@ function get_first_symbol_price_graph(element_id, in_backtesting_mode=false) {
     $.get(url,function(data) {
         if("time_frame" in data){
             let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
-            get_symbol_price_graph(element_id, data["exchange"], formatted_symbol, data["time_frame"], in_backtesting_mode, false, true);
+            get_symbol_price_graph(element_id, data["exchange_id"], data["exchange_name"], formatted_symbol, data["time_frame"], in_backtesting_mode, false, true);
         }
     });
 }
@@ -67,7 +67,7 @@ function get_watched_symbol_price_graph(element) {
     $.get(ajax_url,function(data) {
         if("time_frame" in data){
             let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
-            get_symbol_price_graph(element.attr("id"), data["exchange"], formatted_symbol, data["time_frame"], false, false, true);
+            get_symbol_price_graph(element.attr("id"), data["exchange_id"], data["exchange_name"], formatted_symbol, data["time_frame"], false, false, true);
         }
     });
 }
