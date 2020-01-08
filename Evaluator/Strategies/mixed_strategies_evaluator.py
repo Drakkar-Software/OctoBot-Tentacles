@@ -53,6 +53,7 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                               eval_note,
                               eval_note_type,
                               exchange_name,
+                              cryptocurrency,
                               symbol,
                               time_frame):
         self.counter = 0
