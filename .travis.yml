@@ -4,7 +4,7 @@ sudo: enabled
 os: linux
 language: python
 cache: pip
-python: 3.7-dev
+python: 3.8-dev
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
   - if [[ $TRAVIS_BRANCH == "dev" ]]; then git checkout dev; fi
@@ -36,6 +36,6 @@ matrix:
 
     - name: "Linux - Python 3 nightly"
       os: linux
-      python: nightly
+      python: 3.8
       language: python
       script: pytest -n 5 --cov=. --cov-config=.coveragerc tentacles/tests
