@@ -327,7 +327,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         self.SHORT_THRESHOLD = 0.85
         self.RISK_THRESHOLD = 0.2
 
-    async def set_final_eval(self, symbol, time_frame):
+    async def set_final_eval(self, cryptocurrency, symbol, time_frame):
         if time_frame is None:
             # Do nothing, requires a time frame
             return
