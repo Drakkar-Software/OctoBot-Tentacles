@@ -20,9 +20,10 @@ from flask import render_template, request, jsonify
 
 from octobot_interfaces.util.order import get_all_open_orders
 from octobot_interfaces.util.trader import get_trades_history, get_currencies_with_status, \
-    has_real_and_or_simulated_traders, get_reference_market
+    has_real_and_or_simulated_traders
 from octobot_interfaces.util.portfolio import get_global_portfolio_currencies_amounts, get_portfolio_current_value, \
     get_portfolio_holdings
+from octobot_interfaces.util.profitability import get_reference_market
 from tentacles.Interfaces.web import server_instance
 from octobot_trading.constants import CONFIG_PORTFOLIO_TOTAL
 from tentacles.Interfaces.web.models.configuration import get_in_backtesting_mode
