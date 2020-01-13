@@ -15,12 +15,9 @@
 #  License along with this library.
 
 import socket
-
 from octobot_commons.constants import CONFIG_ENABLED_OPTION
-
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_SERVICE_INSTANCE, \
-    CONFIG_WEB_IP, CONFIG_WEB_PORT, DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT
-# from interfaces.web.web_app import WebApp
+    CONFIG_WEB_PORT, DEFAULT_SERVER_PORT
 from octobot_services.services.abstract_service import AbstractService
 
 
@@ -55,14 +52,11 @@ class WebService(AbstractService):
 
     @staticmethod
     def get_is_enabled(config):
-        return CONFIG_CATEGORY_SERVICES in config \
-            and CONFIG_WEB in config[CONFIG_CATEGORY_SERVICES] \
-            and config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION]
-
-    @staticmethod
-    def is_available(config):
-        return WebService.is_setup_correctly(config) and \
-               config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION]
+        # allow to disable web interface from config, enabled by default otherwise
+        try:
+            return config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION]
+        except KeyError:
+            return True
 
     def has_required_configuration(self):
         return self.get_is_enabled(self.config)
@@ -74,8 +68,6 @@ class WebService(AbstractService):
         return CONFIG_WEB
 
     async def prepare(self) -> None:
-        # self.web_app = WebApp(self.config)
-        # self.web_app.start()
         pass
 
     @staticmethod
@@ -86,25 +78,12 @@ class WebService(AbstractService):
         if self.web_app:
             self.web_app.stop()
 
-    @staticmethod
-    def enable(config, is_enabled):
-        if CONFIG_CATEGORY_SERVICES not in config:
-            config[CONFIG_CATEGORY_SERVICES] = {}
-        if CONFIG_WEB not in config[CONFIG_CATEGORY_SERVICES]:
-            config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB] = {}
-            config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP] = DEFAULT_SERVER_IP
-            config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT] = DEFAULT_SERVER_PORT
-        else:
-            if CONFIG_WEB_IP not in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB]:
-                config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP] = DEFAULT_SERVER_IP
-            if CONFIG_WEB_PORT not in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB]:
-                config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT] = DEFAULT_SERVER_PORT
-
-        config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_ENABLED_OPTION] = is_enabled
-
     def _get_web_server_url(self):
-        return f"{socket.gethostbyname(socket.gethostname())}:" \
-               f"{self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]}"
+        try:
+            port = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]
+        except KeyError:
+            port = DEFAULT_SERVER_PORT
+        return f"{socket.gethostbyname(socket.gethostname())}:{port}"
 
     def get_successful_startup_message(self):
         return f"Interface successfully initialized and accessible at: http://{self._get_web_server_url()}.", True
