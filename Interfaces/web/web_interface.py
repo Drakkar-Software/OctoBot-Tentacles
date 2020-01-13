@@ -18,7 +18,8 @@ from werkzeug.serving import make_server
 import threading
 from time import sleep
 
-from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT
+from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
+    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP
 from tentacles.Interfaces.web import server_instance
 from tentacles.Interfaces.web.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
@@ -42,11 +43,24 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         self.app = None
         self.srv = None
         self.ctx = None
+        self.host = None
+        self.port = None
+        self._init_web_settings()
+
+    def _init_web_settings(self):
+        try:
+            self.host = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP]
+        except KeyError:
+            self.host = DEFAULT_SERVER_IP
+        try:
+            self.port = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]
+        except KeyError:
+            self.port = DEFAULT_SERVER_PORT
 
     def _prepare_server(self):
         try:
-            self.srv = make_server(host=self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP],
-                                   port=self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT],
+            self.srv = make_server(host=self.host,
+                                   port=self.port,
                                    threaded=True,
                                    app=server_instance)
             self.ctx = server_instance.app_context()
