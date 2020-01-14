@@ -128,7 +128,7 @@
                             {% if loop.first %}
                                 selected="selected"
                             {% endif %}>
-                           {{file}} : {{description.candles}}
+                           {{file}} : {{", ".join(description.time_frames)}}
                          </option>
                          {% endfor %}
                        </select>
