@@ -15,7 +15,10 @@
 #  License along with this library.
 import logging
 
-from octobot_backtesting.collectors.exchanges.exchange_collector import ExchangeDataCollector
+from octobot_backtesting.collectors.exchanges.abstract_exchange_history_collector import \
+    AbstractExchangeHistoryCollector
+from octobot_backtesting.enums import DataFormats
+from octobot_commons.enums import TimeFrames
 from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
 try:
@@ -24,20 +27,26 @@ except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
 
-class ExchangeHistoryDataCollector(ExchangeDataCollector):
+class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
     IMPORTER = GenericExchangeDataImporter
 
-    def __init__(self, config, exchange_name, symbols, time_frames):
-        super().__init__(config, exchange_name, symbols, time_frames)
+    def __init__(self, config, exchange_name, symbols, time_frames, use_all_available_timeframes=False,
+                 data_format=DataFormats.REGULAR_COLLECTOR_DATA):
+        super().__init__(config, exchange_name, symbols, time_frames, use_all_available_timeframes,
+                         data_format=data_format)
         self.exchange = None
         self.exchange_manager = None
 
     async def start(self):
         exchange_factory = create_new_exchange(self.config, self.exchange_name, is_simulated=True, is_rest_only=True,
-                                               is_collecting=True, exchange_only=True)
+                                               ignore_config=True, is_collecting=True, exchange_only=True)
         await exchange_factory.create_basic()
         self.exchange_manager = exchange_factory.exchange_manager
         self.exchange = self.exchange_manager.exchange
+        self._load_timeframes_if_necessary()
+
+        # create description
+        await self._create_description()
 
         self.logger.info("Start collecting history")
         for symbol in self.symbols:
@@ -53,11 +62,16 @@ class ExchangeHistoryDataCollector(ExchangeDataCollector):
 
         await self.stop()
 
-    def use_all_available_timeframes(self):
-        self.time_frames = self.exchange.client.timeframes.keys() if hasattr(self.exchange.client, "timeframes") else []
+    def _load_all_available_timeframes(self):
+        allowed_timeframes = set(tf.value for tf in TimeFrames)
+        self.time_frames = [TimeFrames(time_frame)
+                            for time_frame in self.exchange.client.timeframes
+                            if time_frame in allowed_timeframes] \
+            if hasattr(self.exchange.client, "timeframes") else []
 
     async def stop(self):
         await self.exchange_manager.stop()
+        await self.database.stop()
 
     async def get_ticker_history(self, exchange, symbol):
         pass

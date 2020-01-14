@@ -15,8 +15,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from octobot_backtesting.collectors.exchanges.exchange_collector cimport ExchangeDataCollector
+from octobot_backtesting.collectors.exchanges.exchange_collector cimport AbstractExchangeHistoryCollector
 
-cdef class ExchangeHistoryDataCollector(ExchangeDataCollector):
+cdef class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
     cdef public object exchange
     cdef public object exchange_manager
