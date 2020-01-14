@@ -16,10 +16,10 @@
           <thead>
             <tr>
                 <th scope="col">File</th>
-                <th scope="col">Symbol</th>
+                <th scope="col">Symbol(s)</th>
                 <th scope="col">Date of recording</th>
                 <th scope="col">Exchange</th>
-                <th scope="col">Candles</th>
+                <th scope="col">Time frame(s)</th>
                 <th scope="col">Action</th>
             </tr>
           </thead>
@@ -27,10 +27,10 @@
             {% for file, description in data_files.items() %}
                 <tr class="selectable_datafile">
                     <td>{{file}}</td>
-                    <td>{{description.symbol}}</td>
+                    <td>{{", ".join(description.symbols)}}</td>
                     <td>{{description.date}}</td>
                     <td>{{description.exchange}}</td>
-                    <td>{{description.candles}}</td>
+                    <td>{{", ".join(description.time_frames)}}</td>
                     <td class="text-center">
                         <a class="btn fa fa-trash-alt delete_data_file waves-effect" data-file={{file}} data-toggle="tooltip" data-placement="right" title="Delete data file"></a>
                     </td>
