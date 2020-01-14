@@ -28,10 +28,7 @@ $tentacle_description: {
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import random
-
 from ccxt import InsufficientFunds
-from octobot_evaluators.enums import EvaluatorMatrixTypes
 
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
@@ -327,7 +324,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         self.SHORT_THRESHOLD = 0.85
         self.RISK_THRESHOLD = 0.2
 
-    async def set_final_eval(self, cryptocurrency, symbol, time_frame):
+    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
         if time_frame is None:
             # Do nothing, requires a time frame
             return
@@ -335,13 +332,16 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         strategies_analysis_note_counter = 0
 
         try:
-            from octobot_evaluators.data.matrix import Matrix
+            from octobot_evaluators.matrices.matrices import Matrices
+            from octobot_evaluators.enums import EvaluatorMatrixTypes
         except ImportError:
-            self.logger.error("octobot_evaluators.data.matrix.EvaluatorMatrix cannot be imported")
+            self.logger.error("octobot_evaluators.matrices.matrices.Matrices cannot be imported")
             return
 
+        related_matrix = Matrices.instance().get_matrix(matrix_id)
+
         # Strategies analysis
-        for evaluated_strategy_node in Matrix.instance().get_tentacles_value_nodes(Matrix.instance().get_tentacle_nodes(
+        for evaluated_strategy_node in related_matrix.get_tentacles_value_nodes(related_matrix.get_tentacle_nodes(
                 exchange_name=self.exchange_name,
                 tentacle_type=EvaluatorMatrixTypes.STRATEGIES.value),
                 symbol=symbol,
