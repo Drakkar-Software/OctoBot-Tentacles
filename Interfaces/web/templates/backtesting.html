@@ -20,10 +20,10 @@
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">File</th>
-                <th scope="col">Symbol</th>
+                <th scope="col">Symbol(s)</th>
                 <th scope="col">Date of recording</th>
                 <th scope="col">Exchange</th>
-                <th scope="col">Candles</th>
+                <th scope="col">Time frame(s)</th>
             </tr>
           </thead>
           <tbody>
@@ -34,10 +34,10 @@
                         <label class="custom-control-label"></label>
                     </div></td>
                     <td>{{file}}</td>
-                    <td>{{description.symbol}}</td>
+                    <td>{{", ".join(description.symbols)}}</td>
                     <td>{{description.date}}</td>
                     <td>{{description.exchange}}</td>
-                    <td>{{description.candles}}</td>
+                    <td>{{", ".join(description.time_frames)}}</td>
                 </tr>
             {% endfor %}
           </tbody>

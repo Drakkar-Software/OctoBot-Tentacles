@@ -36,12 +36,18 @@ from tentacles.Interfaces.web.web_interface import WebInterface
 LOGGER = get_logger("DataCollectorWebInterfaceModel")
 
 
+async def _retrieve_data_files_with_description(files):
+    files_with_description = {}
+    for data_file in files:
+        description = await get_file_description(data_file)
+        if description is not None:
+            files_with_description[data_file] = description
+    return files_with_description
+
+
 def get_data_files_with_description():
     files = get_all_available_data_files()
-    files_with_description = {
-        data_file: get_file_description(data_file) for data_file in files
-    }
-    return files_with_description
+    return run_in_bot_main_loop(_retrieve_data_files_with_description(files))
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False):
@@ -97,7 +103,7 @@ def get_delete_data_file(file_name):
 def collect_data_file(exchange, symbol):
     success = False
     try:
-        result = run_in_bot_main_loop(collect_exchange_historical_data(get_bot().config, exchange, [symbol]))
+        result = run_in_bot_main_loop(collect_exchange_historical_data(exchange, [symbol]))
         success = True
     except Exception as e:
         result = f"data collector error: {e}"
