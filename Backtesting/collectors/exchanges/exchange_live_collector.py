@@ -17,7 +17,7 @@ import asyncio
 import logging
 import time
 
-from octobot_backtesting.collectors.exchanges.exchange_collector import ExchangeDataCollector
+from octobot_backtesting.collectors.exchanges.abstract_exchange_live_collector import AbstractExchangeLiveCollector
 from octobot_commons.channels_name import OctoBotTradingChannelsName
 from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
@@ -28,24 +28,29 @@ except ImportError:
     logging.error("ExchangeLiveDataCollector requires OctoBot-Trading package installed")
 
 
-class ExchangeLiveDataCollector(ExchangeDataCollector):
+class ExchangeLiveDataCollector(AbstractExchangeLiveCollector):
     IMPORTER = GenericExchangeDataImporter
 
     async def start(self):
         exchange_factory = create_new_exchange(self.config, self.exchange_name, is_simulated=True, is_rest_only=True,
-                                               is_collecting=True)
+                                               ignore_config=True, is_collecting=True)
         await exchange_factory.create_basic()
+        self._load_timeframes_if_necessary()
 
+        # create description
+        await self._create_description()
+
+        exchange_id = exchange_factory.exchange_manager.id
         await get_chan(OctoBotTradingChannelsName.TICKER_CHANNEL.value,
-                       self.exchange_name).new_consumer(self.ticker_callback)
+                       exchange_id).new_consumer(self.ticker_callback)
         await get_chan(OctoBotTradingChannelsName.RECENT_TRADES_CHANNEL.value,
-                       self.exchange_name).new_consumer(self.recent_trades_callback)
+                       exchange_id).new_consumer(self.recent_trades_callback)
         await get_chan(OctoBotTradingChannelsName.ORDER_BOOK_CHANNEL.value,
-                       self.exchange_name).new_consumer(self.order_book_callback)
+                       exchange_id).new_consumer(self.order_book_callback)
         await get_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value,
-                       self.exchange_name).new_consumer(self.kline_callback)
+                       exchange_id).new_consumer(self.kline_callback)
         await get_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
-                       self.exchange_name).new_consumer(self.ohlcv_callback)
+                       exchange_id).new_consumer(self.ohlcv_callback)
 
         await asyncio.gather(*asyncio.all_tasks(asyncio.get_event_loop()))
 
