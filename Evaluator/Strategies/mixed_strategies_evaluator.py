@@ -48,6 +48,7 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
         self.evaluation = 0
 
     async def matrix_callback(self,
+                              matrix_id,
                               evaluator_name,
                               evaluator_type,
                               eval_note,
