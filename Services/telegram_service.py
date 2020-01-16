@@ -137,23 +137,26 @@ class TelegramService(AbstractService):
                and self.check_required_config(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM]) \
                and self.get_is_enabled(self.config)
 
-    async def send_message(self, content, markdown=False):
+    async def send_message(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
         kwargs = {}
         if markdown:
             kwargs[MESSAGE_PARSE_MODE] = telegram.parsemode.ParseMode.MARKDOWN
         try:
             if content:
                 # no async call possible yet
-                self.telegram_api.send_message(chat_id=self.chat_id, text=content, **kwargs)
+                return self.telegram_api.send_message(chat_id=self.chat_id, text=content,
+                                                      reply_to_message_id=reply_to_message_id, **kwargs)
         except telegram.error.TimedOut:
             # retry on failing
             try:
                 # no async call possible yet
-                self.telegram_api.send_message(chat_id=self.chat_id, text=content, **kwargs)
+                return self.telegram_api.send_message(chat_id=self.chat_id, text=content,
+                                                      reply_to_message_id=reply_to_message_id, **kwargs)
             except telegram.error.TimedOut as e:
                 self.logger.error(f"Failed to send message : {e}")
         except telegram.error.Unauthorized as e:
             self.logger.error(f"Failed to send message ({e}): invalid telegram configuration.")
+        return None
 
     def _get_bot_url(self):
         return f"https://web.telegram.org/#/im?p={self.telegram_api.get_me().name}"
