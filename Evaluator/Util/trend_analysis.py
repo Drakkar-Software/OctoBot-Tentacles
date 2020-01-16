@@ -28,7 +28,7 @@ $tentacle_description: {
 
 import numpy as np
 
-from evaluator.Util.abstract_util import AbstractUtil
+from octobot_evaluators.evaluator.abstract_util import AbstractUtil
 
 
 class TrendAnalysis(AbstractUtil):
