@@ -84,7 +84,7 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
 
         # TODO temp
         if evaluator_name != self.get_name():
-            await self.evaluation_completed(symbol, time_frame)
+            await self.evaluation_completed(cryptocurrency, symbol, time_frame)
 
     def finalize(self):
         if self.counter > 0:
