@@ -56,11 +56,11 @@ class DailyTradingMode(AbstractTradingMode):
                   "each state."
 
     async def create_producers(self):
-        await DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.exchange.name),
+        await DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
                                        self.config, self, self.exchange_manager).run()
 
     async def create_consumers(self):
-        await get_chan(MODE_CHANNEL, self.exchange_manager.exchange.name).new_consumer(
+        await get_chan(MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=DailyTradingModeConsumer(self))
 
 
