@@ -46,9 +46,10 @@ class RSIMomentumEvaluator(TAEvaluator):
         super().__init__()
         self.pertinence = 1
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str,  time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
         period_length = 14
-        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).get_symbol_close_candles()
+        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+            get_symbol_close_candles(period_length).base
         if candle_data is not None and len(candle_data) > period_length:
             rsi_v = tulipy.rsi(candle_data, period=period_length)
 
@@ -71,4 +72,4 @@ class RSIMomentumEvaluator(TAEvaluator):
                     self.set_eval_note(rsi_v[-1] / 200)
                 else:
                     self.set_eval_note((rsi_v[-1] - 100) / 200)
-                await self.evaluation_completed(symbol, time_frame)
+                await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
