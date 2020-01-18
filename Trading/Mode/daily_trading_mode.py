@@ -33,6 +33,7 @@ from ccxt import InsufficientFunds
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
+from octobot_commons.pretty_printer import PrettyPrinter
 
 from octobot_trading.constants import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
@@ -396,3 +397,21 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(symbol=symbol, final_note=self.final_eval, state=self.state)
+
+                # send_notification
+                await self._send_alert_notification(symbol, new_state)
+
+    async def _send_alert_notification(self, symbol, new_state):
+        try:
+            from octobot_notifications.api.notification import create_notification, send_notification
+            from octobot_notifications.enums import NotificationCategory
+            title = f"OCTOBOT ALERT : #{symbol}"
+            alert_content, alert_content_markdown = PrettyPrinter.cryptocurrency_alert(
+                new_state,
+                self.final_eval)
+            await send_notification(create_notification(alert_content, title=title,
+                                                        markdown_text=alert_content_markdown,
+                                                        category=NotificationCategory.PRICE_ALERTS))
+        except ImportError as e:
+            self.logger.error(f"Impossible to send notification: {e}")
+            self.logger.exception(e)
