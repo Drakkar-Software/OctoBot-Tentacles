@@ -26,7 +26,7 @@ from octobot_backtesting.api.data_file import get_all_available_data_files, get_
 
 from octobot_commons.tentacles_management.config_manager import reload_tentacle_config
 from octobot_evaluators.constants import CONFIG_EVALUATOR
-from octobot_interfaces.util.bot import get_bot
+from octobot_interfaces.util.bot import get_global_config
 from octobot_interfaces.util.util import run_in_bot_main_loop
 from octobot_trading.constants import CONFIG_TRADING_TENTACLES
 from tentacles.Interfaces.web.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
@@ -59,10 +59,10 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             return False, "A backtesting is already running"
         else:
             if reset_tentacle_config:
-                config = reload_tentacle_config(copy(get_bot().config), CONFIG_EVALUATOR, CONFIG_EVALUATOR_FILE_PATH)
+                config = reload_tentacle_config(copy(get_global_config()), CONFIG_EVALUATOR, CONFIG_EVALUATOR_FILE_PATH)
                 config = reload_tentacle_config(config, CONFIG_TRADING_TENTACLES, CONFIG_TRADING_FILE_PATH)
             else:
-                config = get_bot().config
+                config = get_global_config()
             backtesting = create_backtesting(config, files)
             run_in_bot_main_loop(initialize_created_backtesting(backtesting), blocking=False)
             tools[BOT_TOOLS_BACKTESTING] = backtesting

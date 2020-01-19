@@ -14,10 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from octobot_interfaces.util.bot import get_bot
-from octobot_interfaces.util.util import get_exchange_managers
-from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id, get_watched_timeframes, \
-    get_exchange_name, get_exchange_manager_from_exchange_id
+from octobot_trading.api.exchange import get_watched_timeframes, get_exchange_name, \
+    get_exchange_manager_from_exchange_id
 
 
 def get_exchange_time_frames(exchange_id):
