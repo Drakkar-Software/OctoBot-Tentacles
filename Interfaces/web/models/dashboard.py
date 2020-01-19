@@ -13,14 +13,14 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import numpy as np
+from math import nan
 
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_bot, get_global_config
-from octobot_interfaces.util.util import get_exchange_managers
-from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, \
-    get_exchange_name, get_exchange_manager_from_exchange_id, get_exchange_configurations_from_exchange_name, \
-    get_exchange_manager_id
-from octobot_trading.api.symbol_data import get_symbol_candles_manager, get_symbol_data
+from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
+    get_exchange_configurations_from_exchange_name, get_exchange_manager_id
+from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines
 from tentacles.Interfaces.web import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Interfaces.web.constants import DEFAULT_TIMEFRAME
 from tentacles.Interfaces.web.enums import PriceStrings
@@ -124,12 +124,7 @@ def get_first_symbol_data():
         return {}
 
 
-# TODO remove this function and its calls when https://github.com/Drakkar-Software/OctoBot-Trading/issues/31 is fixed
-def _filter_invalid_values(data_array):
-    return [val for val in data_array if val != -1]
-
-
-def _create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_backtesting):
+def _create_candles_data(symbol, time_frame, historical_candles, kline, bot, list_arrays, in_backtesting):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
@@ -140,12 +135,26 @@ def _create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_back
     }
 
     if not in_backtesting:
-        add_to_symbol_data_history(symbol, new_data, time_frame, False)
+        add_to_symbol_data_history(symbol, historical_candles, time_frame, False)
         data = get_symbol_data_history(symbol, time_frame)
     else:
-        data = new_data
+        data = historical_candles
 
-    data_x = convert_timestamps_to_datetime(_filter_invalid_values(data[PriceIndexes.IND_PRICE_TIME.value]),
+    # add kline as the last (current) candle that is not yet in history
+    if nan not in kline and data[PriceIndexes.IND_PRICE_TIME.value][-1] != kline[PriceIndexes.IND_PRICE_TIME.value]:
+        data[PriceIndexes.IND_PRICE_TIME.value] = np.append(data[PriceIndexes.IND_PRICE_TIME.value],
+                                                            kline[PriceIndexes.IND_PRICE_TIME.value])
+        data[PriceIndexes.IND_PRICE_CLOSE.value] = np.append(data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                                             kline[PriceIndexes.IND_PRICE_CLOSE.value])
+        data[PriceIndexes.IND_PRICE_LOW.value] = np.append(data[PriceIndexes.IND_PRICE_LOW.value],
+                                                           kline[PriceIndexes.IND_PRICE_LOW.value])
+        data[PriceIndexes.IND_PRICE_OPEN.value] = np.append(data[PriceIndexes.IND_PRICE_OPEN.value],
+                                                            kline[PriceIndexes.IND_PRICE_OPEN.value])
+        data[PriceIndexes.IND_PRICE_HIGH.value] = np.append(data[PriceIndexes.IND_PRICE_HIGH.value],
+                                                            kline[PriceIndexes.IND_PRICE_HIGH.value])
+        data[PriceIndexes.IND_PRICE_VOL.value] = np.append(data[PriceIndexes.IND_PRICE_VOL.value],
+                                                           kline[PriceIndexes.IND_PRICE_VOL.value])
+    data_x = convert_timestamps_to_datetime(data[PriceIndexes.IND_PRICE_TIME.value],
                                             time_format="%y-%m-%d %H:%M:%S",
                                             force_timezone=False)
 
@@ -159,20 +168,20 @@ def _create_candles_data(symbol, time_frame, new_data, bot, list_arrays, in_back
 
     if list_arrays:
         result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: _filter_invalid_values(data_x),
-            PriceStrings.STR_PRICE_CLOSE.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_CLOSE.value].tolist()),
-            PriceStrings.STR_PRICE_LOW.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_LOW.value].tolist()),
-            PriceStrings.STR_PRICE_OPEN.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_OPEN.value].tolist()),
-            PriceStrings.STR_PRICE_HIGH.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_HIGH.value].tolist()),
-            PriceStrings.STR_PRICE_VOL.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_VOL.value].tolist())
+            PriceStrings.STR_PRICE_TIME.value: data_x,
+            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value].tolist(),
+            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value].tolist(),
+            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value].tolist(),
+            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value].tolist(),
+            PriceStrings.STR_PRICE_VOL.value: data[PriceIndexes.IND_PRICE_VOL.value].tolist()
         }
     else:
         result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: _filter_invalid_values(data_x),
-            PriceStrings.STR_PRICE_CLOSE.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_CLOSE.value]),
-            PriceStrings.STR_PRICE_LOW.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_LOW.value]),
-            PriceStrings.STR_PRICE_OPEN.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_OPEN.value]),
-            PriceStrings.STR_PRICE_HIGH.value: _filter_invalid_values(data[PriceIndexes.IND_PRICE_HIGH.value])
+            PriceStrings.STR_PRICE_TIME.value: data_x,
+            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value],
+            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value],
+            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value],
+            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value]
         }
     return result_dict
 
@@ -195,9 +204,11 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     if time_frame is not None:
         symbol_data = get_symbol_data(exchange_manager, symbol)
         try:
-            data = get_symbol_candles_manager(symbol_data, time_frame).get_symbol_prices()
-            if data is not None:
-                return _create_candles_data(symbol, time_frame, data, bot, list_arrays, in_backtesting)
+            historical_candles = get_symbol_historical_candles(symbol_data, time_frame)
+            kline = get_symbol_klines(symbol_data, time_frame)
+            if historical_candles is not None:
+                return _create_candles_data(symbol, time_frame, historical_candles,
+                                            kline, bot, list_arrays, in_backtesting)
         except KeyError:
             # not started yet
             return None
