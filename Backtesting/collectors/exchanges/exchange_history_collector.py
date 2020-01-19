@@ -22,7 +22,7 @@ from octobot_commons.enums import TimeFrames
 from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
 try:
-    from octobot_trading.api.exchange import create_new_exchange
+    from octobot_trading.api.exchange import create_exchange_builder
 except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
@@ -38,10 +38,14 @@ class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
         self.exchange_manager = None
 
     async def start(self):
-        exchange_factory = create_new_exchange(self.config, self.exchange_name, is_simulated=True, is_rest_only=True,
-                                               ignore_config=True, is_collecting=True, exchange_only=True)
-        await exchange_factory.create_basic()
-        self.exchange_manager = exchange_factory.exchange_manager
+        self.exchange_manager = await create_exchange_builder(self.config, self.exchange_name) \
+            .is_simulated() \
+            .is_rest_only() \
+            .is_exchange_only() \
+            .is_collecting() \
+            .is_ignoring_config() \
+            .build()
+
         self.exchange = self.exchange_manager.exchange
         self._load_timeframes_if_necessary()
 
