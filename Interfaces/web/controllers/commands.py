@@ -19,11 +19,9 @@ from copy import copy
 from flask import render_template, jsonify
 
 from config.disclaimer import DISCLAIMER
-from octobot_interfaces.util.bot import get_bot
+from octobot_interfaces.util.bot import get_bot_api
 from tentacles.Interfaces.web import server_instance, get_notifications, flush_notifications, get_errors_count
-# from tools.commands import Commands
 from tentacles.Interfaces.web.models.configuration import get_metrics_enabled
-from tools.commands import stop_bot, restart_bot
 
 logger = get_logger("ServerInstance Controller")
 
@@ -32,11 +30,11 @@ logger = get_logger("ServerInstance Controller")
 @server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
 def commands(cmd=None):
     if cmd == "restart":
-        restart_bot()
+        get_bot_api().restart_bot()
         return jsonify("Success")
 
     elif cmd == "stop":
-        stop_bot(get_bot())
+        get_bot_api().stop_bot()
         return jsonify("Success")
 
     return render_template('commands.html',
