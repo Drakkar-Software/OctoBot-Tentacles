@@ -30,15 +30,14 @@ from octobot_evaluators.constants import EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES, \
     CONFIG_TRADING_TENTACLES
 from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION, CONFIG_ADVANCED_CLASSES
-from octobot_interfaces.util.bot import get_bot, get_global_config, get_edited_config, get_startup_config
+from octobot_interfaces.util.bot import get_global_config, get_edited_config, get_startup_config, get_bot_api
 from octobot_services.api.services import get_available_services
 import octobot_commons.config_manager as config_manager
 from octobot_commons.tentacles_management.class_inspector import get_class_from_string, evaluator_parent_inspection, \
     trading_mode_parent_inspection
 from octobot_evaluators.evaluator.abstract_evaluator import AbstractEvaluator
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
-# TODO: manage metrics
-# from tools.metrics.metrics_manager import MetricsManager
+from tools.metrics.metrics_manager import MetricsManager
 
 
 NAME_KEY = "name"
@@ -84,13 +83,13 @@ def get_trading_startup_config():
 
 
 def reset_trading_history():
-    previous_state_manager = get_bot().exchange_factory.previous_trading_state_manager
+    previous_state_manager = get_bot_api().get_previous_states_manager()
     if previous_state_manager:
         previous_state_manager.reset_trading_history()
 
 
 def is_trading_persistence_activated():
-    return get_bot().exchange_factory.previous_trading_state_manager is not None
+    return get_bot_api().get_previous_states_manager() is not None
 
 
 def _get_advanced_class_details(class_name, klass, is_trading_mode=False, is_strategy=False):
@@ -388,9 +387,8 @@ def manage_metrics(enable_metrics):
         current_edited_config[CONFIG_METRICS] = {CONFIG_ENABLED_OPTION: enable_metrics}
     else:
         current_edited_config[CONFIG_METRICS][CONFIG_ENABLED_OPTION] = enable_metrics
-    # TODO: manager metrics
-    # if enable_metrics and MetricsManager.should_register_bot(current_edited_config):
-    #     MetricsManager.background_get_id_and_register_bot(get_bot())
+    if enable_metrics and MetricsManager.should_register_bot(current_edited_config):
+        MetricsManager.background_get_id_and_register_bot(get_bot_api())
     config_manager.simple_save_config_update(current_edited_config)
 
 

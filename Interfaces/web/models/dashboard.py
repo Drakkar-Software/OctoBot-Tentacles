@@ -17,7 +17,7 @@ import numpy as np
 from math import nan
 
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
-from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_interfaces.util.bot import get_global_config, get_bot_api
 from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
     get_exchange_configurations_from_exchange_name, get_exchange_manager_id
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines
@@ -124,7 +124,7 @@ def get_first_symbol_data():
         return {}
 
 
-def _create_candles_data(symbol, time_frame, historical_candles, kline, bot, list_arrays, in_backtesting):
+def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
@@ -158,7 +158,7 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot, lis
                                             time_format="%y-%m-%d %H:%M:%S",
                                             force_timezone=False)
 
-    real_trades_history, simulated_trades_history = get_trades_history(bot, symbol)
+    real_trades_history, simulated_trades_history = get_trades_history(bot_api, symbol)
 
     if real_trades_history:
         result_dict[real_trades_key] = _format_trades(real_trades_history)
@@ -187,7 +187,7 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot, lis
 
 
 def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False):
-    bot = get_bot()
+    bot_api = get_bot_api()
     # TODO: handle on the fly backtesting price graph
     # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
     #     bot = WebInterface.tools[BOT_TOOLS_BACKTESTING].get_bot()
@@ -208,7 +208,7 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
             kline = get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
                 return _create_candles_data(symbol, time_frame, historical_candles,
-                                            kline, bot, list_arrays, in_backtesting)
+                                            kline, bot_api, list_arrays, in_backtesting)
         except KeyError:
             # not started yet
             return None
