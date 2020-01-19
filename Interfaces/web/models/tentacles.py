@@ -22,7 +22,7 @@ from octobot_commons.logging.logging_util import get_logger
 
 
 from tentacles_manager import CONFIG_TENTACLES_KEY, TENTACLE_PACKAGE_DESCRIPTION, TENTACLES_DEFAULT_BRANCH
-from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_interfaces.util.bot import get_global_config
 
 logger = get_logger("TentaclesModel")
 
@@ -54,7 +54,7 @@ def _get_tentacles_manager(config):
 
 
 def register_and_install(path_or_url):
-    config = get_bot().get_config()
+    config = get_global_config()
     config[CONFIG_TENTACLES_KEY].append(path_or_url)
     # TODO update config.json
 
@@ -65,7 +65,7 @@ def register_and_install(path_or_url):
 
 def install_packages():
     try:
-        tentacles_manager = _get_tentacles_manager(get_bot().get_config())
+        tentacles_manager = _get_tentacles_manager(get_global_config())
         tentacles_manager.update_list()
         tentacles_manager.set_force_actions(True)
         return f"{tentacles_manager.install_parser(None, True)} installed tentacles"
@@ -77,7 +77,7 @@ def install_packages():
 
 def update_packages():
     try:
-        tentacles_manager = _get_tentacles_manager(get_bot().get_config())
+        tentacles_manager = _get_tentacles_manager(get_global_config())
         tentacles_manager.update_list()
         tentacles_manager.set_force_actions(True)
         return f"{tentacles_manager.update_parser(None, True)} tentacles up to date"
@@ -89,7 +89,7 @@ def update_packages():
 
 def reset_packages():
     try:
-        tentacles_manager = _get_tentacles_manager(get_bot().get_config())
+        tentacles_manager = _get_tentacles_manager(get_global_config())
         tentacles_manager.reset_tentacles()
         return "reset successful"
     except Exception as e:
@@ -100,7 +100,7 @@ def reset_packages():
 
 def update_modules(modules):
     try:
-        tentacles_manager = _get_tentacles_manager(get_bot().get_config())
+        tentacles_manager = _get_tentacles_manager(get_global_config())
         tentacles_manager.update_list()
         tentacles_manager.set_force_actions(True)
         nb_updated = tentacles_manager.update_parser(modules, False)
@@ -113,7 +113,7 @@ def update_modules(modules):
 
 def uninstall_modules(modules):
     try:
-        tentacles_manager = _get_tentacles_manager(get_bot().get_config())
+        tentacles_manager = _get_tentacles_manager(get_global_config())
         tentacles_manager.update_list()
         nb_uninstalled = tentacles_manager.uninstall_parser(modules, False)
         return f"{nb_uninstalled} uninstalled module(s)" if nb_uninstalled > 1 else f"{modules[0]} uninstalled"
