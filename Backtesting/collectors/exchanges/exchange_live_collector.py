@@ -23,7 +23,7 @@ from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import 
 
 try:
     from octobot_trading.channels.exchange_channel import get_chan
-    from octobot_trading.api.exchange import create_new_exchange
+    from octobot_trading.api.exchange import create_exchange_builder
 except ImportError:
     logging.error("ExchangeLiveDataCollector requires OctoBot-Trading package installed")
 
@@ -32,15 +32,19 @@ class ExchangeLiveDataCollector(AbstractExchangeLiveCollector):
     IMPORTER = GenericExchangeDataImporter
 
     async def start(self):
-        exchange_factory = create_new_exchange(self.config, self.exchange_name, is_simulated=True, is_rest_only=True,
-                                               ignore_config=True, is_collecting=True)
-        await exchange_factory.create_basic()
+        exchange_manager = await create_exchange_builder(self.config, self.exchange_name) \
+            .is_simulated() \
+            .is_rest_only() \
+            .is_collecting() \
+            .is_ignoring_config() \
+            .build()
+
         self._load_timeframes_if_necessary()
 
         # create description
         await self._create_description()
 
-        exchange_id = exchange_factory.exchange_manager.id
+        exchange_id = exchange_manager.id
         await get_chan(OctoBotTradingChannelsName.TICKER_CHANNEL.value,
                        exchange_id).new_consumer(self.ticker_callback)
         await get_chan(OctoBotTradingChannelsName.RECENT_TRADES_CHANNEL.value,
