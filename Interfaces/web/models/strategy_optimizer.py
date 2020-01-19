@@ -17,7 +17,7 @@
 import threading
 
 from octobot_evaluators.api import get_relevant_TAs_for_strategy
-from octobot_interfaces.util.bot import get_bot, get_global_config
+from octobot_interfaces.util.bot import get_bot_api, get_global_config
 from octobot_commons.tentacles_management.advanced_manager import create_advanced_types_list
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from tentacles.Evaluator import Strategies
@@ -62,8 +62,8 @@ def get_risks_list():
 
 def get_current_strategy():
     try:
-        first_symbol_evaluator = next(iter(get_bot().get_symbol_evaluator_list().values()))
-        first_exchange = next(iter(get_bot().get_exchanges_list().values()))
+        first_symbol_evaluator = next(iter(get_bot_api().get_symbol_evaluator_list().values()))
+        first_exchange = next(iter(get_bot_api().get_exchanges_list().values()))
         return first_symbol_evaluator.get_strategies_eval_list(first_exchange)[0].get_name()
     except Exception:
         strategy_list = get_strategies_list()
@@ -128,7 +128,7 @@ def get_current_run_params():
 
 
 def get_trading_mode():
-    return get_bot().get_trading_mode().get_name()
+    return get_bot_api().get_trading_mode().get_name()
 
 
 def get_optimizer_status():
