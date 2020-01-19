@@ -20,30 +20,28 @@
             </tr>
           </thead>
           <tbody>
-            {% for symbol, matrix_symbol in matrix_list.items() %}
-                {% for exchange, matrix_exchange in matrix_symbol.items() %}
-                    {% for type, matrix_type in matrix_exchange.get_matrix().items() %}
-                        {% for evaluator, matrix_evaluator in matrix_type.items() %}
-                            {% if matrix_evaluator is iterable and matrix_evaluator is not string %}
-                                {% for time_frame, eval_note in matrix_evaluator.items() %}
+            {% for exchange, matrix_exchange in matrix_list.items() %}
+                {% for evaluator, matrix_evaluator in matrix_exchange.items() %}
+                    {% for symbol, matrix_symbol in matrix_evaluator.items() %}
+                        {% if matrix_symbol is iterable and matrix_symbol is not string %}
+                            {% for time_frame, eval_note in matrix_symbol.items() %}
                                  <tr>
                                     <td>{{evaluator}}</td>
                                     <td>{{eval_note}}</td>
-                                    <td>{{time_frame.name}}</td>
+                                    <td>{{time_frame}}</td>
                                     <td>{{symbol}}</td>
                                     <td>{{exchange}}</td>
                                  </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td>{{evaluator}}</td>
-                                    <td>{{matrix_evaluator}}</td>
-                                    <td></td>
-                                    <td>{{symbol}}</td>
-                                    <td>{{exchange}}</td>
-                                </tr>
-                            {% endif %}
-                        {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td>{{evaluator}}</td>
+                                <td>{{matrix_symbol}}</td>
+                                <td></td>
+                                <td>{{symbol}}</td>
+                                <td>{{exchange}}</td>
+                            </tr>
+                        {% endif %}
                     {% endfor %}
                 {% endfor %}
             {% endfor %}
