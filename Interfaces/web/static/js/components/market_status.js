@@ -26,9 +26,14 @@ function update_graph(time_frame, symbol, exchange, exchange_id){
     if(isDefined(time_frame) && isDefined(symbol) && isDefined(exchange)){
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
         const valid_exchange_name = exchange.split("[")[0];
-        get_symbol_price_graph("graph-symbol-price", exchange_id, valid_exchange_name, formated_symbol, time_frame, backtesting=get_in_backtesting_mode(), replace=true);
+        get_symbol_price_graph("graph-symbol-price", exchange_id, valid_exchange_name, formated_symbol, time_frame, backtesting=get_in_backtesting_mode(), replace=true, should_retry=true);
     }else{
-        $("#graph-symbol-price").text("Impossible to display price graph.")
+        const loadingSelector = $("div[name='loadingSpinner']");
+        if (loadingSelector.length) {
+            loadingSelector.addClass(hidden_class);
+        }
+        $("#graph-symbol-price").html("<h7>Impossible to display price graph, if this error keeps appearing, " +
+            "go to back to <strong>Trading</strong> and re-display this page.</h7>")
     }
 }
 
