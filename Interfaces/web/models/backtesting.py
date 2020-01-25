@@ -53,9 +53,9 @@ def get_data_files_with_description():
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False):
     try:
         tools = WebInterface.tools
-        if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and tools[BOT_TOOLS_STRATEGY_OPTIMIZER].get_is_computing():
+        if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and tools[BOT_TOOLS_STRATEGY_OPTIMIZER].is_in_progress():
             return False, "Optimizer already running"
-        elif tools[BOT_TOOLS_BACKTESTING] and tools[BOT_TOOLS_BACKTESTING].get_is_computing():
+        elif tools[BOT_TOOLS_BACKTESTING] and tools[BOT_TOOLS_BACKTESTING].is_in_progress():
             return False, "A backtesting is already running"
         else:
             if reset_tentacle_config:
