@@ -20,7 +20,8 @@ from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_global_config, get_bot_api
 from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
     get_exchange_configurations_from_exchange_name, get_exchange_manager_id
-from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines
+from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
+    has_symbol_klines
 from tentacles.Interfaces.web import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Interfaces.web.constants import DEFAULT_TIMEFRAME
 from tentacles.Interfaces.web.enums import PriceStrings
@@ -193,19 +194,14 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     #     bot = WebInterface.tools[BOT_TOOLS_BACKTESTING].get_bot()
     symbol = parse_get_symbol(symbol)
     in_backtesting = is_backtesting_enabled(get_global_config()) or backtesting
-
     exchange_manager = get_exchange_manager_from_exchange_id(exchange_id)
-    if backtesting:
-        exchanges = get_exchange_names()
-        if exchanges:
-            exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(exchanges[0]).values()))\
-                .exchange_manager
-
     if time_frame is not None:
         symbol_data = get_symbol_data(exchange_manager, symbol)
         try:
             historical_candles = get_symbol_historical_candles(symbol_data, time_frame)
-            kline = get_symbol_klines(symbol_data, time_frame)
+            kline = [nan]
+            if has_symbol_klines(symbol_data, time_frame):
+                kline = get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
                 return _create_candles_data(symbol, time_frame, historical_candles,
                                             kline, bot_api, list_arrays, in_backtesting)
