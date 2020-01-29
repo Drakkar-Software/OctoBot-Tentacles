@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.11",
+    "version": "1.1.12",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "config_schema_files": ["StaggeredOrdersTradingMode_schema.json"],
@@ -696,6 +696,10 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             order_distance = (upper_bound - self.flat_spread/2) - lower_bound
         order_count_divisor = self.flat_increment
         orders_count = floor(order_distance / order_count_divisor + 1)
+        if orders_count < 1:
+            self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
+                                f"not enough funds.")
+            return 0, 0
         average_order_quantity = holdings / orders_count
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
         if self.min_max_order_details[self.min_quantity] is not None \
