@@ -73,7 +73,8 @@ class TelegramService(AbstractService):
         if not self.telegram_updater:
             self.telegram_updater = Updater(
                 self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TELEGRAM][CONFIG_TOKEN],
-                use_context=True
+                use_context=True,
+                workers=1
             )
 
         set_logging_level(self.LOGGERS, logging.WARNING)
