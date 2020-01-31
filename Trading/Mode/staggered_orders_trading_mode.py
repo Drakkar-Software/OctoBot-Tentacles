@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "staggered_orders_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.12",
+    "version": "1.1.13",
     "requirements": ["staggered_orders_strategy_evaluator"],
     "config_files": ["StaggeredOrdersTradingMode.json"],
     "config_schema_files": ["StaggeredOrdersTradingMode_schema.json"],
@@ -241,7 +241,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             mode = self.symbol_trading_config[self.trading_mode.CONFIG_MODE]
             self.mode = StrategyModes(mode)
         except ValueError as e:
-            self.logger.error(f"Invalid staggered orders strategy mode: {mode} "
+            self.logger.error(f"Invalid staggered orders strategy mode: {mode} for {self.symbol}"
                               f"supported modes are {[m.value for m in StrategyModes]}")
             raise e
         self.spread = self.symbol_trading_config[self.trading_mode.CONFIG_SPREAD] / 100
@@ -277,7 +277,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         new_side = TradeOrderSide.SELL if now_selling else TradeOrderSide.BUY
         trader = filled_order.trader
         if self.flat_increment is None:
-            self.logger.error("Impossible to create symmetrical order: self.flat_increment is unset.")
+            self.logger.error(f"Impossible to create symmetrical order for {self.symbol}: "
+                              f"self.flat_increment is unset.")
             return
         if self.flat_spread is None:
             self.flat_spread = AbstractTradingModeCreator.adapt_price(self.symbol_market,
@@ -311,9 +312,9 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
     async def _generate_staggered_orders(self, current_price, trader):
         interfering_orders_pairs = self._get_interfering_orders_pairs(trader.get_open_orders())
         if interfering_orders_pairs:
-            self.logger.error(f"Impossible to create staggered orders with interfering orders using pair(s): "
-                              f"{interfering_orders_pairs}. Staggered orders require no other orders in both "
-                              f"quote and base.")
+            self.logger.error(f"Impossible to create staggered orders for {self.symbol} with interfering orders "
+                              f"using pair(s): {interfering_orders_pairs}. Staggered orders require no other orders "
+                              f"in both quote and base.")
             return [], []
         existing_orders = trader.get_open_orders(self.symbol)
         portfolio = trader.get_portfolio().get_portfolio()
@@ -362,10 +363,10 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     def _check_params(self):
         if self.increment >= self.spread:
-            self.logger.error("Your spread_percent parameter should always be higher than your increment_percent"
-                              " parameter: average profit is spread-increment.")
+            self.logger.error(f"Your spread_percent parameter should always be higher than your increment_percent"
+                              f" parameter: average profit is spread-increment. ({self.symbol})")
         if self.lowest_buy >= self.highest_sell:
-            self.logger.error("Your lower_bound should always be lower than your upper_bound")
+            self.logger.error(f"Your lower_bound should always be lower than your upper_bound ({self.symbol})")
 
     def _analyse_current_orders_situation(self, sorted_orders, recently_closed_orders):
         if not sorted_orders:
@@ -435,7 +436,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                            max_quant_per_order / missing_order_price)
                             orders.append(OrderData(missing_order_side, quantity,
                                                     missing_order_price, self.symbol, False))
-                            self.logger.debug(f"Creating missing orders not around spread: {orders[-1]}")
+                            self.logger.debug(f"Creating missing orders not around spread: {orders[-1]} "
+                                              f"for {self.symbol}")
                         else:
                             missing_orders_around_spread.append((missing_order_price, missing_order_side))
 
@@ -475,14 +477,15 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                     if limiting_currency_quantity is not None:
                                         orders.append(OrderData(side, limiting_currency_quantity, price,
                                                                 self.symbol, False))
-                                        self.logger.debug(f"Creating missing order around spread {orders[-1]}")
+                                        self.logger.debug(f"Creating missing order around spread {orders[-1]} "
+                                                          f"for {self.symbol}")
                                 price = price - self.flat_increment if selling else price + self.flat_increment
                                 limiting_amount_from_this_order -= limiting_currency_quantity
                                 i += 1
 
         elif state == self.ERROR:
-            self.logger.error("Impossible to create staggered orders when incompatible order are already in place. "
-                              "Cancel these orders of you want to use this trading mode.")
+            self.logger.error(f"Impossible to create staggered orders for {self.symbol} when incompatible order "
+                              f"are already in place. Cancel these orders of you want to use this trading mode.")
         return orders
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_orders):
@@ -503,18 +506,18 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         if sorted_orders:
             if sorted_orders[0].get_side() == TradeOrderSide.SELL:
                 # only sell orders
-                self.logger.warning("Only sell orders are online, now waiting for the price to go up to create "
-                                    "new buy orders.")
+                self.logger.warning(f"Only sell orders are online for {self.symbol}, now waiting for the price to "
+                                    f"go up to create new buy orders.")
                 first_sell = sorted_orders[0]
                 only_sell = True
             if sorted_orders[-1].get_side() == TradeOrderSide.BUY:
                 # only buy orders
-                self.logger.warning("Only buy orders are online, now waiting for the price to go down to create "
-                                    "new sell orders.")
+                self.logger.warning(f"Only buy orders are online for {self.symbol}, now waiting for the price to "
+                                    f"go down to create new sell orders.")
                 only_buy = True
             for order in sorted_orders:
                 if order.symbol != self.symbol:
-                    self.logger.warning("Error when analyzing orders: order.symbol != self.symbol.")
+                    self.logger.warning(f"Error when analyzing orders for {self.symbol}: order.symbol != self.symbol.")
                     return None, self.ERROR, None
                 spread_point = False
                 if previous_order is None:
@@ -527,7 +530,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                 delta_spread = order.origin_price - previous_order.origin_price
 
                                 if increment is None:
-                                    self.logger.warning("Error when analyzing orders: increment is None.")
+                                    self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment "
+                                                        f"is None.")
                                     return None, self.ERROR, None
                                 else:
                                     inferred_spread = self.flat_spread or self.spread*increment/self.increment
@@ -569,12 +573,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                 ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
                                     else first_buy_cost / last_buy_cost
                             else:
-                                self.logger.info(f"Current price ({self.final_eval}) is out of range.")
+                                self.logger.info(f"Current price ({self.final_eval}) for {self.symbol} "
+                                                 f"is out of range.")
                                 return None, self.ERROR, None
                     if increment is None:
                         increment = self.flat_increment or order.origin_price - previous_order.origin_price
                         if increment <= 0:
-                            self.logger.warning("Error when analyzing orders: increment <= 0.")
+                            self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment <= 0.")
                             return None, self.ERROR, None
                     elif not spread_point:
                         delta_increment = order.origin_price - previous_order.origin_price
@@ -582,7 +587,8 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                         if previous_order.side == order.side:
                             missing_orders_count = delta_increment/increment
                             if missing_orders_count > 2.5:
-                                self.logger.warning("Error when analyzing orders: missing_orders_count > 2.5.")
+                                self.logger.warning(f"Error when analyzing orders for {self.symbol}: "
+                                                    f"missing_orders_count > 2.5.")
                                 if not self._is_just_closed_order(previous_order.origin_price+increment,
                                                                   recently_closed_orders):
                                     return None, self.ERROR, None
@@ -611,12 +617,12 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                             mode = StrategyModes.VALLEY
 
                 if mode is None or increment is None or spread is None:
-                    self.logger.warning("Error when analyzing orders: mode is None or increment is None or "
-                                        "spread is None.")
+                    self.logger.warning(f"Error when analyzing orders for {self.symbol}: mode is None or increment "
+                                        f"is None or spread is None.")
                     return None, self.ERROR, None
             if increment is None or (not(only_sell or only_buy) and spread is None):
-                self.logger.warning("Error when analyzing orders: increment is None or (not(only_sell or only_buy) "
-                                    "and spread is None).")
+                self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment is None or "
+                                    f"(not(only_sell or only_buy) and spread is None).")
                 return None, self.ERROR, None
             return missing_orders, state, increment
         else:
@@ -688,7 +694,7 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
                                               currency=None):
         if lower_bound >= upper_bound:
-            self.logger.error("Invalid bounds: too close to the current price")
+            self.logger.error(f"Invalid bounds for {self.symbol}: too close to the current price")
             return 0, 0
         if selling:
             order_distance = upper_bound - (lower_bound + self.flat_spread/2)
@@ -796,13 +802,13 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                     if created_order is not None:
                         new_orders.append(created_order)
                 except InsufficientFunds as e:
-                    self.logger.error(f"Failed to create order on second attempt : {e})")
+                    self.logger.error(f"Failed to create order for {self.symbol} on second attempt : {e})")
         except Exception as e:
             # retry once if failed to create order
             if retry:
                 await self._create_order(order, trader, order_creator, new_orders, portfolio, retry=False)
             else:
-                self.logger.error(f"Error while creating order: {e}")
+                self.logger.error(f"Error while creating order for {self.symbol}: {e}")
                 raise e
 
     async def _create_not_virtual_orders(self, notifier, trader, orders_to_create, creator_key):
