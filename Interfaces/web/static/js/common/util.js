@@ -16,6 +16,13 @@
  * License along with this library.
  */
 
+function get_websocket(namespace){
+    // Connect to the Socket.IO server.
+    // The connection URL has the following format, relative to the current page:
+    //     http[s]://<domain>:<port>[/<namespace>]
+    return io(namespace);
+}
+
 function setup_editable(){
     $.fn.editable.defaults.mode = 'inline';
 }

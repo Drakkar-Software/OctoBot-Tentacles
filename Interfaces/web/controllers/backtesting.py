@@ -17,9 +17,9 @@
 from flask import render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
-from tentacles.Interfaces.web import server_instance
+from tentacles.Interfaces.web import server_instance, send_backtesting_status
 from tentacles.Interfaces.web.models.backtesting import get_data_files_with_description, \
-    start_backtesting_using_specific_files, get_backtesting_report, get_backtesting_status, get_delete_data_file, \
+    start_backtesting_using_specific_files, get_backtesting_report, get_delete_data_file, \
     collect_data_file, save_data_file
 
 from tentacles.Interfaces.web.models.configuration import get_symbol_list, get_full_exchange_list, \
@@ -40,8 +40,8 @@ def backtesting():
             reset_tentacle_config = request.args["reset_tentacle_config"] if "reset_tentacle_config" in request.args \
                 else False
             success, reply = start_backtesting_using_specific_files(files, source, reset_tentacle_config)
-
         if success:
+            send_backtesting_status()
             return get_rest_reply(jsonify(reply))
         else:
             return get_rest_reply(reply, 500)
@@ -53,10 +53,6 @@ def backtesting():
                 source = request.args["source"]
                 backtesting_report = get_backtesting_report(source)
                 return jsonify(backtesting_report)
-            elif target == "backtesting_status":
-                backtesting_status, progress = get_backtesting_status()
-                status = {"status": backtesting_status, "progress": progress}
-                return jsonify(status)
 
         else:
             return render_template('backtesting.html',
