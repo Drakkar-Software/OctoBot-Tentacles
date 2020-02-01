@@ -37,7 +37,7 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
 
     def __init__(self, config, main_async_loop):
         AbstractServiceFeed.__init__(self, config, main_async_loop)
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name=self.get_name())
         self.subreddits = None
         self.counter = 0
         self.connect_attempts = 0
