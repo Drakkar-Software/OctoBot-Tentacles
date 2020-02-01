@@ -79,8 +79,5 @@ $(document).ready(function() {
     });
     lock_interface();
 
-    setInterval(function(){refresh_status();}, 300);
-    function refresh_status(){
-        check_backtesting_state();
-    }
+    init_backtesting_status_websocket();
 });
