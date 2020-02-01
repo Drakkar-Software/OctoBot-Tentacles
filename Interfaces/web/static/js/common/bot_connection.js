@@ -16,18 +16,15 @@
  * License along with this library.
  */
 
-function get_update(){
-    $.ajax({
-      url: "/update"
-    }).done(function(data) {
+function init_status_websocket(){
+    const socket = get_websocket("/notifications");
+    socket.on('update', function(data) {
         unlock_ui();
-
-    }).fail(function(data) {
-        lock_ui();
-
-    }).always(function(data) {
         manage_alert(data);
-  });
+    });
+    socket.on('reconnect_attempt', function() {
+        lock_ui();
+    });
 }
 
 function manage_alert(data){
@@ -119,10 +116,7 @@ const update_rate_millis = 1000;
 $(document).ready(function () {
     handle_route_button();
 
-    // initial health check
-    get_update();
-    // setup cyclic health check
-    setInterval(function(){ get_update(); }, update_rate_millis);
+    init_status_websocket();
 
     load_metadata();
 });

@@ -74,13 +74,12 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
 
 
 def get_backtesting_status():
-    if WebInterface.tools[BOT_TOOLS_BACKTESTING]:
+    if WebInterface.tools[BOT_TOOLS_BACKTESTING] is not None:
         backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
         if is_backtesting_in_progress(backtesting):
             return "computing", get_backtesting_progress(backtesting) * 100
-        return "finished", 100
-    else:
-        return "not started", 0
+        return "starting", 0
+    return "not started", 0
 
 
 def get_backtesting_report(source):
