@@ -20,7 +20,7 @@ function get_websocket(namespace){
     // Connect to the Socket.IO server.
     // The connection URL has the following format, relative to the current page:
     //     http[s]://<domain>:<port>[/<namespace>]
-    return io(namespace);
+    return io(namespace, {transports: ['websocket']});
 }
 
 function setup_editable(){
