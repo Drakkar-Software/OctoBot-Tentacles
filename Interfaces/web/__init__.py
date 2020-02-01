@@ -25,7 +25,7 @@ from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATAB
 from flask_socketio import SocketIO
 
 server_instance = flask.Flask(__name__)
-websocket_instance = SocketIO(server_instance)
+websocket_instance = SocketIO(server_instance, async_mode="gevent")
 
 from tentacles.Interfaces.web.advanced_controllers import advanced
 
@@ -33,7 +33,7 @@ server_instance.register_blueprint(advanced)
 server_instance.register_blueprint(api)
 
 # disable server logging
-loggers = ['engineio.server', 'socketio.server']
+loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
 for logger in loggers:
     logging.getLogger(logger).setLevel(logging.WARNING)
 
