@@ -120,43 +120,53 @@ function update_progress(progress){
     $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress)
 }
 
-function check_backtesting_state(){
-    const url = $("#backtestingPage").attr(update_url_attr);
-    $.get(url,function(data, status){
-        const backtesting_status = data["status"];
-        const progress = data["progress"];
+function _refresh_status(socket){
+    socket.emit('backtesting_status');
+}
 
-        const report = $("#backtestingReport");
-        const progress_bar = $("#backtesting_progress_bar");
-
-        if(backtesting_status === "computing"){
-            lock_interface(true);
-            progress_bar.show();
-            update_progress(progress);
-            first_refresh_state = backtesting_status;
-            if(report.is(":visible")){
-                report.hide();
-            }
-        }
-        else{
-            lock_interface(false);
-            progress_bar.hide();
-            if(backtesting_status === "finished"){
-                const should_alert = first_refresh_state !== "" && first_refresh_state !== "finished";
-                if(should_alert){
-                    create_alert("success", "Backtesting finished.", "");
-                    first_refresh_state="finished";
-                }
-                if(!report.is(":visible") && report.attr("loading") === "false"){
-                    report.attr("loading", "true");
-                    load_report(report, should_alert);
-                }
-            }
-        }
-        if(first_refresh_state === ""){
-            first_refresh_state = backtesting_status;
-        }
+function init_backtesting_status_websocket(){
+    const socket = get_websocket("/backtesting");
+    socket.on('backtesting_status', function(backtesting_status_data) {
+        _handle_backtesting(backtesting_status_data, socket)
     });
+}
+
+function _handle_backtesting(backtesting_status_data, socket){
+    const backtesting_status = backtesting_status_data["status"];
+    const progress = backtesting_status_data["progress"];
+
+    const report = $("#backtestingReport");
+    const progress_bar = $("#backtesting_progress_bar");
+
+    if(backtesting_status === "computing" || backtesting_status === "starting"){
+        lock_interface(true);
+        progress_bar.show();
+        update_progress(progress);
+        first_refresh_state = backtesting_status;
+        if(report.is(":visible")){
+            report.hide();
+        }
+        // re-schedule progress refresh
+        setTimeout(function () {_refresh_status(socket)}, 50)
+    }
+    else{
+        lock_interface(false);
+        progress_bar.hide();
+        if(backtesting_status === "finished"){
+            const should_alert = first_refresh_state !== "" && first_refresh_state !== "finished";
+            if(should_alert){
+                create_alert("success", "Backtesting finished.", "");
+                first_refresh_state="finished";
+            }
+            if(!report.is(":visible") && report.attr("loading") === "false"){
+                report.attr("loading", "true");
+                load_report(report, should_alert);
+            }
+        }
+    }
+    if(first_refresh_state === ""){
+        first_refresh_state = backtesting_status;
+    }
 }
 
 let first_refresh_state = "";
