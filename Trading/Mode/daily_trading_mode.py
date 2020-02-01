@@ -29,6 +29,7 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 from ccxt import InsufficientFunds
+from octobot_channels.channels.channel import CHANNEL_WILDCARD
 
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
@@ -61,7 +62,15 @@ class DailyTradingMode(AbstractTradingMode):
 
     async def create_consumers(self):
         await get_chan(MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=DailyTradingModeConsumer(self))
+            consumer_instance=DailyTradingModeConsumer(self),
+            trading_mode_name=self.get_name(),
+            cryptocurrency=self.cryptocurrency if self.cryptocurrency else CHANNEL_WILDCARD,
+            symbol=self.symbol if self.symbol else CHANNEL_WILDCARD,
+            time_frame=self.time_frame if self.time_frame else CHANNEL_WILDCARD)
+
+    @classmethod
+    def get_is_symbol_wildcard(cls) -> bool:
+        return False
 
 
 class DailyTradingModeConsumer(AbstractTradingModeConsumer):
@@ -213,7 +222,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             return 1
 
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
-    async def internal_callback(self, trading_mode_name, symbol, final_note, state):
+    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state):
         current_order = None
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
@@ -356,36 +365,45 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
             self.final_eval /= strategies_analysis_note_counter
         else:
             self.final_eval = INIT_EVAL_NOTE
-        await self.create_state(symbol=symbol)
-
-    async def submit_trading_evaluation(self, symbol, final_note=INIT_EVAL_NOTE, state=EvaluatorStates.NEUTRAL):
-        await self.send(trading_mode_name=self.trading_mode.get_name(),
-                        symbol=symbol,
-                        final_note=final_note,
-                        state=state)
+        await self.create_state(cryptocurrency=cryptocurrency, symbol=symbol, time_frame=time_frame)
 
     def __get_delta_risk(self):
         return self.RISK_THRESHOLD * self.exchange_manager.trader.risk
 
-    async def create_state(self, symbol):
+    async def create_state(self, cryptocurrency: str, symbol: str, time_frame):
         delta_risk = self.__get_delta_risk()
 
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
-            await self.__set_state(symbol, EvaluatorStates.VERY_LONG)
+            await self.__set_state(cryptocurrency=cryptocurrency,
+                                   symbol=symbol,
+                                   time_frame=time_frame,
+                                   new_state=EvaluatorStates.VERY_LONG)
         elif self.final_eval < self.LONG_THRESHOLD + delta_risk:
-            await self.__set_state(symbol, EvaluatorStates.LONG)
+            await self.__set_state(cryptocurrency=cryptocurrency,
+                                   symbol=symbol,
+                                   time_frame=time_frame,
+                                   new_state=EvaluatorStates.LONG)
         elif self.final_eval < self.NEUTRAL_THRESHOLD - delta_risk:
-            await self.__set_state(symbol, EvaluatorStates.NEUTRAL)
+            await self.__set_state(cryptocurrency=cryptocurrency,
+                                   symbol=symbol,
+                                   time_frame=time_frame,
+                                   new_state=EvaluatorStates.NEUTRAL)
         elif self.final_eval < self.SHORT_THRESHOLD - delta_risk:
-            await self.__set_state(symbol, EvaluatorStates.SHORT)
+            await self.__set_state(cryptocurrency=cryptocurrency,
+                                   symbol=symbol,
+                                   time_frame=time_frame,
+                                   new_state=EvaluatorStates.SHORT)
         else:
-            await self.__set_state(symbol, EvaluatorStates.VERY_SHORT)
+            await self.__set_state(cryptocurrency=cryptocurrency,
+                                   symbol=symbol,
+                                   time_frame=time_frame,
+                                   new_state=EvaluatorStates.VERY_SHORT)
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):
         return True
 
-    async def __set_state(self, symbol, new_state):
+    async def __set_state(self, cryptocurrency: str, symbol: str, time_frame, new_state):
         if new_state != self.state:
             # previous_state = self.state
             self.state = new_state
@@ -396,7 +414,11 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
                 await self.cancel_symbol_open_orders(symbol)
 
                 # call orders creation from consumers
-                await self.submit_trading_evaluation(symbol=symbol, final_note=self.final_eval, state=self.state)
+                await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                     symbol=symbol,
+                                                     time_frame=time_frame,
+                                                     final_note=self.final_eval,
+                                                     state=self.state)
 
                 # send_notification
                 await self._send_alert_notification(symbol, new_state)
