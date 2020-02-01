@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Interfaces
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -17,24 +17,38 @@
 import copy
 import logging
 import time
+from abc import abstractmethod
 
 import flask
 from tentacles.Interfaces.web.api import api
 from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATABASE, LOG_NEW_ERRORS_COUNT
+from flask_socketio import SocketIO
 
 server_instance = flask.Flask(__name__)
+websocket_instance = SocketIO(server_instance)
 
 from tentacles.Interfaces.web.advanced_controllers import advanced
 
 server_instance.register_blueprint(advanced)
 server_instance.register_blueprint(api)
 
-# disable Flask logging
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.WARNING)
+# disable server logging
+loggers = ['engineio.server', 'socketio.server']
+for logger in loggers:
+    logging.getLogger(logger).setLevel(logging.WARNING)
 
 notifications = []
 
+
+class Notifier:
+    @abstractmethod
+    def send_notifications(self) -> bool:
+        raise NotImplementedError("send_notifications is not implemented")
+
+
+GENERAL_NOTIFICATION_KEY = "general_notifications"
+BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
+notifiers = {}
 
 matrix_history = []
 symbol_data_history = {}
@@ -45,6 +59,12 @@ portfolio_value_history = {
 }
 
 TIME_AXIS_TITLE = "Time"
+
+
+def register_notifier(notification_key, notifier):
+    if notification_key not in notifiers:
+        notifiers[notification_key] = []
+    notifiers[notification_key].append(notifier)
 
 
 def add_to_matrix_history(matrix):
@@ -101,16 +121,33 @@ def add_to_symbol_data_history(symbol, data, time_frame, force_data_reset=False)
     #                                                                      new_data), axis=1)
 
 
+def flush_notifications():
+    notifications.clear()
+
+
+def _send_notification(notification_key) -> bool:
+    if notification_key in notifiers:
+        return any(notifier.all_clients_send_notifications()
+                   for notifier in notifiers[notification_key])
+    return False
+
+
+def send_general_notifications():
+    if _send_notification(GENERAL_NOTIFICATION_KEY):
+        flush_notifications()
+
+
+def send_backtesting_status():
+    _send_notification(BACKTESTING_NOTIFICATION_KEY)
+
+
 async def add_notification(level, title, message):
     notifications.append({
         "Level": level.value,
         "Title": title,
         "Message": message
     })
-
-
-def flush_notifications():
-    notifications.clear()
+    send_general_notifications()
 
 
 def get_matrix_history():

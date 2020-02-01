@@ -223,10 +223,7 @@ $(document).ready(function() {
 
     handle_evaluator_configuration_editor();
 
-    setInterval(function(){refresh_status();}, 300);
-    function refresh_status(){
-        check_backtesting_state();
-    }
+    init_backtesting_status_websocket();
 
     register_exit_confirm_function(something_is_unsaved);
 });
