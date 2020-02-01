@@ -33,7 +33,7 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
 
     def __init__(self, config, main_async_loop):
         super().__init__(config, main_async_loop)
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name=self.get_name())
         self.user_ids = []
         self.hashtags = []
         self.counter = 0
