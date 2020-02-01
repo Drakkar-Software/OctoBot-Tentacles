@@ -39,7 +39,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
     def __init__(self, config):
         AbstractWebInterface.__init__(self, config)
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name=self.get_name())
         self.app = None
         self.srv = None
         self.ctx = None
