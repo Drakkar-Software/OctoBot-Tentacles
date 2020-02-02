@@ -18,7 +18,8 @@ import logging
 from octobot_backtesting.collectors.exchanges.abstract_exchange_history_collector import \
     AbstractExchangeHistoryCollector
 from octobot_backtesting.enums import DataFormats
-from octobot_commons.enums import TimeFrames
+from octobot_commons.constants import MINUTE_TO_SECONDS
+from octobot_commons.enums import TimeFrames, TimeFramesMinutes
 from tentacles.Backtesting.importers.exchanges.generic_exchange_importer import GenericExchangeDataImporter
 
 try:
@@ -87,10 +88,12 @@ class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
         pass
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
+        # use time_frame_sec to add time to save the candle closing time
+        time_frame_sec = TimeFramesMinutes[time_frame] * MINUTE_TO_SECONDS
         candles: list = await self.exchange.get_symbol_prices(symbol, time_frame)
         self.exchange_manager.uniformize_candles_if_necessary(candles)
         await self.save_ohlcv(exchange=exchange, symbol=symbol, time_frame=time_frame, candle=candles,
-                              timestamp=[candle[0] for candle in candles], multiple=True)
+                              timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
