@@ -17,9 +17,11 @@ import threading
 from time import sleep
 
 from octobot_commons.logging import register_error_notifier
+from octobot_commons.logging.logging_util import get_logger
+from octobot_interfaces.util.util import run_in_bot_main_loop
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
     DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP
-from tentacles.Interfaces.web import server_instance, websocket_instance, send_general_notifications
+from tentacles.Interfaces.web import server_instance, websocket_instance, send_general_notifications, send_new_trade
 from tentacles.Interfaces.web.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
 from tentacles.Interfaces.web.controllers import load_routes
@@ -57,6 +59,17 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         except KeyError:
             self.port = DEFAULT_SERVER_PORT
 
+    @staticmethod
+    async def _web_trades_callback(exchange: str, exchange_id: str, symbol: str, trade, old_trade):
+        send_new_trade(trade)
+
+    async def _register_on_channels(self):
+        try:
+            from octobot_trading.api.trades import subscribe_to_trades_channel
+            await subscribe_to_trades_channel(self._web_trades_callback)
+        except ImportError:
+            self.get_logger().error("Watching trade channels requires OctoBot-Trading package installed")
+
     def _prepare_websocket(self):
         # handles all namespaces without an explicit error handler
         @websocket_instance.on_error_default
@@ -67,6 +80,8 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         load_namespaces()
         for namespace in namespaces:
             websocket_instance.on_namespace(namespace)
+
+        run_in_bot_main_loop(self._register_on_channels())
 
         register_error_notifier(send_general_notifications)
 

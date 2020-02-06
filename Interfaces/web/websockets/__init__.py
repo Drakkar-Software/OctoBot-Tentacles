@@ -20,3 +20,4 @@ namespaces = []
 def load_namespaces():
     from .notifications import NotificationsNamespace
     from .backtesting import BacktestingNamespace
+    from .dashboard import DashboardNamespace

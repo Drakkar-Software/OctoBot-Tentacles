@@ -22,8 +22,9 @@ from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, 
     get_exchange_configurations_from_exchange_name, get_exchange_manager_id
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
     has_symbol_klines
+from tentacles.Interfaces import WebInterface
 from tentacles.Interfaces.web import add_to_symbol_data_history, get_symbol_data_history
-from tentacles.Interfaces.web.constants import DEFAULT_TIMEFRAME
+from tentacles.Interfaces.web.constants import DEFAULT_TIMEFRAME, BOT_TOOLS_BACKTESTING
 from tentacles.Interfaces.web.enums import PriceStrings
 from octobot_commons.timestamp_util import convert_timestamps_to_datetime, convert_timestamp_to_datetime
 from octobot_commons.time_frame_manager import get_display_time_frame
@@ -45,7 +46,7 @@ def get_value_from_dict_or_string(data):
         return data
 
 
-def _format_trades(trade_history):
+def format_trades(trade_history):
     trade_time_key = "time"
     trade_price_key = "price"
     trade_description_key = "trade_description"
@@ -121,18 +122,18 @@ def get_first_symbol_data():
         symbol = get_trading_pairs(exchange)[0]
         time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
         return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
-    except KeyError:
+    except (KeyError, IndexError):
         return {}
 
 
-def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting):
+def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting, ignore_trades):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
     result_dict = {
-        candles_key: [],
-        real_trades_key: [],
-        simulated_trades_key: [],
+        candles_key: {},
+        real_trades_key: {},
+        simulated_trades_key: {},
     }
 
     if not in_backtesting:
@@ -159,13 +160,18 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
                                             time_format="%y-%m-%d %H:%M:%S",
                                             force_timezone=False)
 
-    real_trades_history, simulated_trades_history = get_trades_history(bot_api, symbol)
+    independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING] if in_backtesting else None
+    bot_api_for_history = None if in_backtesting else bot_api
+    if not ignore_trades:
+        real_trades_history, simulated_trades_history = get_trades_history(bot_api_for_history,
+                                                                           symbol,
+                                                                           independent_backtesting)
 
-    if real_trades_history:
-        result_dict[real_trades_key] = _format_trades(real_trades_history)
+        if real_trades_history:
+            result_dict[real_trades_key] = format_trades(real_trades_history)
 
-    if simulated_trades_history:
-        result_dict[simulated_trades_key] = _format_trades(simulated_trades_history)
+        if simulated_trades_history:
+            result_dict[simulated_trades_key] = format_trades(simulated_trades_history)
 
     if list_arrays:
         result_dict[candles_key] = {
@@ -187,7 +193,7 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
     return result_dict
 
 
-def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False):
+def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False, minimal_candles=False, ignore_trades=False):
     bot_api = get_bot_api()
     # TODO: handle on the fly backtesting price graph
     # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
@@ -196,15 +202,16 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     in_backtesting = is_backtesting_enabled(get_global_config()) or backtesting
     exchange_manager = get_exchange_manager_from_exchange_id(exchange_id)
     if time_frame is not None:
-        symbol_data = get_symbol_data(exchange_manager, symbol)
         try:
-            historical_candles = get_symbol_historical_candles(symbol_data, time_frame)
+            symbol_data = get_symbol_data(exchange_manager, symbol, allow_creation=False)
+            limit = 1 if minimal_candles else -1
+            historical_candles = get_symbol_historical_candles(symbol_data, time_frame, limit=limit)
             kline = [nan]
             if has_symbol_klines(symbol_data, time_frame):
                 kline = get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
                 return _create_candles_data(symbol, time_frame, historical_candles,
-                                            kline, bot_api, list_arrays, in_backtesting)
+                                            kline, bot_api, list_arrays, in_backtesting, ignore_trades)
         except KeyError:
             # not started yet
             return None
