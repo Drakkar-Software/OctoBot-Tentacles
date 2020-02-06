@@ -48,6 +48,7 @@ class Notifier:
 
 GENERAL_NOTIFICATION_KEY = "general_notifications"
 BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
+DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 notifiers = {}
 
 matrix_history = []
@@ -125,20 +126,27 @@ def flush_notifications():
     notifications.clear()
 
 
-def _send_notification(notification_key) -> bool:
+def _send_notification(notification_key, **kwargs) -> bool:
     if notification_key in notifiers:
-        return any(notifier.all_clients_send_notifications()
+        return any(notifier.all_clients_send_notifications(**kwargs)
                    for notifier in notifiers[notification_key])
     return False
 
 
-def send_general_notifications():
-    if _send_notification(GENERAL_NOTIFICATION_KEY):
+def send_general_notifications(**kwargs):
+    if _send_notification(GENERAL_NOTIFICATION_KEY, **kwargs):
         flush_notifications()
 
 
-def send_backtesting_status():
-    _send_notification(BACKTESTING_NOTIFICATION_KEY)
+def send_backtesting_status(**kwargs):
+    _send_notification(BACKTESTING_NOTIFICATION_KEY, **kwargs)
+
+
+def send_new_trade(new_trade):
+    if new_trade.simulated:
+        _send_notification(DASHBOARD_NOTIFICATION_KEY, simulated_trades=[new_trade])
+    else:
+        _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[new_trade])
 
 
 async def add_notification(level, title, message):
