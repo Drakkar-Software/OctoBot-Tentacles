@@ -65,6 +65,8 @@ const trading_config_type = "trading_config";
 
 const max_attempts = 20;
 
+const price_graph_update_interval = 3000;
+
 const material_colors = ["#2962ff", "#00b8d4", "#00c853", "#aeea00", "#ffab00",
     "#dd2c00", "#d50000", "#6200ea"];
 

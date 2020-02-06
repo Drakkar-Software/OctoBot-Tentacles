@@ -22,11 +22,45 @@ function get_in_backtesting_mode() {
 }
 
 
-function update_graph(time_frame, symbol, exchange, exchange_id){
-    if(isDefined(time_frame) && isDefined(symbol) && isDefined(exchange)){
-        const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
+function init_update_handler(){
+    socket.on("candle_graph_update_data", function (data) {
+        if(!cancel_next_update){
+            updating_graph = true;
+            update_graph(graph.attr("exchange"), true, data.data);
+        }else{
+            cancel_next_update = false;
+        }
+    });
+    socket.on('new_data', function (data) {
+        if(!cancel_next_update) {
+            updating_graph = true;
+            update_graph(graph.attr("exchange"), true, data.data, false);
+        }
+    });
+}
+
+function schedule_update(){
+    setTimeout(function () {
+        socket.emit("candle_graph_update", update_details);
+    }, price_graph_update_interval)
+}
+
+
+function update_graph(exchange, update=false, data=undefined, re_update=true, initialization=false){
+    const in_backtesting = get_in_backtesting_mode();
+    if(isDefined(update_details.time_frame) && isDefined(update_details.symbol) && isDefined(exchange)){
+        if (initialization && !in_backtesting){
+            init_update_handler();
+            updating_graph = false;
+        }
+        const formated_symbol = update_details.symbol.replace(new RegExp("/","g"), "|");
         const valid_exchange_name = exchange.split("[")[0];
-        get_symbol_price_graph("graph-symbol-price", exchange_id, valid_exchange_name, formated_symbol, time_frame, backtesting=get_in_backtesting_mode(), replace=true, should_retry=true);
+        get_symbol_price_graph("graph-symbol-price", update_details.exchange_id, valid_exchange_name,
+            formated_symbol, update_details.time_frame, in_backtesting, !update,
+            true, 0, data, schedule_update);
+        if (update && re_update && !in_backtesting){
+            schedule_update();
+        }
     }else{
         const loadingSelector = $("div[name='loadingSpinner']");
         if (loadingSelector.length) {
@@ -37,13 +71,35 @@ function update_graph(time_frame, symbol, exchange, exchange_id){
     }
 }
 
+function change_time_frame(new_time_frame) {
+    update_details.time_frame = new_time_frame;
+    update_graph(graph.attr("exchange"));
+}
+
 const graph = $("#symbol_graph");
+const timeFrameSelect = $("#time-frame-select");
+const update_details = {
+    exchange_id: graph.attr("exchange_id"),
+    symbol: graph.attr("symbol"),
+    time_frame: timeFrameSelect.val()
+};
+let updating_graph = false;
+let cancel_next_update = false;
+
+const socket = get_websocket("/dashboard");
 
 $(document).ready(function() {
-    const timeFrameSelect = $("#time-frame-select");
-    update_graph(timeFrameSelect.val(), graph.attr("symbol"), graph.attr("exchange"), graph.attr("exchange_id"));
+    update_graph(graph.attr("exchange"), false, undefined, true, true);
     timeFrameSelect.on('change', function () {
-        update_graph(this.value, graph.attr("symbol"), graph.attr("exchange"), graph.attr("exchange_id"));
+        const new_val = this.value;
+        cancel_next_update = true;
+        if(updating_graph){
+            setTimeout(function () {
+                change_time_frame(new_val)
+            }, 50);
+        }else{
+            change_time_frame(new_val);
+        }
     });
 
 });
