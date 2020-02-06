@@ -32,7 +32,7 @@ class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
     def on_backtesting_status(self):
         emit("backtesting_status", self._get_backtesting_status())
 
-    def all_clients_send_notifications(self) -> bool:
+    def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
             try:
                 self.socketio.emit("backtesting_status", self._get_backtesting_status(), namespace=self.namespace)

@@ -23,9 +23,13 @@ let real_no_trade_profitability = undefined;
 let market_profitability = undefined;
 let profitability_chart = undefined;
 
-function get_profitability(){
-    const url = $("#profitability_graph").attr(update_url_attr);
-    $.get(url,function(data, status){
+function _refresh_profitability(socket){
+    socket.emit('profitability');
+    waiting_profitability_update = false;
+}
+
+function handle_profitability(socket){
+    socket.on("profitability", function (data) {
         bot_simulated_profitability = data["bot_simulated_profitability"];
         simulated_no_trade_profitability = data["simulated_no_trade_profitability"];
         bot_real_profitability = data["bot_real_profitability"];
@@ -38,8 +42,12 @@ function get_profitability(){
         else{
             $("#graph-profitability-description").html("<h4>Nothing to display yet: profitability is 0 for the moment.</h4>")
         }
-    });
-
+        if(!waiting_profitability_update){
+            // re-schedule profitability refresh
+            waiting_profitability_update = true;
+            setTimeout(function () {_refresh_profitability(socket)}, 2000);
+        }
+    })
 }
 
 function should_display_profitability(profitability){
@@ -106,8 +114,8 @@ function get_in_backtesting_mode() {
     return $("#first_symbol_graph").attr("backtesting_mode") === "True";
 }
 
-function update_dashboard(){
-    get_profitability();
+function init_dashboard_websocket(){
+    socket = get_websocket("/dashboard");
 }
 
 function get_announcements(){
@@ -124,16 +132,94 @@ function get_announcements(){
     })
 }
 
-$(document).ready(function() {
-    get_profitability();
-    get_announcements();
+function handle_graph_update() {
+    socket.on('candle_graph_update_data', function (data) {
+        update_graph(data);
+    });
+    socket.on('new_data', function (data) {
+        update_graph(data, false);
+    });
+    socket.on('error', function (data) {
+        if("missing exchange manager" === data){
+            socket.off("candle_graph_update_data");
+            socket.off("new_data");
+            socket.off("error");
+            socket.off("profitability");
+            profitability_chart = undefined;
+            $('#exchange-specific-data').load(document.URL +  ' #exchange-specific-data',function(data){
+                init_graphs();
+            });
+        }
+    });
+}
+
+function _find_symbol_details(symbol){
+    let found_update_detail = undefined;
+    $.each(update_details, function (i, update_detail) {
+        if (update_detail.symbol === symbol){
+            found_update_detail = update_detail;
+        }
+    })
+    return found_update_detail;
+}
+
+function update_graph(data, re_update=true) {
+    const candle_data = data.data;
+    let update_detail = undefined;
+    if(isDefined(data.request)){
+        update_detail = data.request;
+    }else{
+        update_detail = _find_symbol_details(candle_data.symbol)
+    }
+    if(isDefined(update_detail)){
+        get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
+            "", update_details.time_frame, get_in_backtesting_mode(),
+            false, true, 0, candle_data);
+        if(re_update){
+            setTimeout(function () {
+                socket.emit("candle_graph_update", update_detail);
+            }, price_graph_update_interval)
+        }
+    }
+}
+
+function init_updater(exchange_id, symbol, time_frame, elem_id){
+    if(!get_in_backtesting_mode()){
+        const update_detail = {};
+        update_detail.exchange_id = exchange_id;
+        update_detail.symbol = symbol;
+        update_detail.time_frame = time_frame;
+        update_detail.elem_id = elem_id;
+        update_details.push(update_detail);
+        setTimeout(function () {
+            if(isDefined(socket)){
+                socket.emit("candle_graph_update", update_detail);
+            }},
+            3000);
+    }
+}
+
+function init_graphs() {
+    update_details = [];
     let useDefaultGraph = true;
     $(".watched-symbol-graph").each(function () {
         useDefaultGraph = false;
-        get_watched_symbol_price_graph($(this));
+        get_watched_symbol_price_graph($(this), init_updater);
     });
     if(useDefaultGraph){
-        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode());
+        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater);
     }
-    setInterval(function(){ update_dashboard(); }, 15000);
+    handle_graph_update(socket);
+    handle_profitability(socket);
+}
+
+let update_details = [];
+let waiting_profitability_update = false;
+
+let socket = undefined;
+
+$(document).ready(function() {
+    get_announcements();
+    init_dashboard_websocket();
+    init_graphs();
 });

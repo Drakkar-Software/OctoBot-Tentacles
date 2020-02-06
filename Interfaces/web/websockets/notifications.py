@@ -35,7 +35,7 @@ class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
     def _client_context_send_notifications(self):
         emit("update", self._get_update_data())
 
-    def all_clients_send_notifications(self) -> bool:
+    def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
             try:
                 self.socketio.emit("update", self._get_update_data(), namespace=self.namespace)
