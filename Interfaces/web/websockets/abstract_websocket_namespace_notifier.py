@@ -26,7 +26,7 @@ class AbstractWebSocketNamespaceNotifier(Namespace, Notifier):
         self.logger = get_logger(self.__class__.__name__)
         self.clients_count = 0
 
-    def all_clients_send_notifications(self) -> bool:
+    def all_clients_send_notifications(self, **kwargs) -> bool:
         raise NotImplementedError("all_clients_send_notifications is not implemented")
 
     def on_connect(self):
