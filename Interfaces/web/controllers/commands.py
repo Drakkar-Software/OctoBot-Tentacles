@@ -41,13 +41,3 @@ def commands(cmd=None):
                            cmd=cmd,
                            metrics_enabled=get_metrics_enabled(),
                            disclaimer=DISCLAIMER)
-
-
-@server_instance.route("/update")
-def update():
-    update_data = {
-        "notifications": copy(get_notifications()),
-        "errors_count": get_errors_count()
-    }
-    flush_notifications()
-    return jsonify(update_data)

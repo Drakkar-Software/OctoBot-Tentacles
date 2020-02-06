@@ -99,6 +99,11 @@ body:before {
     background-color: #3E4551 !important;
 }
 
+.card-body.candle-graph{
+    min-height: 490px;
+    background-color: inherit;
+}
+
 .card,
 .card-body,
 .card-text,
