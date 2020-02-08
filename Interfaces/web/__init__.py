@@ -20,6 +20,8 @@ import time
 from abc import abstractmethod
 
 import flask
+
+from octobot_trading.api.trades import is_trade_simulated
 from tentacles.Interfaces.web.api import api
 from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATABASE, LOG_NEW_ERRORS_COUNT
 from flask_socketio import SocketIO
@@ -143,7 +145,7 @@ def send_backtesting_status(**kwargs):
 
 
 def send_new_trade(new_trade):
-    if new_trade.simulated:
+    if is_trade_simulated(new_trade):
         _send_notification(DASHBOARD_NOTIFICATION_KEY, simulated_trades=[new_trade])
     else:
         _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[new_trade])
