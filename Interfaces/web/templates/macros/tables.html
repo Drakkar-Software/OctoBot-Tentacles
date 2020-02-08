@@ -4,11 +4,7 @@
             {% if sim_or_real == 'Simulated' %}
                 {{ sim_or_real }}
             {% else %}
-                {% if order.order_id is none %}
-                    {{ sim_or_real }} (virtual)
-                {% else %}
-                    {{ sim_or_real }} ({{ order.order_id }})
-                {% endif %}
+                {{ sim_or_real }} {{"(virtual)" if order.is_self_managed()}}
             {% endif %}
         </td>
         <td>{{ timestamp }}</td>
@@ -26,25 +22,16 @@
 
 {% macro trades_tr(trade, type='', timestamp='', sim_or_real='Simulated') -%}
     <tr>
-        <td scope="row">
-            {% if sim_or_real == 'Simulated' %}
-                {{ sim_or_real }}
-            {% else %}
-                {% if trade.order_id is none %}
-                    {{ sim_or_real }} (virtual)
-                {% else %}
-                    {{ sim_or_real }} ({{ trade.order_id }})
-                {% endif %}
-            {% endif %}
-        </td>
-        <td>{{ trade.order.exchange_manager.exchange.name }}</td>
+        <td>{{ sim_or_real }}</td>
+        <td>{{ trade.exchange_manager.exchange.name }}</td>
         <td>{{ trade.symbol }}</td>
         <td class="text-center">{{ type }}</td>
-        <td>{{ trade.price }}</td>
-        <td>{{ trade.quantity }}</td>
-        <td class="text-right">{{ trade.cost }} {{ trade.market }}</td>
+        <td>{{ trade.executed_price }}</td>
+        <td>{{ trade.executed_quantity }}</td>
+        <td class="text-right">{{ trade.total_cost }} {{ trade.market }}</td>
         <td class="text-right">{{ trade.fee['cost'] }} {{ trade.fee['currency'] }}</td>
         <td class="text-right">{{ timestamp }}</td>
+        <td class="text-right">{{ trade.trade_id }}</td>
     </tr>
 {%- endmacro %}
 
