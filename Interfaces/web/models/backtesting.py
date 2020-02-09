@@ -16,8 +16,10 @@
 
 from copy import copy
 
-from octobot_backtesting.api.backtesting import create_backtesting, initialize_created_backtesting, \
-    get_backtesting_progress, is_backtesting_in_progress, get_backtesting_run_report
+from octobot_backtesting.api.backtesting import create_independent_backtesting, \
+    initialize_and_run_independent_backtesting, \
+    get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
+    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting
 from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
 from octobot_commons.constants import CONFIG_TRADING_FILE_PATH, CONFIG_EVALUATOR_FILE_PATH
@@ -53,19 +55,22 @@ def get_data_files_with_description():
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False):
     try:
         tools = WebInterface.tools
+        previous_independant_backtesting = tools[BOT_TOOLS_BACKTESTING]
         if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and tools[BOT_TOOLS_STRATEGY_OPTIMIZER].is_in_progress():
             return False, "Optimizer already running"
-        elif tools[BOT_TOOLS_BACKTESTING] and tools[BOT_TOOLS_BACKTESTING].is_in_progress():
+        elif previous_independant_backtesting and previous_independant_backtesting.is_in_progress():
             return False, "A backtesting is already running"
         else:
+            if previous_independant_backtesting:
+                run_in_bot_main_loop(stop_independent_backtesting(previous_independant_backtesting))
             if reset_tentacle_config:
                 config = reload_tentacle_config(copy(get_global_config()), CONFIG_EVALUATOR, CONFIG_EVALUATOR_FILE_PATH)
                 config = reload_tentacle_config(config, CONFIG_TRADING_TENTACLES, CONFIG_TRADING_FILE_PATH)
             else:
                 config = get_global_config()
-            backtesting = create_backtesting(config, files)
-            run_in_bot_main_loop(initialize_created_backtesting(backtesting), blocking=False)
-            tools[BOT_TOOLS_BACKTESTING] = backtesting
+            independent_backtesting = create_independent_backtesting(config, files)
+            run_in_bot_main_loop(initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
+            tools[BOT_TOOLS_BACKTESTING] = independent_backtesting
             tools[BOT_TOOLS_BACKTESTING_SOURCE] = source
             return True, "Backtesting started"
     except Exception as e:
@@ -75,9 +80,11 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
 
 def get_backtesting_status():
     if WebInterface.tools[BOT_TOOLS_BACKTESTING] is not None:
-        backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
-        if is_backtesting_in_progress(backtesting):
-            return "computing", get_backtesting_progress(backtesting) * 100
+        independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
+        if is_independent_backtesting_in_progress(independent_backtesting):
+            return "computing", get_independent_backtesting_progress(independent_backtesting) * 100
+        if is_independent_backtesting_finished(independent_backtesting):
+            return "finished", 100
         return "starting", 0
     return "not started", 0
 
@@ -87,7 +94,7 @@ def get_backtesting_report(source):
     if tools[BOT_TOOLS_BACKTESTING]:
         backtesting = tools[BOT_TOOLS_BACKTESTING]
         if tools[BOT_TOOLS_BACKTESTING_SOURCE] == source:
-            return get_backtesting_run_report(backtesting)
+            return run_in_bot_main_loop(get_independent_backtesting_report(backtesting))
     return {}
 
 
