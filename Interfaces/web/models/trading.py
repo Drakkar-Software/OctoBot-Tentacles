@@ -13,10 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+from octobot_interfaces.util.util import get_exchange_managers
 from octobot_trading.api.exchange import get_watched_timeframes, get_exchange_name, \
     get_exchange_manager_from_exchange_id, get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.modes import get_trading_modes, get_trading_mode_symbol, get_trading_mode_current_state
+from octobot_trading.api.profitability import get_initializing_currencies_prices
 
 
 def get_exchange_time_frames(exchange_id):
@@ -25,6 +26,13 @@ def get_exchange_time_frames(exchange_id):
         return get_watched_timeframes(exchange_manager), get_exchange_name(exchange_manager)
     except KeyError:
         return [], ""
+
+
+def get_initializing_currencies_prices_set():
+    initializing_currencies = set()
+    for exchange_manager in get_exchange_managers():
+        initializing_currencies = initializing_currencies.union(get_initializing_currencies_prices(exchange_manager))
+    return initializing_currencies
 
 
 def get_evaluation(symbol, exchange_name):
