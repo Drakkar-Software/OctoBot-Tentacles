@@ -93,7 +93,7 @@ function load_report(report, should_alert=False){
                 });
             $("#sPort").html(starting_portfolio_reports.join(", "));
 
-            add_graphs(data["symbols_with_time_frames_frames"]);
+            add_graphs(data["chart_identifiers"]);
         }
     }).fail(function () {
         report.hide();
@@ -102,17 +102,21 @@ function load_report(report, should_alert=False){
     });
 }
 
-function add_graphs(symbols_with_time_frames){
+function add_graphs(chart_identifiers){
     const result_graph_id = "result-graph-";
     const graph_symbol_price_id = "graph-symbol-price-";
     const result_graphs = $("#result-graphs");
     result_graphs.empty();
-    $.each(symbols_with_time_frames, function (symbol, time_frame) {
+    $.each(chart_identifiers, function (_, chart_identifier) {
         const target_template = $("#"+result_graph_id+config_default_value);
-        const graph_card = target_template.html().replace(new RegExp(config_default_value,"g"), symbol);
+        const symbol = chart_identifier["symbol"];
+        const exchange_id = chart_identifier["exchange_id"];
+        const exchange_name = chart_identifier["exchange_name"];
+        const time_frame = chart_identifier["time_frame"];
+        const graph_card = target_template.html().replace(new RegExp(config_default_value,"g"), exchange_id+symbol);
         result_graphs.append(graph_card);
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
-        get_symbol_price_graph(graph_symbol_price_id+symbol, "#TODO", "ExchangeSimulator", formated_symbol, time_frame, true);
+        get_symbol_price_graph(`${graph_symbol_price_id}${exchange_id}${symbol}`, exchange_id, exchange_name, formated_symbol, time_frame, true);
     })
 }
 
