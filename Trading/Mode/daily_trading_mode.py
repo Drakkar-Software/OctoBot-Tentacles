@@ -56,6 +56,10 @@ class DailyTradingMode(AbstractTradingMode):
                   "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
                   "each state."
 
+    def get_current_state(self) -> (str, float):
+        return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
+               self.producers[0].final_eval
+
     async def create_producers(self):
         await DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
                                        self.config, self, self.exchange_manager).run()
