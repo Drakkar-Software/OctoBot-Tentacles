@@ -26,47 +26,47 @@ cdef class DailyTradingMode(AbstractTradingMode):
 
 
 cdef class DailyTradingModeConsumer(AbstractTradingModeConsumer):
-    cdef public float MAX_SUM_RESULT
+    cdef public double MAX_SUM_RESULT
 
-    cdef public float STOP_LOSS_ORDER_MAX_PERCENT
-    cdef public float STOP_LOSS_ORDER_MIN_PERCENT
-    cdef public float STOP_LOSS_ORDER_ATTENUATION
+    cdef public double STOP_LOSS_ORDER_MAX_PERCENT
+    cdef public double STOP_LOSS_ORDER_MIN_PERCENT
+    cdef public double STOP_LOSS_ORDER_ATTENUATION
 
-    cdef public float QUANTITY_MIN_PERCENT
-    cdef public float QUANTITY_MAX_PERCENT
-    cdef public float QUANTITY_ATTENUATION
+    cdef public double QUANTITY_MIN_PERCENT
+    cdef public double QUANTITY_MAX_PERCENT
+    cdef public double QUANTITY_ATTENUATION
 
-    cdef public float QUANTITY_MARKET_MIN_PERCENT
-    cdef public float QUANTITY_MARKET_MAX_PERCENT
-    cdef public float QUANTITY_BUY_MARKET_ATTENUATION
-    cdef public float QUANTITY_MARKET_ATTENUATION
+    cdef public double QUANTITY_MARKET_MIN_PERCENT
+    cdef public double QUANTITY_MARKET_MAX_PERCENT
+    cdef public double QUANTITY_BUY_MARKET_ATTENUATION
+    cdef public double QUANTITY_MARKET_ATTENUATION
 
-    cdef public float BUY_LIMIT_ORDER_MAX_PERCENT
-    cdef public float BUY_LIMIT_ORDER_MIN_PERCENT
-    cdef public float SELL_LIMIT_ORDER_MIN_PERCENT
-    cdef public float SELL_LIMIT_ORDER_MAX_PERCENT
-    cdef public float LIMIT_ORDER_ATTENUATION
+    cdef public double BUY_LIMIT_ORDER_MAX_PERCENT
+    cdef public double BUY_LIMIT_ORDER_MIN_PERCENT
+    cdef public double SELL_LIMIT_ORDER_MIN_PERCENT
+    cdef public double SELL_LIMIT_ORDER_MAX_PERCENT
+    cdef public double LIMIT_ORDER_ATTENUATION
 
-    cdef public float QUANTITY_RISK_WEIGHT
-    cdef public float MAX_QUANTITY_RATIO
-    cdef public float MIN_QUANTITY_RATIO
-    cdef public float DELTA_RATIO
+    cdef public double QUANTITY_RISK_WEIGHT
+    cdef public double MAX_QUANTITY_RATIO
+    cdef public double MIN_QUANTITY_RATIO
+    cdef public double DELTA_RATIO
 
-    cdef public float SELL_MULTIPLIER
-    cdef public float FULL_SELL_MIN_RATIO
+    cdef public double SELL_MULTIPLIER
+    cdef public double FULL_SELL_MIN_RATIO
 
     cpdef __get_limit_price_from_risk(self, object eval_note)
     cpdef __get_stop_price_from_risk(self)
-    cpdef __get_buy_limit_quantity_from_risk(self, object eval_note, float quantity, str quote)
-    cpdef __get_market_quantity_from_risk(self, object eval_note, float quantity, str quote, bint selling=*)
+    cpdef __get_buy_limit_quantity_from_risk(self, object eval_note, double quantity, str quote)
+    cpdef __get_market_quantity_from_risk(self, object eval_note, double quantity, str quote, bint selling=*)
 
 cdef class DailyTradingModeProducer(AbstractTradingModeProducer):
     cdef public object state
 
-    cdef public float VERY_LONG_THRESHOLD
-    cdef public float LONG_THRESHOLD
-    cdef public float NEUTRAL_THRESHOLD
-    cdef public float SHORT_THRESHOLD
-    cdef public float RISK_THRESHOLD
+    cdef public double VERY_LONG_THRESHOLD
+    cdef public double LONG_THRESHOLD
+    cdef public double NEUTRAL_THRESHOLD
+    cdef public double SHORT_THRESHOLD
+    cdef public double RISK_THRESHOLD
 
-    cpdef float __get_delta_risk(self)
+    cpdef double __get_delta_risk(self)
