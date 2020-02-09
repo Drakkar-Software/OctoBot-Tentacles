@@ -15,7 +15,8 @@
 #  License along with this library.
 
 from octobot_trading.api.exchange import get_watched_timeframes, get_exchange_name, \
-    get_exchange_manager_from_exchange_id
+    get_exchange_manager_from_exchange_id, get_exchange_manager_from_exchange_name_and_id
+from octobot_trading.api.modes import get_trading_modes, get_trading_mode_symbol, get_trading_mode_current_state
 
 
 def get_exchange_time_frames(exchange_id):
@@ -29,16 +30,11 @@ def get_exchange_time_frames(exchange_id):
 def get_evaluation(symbol, exchange_name):
     try:
         if exchange_name:
-            return "N/A"
-            # TODO: return trading mode state
-            # exchange_manager = get_exchange_manager_from_exchange_name(exchange_name)
-            # symbol_evaluator = get_bot().get_symbol_evaluator_list()[symbol]
-            # return (
-            #     ",".join([
-            #         f"{dec.get_state().name}: {round(dec.get_final_eval(), 4)}"
-            #         if dec.get_state() is not None else "N/A"
-            #         for dec in symbol_evaluator.get_deciders(exchange)
-            #     ])
-            # )
+            exchange_manager = get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
+            for trading_mode in get_trading_modes(exchange_manager):
+                if get_trading_mode_symbol(trading_mode) == symbol:
+                    state_desc, state = get_trading_mode_current_state(trading_mode)
+                    return f"{state_desc.replace('_', ' ')}, {round(state)}"
     except KeyError:
-        return "N/A"
+        pass
+    return "N/A"

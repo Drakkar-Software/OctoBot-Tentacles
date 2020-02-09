@@ -75,7 +75,7 @@ def symbol_market_status():
     symbol_time_frames, exchange = get_exchange_time_frames(exchange_id)
     time_frames = list(symbol_time_frames)
     time_frames.reverse()
-    symbol_evaluation = get_evaluation(symbol, exchange)
+    symbol_evaluation = get_evaluation(symbol, exchange, exchange_id)
     return render_template('symbol_market_status.html',
                            symbol=symbol,
                            exchange=exchange,
