@@ -27,7 +27,8 @@ from octobot_interfaces.util.profitability import get_reference_market
 from tentacles.Interfaces.web import server_instance
 from octobot_trading.constants import CONFIG_PORTFOLIO_TOTAL
 from tentacles.Interfaces.web.models.configuration import get_in_backtesting_mode
-from tentacles.Interfaces.web.models.trading import get_exchange_time_frames, get_evaluation
+from tentacles.Interfaces.web.models.trading import get_exchange_time_frames, get_evaluation, \
+    get_initializing_currencies_prices_set
 from tentacles.Interfaces.web.models.interface_settings import get_watched_symbols
 
 
@@ -46,6 +47,7 @@ def portfolio():
 
     _, _, portfolio_real_current_value, portfolio_simulated_current_value = get_portfolio_current_value()
     reference_market = get_reference_market()
+    initializing_currencies_prices_set = get_initializing_currencies_prices_set()
 
     return render_template('portfolio.html',
                            has_real_trader=has_real_trader,
@@ -54,7 +56,8 @@ def portfolio():
                            real_portfolio=filtered_real_portfolio,
                            simulated_total_value=round(portfolio_simulated_current_value, 8),
                            real_total_value=round(portfolio_real_current_value, 8),
-                           reference_unit=reference_market
+                           reference_unit=reference_market,
+                           initializing_currencies_prices=initializing_currencies_prices_set
                            )
 
 

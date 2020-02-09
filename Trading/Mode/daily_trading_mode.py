@@ -60,17 +60,21 @@ class DailyTradingMode(AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
 
-    async def create_producers(self):
-        await DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
-                                       self.config, self, self.exchange_manager).run()
+    async def create_producers(self) -> list:
+        mode_producer = DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
+                                                       self.config, self, self.exchange_manager)
+        await mode_producer.run()
+        return [mode_producer]
 
-    async def create_consumers(self):
+    async def create_consumers(self) -> list:
+        mode_consumer = DailyTradingModeConsumer(self)
         await get_chan(MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=DailyTradingModeConsumer(self),
+            consumer_instance=mode_consumer,
             trading_mode_name=self.get_name(),
             cryptocurrency=self.cryptocurrency if self.cryptocurrency else CHANNEL_WILDCARD,
             symbol=self.symbol if self.symbol else CHANNEL_WILDCARD,
             time_frame=self.time_frame if self.time_frame else CHANNEL_WILDCARD)
+        return [mode_consumer]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
@@ -112,6 +116,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
         self.SELL_MULTIPLIER = 5
         self.FULL_SELL_MIN_RATIO = 0.05
+
+    def flush(self):
+        super().flush()
+        self.trader = None
 
     """
     Starting point : self.SELL_LIMIT_ORDER_MIN_PERCENT or self.BUY_LIMIT_ORDER_MAX_PERCENT
@@ -338,6 +346,11 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         self.SHORT_THRESHOLD = 0.85
         self.RISK_THRESHOLD = 0.2
 
+    async def stop(self):
+        if self.trading_mode is not None:
+            self.trading_mode.consumers[0].flush()
+        await super().stop()
+
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
         if time_frame is None:
             # Do nothing, requires a time frame
@@ -425,7 +438,8 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
                                                      state=self.state)
 
                 # send_notification
-                await self._send_alert_notification(symbol, new_state)
+                if not self.exchange_manager.is_backtesting:
+                    await self._send_alert_notification(symbol, new_state)
 
     async def _send_alert_notification(self, symbol, new_state):
         try:
