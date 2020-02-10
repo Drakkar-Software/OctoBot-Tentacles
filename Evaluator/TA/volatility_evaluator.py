@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "volatility_evaluator",
     "type": "Evaluator",
     "subtype": "TA",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "config_files": ["StochasticRSIVolatilityEvaluator.json"],
     "config_schema_files": ["StochasticRSIVolatilityEvaluator_schema.json"],
     "requirements": []
@@ -28,6 +28,7 @@ $tentacle_description: {
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import tulipy
+from tulipy.lib import InvalidOptionError
 
 from config import PriceIndexes, START_PENDING_EVAL_NOTE
 from evaluator.TA.TA_evaluator import VolatilityEvaluator
@@ -36,7 +37,7 @@ from evaluator.TA.TA_evaluator import VolatilityEvaluator
 class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
     DESCRIPTION = "Uses the Stochastic RSI as a volatilty evaluator to help identify trends. " \
                   "When found, evaluates -1 to 1 according to the strength of the trend."
-    
+
     STOCHRSI_PERIOD = "period"
     HIGH_LEVEL = "high_level"
     LOW_LEVEL = "low_level"
@@ -47,12 +48,17 @@ class StochasticRSIVolatilityEvaluator(VolatilityEvaluator):
         self.evaluator_config = self.get_specific_config()
 
     async def eval_impl(self):
-        stochrsi_value = tulipy.stochrsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
-                                         self.evaluator_config[self.STOCHRSI_PERIOD])[-1]
+        try:
+            stochrsi_value = tulipy.stochrsi(self.data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                             self.evaluator_config[self.STOCHRSI_PERIOD])[-1]
 
-        if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
-            self.eval_note = 1
-        elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.evaluator_config[self.LOW_LEVEL]:
-            self.eval_note = -1
-        else:
-            self.eval_note = stochrsi_value - 0.5
+            if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
+                self.eval_note = 1
+            elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.evaluator_config[self.LOW_LEVEL]:
+                self.eval_note = -1
+            else:
+                self.eval_note = stochrsi_value - 0.5
+        except InvalidOptionError as e:
+            self.logger.debug(f"Error when computing stochrsi: {e}")
+            self.logger.exception(e)
+            self.eval_note = START_PENDING_EVAL_NOTE
