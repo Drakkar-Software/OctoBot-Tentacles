@@ -113,10 +113,34 @@ def collect_data_file(exchange, symbol):
         return success, f"Can't collect data for {symbol} on {exchange} ({result})"
 
 
+async def _convert_into_octobot_data_file_if_necessary(output_file):
+    try:
+        description = await get_file_description(output_file, data_path="")
+        if description is not None:
+            # no error: current bot format data
+            return f"{output_file} saved"
+        else:
+            # try to convert into current bot format
+            converted_output_file = await convert_data_file(output_file)
+            if converted_output_file is not None:
+                message = f"Saved into {converted_output_file}"
+            else:
+                message = "Failed to convert file."
+            # remove invalid format file
+            remove(output_file)
+            return message
+    except Exception as e:
+        message = f"Error when handling backtesting data file: {e}"
+        LOGGER.error(message)
+        LOGGER.exception(e)
+        return message
+
+
 def save_data_file(name, file):
     try:
-        file.save(f"{BACKTESTING_FILE_PATH}/{name}")
-        message = f"{name} saved"
+        output_file = f"{BACKTESTING_FILE_PATH}/{name}"
+        file.save(output_file)
+        message = run_in_bot_main_loop(_convert_into_octobot_data_file_if_necessary(output_file))
         LOGGER.info(message)
         return True, message
     except Exception as e:
