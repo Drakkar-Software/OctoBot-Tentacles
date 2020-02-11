@@ -1,5 +1,5 @@
 # cython: language_level=3
-#  Drakkar-Software OctoBot-Backtesting
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -15,6 +15,16 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 from octobot_backtesting.converters.data_converter cimport DataConverter
+from octobot_backtesting.data.database cimport DataBase
 
 cdef class LegacyDataConverter(DataConverter):
-    pass
+    cdef str exchange_name
+    cdef str symbol
+    cdef str time_data
+    cdef list time_frames
+    cdef dict file_content
+    cdef DataBase database
+
+    cdef list _get_formatted_candles(self, object time_frame)
+    cdef dict _read_data_file(self)
+    cdef dict _read_data_file(self)

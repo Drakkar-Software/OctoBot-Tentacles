@@ -16,3 +16,4 @@
 
 from .collectors import *
 from .importers import *
+from .converters import *
