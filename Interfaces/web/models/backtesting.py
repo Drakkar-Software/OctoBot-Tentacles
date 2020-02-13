@@ -15,11 +15,13 @@
 #  License along with this library.
 
 from copy import copy
+from os import remove
 
 from octobot_backtesting.api.backtesting import create_independent_backtesting, \
     initialize_and_run_independent_backtesting, \
     get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
     get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting
+from octobot_backtesting.api.data_file_converters import convert_data_file
 from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
 from octobot_commons.constants import CONFIG_TRADING_FILE_PATH, CONFIG_EVALUATOR_FILE_PATH
