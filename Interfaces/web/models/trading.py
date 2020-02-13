@@ -35,7 +35,7 @@ def get_initializing_currencies_prices_set():
     return initializing_currencies
 
 
-def get_evaluation(symbol, exchange_name):
+def get_evaluation(symbol, exchange_name, exchange_id):
     try:
         if exchange_name:
             exchange_manager = get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
