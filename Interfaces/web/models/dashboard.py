@@ -20,6 +20,7 @@ from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_global_config, get_bot_api
 from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
     get_exchange_configurations_from_exchange_name, get_exchange_manager_id
+from octobot_trading.enums import OrderStatus
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
     has_symbol_klines
 from tentacles.Interfaces import WebInterface
@@ -33,6 +34,7 @@ from octobot_commons.enums import PriceIndexes, TimeFrames
 from octobot_interfaces.util.trader import get_trades_history
 
 GET_SYMBOL_SEPARATOR = "|"
+DISPLAY_CANCELLED_TRADES = False
 
 
 def parse_get_symbol(get_symbol):
@@ -59,11 +61,14 @@ def format_trades(trade_history):
     }
 
     for trade in trade_history:
-        trades[trade_time_key].append(convert_timestamp_to_datetime(trade.executed_time,
-                                                                    time_format="%y-%m-%d %H:%M:%S"))
-        trades[trade_price_key].append(trade.executed_price)
-        trades[trade_description_key].append(f"{trade.trade_type.name}: {trade.executed_quantity}")
-        trades[trade_order_side_key].append(trade.side.value)
+        if trade.status is not OrderStatus.CANCELED or DISPLAY_CANCELLED_TRADES:
+            trades[trade_time_key].append(convert_timestamp_to_datetime(trade.executed_time
+                                                                        if trade.status is not OrderStatus.CANCELED
+                                                                        else trade.canceled_time,
+                                                                        time_format="%y-%m-%d %H:%M:%S"))
+            trades[trade_price_key].append(trade.executed_price)
+            trades[trade_description_key].append(f"{trade.trade_type.name}: {trade.executed_quantity}")
+            trades[trade_order_side_key].append(trade.side.value)
 
     return trades
 
@@ -85,7 +90,7 @@ def _get_first_exchange_identifiers():
     exchanges = get_exchange_names()
     if exchanges:
         first_exchange_name = next(iter(exchanges))
-        exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(first_exchange_name).values()))\
+        exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(first_exchange_name).values())) \
             .exchange_manager
         return exchange_manager, first_exchange_name, get_exchange_manager_id(exchange_manager)
     raise KeyError("No exchange to be found")
@@ -126,7 +131,8 @@ def get_first_symbol_data():
         return {}
 
 
-def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting, ignore_trades):
+def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting,
+                         ignore_trades):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
@@ -193,7 +199,8 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
     return result_dict
 
 
-def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False, minimal_candles=False, ignore_trades=False):
+def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False,
+                                    minimal_candles=False, ignore_trades=False):
     bot_api = get_bot_api()
     # TODO: handle on the fly backtesting price graph
     # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
