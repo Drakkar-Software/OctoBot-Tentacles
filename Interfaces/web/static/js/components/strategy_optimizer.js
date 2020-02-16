@@ -115,56 +115,57 @@ function update_progress(progress, overall_progress){
     }
 }
 
-function check_optimizer_state(reportTable){
-    const url = $("#strategyOptimizerInputs").attr(update_url_attr);
-    $.get(url,function(data, request_status){
-        const status = data["status"];
-        const progress = data["progress"];
-        const overall_progress = data["overall_progress"];
-        const errors = data["errors"];
-        const error_div = $("#error_info");
-        const error_text_div = $("#error_info_text");
-        const report_datatable_card = $("#report_datatable_card");
-        const has_errors = errors !== null;
-        let alert_type = "success";
-        let alert_additional_text = "Strategy optimized finished simulations.";
-        if(has_errors){
-            error_text_div.text(errors);
-            error_div.show();
-            alert_type = "error";
-            alert_additional_text = "Strategy optimized finished simulations with error(s)."
-        }else{
-            error_text_div.text("");
-            error_div.hide();
+function check_optimizer_state(socket){
+    socket.emit("strategy_optimizer_status");
+}
+
+function handle_optimizer_state_update(data){
+    const status = data["status"];
+    const progress = data["progress"];
+    const overall_progress = data["overall_progress"];
+    const errors = data["errors"];
+    const error_div = $("#error_info");
+    const error_text_div = $("#error_info_text");
+    const report_datatable_card = $("#report_datatable_card");
+    const has_errors = errors !== null;
+    let alert_type = "success";
+    let alert_additional_text = "Strategy optimized finished simulations.";
+    if(has_errors){
+        error_text_div.text(errors);
+        error_div.show();
+        alert_type = "error";
+        alert_additional_text = "Strategy optimized finished simulations with error(s)."
+    }else{
+        error_text_div.text("");
+        error_div.hide();
+    }
+    if(status === "computing"){
+        lock_inputs();
+        update_progress(progress, overall_progress);
+        first_refresh_state = status;
+        if(report_datatable_card.is(":visible")){
+            report_datatable_card.hide();
+            reportTable.clear();
         }
-        if(status === "computing"){
-            lock_inputs();
-            update_progress(progress, overall_progress);
-            first_refresh_state = status;
-            if(report_datatable_card.is(":visible")){
-                report_datatable_card.hide();
-                reportTable.clear();
+    }
+    else{
+        lock_inputs(false);
+        if(status === "finished"){
+            if(!report_datatable_card.is(":visible")){
+                report_datatable_card.show();
+            }
+            if(reportTable.rows().count() === 0){
+                reportTable.ajax.reload( null, false);
+            }
+            if((first_refresh_state !== "" || has_errors) && first_refresh_state !== "finished"){
+                create_alert(alert_type, alert_additional_text, "");
+                first_refresh_state="finished";
             }
         }
-        else{
-            lock_inputs(false);
-            if(status === "finished"){
-                if(!report_datatable_card.is(":visible")){
-                    report_datatable_card.show();
-                }
-                if(reportTable.rows().count() === 0){
-                    reportTable.ajax.reload( null, false);
-                }
-                if((first_refresh_state !== "" || has_errors) && first_refresh_state !== "finished"){
-                    create_alert(alert_type, alert_additional_text, "");
-                    first_refresh_state="finished";
-                }
-            }
-        }
-        if(first_refresh_state === ""){
-            first_refresh_state = status;
-        }
-    });
+    }
+    if(first_refresh_state === ""){
+        first_refresh_state = status;
+    }
 }
 
 const iterationColumnsDef = [
@@ -275,28 +276,16 @@ let first_refresh_state = "";
 
 const progressChart = create_circular_progress_doughnut($("#optimize_doughnutChart")[0]);
 
-$(document).ready(function() {
-
-    check_disabled();
-
-    $('#strategySelect').on('input', function() {
-        update_strategy_params($('#strategySelect').attr(update_url_attr), $('#strategySelect').val());
+function init_websocket(){
+    const socket = get_websocket("/strategy_optimizer");
+    socket.on("strategy_optimizer_status", function (data) {
+        handle_optimizer_state_update(data);
     });
+    return socket;
+}
 
-    $(".multi-select-element").select2({
-        dropdownAutoWidth : true,
-        multiple: true,
-        closeOnSelect: false
-    });
-    $(".multi-select-element").on('change', function (e) {
-        recompute_nb_iterations();
-        check_disabled();
-    });
-    $("#startOptimizer").click(function(){
-        start_optimizer($(this));
-    });
-
-    const reportTable = $("#report_datatable").DataTable({
+function init_data_tables_and_refreshers(){
+    reportTable = $("#report_datatable").DataTable({
         ajax: {
             "url": $("#report_datatable").attr(update_url_attr),
             "dataSrc": ""
@@ -318,13 +307,41 @@ $(document).ready(function() {
         columnDefs: iterationColumnsDef
     });
 
+    const socket = init_websocket();
 
-    setInterval(function(){refresh_message_table(iterationTable,reportTable);}, 1500);
-    function refresh_message_table(iterationTable, reportTable){
+    setInterval(function(){refresh_message_table(iterationTable);}, 1500);
+    function refresh_message_table(iterationTable){
         iterationTable.ajax.reload( null, false );
         if(iterationTable.rows().count() > 0){
             $("#results_datatable_card").show();
         }
-        check_optimizer_state(reportTable);
+        check_optimizer_state(socket);
     }
+}
+
+function register_events(){
+    $('#strategySelect').on('input', function() {
+        update_strategy_params($('#strategySelect').attr(update_url_attr), $('#strategySelect').val());
+    });
+
+    $(".multi-select-element").select2({
+        dropdownAutoWidth : true,
+        multiple: true,
+        closeOnSelect: false
+    });
+    $(".multi-select-element").on('change', function (e) {
+        recompute_nb_iterations();
+        check_disabled();
+    });
+    $("#startOptimizer").click(function(){
+        start_optimizer($(this));
+    });
+}
+
+let reportTable = undefined;
+
+$(document).ready(function() {
+    check_disabled();
+    register_events();
+    init_data_tables_and_refreshers();
 });
