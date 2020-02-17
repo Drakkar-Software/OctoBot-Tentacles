@@ -1,3 +1,15 @@
+"""
+OctoBot Tentacle
+
+$tentacle_description: {
+    "package_name": "OctoBot-Tentacles",
+    "name": "bitmex",
+    "type": "Trading",
+    "subtype": "Exchange",
+    "version": "1.0.0",
+}
+"""
+
 #  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -13,6 +25,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
 
-from .Exchange import *
-from .Mode import *
+
+class Bitmax(MarginExchange):
+    DESCRIPTION = ""
+
+    @classmethod
+    def get_name(cls):
+        return 'bitmax'
