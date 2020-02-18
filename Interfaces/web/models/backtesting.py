@@ -16,6 +16,7 @@
 
 from copy import copy
 from os import remove
+from asyncio import gather
 
 from octobot_backtesting.api.backtesting import create_independent_backtesting, \
     initialize_and_run_independent_backtesting, \
@@ -40,12 +41,15 @@ from tentacles.Interfaces.web.web_interface import WebInterface
 LOGGER = get_logger("DataCollectorWebInterfaceModel")
 
 
+async def _get_description(data_file, files_with_description):
+    description = await get_file_description(data_file)
+    if description is not None:
+        files_with_description[data_file] = description
+
+
 async def _retrieve_data_files_with_description(files):
     files_with_description = {}
-    for data_file in files:
-        description = await get_file_description(data_file)
-        if description is not None:
-            files_with_description[data_file] = description
+    await gather(*[_get_description(data_file, files_with_description) for data_file in files])
     return files_with_description
 
 
