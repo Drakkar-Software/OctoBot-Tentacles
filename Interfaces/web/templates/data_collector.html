@@ -24,7 +24,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for file, description in data_files.items() %}
+            {% for file, description in data_files.items() | sort(reverse=True)%}
                 <tr class="selectable_datafile">
                     <td>{{file}}</td>
                     <td>{{", ".join(description.symbols)}}</td>
