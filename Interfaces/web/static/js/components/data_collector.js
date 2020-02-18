@@ -56,7 +56,7 @@ function lock_collector_ui(lock=true){
 
 function reload_table(){
     $("#collector_data").load(location.href.split("?")[0] + " #collector_data",function(){
-        dataFilesTable = $('#dataFilesTable').DataTable();
+        dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
         handle_data_files_buttons();
         dataFilesTable.on("draw.dt", function(){
             handle_data_files_buttons();
@@ -105,7 +105,7 @@ function update_symbol_list(url, exchange){
     });
 }
 
-let dataFilesTable = $('#dataFilesTable').DataTable();
+let dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
 
 $(document).ready(function() {
     handle_data_files_buttons();

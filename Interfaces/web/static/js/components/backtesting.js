@@ -66,7 +66,7 @@ function handle_file_selection(){
     });
 }
 
-const dataFilesTable = $('#dataFilesTable').DataTable();
+const dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
 
 $(document).ready(function() {
     lock_interface_callbacks.push(function () {
