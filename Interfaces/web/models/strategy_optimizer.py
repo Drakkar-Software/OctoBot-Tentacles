@@ -16,7 +16,7 @@
 
 import threading
 
-from octobot_evaluators.api import get_relevant_TAs_for_strategy
+from octobot_evaluators.api.inspection import get_relevant_TAs_for_strategy
 from octobot_interfaces.util.bot import get_bot_api, get_global_config
 from octobot_commons.tentacles_management.advanced_manager import create_advanced_types_list
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator

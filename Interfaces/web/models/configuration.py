@@ -22,7 +22,7 @@ import ccxt
 import requests
 
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
-from octobot_evaluators.api import get_evaluator_config
+from octobot_evaluators.api.evaluators import get_evaluator_config
 from octobot_trading.api.modes import get_activated_trading_mode, get_trading_config
 from tentacles.Interfaces.web.constants import UPDATED_CONFIG_SEPARATOR, EVALUATOR_ACTIVATION, \
     COIN_MARKET_CAP_CURRENCIES_LIST_URL
