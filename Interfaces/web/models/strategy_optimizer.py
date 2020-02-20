@@ -16,9 +16,14 @@
 
 import threading
 
-from backtesting.strategy_optimizer.strategy_optimizer import StrategyOptimizer
+from octobot_backtesting.api.strategy_optimizer import create_strategy_optimizer, find_optimal_configuration, \
+    get_optimizer_current_test_suite_progress, get_optimizer_errors_description, get_optimizer_overall_progress, \
+    is_optimizer_computing, get_optimizer_strategy, get_optimizer_all_time_frames, get_optimizer_all_TAs, \
+    get_optimizer_all_risks, get_optimizer_trading_mode, get_optimizer_report as api_get_optimizer_report, \
+    get_optimizer_results as api_get_optimizer_results
 
-from octobot_backtesting.api.backtesting import is_independent_backtesting_in_progress, create_independent_backtesting
+from octobot_backtesting.api.backtesting import is_independent_backtesting_in_progress, create_independent_backtesting, \
+    initialize_independent_backtesting_config
 from octobot_evaluators.api.inspection import get_relevant_TAs_for_strategy
 from octobot_interfaces.util.bot import get_bot_api, get_global_config
 from octobot_commons.tentacles_management.advanced_manager import create_advanced_types_list
@@ -74,8 +79,8 @@ def get_current_strategy():
 
 def start_optimizer(strategy, time_frames, evaluators, risks):
     tools = WebInterface.tools
-    independent_backtesting = tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
-    if independent_backtesting is not None and independent_backtesting.get_is_computing():
+    optimizer = tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
+    if optimizer is not None and is_optimizer_computing(optimizer):
         return False, "Optimizer already running"
     independent_backtesting = tools[BOT_TOOLS_BACKTESTING]
     if independent_backtesting and is_independent_backtesting_in_progress(independent_backtesting):
@@ -84,11 +89,11 @@ def start_optimizer(strategy, time_frames, evaluators, risks):
         formatted_time_frames = parse_time_frames(time_frames)
         float_risks = [float(risk) for risk in risks]
         temp_independent_backtesting = create_independent_backtesting(get_global_config(),  [])
-        optimizer_config = run_in_bot_main_loop(temp_independent_backtesting.initialize_config())
-        optimizer = StrategyOptimizer(optimizer_config, strategy)
+        optimizer_config = run_in_bot_main_loop(initialize_independent_backtesting_config(temp_independent_backtesting))
+        optimizer = create_strategy_optimizer(optimizer_config, strategy)
         tools[BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
-        thread = threading.Thread(target=optimizer.find_optimal_configuration,
-                                  args=(evaluators, formatted_time_frames, float_risks),
+        thread = threading.Thread(target=find_optimal_configuration,
+                                  args=(optimizer, evaluators, formatted_time_frames, float_risks),
                                   name=f"{optimizer.get_name()}-WebInterface-runner")
         thread.start()
         return True, "Optimizer started"
@@ -97,7 +102,7 @@ def start_optimizer(strategy, time_frames, evaluators, risks):
 def get_optimizer_results():
     optimizer = WebInterface.tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer:
-        results = optimizer.get_results()
+        results = api_get_optimizer_results(optimizer)
         return [result.get_result_dict(i) for i, result in enumerate(results)]
     else:
         return []
@@ -106,7 +111,7 @@ def get_optimizer_results():
 def get_optimizer_report():
     if get_optimizer_status()[0] == "finished":
         optimizer = WebInterface.tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
-        return optimizer.get_report()
+        return api_get_optimizer_report(optimizer)
     else:
         return []
 
@@ -122,11 +127,11 @@ def get_current_run_params():
     if WebInterface.tools[BOT_TOOLS_STRATEGY_OPTIMIZER]:
         optimizer = WebInterface.tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
         params = {
-            "strategy_name": [optimizer.strategy_class.get_name()],
-            "time_frames": [tf.value for tf in optimizer.all_time_frames],
-            "evaluators": optimizer.all_TAs,
-            "risks": optimizer.risks,
-            "trading_mode": [optimizer.trading_mode]
+            "strategy_name": [get_optimizer_strategy(optimizer).get_name()],
+            "time_frames": [tf.value for tf in get_optimizer_all_time_frames(optimizer)],
+            "evaluators": get_optimizer_all_TAs(optimizer),
+            "risks": get_optimizer_all_risks(optimizer),
+            "trading_mode": [get_optimizer_trading_mode(optimizer)]
         }
     return params
 
@@ -138,10 +143,11 @@ def get_trading_mode():
 def get_optimizer_status():
     optimizer = WebInterface.tools[BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer:
-        if optimizer.get_is_computing():
-            return "computing", optimizer.get_current_test_suite_progress(), optimizer.get_overall_progress(), \
-                   optimizer.get_errors_description()
+        if is_optimizer_computing(optimizer):
+            return "computing", get_optimizer_current_test_suite_progress(optimizer), \
+                   get_optimizer_overall_progress(optimizer), \
+                   get_optimizer_errors_description(optimizer)
         else:
-            return "finished", 100, 100, optimizer.get_errors_description()
+            return "finished", 100, 100,  get_optimizer_errors_description(optimizer)
     else:
         return "not started", 0, 0, None
