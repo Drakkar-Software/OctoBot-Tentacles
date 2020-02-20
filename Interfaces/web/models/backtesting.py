@@ -24,6 +24,7 @@ from octobot_backtesting.api.backtesting import create_independent_backtesting, 
     get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting
 from octobot_backtesting.api.data_file_converters import convert_data_file
 from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
+from octobot_backtesting.api.strategy_optimizer import is_optimizer_in_progress
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
 from octobot_commons.constants import CONFIG_TRADING_FILE_PATH, CONFIG_EVALUATOR_FILE_PATH
 from octobot_commons.logging.logging_util import get_logger
@@ -62,9 +63,10 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
     try:
         tools = WebInterface.tools
         previous_independant_backtesting = tools[BOT_TOOLS_BACKTESTING]
-        if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and tools[BOT_TOOLS_STRATEGY_OPTIMIZER].is_in_progress():
+        if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and is_optimizer_in_progress(tools[BOT_TOOLS_STRATEGY_OPTIMIZER]):
             return False, "Optimizer already running"
-        elif previous_independant_backtesting and previous_independant_backtesting.is_in_progress():
+        elif previous_independant_backtesting and \
+                is_independent_backtesting_in_progress(previous_independant_backtesting):
             return False, "A backtesting is already running"
         else:
             if previous_independant_backtesting:
