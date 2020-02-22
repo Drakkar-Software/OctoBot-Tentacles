@@ -78,8 +78,7 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
                                    namespace=self.namespace)
                 return True
             except Exception as e:
-                self.logger.exception(e)
-                self.logger.error(f"Error when sending web notification: {e}")
+                self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
     def on_candle_graph_update(self, data):

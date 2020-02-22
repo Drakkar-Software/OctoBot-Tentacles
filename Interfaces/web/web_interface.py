@@ -74,8 +74,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         # handles all namespaces without an explicit error handler
         @websocket_instance.on_error_default
         def default_error_handler(e):
-            self.get_logger().error(f"Error with websocket: {e}")
-            self.get_logger().exception(e)
+            self.get_logger().exception(e, True, f"Error with websocket: {e}")
 
         load_namespaces()
         for namespace in namespaces:
