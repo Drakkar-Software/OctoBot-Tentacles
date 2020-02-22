@@ -67,7 +67,8 @@ def format_trades(trade_history):
                                                                         else trade.canceled_time,
                                                                         time_format="%y-%m-%d %H:%M:%S"))
             trades[trade_price_key].append(trade.executed_price)
-            trades[trade_description_key].append(f"{trade.trade_type.name}: {trade.executed_quantity}")
+            trades[trade_description_key].append(
+                f"{trade.trade_type.name.replace('_', ' ')}: {trade.executed_quantity}")
             trades[trade_order_side_key].append(trade.side.value)
 
     return trades
