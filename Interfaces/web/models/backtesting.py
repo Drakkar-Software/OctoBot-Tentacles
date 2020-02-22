@@ -144,8 +144,7 @@ async def _convert_into_octobot_data_file_if_necessary(output_file):
             return message
     except Exception as e:
         message = f"Error when handling backtesting data file: {e}"
-        LOGGER.error(message)
-        LOGGER.exception(e)
+        LOGGER.exception(e, True, message)
         return message
 
 

@@ -41,8 +41,7 @@ class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
                 self.socketio.emit("update", self._get_update_data(), namespace=self.namespace)
                 return True
             except Exception as e:
-                self.logger.exception(e)
-                self.logger.error(f"Error when sending web notification: {e}")
+                self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
     def on_connect(self):

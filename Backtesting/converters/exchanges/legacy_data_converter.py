@@ -86,8 +86,7 @@ class LegacyDataConverter(DataConverter):
                 await self._convert_ohlcv(time_frame)
             return True
         except Exception as e:
-            self.logger.error(f"Error while converting data file: {e}")
-            self.logger.exception(e)
+            self.logger.exception(e, True, f"Error while converting data file: {e}")
             return False
         finally:
             if self.database is not None:
