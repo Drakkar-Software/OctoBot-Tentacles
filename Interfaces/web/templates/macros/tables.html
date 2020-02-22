@@ -10,7 +10,7 @@
         <td>{{ timestamp }}</td>
         <td>{{ order.exchange_manager.exchange.name }}</td>
         <td>{{ order.symbol }}</td>
-        <td class="text-center">{{ type }}</td>
+        <td class="text-center">{{ type.replace("_", " ")}}</td>
         <td>{{ order.origin_price }}</td>
         <td>{{ order.origin_quantity }}</td>
         <td class="text-right">{{ order.origin_price * order.origin_quantity | round(8) }}  {{ order.market }}</td>
@@ -25,7 +25,7 @@
         <td>{{ sim_or_real }}</td>
         <td>{{ trade.exchange_manager.exchange.name }}</td>
         <td>{{ trade.symbol }}</td>
-        <td class="text-center">{{ type }}</td>
+        <td class="text-center">{{ type.replace("_", " ")}}</td>
         <td>{{ trade.executed_price }}</td>
         <td>{{ trade.executed_quantity }}</td>
         <td class="text-right">{{ trade.total_cost }} {{ trade.market }}</td>
