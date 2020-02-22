@@ -106,11 +106,9 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
             try:
                 await self._start_listener()
             except twitter.error.TwitterError as e:
-                self.logger.error(f"Error when receiving Twitter feed: {e.message} ({e})")
-                self.logger.exception(e)
+                self.logger.exception(e, True, f"Error when receiving Twitter feed: {e.message} ({e})")
                 self.keep_running = False
             except Exception as e:
-                self.logger.error(f"Error when receiving Twitter feed ({e}) ")
-                self.logger.exception(e)
+                self.logger.exception(e, True, f"Error when receiving Twitter feed: ({e})")
                 self.keep_running = False
         return False

@@ -70,8 +70,7 @@ def install_packages():
         tentacles_manager.set_force_actions(True)
         return f"{tentacles_manager.install_parser(None, True)} installed tentacles"
     except Exception as e:
-        logger.error(f"Error when installing packages: {e}")
-        logger.exception(e)
+        logger.exception(e, True, f"Error when installing packages: {e}")
         return False
 
 
@@ -82,8 +81,7 @@ def update_packages():
         tentacles_manager.set_force_actions(True)
         return f"{tentacles_manager.update_parser(None, True)} tentacles up to date"
     except Exception as e:
-        logger.error(f"Error when updating packages: {e}")
-        logger.exception(e)
+        logger.exception(e, True, f"Error when updating packages: {e}")
         return None
 
 
@@ -93,8 +91,7 @@ def reset_packages():
         tentacles_manager.reset_tentacles()
         return "reset successful"
     except Exception as e:
-        logger.error(f"Error when resetting packages: {e}")
-        logger.exception(e)
+        logger.exception(e, True, f"Error when resetting packages: {e}")
         return None
 
 
@@ -106,8 +103,7 @@ def update_modules(modules):
         nb_updated = tentacles_manager.update_parser(modules, False)
         return f"{nb_updated} up to date module(s)" if nb_updated > 1 else f"{modules[0]} up to date"
     except Exception as e:
-        logger.error(f"Error when updating modules: {e}")
-        logger.exception(e)
+        logger.exception(e, True, f"Error when updating modules: {e}")
         return None
 
 
@@ -118,8 +114,7 @@ def uninstall_modules(modules):
         nb_uninstalled = tentacles_manager.uninstall_parser(modules, False)
         return f"{nb_uninstalled} uninstalled module(s)" if nb_uninstalled > 1 else f"{modules[0]} uninstalled"
     except Exception as e:
-        logger.error(f"Error when uninstalling modules: {e}")
-        logger.exception(e)
+        logger.exception(e, True, f"Error when uninstalling modules: {e}")
         return None
 
 
