@@ -38,8 +38,7 @@ class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
                 self.socketio.emit("backtesting_status", self._get_backtesting_status(), namespace=self.namespace)
                 return True
             except Exception as e:
-                self.logger.exception(e)
-                self.logger.error(f"Error when sending backtesting_status: {e}")
+                self.logger.exception(e, True, f"Error when sending backtesting_status: {e}")
         return False
 
     def on_connect(self):
