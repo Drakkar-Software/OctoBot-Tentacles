@@ -16,11 +16,11 @@
 
 from telegram.ext import CommandHandler, MessageHandler, Filters
 from telegram.constants import MAX_MESSAGE_LENGTH
+from telegram.utils.helpers import escape_markdown
 
 from octobot_services.constants import CONFIG_TELEGRAM
 from octobot_interfaces.bots import EOL, UNAUTHORIZED_USER_MESSAGE
 from octobot_interfaces.bots.abstract_bot_interface import AbstractBotInterface
-from octobot_commons.pretty_printer import escape_markdown
 from tentacles.Services import TelegramService
 
 # Telegram bot interface

@@ -62,7 +62,7 @@ class DailyTradingMode(AbstractTradingMode):
 
     async def create_producers(self) -> list:
         mode_producer = DailyTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
-                                                       self.config, self, self.exchange_manager)
+                                                 self.config, self, self.exchange_manager)
         await mode_producer.run()
         return [mode_producer]
 
@@ -328,8 +328,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             raise e
 
         except Exception as e:
-            self._logger.error(f"Failed to create order : {e}.")
-            self._logger.exception(e)
+            self._logger.exception(e, True, f"Failed to create order : {e}.")
             return None
 
 
@@ -453,5 +452,4 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
                                                         markdown_text=alert_content_markdown,
                                                         category=NotificationCategory.PRICE_ALERTS))
         except ImportError as e:
-            self.logger.error(f"Impossible to send notification: {e}")
-            self.logger.exception(e)
+            self.logger.exception(e, True, f"Impossible to send notification: {e}")
