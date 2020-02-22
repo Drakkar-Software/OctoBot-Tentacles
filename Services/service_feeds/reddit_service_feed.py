@@ -119,27 +119,24 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
             except InvalidToken as e:
                 # expired, try again
-                self.logger.error(f"Error when receiving Reddit feed: '{e}'")
-                self.logger.exception(e)
+                self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}'")
                 self.logger.info(f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds.")
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
             except ServerError as e:
                 # server error, try again
-                self.logger.error("Error when receiving Reddit feed: '{e}'")
-                self.logger.exception(e)
+                self.logger.exception(e, True, "Error when receiving Reddit feed: '{e}'")
                 self.logger.info(f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds.")
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
             except OAuthException as e:
-                self.logger.error(f"Error when receiving Reddit feed: '{e}' this may mean that reddit login info "
-                                  f"in config.json are wrong")
-                self.logger.exception(e)
+                self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}' this may mean that reddit "
+                                               f"login info in config.json are wrong")
                 self.keep_running = False
             except ResponseException as e:
                 message_complement = "this may mean that reddit login info in config.json are invalid." \
                     if not self.credentials_ok else \
                     f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds."
-                self.logger.error(f"Error when receiving Reddit feed: '{e}' this may mean {message_complement}")
-                self.logger.exception(e)
+                self.logger.exception(e, True,
+                                      f"Error when receiving Reddit feed: '{e}' this may mean {message_complement}")
                 if not self.credentials_ok:
                     self.connect_attempts += 1
                 else:
@@ -147,6 +144,6 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
             except Exception as e:
                 self.logger.error(f"Error when receiving Reddit feed: '{e}'")
-                self.logger.exception(e)
+                self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}'")
                 self.keep_running = False
         return False
