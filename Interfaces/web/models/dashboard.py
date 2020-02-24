@@ -20,7 +20,8 @@ from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_interfaces.util.bot import get_global_config, get_bot_api
 from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
     get_exchange_configurations_from_exchange_name, get_exchange_manager_id
-from octobot_trading.enums import OrderStatus
+from octobot_trading.api.trades import parse_trade_type
+from octobot_trading.enums import OrderStatus, ExchangeConstantsOrderColumns, TradeOrderSide, TraderOrderType
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
     has_symbol_klines
 from tentacles.Interfaces import WebInterface
@@ -48,7 +49,7 @@ def get_value_from_dict_or_string(data):
         return data
 
 
-def format_trades(trade_history):
+def format_trades(dict_trade_history):
     trade_time_key = "time"
     trade_price_key = "price"
     trade_description_key = "trade_description"
@@ -60,16 +61,19 @@ def format_trades(trade_history):
         trade_order_side_key: []
     }
 
-    for trade in trade_history:
-        if trade.status is not OrderStatus.CANCELED or DISPLAY_CANCELLED_TRADES:
-            trades[trade_time_key].append(convert_timestamp_to_datetime(trade.executed_time
-                                                                        if trade.status is not OrderStatus.CANCELED
-                                                                        else trade.canceled_time,
-                                                                        time_format="%y-%m-%d %H:%M:%S"))
-            trades[trade_price_key].append(trade.executed_price)
+    for dict_trade in dict_trade_history:
+        status = dict_trade[ExchangeConstantsOrderColumns.STATUS.value]
+        trade_side = TradeOrderSide(dict_trade[ExchangeConstantsOrderColumns.SIDE.value])
+        trade_type = parse_trade_type(dict_trade)
+        if trade_type == TraderOrderType.UNKNOWN:
+            trade_type = trade_side
+        if status is not OrderStatus.CANCELED or DISPLAY_CANCELLED_TRADES:
+            trade_time = dict_trade[ExchangeConstantsOrderColumns.TIMESTAMP.value]
+            trades[trade_time_key].append(convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
+            trades[trade_price_key].append(dict_trade[ExchangeConstantsOrderColumns.PRICE.value])
             trades[trade_description_key].append(
-                f"{trade.trade_type.name.replace('_', ' ')}: {trade.executed_quantity}")
-            trades[trade_order_side_key].append(trade.side.value)
+                f"{trade_type.name.replace('_', ' ')}: {dict_trade[ExchangeConstantsOrderColumns.AMOUNT.value]}")
+            trades[trade_order_side_key].append(trade_side.value)
 
     return trades
 
@@ -170,9 +174,13 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
     independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING] if in_backtesting else None
     bot_api_for_history = None if in_backtesting else bot_api
     if not ignore_trades:
+        # handle trades after the 1st displayed candle start time for dashboard
+        first_time_to_handle_in_board = data[PriceIndexes.IND_PRICE_TIME.value][0]
         real_trades_history, simulated_trades_history = get_trades_history(bot_api_for_history,
                                                                            symbol,
-                                                                           independent_backtesting)
+                                                                           independent_backtesting,
+                                                                           since=first_time_to_handle_in_board,
+                                                                           as_dict=True)
 
         if real_trades_history:
             result_dict[real_trades_key] = format_trades(real_trades_history)
