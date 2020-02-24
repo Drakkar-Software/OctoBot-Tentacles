@@ -15,6 +15,7 @@
 #  License along with this library.
 from flask_socketio import emit
 
+from octobot_trading.enums import ExchangeConstantsOrderColumns
 from tentacles.Interfaces.web import register_notifier, DASHBOARD_NOTIFICATION_KEY
 from tentacles.Interfaces.web.models.dashboard import get_currency_price_graph_update, get_value_from_dict_or_string, \
     format_trades
@@ -57,9 +58,9 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
             simulated_trades = []
         symbol = None
         if real_trades:
-            symbol = real_trades[0].symbol
+            symbol = real_trades[0][ExchangeConstantsOrderColumns.SYMBOL.value]
         elif simulated_trades:
-            symbol = simulated_trades[0].symbol
+            symbol = simulated_trades[0][ExchangeConstantsOrderColumns.SYMBOL.value]
         return {
             "real_trades": format_trades(real_trades),
             "simulated_trades": format_trades(simulated_trades),

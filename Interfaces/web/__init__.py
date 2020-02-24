@@ -143,11 +143,11 @@ def send_backtesting_status(**kwargs):
     _send_notification(BACKTESTING_NOTIFICATION_KEY, **kwargs)
 
 
-def send_new_trade(new_trade):
-    if new_trade.simulated:
-        _send_notification(DASHBOARD_NOTIFICATION_KEY, simulated_trades=[new_trade])
+def send_new_trade(dict_new_trade, is_simulated):
+    if is_simulated:
+        _send_notification(DASHBOARD_NOTIFICATION_KEY, simulated_trades=[dict_new_trade])
     else:
-        _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[new_trade])
+        _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[dict_new_trade])
 
 
 async def add_notification(level, title, message):
