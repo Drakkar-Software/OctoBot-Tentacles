@@ -5,7 +5,7 @@ $tentacle_description: {
     "name": "dip_analyser_trading_mode",
     "type": "Trading",
     "subtype": "Mode",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "requirements": ["dip_analyser_strategy_evaluator"],
     "config_files": ["DipAnalyserTradingMode.json"],
     "config_schema_files": ["DipAnalyserTradingMode_schema.json"],
@@ -43,12 +43,11 @@ class DipAnalyserTradingMode(AbstractTradingMode):
     DESCRIPTION = "DipAnalyserTradingMode is a trading mode adapted to volatile markets.\nIt will look for local " \
                   "market bottoms, weight them and buy these bottoms. It never sells except after a buy order is " \
                   "filled.\nWhen a buy order is filled, sell orders will automatically be created at a higher price " \
-                  "than this of the filled buy order. The number of sell orders created after each buy is specified " \
-                  "in DipAnalyserTradingMode.json.\nA higher risk will make larger buy orders.\n Warning: Make sure " \
-                  "to have the base of each traded pair to be traded otherwise the DipAnalyserTradingMode won't " \
-                  "trade: it will never be able to place the initial buy orders.\nSell orders are never cancelled " \
-                  "by the strategy, therefore it is not advised to use it on continued downtrends or funds might " \
-                  "get stuck in unfilled sell orders."
+                  "than this of the filled buy order. The number of sell orders created after each buy can be " \
+                  "configured.\nA higher risk will make larger buy orders.\n Warning: Ensure " \
+                  "enough funds are available in your portfolio for OctoBot to place the initial buy orders.\n" \
+                  "Sell orders are never cancelled by this strategy, therefore it is not advised to use it on " \
+                  "continued downtrends: funds might get locked in open sell orders."
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
