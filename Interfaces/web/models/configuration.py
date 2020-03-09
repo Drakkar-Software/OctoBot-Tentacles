@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import json
 from octobot_commons.logging.logging_util import get_logger
 from copy import copy
 
@@ -25,7 +24,7 @@ from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from octobot_evaluators.api.evaluators import get_evaluator_config
 from octobot_trading.api.modes import get_activated_trading_mode, get_trading_config
 from tentacles.Interfaces.web.constants import UPDATED_CONFIG_SEPARATOR, EVALUATOR_ACTIVATION, \
-    COIN_MARKET_CAP_CURRENCIES_LIST_URL
+    CURRENCIES_LIST_URL
 from octobot_evaluators.constants import EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES, \
     CONFIG_TRADING_TENTACLES
@@ -425,7 +424,7 @@ def get_symbol_list(exchanges):
 
 def get_all_symbol_list():
     try:
-        currencies_list = json.loads(requests.get(COIN_MARKET_CAP_CURRENCIES_LIST_URL).text)
+        currencies_list = requests.get(CURRENCIES_LIST_URL).json()
         return {
             currency_data[NAME_KEY]: currency_data["symbol"]
             for currency_data in currencies_list["data"]
