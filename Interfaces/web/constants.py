@@ -16,7 +16,7 @@
 
 
 # utility URLs
-COIN_MARKET_CAP_CURRENCIES_LIST_URL = "https://api.coinmarketcap.com/v2/listings/"
+CURRENCIES_LIST_URL = "https://api.coincap.io/v2/assets?limit=1000"
 
 # config keys
 CONFIG_WATCHED_SYMBOLS = "watched_symbols"
