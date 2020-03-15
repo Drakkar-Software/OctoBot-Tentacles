@@ -35,8 +35,13 @@ from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
 class Binance(MarginExchange):
     DESCRIPTION = ""
 
+    FUNDING_WITH_MARK_PRICE = True
+
     BINANCE_FUTURE_QUANTITY = "positionAmt"
     BINANCE_FUTURE_UNREALIZED_PNL = "unRealizedProfit"
+
+    BINANCE_MARGIN_TYPE_ISOLATED = "ISOLATED"
+    BINANCE_MARGIN_TYPE_CROSSED = "CROSSED"
 
     CCXT_CLIENT_LOGIN_OPTIONS = {'defaultMarket': 'future'}
 
@@ -63,10 +68,19 @@ class Binance(MarginExchange):
             for position in await self.client.fapiPrivate_get_positionrisk()
         }
 
+    async def get_mark_price(self, symbol: str, limit: int = 1):
+        # funding rate is also returned
+        return self.client.fapiPrivate_get_premiumIndex({"symbol": self.get_exchange_pair(symbol)})
+
     async def set_symbol_leverage(self, symbol: str, leverage: int):
         await self.client.fapiPrivate_post_leverage(
             {"symbol": self.get_exchange_pair(symbol),
              "leverage": leverage})
+
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool):
+        await self.client.fapiPrivate_post_marginType(
+            {"symbol": self.get_exchange_pair(symbol),
+             "marginType": self.BINANCE_MARGIN_TYPE_ISOLATED if isolated else self.BINANCE_MARGIN_TYPE_CROSSED})
 
     def _cleanup_position_dict(self, position):
         try:

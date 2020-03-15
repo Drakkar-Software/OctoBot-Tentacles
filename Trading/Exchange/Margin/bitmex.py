@@ -25,18 +25,26 @@ $tentacle_description: {
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from ccxt.async_support import bitmex
+from octobot_commons.constants import HOURS_TO_SECONDS
+from octobot_commons.timestamp_util import datetime_to_timestamp, create_datetime_from_string
+
 from octobot_trading.data.position import ExchangeConstantsPositionColumns
 
-from octobot_trading.enums import ExchangeConstantsOrderColumns
+from octobot_trading.enums import ExchangeConstantsOrderColumns, ExchangeConstantsFundingColumns
 from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
 
 
 class Bitmex(MarginExchange):
     DESCRIPTION = ""
 
+    MARK_PRICE_IN_POSITION = True
+
     BITMEX_ENTRY_PRICE = "avgEntryPrice"
     BITMEX_QUANTITY = "currentQty"
+    BITMEX_FUNDING_RATE = "fundingRate"
+    BITMEX_FUNDING_INTERV = "fundingInterval"
+
+    BITMEX_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     @classmethod
     def get_name(cls):
@@ -62,6 +70,17 @@ class Bitmex(MarginExchange):
             {"symbol": self.get_exchange_pair(symbol),
              "leverage": leverage})
 
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool):
+        await self.client.private_post_position_isolate(
+            {"symbol": self.get_exchange_pair(symbol),
+             "enabled": True if isolated else False})
+
+    async def get_funding_rate(self, symbol: str, limit: int = 1):
+        return self._cleanup_funding_dict((await self.client.public_get_funding(
+            {"symbol": self.get_exchange_pair(symbol),
+             "count": limit,
+             "reverse": True}))[0])
+
     def _cleanup_position_dict(self, position) -> dict:
         try:
             # If exchange has not position id -> global position foreach symbol
@@ -77,3 +96,21 @@ class Bitmex(MarginExchange):
         except KeyError as e:
             self.logger.error(f"Fail to cleanup position dict ({e})")
         return position
+
+    def _cleanup_funding_dict(self, funding_dict):
+        try:
+            if ExchangeConstantsFundingColumns.FUNDING_RATE.value not in funding_dict \
+                    and self.BITMEX_FUNDING_RATE in funding_dict:
+                funding_dict[ExchangeConstantsFundingColumns.FUNDING_RATE.value] = funding_dict[
+                    self.BITMEX_FUNDING_RATE]
+
+            if ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value not in funding_dict \
+                    and self.BITMEX_FUNDING_INTERV in funding_dict:
+                funding_dict[ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value] = \
+                    datetime_to_timestamp(funding_dict[ExchangeConstantsFundingColumns.TIMESTAMP.value],
+                                          date_time_format=self.BITMEX_DATETIME_FORMAT) + \
+                    (create_datetime_from_string(funding_dict[self.BITMEX_FUNDING_INTERV],
+                                                 date_time_format=self.BITMEX_DATETIME_FORMAT).hour + 1) * HOURS_TO_SECONDS  # TODO manage timezone
+        except KeyError as e:
+            self.logger.error(f"Fail to cleanup funding dict ({e})")
+        return funding_dict
