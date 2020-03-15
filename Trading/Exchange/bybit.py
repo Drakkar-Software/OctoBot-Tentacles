@@ -29,10 +29,10 @@ from octobot_commons.constants import HOURS_TO_SECONDS
 
 from octobot_trading.enums import ExchangeConstantsOrderColumns, ExchangeConstantsPositionColumns, \
     ExchangeConstantsFundingColumns
-from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.future_exchange import FutureExchange
 
 
-class Bybit(MarginExchange):
+class Bybit(FutureExchange):
     DESCRIPTION = ""
 
     BYBIT_SIZE = "size"

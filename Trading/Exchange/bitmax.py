@@ -25,11 +25,13 @@ $tentacle_description: {
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.future_exchange import FutureExchange
+from octobot_trading.exchanges.types.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.spot_exchange import SpotExchange
 from ccxt.async_support.bitmax import bitmax
 
 
-class Bitmax(MarginExchange):
+class Bitmax(SpotExchange, MarginExchange, FutureExchange):
     DESCRIPTION = ""
 
     @classmethod

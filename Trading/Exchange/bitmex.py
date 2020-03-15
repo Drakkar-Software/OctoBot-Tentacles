@@ -31,10 +31,10 @@ from octobot_commons.timestamp_util import datetime_to_timestamp, create_datetim
 from octobot_trading.data.position import ExchangeConstantsPositionColumns
 
 from octobot_trading.enums import ExchangeConstantsOrderColumns, ExchangeConstantsFundingColumns
-from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.future_exchange import FutureExchange
 
 
-class Bitmex(MarginExchange):
+class Bitmex(FutureExchange):
     DESCRIPTION = ""
 
     MARK_PRICE_IN_POSITION = True

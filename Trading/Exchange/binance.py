@@ -29,10 +29,12 @@ $tentacle_description: {
 from octobot_trading.data.position import ExchangeConstantsPositionColumns
 
 from octobot_trading.enums import ExchangeConstantsOrderColumns
-from octobot_trading.exchanges.margin.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.future_exchange import FutureExchange
+from octobot_trading.exchanges.types.margin_exchange import MarginExchange
+from octobot_trading.exchanges.types.spot_exchange import SpotExchange
 
 
-class Binance(MarginExchange):
+class Binance(SpotExchange, MarginExchange, FutureExchange):
     DESCRIPTION = ""
 
     FUNDING_WITH_MARK_PRICE = True
