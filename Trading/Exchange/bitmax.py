@@ -3,7 +3,7 @@ OctoBot Tentacle
 
 $tentacle_description: {
     "package_name": "OctoBot-Tentacles",
-    "name": "bitmex",
+    "name": "bitmax",
     "type": "Trading",
     "subtype": "Exchange",
     "version": "1.0.0",
