@@ -25,18 +25,26 @@ $tentacle_description: {
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+from octobot_trading.enums import AccountTypes
 from octobot_trading.exchanges.types.future_exchange import FutureExchange
 from octobot_trading.exchanges.types.margin_exchange import MarginExchange
 from octobot_trading.exchanges.types.spot_exchange import SpotExchange
-from ccxt.async_support.bitmax import bitmax
 
 
 class Bitmax(SpotExchange, MarginExchange, FutureExchange):
     DESCRIPTION = ""
 
+    BUY_STR = "Buy"
+    SELL_STR = "Sell"
+
+    ACCOUNTS = {
+        AccountTypes.CASH: 'cash',
+        AccountTypes.MARGIN: 'margin',
+        AccountTypes.FUTURE: 'future',  # currently in beta
+    }
+
     @classmethod
     def get_name(cls):
-        bitmax
         return 'bitmax'
 
     # override to add url
@@ -45,3 +53,11 @@ class Bitmax(SpotExchange, MarginExchange, FutureExchange):
             self.client.urls['api'] = 'https://bitmax-test.io'
         else:
             self.client.setSandboxMode(is_sandboxed)
+
+    async def switch_to_account(self, account_type):
+        # TODO
+        pass
+
+    def parse_account(self, account):
+        return AccountTypes[account.lower()]
+
