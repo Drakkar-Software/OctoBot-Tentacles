@@ -1,21 +1,26 @@
-#  Drakkar-Software OctoBot-Tentacles
-#  Copyright (c) Drakkar-Software, All rights reserved.
-#
-#  This library is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU Lesser General Public
-#  License as published by the Free Software Foundation; either
-#  version 3.0 of the License, or (at your option) any later version.
-#
-#  This library is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  Lesser General Public License for more details.
-#
-#  You should have received a copy of the GNU Lesser General Public
-#  License along with this library.
+from octobot_tentacles_manager.api.inspector import check_tentacle_version
+from octobot_commons.logging.logging_util import get_logger
 
-from .reddit_service import *
-from .telegram_service import *
-from .twitter_service import *
-from .web_service import *
-from .service_feeds import *
+if check_tentacle_version('1.2.0', 'reddit_service', 'OctoBot-Default-Tentacles'):
+    try:
+        from .reddit_service import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading reddit_service: {e}')
+
+if check_tentacle_version('1.2.0', 'telegram_service', 'OctoBot-Default-Tentacles'):
+    try:
+        from .telegram_service import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading telegram_service: {e}')
+
+if check_tentacle_version('1.2.0', 'twitter_service', 'OctoBot-Default-Tentacles'):
+    try:
+        from .twitter_service import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading twitter_service: {e}')
+
+if check_tentacle_version('1.2.0', 'web_service', 'OctoBot-Default-Tentacles'):
+    try:
+        from .web_service import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading web_service: {e}')

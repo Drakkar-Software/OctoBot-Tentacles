@@ -1,19 +1,20 @@
-#  Drakkar-Software OctoBot-Tentacles
-#  Copyright (c) Drakkar-Software, All rights reserved.
-#
-#  This library is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU Lesser General Public
-#  License as published by the Free Software Foundation; either
-#  version 3.0 of the License, or (at your option) any later version.
-#
-#  This library is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  Lesser General Public License for more details.
-#
-#  You should have received a copy of the GNU Lesser General Public
-#  License along with this library.
+from octobot_tentacles_manager.api.inspector import check_tentacle_version
+from octobot_commons.logging.logging_util import get_logger
 
-from .telegram_notifier import TelegramNotifier
-from .twitter_notifier import TwitterNotifier
-from .web_notifier import WebNotifier
+if check_tentacle_version('1.2.0', 'telegram_notifier', 'OctoBot-Default-Tentacles'):
+    try:
+        from .telegram_notifier import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading telegram_notifier: {e}')
+
+if check_tentacle_version('1.2.0', 'twitter_notifier', 'OctoBot-Default-Tentacles'):
+    try:
+        from .twitter_notifier import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading twitter_notifier: {e}')
+
+if check_tentacle_version('1.2.0', 'web_notifier', 'OctoBot-Default-Tentacles'):
+    try:
+        from .web_notifier import *
+    except Exception as e:
+        get_logger('TentacleLoader').exception(e, True, f'Error when loading web_notifier: {e}')
