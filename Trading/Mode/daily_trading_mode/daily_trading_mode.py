@@ -34,12 +34,6 @@ from octobot_trading.producers.abstract_mode_producer import AbstractTradingMode
 
 
 class DailyTradingMode(AbstractTradingMode):
-    DESCRIPTION = "DailyTradingMode is a low risk versatile trading mode that reacts only the its state changes to " \
-                  "a state that is different from the previous one and that is not NEUTRAL.\n" \
-                  "When triggered for a given symbol, it will cancel previously created (and unfilled) orders " \
-                  "and create new ones according to its new state.\n" \
-                  "DailyTradingMode will consider every compatible strategy and average their evaluation to create " \
-                  "each state."
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
