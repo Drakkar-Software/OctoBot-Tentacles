@@ -20,20 +20,20 @@
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
 
         <!-- toaster -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" integrity="sha384-R334r6kryDNB/GWs2kfB6blAOyWPCxjdHSww/mo7fel+o5TM/AOobJ0QpGRXSDh4" crossorigin="anonymous">
 
         <!-- mdb CSS -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.7/css/mdb.min.css" rel="stylesheet" crossorigin="anonymous">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.7/css/mdb.min.css" integrity="sha384-RNicBx9czqOAKY235IZHi+en+quKdQsy5QtaGfMjOhJdjz6t1FZn808Xitebm9K1" rel="stylesheet" crossorigin="anonymous">
 
         <!-- Datatables -->
-        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css" integrity="sha384-88btmYK8qOHy4Z2XuhkWZjUOHICKYe1eSDMwaDGOAy802OCu6PD6mwqY5OwnfGwp" crossorigin="anonymous">
 
         <!-- Select -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css" integrity="sha384-YT6Vh7LpL+LTEi0RVF6MlYgTcoBIji2PmGBbXk3D4So5lw1e64pyuwTtbLOED1Li" crossorigin="anonymous">
 
         <!-- Editable -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.css') }}">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" crossorigin="anonymous"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" integrity="sha384-RdQbeSCGSeSdSlTMGnUr2oDJZzOuGjJAkQy1MbKMu8fZT5G0qlBajY0n0sY/hKMK" crossorigin="anonymous"/>
 
         <!-- Own -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -45,20 +45,20 @@
     <body class="bg-dark" style="{% block body_style %}{% endblock body_style %}">
         <!-- Scripts -->
         <!-- At the beginning of the page : be available for template scripts -->
-        <script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha384-HHKD5G6fqvxz/wBz7BFYeOPzBKELGIZv5l5HAECcXD3zdAS6n8OppmPH9ZxGXY0G" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha384-JUMjoW8OzDJw4oFpWIB2Bu/c6768ObEthBMVSiIx4ruBIEdyNSUQAjJNFqT5pnJ6" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha384-HHKD5G6fqvxz/wBz7BFYeOPzBKELGIZv5l5HAECcXD3zdAS6n8OppmPH9ZxGXY0G" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.7/js/mdb.min.js" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" crossorigin="anonymous"></script>
-        <script src="https://cdn.plot.ly/plotly-1.52.2.min.js" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@1.3.5/dist/jsoneditor.min.js" crossorigin="anonymous"></script>
-        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js" crossorigin="anonymous"></script>
-        <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js') }}"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"  crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js" integrity="sha384-Si3HKTyQYGU+NC4aAF3ThcOSvK+ZQiyEKlYyfjiIFKMqsnCmfHjGa1VK1kYP9UdS" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.7/js/mdb.min.js" integrity="sha384-6YGZbg5Tdwu6pl9r8b4Suahuu3kXQVh6ObgwonFdh2qEhfwPnMEQTCKZvXJWqf9N" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" integrity="sha384-TTjj1KxpUMxMChPbgmSWLlfEep0/67X86v9lnJMkldzkQGHZNAhZRgE9owovIRyz" crossorigin="anonymous"></script>
+        <script src="https://cdn.plot.ly/plotly-1.52.2.min.js" integrity="sha384-Xd5qIXxcC3gkkORHW33F48/E2YSCbTYK9pSXf0ha9ZE+/r84r16ZzSm5gLHajGfE" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@1.3.5/dist/jsoneditor.min.js" integrity="sha384-R5m2v/a9TT6/kWapMPWQHeovfb67Z0U9a6BFeyUWRgvynKQ658NGMtWgcQFZmRMX" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js" integrity="sha384-GEJ/FIvb8xlENwefTZNXcLd9QZAwvP388VMaLyDvc43hBMl/IfRrhgyCgjtrKMgk" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"integrity="sha384-V2ETvVMpY0zaj0P3nwnqTUqHU19jQInctJYWqgEQE/5vFaU3fWdcMfufqV/8ISD7"  crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js" integrity="sha384-uQwKPrmNkEOvI7rrNdCSs6oS1F3GvnZkmPtkntOSIiPQN4CCbFSxv+Bj6qe0mWDb" crossorigin="anonymous"></script>
 
+        <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js') }}"></script>
         <script src="{{ url_for('static', filename='js/common/cst.js') }}"></script>
         <script src="{{ url_for('static', filename='js/common/json_editor_settings.js') }}"></script>
         <script src="{{ url_for('static', filename='js/common/util.js') }}"></script>
@@ -104,15 +104,15 @@
                             <a class="nav-link" href="{{ url_for('tentacles') }}">Tentacles</a>
                         </li>
                         <li class="nav-item mx-1 px-0 {% if 'logs' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('logs') }}"><i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="Event logs">
+                            <a class="nav-link" href="{{ url_for('logs') }}" aria-label="Logs"><i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="Event logs">
                                 <span id="errors-count-badge" class="badge badge-warning"></span>
                             </i></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link mx-1 px-0 " href="{{ url_for('advanced.home') }}"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>
+                            <a class="nav-link mx-1 px-0 " href="{{ url_for('advanced.home') }}" aria-label="Advanced OctoBot"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>
                         </li>
                         <li class="nav-item mx-1 px-0 {% if 'commands' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('commands') }}"><i id="navbar-bot-reboot" class="fa fa-sync" data-toggle="tooltip" data-placement="top" title="Commands"></i></a>
+                            <a class="nav-link" href="{{ url_for('commands') }}" aria-label="Commands"><i id="navbar-bot-reboot" class="fa fa-sync" data-toggle="tooltip" data-placement="top" title="Commands"></i></a>
                         </li>
                     </ul>
                 </div>

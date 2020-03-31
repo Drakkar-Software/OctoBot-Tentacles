@@ -25,6 +25,7 @@ from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
 from tentacles.Interfaces.web_interface.controllers import load_routes
+from tentacles.Interfaces.web_interface.security import register_responses_extra_header
 from tentacles.Interfaces.web_interface.websockets import load_namespaces, namespaces
 from tentacles.Services import WebService
 from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
@@ -97,6 +98,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
         try:
             from tentacles.Interfaces.web_interface import server_instance, websocket_instance
+
+            register_responses_extra_header(server_instance, True)
+
             websocket_instance.run(server_instance,
                                    host=self.host,
                                    port=self.port,
