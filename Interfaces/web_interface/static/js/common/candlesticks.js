@@ -348,7 +348,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
         const plotlyConfig = {
             modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
             responsive: true,
-            showEditInChartStudio: true
+            showEditInChartStudio: true,
+            displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
         };
         if(replace){
             Plotly.newPlot(element_id, data, layout, plotlyConfig);
