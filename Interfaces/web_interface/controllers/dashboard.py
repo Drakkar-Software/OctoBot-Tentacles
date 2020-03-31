@@ -19,8 +19,6 @@ from flask import jsonify
 from tentacles.Interfaces.web_interface import server_instance
 from tentacles.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
     get_value_from_dict_or_string, get_first_symbol_data, get_watched_symbol_data
-from octobot_interfaces.util.profitability import get_global_profitability
-from octobot_commons.pretty_printer import PrettyPrinter
 
 
 @server_instance.route('/dashboard/currency_price_graph_update/<exchange_id>/<symbol>/<time_frame>/<mode>')
