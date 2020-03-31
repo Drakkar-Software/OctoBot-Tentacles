@@ -1,4 +1,4 @@
-# OctoBot-Tentacles [![Build Status](https://api.travis-ci.org/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.org/Drakkar-Software/OctoBot-Tentacles)
+# OctoBot-Tentacles [![Build Status](https://api.travis-ci.com/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.com/Drakkar-Software/OctoBot-Tentacles)
 This repository contains default evaluators, strategies, utilitary modules and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
 Evaluators, utilitary modules, strategies and trading modes in this tentacles package are automatically installed on OctoBot when using the following command:
