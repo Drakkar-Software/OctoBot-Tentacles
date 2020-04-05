@@ -23,7 +23,7 @@ from octobot_commons.data_util import drop_nan
 from octobot_commons.errors import ConfigError
 from octobot_evaluators.evaluator import TAEvaluator
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
-from tentacles.Evaluator.Util import TrendAnalysis
+from tentacles.Evaluator.Util import TrendAnalysis, PatternAnalyser
 
 
 class RSIMomentumEvaluator(TAEvaluator):
@@ -251,3 +251,78 @@ class ADXMomentumEvaluator(TAEvaluator):
                 else:
                     self.eval_note = multiplier * min(1, ((neutral_adx - current_adx) / (neutral_adx - min_adx)))
                 await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+
+
+class MACDMomentumEvaluator(TAEvaluator):
+    def __init__(self):
+        super().__init__()
+        self.previous_note = None
+
+    def _analyse_pattern(self, pattern, macd_hist, zero_crossing_indexes, price_weight,
+                         pattern_move_time, sign_multiplier):
+        # add pattern's strength
+        weight = price_weight * PatternAnalyser.get_pattern_strength(pattern)
+
+        average_pattern_period = 0.7
+        if len(zero_crossing_indexes) > 1:
+            # compute chances to be after average pattern period
+            patterns = [PatternAnalyser.get_pattern(
+                macd_hist[zero_crossing_indexes[i]:zero_crossing_indexes[i + 1]])
+                for i in range(len(zero_crossing_indexes) - 1)
+            ]
+            if 0 != zero_crossing_indexes[0]:
+                patterns.append(PatternAnalyser.get_pattern(macd_hist[0:zero_crossing_indexes[0]]))
+            if len(macd_hist) - 1 != zero_crossing_indexes[-1]:
+                patterns.append(PatternAnalyser.get_pattern(macd_hist[zero_crossing_indexes[-1]:]))
+            double_patterns_count = patterns.count("W") + patterns.count("M")
+
+            average_pattern_period = TrendAnalysis. \
+                get_estimation_of_move_state_relatively_to_previous_moves_length(
+                    zero_crossing_indexes,
+                    macd_hist,
+                    pattern_move_time,
+                    double_patterns_count)
+
+        # if we have few data but wave is growing => set higher value
+        if len(zero_crossing_indexes) <= 1 and price_weight == 1:
+            if self.previous_note is not None:
+                average_pattern_period = 0.95
+            self.previous_note = sign_multiplier * weight * average_pattern_period
+        else:
+            self.previous_note = None
+
+        self.eval_note = sign_multiplier * weight * average_pattern_period
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        long_period_length = 26
+        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+            get_symbol_close_candles(long_period_length)
+        if len(candle_data) >= long_period_length:
+            macd, macd_signal, macd_hist = tulipy.macd(drop_nan(candle_data.base), 12, long_period_length, 9)
+
+            # on macd hist => M pattern: bearish movement, W pattern: bullish movement
+            #                 max on hist: optimal sell or buy
+            macd_hist = drop_nan(macd_hist)
+            zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(macd_hist, 0)
+            last_index = len(macd_hist) - 1
+            pattern, start_index, end_index = PatternAnalyser.find_pattern(macd_hist, zero_crossing_indexes,
+                                                                           last_index)
+
+            if pattern != PatternAnalyser.UNKNOWN_PATTERN:
+
+                # set sign (-1 buy or 1 sell)
+                sign_multiplier = -1 if pattern == "W" or pattern == "V" else 1
+
+                # set pattern time frame => W and M are on 2 time frames, others 1
+                pattern_move_time = 2 if (pattern == "W" or pattern == "M") and end_index == last_index else 1
+
+                # set weight according to the max value of the pattern and the current value
+                current_pattern_start = start_index
+                price_weight = macd_hist[-1] / macd_hist[current_pattern_start:].max() if sign_multiplier == 1 \
+                    else macd_hist[-1] / macd_hist[current_pattern_start:].min()
+
+                if not math.isnan(price_weight):
+                    self._analyse_pattern(pattern, macd_hist, zero_crossing_indexes, price_weight,
+                                          pattern_move_time, sign_multiplier)
+            await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
