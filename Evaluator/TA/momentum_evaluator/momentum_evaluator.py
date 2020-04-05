@@ -31,9 +31,9 @@ class RSIMomentumEvaluator(TAEvaluator):
     async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
         period_length = 14
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(period_length).base
-        if candle_data is not None and len(candle_data) > period_length:
-            rsi_v = tulipy.rsi(candle_data, period=period_length)
+            get_symbol_close_candles(period_length)
+        if candle_data is not None and len(candle_data) >= period_length:
+            rsi_v = tulipy.rsi(drop_nan(candle_data.base), period=period_length)
 
             if len(rsi_v) and not math.isnan(rsi_v[-1]):
                 long_trend = TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
