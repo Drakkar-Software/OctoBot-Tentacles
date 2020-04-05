@@ -369,3 +369,36 @@ class KlingerOscillatorMomentumEvaluator(TAEvaluator):
 
         self.eval_note = eval_proposition
         await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+
+
+class KlingerOscillatorReversalConfirmationMomentumEvaluator(TAEvaluator):
+
+    @staticmethod
+    def get_eval_type():
+        return bool
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = False
+        short_period = 35    # standard with klinger
+        long_period = 55     # standard with klinger
+        ema_signal_period = 13  # standard ema signal for klinger
+        symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
+        kvo = tulipy.kvo(drop_nan(symbol_candles.get_symbol_high_candles().base),
+                         drop_nan(symbol_candles.get_symbol_low_candles().base),
+                         drop_nan(symbol_candles.get_symbol_close_candles().base),
+                         drop_nan(symbol_candles.get_symbol_volume_candles().base),
+                         short_period,
+                         long_period)
+        kvo = drop_nan(kvo)
+        if len(kvo) >= ema_signal_period:
+
+            kvo_ema = tulipy.ema(kvo, ema_signal_period)
+            ema_difference = kvo-kvo_ema
+
+            if len(ema_difference) > 1:
+                zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
+                max_elements = 7
+                to_consider_kvo = min(max_elements, len(ema_difference)-zero_crossing_indexes[-1])
+                self.eval_note = TrendAnalysis.min_has_just_been_reached(ema_difference[-to_consider_kvo:],
+                                                                         acceptance_window=0.9, delay=1)
+        await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
