@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "title": "StochasticRSIVolatilityEvaluator",
+  "properties": {
+    "period": {
+        "title": "Period: length of the stochastic RSI period",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "low_level": {
+        "title": "Low threshold: stochastic RSI level from which evaluation is considered a buy signal",
+        "type": "number",
+        "minimum": 1
+    },
+    "high_level": {
+        "title": "High threshold: stochastic RSI level from which evaluation is considered a sell signal",
+        "type": "number",
+        "minimum": 1
+    }
+  }
+}
