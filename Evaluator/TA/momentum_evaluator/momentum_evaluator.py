@@ -145,6 +145,57 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
             await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
 
 
+# bollinger_bands
+class BBMomentumEvaluator(TAEvaluator):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        period_length = 20
+        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+            get_symbol_close_candles(period_length)
+        if len(candle_data) >= period_length:
+            # compute bollinger bands
+            lower_band, middle_band, upper_band = tulipy.bbands(drop_nan(candle_data.base), period_length, 2)
+
+            # if close to lower band => low value => bad,
+            # therefore if close to middle, value is keeping up => good
+            # finally if up the middle one or even close to the upper band => very good
+
+            current_value = candle_data[-1]
+            current_up = upper_band[-1]
+            current_middle = middle_band[-1]
+            current_low = lower_band[-1]
+            delta_up = current_up - current_middle
+            delta_low = current_middle - current_low
+
+            # its exactly on all bands
+            if current_up == current_low:
+                self.eval_note = START_PENDING_EVAL_NOTE
+
+            # exactly on the middle
+            elif current_value == current_middle:
+                self.eval_note = 0
+
+            # up the upper band
+            elif current_value > current_up:
+                self.eval_note = 1
+
+            # down the lower band
+            elif current_value < current_low:
+                self.eval_note = -1
+
+            # regular values case: use parabolic factor all the time
+            else:
+
+                # up the middle band
+                if current_middle < current_value:
+                    self.eval_note = math.pow((current_value - current_middle) / delta_up, 2)
+
+                # down the middle band
+                elif current_middle > current_value:
+                    self.eval_note = -1 * math.pow((current_middle - current_value) / delta_low, 2)
+            await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+
+
 # ADX --> trend_strength
 class ADXMomentumEvaluator(TAEvaluator):
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
