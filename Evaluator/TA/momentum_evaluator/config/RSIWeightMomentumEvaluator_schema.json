@@ -1,0 +1,76 @@
+{
+  "type": "object",
+  "title": "RSIWeightMomentumEvaluator",
+  "properties": {
+    "period": {
+        "title": "Period: length RSI period",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "slow_eval_count": {
+        "title": "Number of recent RSI values to consider to get the current slow moving market sentiment",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "fast_eval_count": {
+        "title": "Number of recent RSI values to consider to get the current fast moving market sentiment",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "RSI_to_weight": {
+        "type": "array",
+        "title": "RSI values and interpretations",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "title": "Slow RSI interpretation",
+          "properties": {
+            "slow_threshold": {
+              "title": "Slow RSI threshold under which this interpretation will be triggered",
+              "type": "number",
+              "minimum": 0
+            },
+            "fast_thresholds": {
+              "title": "Interpretations on this slow threshold trigger case",
+              "type": "array",
+              "uniqueItems": true,
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "title": "Fast RSI interpretation",
+                "properties": {
+                  "fast_threshold": {
+                    "title": "Fast RSI threshold under which this interpretation will be triggered",
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "weights": {
+                    "title": "Price and volume weights of this interpretation",
+                    "type": "object",
+                    "properties": {
+                      "price": {
+                        "title": "Price weight",
+                        "type": "number",
+                        "default": 1,
+                        "enum": [1, 2, 3]
+                      },
+                      "volume": {
+                        "title": "Volume weight",
+                        "type": "number",
+                        "default": 1,
+                        "enum": [1, 2, 3]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+  }
+}
