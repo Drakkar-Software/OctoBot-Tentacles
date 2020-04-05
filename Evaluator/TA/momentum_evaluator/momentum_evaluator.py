@@ -14,11 +14,15 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import math
+import numpy
 import tulipy
+from typing import Dict
 
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_commons.data_util import drop_nan
+from octobot_commons.errors import ConfigError
 from octobot_evaluators.evaluator import TAEvaluator
+from octobot_tentacles_manager.api.configurator import get_tentacle_config
 from tentacles.Evaluator.Util import TrendAnalysis
 
 
@@ -55,6 +59,90 @@ class RSIMomentumEvaluator(TAEvaluator):
                 else:
                     self.set_eval_note((rsi_v[-1] - 100) / 200)
                 await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+
+
+# double RSI analysis
+class RSIWeightMomentumEvaluator(TAEvaluator):
+    PERIOD = "period"
+    SLOW_EVAL_COUNT = "slow_eval_count"
+    FAST_EVAL_COUNT = "fast_eval_count"
+    RSI_TO_WEIGHTS = "RSI_to_weight"
+    SLOW_THRESHOLD = "slow_threshold"
+    FAST_THRESHOLD = "fast_threshold"
+    FAST_THRESHOLDS = "fast_thresholds"
+    WEIGHTS = "weights"
+    PRICE = "price"
+    VOLUME = "volume"
+
+    @staticmethod
+    def get_eval_type():
+        return Dict[str, int]
+
+    def __init__(self):
+        super().__init__()
+        self.evaluator_config = get_tentacle_config(self.__class__)
+        self.period_length = self.evaluator_config[self.PERIOD]
+        self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
+        self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]
+
+        try:
+            # ensure rsi weights are sorted
+            self.weights = sorted(self.evaluator_config[self.RSI_TO_WEIGHTS], key=lambda a: a[self.SLOW_THRESHOLD])
+            for i, fast_threshold in enumerate(self.weights):
+                fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
+                                                              key=lambda a: a[self.FAST_THRESHOLD])
+        except KeyError as e:
+            raise ConfigError(f"Error when reading config: {e}")
+
+    def _get_rsi_averages(self, symbol_candles):
+        # compute the slow and fast RSI average
+        candle_data = symbol_candles.get_symbol_close_candles(self.period_length)
+        if len(candle_data) > self.period_length:
+            rsi_v = tulipy.rsi(drop_nan(candle_data.base), period=self.period_length)
+            rsi_v = drop_nan(rsi_v)
+            if len(rsi_v):
+                slow_average = numpy.mean(rsi_v[-self.slow_eval_count:])
+                fast_average = numpy.mean(rsi_v[-self.fast_eval_count:])
+                return slow_average, fast_average, rsi_v
+        return None, None, None
+
+    @staticmethod
+    def _check_inferior(bound, val1, val2):
+        return val1 < bound and val2 < bound
+
+    def _analyse_dip_weight(self, slow_rsi, fast_rsi, current_rsi):
+        # returns price weight, volume weight
+        try:
+            for slow_rsi_weight in self.weights:
+                if slow_rsi < slow_rsi_weight[self.SLOW_THRESHOLD]:
+                    for fast_rsi_weight in slow_rsi_weight[self.FAST_THRESHOLDS]:
+                        if self._check_inferior(fast_rsi_weight[self.FAST_THRESHOLD], fast_rsi, current_rsi):
+                            return fast_rsi_weight[self.WEIGHTS][self.PRICE], \
+                                fast_rsi_weight[self.WEIGHTS][self.VOLUME]
+                    # exit loop since the target RSI has been found
+                    break
+        except KeyError as e:
+            self.logger.error(self.get_config_file_error_message(e))
+        return None, None
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
+        # compute the slow and fast RSI average
+        slow_rsi, fast_rsi, rsi_v = self._get_rsi_averages(symbol_candles)
+        if slow_rsi is not None and fast_rsi is not None and rsi_v is not None:
+            last_rsi_values_to_consider = 5
+            analysed_rsi = rsi_v[-last_rsi_values_to_consider:]
+            peak_reached = TrendAnalysis.min_has_just_been_reached(analysed_rsi, acceptance_window=0.95, delay=2)
+            if peak_reached:
+                price_weight, volume_weight = self._analyse_dip_weight(slow_rsi, fast_rsi, rsi_v[-1])
+                if price_weight is not None and volume_weight is not None:
+                    self.eval_note = {
+                        "price_weight": price_weight,
+                        "volume_weight": volume_weight,
+                        "current_candle_time": symbol_candles.get_symbol_time_candles(1)[-1]
+                    }
+            await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
 
 
 # ADX --> trend_strength
