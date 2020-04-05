@@ -12,7 +12,7 @@ install:
   - python3 -m pip install -r pre_requirements.txt
   - python3 -m pip install -r requirements.txt -r dev_requirements.txt
   - cp ../octobot_config.json ./config.json
-  - python3 start.py -p install all
+#  - python3 start.py -p install all
 
 matrix:
   include:
@@ -38,4 +38,4 @@ matrix:
       os: linux
       python: 3.8
       language: python
-      script: pytest -n 5 --cov=. --cov-config=.coveragerc tentacles/tests
+      script: echo "TODO"
