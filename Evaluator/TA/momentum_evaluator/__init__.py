@@ -1,1 +1,1 @@
-from .momentum_evaluator import RSIMomentumEvaluator
+from .momentum_evaluator import RSIMomentumEvaluator, ADXMomentumEvaluator
