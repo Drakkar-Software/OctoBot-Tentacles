@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "EMADivergenceTrendEvaluator",
+  "properties": {
+    "size": {
+        "title": "Period: length exponential moving average period",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "long": {
+        "title": "Low threshold: percent price difference from current ema from which evaluation is considered a buy signal",
+        "type": "number"
+    },
+    "short": {
+        "title": "High threshold: percent price difference from current ema from which evaluation is considered a sell signal",
+        "type": "number"
+    }
+  }
+}
