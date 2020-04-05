@@ -21,6 +21,7 @@ import math
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_commons.data_util import drop_nan, normalize_data
 from octobot_evaluators.evaluator import TAEvaluator
+from octobot_tentacles_manager.api.configurator import get_tentacle_config
 from tentacles.Evaluator.Util import TrendAnalysis
 
 
@@ -85,3 +86,29 @@ class DoubleMovingAverageTrendEvaluator(TAEvaluator):
 
         # just crossed the average => neutral
         return 0
+
+
+# evaluates position of the current ema to detect divergences
+class EMADivergenceTrendEvaluator(TAEvaluator):
+    EMA_SIZE = "size"
+    SHORT_VALUE = "short"
+    LONG_VALUE = "long"
+
+    def __init__(self):
+        super().__init__()
+        self.evaluator_config = get_tentacle_config(self.__class__)
+        self.period = self.evaluator_config[self.EMA_SIZE]
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = START_PENDING_EVAL_NOTE
+        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+            get_symbol_close_candles(self.period)
+        current_ema = tulipy.ema(drop_nan(candle_data.base), self.period)[-1]
+        current_price_close = candle_data[-1]
+        diff = (current_price_close / current_ema * 100) - 100
+
+        if diff <= self.evaluator_config[self.LONG_VALUE]:
+            self.eval_note = -1
+        elif diff >= self.evaluator_config[self.SHORT_VALUE]:
+            self.eval_note = 1
+        await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
