@@ -1,0 +1,1 @@
+from .trend_evaluator import DoubleMovingAverageTrendEvaluator
