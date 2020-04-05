@@ -47,7 +47,7 @@ class PatternAnalyser:
                 if extended_shape == "W" or extended_shape == "M":
                     # check that values are on the same side (< or >0)
                     first_part = data[zero_crossing_indexes[-1 * backwards_index]:
-                                            zero_crossing_indexes[-1*backwards_index+1]]
+                                      zero_crossing_indexes[-1*backwards_index+1]]
                     second_part = data[zero_crossing_indexes[-1]:]
                     if np.mean(first_part)*np.mean(second_part) > 0:
                         return extended_shape, zero_crossing_indexes[-1*backwards_index], zero_crossing_indexes[-1]
