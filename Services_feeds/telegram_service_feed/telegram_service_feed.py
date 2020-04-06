@@ -18,7 +18,6 @@ from octobot_services.channel.abstract_service_feed import AbstractServiceFeedCh
 from octobot_services.constants import CONFIG_TELEGRAM_CHANNEL, CONFIG_GROUP_MESSAGE, CONFIG_GROUP_MESSAGE_DESCRIPTION, \
     CONFIG_TELEGRAM_ALL_CHANNEL, FEED_METADATA
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
-from octobot_services.service_feeds.service_feed_exception import ServiceFeedException
 from tentacles.Services import TelegramService
 
 
@@ -42,22 +41,13 @@ class TelegramServiceFeed(AbstractServiceFeed):
     # configure the whitelist of Telegram groups/channels to listen to
     # merge new config into existing config
     def update_feed_config(self, config):
-        if not TelegramService.is_setup_correctly(self.config):
-            raise ServiceFeedException(f"{self.get_name()} is not usable: {self.REQUIRED_SERVICE_ERROR_MESSAGE}. "
-                                      "Evaluators using Telegram channels information can't work.")
         self.feed_config[CONFIG_TELEGRAM_CHANNEL].extend(channel for channel in config[CONFIG_TELEGRAM_CHANNEL]
                                                          if channel not in
                                                          self.feed_config[CONFIG_TELEGRAM_CHANNEL])
-        self._register_if_something_to_watch()
 
     # if True, disable channel whitelist and listen to every group/channel it is invited to
     def set_listen_to_all_groups_and_channels(self, activate=True):
         self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] = activate
-        self._register_if_something_to_watch()
-
-    def _register_if_something_to_watch(self):
-        if self._something_to_watch():
-            self._register_to_service()
 
     def _register_to_service(self):
         if not self.service.is_registered(self.get_name()):
@@ -85,7 +75,7 @@ class TelegramServiceFeed(AbstractServiceFeed):
         return TelegramService
 
     def _initialize(self):
-        pass
+        self._register_to_service()
 
     async def _start_service_feed(self):
         return True

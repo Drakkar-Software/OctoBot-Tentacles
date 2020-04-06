@@ -60,8 +60,7 @@ class RedditForumEvaluator(SocialEvaluator):
                     link = f"https://www.reddit.com{data[CONFIG_REDDIT_ENTRY].permalink}"
                     self._print_entry(link, entry_note, str(self.count))
             self.eval_note = self.overall_state_analyser.get_overall_state_after_refresh()
-            # TODO: change evaluation_completed to handle not timeframe related evaluators
-            await self.evaluation_completed(self.cryptocurrency, None)
+            await self.evaluation_completed(self.cryptocurrency)
 
     def _get_sentiment(self, entry):
         # analysis entry text and gives overall sentiment
