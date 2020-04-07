@@ -71,7 +71,7 @@ class RedditForumEvaluator(SocialEvaluator):
         return START_PENDING_EVAL_NOTE
 
     def _is_interested_by_this_notification(self, notification_description):
-        # true if in this symbol's subreddits configuration
+        # true if the given subreddit is in this cryptocurrency's subreddits configuration
         if self.specific_config[CONFIG_REDDIT_SUBREDDITS]:
             for subreddit in self.specific_config[CONFIG_REDDIT_SUBREDDITS][self.cryptocurrency]:
                 if subreddit.lower() == notification_description:
