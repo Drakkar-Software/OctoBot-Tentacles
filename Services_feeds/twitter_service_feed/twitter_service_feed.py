@@ -43,7 +43,7 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
         return True
 
     # merge new config into existing config
-    def update_social_config(self, config):
+    def update_feed_config(self, config):
         if CONFIG_TWITTERS_ACCOUNTS in self.feed_config:
             self.feed_config[CONFIG_TWITTERS_ACCOUNTS] = {**self.feed_config[CONFIG_TWITTERS_ACCOUNTS],
                                                           **config[CONFIG_TWITTERS_ACCOUNTS]}
@@ -107,8 +107,8 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
                 await self._start_listener()
             except twitter.error.TwitterError as e:
                 self.logger.exception(e, True, f"Error when receiving Twitter feed: {e.message} ({e})")
-                self.keep_running = False
+                self.should_stop = True
             except Exception as e:
                 self.logger.exception(e, True, f"Error when receiving Twitter feed: ({e})")
-                self.keep_running = False
+                self.should_stop = True
         return False
