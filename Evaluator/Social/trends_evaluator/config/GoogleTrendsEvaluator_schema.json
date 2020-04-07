@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "title": "GoogleTrendStatsEvaluator",
+  "properties": {
+    "refresh_rate_seconds": {
+        "title": "Seconds between each re-evaluation (do not set too low because google has a low monthly rate limit)",
+        "type": "number",
+        "minimum": 1
+    },
+    "relevant_history_months": {
+        "title": "Number of months to look into to compute the trend evaluation (for now works only with 3)",
+        "type": "number",
+        "minimum": 3,
+        "maximum": 3
+    }
+  }
+}
