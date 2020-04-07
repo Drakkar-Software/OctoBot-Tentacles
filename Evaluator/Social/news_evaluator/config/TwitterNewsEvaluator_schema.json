@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "title": "TwitterNewsEvaluator",
+  "properties": {
+    "crypto-currencies": {
+        "type": "array",
+        "title": "Crypto currencies to watch",
+        "uniqueItems": true,
+        "items": {
+          "type": "object",
+          "title": "Crypto currency",
+          "properties": {
+            "crypto-currency": {
+              "type": "string",
+              "title": "Crypto currency name",
+              "options": {
+                "inputAttributes": {
+                  "placeholder": "Bitcoin"
+                }
+              },
+              "minLength": 2
+            },
+            "accounts": {
+              "type": "array",
+              "title": "Twitter accounts to watch",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "title": "Twitter account name",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder": "BTCFoundation"
+                  }
+                },
+                "minLength": 2
+              }
+            },
+            "hashtags": {
+              "type": "array",
+              "title": "Twitter hashtags to watch, warning: might trigger evaluator for irrelevant tweets",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "title": "account name",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder": "blockchain"
+                  }
+                },
+                "minLength": 2
+              }
+            }
+          }
+        }
+    }
+  }
+}
