@@ -422,8 +422,10 @@ def get_services_list():
     services_names = []
     for service in get_available_services():
         srv = service.instance()
-        services[srv.get_type()] = srv
-        services_names.append(srv.get_type())
+        if srv.get_required_config():
+            # do not add services without a config, ex: GoogleService (nothing to show on the web interface)
+            services[srv.get_type()] = srv
+            services_names.append(srv.get_type())
     return services, services_names
 
 
