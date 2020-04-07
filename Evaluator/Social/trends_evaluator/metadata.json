@@ -1,0 +1,6 @@
+{
+  "version": "1.2.0",
+  "origin_package": "OctoBot-Default-Tentacles",
+  "tentacles": ["GoogleTrendsEvaluator"],
+  "tentacles-requirements": ["statistics_analysis", "google_service_feed"]
+}
