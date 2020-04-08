@@ -23,7 +23,7 @@ from octobot_commons.pretty_printer import PrettyPrinter
 
 from octobot_trading.constants import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
-from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
+from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer, check_factor
 from octobot_trading.enums import EvaluatorStates, TraderOrderType
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.orders.order_adapter import add_dusts_to_quantity_if_necessary, \
@@ -79,14 +79,14 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         self.QUANTITY_MARKET_MAX_PERCENT = 1
         self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
         self.QUANTITY_MARKET_ATTENUATION = (self.QUANTITY_MARKET_MAX_PERCENT - self.QUANTITY_MARKET_MIN_PERCENT) \
-                                           / self.MAX_SUM_RESULT
+            / self.MAX_SUM_RESULT
 
         self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
         self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.98
         self.SELL_LIMIT_ORDER_MIN_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MAX_PERCENT)
         self.SELL_LIMIT_ORDER_MAX_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MIN_PERCENT)
         self.LIMIT_ORDER_ATTENUATION = (self.BUY_LIMIT_ORDER_MAX_PERCENT - self.BUY_LIMIT_ORDER_MIN_PERCENT) \
-                                       / self.MAX_SUM_RESULT
+            / self.MAX_SUM_RESULT
 
         self.QUANTITY_RISK_WEIGHT = 0.2
         self.MAX_QUANTITY_RATIO = 1
@@ -112,15 +112,11 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         if eval_note > 0:
             factor = self.SELL_LIMIT_ORDER_MIN_PERCENT + \
                      ((1 - abs(eval_note) + 1 - self.trader.risk) * self.LIMIT_ORDER_ATTENUATION)
-            return AbstractTradingModeConsumer.check_factor(self.SELL_LIMIT_ORDER_MIN_PERCENT,
-                                                            self.SELL_LIMIT_ORDER_MAX_PERCENT,
-                                                            factor)
+            return check_factor(self.SELL_LIMIT_ORDER_MIN_PERCENT, self.SELL_LIMIT_ORDER_MAX_PERCENT, factor)
         else:
             factor = self.BUY_LIMIT_ORDER_MAX_PERCENT - \
                      ((1 - abs(eval_note) + 1 - self.trader.risk) * self.LIMIT_ORDER_ATTENUATION)
-            return AbstractTradingModeConsumer.check_factor(self.BUY_LIMIT_ORDER_MIN_PERCENT,
-                                                            self.BUY_LIMIT_ORDER_MAX_PERCENT,
-                                                            factor)
+            return check_factor(self.BUY_LIMIT_ORDER_MIN_PERCENT, self.BUY_LIMIT_ORDER_MAX_PERCENT, factor)
 
     """
     Starting point : self.STOP_LOSS_ORDER_MAX_PERCENT
@@ -131,9 +127,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
     def __get_stop_price_from_risk(self):
         factor = self.STOP_LOSS_ORDER_MAX_PERCENT - (self.trader.risk * self.STOP_LOSS_ORDER_ATTENUATION)
-        return AbstractTradingModeConsumer.check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT,
-                                                        self.STOP_LOSS_ORDER_MAX_PERCENT,
-                                                        factor)
+        return check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT, self.STOP_LOSS_ORDER_MAX_PERCENT, factor)
 
     """
     Starting point : self.QUANTITY_MIN_PERCENT
@@ -150,8 +144,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         if quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT,
-                                                                  factor)
+        checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
         return checked_factor * quantity
 
     """
@@ -173,9 +166,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         if await self.get_holdings_ratio(quote) < self.FULL_SELL_MIN_RATIO:
             return quantity
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MIN_PERCENT,
-                                                                  self.QUANTITY_MAX_PERCENT,
-                                                                  factor)
+        checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
         return checked_factor * quantity
 
     """
@@ -197,9 +188,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         factor = self.QUANTITY_MARKET_MIN_PERCENT + (
                 (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION)
 
-        checked_factor = AbstractTradingModeConsumer.check_factor(self.QUANTITY_MARKET_MIN_PERCENT,
-                                                                  self.QUANTITY_MARKET_MAX_PERCENT,
-                                                                  factor)
+        checked_factor = check_factor(self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor)
         return checked_factor * quantity
 
     async def __get_quantity_ratio(self, currency):
@@ -307,7 +296,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             raise e
 
         except Exception as e:
-            self._logger.exception(e, True, f"Failed to create order : {e}.")
+            self.logger.exception(e, True, f"Failed to create order : {e}.")
             return None
 
 
