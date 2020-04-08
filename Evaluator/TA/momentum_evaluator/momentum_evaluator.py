@@ -35,9 +35,9 @@ class RSIMomentumEvaluator(TAEvaluator):
     async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
         period_length = 14
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(period_length)
+            get_symbol_close_candles()
         if candle_data is not None and len(candle_data) >= period_length:
-            rsi_v = tulipy.rsi(drop_nan(candle_data.base), period=period_length)
+            rsi_v = tulipy.rsi(candle_data, period=period_length)
 
             if len(rsi_v) and not math.isnan(rsi_v[-1]):
                 long_trend = TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
@@ -98,7 +98,7 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
         # compute the slow and fast RSI average
         candle_data = symbol_candles.get_symbol_close_candles(self.period_length)
         if len(candle_data) > self.period_length:
-            rsi_v = tulipy.rsi(drop_nan(candle_data.base), period=self.period_length)
+            rsi_v = tulipy.rsi(candle_data, period=self.period_length)
             rsi_v = drop_nan(rsi_v)
             if len(rsi_v):
                 slow_average = numpy.mean(rsi_v[-self.slow_eval_count:])
@@ -154,7 +154,7 @@ class BBMomentumEvaluator(TAEvaluator):
             get_symbol_close_candles(period_length)
         if len(candle_data) >= period_length:
             # compute bollinger bands
-            lower_band, middle_band, upper_band = tulipy.bbands(drop_nan(candle_data.base), period_length, 2)
+            lower_band, middle_band, upper_band = tulipy.bbands(candle_data, period_length, 2)
 
             # if close to lower band => low value => bad,
             # therefore if close to middle, value is keeping up => good
@@ -206,16 +206,16 @@ class ADXMomentumEvaluator(TAEvaluator):
         period_length = 14
         minimal_data = period_length + 11
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
-        close_candles = symbol_candles.get_symbol_close_candles(minimal_data)
+        close_candles = symbol_candles.get_symbol_close_candles()
         if len(close_candles) >= period_length + 10:
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
-            high_candles = symbol_candles.get_symbol_high_candles(period_length).base
-            low_candles = symbol_candles.get_symbol_low_candles(period_length).base
-            adx = tulipy.adx(high_candles, low_candles, close_candles.base, period_length)
-            instant_ema = drop_nan(tulipy.ema(close_candles.base, 2))
-            slow_ema = drop_nan(tulipy.ema(close_candles.base, 20))
+            high_candles = symbol_candles.get_symbol_high_candles()
+            low_candles = symbol_candles.get_symbol_low_candles()
+            adx = tulipy.adx(high_candles, low_candles, close_candles, period_length)
+            instant_ema = drop_nan(tulipy.ema(close_candles, 2))
+            slow_ema = drop_nan(tulipy.ema(close_candles, 20))
             adx = drop_nan(adx)
 
             if len(adx):
@@ -297,9 +297,9 @@ class MACDMomentumEvaluator(TAEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 26
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(long_period_length)
+            get_symbol_close_candles(-1)
         if len(candle_data) >= long_period_length:
-            macd, macd_signal, macd_hist = tulipy.macd(drop_nan(candle_data.base), 12, long_period_length, 9)
+            macd, macd_signal, macd_hist = tulipy.macd(candle_data, 12, long_period_length, 9)
 
             # on macd hist => M pattern: bearish movement, W pattern: bullish movement
             #                 max on hist: optimal sell or buy
@@ -336,10 +336,10 @@ class KlingerOscillatorMomentumEvaluator(TAEvaluator):
         long_period = 55     # standard with klinger
         ema_signal_period = 13  # standard ema signal for klinger
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
-        kvo = tulipy.kvo(drop_nan(symbol_candles.get_symbol_high_candles().base),
-                         drop_nan(symbol_candles.get_symbol_low_candles().base),
-                         drop_nan(symbol_candles.get_symbol_close_candles().base),
-                         drop_nan(symbol_candles.get_symbol_volume_candles().base),
+        kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
+                         symbol_candles.get_symbol_low_candles(),
+                         symbol_candles.get_symbol_close_candles(),
+                         symbol_candles.get_symbol_volume_candles(),
                          short_period,
                          long_period)
         kvo = drop_nan(kvo)
@@ -383,10 +383,10 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(TAEvaluator):
         long_period = 55     # standard with klinger
         ema_signal_period = 13  # standard ema signal for klinger
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
-        kvo = tulipy.kvo(drop_nan(symbol_candles.get_symbol_high_candles().base),
-                         drop_nan(symbol_candles.get_symbol_low_candles().base),
-                         drop_nan(symbol_candles.get_symbol_close_candles().base),
-                         drop_nan(symbol_candles.get_symbol_volume_candles().base),
+        kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
+                         symbol_candles.get_symbol_low_candles(),
+                         symbol_candles.get_symbol_close_candles(),
+                         symbol_candles.get_symbol_volume_candles(),
                          short_period,
                          long_period)
         kvo = drop_nan(kvo)
