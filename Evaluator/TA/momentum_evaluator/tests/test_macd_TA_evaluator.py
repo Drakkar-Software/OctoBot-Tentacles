@@ -36,7 +36,7 @@ class TestMACDTAEvaluator(AbstractTATest):
 
     @staticmethod
     async def test_stress_test(evaluator_tester):
-        await evaluator_tester.run_stress_test_without_exceptions(0.6, time_limit_seconds=3)
+        await evaluator_tester.run_stress_test_without_exceptions(0.6, time_limit_seconds=5)
 
     @staticmethod
     async def test_reactions_to_dump(evaluator_tester):
