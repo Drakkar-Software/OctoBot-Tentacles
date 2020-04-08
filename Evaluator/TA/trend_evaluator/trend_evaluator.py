@@ -32,11 +32,11 @@ class DoubleMovingAverageTrendEvaluator(TAEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 10
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(long_period_length)
+            get_symbol_close_candles(-1)
         if len(candle_data) >= long_period_length:
             time_units = [5, long_period_length]
-            current_moving_average = tulipy.sma(drop_nan(candle_data.base), 2)
-            results = [self.get_moving_average_analysis(drop_nan(candle_data.base), current_moving_average, time_unit)
+            current_moving_average = tulipy.sma(candle_data, 2)
+            results = [self.get_moving_average_analysis(candle_data, current_moving_average, time_unit)
                        for time_unit in time_units]
             if len(results):
                 self.eval_note = numpy.mean(results)
@@ -103,7 +103,7 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
             get_symbol_close_candles(self.period)
-        current_ema = tulipy.ema(drop_nan(candle_data.base), self.period)[-1]
+        current_ema = tulipy.ema(candle_data, self.period)[-1]
         current_price_close = candle_data[-1]
         diff = (current_price_close / current_ema * 100) - 100
 
