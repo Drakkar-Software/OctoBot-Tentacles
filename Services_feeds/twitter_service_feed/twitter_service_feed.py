@@ -31,8 +31,8 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
     FEED_CHANNEL = TwitterServiceFeedChannel
     REQUIRED_SERVICE = TwitterService
 
-    def __init__(self, config, main_async_loop):
-        super().__init__(config, main_async_loop)
+    def __init__(self, config, main_async_loop, bot_id):
+        super().__init__(config, main_async_loop, bot_id)
         threading.Thread.__init__(self, name=self.get_name())
         self.user_ids = []
         self.hashtags = []
