@@ -122,10 +122,10 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
         else:
             self.something_is_happening = False
 
-    async def start(self) -> None:
+    async def start(self, bot_id: str) -> bool:
         """
         Subscribe to Kline and OHLCV notification
-        :return: None
+        :return: bool
         """
         try:
             from octobot_trading.channels.exchange_channel import get_chan as get_trading_chan
@@ -138,8 +138,10 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
                 callback=self.ohlcv_callback, consumer_filters=consumer_filter)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
                 callback=self.kline_callback, consumer_filters=consumer_filter)
+            return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
+        return False
 
     def set_default_config(self):
         super().set_default_config()
@@ -204,10 +206,10 @@ class InstantMAEvaluator(RealTimeEvaluator):
 
         await self.evaluation_completed(self.cryptocurrency, symbol)
 
-    async def start(self) -> None:
+    async def start(self, bot_id: str) -> bool:
         """
         Subscribe to Kline and OHLCV notification
-        :return: None
+        :return: bool
         """
         try:
             from octobot_trading.channels.exchange_channel import get_chan as get_trading_chan
@@ -219,8 +221,10 @@ class InstantMAEvaluator(RealTimeEvaluator):
                 callback=self.ohlcv_callback, consumer_filters=time_frame_filter)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
                 callback=self.kline_callback, consumer_filters=time_frame_filter)
+            return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
+        return False
 
     def set_default_config(self):
         super().set_default_config()
