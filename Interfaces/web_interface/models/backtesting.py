@@ -13,8 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
-from copy import copy
 from os import remove
 from asyncio import gather
 
@@ -28,7 +26,6 @@ from octobot_backtesting.api.strategy_optimizer import is_optimizer_in_progress
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
 from octobot_commons.logging.logging_util import get_logger
 from octobot_backtesting.api.data_file import get_all_available_data_files, get_file_description, delete_data_file
-
 from octobot_interfaces.util.bot import get_global_config, get_bot_api
 from octobot_interfaces.util.util import run_in_bot_main_loop
 from octobot_tentacles_manager.api.configurator import get_tentacles_setup_config
