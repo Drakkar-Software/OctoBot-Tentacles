@@ -40,7 +40,7 @@ from octobot_commons.tentacles_management.class_inspector import get_class_from_
     trading_mode_parent_inspection
 from octobot_evaluators.evaluator.abstract_evaluator import AbstractEvaluator
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
-from tools.metrics.metrics_manager import MetricsManager
+from octobot.community.community_manager import CommunityManager
 from octobot_tentacles_manager.api.configurator import save_tentacles_setup_configuration
 from octobot_tentacles_manager.api.inspector import get_tentacle_resources_path
 
@@ -408,8 +408,8 @@ def manage_metrics(enable_metrics):
         current_edited_config[CONFIG_METRICS] = {CONFIG_ENABLED_OPTION: enable_metrics}
     else:
         current_edited_config[CONFIG_METRICS][CONFIG_ENABLED_OPTION] = enable_metrics
-    if enable_metrics and MetricsManager.should_register_bot(current_edited_config):
-        MetricsManager.background_get_id_and_register_bot(get_bot_api())
+    if enable_metrics and CommunityManager.should_register_bot(current_edited_config):
+        CommunityManager.background_get_id_and_register_bot(get_bot_api())
     config_manager.simple_save_config_update(current_edited_config)
 
 
