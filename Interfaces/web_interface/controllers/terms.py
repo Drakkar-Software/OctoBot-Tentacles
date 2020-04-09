@@ -17,7 +17,7 @@
 
 from flask import render_template
 
-from config.disclaimer import DISCLAIMER
+from octobot.disclaimer import DISCLAIMER
 from tentacles.Interfaces.web_interface import server_instance
 from tentacles.Interfaces.web_interface.models.configuration import accepted_terms
 

@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from config import DEFAULT_TENTACLES_URL, DEFAULT_TENTACLES_PACKAGE_NAME
+from octobot.constants import DEFAULT_TENTACLES_URL, DEFAULT_TENTACLES_PACKAGE_NAME
 from octobot_commons.logging.logging_util import get_logger
 from octobot_interfaces.util.bot import get_bot_api
 from octobot_interfaces.util.util import run_in_bot_main_loop
