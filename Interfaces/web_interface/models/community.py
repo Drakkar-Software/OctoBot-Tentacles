@@ -15,7 +15,7 @@
 #  License along with this library.
 
 from octobot_interfaces.util.bot import get_edited_config
-from tools.metrics.metrics_analysis import can_read_metrics, get_community_metrics
+from octobot.community.community_analysis import can_read_metrics, get_community_metrics
 
 
 def get_community_metrics_to_display():
