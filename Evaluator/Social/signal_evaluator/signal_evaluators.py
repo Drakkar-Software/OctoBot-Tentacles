@@ -43,7 +43,7 @@ class TelegramSignalEvaluator(SocialEvaluator):
         if start_eval_chars in notification_test and end_eval_chars in notification_test:
             try:
                 split_test = notification_test.split(start_eval_chars)
-                notification_eval =split_test[1].split(end_eval_chars)[0]
+                notification_eval = split_test[1].split(end_eval_chars)[0]
                 potential_note = float(notification_eval)
                 if -1 <= potential_note <= 1:
                     self.eval_note = potential_note
