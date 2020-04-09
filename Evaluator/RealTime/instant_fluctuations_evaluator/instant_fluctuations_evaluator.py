@@ -18,7 +18,7 @@ import tulipy
 import numpy as np
 
 from octobot_commons.constants import CONFIG_TIME_FRAME, START_PENDING_EVAL_NOTE
-from octobot_commons.enums import PriceIndexes
+from octobot_commons.enums import PriceIndexes, TimeFrames
 from octobot_commons.channels_name import OctoBotTradingChannelsName
 from octobot_evaluators.evaluator.realtime_evaluator import RealTimeEvaluator
 
@@ -135,9 +135,9 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
             # TODO: add symbol filter (https://github.com/Drakkar-Software/OctoBot-Trading/issues/152)
             consumer_filter = None
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, consumer_filters=consumer_filter)
+                callback=self.ohlcv_callback, time_frame=consumer_filter)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, consumer_filters=consumer_filter)
+                callback=self.kline_callback, time_frame=consumer_filter)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
@@ -216,11 +216,11 @@ class InstantMAEvaluator(RealTimeEvaluator):
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             # TODO: add time frame filter (https://github.com/Drakkar-Software/OctoBot-Trading/issues/152)
-            time_frame_filter = None
+            time_frame_filter = TimeFrames(self.time_frame)
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, consumer_filters=time_frame_filter)
+                callback=self.ohlcv_callback)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, consumer_filters=time_frame_filter)
+                callback=self.kline_callback)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
