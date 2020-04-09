@@ -35,8 +35,8 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
 
     MAX_CONNECTION_ATTEMPTS = 10
 
-    def __init__(self, config, main_async_loop):
-        AbstractServiceFeed.__init__(self, config, main_async_loop)
+    def __init__(self, config, main_async_loop, bot_id):
+        AbstractServiceFeed.__init__(self, config, main_async_loop, bot_id)
         threading.Thread.__init__(self, name=self.get_name())
         self.subreddits = None
         self.counter = 0
