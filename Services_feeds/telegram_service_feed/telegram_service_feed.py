@@ -31,8 +31,8 @@ class TelegramServiceFeed(AbstractServiceFeed):
 
     HANDLED_CHATS = ["group", "channel"]
 
-    def __init__(self, config, main_async_loop):
-        super().__init__(config, main_async_loop)
+    def __init__(self, config, main_async_loop, bot_id):
+        super().__init__(config, main_async_loop, bot_id)
         self.feed_config = {
             CONFIG_TELEGRAM_ALL_CHANNEL: False,
             CONFIG_TELEGRAM_CHANNEL: []
