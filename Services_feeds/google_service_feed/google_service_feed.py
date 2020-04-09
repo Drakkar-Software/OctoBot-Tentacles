@@ -49,8 +49,8 @@ class GoogleServiceFeed(AbstractServiceFeed):
     FEED_CHANNEL = GoogleServiceFeedChannel
     REQUIRED_SERVICE = GoogleService
 
-    def __init__(self, config, main_async_loop):
-        super().__init__(config, main_async_loop)
+    def __init__(self, config, main_async_loop, bot_id):
+        super().__init__(config, main_async_loop, bot_id)
         self.trends_req_builder = None
         self.trends_topics = []
 
