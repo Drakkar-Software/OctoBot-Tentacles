@@ -53,28 +53,24 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str,  time_frame, candle):
-        # TODO: remove if when time frame filter
-        if time_frame == self.specific_config[CONFIG_TIME_FRAME] and symbol == self.symbol:
-            volume_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
-                get_symbol_volume_candles(self.candle_segments[0])
-            close_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
-                get_symbol_close_candles(self.candle_segments[0])
-            for segment in self.candle_segments:
-                volume_data = [d for d in volume_data[-segment:] if d is not None]
-                price_data = [d for d in close_data[-segment:] if d is not None]
-                self.average_volumes[segment] = np.mean(volume_data)
-                self.average_prices[segment] = np.mean(price_data)
+        volume_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+            get_symbol_volume_candles(self.candle_segments[0])
+        close_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
+            get_symbol_close_candles(self.candle_segments[0])
+        for segment in self.candle_segments:
+            volume_data = [d for d in volume_data[-segment:] if d is not None]
+            price_data = [d for d in close_data[-segment:] if d is not None]
+            self.average_volumes[segment] = np.mean(volume_data)
+            self.average_prices[segment] = np.mean(price_data)
 
-            self.last_volume = volume_data[-1]
-            self.last_price = close_data[-1]
-            await self._trigger_evaluation(symbol)
+        self.last_volume = volume_data[-1]
+        self.last_price = close_data[-1]
+        await self._trigger_evaluation(symbol)
 
     async def kline_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, kline):
-        # TODO: remove if when time frame filter
-        if time_frame == self.specific_config[CONFIG_TIME_FRAME] and symbol == self.symbol:
-            self.last_volume = kline[PriceIndexes.IND_PRICE_VOL.value]
-            self.last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
-            await self._trigger_evaluation(symbol)
+        self.last_volume = kline[PriceIndexes.IND_PRICE_VOL.value]
+        self.last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
+        await self._trigger_evaluation(symbol)
 
     async def _trigger_evaluation(self, symbol):
         self.evaluate_volume_fluctuations()
@@ -131,13 +127,10 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
             from octobot_trading.channels.exchange_channel import get_chan as get_trading_chan
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
-            # TODO: add time frame filter (https://github.com/Drakkar-Software/OctoBot-Trading/issues/152)
-            # TODO: add symbol filter (https://github.com/Drakkar-Software/OctoBot-Trading/issues/152)
-            consumer_filter = None
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, time_frame=consumer_filter)
+                callback=self.ohlcv_callback, symbol=self.symbol, time_frame=self.TIME_FRAME)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, time_frame=consumer_filter)
+                callback=self.kline_callback, symbol=self.symbol, time_frame=self.TIME_FRAME)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
@@ -164,27 +157,25 @@ class InstantMAEvaluator(RealTimeEvaluator):
         self.period = 6
         self.time_frame = self.specific_config[CONFIG_TIME_FRAME]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str,  time_frame, candle):
-        if time_frame == self.specific_config[CONFIG_TIME_FRAME]:   # TODO: remove if when time frame filter
-            self.eval_note = 0
-            new_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
-                get_symbol_close_candles(20)
-            should_eval = symbol not in self.last_candle_data or \
-                not self._compare_data(new_data, self.last_candle_data[symbol])
-            self.last_candle_data[symbol] = new_data
-            if should_eval:
-                if len(self.last_candle_data[symbol]) > self.period:
-                    self.last_moving_average_values[symbol] = tulipy.sma(self.last_candle_data[symbol],
-                                                                         self.period)
-                    await self._evaluate_current_price(self.last_candle_data[symbol][-1], symbol)
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+        self.eval_note = 0
+        new_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
+            get_symbol_close_candles(20)
+        should_eval = symbol not in self.last_candle_data or \
+            not self._compare_data(new_data, self.last_candle_data[symbol])
+        self.last_candle_data[symbol] = new_data
+        if should_eval:
+            if len(self.last_candle_data[symbol]) > self.period:
+                self.last_moving_average_values[symbol] = tulipy.sma(self.last_candle_data[symbol],
+                                                                     self.period)
+                await self._evaluate_current_price(self.last_candle_data[symbol][-1], symbol)
 
     async def kline_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, kline):
-        if time_frame == self.specific_config[CONFIG_TIME_FRAME]:   # TODO: remove if when time frame filter
-            if symbol in self.last_moving_average_values and len(self.last_moving_average_values[symbol]) > 0:
-                self.eval_note = 0
-                last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
-                if last_price != self.last_candle_data[symbol][-1]:
-                    await self._evaluate_current_price(last_price, symbol)
+        if symbol in self.last_moving_average_values and len(self.last_moving_average_values[symbol]) > 0:
+            self.eval_note = 0
+            last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
+            if last_price != self.last_candle_data[symbol][-1]:
+                await self._evaluate_current_price(last_price, symbol)
 
     async def _evaluate_current_price(self, last_price, symbol):
         last_ma_value = self.last_moving_average_values[symbol][-1]
@@ -215,12 +206,10 @@ class InstantMAEvaluator(RealTimeEvaluator):
             from octobot_trading.channels.exchange_channel import get_chan as get_trading_chan
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
-            # TODO: add time frame filter (https://github.com/Drakkar-Software/OctoBot-Trading/issues/152)
-            time_frame_filter = TimeFrames(self.time_frame)
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback)
+                callback=self.ohlcv_callback, time_frame=self.time_frame)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback)
+                callback=self.kline_callback, time_frame=self.time_frame)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
