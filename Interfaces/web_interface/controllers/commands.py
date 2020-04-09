@@ -17,7 +17,7 @@
 from octobot_commons.logging.logging_util import get_logger
 from flask import render_template, jsonify
 
-from config.disclaimer import DISCLAIMER
+from octobot.disclaimer import DISCLAIMER
 from octobot_interfaces.util.bot import get_bot_api
 from tentacles.Interfaces.web_interface import server_instance
 from tentacles.Interfaces.web_interface.models.configuration import get_metrics_enabled
