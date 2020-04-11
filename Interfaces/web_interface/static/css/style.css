@@ -49,7 +49,16 @@ body:before {
     opacity : 0.2;
 }
 
-.nav-item.active  {
+.navbar.navbar-dark .navbar-nav .nav-item  {
+    border-bottom: 2px solid transparent;
+}
+
+.navbar.navbar-dark .navbar-nav .nav-item:hover  {
+    animation: all 0.2s ease-in forwards;
+    border-bottom: 2px solid white;
+}
+
+.navbar.navbar-dark .navbar-nav .nav-item.active  {
     border-bottom: 2px solid white;
     font-weight: bolder;
 }
