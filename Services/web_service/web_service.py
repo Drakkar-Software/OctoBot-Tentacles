@@ -14,10 +14,11 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+import os
 import socket
 from octobot_commons.constants import CONFIG_ENABLED_OPTION
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_SERVICE_INSTANCE, \
-    CONFIG_WEB_PORT, DEFAULT_SERVER_PORT
+    CONFIG_WEB_PORT, DEFAULT_SERVER_PORT, ENV_WEB_PORT
 from octobot_services.services.abstract_service import AbstractService
 
 
@@ -80,9 +81,9 @@ class WebService(AbstractService):
 
     def _get_web_server_url(self):
         try:
-            port = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]
+            port = os.getenv(ENV_WEB_PORT, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT])
         except KeyError:
-            port = DEFAULT_SERVER_PORT
+            port = os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT)
         return f"{socket.gethostbyname(socket.gethostname())}:{port}"
 
     def get_successful_startup_message(self):
