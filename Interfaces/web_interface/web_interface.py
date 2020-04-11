@@ -13,13 +13,14 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import os
 import threading
 from time import sleep
 
 from octobot_commons.logging import register_error_notifier
 from octobot_interfaces.util.util import run_in_bot_main_loop
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
-    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP
+    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT
 from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
@@ -56,9 +57,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         except KeyError:
             self.host = DEFAULT_SERVER_IP
         try:
-            self.port = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]
+            self.port = int(os.getenv(ENV_WEB_PORT, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]))
         except KeyError:
-            self.port = DEFAULT_SERVER_PORT
+            self.port = int(os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT))
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, symbol: str, trade, old_trade):
