@@ -5,37 +5,39 @@ os: linux
 language: python
 cache: pip
 python: 3.8-dev
+env:
+  global:
+    - GH_REPO=Drakkar-Software/OctoBot-Tentacles
+    - DEPLOY_BRANCH=master
+
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
   - if [[ $TRAVIS_BRANCH == "dev" ]]; then git checkout dev; fi
-  - if [[ $TRAVIS_OS_NAME = "linux" ]]; then sudo bash ./docs/install/linux_dependencies.sh; fi
-  - python3 -m pip install -r pre_requirements.txt
   - python3 -m pip install -r requirements.txt -r dev_requirements.txt
-  - cp ../octobot_config.json ./config.json
-#  - python3 start.py -p install all
 
 matrix:
   include:
-#    - name: "OS X - Python 3"
-#      os: osx
-#      osx_image: xcode8.3
-#      language: generic
-#      before_cache:
-#        - brew cleanup
-#      cache:
-#        directories:
-#          - $HOME/Library/Caches/Homebrew
-#      before_install:
-#        - brew update || travis_terminate 1;
-#        - brew upgrade python || brew install python || travis_terminate 1;
-#        - python3 -m venv venv || travis_terminate 1;
-#        - source venv/bin/activate;
-#
-#      script:
-#        - pytest -n 5 --cov=. --cov-config=.coveragerc tentacles/tests
-
     - name: "Linux - Python 3 nightly"
+      stage: test
       os: linux
       python: 3.8
       language: python
       script: echo "TODO"
+
+    - name: "Linux - Tentacles - Deploy"
+      stage: deploy
+      os: linux
+      install: skip
+      script:
+        - mkdir reference_tentacles
+        - cp -r Backtesting Evaluator Interfaces Notifiers Services Services_feeds Trading reference_tentacles
+        - zip -9 -q -r $TRAVIS_TAG.zip reference_tentacles
+      deploy:
+        - provider: script
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$TRAVIS_TAG.zip  https://www.tentacles.octobot.online/repository/tentacles/releases/$TRAVIS_TAG.zip
+          skip_cleanup: true
+          cleanup: false
+          on:
+            repo: "$GH_REPO"
+            tags: true
+            condition: "$TRAVIS_OS_NAME = 'linux'"
