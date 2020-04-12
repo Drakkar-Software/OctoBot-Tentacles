@@ -20,6 +20,7 @@ from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
 from octobot_commons.pretty_printer import PrettyPrinter
+from octobot_evaluators.data_manager.matrix_manager import get_tentacles_value_nodes, get_tentacle_nodes
 
 from octobot_trading.constants import MODE_CHANNEL
 from octobot_trading.channels.exchange_channel import get_chan
@@ -79,14 +80,14 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         self.QUANTITY_MARKET_MAX_PERCENT = 1
         self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
         self.QUANTITY_MARKET_ATTENUATION = (self.QUANTITY_MARKET_MAX_PERCENT - self.QUANTITY_MARKET_MIN_PERCENT) \
-            / self.MAX_SUM_RESULT
+                                           / self.MAX_SUM_RESULT
 
         self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
         self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.98
         self.SELL_LIMIT_ORDER_MIN_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MAX_PERCENT)
         self.SELL_LIMIT_ORDER_MAX_PERCENT = 1 + (1 - self.BUY_LIMIT_ORDER_MIN_PERCENT)
         self.LIMIT_ORDER_ATTENUATION = (self.BUY_LIMIT_ORDER_MAX_PERCENT - self.BUY_LIMIT_ORDER_MIN_PERCENT) \
-            / self.MAX_SUM_RESULT
+                                       / self.MAX_SUM_RESULT
 
         self.QUANTITY_RISK_WEIGHT = 0.2
         self.MAX_QUANTITY_RATIO = 1
@@ -332,14 +333,13 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
             self.logger.error("octobot_evaluators.matrices.matrices.Matrices cannot be imported")
             return
 
-        related_matrix = Matrices.instance().get_matrix(matrix_id)
-
         # Strategies analysis
-        for evaluated_strategy_node in related_matrix.get_tentacles_value_nodes(related_matrix.get_tentacle_nodes(
-                exchange_name=self.exchange_name,
-                tentacle_type=EvaluatorMatrixTypes.STRATEGIES.value),
-                symbol=symbol,
-                time_frame=time_frame):
+        for evaluated_strategy_node in get_tentacles_value_nodes(matrix_id,
+                                                                 get_tentacle_nodes(matrix_id,
+                                                                                    exchange_name=self.exchange_name,
+                                                                                    tentacle_type=EvaluatorMatrixTypes.STRATEGIES.value),
+                                                                 symbol=symbol,
+                                                                 time_frame=time_frame):
 
             if evaluated_strategy_node and check_valid_eval_note(evaluated_strategy_node.node_value):
                 self.final_eval += evaluated_strategy_node.node_value  # TODO * evaluated_strategies.get_pertinence()
