@@ -16,7 +16,7 @@
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_services.constants import CONFIG_GROUP_MESSAGE_DESCRIPTION
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
-from tentacles.Services_feeds import TelegramServiceFeed
+from tentacles.Services.Services_feeds import TelegramServiceFeed
 
 
 class TelegramSignalEvaluator(SocialEvaluator):

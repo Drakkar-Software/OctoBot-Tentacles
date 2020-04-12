@@ -21,7 +21,7 @@ from octobot_services.constants import CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS
     CONFIG_TWEET_DESCRIPTION
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
 from tentacles.Evaluator.Util.text_analysis import TextAnalysis
-from tentacles.Services_feeds import TwitterServiceFeed
+from tentacles.Services.Services_feeds import TwitterServiceFeed
 
 
 class TwitterNewsEvaluator(SocialEvaluator):
