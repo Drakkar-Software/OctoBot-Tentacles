@@ -20,8 +20,8 @@ from octobot_commons.tentacles_management.advanced_manager import get_single_dee
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
 from octobot_services.constants import FEED_METADATA, CONFIG_TREND_HISTORY_TIME, CONFIG_TREND_TOPICS, CONFIG_TREND
 from tentacles.Evaluator.Util.statistics_analysis import StatisticAnalysis
-from tentacles.Services_feeds import GoogleServiceFeed
-from tentacles.Services_feeds.google_service_feed.google_service_feed import TrendTopic
+from tentacles.Services.Services_feeds import GoogleServiceFeed
+from tentacles.Services.Services_feeds.google_service_feed.google_service_feed import TrendTopic
 
 
 class GoogleTrendsEvaluator(SocialEvaluator):
