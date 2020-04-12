@@ -24,7 +24,7 @@ from simplifiedpytrends.request import TrendReq
 from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
 from octobot_services.constants import FEED_METADATA, CONFIG_TREND_DESCRIPTION, CONFIG_TREND, CONFIG_TREND_TOPICS
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
-from tentacles.Services import GoogleService
+from tentacles.Services.Services_bases import GoogleService
 
 
 class GoogleServiceFeedChannel(AbstractServiceFeedChannel):
