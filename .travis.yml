@@ -30,7 +30,7 @@ matrix:
       install: skip
       script:
         - mkdir reference_tentacles
-        - cp -r Backtesting Evaluator Interfaces Notifiers Services Services_feeds Trading reference_tentacles
+        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading reference_tentacles
         - zip -9 -q -r $TRAVIS_TAG.zip reference_tentacles
       deploy:
         - provider: script
