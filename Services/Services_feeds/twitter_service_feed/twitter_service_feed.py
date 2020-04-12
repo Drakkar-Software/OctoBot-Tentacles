@@ -20,7 +20,7 @@ from octobot_services.channel.abstract_service_feed import AbstractServiceFeedCh
 from octobot_services.constants import CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS_HASHTAGS, CONFIG_TWEET, \
     CONFIG_TWEET_DESCRIPTION, FEED_METADATA
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
-from tentacles.Services import TwitterService
+from tentacles.Services.Services_bases import TwitterService
 
 
 class TwitterServiceFeedChannel(AbstractServiceFeedChannel):

@@ -18,7 +18,7 @@ from octobot_services.channel.abstract_service_feed import AbstractServiceFeedCh
 from octobot_services.constants import CONFIG_TELEGRAM_CHANNEL, CONFIG_GROUP_MESSAGE, CONFIG_GROUP_MESSAGE_DESCRIPTION, \
     CONFIG_TELEGRAM_ALL_CHANNEL, FEED_METADATA
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
-from tentacles.Services import TelegramService
+from tentacles.Services.Services_bases import TelegramService
 
 
 class TelegramServiceFeedChannel(AbstractServiceFeedChannel):
