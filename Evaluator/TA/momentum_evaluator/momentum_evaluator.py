@@ -32,7 +32,7 @@ class RSIMomentumEvaluator(TAEvaluator):
         super().__init__()
         self.pertinence = 1
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         period_length = 14
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
             get_symbol_close_candles()
@@ -125,7 +125,7 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
             self.logger.error(self.get_config_file_error_message(e))
         return None, None
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
         # compute the slow and fast RSI average
@@ -147,7 +147,7 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
 
 # bollinger_bands
 class BBMomentumEvaluator(TAEvaluator):
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         period_length = 20
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
@@ -201,7 +201,7 @@ class ADXMomentumEvaluator(TAEvaluator):
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
     # idea: adx > 30 => strong trend, < 20 => trend change to come
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         period_length = 14
         minimal_data = period_length + 11
@@ -293,7 +293,7 @@ class MACDMomentumEvaluator(TAEvaluator):
 
         self.eval_note = sign_multiplier * weight * average_pattern_period
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 26
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
@@ -330,7 +330,7 @@ class MACDMomentumEvaluator(TAEvaluator):
 
 class KlingerOscillatorMomentumEvaluator(TAEvaluator):
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         eval_proposition = START_PENDING_EVAL_NOTE
         short_period = 35    # standard with klinger
         long_period = 55     # standard with klinger
@@ -377,7 +377,7 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(TAEvaluator):
     def get_eval_type():
         return bool
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = False
         short_period = 35    # standard with klinger
         long_period = 55     # standard with klinger

@@ -52,8 +52,9 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
         self.MIN_TRIGGERING_DELTA = 0.15
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str,  time_frame, candle):
-        volume_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str,  time_frame, candle):
+        volume_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
             get_symbol_volume_candles(self.candle_segments[0])
         close_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
             get_symbol_close_candles(self.candle_segments[0])
@@ -67,7 +68,8 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
         self.last_price = close_data[-1]
         await self._trigger_evaluation(symbol)
 
-    async def kline_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, kline):
+    async def kline_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, kline):
         self.last_volume = kline[PriceIndexes.IND_PRICE_VOL.value]
         self.last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
         await self._trigger_evaluation(symbol)
@@ -157,7 +159,8 @@ class InstantMAEvaluator(RealTimeEvaluator):
         self.period = 6
         self.time_frame = self.specific_config[CONFIG_TIME_FRAME]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = 0
         new_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
             get_symbol_close_candles(20)
@@ -170,7 +173,8 @@ class InstantMAEvaluator(RealTimeEvaluator):
                                                                      self.period)
                 await self._evaluate_current_price(self.last_candle_data[symbol][-1], symbol)
 
-    async def kline_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, kline):
+    async def kline_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, kline):
         if symbol in self.last_moving_average_values and len(self.last_moving_average_values[symbol]) > 0:
             self.eval_note = 0
             last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
