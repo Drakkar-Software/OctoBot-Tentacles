@@ -20,7 +20,7 @@ from time import sleep
 from octobot_commons.logging import register_error_notifier
 from octobot_interfaces.util.util import run_in_bot_main_loop
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
-    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT
+    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS
 from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
@@ -53,9 +53,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
     def _init_web_settings(self):
         try:
-            self.host = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP]
+            self.host = os.getenv(ENV_WEB_ADDRESS, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP])
         except KeyError:
-            self.host = DEFAULT_SERVER_IP
+            self.host = os.getenv(ENV_WEB_ADDRESS, DEFAULT_SERVER_IP)
         try:
             self.port = int(os.getenv(ENV_WEB_PORT, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]))
         except KeyError:
