@@ -28,7 +28,7 @@ from tentacles.Evaluator.Util import TrendAnalysis
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TAEvaluator):
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         long_period_length = 10
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
@@ -99,7 +99,7 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
         self.evaluator_config = get_tentacle_config(self.__class__)
         self.period = self.evaluator_config[self.EMA_SIZE]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
             get_symbol_close_candles(self.period)

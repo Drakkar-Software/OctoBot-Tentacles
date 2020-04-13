@@ -34,7 +34,7 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
         self.evaluator_config = get_tentacle_config(self.__class__)
         self.period = self.evaluator_config[self.STOCHRSI_PERIOD]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, symbol: str, time_frame, candle):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         try:
             candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
                 get_symbol_close_candles(self.period)
