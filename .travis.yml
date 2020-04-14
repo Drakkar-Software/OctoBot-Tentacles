@@ -10,6 +10,7 @@ env:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
     - DEPLOY_BRANCH=0.4.0
     - LATEST_TAG=latest
+    - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials
 
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
@@ -35,7 +36,7 @@ matrix:
         - zip -9 -q -r $LATEST_TAG.zip reference_tentacles
       deploy:
         - provider: script
-          script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  https://www.tentacles.octobot.online/repository/tentacles/releases/$TRAVIS_TAG.zip
+          script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
@@ -43,7 +44,7 @@ matrix:
             tags: true
             branch: "$DEPLOY_BRANCH"
         - provider: script
-          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  https://www.tentacles.octobot.online/repository/tentacles/releases/$LATEST_TAG.zip
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  $DEPLOY_URL/$LATEST_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
