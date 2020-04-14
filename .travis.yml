@@ -10,7 +10,7 @@ env:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
     - DEPLOY_BRANCH=0.4.0
     - LATEST_TAG=latest
-    - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials
+    - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
 
 install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
