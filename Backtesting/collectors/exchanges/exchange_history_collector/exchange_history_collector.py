@@ -92,7 +92,9 @@ class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
         time_frame_sec = TimeFramesMinutes[time_frame] * MINUTE_TO_SECONDS
         candles: list = await self.exchange.get_symbol_prices(symbol, time_frame)
         self.exchange_manager.uniformize_candles_if_necessary(candles)
-        await self.save_ohlcv(exchange=exchange, symbol=symbol, time_frame=time_frame, candle=candles,
+        await self.save_ohlcv(exchange=exchange,
+                              cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                              symbol=symbol, time_frame=time_frame, candle=candles,
                               timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
     async def get_kline_history(self, exchange, symbol, time_frame):
