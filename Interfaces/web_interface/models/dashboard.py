@@ -67,7 +67,7 @@ def format_trades(dict_trade_history):
         trade_type = parse_trade_type(dict_trade)
         if trade_type == TraderOrderType.UNKNOWN:
             trade_type = trade_side
-        if status is not OrderStatus.CANCELED or DISPLAY_CANCELLED_TRADES:
+        if status is not OrderStatus.CANCELED.value or DISPLAY_CANCELLED_TRADES:
             trade_time = dict_trade[ExchangeConstantsOrderColumns.TIMESTAMP.value]
             trades[trade_time_key].append(convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
             trades[trade_price_key].append(dict_trade[ExchangeConstantsOrderColumns.PRICE.value])
