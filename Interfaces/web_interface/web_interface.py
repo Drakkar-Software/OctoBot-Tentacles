@@ -62,7 +62,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             self.port = int(os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT))
 
     @staticmethod
-    async def _web_trades_callback(exchange: str, exchange_id: str, symbol: str, trade, old_trade):
+    async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
         from tentacles.Interfaces.web_interface import send_new_trade
         send_new_trade(trade,
                        is_trader_simulated(get_exchange_manager_from_exchange_name_and_id(exchange, exchange_id)))
