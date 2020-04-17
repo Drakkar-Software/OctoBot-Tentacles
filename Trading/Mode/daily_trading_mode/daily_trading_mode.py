@@ -203,7 +203,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             return 1
 
     # creates a new order (or multiple split orders), always check EvaluatorOrderCreator.can_create_order() first.
-    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state):
+    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
         current_order = None
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
