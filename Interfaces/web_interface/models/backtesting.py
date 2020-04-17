@@ -19,7 +19,8 @@ from asyncio import gather
 from octobot_backtesting.api.backtesting import create_independent_backtesting, \
     initialize_and_run_independent_backtesting, \
     get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
-    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting
+    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting, \
+    check_independent_backtesting_remaining_objects
 from octobot_backtesting.api.data_file_converters import convert_data_file
 from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
 from octobot_backtesting.api.strategy_optimizer import is_optimizer_in_progress
@@ -65,6 +66,8 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
         else:
             if previous_independant_backtesting:
                 run_in_bot_main_loop(stop_independent_backtesting(previous_independant_backtesting))
+                # This step might take a few ms, comment if optimisation is required
+                check_independent_backtesting_remaining_objects(previous_independant_backtesting)
             if reset_tentacle_config:
                 tentacles_setup_config = run_in_bot_main_loop(get_tentacles_setup_config())
             else:

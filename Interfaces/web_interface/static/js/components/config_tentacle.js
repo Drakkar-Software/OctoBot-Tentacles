@@ -195,8 +195,8 @@ const configEditorBody = $("#configEditorBody");
 const configSchema = configEditorBody.attr("schema");
 const configValue = configEditorBody.attr("config");
 
-const parsedConfigSchema = configSchema !== "None" ? $.parseJSON(configSchema) : null;
-const parsedConfigValue = configValue !== "None" ? $.parseJSON(configValue) : null;
+const parsedConfigSchema = configSchema !== "" ? $.parseJSON(configSchema) : null;
+const parsedConfigValue = configValue !== "" ? $.parseJSON(configValue) : null;
 if (canEditConfig){
     fix_config_values(parsedConfigValue)
 }
