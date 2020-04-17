@@ -113,7 +113,7 @@ def _get_advanced_class_details(class_name, klass, media_url, is_trading_mode=Fa
             details[REQUIREMENTS_KEY] = [strategy for strategy in required_strategies]
             details[REQUIREMENTS_COUNT_KEY] = required_strategies_count
         elif is_strategy:
-            details[REQUIREMENTS_KEY] = [evaluator for evaluator in advanced_class.get_required_evaluators(config)]
+            details[REQUIREMENTS_KEY] = [evaluator for evaluator in advanced_class.get_required_evaluators()]
             details[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in advanced_class.get_default_evaluators(config)]
     return details
 
@@ -202,7 +202,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
                 if is_trading_mode:
                     _add_trading_mode_requirements_and_default_config(info, klass)
                 elif tentacle_type == STRATEGY_KEY:
-                    _add_strategy_requirements_and_default_config(info, klass, get_global_config())
+                    _add_strategy_requirements_and_default_config(info, klass)
                 return klass, tentacle_type, info
             else:
                 return klass, tentacle_type, None
@@ -255,9 +255,9 @@ def _get_required_element(elements_config):
     return required_elements
 
 
-def _add_strategy_requirements_and_default_config(desc, klass, config):
-    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(config)]
-    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(config)]
+def _add_strategy_requirements_and_default_config(desc, klass):
+    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators()]
+    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators()]
 
 
 def _add_trading_mode_requirements_and_default_config(desc, klass):
@@ -274,12 +274,11 @@ def _add_trading_mode_requirements_and_default_config(desc, klass):
 
 
 def _add_strategies_requirements(strategies, strategy_config):
-    config = get_global_config()
     required_elements = _get_required_element(strategy_config)
     for classKey, klass in strategies.items():
         if not strategy_config[STRATEGIES_KEY][classKey][ADVANCED_CLASS_KEY]:
             # no need for requirement if advanced class: requirements are already in advanced class
-            _add_strategy_requirements_and_default_config(strategy_config[STRATEGIES_KEY][classKey], klass, config)
+            _add_strategy_requirements_and_default_config(strategy_config[STRATEGIES_KEY][classKey], klass)
         strategy_config[STRATEGIES_KEY][classKey][REQUIRED_KEY] = classKey in required_elements
 
 
