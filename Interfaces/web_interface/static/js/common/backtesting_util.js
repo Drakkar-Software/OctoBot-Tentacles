@@ -52,14 +52,14 @@ function load_report(report, should_alert=False){
             let profitability = data["bot_report"]["profitability"];
             const errors_count = data["errors_count"];
             if ("error" in data || errors_count > 0) {
-                let error_message = "Warning: error(s) during backtesting [";
+                let error_message = "Warning: error(s) during backtesting";
                 if ("error" in data){
                      error_message += " " + data["error"] ;
                 }
                 if (errors_count > 0){
                      error_message += " " + errors_count + " error(s)" ;
                 }
-                error_message += " ], more details in logs.";
+                error_message += ", more details in logs.";
                 profitability = profitability + " " + error_message;
                 if (should_alert) {
                     create_alert("error", error_message, "");
