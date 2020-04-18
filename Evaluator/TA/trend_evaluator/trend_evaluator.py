@@ -103,12 +103,13 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
         self.eval_note = START_PENDING_EVAL_NOTE
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
             get_symbol_close_candles(self.period)
-        current_ema = tulipy.ema(candle_data, self.period)[-1]
-        current_price_close = candle_data[-1]
-        diff = (current_price_close / current_ema * 100) - 100
+        if len(candle_data) >= self.period:
+            current_ema = tulipy.ema(candle_data, self.period)[-1]
+            current_price_close = candle_data[-1]
+            diff = (current_price_close / current_ema * 100) - 100
 
-        if diff <= self.evaluator_config[self.LONG_VALUE]:
-            self.eval_note = -1
-        elif diff >= self.evaluator_config[self.SHORT_VALUE]:
-            self.eval_note = 1
+            if diff <= self.evaluator_config[self.LONG_VALUE]:
+                self.eval_note = -1
+            elif diff >= self.evaluator_config[self.SHORT_VALUE]:
+                self.eval_note = 1
         await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
