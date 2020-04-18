@@ -38,14 +38,15 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
         try:
             candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
                 get_symbol_close_candles(self.period)
-            stochrsi_value = tulipy.stochrsi(drop_nan(candle_data.base), self.period)[-1]
+            if len(candle_data) > self.period:
+                stochrsi_value = tulipy.stochrsi(drop_nan(candle_data), self.period)[-1]
 
-            if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
-                self.eval_note = 1
-            elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.evaluator_config[self.LOW_LEVEL]:
-                self.eval_note = -1
-            else:
-                self.eval_note = stochrsi_value - 0.5
+                if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
+                    self.eval_note = 1
+                elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.evaluator_config[self.LOW_LEVEL]:
+                    self.eval_note = -1
+                else:
+                    self.eval_note = stochrsi_value - 0.5
         except InvalidOptionError as e:
             self.logger.debug(f"Error when computing StochRSI: {e}")
             self.logger.exception(e)

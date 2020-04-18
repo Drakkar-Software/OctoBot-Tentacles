@@ -36,7 +36,7 @@ class RSIMomentumEvaluator(TAEvaluator):
         period_length = 14
         candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
             get_symbol_close_candles()
-        if candle_data is not None and len(candle_data) >= period_length:
+        if candle_data is not None and len(candle_data) > period_length:
             rsi_v = tulipy.rsi(candle_data, period=period_length)
 
             if len(rsi_v) and not math.isnan(rsi_v[-1]):
@@ -204,10 +204,10 @@ class ADXMomentumEvaluator(TAEvaluator):
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
         period_length = 14
-        minimal_data = period_length + 11
+        minimal_data = period_length + 10
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
         close_candles = symbol_candles.get_symbol_close_candles()
-        if len(close_candles) >= period_length + 10:
+        if len(close_candles) >= minimal_data:
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
@@ -336,36 +336,38 @@ class KlingerOscillatorMomentumEvaluator(TAEvaluator):
         long_period = 55     # standard with klinger
         ema_signal_period = 13  # standard ema signal for klinger
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
-        kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
-                         symbol_candles.get_symbol_low_candles(),
-                         symbol_candles.get_symbol_close_candles(),
-                         symbol_candles.get_symbol_volume_candles(),
-                         short_period,
-                         long_period)
-        kvo = drop_nan(kvo)
-        if len(kvo) >= ema_signal_period:
-            kvo_ema = tulipy.ema(kvo, ema_signal_period)
+        high_candles = symbol_candles.get_symbol_high_candles()
+        if len(high_candles) >= short_period:
+            kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
+                             symbol_candles.get_symbol_low_candles(),
+                             symbol_candles.get_symbol_close_candles(),
+                             symbol_candles.get_symbol_volume_candles(),
+                             short_period,
+                             long_period)
+            kvo = drop_nan(kvo)
+            if len(kvo) >= ema_signal_period:
+                kvo_ema = tulipy.ema(kvo, ema_signal_period)
 
-            ema_difference = kvo-kvo_ema
+                ema_difference = kvo-kvo_ema
 
-            if len(ema_difference) > 1:
-                zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
+                if len(ema_difference) > 1:
+                    zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
 
-                current_difference = ema_difference[-1]
-                significant_move_threshold = numpy.std(ema_difference)
+                    current_difference = ema_difference[-1]
+                    significant_move_threshold = numpy.std(ema_difference)
 
-                factor = 0.2
+                    factor = 0.2
 
-                if TrendAnalysis.peak_has_been_reached_already(ema_difference[zero_crossing_indexes[-1]:]):
-                    if abs(current_difference) > significant_move_threshold:
-                        factor = 1
-                    else:
-                        factor = 0.5
+                    if TrendAnalysis.peak_has_been_reached_already(ema_difference[zero_crossing_indexes[-1]:]):
+                        if abs(current_difference) > significant_move_threshold:
+                            factor = 1
+                        else:
+                            factor = 0.5
 
-                eval_proposition = current_difference*factor/significant_move_threshold
+                    eval_proposition = current_difference*factor/significant_move_threshold
 
-                if abs(eval_proposition) > 1:
-                    eval_proposition = 1 if eval_proposition > 0 else -1
+                    if abs(eval_proposition) > 1:
+                        eval_proposition = 1 if eval_proposition > 0 else -1
 
         self.eval_note = eval_proposition
         await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
@@ -383,22 +385,24 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(TAEvaluator):
         long_period = 55     # standard with klinger
         ema_signal_period = 13  # standard ema signal for klinger
         symbol_candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
-        kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
-                         symbol_candles.get_symbol_low_candles(),
-                         symbol_candles.get_symbol_close_candles(),
-                         symbol_candles.get_symbol_volume_candles(),
-                         short_period,
-                         long_period)
-        kvo = drop_nan(kvo)
-        if len(kvo) >= ema_signal_period:
+        high_candles = symbol_candles.get_symbol_high_candles()
+        if len(high_candles) >= short_period:
+            kvo = tulipy.kvo(symbol_candles.get_symbol_high_candles(),
+                             symbol_candles.get_symbol_low_candles(),
+                             symbol_candles.get_symbol_close_candles(),
+                             symbol_candles.get_symbol_volume_candles(),
+                             short_period,
+                             long_period)
+            kvo = drop_nan(kvo)
+            if len(kvo) >= ema_signal_period:
 
-            kvo_ema = tulipy.ema(kvo, ema_signal_period)
-            ema_difference = kvo-kvo_ema
+                kvo_ema = tulipy.ema(kvo, ema_signal_period)
+                ema_difference = kvo-kvo_ema
 
-            if len(ema_difference) > 1:
-                zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
-                max_elements = 7
-                to_consider_kvo = min(max_elements, len(ema_difference)-zero_crossing_indexes[-1])
-                self.eval_note = TrendAnalysis.min_has_just_been_reached(ema_difference[-to_consider_kvo:],
-                                                                         acceptance_window=0.9, delay=1)
+                if len(ema_difference) > 1:
+                    zero_crossing_indexes = TrendAnalysis.get_threshold_change_indexes(ema_difference, 0)
+                    max_elements = 7
+                    to_consider_kvo = min(max_elements, len(ema_difference)-zero_crossing_indexes[-1])
+                    self.eval_note = TrendAnalysis.min_has_just_been_reached(ema_difference[-to_consider_kvo:],
+                                                                             acceptance_window=0.9, delay=1)
         await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
