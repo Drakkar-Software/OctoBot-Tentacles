@@ -36,7 +36,7 @@ class TestKlingerTAEvaluator(AbstractTATest):
 
     @staticmethod
     async def test_stress_test(evaluator_tester):
-        await evaluator_tester.run_stress_test_without_exceptions(0.7, False)
+        await evaluator_tester.run_stress_test_without_exceptions(0.7, False, skip_long_time_frames=True)
 
     @staticmethod
     async def test_reactions_to_dump(evaluator_tester):
