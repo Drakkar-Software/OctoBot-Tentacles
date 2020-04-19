@@ -347,10 +347,6 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
-        if time_frame is None:
-            # Do nothing, requires a time frame
-            return
-
         strategies_analysis_note_counter = 0
 
         try:
@@ -378,48 +374,44 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
 
         if strategies_analysis_note_counter > 0:
             self.final_eval = evaluation / strategies_analysis_note_counter
-            await self.create_state(cryptocurrency=cryptocurrency, symbol=symbol, time_frame=time_frame)
+            await self.create_state(cryptocurrency=cryptocurrency, symbol=symbol)
 
     def _get_delta_risk(self):
         return self.RISK_THRESHOLD * self.exchange_manager.trader.risk
 
-    async def create_state(self, cryptocurrency: str, symbol: str, time_frame):
+    async def create_state(self, cryptocurrency: str, symbol: str):
         delta_risk = self._get_delta_risk()
 
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
-                                  time_frame=time_frame,
                                   new_state=EvaluatorStates.VERY_LONG)
         elif self.final_eval < self.LONG_THRESHOLD + delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
-                                  time_frame=time_frame,
                                   new_state=EvaluatorStates.LONG)
         elif self.final_eval < self.NEUTRAL_THRESHOLD - delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
-                                  time_frame=time_frame,
                                   new_state=EvaluatorStates.NEUTRAL)
         elif self.final_eval < self.SHORT_THRESHOLD - delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
-                                  time_frame=time_frame,
                                   new_state=EvaluatorStates.SHORT)
         else:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
-                                  time_frame=time_frame,
                                   new_state=EvaluatorStates.VERY_SHORT)
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):
         return True
 
-    async def _set_state(self, cryptocurrency: str, symbol: str, time_frame, new_state):
+    async def _set_state(self, cryptocurrency: str, symbol: str, new_state):
         if new_state != self.state:
             # previous_state = self.state
             self.state = new_state
+            self.logger.info(f"[{symbol}] new state: {self.state.name}")
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not EvaluatorStates.NEUTRAL:
@@ -429,7 +421,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
                                                      symbol=symbol,
-                                                     time_frame=time_frame,
+                                                     time_frame=None,
                                                      final_note=self.final_eval,
                                                      state=self.state)
 

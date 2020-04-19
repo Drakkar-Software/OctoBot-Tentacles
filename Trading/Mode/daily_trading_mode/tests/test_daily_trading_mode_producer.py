@@ -79,55 +79,55 @@ async def test_set_state():
     producer, consumer, trader = await _get_tools(symbol)
 
     producer.final_eval = 0
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.NEUTRAL)
+    await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
     assert producer.state == EvaluatorStates.NEUTRAL
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 0))
 
     producer.final_eval = -1
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.VERY_LONG)
+    await producer._set_state(currency, symbol, EvaluatorStates.VERY_LONG)
     assert producer.state == EvaluatorStates.VERY_LONG
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = 0
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.NEUTRAL)
+    await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = 1
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.VERY_SHORT)
+    await producer._set_state(currency, symbol, EvaluatorStates.VERY_SHORT)
     assert producer.state == EvaluatorStates.VERY_SHORT
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = 0
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.NEUTRAL)
+    await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
     assert producer.state == EvaluatorStates.NEUTRAL
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = -0.5
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.LONG)
+    await producer._set_state(currency, symbol, EvaluatorStates.LONG)
     assert producer.state == EvaluatorStates.LONG
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = 0
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.NEUTRAL)
+    await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
     assert producer.state == EvaluatorStates.NEUTRAL
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 1))
 
     producer.final_eval = 0.5
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.SHORT)
+    await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
     assert producer.state == EvaluatorStates.SHORT
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 2))  # has stop loss
     # await task
 
     producer.final_eval = 0
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.NEUTRAL)
+    await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
     assert producer.state == EvaluatorStates.NEUTRAL
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 2))
@@ -171,7 +171,7 @@ async def test_set_final_eval():
     producer, consumer, trader = await _get_tools()
     matrix_id = create_matrix()
 
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.SHORT)
+    await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
     assert producer.state == EvaluatorStates.SHORT
     await create_task(_check_open_orders_count(trader, 2))  # has stop loss
     producer.final_eval = "val"
@@ -186,18 +186,17 @@ async def test_set_final_eval():
 async def test_finalize():
     currency = "BTC"
     symbol = "BTC/USDT"
-    time_frame = "1h"
     producer, consumer, trader = await _get_tools()
     matrix_id = create_matrix()
 
     await producer.finalize(get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol, time_frame)
     assert producer.final_eval == INIT_EVAL_NOTE
 
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.SHORT)
+    await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
     assert producer.state == EvaluatorStates.SHORT
     await create_task(_check_open_orders_count(trader, 2))  # has stop loss
 
-    await producer._set_state(currency, symbol, time_frame, EvaluatorStates.SHORT)
+    await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
     await create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders because neutral state
 
     await stop(trader)
