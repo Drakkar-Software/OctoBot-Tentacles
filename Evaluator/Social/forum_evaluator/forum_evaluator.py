@@ -47,8 +47,16 @@ class RedditForumEvaluator(SocialEvaluator):
         """
         return False
 
+    @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return False
+
     def _print_entry(self, entry_text, entry_note, count=""):
-        self.logger.debug(f"New reddit entry ! : {entry_note} | {count} : {self.cryptocurrency} : Link : {entry_text}")
+        self.logger.debug(f"New reddit entry ! : {entry_note} | {count} : {self.cryptocurrency_name} : "
+                          f"Link : {entry_text}")
 
     async def _feed_callback(self, data):
         if self._is_interested_by_this_notification(data[FEED_METADATA]):
@@ -73,7 +81,7 @@ class RedditForumEvaluator(SocialEvaluator):
     def _is_interested_by_this_notification(self, notification_description):
         # true if the given subreddit is in this cryptocurrency's subreddits configuration
         if self.specific_config[CONFIG_REDDIT_SUBREDDITS]:
-            for subreddit in self.specific_config[CONFIG_REDDIT_SUBREDDITS][self.cryptocurrency]:
+            for subreddit in self.specific_config[CONFIG_REDDIT_SUBREDDITS][self.cryptocurrency_name]:
                 if subreddit.lower() == notification_description:
                     return True
         return False
@@ -81,7 +89,7 @@ class RedditForumEvaluator(SocialEvaluator):
     def _get_config_elements(self, key):
         if CONFIG_CRYPTO_CURRENCIES in self.specific_config and self.specific_config[CONFIG_CRYPTO_CURRENCIES]:
             return {cc[CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in self.specific_config[CONFIG_CRYPTO_CURRENCIES]
-                    if cc[CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency}
+                    if cc[CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name}
         return {}
 
     def _format_config(self):
