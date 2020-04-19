@@ -21,6 +21,7 @@ from octobot_commons.constants import CONFIG_TIME_FRAME, START_PENDING_EVAL_NOTE
 from octobot_commons.enums import PriceIndexes
 from octobot_commons.channels_name import OctoBotTradingChannelsName
 from octobot_evaluators.evaluator.realtime_evaluator import RealTimeEvaluator
+from octobot_evaluators.util.evaluation_util import get_eval_time
 
 
 class InstantFluctuationsEvaluator(RealTimeEvaluator):
@@ -46,14 +47,14 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
         self.last_volume = 0
 
         # Constants
-        self.TIME_FRAME = self.specific_config[CONFIG_TIME_FRAME]
+        self.time_frame = self.specific_config[CONFIG_TIME_FRAME]
         self.VOLUME_HAPPENING_THRESHOLD = 1 + (self.specific_config[self.VOLUME_THRESHOLD_KEY] / 100)
         self.PRICE_HAPPENING_THRESHOLD = self.specific_config[self.PRICE_THRESHOLD_KEY] / 100
         self.MIN_TRIGGERING_DELTA = 0.15
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
-                             cryptocurrency: str, symbol: str,  time_frame, candle):
+                             cryptocurrency: str, symbol: str, time_frame, candle):
         volume_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
             get_symbol_volume_candles(self.candle_segments[0])
         close_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
@@ -66,20 +67,21 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
 
         self.last_volume = volume_data[-1]
         self.last_price = close_data[-1]
-        await self._trigger_evaluation(symbol)
+        await self._trigger_evaluation(cryptocurrency, symbol, get_eval_time(full_candle=candle, time_frame=time_frame))
 
     async def kline_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, kline):
         self.last_volume = kline[PriceIndexes.IND_PRICE_VOL.value]
         self.last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
-        await self._trigger_evaluation(symbol)
+        await self._trigger_evaluation(cryptocurrency, symbol, get_eval_time(kline=kline))
 
-    async def _trigger_evaluation(self, symbol):
+    async def _trigger_evaluation(self, cryptocurrency, symbol, time):
         self.evaluate_volume_fluctuations()
         if self.something_is_happening and self.eval_note != START_PENDING_EVAL_NOTE:
             if abs(self.last_notification_eval - self.eval_note) >= self.MIN_TRIGGERING_DELTA:
                 self.last_notification_eval = self.eval_note
-                await self.evaluation_completed(self.cryptocurrency, symbol)
+                await self.evaluation_completed(cryptocurrency, symbol, self.time_frame,
+                                                eval_time=time)
             self.something_is_happening = False
         else:
             self.eval_note = START_PENDING_EVAL_NOTE
@@ -130,9 +132,9 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, symbol=self.symbol, time_frame=self.TIME_FRAME)
+                callback=self.ohlcv_callback, symbol=self.symbol, time_frame=self.time_frame)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, symbol=self.symbol, time_frame=self.TIME_FRAME)
+                callback=self.kline_callback, symbol=self.symbol, time_frame=self.time_frame)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
@@ -160,7 +162,7 @@ class InstantMAEvaluator(RealTimeEvaluator):
         self.time_frame = self.specific_config[CONFIG_TIME_FRAME]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
-                             cryptocurrency: str, symbol: str,  time_frame, candle):
+                             cryptocurrency: str, symbol: str, time_frame, candle):
         self.eval_note = 0
         new_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame). \
             get_symbol_close_candles(20)
@@ -171,7 +173,8 @@ class InstantMAEvaluator(RealTimeEvaluator):
             if len(self.last_candle_data[symbol]) > self.period:
                 self.last_moving_average_values[symbol] = tulipy.sma(self.last_candle_data[symbol],
                                                                      self.period)
-                await self._evaluate_current_price(self.last_candle_data[symbol][-1], symbol)
+                await self._evaluate_current_price(self.last_candle_data[symbol][-1], cryptocurrency, symbol,
+                                                   get_eval_time(full_candle=candle, time_frame=time_frame))
 
     async def kline_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, kline):
@@ -179,9 +182,9 @@ class InstantMAEvaluator(RealTimeEvaluator):
             self.eval_note = 0
             last_price = kline[PriceIndexes.IND_PRICE_CLOSE.value]
             if last_price != self.last_candle_data[symbol][-1]:
-                await self._evaluate_current_price(last_price, symbol)
+                await self._evaluate_current_price(last_price, cryptocurrency, symbol, get_eval_time(kline=kline))
 
-    async def _evaluate_current_price(self, last_price, symbol):
+    async def _evaluate_current_price(self, last_price, cryptocurrency, symbol, time):
         last_ma_value = self.last_moving_average_values[symbol][-1]
         if last_ma_value == 0:
             self.eval_note = 0
@@ -199,7 +202,8 @@ class InstantMAEvaluator(RealTimeEvaluator):
             else:
                 self.eval_note = 0
 
-        await self.evaluation_completed(self.cryptocurrency, symbol)
+        await self.evaluation_completed(cryptocurrency, symbol, self.time_frame,
+                                        eval_time=time)
 
     async def start(self, bot_id: str) -> bool:
         """
