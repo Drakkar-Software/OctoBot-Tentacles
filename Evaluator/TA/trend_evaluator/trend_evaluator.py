@@ -21,6 +21,7 @@ import math
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_commons.data_util import drop_nan, normalize_data
 from octobot_evaluators.evaluator import TAEvaluator
+from octobot_evaluators.util.evaluation_util import get_eval_time
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
 from tentacles.Evaluator.Util import TrendAnalysis
 
@@ -45,7 +46,8 @@ class DoubleMovingAverageTrendEvaluator(TAEvaluator):
 
             if self.eval_note == 0:
                 self.eval_note = START_PENDING_EVAL_NOTE
-            await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=get_eval_time(full_candle=candle, time_frame=time_frame))
 
     # < 0 --> Current average bellow other one (computed using time_period)
     # > 0 --> Current average above other one (computed using time_period)
@@ -112,4 +114,5 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
                 self.eval_note = -1
             elif diff >= self.evaluator_config[self.SHORT_VALUE]:
                 self.eval_note = 1
-        await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=get_eval_time(full_candle=candle, time_frame=time_frame))

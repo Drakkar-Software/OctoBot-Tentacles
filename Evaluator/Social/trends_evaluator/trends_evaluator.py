@@ -39,6 +39,13 @@ class GoogleTrendsEvaluator(SocialEvaluator):
         """
         return False
 
+    @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return False
+
     async def _feed_callback(self, data):
         if self._is_interested_by_this_notification(data[FEED_METADATA]):
             trend = numpy.array([d["data"] for d in data[CONFIG_TREND]])
@@ -47,13 +54,13 @@ class GoogleTrendsEvaluator(SocialEvaluator):
             await self.evaluation_completed(self.cryptocurrency)
 
     def _is_interested_by_this_notification(self, notification_description):
-        return self.cryptocurrency in notification_description
+        return self.cryptocurrency_name in notification_description
 
     def _build_trend_topics(self):
         trend_time_frame = f"today {str(self.specific_config[CONFIG_TREND_HISTORY_TIME])}-m"
         return [
             TrendTopic(self.specific_config[CONFIG_REFRESH_RATE],
-                       [self.cryptocurrency],
+                       [self.cryptocurrency_name],
                        time_frame=trend_time_frame)
         ]
 
