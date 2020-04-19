@@ -51,4 +51,4 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
             self.logger.debug(f"Error when computing StochRSI: {e}")
             self.logger.exception(e)
             self.eval_note = START_PENDING_EVAL_NOTE
-        await self.evaluation_completed(self.cryptocurrency, symbol, time_frame)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame)

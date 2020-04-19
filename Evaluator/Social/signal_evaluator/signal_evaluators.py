@@ -63,8 +63,28 @@ class TelegramSignalEvaluator(SocialEvaluator):
         return False
 
     @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return False
+
+    @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
         """
         :return: True if the evaluator is not symbol dependant else False
         """
         return False
+
+    def _get_tentacle_registration_topic(self, all_symbols_by_crypto_currencies, time_frames, real_time_time_frames):
+        currencies = [self.cryptocurrency]
+        symbols = [self.symbol]
+        to_handle_time_frames = [self.time_frame]
+        if self.get_is_cryptocurrencies_wildcard():
+            currencies = all_symbols_by_crypto_currencies.keys()
+        if self.get_is_symbol_wildcard():
+            symbols = []
+            for currency_symbols in all_symbols_by_crypto_currencies.values():
+                symbols += currency_symbols
+        # by default no time frame registration for social evaluators
+        return currencies, symbols, to_handle_time_frames

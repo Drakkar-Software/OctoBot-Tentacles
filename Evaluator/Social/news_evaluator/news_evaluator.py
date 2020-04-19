@@ -46,8 +46,15 @@ class TwitterNewsEvaluator(SocialEvaluator):
         """
         return False
 
+    @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return False
+
     def _print_tweet(self, tweet_text, tweet_url, note, count=""):
-        self.logger.debug(f"Current note : {note} | {count} : {self.cryptocurrency} : Link: {tweet_url} Text : "
+        self.logger.debug(f"Current note : {note} | {count} : {self.cryptocurrency_name} : Link: {tweet_url} Text : "
                           f"{tweet_text.encode('utf-8', 'ignore')}")
 
     async def _feed_callback(self, data):
@@ -81,8 +88,8 @@ class TwitterNewsEvaluator(SocialEvaluator):
                     else padding_name
                 author_name = tweet['user']['name'] if "name" in tweet['user'] else padding_name
                 if self.specific_config[CONFIG_TWITTERS_ACCOUNTS]:
-                    if author_screen_name in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency] \
-                       or author_name in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency]:
+                    if author_screen_name in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency_name] \
+                       or author_name in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency_name]:
                         return -1 * self.sentiment_analyser.analyse(tweet_text)
         except KeyError:
             pass
@@ -93,7 +100,7 @@ class TwitterNewsEvaluator(SocialEvaluator):
     def _is_interested_by_this_notification(self, notification_description):
         # true if in twitter accounts
         if self.specific_config[CONFIG_TWITTERS_ACCOUNTS]:
-            for account in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency]:
+            for account in self.specific_config[CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency_name]:
                 if account.lower() in notification_description:
                     return True
 
@@ -102,12 +109,12 @@ class TwitterNewsEvaluator(SocialEvaluator):
             return False
 
         # true if contains symbol
-        if self.cryptocurrency.lower() in notification_description:
+        if self.cryptocurrency_name.lower() in notification_description:
             return True
 
         # true if in hashtags
         if self.specific_config[CONFIG_TWITTERS_HASHTAGS]:
-            for hashtags in self.specific_config[CONFIG_TWITTERS_HASHTAGS][self.cryptocurrency]:
+            for hashtags in self.specific_config[CONFIG_TWITTERS_HASHTAGS][self.cryptocurrency_name]:
                 if hashtags.lower() in notification_description:
                     return True
             return False
@@ -115,7 +122,7 @@ class TwitterNewsEvaluator(SocialEvaluator):
     def _get_config_elements(self, key):
         if CONFIG_CRYPTO_CURRENCIES in self.specific_config and self.specific_config[CONFIG_CRYPTO_CURRENCIES]:
             return {cc[CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in self.specific_config[CONFIG_CRYPTO_CURRENCIES]
-                    if cc[CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency}
+                    if cc[CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name}
         return {}
 
     def _format_config(self):
