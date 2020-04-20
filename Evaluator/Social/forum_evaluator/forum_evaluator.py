@@ -67,8 +67,8 @@ class RedditForumEvaluator(SocialEvaluator):
                 if data[CONFIG_REDDIT_ENTRY_WEIGHT] > 3:
                     link = f"https://www.reddit.com{data[CONFIG_REDDIT_ENTRY].permalink}"
                     self._print_entry(link, entry_note, str(self.count))
-            self.eval_note = self.overall_state_analyser.get_overall_state_after_refresh()
-            await self.evaluation_completed(self.cryptocurrency)
+                self.eval_note = self.overall_state_analyser.get_overall_state_after_refresh()
+                await self.evaluation_completed(self.cryptocurrency, eval_time=self.get_current_exchange_time())
 
     def _get_sentiment(self, entry):
         # analysis entry text and gives overall sentiment
