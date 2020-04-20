@@ -13,14 +13,15 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import tulipy
 from tulipy.lib import InvalidOptionError
 
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_commons.data_util import drop_nan
 from octobot_evaluators.evaluator import TAEvaluator
+from octobot_evaluators.util.evaluation_util import get_eval_time
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
+from octobot_trading.api.symbol_data import get_symbol_close_candles
 
 
 class StochasticRSIVolatilityEvaluator(TAEvaluator):
@@ -34,10 +35,14 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
         self.evaluator_config = get_tentacle_config(self.__class__)
         self.period = self.evaluator_config[self.STOCHRSI_PERIOD]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
+    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
+                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
+                                               include_in_construction=inc_in_construction_data)
+        await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         try:
-            candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-                get_symbol_close_candles(self.period)
             if len(candle_data) > self.period:
                 stochrsi_value = tulipy.stochrsi(drop_nan(candle_data), self.period)[-1]
 
@@ -51,4 +56,5 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
             self.logger.debug(f"Error when computing StochRSI: {e}")
             self.logger.exception(e)
             self.eval_note = START_PENDING_EVAL_NOTE
-        await self.evaluation_completed(cryptocurrency, symbol, time_frame)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=get_eval_time(full_candle=candle, time_frame=time_frame))
