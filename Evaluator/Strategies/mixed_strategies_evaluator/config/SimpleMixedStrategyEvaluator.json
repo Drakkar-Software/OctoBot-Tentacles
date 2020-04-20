@@ -11,5 +11,10 @@
         "4h",
         "1d",
         "1w"
+    ],
+    "social_evaluators_notification_timeout": 3600,
+    "re_evaluate_TA_when_social_or_realtime_notification": true,
+    "background_social_evaluators": [
+      "RedditForumEvaluator"
     ]
 }
