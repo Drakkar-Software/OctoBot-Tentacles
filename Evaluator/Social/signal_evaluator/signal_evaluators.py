@@ -26,7 +26,8 @@ class TelegramSignalEvaluator(SocialEvaluator):
     async def _feed_callback(self, data):
         if self._is_interested_by_this_notification(data[CONFIG_GROUP_MESSAGE_DESCRIPTION]):
             await self.analyse_notification(data)
-            await self.evaluation_completed(self.cryptocurrency, self.symbol)
+            await self.evaluation_completed(self.cryptocurrency, self.symbol,
+                                            eval_time=self.get_current_exchange_time())
 
     # return true if the given notification is relevant for this client
     def _is_interested_by_this_notification(self, notification_description):
