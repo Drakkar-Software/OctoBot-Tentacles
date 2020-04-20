@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import tulipy
 import numpy
 import math
@@ -23,19 +22,27 @@ from octobot_commons.data_util import drop_nan, normalize_data
 from octobot_evaluators.evaluator import TAEvaluator
 from octobot_evaluators.util.evaluation_util import get_eval_time
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
+from octobot_trading.api.symbol_data import get_symbol_close_candles
 from tentacles.Evaluator.Util import TrendAnalysis
 
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(TAEvaluator):
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
+    def __init__(self):
+        super().__init__()
+        self.long_period_length = 10
+
+    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
+                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
+                                               include_in_construction=inc_in_construction_data)
+        await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
-        long_period_length = 10
-        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(-1)
-        if len(candle_data) >= long_period_length:
-            time_units = [5, long_period_length]
+        if len(candle_data) >= self.long_period_length:
+            time_units = [5, self.long_period_length]
             current_moving_average = tulipy.sma(candle_data, 2)
             results = [self.get_moving_average_analysis(candle_data, current_moving_average, time_unit)
                        for time_unit in time_units]
@@ -101,10 +108,14 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
         self.evaluator_config = get_tentacle_config(self.__class__)
         self.period = self.evaluator_config[self.EMA_SIZE]
 
-    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,  time_frame, candle):
+    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
+                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
+                                               include_in_construction=inc_in_construction_data)
+        await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
-        candle_data = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame).\
-            get_symbol_close_candles(self.period)
         if len(candle_data) >= self.period:
             current_ema = tulipy.ema(candle_data, self.period)[-1]
             current_price_close = candle_data[-1]
