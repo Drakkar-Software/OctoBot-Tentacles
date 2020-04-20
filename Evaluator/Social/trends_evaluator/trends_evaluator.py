@@ -51,7 +51,7 @@ class GoogleTrendsEvaluator(SocialEvaluator):
             trend = numpy.array([d["data"] for d in data[CONFIG_TREND]])
             # compute bollinger bands
             self.eval_note = self.stats_analyser.analyse_recent_trend_changes(trend, numpy.sqrt)
-            await self.evaluation_completed(self.cryptocurrency)
+            await self.evaluation_completed(self.cryptocurrency, eval_time=self.get_current_exchange_time())
 
     def _is_interested_by_this_notification(self, notification_description):
         return self.cryptocurrency_name in notification_description
