@@ -72,7 +72,7 @@ class TwitterNewsEvaluator(SocialEvaluator):
             if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
                 self.eval_note = note
                 self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                await self.evaluation_completed(self.cryptocurrency)
+                await self.evaluation_completed(self.cryptocurrency, eval_time=self.get_current_exchange_time())
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
