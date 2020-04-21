@@ -33,8 +33,9 @@ class DoubleMovingAverageTrendEvaluator(TAEvaluator):
         super().__init__()
         self.long_period_length = 10
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        # self.logger.info(f"ohlcv_callback {time_frame}")
         candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
                                                include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
@@ -108,8 +109,8 @@ class EMADivergenceTrendEvaluator(TAEvaluator):
         self.evaluator_config = get_tentacle_config(self.__class__)
         self.period = self.evaluator_config[self.EMA_SIZE]
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
                                                include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
