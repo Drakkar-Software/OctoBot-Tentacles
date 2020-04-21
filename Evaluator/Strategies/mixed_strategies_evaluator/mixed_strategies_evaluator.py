@@ -16,13 +16,15 @@
 from octobot_commons.constants import START_PENDING_EVAL_NOTE, HOURS_TO_SECONDS
 from octobot_commons.enums import TimeFrames
 from octobot_commons.evaluators_util import check_valid_eval_note
+from octobot_evaluators.api.matrix import get_value, get_type, get_time
 from octobot_evaluators.channels.evaluator_channel import trigger_technical_evaluators_re_evaluation_with_updated_data
 from octobot_evaluators.enums import EvaluatorMatrixTypes
 from octobot_evaluators.errors import UnsetTentacleEvaluation
 from octobot_evaluators.evaluator import StrategyEvaluator, EVALUATOR_EVAL_DEFAULT_TYPE, \
-    TA_LOOP_CALLBACK, Evaluation
+    TA_LOOP_CALLBACK
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
-from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
+from octobot_trading.api.exchange import get_exchange_id_from_matrix_id, get_exchange_current_time, \
+    get_exchange_manager_from_exchange_name_and_id
 
 
 class SimpleMixedStrategyEvaluator(StrategyEvaluator):
@@ -50,7 +52,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                               evaluator_type,
                               eval_note,
                               eval_note_type,
-                              eval_time,
                               exchange_name,
                               cryptocurrency,
                               symbol,
@@ -68,7 +69,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                                evaluator_type,
                                                eval_note,
                                                eval_note_type,
-                                               eval_time,
                                                exchange_name,
                                                cryptocurrency,
                                                available_symbol,
@@ -80,7 +80,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                            evaluator_type,
                                            eval_note,
                                            eval_note_type,
-                                           eval_time,
                                            exchange_name,
                                            cryptocurrency,
                                            symbol,
@@ -90,7 +89,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                                         matrix_id,
                                                         update_source,
                                                         evaluator_type,
-                                                        current_time,
                                                         exchange_name,
                                                         cryptocurrency,
                                                         symbol,
@@ -104,7 +102,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                        evaluator_type,
                                        None,
                                        None,
-                                       current_time,
                                        exchange_name,
                                        cryptocurrency,
                                        symbol,
@@ -116,7 +113,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                   evaluator_type,
                                   eval_note,
                                   eval_note_type,
-                                  eval_time,
                                   exchange_name,
                                   cryptocurrency,
                                   symbol,
@@ -162,11 +158,11 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                     available_time_frame)
                 for available_time_frame in available_rt_time_frames
             }
-
             if self.re_evaluate_TA_when_social_or_realtime_notification and evaluator_name != TA_LOOP_CALLBACK \
                     and evaluator_type in self.re_evaluation_triggering_eval_types \
                     and evaluator_name not in self.background_social_evaluators:
-                if Evaluation(evaluator_name, eval_note, eval_note_type, eval_time).is_valid_evaluation():
+                if check_valid_eval_note(eval_note, eval_type=eval_note_type,
+                                         expected_eval_type=EVALUATOR_EVAL_DEFAULT_TYPE):
                     # trigger re-evaluation
                     exchange_id = get_exchange_id_from_matrix_id(exchange_name, matrix_id)
                     await trigger_technical_evaluators_re_evaluation_with_updated_data(matrix_id,
@@ -182,21 +178,35 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
 
             for eval_by_rt in RT_evaluations_by_time_frame.values():
                 for evaluation in eval_by_rt.values():
-                    if evaluation.is_valid_evaluation():
-                        self.evaluation += evaluation.evaluation_value
+                    eval_value = get_value(evaluation)
+                    if check_valid_eval_note(eval_value, eval_type=get_type(evaluation),
+                                             expected_eval_type=EVALUATOR_EVAL_DEFAULT_TYPE):
+                        self.evaluation += eval_value
                         self.counter += 1
 
             for eval_by_ta in TA_by_timeframe.values():
                 for evaluation in eval_by_ta.values():
-                    if evaluation.is_valid_evaluation():
-                        self.evaluation += evaluation.evaluation_value
+                    eval_value = get_value(evaluation)
+                    if check_valid_eval_note(eval_value, eval_type=get_type(evaluation),
+                                             expected_eval_type=EVALUATOR_EVAL_DEFAULT_TYPE):
+                        self.evaluation += eval_value
                         self.counter += 1
 
-            for evaluation in social_evaluations_by_evaluator.values():
-                if evaluation.is_valid_evaluation(expiry_delay=self.social_evaluators_default_timeout,
-                                                  current_time=eval_time):
-                    self.evaluation += evaluation.evaluation_value
-                    self.counter += 1
+            if social_evaluations_by_evaluator:
+                exchange_manager = get_exchange_manager_from_exchange_name_and_id(
+                    exchange_name,
+                    get_exchange_id_from_matrix_id(exchange_name, self.matrix_id)
+                )
+                current_time = get_exchange_current_time(exchange_manager)
+                for evaluation in social_evaluations_by_evaluator.values():
+                    eval_value = get_value(evaluation)
+                    if check_valid_eval_note(eval_value, eval_type=get_type(evaluation),
+                                             expected_eval_type=EVALUATOR_EVAL_DEFAULT_TYPE,
+                                             eval_time=get_time(evaluation),
+                                             expiry_delay=self.social_evaluators_default_timeout,
+                                             current_time=current_time):
+                        self.evaluation += eval_value
+                        self.counter += 1
 
             if self.counter > 0:
                 self.eval_note = self.evaluation / self.counter
