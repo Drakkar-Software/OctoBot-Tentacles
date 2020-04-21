@@ -36,8 +36,8 @@ class RSIMomentumEvaluator(TAEvaluator):
         self.pertinence = 1
         self.period_length = 14
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
                                                include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
@@ -138,14 +138,14 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
             self.logger.error(f"Error when reading from config file: missing {e}")
         return None, None
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_dat):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         # compute the slow and fast RSI average
         slow_rsi, fast_rsi, rsi_v = self._get_rsi_averages(symbol_candles, time_frame,
-                                                           include_in_construction=inc_in_construction_dat)
+                                                           include_in_construction=inc_in_construction_data)
         current_candle_time = get_symbol_time_candles(symbol_candles, time_frame,
-                                                      include_in_construction=inc_in_construction_dat)[-1]
+                                                      include_in_construction=inc_in_construction_data)[-1]
         await self.evaluate(cryptocurrency, symbol, time_frame, slow_rsi,
                             fast_rsi, rsi_v, current_candle_time, candle)
 
@@ -175,8 +175,8 @@ class BBMomentumEvaluator(TAEvaluator):
         super().__init__()
         self.period_length = 20
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
                                                self.period_length, include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
@@ -239,8 +239,8 @@ class ADXMomentumEvaluator(TAEvaluator):
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
     # idea: adx > 30 => strong trend, < 20 => trend change to come
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         close_candles = get_symbol_close_candles(symbol_candles, time_frame,
                                                  include_in_construction=inc_in_construction_data)
@@ -345,8 +345,8 @@ class MACDMomentumEvaluator(TAEvaluator):
 
         self.eval_note = sign_multiplier * weight * average_pattern_period
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame,
                                                include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
@@ -392,8 +392,8 @@ class KlingerOscillatorMomentumEvaluator(TAEvaluator):
         self.long_period = 55     # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         high_candles = get_symbol_high_candles(symbol_candles, time_frame,
                                                include_in_construction=inc_in_construction_data)
@@ -460,8 +460,8 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(TAEvaluator):
     def get_eval_type():
         return bool
 
-    async def inner_ohlcv_callback(self, exchange: str, exchange_id: str,
-                                   cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         high_candles = get_symbol_high_candles(symbol_candles, time_frame,
                                                include_in_construction=inc_in_construction_data)
