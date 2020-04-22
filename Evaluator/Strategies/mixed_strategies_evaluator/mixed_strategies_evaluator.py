@@ -18,10 +18,10 @@ from octobot_commons.enums import TimeFrames
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_evaluators.api.matrix import get_value, get_type, get_time
 from octobot_evaluators.channels.evaluator_channel import trigger_technical_evaluators_re_evaluation_with_updated_data
+from octobot_evaluators.data_manager.matrix_manager import get_evaluations_by_evaluator
 from octobot_evaluators.enums import EvaluatorMatrixTypes
 from octobot_evaluators.errors import UnsetTentacleEvaluation
-from octobot_evaluators.evaluator import StrategyEvaluator, EVALUATOR_EVAL_DEFAULT_TYPE, \
-    TA_LOOP_CALLBACK
+from octobot_evaluators.evaluator import StrategyEvaluator, EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_tentacles_manager.api.configurator import get_tentacle_config
 from octobot_trading.api.exchange import get_exchange_id_from_matrix_id, get_exchange_current_time, \
     get_exchange_manager_from_exchange_name_and_id
@@ -56,13 +56,8 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                               cryptocurrency,
                               symbol,
                               time_frame):
-        # TODO: find better way than this if
-        if evaluator_name == self.get_name() or evaluator_type == EvaluatorMatrixTypes.TA.value:
-            # avoid infinite auto callback and notifications from TA evaluators since they are handled in their
-            # own callback
-            return
         if symbol is None and cryptocurrency is not None and evaluator_type == EvaluatorMatrixTypes.SOCIAL.value:
-            # social evaluators can by cryptocurrency related but not symbol related, wakeup every symbol
+            # social evaluators can be cryptocurrency related but not symbol related, wakeup every symbol
             for available_symbol in self.get_available_symbols(matrix_id, exchange_name, cryptocurrency):
                 await self._trigger_evaluation(matrix_id,
                                                evaluator_name,
@@ -85,28 +80,6 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                            symbol,
                                            time_frame)
 
-    async def technical_evaluators_update_loop_callback(self,
-                                                        matrix_id,
-                                                        update_source,
-                                                        evaluator_type,
-                                                        exchange_name,
-                                                        cryptocurrency,
-                                                        symbol,
-                                                        time_frame):
-        # Automatically called every time all technical evaluators have a relevant evaluation
-        # Mostly called after a time-frame updates
-        # To be used to trigger an evaluation
-        # Do not forget to check if evaluator_name is self.name
-        await self._trigger_evaluation(matrix_id,
-                                       update_source,
-                                       evaluator_type,
-                                       None,
-                                       None,
-                                       exchange_name,
-                                       cryptocurrency,
-                                       symbol,
-                                       time_frame)
-
     async def _trigger_evaluation(self,
                                   matrix_id,
                                   evaluator_name,
@@ -117,11 +90,10 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                   cryptocurrency,
                                   symbol,
                                   time_frame):
-
-        # only start evaluations when technical evaluators have been initialized
+        # ensure only start evaluations when technical evaluators have been initialized
         try:
             TA_by_timeframe = {
-                available_time_frame: self.get_evaluations_by_evaluator(
+                available_time_frame: get_evaluations_by_evaluator(
                     matrix_id,
                     exchange_name,
                     EvaluatorMatrixTypes.TA.value,
@@ -133,23 +105,23 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                 for available_time_frame in self.strategy_time_frames
             }
             # social evaluators by symbol
-            social_evaluations_by_evaluator = self.get_evaluations_by_evaluator(matrix_id,
+            social_evaluations_by_evaluator = get_evaluations_by_evaluator(matrix_id,
+                                                                           exchange_name,
+                                                                           EvaluatorMatrixTypes.SOCIAL.value,
+                                                                           cryptocurrency,
+                                                                           symbol)
+            # social evaluators by crypto currency
+            social_evaluations_by_evaluator.update(get_evaluations_by_evaluator(matrix_id,
                                                                                 exchange_name,
                                                                                 EvaluatorMatrixTypes.SOCIAL.value,
-                                                                                cryptocurrency,
-                                                                                symbol)
-            # social evaluators by crypto currency
-            social_evaluations_by_evaluator.update(self.get_evaluations_by_evaluator(matrix_id,
-                                                                                     exchange_name,
-                                                                                     EvaluatorMatrixTypes.SOCIAL.value,
-                                                                                     cryptocurrency))
+                                                                                cryptocurrency))
             available_rt_time_frames = self.get_available_time_frames(matrix_id,
                                                                       exchange_name,
                                                                       EvaluatorMatrixTypes.REAL_TIME.value,
                                                                       cryptocurrency,
                                                                       symbol)
             RT_evaluations_by_time_frame = {
-                available_time_frame: self.get_evaluations_by_evaluator(
+                available_time_frame: get_evaluations_by_evaluator(
                     matrix_id,
                     exchange_name,
                     EvaluatorMatrixTypes.REAL_TIME.value,
@@ -158,7 +130,8 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                     available_time_frame)
                 for available_time_frame in available_rt_time_frames
             }
-            if self.re_evaluate_TA_when_social_or_realtime_notification and evaluator_name != TA_LOOP_CALLBACK \
+            if self.re_evaluate_TA_when_social_or_realtime_notification \
+                    and evaluator_type != EvaluatorMatrixTypes.TA.value \
                     and evaluator_type in self.re_evaluation_triggering_eval_types \
                     and evaluator_name not in self.background_social_evaluators:
                 if check_valid_eval_note(eval_note, eval_type=eval_note_type,
@@ -173,6 +146,8 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                                                                                        symbol,
                                                                                        exchange_id,
                                                                                        self.strategy_time_frames)
+                    # do not continue this evaluation
+                    return
             self.counter = 0
             self.evaluation = 0
 
@@ -213,7 +188,7 @@ class SimpleMixedStrategyEvaluator(StrategyEvaluator):
                 await self.evaluation_completed(cryptocurrency, symbol)
 
         except UnsetTentacleEvaluation as e:
-            if evaluator_name == TA_LOOP_CALLBACK:
+            if evaluator_type == EvaluatorMatrixTypes.TA.value:
                 self.logger.error(f"Missing technical evaluator data for ({e})")
             # otherwise it's a social or real-time evaluator, it will shortly be taken into account by TA update cycle
         except Exception as e:
