@@ -47,6 +47,7 @@ from octobot_tentacles_manager.api.inspector import get_tentacle_resources_path
 NAME_KEY = "name"
 DESCRIPTION_KEY = "description"
 REQUIREMENTS_KEY = "requirements"
+COMPATIBLE_TYPES_KEY = "compatible-types"
 REQUIREMENTS_COUNT_KEY = "requirements-min-count"
 DEFAULT_CONFIG_KEY = "default-config"
 TRADING_MODES_KEY = "trading-modes"
@@ -256,17 +257,20 @@ def _get_required_element(elements_config):
 
 
 def _add_strategy_requirements_and_default_config(desc, klass):
-    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators()]
-    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators()]
+    strategy_config = get_tentacle_config(klass)
+    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(strategy_config)]
+    desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(strategy_config)]
+    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(strategy_config)]
 
 
 def _add_trading_mode_requirements_and_default_config(desc, klass):
-    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count()
+    mode_config = get_tentacle_config(klass)
+    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(mode_config)
     if required_strategies:
         desc[REQUIREMENTS_KEY] = \
             [strategy for strategy in required_strategies]
         desc[DEFAULT_CONFIG_KEY] = \
-            [strategy for strategy in klass.get_default_strategies()]
+            [strategy for strategy in klass.get_default_strategies(mode_config)]
         desc[REQUIREMENTS_COUNT_KEY] = required_strategies_count
     else:
         desc[REQUIREMENTS_KEY] = []
