@@ -35,6 +35,8 @@ class RSIMomentumEvaluator(TAEvaluator):
         super().__init__()
         self.pertinence = 1
         self.period_length = 14
+        self.short_term_averages = [7, 5, 4, 3, 2, 1]
+        self.long_term_averages = [40, 30, 20, 15, 10]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
