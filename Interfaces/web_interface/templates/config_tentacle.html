@@ -59,38 +59,44 @@
                         {% endif %}
                     {% endfor %}
                 {% else %}
+                    {% if "TA" in tentacle_desc["compatible-types"] or tentacle_desc["compatible-types"] == ["*"]%}
                     <h2>Technical analysis</h2>
-                    <div>
-                        <div class="row config-container" id="ta-evaluator-config-root">
-                            {% for evaluator_name, info in evaluator_config["ta"].items() %}
-                                {% if info["evaluation_format"] == "float" %}
-                                    {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
-                                {% endif %}
-                            {% endfor %}
+                        <div>
+                            <div class="row config-container" id="ta-evaluator-config-root">
+                                {% for evaluator_name, info in evaluator_config["ta"].items() %}
+                                    {% if info["evaluation_format"] == "float" %}
+                                        {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                    <br>
-                    <h2>Social analysis</h2>
-                    <div>
-                        <div class="row config-container" id="social-evaluator-config-root">
-                            {% for evaluator_name, info in evaluator_config["social"].items() %}
-                                {% if info["evaluation_format"] == "float" %}
-                                    {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
-                                {% endif %}
-                            {% endfor %}
+                        <br>
+                    {% endif %}
+                    {% if "SOCIAL" in tentacle_desc["compatible-types"] or tentacle_desc["compatible-types"] == ["*"]%}
+                        <h2>Social analysis</h2>
+                        <div>
+                            <div class="row config-container" id="social-evaluator-config-root">
+                                {% for evaluator_name, info in evaluator_config["social"].items() %}
+                                    {% if info["evaluation_format"] == "float" %}
+                                        {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                    <br>
-                    <h2>Real time analysis</h2>
-                    <div>
-                        <div class="row config-container" id="rt-evaluator-config-root">
-                            {% for evaluator_name, info in evaluator_config["real-time"].items() %}
-                                {% if info["evaluation_format"] == "float" %}
-                                    {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
-                                {% endif %}
-                            {% endfor %}
+                        <br>
+                    {% endif %}
+                    {% if "REAL_TIME" in tentacle_desc["compatible-types"] or tentacle_desc["compatible-types"] == ["*"]%}
+                        <h2>Real time analysis</h2>
+                        <div>
+                            <div class="row config-container" id="rt-evaluator-config-root">
+                                {% for evaluator_name, info in evaluator_config["real-time"].items() %}
+                                    {% if info["evaluation_format"] == "float" %}
+                                        {{ m_config_evaluator_card.tentacle_evaluator_card(evaluator_startup_config, evaluator_name, info, "evaluator_config") }}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
+                    {% endif %}
                 {% endif %}
             </div>
             <div class="card-footer" id='saveConfigFooter'>
