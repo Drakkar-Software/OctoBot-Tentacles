@@ -19,7 +19,8 @@ from flask_socketio import emit
 from tentacles.Interfaces.web_interface import BACKTESTING_NOTIFICATION_KEY, register_notifier
 from tentacles.Interfaces.web_interface.models.backtesting import get_backtesting_status
 from tentacles.Interfaces.web_interface.websockets import namespaces
-from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import AbstractWebSocketNamespaceNotifier
+from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
+    AbstractWebSocketNamespaceNotifier
 
 
 class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):

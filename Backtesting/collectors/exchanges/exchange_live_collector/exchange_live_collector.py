@@ -69,7 +69,7 @@ class ExchangeLiveDataCollector(AbstractExchangeLiveCollector):
         self.logger.info(f"ORDERBOOK : CRYPTOCURRENCY = {cryptocurrency} || SYMBOL = {symbol} "
                          f"|| ASKS = {asks} || BIDS = {bids}")
         await self.save_order_book(timestamp=time.time(), exchange=exchange,
-                                   cryptocurrency=cryptocurrency,symbol=symbol, asks=asks, bids=bids)
+                                   cryptocurrency=cryptocurrency, symbol=symbol, asks=asks, bids=bids)
 
     async def recent_trades_callback(self, exchange: str, exchange_id: str,
                                      cryptocurrency: str, symbol: str, recent_trades):
