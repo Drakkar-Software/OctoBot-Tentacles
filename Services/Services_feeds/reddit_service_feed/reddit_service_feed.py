@@ -104,9 +104,9 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
             entry_weight = self._get_entry_weight(entry_age_when_feed_started_in_sec)
             self._notify_consumers(
                 {
-                     FEED_METADATA: entry.subreddit.display_name.lower(),
-                     CONFIG_REDDIT_ENTRY: entry,
-                     CONFIG_REDDIT_ENTRY_WEIGHT: entry_weight
+                    FEED_METADATA: entry.subreddit.display_name.lower(),
+                    CONFIG_REDDIT_ENTRY: entry,
+                    CONFIG_REDDIT_ENTRY_WEIGHT: entry_weight
                 }
             )
 

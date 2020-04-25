@@ -49,7 +49,7 @@ class WebService(AbstractService):
     @staticmethod
     def is_setup_correctly(config):
         return CONFIG_WEB in config[CONFIG_CATEGORY_SERVICES] \
-                and CONFIG_SERVICE_INSTANCE in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB]
+            and CONFIG_SERVICE_INSTANCE in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB]
 
     @staticmethod
     def get_is_enabled(config):
