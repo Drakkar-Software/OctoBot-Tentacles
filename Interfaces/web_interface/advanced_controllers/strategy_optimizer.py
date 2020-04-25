@@ -25,7 +25,7 @@ from tentacles.Interfaces.web_interface.models.configuration import get_config_a
 @advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
 def strategy_optimizer():
     from tentacles.Interfaces.web_interface.models.strategy_optimizer import get_strategies_list, \
-        get_current_strategy,get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
+        get_current_strategy, get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
         get_optimizer_results, get_optimizer_report, get_current_run_params
 
     if request.method == 'POST':

@@ -80,10 +80,8 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
             self._init_hashtags()
 
     def _something_to_watch(self):
-        return (CONFIG_TWITTERS_HASHTAGS in self.feed_config
-                and self.feed_config[CONFIG_TWITTERS_HASHTAGS]) \
-               or (CONFIG_TWITTERS_ACCOUNTS in self.feed_config
-                   and self.feed_config[CONFIG_TWITTERS_ACCOUNTS])
+        return (CONFIG_TWITTERS_HASHTAGS in self.feed_config and self.feed_config[CONFIG_TWITTERS_HASHTAGS]) \
+            or (CONFIG_TWITTERS_ACCOUNTS in self.feed_config and self.feed_config[CONFIG_TWITTERS_ACCOUNTS])
 
     async def _start_listener(self):
         for tweet in self.service.get_endpoint().GetStreamFilter(follow=self.user_ids,
@@ -95,9 +93,9 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
                 tweet_desc = str(tweet).lower()
                 self._notify_consumers(
                     {
-                         FEED_METADATA: tweet_desc,
-                         CONFIG_TWEET: tweet,
-                         CONFIG_TWEET_DESCRIPTION: string_tweet.lower()
+                        FEED_METADATA: tweet_desc,
+                        CONFIG_TWEET: tweet,
+                        CONFIG_TWEET_DESCRIPTION: string_tweet.lower()
                     }
                 )
 
