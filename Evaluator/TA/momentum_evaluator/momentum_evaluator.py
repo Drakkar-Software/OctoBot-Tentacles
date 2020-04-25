@@ -110,7 +110,7 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
 
     def _get_rsi_averages(self, symbol_candles, time_frame, include_in_construction):
         # compute the slow and fast RSI average
-        candle_data = get_symbol_close_candles(symbol_candles, time_frame, self.period_length,
+        candle_data = get_symbol_close_candles(symbol_candles, time_frame,
                                                include_in_construction=include_in_construction)
         if len(candle_data) > self.period_length:
             rsi_v = tulipy.rsi(candle_data, period=self.period_length)
@@ -142,14 +142,17 @@ class RSIWeightMomentumEvaluator(TAEvaluator):
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
-        symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
-        # compute the slow and fast RSI average
-        slow_rsi, fast_rsi, rsi_v = self._get_rsi_averages(symbol_candles, time_frame,
-                                                           include_in_construction=inc_in_construction_data)
-        current_candle_time = get_symbol_time_candles(symbol_candles, time_frame,
-                                                      include_in_construction=inc_in_construction_data)[-1]
-        await self.evaluate(cryptocurrency, symbol, time_frame, slow_rsi,
-                            fast_rsi, rsi_v, current_candle_time, candle)
+        try:
+            symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
+            # compute the slow and fast RSI average
+            slow_rsi, fast_rsi, rsi_v = self._get_rsi_averages(symbol_candles, time_frame,
+                                                               include_in_construction=inc_in_construction_data)
+            current_candle_time = get_symbol_time_candles(symbol_candles, time_frame,
+                                                          include_in_construction=inc_in_construction_data)[-1]
+            await self.evaluate(cryptocurrency, symbol, time_frame, slow_rsi,
+                                fast_rsi, rsi_v, current_candle_time, candle)
+        except IndexError:
+            self.eval_note = START_PENDING_EVAL_NOTE
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, slow_rsi,
                        fast_rsi, rsi_v, current_candle_time, candle):
