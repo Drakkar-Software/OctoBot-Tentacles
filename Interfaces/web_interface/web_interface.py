@@ -77,6 +77,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
     def _prepare_websocket(self):
         from tentacles.Interfaces.web_interface import websocket_instance, send_general_notifications
         # handles all namespaces without an explicit error handler
+
         @websocket_instance.on_error_default
         def default_error_handler(e):
             self.get_logger().exception(e, True, f"Error with websocket: {e}")

@@ -18,7 +18,8 @@ from flask_socketio import emit
 
 from tentacles.Interfaces.web_interface.models.strategy_optimizer import get_optimizer_status
 from tentacles.Interfaces.web_interface.websockets import namespaces
-from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import AbstractWebSocketNamespaceNotifier
+from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
+    AbstractWebSocketNamespaceNotifier
 
 
 class StrategyOptimizerNamespace(AbstractWebSocketNamespaceNotifier):

@@ -149,7 +149,7 @@ async def test_create_state():
     delta_risk = producer._get_delta_risk()
     for i in range(-100, 100, 1):
         producer.final_eval = i/100
-        await producer.create_state(None, None, None)
+        await producer.create_state(None, None)
         if producer.final_eval < producer.VERY_LONG_THRESHOLD + delta_risk:
             assert producer.state == EvaluatorStates.VERY_LONG
         elif producer.final_eval < producer.LONG_THRESHOLD + delta_risk:
@@ -189,7 +189,7 @@ async def test_finalize():
     producer, consumer, trader = await _get_tools()
     matrix_id = create_matrix()
 
-    await producer.finalize(get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol, time_frame)
+    await producer.finalize(get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol)
     assert producer.final_eval == INIT_EVAL_NOTE
 
     await producer._set_state(currency, symbol, EvaluatorStates.SHORT)

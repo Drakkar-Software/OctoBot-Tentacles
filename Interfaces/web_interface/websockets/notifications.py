@@ -17,10 +17,11 @@
 from copy import copy
 from flask_socketio import emit
 
-from tentacles.Interfaces.web_interface import get_notifications, get_errors_count, register_notifier, flush_notifications, \
-    GENERAL_NOTIFICATION_KEY
+from tentacles.Interfaces.web_interface import get_notifications, get_errors_count, register_notifier, \
+    flush_notifications, GENERAL_NOTIFICATION_KEY
 from tentacles.Interfaces.web_interface.websockets import namespaces
-from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import AbstractWebSocketNamespaceNotifier
+from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
+    AbstractWebSocketNamespaceNotifier
 
 
 class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):

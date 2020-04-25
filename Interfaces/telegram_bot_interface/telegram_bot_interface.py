@@ -83,7 +83,7 @@ class TelegramBotInterface(AbstractBotInterface):
     def command_unknown(update, _):
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, f"`Unfortunately, I don't know the command:` "
-                                              f"{escape_markdown(update.effective_message.text)}.")
+                                               f"{escape_markdown(update.effective_message.text)}.")
 
     @staticmethod
     def command_help(update, _):
