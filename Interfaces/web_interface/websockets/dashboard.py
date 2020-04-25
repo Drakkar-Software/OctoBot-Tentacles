@@ -17,12 +17,14 @@ from flask_socketio import emit
 
 from octobot_trading.enums import ExchangeConstantsOrderColumns
 from tentacles.Interfaces.web_interface import register_notifier, DASHBOARD_NOTIFICATION_KEY
-from tentacles.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, get_value_from_dict_or_string, \
+from tentacles.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
+    get_value_from_dict_or_string, \
     format_trades
 from octobot_commons.pretty_printer import PrettyPrinter
 from octobot_interfaces.util.profitability import get_global_profitability
 from tentacles.Interfaces.web_interface.websockets import namespaces
-from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import AbstractWebSocketNamespaceNotifier
+from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
+    AbstractWebSocketNamespaceNotifier
 
 
 class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
@@ -31,13 +33,14 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
     def _get_profitability():
         profitability_digits = 4
         has_real_trader, has_simulated_trader, \
-        _, _, \
-        real_percent_profitability, simulated_percent_profitability, \
-        real_no_trade_profitability, simulated_no_trade_profitability, \
-        market_average_profitability = get_global_profitability()
-        profitability_data = \
-            {"market_average_profitability":
-                 PrettyPrinter.round_with_decimal_count(market_average_profitability, profitability_digits)}
+            _, _, \
+            real_percent_profitability, simulated_percent_profitability, \
+            real_no_trade_profitability, simulated_no_trade_profitability, \
+            market_average_profitability = get_global_profitability()
+        profitability_data = {
+            "market_average_profitability":
+                PrettyPrinter.round_with_decimal_count(market_average_profitability, profitability_digits)
+        }
         if has_real_trader:
             profitability_data["bot_real_profitability"] = \
                 PrettyPrinter.round_with_decimal_count(real_percent_profitability, profitability_digits)
@@ -73,8 +76,9 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
     def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
             try:
-                self.socketio.emit("new_data", {
-                                        "data": self._format_new_data(**kwargs)
+                self.socketio.emit("new_data",
+                                   {
+                                       "data": self._format_new_data(**kwargs)
                                    },
                                    namespace=self.namespace)
                 return True
@@ -93,7 +97,7 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
                                                         minimal_candles=True,
                                                         ignore_trades=True)
             })
-        except KeyError as e:
+        except KeyError:
             emit("error", "missing exchange manager")
 
     def on_connect(self):

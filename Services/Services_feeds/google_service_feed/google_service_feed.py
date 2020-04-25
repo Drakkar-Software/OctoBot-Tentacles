@@ -88,9 +88,9 @@ class GoogleServiceFeed(AbstractServiceFeed):
                 if interest_over_time:
                     await self._async_notify_consumers(
                         {
-                             FEED_METADATA: f"{topic};{interest_over_time}",
-                             CONFIG_TREND: interest_over_time,
-                             CONFIG_TREND_DESCRIPTION: topic
+                            FEED_METADATA: f"{topic};{interest_over_time}",
+                            CONFIG_TREND: interest_over_time,
+                            CONFIG_TREND_DESCRIPTION: topic
                         }
                     )
         await asyncio.sleep(self._get_sleep_time_before_next_wakeup())

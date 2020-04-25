@@ -181,7 +181,7 @@ def config_actions():
             "title": "Trading history reset",
             "details": "Next trading sessions will not consider past sessions for "
                        "profitability and trading simulator will start using a fresh portfolio."
-            })
+        })
     return get_rest_reply("No specified action.", code=500)
 
 

@@ -61,9 +61,9 @@ class TelegramServiceFeed(AbstractServiceFeed):
             message_desc = str(update)
             self._notify_consumers(
                 {
-                     FEED_METADATA: message_desc,
-                     CONFIG_GROUP_MESSAGE: update,
-                     CONFIG_GROUP_MESSAGE_DESCRIPTION: message.lower()
+                    FEED_METADATA: message_desc,
+                    CONFIG_GROUP_MESSAGE: update,
+                    CONFIG_GROUP_MESSAGE_DESCRIPTION: message.lower()
                 }
             )
 
