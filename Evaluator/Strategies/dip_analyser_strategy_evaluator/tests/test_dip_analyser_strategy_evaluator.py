@@ -17,7 +17,7 @@ import pytest
 
 from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
 from tentacles.Evaluator.Strategies import DipAnalyserStrategyEvaluator
-#TODO use DipAnalyserTradingMode trading mode
+# TODO use DipAnalyserTradingMode trading mode
 # from tentacles.Trading.Mode import DipAnalyserTradingMode
 from tentacles.Trading.Mode import DailyTradingMode
 
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 def strategy_tester():
     strategy_tester_instance = _TestDipAnalyserStrategiesEvaluator()
-    #TODO use DipAnalyserTradingMode trading mode
+    # TODO use DipAnalyserTradingMode trading mode
     strategy_tester_instance.initialize(DipAnalyserStrategyEvaluator, DailyTradingMode)
     return strategy_tester_instance
 
