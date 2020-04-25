@@ -6,7 +6,7 @@
 <br>
 <div class="card">
     <div class="card-header">
-        <h1>Commands</h1>
+        <h1>Your OctoBot</h1>
     </div>
     <div class="card-body">
         <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
@@ -19,6 +19,13 @@
         <h1>Help us to improve OctoBot</h1>
     </div>
     <div class="card-body">
+        <div class="mb-4">
+            Any question ? Please have a look at our
+            <a target="_blank" rel="noopener noreferrer" href="https://github.com/Drakkar-Software/OctoBot/wiki/Frequently-asked-questions-(FAQ)#frequently-asked-questions">
+                Frequently ask question (FAQ) section
+            </a>
+            first !
+        </div>
         <div class="custom-control custom-switch">
             <input type="checkbox" class="custom-control-input" id="metricsCheckbox" update-url="{{ url_for('metrics_settings') }}" {{ 'checked' if metrics_enabled else ''}}>
             <label class="custom-control-label" for="metricsCheckbox">Share</label> anonymous data to help the OctoBot Community
