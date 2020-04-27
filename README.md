@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/fde60767955a49038dac14a3b7b3172b)](https://app.codacy.com/gh/Drakkar-Software/OctoBot-Tentacles?utm_source=github.com&utm_medium=referral&utm_content=Drakkar-Software/OctoBot-Tentacles&utm_campaign=Badge_Grade_Dashboard)
 # OctoBot-Tentacles [![Build Status](https://api.travis-ci.org/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.org/Drakkar-Software/OctoBot-Tentacles)
 This repository contains default evaluators, strategies, utilitary modules and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
