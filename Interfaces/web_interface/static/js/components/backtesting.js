@@ -51,13 +51,13 @@ function handle_file_selection(){
         }else{
             row_element.toggleClass(selected_item_class);
             const checkbox = row_element.find(".dataFileCheckbox");
-            const symbol = checkbox.attr("symbol");
+            const symbols = checkbox.attr("symbols");
             const data_file = checkbox.attr("data-file");
             checkbox.prop('checked', true);
             // uncheck same symbols from other rows if any
             $("#dataFilesTable").find("input[type='checkbox']:checked").each(function(){
-                if($(this).attr("symbol") === symbol && !($(this).attr("data-file") === data_file)){
-                    $(this).parent().parent().removeClass(selected_item_class);
+                if($(this).attr("symbols") === symbols && !($(this).attr("data-file") === data_file)){
+                    $(this).closest('tr').removeClass(selected_item_class);
                     $(this).prop('checked', false);
                 }
             });
