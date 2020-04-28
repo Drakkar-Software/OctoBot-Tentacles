@@ -76,7 +76,7 @@ class DipAnalyserStrategyEvaluator(StrategyEvaluator):
             try:
                 if get_value(TA_evaluations[self.REVERSAL_CONFIRMATION_CLASS_NAME]):
                     self.eval_note = get_value(TA_evaluations[self.REVERSAL_WEIGHT_CLASS_NAME])
-                await self.evaluation_completed(cryptocurrency, symbol)
+                await self.strategy_completed(cryptocurrency, symbol)
             except KeyError as e:
                 self.logger.error(f"Missing required evaluator: {e}")
 
