@@ -180,7 +180,7 @@ class SimpleStrategyEvaluator(StrategyEvaluator):
 
             if counter > 0:
                 self.eval_note = total_evaluation / counter
-                await self.evaluation_completed(cryptocurrency, symbol)
+                await self.strategy_completed(cryptocurrency, symbol)
 
         except UnsetTentacleEvaluation as e:
             if evaluator_type == EvaluatorMatrixTypes.TA.value:
@@ -260,7 +260,7 @@ class TechnicalAnalysisStrategyEvaluator(StrategyEvaluator):
 
             if total_weights > 0:
                 self.eval_note = total_evaluation / total_weights
-                await self.evaluation_completed(cryptocurrency, symbol)
+                await self.strategy_completed(cryptocurrency, symbol)
 
         except UnsetTentacleEvaluation as e:
             self.logger.error(f"Missing technical evaluator data for ({e})")
