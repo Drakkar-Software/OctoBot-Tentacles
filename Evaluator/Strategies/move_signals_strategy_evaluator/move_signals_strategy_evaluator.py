@@ -85,7 +85,7 @@ class MoveSignalsStrategyEvaluator(StrategyEvaluator):
 
                 self._refresh_evaluations(TA_by_timeframe)
                 self._compute_final_evaluation()
-                await self.evaluation_completed(cryptocurrency, symbol)
+                await self.strategy_completed(cryptocurrency, symbol)
 
             except UnsetTentacleEvaluation as e:
                 self.logger.debug(f"Tentacles evaluation initialization: not ready yet for a strategy update ({e})")
