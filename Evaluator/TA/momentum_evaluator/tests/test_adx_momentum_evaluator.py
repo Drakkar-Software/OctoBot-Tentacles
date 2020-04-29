@@ -27,7 +27,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestADXTAEvaluator()
-    await evaluator_tester_instance.initialize(ADXMomentumEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = ADXMomentumEvaluator
     return evaluator_tester_instance
 
 
