@@ -27,7 +27,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestRSITAEvaluator()
-    await evaluator_tester_instance.initialize(RSIMomentumEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = RSIMomentumEvaluator
     return evaluator_tester_instance
 
 
