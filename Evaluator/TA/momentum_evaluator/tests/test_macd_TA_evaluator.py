@@ -28,7 +28,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestMACDTAEvaluator()
-    await evaluator_tester_instance.initialize(MACDMomentumEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = MACDMomentumEvaluator
     return evaluator_tester_instance
 
 

@@ -28,7 +28,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestDoubleMovingAveragesTAEvaluator()
-    await evaluator_tester_instance.initialize(DoubleMovingAverageTrendEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = DoubleMovingAverageTrendEvaluator
     return evaluator_tester_instance
 
 

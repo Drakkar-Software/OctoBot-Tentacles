@@ -9,7 +9,7 @@ env:
   global:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
     - DEPLOY_BRANCH=0.4.0
-    - OCTOBOT_BRANCH=0.4.0
+    - OCTOBOT_BRANCH=tentacles_fixes
     - LATEST_TAG=latest
     - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
 
