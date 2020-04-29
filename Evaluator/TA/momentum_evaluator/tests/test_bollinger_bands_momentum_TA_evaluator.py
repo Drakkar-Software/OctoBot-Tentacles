@@ -28,7 +28,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestBollingerBandsMomentumTAEvaluator()
-    await evaluator_tester_instance.initialize(BBMomentumEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = BBMomentumEvaluator
     return evaluator_tester_instance
 
 
