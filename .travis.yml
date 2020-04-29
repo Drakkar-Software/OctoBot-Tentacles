@@ -1,42 +1,47 @@
 notifications:
   email: false
-sudo: enabled
+dist: xenial
 os: linux
 language: python
+python: 3.7-dev
 cache: pip
-python: 3.8-dev
 env:
   global:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
     - DEPLOY_BRANCH=0.4.0
+    - OCTOBOT_BRANCH=0.4.0
     - LATEST_TAG=latest
     - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
 
 install:
-  - git clone https://github.com/Drakkar-Software/OctoBot.git && cd OctoBot
-  - if [[ $TRAVIS_BRANCH == "dev" ]]; then git checkout dev; fi
-  - python3 -m pip install -r requirements.txt -r dev_requirements.txt
+  - git clone https://github.com/Drakkar-Software/OctoBot.git -b $OCTOBOT_BRANCH && cd OctoBot
+  - python3 -m pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
+  - cd ..
 
 matrix:
   include:
-    - name: "Linux - Python 3 nightly"
+    - name: "Linux - Python 3.7 - Python sources"
       stage: test
       os: linux
-      python: 3.8
+      python: 3.7-dev
       language: python
-      script: echo "TODO"
+      script:
+        - mkdir new_tentacles
+        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
+        - cd OctoBot
+        - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
+        - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
+        - pytest --cov=. --cov-config=.coveragerc --durations=0 tentacles
+      after_success:
+        - if [ $TRAVIS_PULL_REQUEST == "false" ]; then coveralls; fi
 
     - name: "Linux - Tentacles - Deploy"
       stage: deploy
       os: linux
       install: skip
-      script:
-        - mkdir reference_tentacles
-        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading reference_tentacles
-        - zip -9 -q -r $LATEST_TAG.zip reference_tentacles
       deploy:
         - provider: script
-          script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
+          script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
@@ -44,7 +49,7 @@ matrix:
             tags: true
             branch: "$DEPLOY_BRANCH"
         - provider: script
-          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./$LATEST_TAG.zip  $DEPLOY_URL/$LATEST_TAG.zip
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$LATEST_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
