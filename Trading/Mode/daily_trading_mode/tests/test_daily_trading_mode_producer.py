@@ -17,15 +17,18 @@ import pytest
 from os.path import join
 from asyncio import create_task
 
+from octobot_channels.util.channel_creator import create_all_subclasses_channel
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
 from octobot_evaluators.api.evaluators import create_matrix
 from octobot_trading.api.exchange import get_exchange_name
 from octobot_trading.api.orders import get_open_orders
 from octobot_trading.api.symbol_data import force_set_mark_price
+from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrameExchangeChannel, set_chan
 from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
 from octobot_trading.enums import EvaluatorStates
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
+from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
 from octobot_trading.exchanges.rest_exchange import RestExchange
 from octobot_trading.traders.trader_simulator import TraderSimulator
 from tentacles.Trading.Mode import DailyTradingMode
@@ -45,7 +48,13 @@ async def _get_tools(symbol="BTC/USDT"):
     exchange_manager.backtesting_files = [join(TEST_CONFIG_FOLDER,
                                                "AbstractExchangeHistoryCollector_1586017993.616272.data")]
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
-    await exchange_manager._create_simulated_exchange()
+    exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
+                                                  exchange_manager.exchange_type,
+                                                  exchange_manager,
+                                                  exchange_manager.backtesting_files)
+    await exchange_manager.exchange.initialize()
+    for exchange_channel_class_type in [ExchangeChannel, TimeFrameExchangeChannel]:
+        await create_all_subclasses_channel(exchange_channel_class_type, set_chan, exchange_manager=exchange_manager)
 
     trader = TraderSimulator(config, exchange_manager)
     await trader.initialize()
