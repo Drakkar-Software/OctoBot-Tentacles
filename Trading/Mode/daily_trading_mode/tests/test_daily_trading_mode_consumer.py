@@ -16,7 +16,6 @@
 import math
 import pytest
 from os.path import join
-from mock import patch, AsyncMock
 import copy
 
 from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE
@@ -25,6 +24,7 @@ from octobot_trading.api.symbol_data import force_set_mark_price
 from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
 from octobot_trading.enums import EvaluatorStates, TraderOrderType, TradeOrderSide, OrderStatus
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
+from octobot_trading.exchanges.rest_exchange import RestExchange
 from octobot_trading.orders.order_adapter import trunc_with_n_decimal_digits
 from octobot_trading.orders.types import SellMarketOrder, BuyMarketOrder, SellLimitOrder, BuyLimitOrder
 from octobot_trading.traders.trader_simulator import TraderSimulator
@@ -50,10 +50,8 @@ async def _get_tools():
     exchange_manager.is_backtesting = True
     exchange_manager.backtesting_files = [join(TEST_CONFIG_FOLDER,
                                                "AbstractExchangeHistoryCollector_1586017993.616272.data")]
-
-    # prevent exchange channels from being created (unnecessary and have to be waited)
-    with patch.object(exchange_manager, '_init_simulated_exchange', new=AsyncMock()):
-        await exchange_manager.initialize()
+    exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
+    await exchange_manager._create_simulated_exchange()
 
     trader = TraderSimulator(config, exchange_manager)
     await trader.initialize()
