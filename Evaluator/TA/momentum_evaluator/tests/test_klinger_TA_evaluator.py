@@ -28,7 +28,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def evaluator_tester():
     evaluator_tester_instance = TestKlingerTAEvaluator()
-    await evaluator_tester_instance.initialize(KlingerOscillatorMomentumEvaluator)
+    evaluator_tester_instance.TA_evaluator_class = KlingerOscillatorMomentumEvaluator
     return evaluator_tester_instance
 
 
