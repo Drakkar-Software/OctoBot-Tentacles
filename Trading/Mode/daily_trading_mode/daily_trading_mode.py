@@ -233,7 +233,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             quote, _ = split_symbol(symbol)
             created_orders = []
 
-            if state == EvaluatorStates.VERY_SHORT:
+            if state == EvaluatorStates.VERY_SHORT.value:
                 quantity = self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
                 quantity = add_dusts_to_quantity_if_necessary(quantity, price, symbol_market, current_symbol_holding)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
@@ -248,7 +248,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                     created_orders.append(current_order)
                 return created_orders
 
-            elif state == EvaluatorStates.SHORT:
+            elif state == EvaluatorStates.SHORT.value:
                 quantity = await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
                 quantity = add_dusts_to_quantity_if_necessary(quantity, price, symbol_market, current_symbol_holding)
                 limit_price = adapt_price(symbol_market, price * self._get_limit_price_from_risk(final_note))
@@ -276,11 +276,11 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                         await self.trader.create_order(current_order)
                 return created_orders
 
-            elif state == EvaluatorStates.NEUTRAL:
+            elif state == EvaluatorStates.NEUTRAL.value:
                 pass
 
             # TODO : stop loss
-            elif state == EvaluatorStates.LONG:
+            elif state == EvaluatorStates.LONG.value:
                 quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
                 quantity = quantity * await self._get_quantity_ratio(quote)
                 limit_price = adapt_price(symbol_market, price * self._get_limit_price_from_risk(final_note))
@@ -297,7 +297,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                     created_orders.append(current_order)
                 return created_orders
 
-            elif state == EvaluatorStates.VERY_LONG:
+            elif state == EvaluatorStates.VERY_LONG.value:
                 quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
                 quantity = quantity * await self._get_quantity_ratio(quote)
                 for order_quantity, order_price in check_and_adapt_order_details_if_necessary(quantity, price,
