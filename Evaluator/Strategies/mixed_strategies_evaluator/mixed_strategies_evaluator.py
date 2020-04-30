@@ -18,7 +18,7 @@ from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.time_frame_manager import parse_time_frames
 from octobot_evaluators.api.matrix import get_value, get_type, get_time
 from octobot_evaluators.channels.evaluator_channel import trigger_technical_evaluators_re_evaluation_with_updated_data
-from octobot_evaluators.data_manager.matrix_manager import get_evaluations_by_evaluator
+from octobot_evaluators.data_manager.matrix_manager import get_evaluations_by_evaluator, get_available_symbols
 from octobot_evaluators.enums import EvaluatorMatrixTypes
 from octobot_evaluators.errors import UnsetTentacleEvaluation
 from octobot_evaluators.evaluator import StrategyEvaluator, EVALUATOR_EVAL_DEFAULT_TYPE, CONFIG_FORCED_TIME_FRAME
@@ -56,7 +56,7 @@ class SimpleStrategyEvaluator(StrategyEvaluator):
                               time_frame):
         if symbol is None and cryptocurrency is not None and evaluator_type == EvaluatorMatrixTypes.SOCIAL.value:
             # social evaluators can be cryptocurrency related but not symbol related, wakeup every symbol
-            for available_symbol in self.get_available_symbols(matrix_id, exchange_name, cryptocurrency):
+            for available_symbol in get_available_symbols(matrix_id, exchange_name, cryptocurrency):
                 await self._trigger_evaluation(matrix_id,
                                                evaluator_name,
                                                evaluator_type,
