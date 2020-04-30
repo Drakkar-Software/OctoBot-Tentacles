@@ -9,6 +9,7 @@ env:
   global:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
     - DEPLOY_BRANCH=0.4.0
+    - PACKAGE_FOLDER=octobot
     - OCTOBOT_BRANCH=tentacles_fixes
     - LATEST_TAG=latest
     - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
@@ -17,33 +18,40 @@ install:
   - git clone https://github.com/Drakkar-Software/OctoBot.git -b $OCTOBOT_BRANCH && cd OctoBot
   - python3 -m pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
   - cd ..
+  - mkdir new_tentacles
+  - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
+  - cd OctoBot
+  - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
+  - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
 
-matrix:
+jobs:
   include:
-    - name: "Linux - Python 3.7 - Python sources"
+    - name: "Linux - Python 3.7-dev - Python sources"
       stage: test
       os: linux
       python: 3.7-dev
       language: python
       script:
-        - mkdir new_tentacles
-        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
-        - cd OctoBot
-        - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
-        - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
         - pytest --cov=. --cov-config=../.coveragerc --durations=0 tentacles
       after_success:
         - if [ $TRAVIS_PULL_REQUEST == "false" ]; then coveralls; fi
 
+    - name: "Linux - Python 3.7-dev - Installed"
+      stage: test
+      os: linux
+      python: 3.8-dev
+      language: python
+      env: CYTHON_TEST_IGNORE=true
+      script:
+        - python3 setup.py build_ext --inplace
+        - python3 setup.py install
+        - rm -rf $PACKAGE_FOLDER
+        - pytest tentacles
+
     - name: "Linux - Tentacles - Deploy"
       stage: deploy
       os: linux
-      script:
-        - mkdir new_tentacles
-        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
-        - cd OctoBot
-        - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
-        - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
+      script: skip
       deploy:
         - provider: script
           script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
