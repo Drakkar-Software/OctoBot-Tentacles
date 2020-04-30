@@ -19,7 +19,7 @@ from tentacles.Services import TwitterService
 
 
 class TwitterNotifier(AbstractNotifier):
-    REQUIRED_SERVICE = TwitterService
+    REQUIRED_SERVICES = [TwitterService]
     NOTIFICATION_TYPE_KEY = "twitter"
 
     async def _handle_notification(self, notification: Notification):
@@ -34,14 +34,14 @@ class TwitterNotifier(AbstractNotifier):
             self.logger.info("Tweet sent")
 
     async def _send_regular_tweet(self, notification):
-        result = await self.service.post(self._get_tweet_text(notification), True)
+        result = await self.services[0].post(self._get_tweet_text(notification), True)
         notification.metadata[self.NOTIFICATION_TYPE_KEY] = result
         return result
 
     async def _send_tweet_reply(self, notification):
         try:
             previous_tweet_id = notification.linked_notification.metadata[self.NOTIFICATION_TYPE_KEY].id
-            result = await self.service.respond(previous_tweet_id, self._get_tweet_text(notification), True)
+            result = await self.services[0].respond(previous_tweet_id, self._get_tweet_text(notification), True)
             notification.metadata[self.NOTIFICATION_TYPE_KEY] = result
             return result
         except KeyError:

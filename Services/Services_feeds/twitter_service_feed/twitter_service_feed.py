@@ -29,7 +29,7 @@ class TwitterServiceFeedChannel(AbstractServiceFeedChannel):
 
 class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
     FEED_CHANNEL = TwitterServiceFeedChannel
-    REQUIRED_SERVICE = TwitterService
+    REQUIRED_SERVICES = [TwitterService]
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
@@ -63,7 +63,7 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
                 if account not in tempo_added_accounts:
                     tempo_added_accounts.append(account)
                     try:
-                        self.user_ids.append(str(self.service.get_user_id(account)))
+                        self.user_ids.append(str(self.services[0].get_user_id(account)))
                     except twitter.TwitterError as e:
                         self.logger.error(account + " : " + str(e))
 
@@ -84,11 +84,11 @@ class TwitterServiceFeed(AbstractServiceFeed, threading.Thread):
             or (CONFIG_TWITTERS_ACCOUNTS in self.feed_config and self.feed_config[CONFIG_TWITTERS_ACCOUNTS])
 
     async def _start_listener(self):
-        for tweet in self.service.get_endpoint().GetStreamFilter(follow=self.user_ids,
-                                                                 track=self.hashtags,
-                                                                 stall_warnings=True):
+        for tweet in self.services[0].get_endpoint().GetStreamFilter(follow=self.user_ids,
+                                                                     track=self.hashtags,
+                                                                     stall_warnings=True):
             self.counter += 1
-            string_tweet = self.service.get_tweet_text(tweet)
+            string_tweet = self.services[0].get_tweet_text(tweet)
             if string_tweet:
                 tweet_desc = str(tweet).lower()
                 self._notify_consumers(
