@@ -15,12 +15,12 @@
 #  License along with this library.
 from flask_socketio import emit
 
+from octobot_commons.pretty_printer import round_with_decimal_count
 from octobot_trading.enums import ExchangeConstantsOrderColumns
 from tentacles.Interfaces.web_interface import register_notifier, DASHBOARD_NOTIFICATION_KEY
 from tentacles.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
     get_value_from_dict_or_string, \
     format_trades
-from octobot_commons.pretty_printer import PrettyPrinter
 from octobot_interfaces.util.profitability import get_global_profitability
 from tentacles.Interfaces.web_interface.websockets import namespaces
 from tentacles.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
@@ -33,24 +33,23 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
     def _get_profitability():
         profitability_digits = 4
         has_real_trader, has_simulated_trader, \
-            _, _, \
-            real_percent_profitability, simulated_percent_profitability, \
-            real_no_trade_profitability, simulated_no_trade_profitability, \
-            market_average_profitability = get_global_profitability()
-        profitability_data = {
-            "market_average_profitability":
-                PrettyPrinter.round_with_decimal_count(market_average_profitability, profitability_digits)
-        }
+        _, _, \
+        real_percent_profitability, simulated_percent_profitability, \
+        real_no_trade_profitability, simulated_no_trade_profitability, \
+        market_average_profitability = get_global_profitability()
+        profitability_data = \
+            {"market_average_profitability":
+                 round_with_decimal_count(market_average_profitability, profitability_digits)}
         if has_real_trader:
             profitability_data["bot_real_profitability"] = \
-                PrettyPrinter.round_with_decimal_count(real_percent_profitability, profitability_digits)
+                round_with_decimal_count(real_percent_profitability, profitability_digits)
             profitability_data["real_no_trade_profitability"] = \
-                PrettyPrinter.round_with_decimal_count(real_no_trade_profitability, profitability_digits)
+                round_with_decimal_count(real_no_trade_profitability, profitability_digits)
         if has_simulated_trader:
             profitability_data["bot_simulated_profitability"] = \
-                PrettyPrinter.round_with_decimal_count(simulated_percent_profitability, profitability_digits)
+                round_with_decimal_count(simulated_percent_profitability, profitability_digits)
             profitability_data["simulated_no_trade_profitability"] = \
-                PrettyPrinter.round_with_decimal_count(simulated_no_trade_profitability, profitability_digits)
+                round_with_decimal_count(simulated_no_trade_profitability, profitability_digits)
         return profitability_data
 
     @staticmethod
