@@ -31,7 +31,7 @@ matrix:
         - cd OctoBot
         - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
         - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
-        - pytest --cov=. --cov-config=.coveragerc --durations=0 tentacles
+        - pytest --cov=. --cov-config=../.coveragerc --durations=0 tentacles
       after_success:
         - if [ $TRAVIS_PULL_REQUEST == "false" ]; then coveralls; fi
 
