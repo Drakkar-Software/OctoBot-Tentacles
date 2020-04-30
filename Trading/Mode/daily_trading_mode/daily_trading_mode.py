@@ -313,15 +313,15 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                     created_orders.append(current_order)
                 return created_orders
 
-            # if nothing go returned, return None
-            return None
+            # if nothing go returned, return empty list
+            return []
 
         except InsufficientFunds as e:
             raise e
 
         except Exception as e:
             self.logger.exception(e, True, f"Failed to create order : {e}.")
-            return None
+            return []
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
         # creates a new order (or multiple split orders), always check self.can_create_order() first.
@@ -329,6 +329,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
 
 class DailyTradingModeProducer(AbstractTradingModeProducer):
+
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
 

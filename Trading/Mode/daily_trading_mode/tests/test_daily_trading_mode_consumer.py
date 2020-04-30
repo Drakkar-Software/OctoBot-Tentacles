@@ -95,11 +95,11 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
 
     # portfolio: "BTC": 10 "USD": 1000
     # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) is None
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
 
     # valid sell limit order (price adapted)
     orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT)
@@ -212,11 +212,11 @@ async def test_valid_create_new_orders_ref_market_as_quote():
 
     # portfolio: "BTC": 10 "USD": 1000
     # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) is None
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) is None
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
 
     # valid sell limit order (price adapted)
     orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT)
@@ -329,7 +329,7 @@ async def test_invalid_create_new_orders():
     # invalid sell order with not trade data
     import octobot_trading.constants
     octobot_trading.constants.ORDER_DATA_FETCHING_TIMEOUT = 0.1
-    assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT, timeout=0.1) is None
+    assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT, timeout=0.1) == []
 
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
         "BTC": {
@@ -704,7 +704,13 @@ async def test_create_multiple_buy_orders_after_fill():
         10 + 1000/last_btc_price
     # force many traded asset not to create all in orders
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.origin_crypto_currencies_values \
-        = [0] * 15
+        = {
+            "a": 0,
+            "b": 0,
+            "c": 0,
+            "d": 0,
+            "e": 0
+        }
     await ensure_smaller_orders(consumer, symbol, trader)
 
     # with another symbol with 0 quantity when start
