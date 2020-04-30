@@ -38,7 +38,12 @@ matrix:
     - name: "Linux - Tentacles - Deploy"
       stage: deploy
       os: linux
-      install: skip
+      script:
+        - mkdir new_tentacles
+        - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
+        - cd OctoBot
+        - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
+        - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
       deploy:
         - provider: script
           script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
