@@ -33,7 +33,7 @@ from octobot_interfaces.web.abstract_web_interface import AbstractWebInterface
 
 
 class WebInterface(AbstractWebInterface, threading.Thread):
-    REQUIRED_SERVICE = WebService
+    REQUIRED_SERVICES = [WebService]
 
     tools = {
         BOT_TOOLS_BACKTESTING: None,

@@ -31,7 +31,7 @@ class RedditServiceFeedChannel(AbstractServiceFeedChannel):
 
 class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
     FEED_CHANNEL = RedditServiceFeedChannel
-    REQUIRED_SERVICE = RedditService
+    REQUIRED_SERVICES = [RedditService]
 
     MAX_CONNECTION_ATTEMPTS = 10
 
@@ -92,7 +92,7 @@ class RedditServiceFeed(AbstractServiceFeed, threading.Thread):
         return 5
 
     async def _start_listener(self):
-        subreddit = self.service.get_endpoint().subreddit(self.subreddits)
+        subreddit = self.services[0].get_endpoint().subreddit(self.subreddits)
         start_time = time.time()
         for entry in subreddit.stream.submissions():
             self.credentials_ok = True

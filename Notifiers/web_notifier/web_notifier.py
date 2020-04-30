@@ -20,7 +20,7 @@ from tentacles.Services import WebService
 
 
 class WebNotifier(AbstractNotifier):
-    REQUIRED_SERVICE = WebService
+    REQUIRED_SERVICES = [WebService]
     NOTIFICATION_TYPE_KEY = "web"
 
     async def _handle_notification(self, notification: Notification):
