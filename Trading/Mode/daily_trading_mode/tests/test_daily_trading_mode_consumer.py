@@ -95,14 +95,14 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
 
     # portfolio: "BTC": 10 "USD": 1000
     # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
 
     # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellLimitOrder)
@@ -128,7 +128,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
     check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     # valid buy limit order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG)
+    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyLimitOrder)
@@ -155,7 +155,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
     truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
 
     # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG)
+    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyMarketOrder)
@@ -178,7 +178,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
     check_order_limits(order, market_status)
 
     # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT)
+    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellMarketOrder)
@@ -212,14 +212,14 @@ async def test_valid_create_new_orders_ref_market_as_quote():
 
     # portfolio: "BTC": 10 "USD": 1000
     # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL) == []
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
+    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
 
     # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellLimitOrder)
@@ -246,7 +246,7 @@ async def test_valid_create_new_orders_ref_market_as_quote():
     check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
     # valid buy limit order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG)
+    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyLimitOrder)
@@ -273,7 +273,7 @@ async def test_valid_create_new_orders_ref_market_as_quote():
     truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
 
     # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG)
+    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, BuyMarketOrder)
@@ -296,7 +296,7 @@ async def test_valid_create_new_orders_ref_market_as_quote():
     check_order_limits(order, market_status)
 
     # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT)
+    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellMarketOrder)
@@ -329,7 +329,7 @@ async def test_invalid_create_new_orders():
     # invalid sell order with not trade data
     import octobot_trading.constants
     octobot_trading.constants.ORDER_DATA_FETCHING_TIMEOUT = 0.1
-    assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT, timeout=0.1) == []
+    assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT.value, timeout=0.1) == []
 
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
         "BTC": {
@@ -339,7 +339,7 @@ async def test_invalid_create_new_orders():
     }
 
     # invalid sell order with not enough currency to sell
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
     assert len(orders) == 0
 
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
@@ -350,7 +350,7 @@ async def test_invalid_create_new_orders():
     }
 
     # invalid buy order with not enough currency to buy
-    orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG)
+    orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG.value)
     assert len(orders) == 0
     await _stop(exchange_manager)
 
@@ -365,7 +365,7 @@ async def test_create_new_orders_with_dusts_included():
         }
     }
     # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.VERY_SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.VERY_SHORT.value)
     assert len(orders) == 1
     assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"] == {
         PORTFOLIO_TOTAL:  orders[0].origin_quantity,
@@ -382,7 +382,7 @@ async def test_create_new_orders_with_dusts_included():
     }
     force_set_mark_price(exchange_manager, test_pair, 0.005318)
     # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
-    orders = await consumer.create_new_orders(test_pair, 0.75445456165478, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(test_pair, 0.75445456165478, EvaluatorStates.SHORT.value)
     assert len(orders) == 1
     assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio[test_currency] == {
         PORTFOLIO_TOTAL:  orders[0].origin_quantity,
@@ -410,7 +410,7 @@ async def test_split_create_new_orders():
         last_btc_price * 2000000001 + 1000
 
     # split orders because order too big and coin price too high
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
     assert len(orders) == 11
     adapted_order = orders[0]
     identical_orders = orders[1:]
@@ -471,7 +471,7 @@ async def test_split_create_new_orders():
     # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
     force_set_mark_price(exchange_manager, symbol, last_btc_price*0.000001)
     # split orders because order too big and too many coins
-    orders = await consumer.create_new_orders(symbol, -0.6,  EvaluatorStates.LONG)
+    orders = await consumer.create_new_orders(symbol, -0.6,  EvaluatorStates.LONG.value)
     assert len(orders) == 3
     adapted_order = orders[0]
     identical_orders = orders[1:]
@@ -538,7 +538,7 @@ async def test_valid_create_new_orders_without_stop_order():
     consumer.USE_STOP_ORDERS = False
 
     # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT)
+    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, SellLimitOrder)
@@ -571,7 +571,7 @@ def _get_evaluations_gradient(step):
 
 
 def _get_states_gradient_with_invald_states():
-    states = [state for state in EvaluatorStates]
+    states = [state.value for state in EvaluatorStates]
     states += [None, 1, {'toto': 1}, math.nan]
     return states
 
@@ -720,13 +720,13 @@ async def test_create_multiple_buy_orders_after_fill():
 
 
 async def ensure_smaller_orders(consumer, symbol, trader):
-    state = EvaluatorStates.VERY_LONG
+    state = EvaluatorStates.VERY_LONG.value
 
     # first call: biggest order
     orders1 = (await consumer.create_new_orders(symbol, -1, state))
     await fill_orders(orders1, trader)
 
-    state = EvaluatorStates.LONG
+    state = EvaluatorStates.LONG.value
     # second call: smaller order (same with very long as with long)
     orders2 = (await consumer.create_new_orders(symbol, -0.6, state))
     assert orders1[0].origin_quantity > orders2[0].origin_quantity
