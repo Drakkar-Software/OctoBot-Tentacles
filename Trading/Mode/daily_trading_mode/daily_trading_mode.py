@@ -17,7 +17,6 @@ from ccxt import InsufficientFunds
 
 from octobot_channels.channels.channel import CHANNEL_WILDCARD
 from octobot_commons.constants import INIT_EVAL_NOTE
-from octobot_commons.dict_util import get_value_or_default
 from octobot_commons.evaluators_util import check_valid_eval_note
 from octobot_commons.symbol_util import split_symbol
 from octobot_commons.pretty_printer import PrettyPrinter
@@ -103,14 +102,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
         trading_config = self.trading_mode.trading_config if self.trading_mode else {}
 
-        self.USE_CLOSE_TO_CURRENT_PRICE = \
-            get_value_or_default(trading_config, "use_prices_close_to_current_price", False)
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = \
-            get_value_or_default(trading_config, "close_to_current_price_difference", 0.02)
-        self.USE_MAXIMUM_SIZE_ORDERS =  \
-            get_value_or_default(trading_config, "use_maximum_size_orders", False)
-        self.USE_STOP_ORDERS =  \
-            get_value_or_default(trading_config, "use_stop_orders", True)
+        self.USE_CLOSE_TO_CURRENT_PRICE = trading_config.get("use_prices_close_to_current_price", False)
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = trading_config.get("close_to_current_price_difference", 0.02)
+        self.USE_MAXIMUM_SIZE_ORDERS = trading_config.get("use_maximum_size_orders", False)
+        self.USE_STOP_ORDERS = trading_config.get("use_stop_orders", True)
 
     def flush(self):
         super().flush()
