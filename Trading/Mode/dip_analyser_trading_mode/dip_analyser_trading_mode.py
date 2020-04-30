@@ -248,14 +248,15 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
         sell_max = sell_base * self.PRICE_WEIGH_TO_PRICE_PERCENT[sell_weight]
         adapted_sell_orders_count, increment = \
             self._check_limits(sell_base, sell_max, quantity, sell_orders_count, symbol_market)
-        order_volume = quantity / adapted_sell_orders_count
+        if adapted_sell_orders_count:
+            order_volume = quantity / adapted_sell_orders_count
 
-        for i in range(adapted_sell_orders_count):
-            order_price = sell_base + (increment * (i + 1))
-            for adapted_quantity, adapted_price in check_and_adapt_order_details_if_necessary(order_volume,
-                                                                                              order_price,
-                                                                                              symbol_market):
-                volume_with_price.append((adapted_quantity, adapted_price))
+            for i in range(adapted_sell_orders_count):
+                order_price = sell_base + (increment * (i + 1))
+                for adapted_quantity, adapted_price in check_and_adapt_order_details_if_necessary(order_volume,
+                                                                                                  order_price,
+                                                                                                  symbol_market):
+                    volume_with_price.append((adapted_quantity, adapted_price))
         return volume_with_price
 
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
@@ -273,7 +274,7 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
                     orders_count -= 1
                 else:
                     # not enough funds to create orders
-                    self.logger.error(f"Not enough funds to create sell order.")
+                    self.logger.warning(f"Not enough funds to create sell order.")
                     return 0, 0
             elif limit_check == 2:
                 if orders_count < 40:
