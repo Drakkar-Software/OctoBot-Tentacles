@@ -41,8 +41,12 @@ def get_evaluation(symbol, exchange_name, exchange_id):
             exchange_manager = get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
             for trading_mode in get_trading_modes(exchange_manager):
                 if get_trading_mode_symbol(trading_mode) == symbol:
-                    state_desc, state = get_trading_mode_current_state(trading_mode)
-                    return f"{state_desc.replace('_', ' ')}, {round(state)}"
+                    state_desc, val_state = get_trading_mode_current_state(trading_mode)
+                    try:
+                        val_state = round(val_state)
+                    except TypeError:
+                        pass
+                    return f"{state_desc.replace('_', ' ')}, {val_state}"
     except KeyError:
         pass
     return "N/A"
