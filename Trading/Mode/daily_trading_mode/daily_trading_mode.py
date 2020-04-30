@@ -18,23 +18,26 @@ from ccxt import InsufficientFunds
 from octobot_channels.channels.channel import CHANNEL_WILDCARD
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
+from octobot_commons.pretty_printer import cryptocurrency_alert
 from octobot_commons.symbol_util import split_symbol
-from octobot_commons.pretty_printer import PrettyPrinter
+from octobot_evaluators.api.matrix import get_value, get_type
 from octobot_evaluators.constants import EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_evaluators.data_manager.matrix_manager import get_tentacles_value_nodes, get_tentacle_nodes
+from octobot_evaluators.enums import EvaluatorMatrixTypes
 from octobot_trading.constants import MODE_CHANNEL, ORDER_DATA_FETCHING_TIMEOUT
 from octobot_trading.channels.exchange_channel import get_chan
-from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer, check_factor
-from octobot_trading.enums import EvaluatorStates, TraderOrderType
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
+from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer, check_factor
+from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
+from octobot_trading.enums import EvaluatorStates, TraderOrderType
 from octobot_trading.orders.order_adapter import add_dusts_to_quantity_if_necessary, \
     check_and_adapt_order_details_if_necessary, adapt_price
 from octobot_trading.orders.order_factory import create_order_instance
 from octobot_trading.orders.order_util import get_pre_order_data
-from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
 
 
 class DailyTradingMode(AbstractTradingMode):
+
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.load_config()
@@ -65,6 +68,7 @@ class DailyTradingMode(AbstractTradingMode):
 
 
 class DailyTradingModeConsumer(AbstractTradingModeConsumer):
+
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
         self.trader = self.exchange_manager.trader
@@ -344,14 +348,6 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
         strategies_analysis_note_counter = 0
-
-        try:
-            from octobot_evaluators.matrices.matrices import Matrices
-            from octobot_evaluators.enums import EvaluatorMatrixTypes
-        except ImportError:
-            self.logger.error("octobot_evaluators.matrices.matrices.Matrices cannot be imported")
-            return
-
         evaluation = INIT_EVAL_NOTE
         # Strategies analysis
         for evaluated_strategy_node in get_tentacles_value_nodes(
@@ -362,10 +358,10 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
                 cryptocurrency=cryptocurrency,
                 symbol=symbol):
 
-            if check_valid_eval_note(evaluated_strategy_node.node_value,
-                                     evaluated_strategy_node.node_type,
+            if check_valid_eval_note(get_value(evaluated_strategy_node),
+                                     get_type(evaluated_strategy_node),
                                      EVALUATOR_EVAL_DEFAULT_TYPE):
-                evaluation += evaluated_strategy_node.node_value  # TODO * evaluated_strategies.get_pertinence()
+                evaluation += get_value(evaluated_strategy_node)  # TODO * evaluated_strategies.get_pertinence()
                 strategies_analysis_note_counter += 1  # TODO evaluated_strategies.get_pertinence()
 
         if strategies_analysis_note_counter > 0:
@@ -430,7 +426,7 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
             from octobot_notifications.api.notification import create_notification, send_notification
             from octobot_notifications.enums import NotificationCategory
             title = f"OCTOBOT ALERT : #{symbol}"
-            alert_content, alert_content_markdown = PrettyPrinter.cryptocurrency_alert(
+            alert_content, alert_content_markdown = cryptocurrency_alert(
                 new_state,
                 self.final_eval)
             await send_notification(create_notification(alert_content, title=title,

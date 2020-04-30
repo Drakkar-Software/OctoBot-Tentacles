@@ -76,7 +76,7 @@ async def _get_tools():
     return exchange_manager, trader, symbol, consumer, last_btc_price
 
 
-async def stop(exchange_manager):
+async def _stop(exchange_manager):
     await exchange_manager.stop()
 
 
@@ -199,7 +199,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
     assert order.linked_to is None
 
     check_order_limits(order, market_status)
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_valid_create_new_orders_ref_market_as_quote():
@@ -317,7 +317,7 @@ async def test_valid_create_new_orders_ref_market_as_quote():
     assert order.linked_to is None
 
     check_order_limits(order, market_status)
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_invalid_create_new_orders():
@@ -352,7 +352,7 @@ async def test_invalid_create_new_orders():
     # invalid buy order with not enough currency to buy
     orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG)
     assert len(orders) == 0
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_create_new_orders_with_dusts_included():
@@ -388,7 +388,7 @@ async def test_create_new_orders_with_dusts_included():
         PORTFOLIO_TOTAL:  orders[0].origin_quantity,
         PORTFOLIO_AVAILABLE: 0
     }
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_split_create_new_orders():
@@ -519,7 +519,7 @@ async def test_split_create_new_orders():
         check_order_limits(order, market_status)
 
         # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_valid_create_new_orders_without_stop_order():
@@ -562,7 +562,7 @@ async def test_valid_create_new_orders_without_stop_order():
 
     # assert no stop orders
     assert len(order.linked_orders) == 0
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 def _get_evaluations_gradient(step):
@@ -637,7 +637,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
         orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
         check_orders(orders, math.nan, state, 0, market_status)
         check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_reset():
@@ -691,7 +691,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
         check_orders(orders, math.nan, state, 0, market_status)
         check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
         await fill_orders(orders, trader)
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def test_create_multiple_buy_orders_after_fill():
@@ -716,7 +716,7 @@ async def test_create_multiple_buy_orders_after_fill():
     # with another symbol with 0 quantity when start
     force_set_mark_price(exchange_manager, "ADA/BTC", 0.0000001)
     await ensure_smaller_orders(consumer, "ADA/BTC", trader)
-    await stop(exchange_manager)
+    await _stop(exchange_manager)
 
 
 async def ensure_smaller_orders(consumer, symbol, trader):
