@@ -1,0 +1,1 @@
+from .dip_analyser_trading_mode import DipAnalyserTradingMode

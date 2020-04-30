@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "title": "DipAnalyserTradingMode",
+  "properties": {
+    "sell_orders_count": {
+        "title": "Number of sell orders to create after each buy",
+        "type": "number",
+        "multipleOf": 1.0,
+        "minimum": 1
+    },
+    "light_weight_price_multiplier": {
+        "title": "Price multiplier for the top sell order in a light price weight signal",
+        "type": "number",
+        "minimum": 1
+    },
+    "medium_weight_price_multiplier": {
+        "title": "Price multiplier for the top sell order in a medium price weight signal",
+        "type": "number",
+        "minimum": 1
+    },
+    "heavy_weight_price_multiplier": {
+        "title": "Price multiplier for the top sell order in a heavy price weight signal",
+        "type": "number",
+        "minimum": 1
+    },
+    "light_weight_volume_multiplier": {
+        "title": "Volume multiplier for the top sell order in a light volume weight signal",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+    },
+    "medium_weight_volume_multiplier": {
+        "title": "Volume multiplier for the top sell order in a medium volume weight signal",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+    },
+    "heavy_weight_volume_multiplier": {
+        "title": "Volume multiplier for the top sell order in a heavy volume weight signal",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+    }
+  }
+}
