@@ -30,7 +30,7 @@
             {% for file, description in data_files.items() | sort(reverse=True) %}
                 <tr class="selectable_datafile">
                     <td><div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input dataFileCheckbox" data-file="{{file}}" symbol="{{description.symbol}}">
+                        <input type="checkbox" class="custom-control-input dataFileCheckbox" data-file="{{file}}" symbols="{{description.symbols}}">
                         <label class="custom-control-label"></label>
                     </div></td>
                     <td>{{file}}</td>
