@@ -68,14 +68,14 @@ async def _get_tools(symbol="BTC/USDT"):
     return mode.producers[0], mode.consumers[0], trader
 
 
-async def stop(trader):
+async def _stop(trader):
     await trader.exchange_manager.stop()
 
 
 async def test_default_values():
     producer, _, trader = await _get_tools()
     assert producer.state is None
-    await stop(trader)
+    await _stop(trader)
 
 
 async def test_set_state():
@@ -138,7 +138,7 @@ async def test_set_state():
     # create as task to allow creator's queue to get processed
     await create_task(_check_open_orders_count(trader, 2))
 
-    await stop(trader)
+    await _stop(trader)
 
 
 async def test_get_delta_risk():
@@ -147,7 +147,7 @@ async def test_get_delta_risk():
         trader.risk = i/100
         assert round(producer._get_delta_risk(), 6) == round(producer.RISK_THRESHOLD * i/100, 6)
 
-    await stop(trader)
+    await _stop(trader)
 
 
 async def test_create_state():
@@ -167,7 +167,7 @@ async def test_create_state():
         else:
             assert producer.state == EvaluatorStates.VERY_SHORT
 
-    await stop(trader)
+    await _stop(trader)
 
 
 async def test_set_final_eval():
@@ -186,7 +186,7 @@ async def test_set_final_eval():
     assert producer.final_eval == "val"  # ensure did not change EvaluatorStates
     await create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders
 
-    await stop(trader)
+    await _stop(trader)
 
 
 async def test_finalize():
@@ -205,7 +205,7 @@ async def test_finalize():
     await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
     await create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders because neutral state
 
-    await stop(trader)
+    await _stop(trader)
 
 
 async def _check_open_orders_count(trader, count):
