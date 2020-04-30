@@ -20,7 +20,7 @@ from tentacles.Services import TelegramService
 
 
 class TelegramNotifier(AbstractNotifier):
-    REQUIRED_SERVICE = TelegramService
+    REQUIRED_SERVICES = [TelegramService]
     NOTIFICATION_TYPE_KEY = "telegram"
 
     async def _handle_notification(self, notification: Notification):
@@ -32,15 +32,15 @@ class TelegramNotifier(AbstractNotifier):
         previous_message_id = notification.linked_notification.metadata[self.NOTIFICATION_TYPE_KEY].message_id \
             if notification.linked_notification and \
             self.NOTIFICATION_TYPE_KEY in notification.linked_notification.metadata else None
-        sent_message = await self.service.send_message(text,
-                                                       markdown=use_markdown,
-                                                       reply_to_message_id=previous_message_id)
+        sent_message = await self.services[0].send_message(text,
+                                                           markdown=use_markdown,
+                                                           reply_to_message_id=previous_message_id)
         if sent_message is None and previous_message_id is not None:
             # failed to reply, try regular message
             self.logger.warning(f"Failed to reply to message with id {previous_message_id}, sending regular message.")
-            sent_message = await self.service.send_message(text,
-                                                           markdown=use_markdown,
-                                                           reply_to_message_id=None)
+            sent_message = await self.services[0].send_message(text,
+                                                               markdown=use_markdown,
+                                                               reply_to_message_id=None)
         notification.metadata[self.NOTIFICATION_TYPE_KEY] = sent_message
 
     @staticmethod
