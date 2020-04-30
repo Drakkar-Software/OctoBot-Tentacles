@@ -29,7 +29,7 @@ from tentacles.Services import TelegramService
 
 class TelegramBotInterface(AbstractBotInterface):
 
-    REQUIRED_SERVICE = TelegramService
+    REQUIRED_SERVICES = [TelegramService]
     HANDLED_CHATS = ["private"]
 
     def __init__(self, config):
@@ -51,7 +51,7 @@ class TelegramBotInterface(AbstractBotInterface):
         else:
             # debug level log only: error log is already produced in initialize()
             self.get_logger().debug(f"Impossible to start bot interface: "
-                                    f"{self.REQUIRED_SERVICE.get_name()} is unavailable.")
+                                    f"{self.REQUIRED_SERVICES[0].get_name()} is unavailable.")
             return False
 
     def stop(self):

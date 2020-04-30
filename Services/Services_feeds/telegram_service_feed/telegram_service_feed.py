@@ -27,7 +27,7 @@ class TelegramServiceFeedChannel(AbstractServiceFeedChannel):
 
 class TelegramServiceFeed(AbstractServiceFeed):
     FEED_CHANNEL = TelegramServiceFeedChannel
-    REQUIRED_SERVICE = TelegramService
+    REQUIRED_SERVICES = [TelegramService]
 
     HANDLED_CHATS = ["group", "channel"]
 
@@ -50,9 +50,9 @@ class TelegramServiceFeed(AbstractServiceFeed):
         self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] = activate
 
     def _register_to_service(self):
-        if not self.service.is_registered(self.get_name()):
-            self.service.register_user(self.get_name())
-            self.service.register_text_polling_handler(self.HANDLED_CHATS, self._feed_callback)
+        if not self.services[0].is_registered(self.get_name()):
+            self.services[0].register_user(self.get_name())
+            self.services[0].register_text_polling_handler(self.HANDLED_CHATS, self._feed_callback)
 
     def _feed_callback(self, _, update):
         if self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] or \
