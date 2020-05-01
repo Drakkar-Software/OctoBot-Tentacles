@@ -15,7 +15,7 @@
 #  License along with this library.
 from octobot_services.notification.notification import Notification
 from octobot_services.notifier.abstract_notifier import AbstractNotifier
-from tentacles.Services import TwitterService
+from tentacles.Services.Services_bases import TwitterService
 
 
 class TwitterNotifier(AbstractNotifier):
