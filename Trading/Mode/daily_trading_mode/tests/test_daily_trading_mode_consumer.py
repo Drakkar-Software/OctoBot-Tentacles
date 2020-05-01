@@ -81,488 +81,502 @@ async def _stop(exchange_manager):
 
 
 async def test_valid_create_new_orders_no_ref_market_as_quote():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    # change reference market to USDT
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[symbol] = \
-        last_btc_price
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
-        last_btc_price * 10 + 1000
+        # change reference market to USDT
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+            symbol] = last_btc_price
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+            last_btc_price * 10 + 1000
 
-    market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
 
-    # portfolio: "BTC": 10 "USD": 1000
-    # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+        # portfolio: "BTC": 10 "USD": 1000
+        # order from neutral state
+        assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
 
-    # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, SellLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 7062.64011187
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == TraderOrderType.SELL_LIMIT
-    assert order.side == TradeOrderSide.SELL
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 7.6
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid sell limit order (price adapted)
+        orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, SellLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == 7062.64011187
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == TraderOrderType.SELL_LIMIT
+        assert order.side == TradeOrderSide.SELL
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 7.6
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
+        assert len(order.linked_orders) == 1
+        check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
-    # valid buy limit order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, BuyLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6955.74988812
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == TraderOrderType.BUY_LIMIT
-    assert order.side == TradeOrderSide.BUY
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 0.12554936
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy limit order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, BuyLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == 6955.74988812
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == TraderOrderType.BUY_LIMIT
+        assert order.side == TradeOrderSide.BUY
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 0.12554936
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
+        # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
-    truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
+        truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, BuyMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == TraderOrderType.BUY_MARKET
-    assert order.side == TradeOrderSide.BUY
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 0.11573814
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, BuyMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == TraderOrderType.BUY_MARKET
+        assert order.side == TradeOrderSide.BUY
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 0.11573814
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, SellMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == TraderOrderType.SELL_MARKET
-    assert order.side == TradeOrderSide.SELL
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 2.4
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, SellMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == TraderOrderType.SELL_MARKET
+        assert order.side == TradeOrderSide.SELL
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 2.4
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
-    await _stop(exchange_manager)
+        check_order_limits(order, market_status)
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_valid_create_new_orders_ref_market_as_quote():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[symbol] = \
-        last_btc_price
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
-        10 + 1000/last_btc_price
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+            symbol] = last_btc_price
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+            10 + 1000/last_btc_price
 
-    # portfolio: "BTC": 10 "USD": 1000
-    # order from neutral state
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+        # portfolio: "BTC": 10 "USD": 1000
+        # order from neutral state
+        assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, 0.5, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, 0, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, -0.5, EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, -1, EvaluatorStates.NEUTRAL.value) == []
 
-    # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, SellLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 7062.64011187
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == TraderOrderType.SELL_LIMIT
-    assert order.side == TradeOrderSide.SELL
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 4.4
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid sell limit order (price adapted)
+        orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, SellLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == 7062.64011187
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == TraderOrderType.SELL_LIMIT
+        assert order.side == TradeOrderSide.SELL
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 4.4
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
-    check_order_limits(order, market_status)
+        market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
+        assert len(order.linked_orders) == 1
+        check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
-    # valid buy limit order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, BuyLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 6955.74988812
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == TraderOrderType.BUY_LIMIT
-    assert order.side == TradeOrderSide.BUY
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 0.21685799
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy limit order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, -0.65, EvaluatorStates.LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, BuyLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == 6955.74988812
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == TraderOrderType.BUY_LIMIT
+        assert order.side == TradeOrderSide.BUY
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 0.21685799
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
+        # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
-    truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
+        truncated_last_price = trunc_with_n_decimal_digits(last_btc_price, 8)
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, BuyMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == TraderOrderType.BUY_MARKET
-    assert order.side == TradeOrderSide.BUY
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 0.07013502
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, -1, EvaluatorStates.VERY_LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, BuyMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == TraderOrderType.BUY_MARKET
+        assert order.side == TradeOrderSide.BUY
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 0.07013502
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, SellMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == TraderOrderType.SELL_MARKET
-    assert order.side == TradeOrderSide.SELL
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 4.032
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, 1, EvaluatorStates.VERY_SHORT.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, SellMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == TraderOrderType.SELL_MARKET
+        assert order.side == TradeOrderSide.SELL
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 4.032
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
-    await _stop(exchange_manager)
+        check_order_limits(order, market_status)
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_invalid_create_new_orders():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    # portfolio: "BTC": 10 "USD": 1000
-    min_trigger_market = "ADA/BNB"
+        # portfolio: "BTC": 10 "USD": 1000
+        min_trigger_market = "ADA/BNB"
 
-    # invalid sell order with not trade data
-    import octobot_trading.constants
-    octobot_trading.constants.ORDER_DATA_FETCHING_TIMEOUT = 0.1
-    assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT.value, timeout=0.1) == []
+        # invalid sell order with not trade data
+        import octobot_trading.constants
+        octobot_trading.constants.ORDER_DATA_FETCHING_TIMEOUT = 0.1
+        assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT.value, timeout=0.1) == []
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            PORTFOLIO_TOTAL: 2000,
-            PORTFOLIO_AVAILABLE: 0.000000000000000000005
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            "BTC": {
+                PORTFOLIO_TOTAL: 2000,
+                PORTFOLIO_AVAILABLE: 0.000000000000000000005
+            }
         }
-    }
 
-    # invalid sell order with not enough currency to sell
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
-    assert len(orders) == 0
+        # invalid sell order with not enough currency to sell
+        orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
+        assert len(orders) == 0
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "USDT": {
-            PORTFOLIO_TOTAL: 2000,
-            PORTFOLIO_AVAILABLE: 0.000000000000000000005
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            "USDT": {
+                PORTFOLIO_TOTAL: 2000,
+                PORTFOLIO_AVAILABLE: 0.000000000000000000005
+            }
         }
-    }
 
-    # invalid buy order with not enough currency to buy
-    orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG.value)
-    assert len(orders) == 0
-    await _stop(exchange_manager)
+        # invalid buy order with not enough currency to buy
+        orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG.value)
+        assert len(orders) == 0
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_create_new_orders_with_dusts_included():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            PORTFOLIO_TOTAL: 0.000015,
-            PORTFOLIO_AVAILABLE: 0.000015
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            "BTC": {
+                PORTFOLIO_TOTAL: 0.000015,
+                PORTFOLIO_AVAILABLE: 0.000015
+            }
         }
-    }
-    # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.VERY_SHORT.value)
-    assert len(orders) == 1
-    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"] == {
-        PORTFOLIO_TOTAL:  orders[0].origin_quantity,
-        PORTFOLIO_AVAILABLE: 0
-    }
+        # trigger order that should not sell everything but does sell everything because remaining amount
+        # is not sellable
+        orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.VERY_SHORT.value)
+        assert len(orders) == 1
+        assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"] == {
+            PORTFOLIO_TOTAL:  orders[0].origin_quantity,
+            PORTFOLIO_AVAILABLE: 0
+        }
 
-    test_currency = "NEO"
-    test_pair = f"{test_currency}/BTC"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        test_currency: {
-            PORTFOLIO_TOTAL: 0.44,
-            PORTFOLIO_AVAILABLE: 0.44
+        test_currency = "NEO"
+        test_pair = f"{test_currency}/BTC"
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            test_currency: {
+                PORTFOLIO_TOTAL: 0.44,
+                PORTFOLIO_AVAILABLE: 0.44
+            }
         }
-    }
-    force_set_mark_price(exchange_manager, test_pair, 0.005318)
-    # trigger order that should not sell everything but does sell everything because remaining amount is not sellable
-    orders = await consumer.create_new_orders(test_pair, 0.75445456165478, EvaluatorStates.SHORT.value)
-    assert len(orders) == 1
-    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio[test_currency] == {
-        PORTFOLIO_TOTAL:  orders[0].origin_quantity,
-        PORTFOLIO_AVAILABLE: 0
-    }
-    await _stop(exchange_manager)
+        force_set_mark_price(exchange_manager, test_pair, 0.005318)
+        # trigger order that should not sell everything but does sell everything because remaining amount
+        # is not sellable
+        orders = await consumer.create_new_orders(test_pair, 0.75445456165478, EvaluatorStates.SHORT.value)
+        assert len(orders) == 1
+        assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio[test_currency] == {
+            PORTFOLIO_TOTAL:  orders[0].origin_quantity,
+            PORTFOLIO_AVAILABLE: 0
+        }
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_split_create_new_orders():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    # change reference market to get more orders
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            PORTFOLIO_TOTAL: 2000000001,
-            PORTFOLIO_AVAILABLE: 2000000001
+        # change reference market to get more orders
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
+        market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            "BTC": {
+                PORTFOLIO_TOTAL: 2000000001,
+                PORTFOLIO_AVAILABLE: 2000000001
+            }
         }
-    }
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[symbol] = \
-        last_btc_price
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
-        last_btc_price * 2000000001 + 1000
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+            symbol] = last_btc_price
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+            last_btc_price * 2000000001 + 1000
 
-    # split orders because order too big and coin price too high
-    orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
-    assert len(orders) == 11
-    adapted_order = orders[0]
-    identical_orders = orders[1:]
+        # split orders because order too big and coin price too high
+        orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
+        assert len(orders) == 11
+        adapted_order = orders[0]
+        identical_orders = orders[1:]
 
-    assert isinstance(adapted_order, SellLimitOrder)
-    assert adapted_order.currency == "BTC"
-    assert adapted_order.symbol == "BTC/USDT"
-    assert adapted_order.origin_price == 7065.26855999
-    assert adapted_order.created_last_price == last_btc_price
-    assert adapted_order.order_type == TraderOrderType.SELL_LIMIT
-    assert adapted_order.side == TradeOrderSide.SELL
-    assert adapted_order.status == OrderStatus.OPEN
-    assert adapted_order.exchange_manager == exchange_manager
-    assert adapted_order.trader == trader
-    assert adapted_order.fee is None
-    assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 64625635.97358092
-    assert adapted_order.filled_quantity == adapted_order.origin_quantity
-    assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
+        assert isinstance(adapted_order, SellLimitOrder)
+        assert adapted_order.currency == "BTC"
+        assert adapted_order.symbol == "BTC/USDT"
+        assert adapted_order.origin_price == 7065.26855999
+        assert adapted_order.created_last_price == last_btc_price
+        assert adapted_order.order_type == TraderOrderType.SELL_LIMIT
+        assert adapted_order.side == TradeOrderSide.SELL
+        assert adapted_order.status == OrderStatus.OPEN
+        assert adapted_order.exchange_manager == exchange_manager
+        assert adapted_order.trader == trader
+        assert adapted_order.fee is None
+        assert adapted_order.filled_price == 0
+        assert adapted_order.origin_quantity == 64625635.97358092
+        assert adapted_order.filled_quantity == adapted_order.origin_quantity
+        assert adapted_order.simulated is True
+        assert adapted_order.linked_to is None
 
-    check_order_limits(adapted_order, market_status)
+        check_order_limits(adapted_order, market_status)
 
-    assert len(adapted_order.linked_orders) == 1
-    check_linked_order(adapted_order, adapted_order.linked_orders[0],
-                       TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
+        assert len(adapted_order.linked_orders) == 1
+        check_linked_order(adapted_order, adapted_order.linked_orders[0],
+                           TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
-    for order in identical_orders:
-        assert isinstance(order, SellLimitOrder)
-        assert order.currency == adapted_order.currency
-        assert order.symbol == adapted_order.symbol
-        assert order.origin_price == adapted_order.origin_price
-        assert order.created_last_price == adapted_order.created_last_price
-        assert order.order_type == adapted_order.order_type
-        assert order.side == adapted_order.side
-        assert order.status == adapted_order.status
-        assert order.exchange_manager == adapted_order.exchange_manager
-        assert order.trader == adapted_order.trader
-        assert order.fee == adapted_order.fee
-        assert order.filled_price == adapted_order.filled_price
-        assert order.origin_quantity == 141537436.47664192
-        assert order.origin_quantity > adapted_order.origin_quantity
-        assert order.filled_quantity > adapted_order.filled_quantity
-        assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
-        assert len(order.linked_orders) == 1
+        for order in identical_orders:
+            assert isinstance(order, SellLimitOrder)
+            assert order.currency == adapted_order.currency
+            assert order.symbol == adapted_order.symbol
+            assert order.origin_price == adapted_order.origin_price
+            assert order.created_last_price == adapted_order.created_last_price
+            assert order.order_type == adapted_order.order_type
+            assert order.side == adapted_order.side
+            assert order.status == adapted_order.status
+            assert order.exchange_manager == adapted_order.exchange_manager
+            assert order.trader == adapted_order.trader
+            assert order.fee == adapted_order.fee
+            assert order.filled_price == adapted_order.filled_price
+            assert order.origin_quantity == 141537436.47664192
+            assert order.origin_quantity > adapted_order.origin_quantity
+            assert order.filled_quantity > adapted_order.filled_quantity
+            assert order.simulated == adapted_order.simulated
+            assert order.linked_to == adapted_order.linked_to
+            assert len(order.linked_orders) == 1
 
-        check_order_limits(order, market_status)
-        check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
+            check_order_limits(order, market_status)
+            check_linked_order(order, order.linked_orders[0], TraderOrderType.STOP_LOSS, 6658.73524999, market_status)
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "USDT": {
-            PORTFOLIO_TOTAL: 40000000000,
-            PORTFOLIO_AVAILABLE: 40000000000
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
+            "USDT": {
+                PORTFOLIO_TOTAL: 40000000000,
+                PORTFOLIO_AVAILABLE: 40000000000
+            }
         }
-    }
 
-    # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
-    force_set_mark_price(exchange_manager, symbol, last_btc_price*0.000001)
-    # split orders because order too big and too many coins
-    orders = await consumer.create_new_orders(symbol, -0.6,  EvaluatorStates.LONG.value)
-    assert len(orders) == 3
-    adapted_order = orders[0]
-    identical_orders = orders[1:]
+        # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
+        force_set_mark_price(exchange_manager, symbol, last_btc_price*0.000001)
+        # split orders because order too big and too many coins
+        orders = await consumer.create_new_orders(symbol, -0.6,  EvaluatorStates.LONG.value)
+        assert len(orders) == 3
+        adapted_order = orders[0]
+        identical_orders = orders[1:]
 
-    assert isinstance(adapted_order, BuyLimitOrder)
-    assert adapted_order.currency == "BTC"
-    assert adapted_order.symbol == "BTC/USDT"
-    assert adapted_order.origin_price == 0.00695312
-    assert adapted_order.created_last_price == 0.007009194999999998
-    assert adapted_order.order_type == TraderOrderType.BUY_LIMIT
-    assert adapted_order.side == TradeOrderSide.BUY
-    assert adapted_order.status == OrderStatus.OPEN
-    assert adapted_order.exchange_manager == exchange_manager
-    assert adapted_order.trader == trader
-    assert adapted_order.fee is None
-    assert adapted_order.filled_price == 0
-    assert adapted_order.origin_quantity == 396851564266.65326
-    assert adapted_order.filled_quantity == adapted_order.origin_quantity
-    assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
+        assert isinstance(adapted_order, BuyLimitOrder)
+        assert adapted_order.currency == "BTC"
+        assert adapted_order.symbol == "BTC/USDT"
+        assert adapted_order.origin_price == 0.00695312
+        assert adapted_order.created_last_price == 0.007009194999999998
+        assert adapted_order.order_type == TraderOrderType.BUY_LIMIT
+        assert adapted_order.side == TradeOrderSide.BUY
+        assert adapted_order.status == OrderStatus.OPEN
+        assert adapted_order.exchange_manager == exchange_manager
+        assert adapted_order.trader == trader
+        assert adapted_order.fee is None
+        assert adapted_order.filled_price == 0
+        assert adapted_order.origin_quantity == 396851564266.65326
+        assert adapted_order.filled_quantity == adapted_order.origin_quantity
+        assert adapted_order.simulated is True
+        assert adapted_order.linked_to is None
 
-    check_order_limits(adapted_order, market_status)
+        check_order_limits(adapted_order, market_status)
 
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
+        # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
-    for order in identical_orders:
-        assert isinstance(order, BuyLimitOrder)
-        assert order.currency == adapted_order.currency
-        assert order.symbol == adapted_order.symbol
-        assert order.origin_price == adapted_order.origin_price
-        assert order.created_last_price == adapted_order.created_last_price
-        assert order.order_type == adapted_order.order_type
-        assert order.side == adapted_order.side
-        assert order.status == adapted_order.status
-        assert order.exchange_manager == adapted_order.exchange_manager
-        assert order.trader == adapted_order.trader
-        assert order.fee == adapted_order.fee
-        assert order.filled_price == adapted_order.filled_price
-        assert order.origin_quantity == 1000000000000.0
-        assert order.origin_quantity > adapted_order.origin_quantity
-        assert order.filled_quantity > adapted_order.filled_quantity
-        assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
+        for order in identical_orders:
+            assert isinstance(order, BuyLimitOrder)
+            assert order.currency == adapted_order.currency
+            assert order.symbol == adapted_order.symbol
+            assert order.origin_price == adapted_order.origin_price
+            assert order.created_last_price == adapted_order.created_last_price
+            assert order.order_type == adapted_order.order_type
+            assert order.side == adapted_order.side
+            assert order.status == adapted_order.status
+            assert order.exchange_manager == adapted_order.exchange_manager
+            assert order.trader == adapted_order.trader
+            assert order.fee == adapted_order.fee
+            assert order.filled_price == adapted_order.filled_price
+            assert order.origin_quantity == 1000000000000.0
+            assert order.origin_quantity > adapted_order.origin_quantity
+            assert order.filled_quantity > adapted_order.filled_quantity
+            assert order.simulated == adapted_order.simulated
+            assert order.linked_to == adapted_order.linked_to
 
-        check_order_limits(order, market_status)
+            check_order_limits(order, market_status)
 
-        # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
-    await _stop(exchange_manager)
+            # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_valid_create_new_orders_without_stop_order():
-    exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
+    try:
+        exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-    # change reference market to get more orders
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[symbol] = \
-        last_btc_price
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
-        last_btc_price * 10 + 1000
-    market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        # change reference market to get more orders
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+            symbol] = last_btc_price
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+            last_btc_price * 10 + 1000
+        market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
 
-    # force no stop orders
-    consumer.USE_STOP_ORDERS = False
+        # force no stop orders
+        consumer.USE_STOP_ORDERS = False
 
-    # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, SellLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == 7062.64011187
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == TraderOrderType.SELL_LIMIT
-    assert order.side == TradeOrderSide.SELL
-    assert order.status == OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == 0
-    assert order.origin_quantity == 7.6
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.linked_to is None
+        # valid sell limit order (price adapted)
+        orders = await consumer.create_new_orders(symbol, 0.65, EvaluatorStates.SHORT.value)
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, SellLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == 7062.64011187
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == TraderOrderType.SELL_LIMIT
+        assert order.side == TradeOrderSide.SELL
+        assert order.status == OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == 0
+        assert order.origin_quantity == 7.6
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.linked_to is None
 
-    check_order_limits(order, market_status)
+        check_order_limits(order, market_status)
 
-    # assert no stop orders
-    assert len(order.linked_orders) == 0
-    await _stop(exchange_manager)
+        # assert no stop orders
+        assert len(order.linked_orders) == 0
+    finally:
+        await _stop(exchange_manager)
 
 
 def _get_evaluations_gradient(step):
