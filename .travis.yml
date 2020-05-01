@@ -54,7 +54,7 @@ jobs:
       script: skip
       deploy:
         - provider: script
-          script: mv $LATEST_TAG.zip $TRAVIS_TAG.zip && curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ../new_tentacles.zip  $DEPLOY_URL/$TRAVIS_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
@@ -62,7 +62,7 @@ jobs:
             tags: true
             branch: "$DEPLOY_BRANCH"
         - provider: script
-          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ./new_tentacles.zip  $DEPLOY_URL/$LATEST_TAG.zip
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ../new_tentacles.zip  $DEPLOY_URL/$LATEST_TAG.zip
           skip_cleanup: true
           cleanup: false
           on:
