@@ -19,8 +19,6 @@ install:
   - mkdir new_tentacles
   - "xcopy Backtesting new_tentacles\\Backtesting /E/H/I"
   - "xcopy Evaluator new_tentacles\\Evaluator /E/H/I"
-  - "xcopy Interfaces new_tentacles\\Interfaces /E/H/I"
-  - "xcopy Evaluator new_tentacles\\Notifiers /E/H/I"
   - "xcopy Services new_tentacles\\Services /E/H/I"
   - "xcopy Trading new_tentacles\\Trading /E/H/I"
   - cd OctoBot

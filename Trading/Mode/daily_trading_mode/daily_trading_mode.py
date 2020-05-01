@@ -423,8 +423,8 @@ class DailyTradingModeProducer(AbstractTradingModeProducer):
 
     async def _send_alert_notification(self, symbol, new_state):
         try:
-            from octobot_notifications.api.notification import create_notification, send_notification
-            from octobot_notifications.enums import NotificationCategory
+            from octobot_services.api.notification import create_notification, send_notification
+            from octobot_services.enums import NotificationCategory
             title = f"OCTOBOT ALERT : #{symbol}"
             alert_content, alert_content_markdown = cryptocurrency_alert(
                 new_state,
