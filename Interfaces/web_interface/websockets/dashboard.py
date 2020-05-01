@@ -32,14 +32,12 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
     @staticmethod
     def _get_profitability():
         profitability_digits = 4
-        has_real_trader, has_simulated_trader, \
-        _, _, \
-        real_percent_profitability, simulated_percent_profitability, \
-        real_no_trade_profitability, simulated_no_trade_profitability, \
-        market_average_profitability = get_global_profitability()
+        has_real_trader, has_simulated_trader, _, _, real_percent_profitability, simulated_percent_profitability, \
+            real_no_trade_profitability, simulated_no_trade_profitability, \
+            market_average_profitability = get_global_profitability()
         profitability_data = \
-            {"market_average_profitability":
-                 round_with_decimal_count(market_average_profitability, profitability_digits)}
+            {"market_average_profitability": round_with_decimal_count(market_average_profitability,
+                                                                      profitability_digits)}
         if has_real_trader:
             profitability_data["bot_real_profitability"] = \
                 round_with_decimal_count(real_percent_profitability, profitability_digits)
