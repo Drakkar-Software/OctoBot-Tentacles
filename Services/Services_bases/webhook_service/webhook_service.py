@@ -15,13 +15,13 @@
 #  License along with this library.
 import logging
 import os
-from threading import Thread
-
+import time
 import flask
+from flask import request, abort
+from threading import Thread
+from gevent.pywsgi import WSGIServer
 from pyngrok import ngrok
 from pyngrok.exception import PyngrokNgrokError
-from werkzeug.serving import make_server
-from flask import request, abort
 
 from octobot_commons.logging.logging_util import set_logging_level
 from octobot_services.constants import CONFIG_WEBHOOK, CONFIG_CATEGORY_SERVICES, CONFIG_SERVICE_INSTANCE, \
@@ -31,6 +31,7 @@ from octobot_services.services.abstract_service import AbstractService
 
 
 class WebHookService(AbstractService):
+    CONNECTION_TIMEOUT = 3
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
@@ -57,11 +58,12 @@ class WebHookService(AbstractService):
         self.webhook_server = None
         self.webhook_server_context = None
         self.webhook_server_thread = None
+        self.connected = None
 
     @staticmethod
     def is_setup_correctly(config):
         return CONFIG_WEBHOOK in config[CONFIG_CATEGORY_SERVICES] \
-               and CONFIG_SERVICE_INSTANCE in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK]
+            and CONFIG_SERVICE_INSTANCE in config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK]
 
     @staticmethod
     def get_is_enabled(config):
@@ -69,8 +71,8 @@ class WebHookService(AbstractService):
 
     def has_required_configuration(self):
         return CONFIG_CATEGORY_SERVICES in self.config \
-               and CONFIG_WEBHOOK in self.config[CONFIG_CATEGORY_SERVICES] \
-               and self.check_required_config(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK])
+            and CONFIG_WEBHOOK in self.config[CONFIG_CATEGORY_SERVICES] \
+            and self.check_required_config(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK])
 
     def get_required_config(self):
         return [CONFIG_NGROK_TOKEN]
@@ -116,8 +118,9 @@ class WebHookService(AbstractService):
 
     def _prepare_webhook_server(self):
         try:
-            self.webhook_server = make_server(self.webhook_host, self.webhook_port,
-                                              self.webhook_app)
+            self.webhook_server = WSGIServer((self.webhook_host, self.webhook_port),
+                                             self.webhook_app,
+                                             log=None)
             self.webhook_server_context = self.webhook_app.app_context()
             self.webhook_server_context.push()
         except OSError as e:
@@ -147,10 +150,6 @@ class WebHookService(AbstractService):
                 self.logger.warning(f"Received unknown request from {webhook_name}")
                 abort(500)
 
-    def run_webhook_server(self):
-        if self.webhook_server:
-            self.webhook_server.serve_forever()
-
     async def prepare(self) -> None:
         set_logging_level(self.LOGGERS, logging.WARNING)
         ngrok.set_auth_token(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK][CONFIG_NGROK_TOKEN])
@@ -165,22 +164,37 @@ class WebHookService(AbstractService):
         except KeyError:
             self.webhook_port = int(os.getenv(ENV_WEBHOOK_PORT, DEFAULT_WEBHOOK_SERVER_PORT))
 
+    def _start_server(self):
+        try:
+            self._prepare_webhook_server()
+            self._load_webhook_routes()
+            self.ngrok_public_url = self.connect(self.webhook_port, protocol="http")
+            self.webhook_public_url = f"{self.ngrok_public_url}/webhook"
+            if self.webhook_server:
+                self.connected = True
+                self.webhook_server.serve_forever()
+        except PyngrokNgrokError as e:
+            self.logger.error(f"Error when starting webhook service: Your ngrock.com token might be invalid. ({e})")
+        except Exception as e:
+            self.logger.exception(e, True, f"Error when running webhook service: ({e})")
+        self.connected = False
+
     def start_webhooks(self) -> bool:
         if self.webhook_app is None:
             self.webhook_app = flask.Flask(__name__)
-            try:
-                self._prepare_webhook_server()
-                self._load_webhook_routes()
-                self.ngrok_public_url = self.connect(self.webhook_port, protocol="http")
-                self.webhook_public_url = f"{self.ngrok_public_url}/webhook"
-                self.webhook_server_thread = Thread(target=self.run_webhook_server)
-                self.webhook_server_thread.start()
-                return True
-            except PyngrokNgrokError as e:
-                self.logger.error(f"Error when starting webhook service: Your ngrock.com token might be invalid. ({e})")
-            except Exception as e:
-                self.logger.exception(e, True, f"Error when running webhook service: ({e})")
-            return False
+            # gevent WSGI server has to be created in the thread it is started: create everything in this thread
+            self.webhook_server_thread = Thread(target=self._start_server, name=self.get_name())
+            self.webhook_server_thread.start()
+            start_time = time.time()
+            timeout = False
+            while self.connected is None and not timeout:
+                time.sleep(0.01)
+                timeout = time.time() - start_time > self.CONNECTION_TIMEOUT
+            if timeout:
+                self.logger.error("Webhook took too long to start, now stopping it.")
+                self.stop()
+                self.connected = False
+            return self.connected is True
         return True
 
     def _is_healthy(self):
@@ -189,10 +203,7 @@ class WebHookService(AbstractService):
     def get_successful_startup_message(self):
         return f"Webhook configured on address: {self.webhook_host} and port: {self.webhook_port}", self._is_healthy()
 
-    def _prepare_stop(self):
-        ngrok.kill()
-        self.webhook_server.server_close()
-
     def stop(self):
-        self._prepare_stop()
-        self.webhook_server.shutdown()
+        ngrok.kill()
+        if self.webhook_server:
+            self.webhook_server.stop()
