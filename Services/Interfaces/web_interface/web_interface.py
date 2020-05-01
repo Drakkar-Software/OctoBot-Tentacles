@@ -28,7 +28,7 @@ from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACK
 from tentacles.Services.Interfaces.web_interface.controllers import load_routes
 from tentacles.Services.Interfaces.web_interface.security import register_responses_extra_header
 from tentacles.Services.Interfaces.web_interface.websockets import load_namespaces, namespaces
-from tentacles.Services import WebService
+from tentacles.Services.Services_bases import WebService
 from octobot_services.interfaces.web.abstract_web_interface import AbstractWebInterface
 
 
