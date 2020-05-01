@@ -19,7 +19,7 @@ install:
   - python3 -m pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
   - cd ..
   - mkdir new_tentacles
-  - cp -r Backtesting Evaluator Interfaces Notifiers Services Trading new_tentacles
+  - cp -r Backtesting Evaluator Services Trading new_tentacles
   - cd OctoBot
   - python3 start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
   - python3 start.py tentacles --install --location "../new_tentacles.zip" --all
