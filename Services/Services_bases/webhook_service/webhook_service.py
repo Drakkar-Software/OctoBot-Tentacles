@@ -140,7 +140,7 @@ class WebHookService(AbstractService):
                     if self.service_feed_auth_callbacks[webhook_name](data):
                         self.service_feed_webhooks[webhook_name](data)
                     else:
-                        self.logger.error(f"Invalid authentication info on feed, data: {data}")
+                        self.logger.debug(f"Ignored feed (wrong token): {data}")
                     return '', 200
                 abort(400)
             else:
