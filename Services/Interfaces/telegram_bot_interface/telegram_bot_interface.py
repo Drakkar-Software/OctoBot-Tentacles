@@ -21,7 +21,7 @@ from telegram.utils.helpers import escape_markdown
 from octobot_services.constants import CONFIG_TELEGRAM
 from octobot_services.interfaces.bots import EOL, UNAUTHORIZED_USER_MESSAGE
 from octobot_services.interfaces.bots.abstract_bot_interface import AbstractBotInterface
-from tentacles.Services import TelegramService
+from tentacles.Services.Services_bases import TelegramService
 
 # Telegram bot interface
 # telegram markdown reminder: *bold*, _italic_, `code`, [text_link](http://github.com/)

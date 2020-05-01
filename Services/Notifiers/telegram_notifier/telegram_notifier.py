@@ -16,7 +16,7 @@
 from octobot_commons.enums import MarkdownFormat
 from octobot_services.notification.notification import Notification
 from octobot_services.notifier.abstract_notifier import AbstractNotifier
-from tentacles.Services import TelegramService
+from tentacles.Services.Services_bases import TelegramService
 
 
 class TelegramNotifier(AbstractNotifier):
