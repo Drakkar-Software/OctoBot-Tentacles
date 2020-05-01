@@ -19,6 +19,7 @@ from threading import Thread
 
 import flask
 from pyngrok import ngrok
+from pyngrok.exception import PyngrokNgrokError
 from werkzeug.serving import make_server
 from flask import request, abort
 
@@ -30,11 +31,11 @@ from octobot_services.services.abstract_service import AbstractService
 
 
 class WebHookService(AbstractService):
-    LOGGERS = ["pyngrok.ngrok", "pyngrok.process", "werkzeug"]
+    LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
         return {
-            CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to internet."
+            CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet."
         }
 
     def get_default_value(self):
@@ -48,6 +49,7 @@ class WebHookService(AbstractService):
         self.webhook_public_url = ""
 
         self.service_feed_webhooks = {}
+        self.service_feed_auth_callbacks = {}
 
         self.webhook_app = None
         self.webhook_host = None
@@ -73,11 +75,18 @@ class WebHookService(AbstractService):
     def get_required_config(self):
         return [CONFIG_NGROK_TOKEN]
 
+    @classmethod
+    def get_help_page(cls) -> str:
+        return "https://github.com/Drakkar-Software/OctoBot/wiki/TradingView-webhook"
+
     def get_endpoint(self) -> None:
         return ngrok
 
     def get_type(self) -> None:
         return CONFIG_WEBHOOK
+
+    def is_subscribed(self, feed_name):
+        return feed_name in self.service_feed_webhooks
 
     @staticmethod
     def connect(port, protocol="http") -> str:
@@ -89,7 +98,7 @@ class WebHookService(AbstractService):
         """
         return ngrok.connect(port, protocol)
 
-    def subscribe_feed(self, service_feed_name, service_feed_callback) -> str:
+    def subscribe_feed(self, service_feed_name, service_feed_callback, auth_callback) -> None:
         """
         Subscribe a service feed to the webhook
         :param service_feed_name: the service feed name
@@ -98,15 +107,17 @@ class WebHookService(AbstractService):
         """
         if service_feed_name not in self.service_feed_webhooks:
             self.service_feed_webhooks[service_feed_name] = service_feed_callback
-            return f"{self.webhook_public_url}/{service_feed_name}"
+            self.service_feed_auth_callbacks[service_feed_name] = auth_callback
+            return
         raise KeyError(f"Service feed has already subscribed to a webhook : {service_feed_name}")
+
+    def get_subscribe_url(self, service_feed_name):
+        return f"{self.webhook_public_url}/{service_feed_name}"
 
     def _prepare_webhook_server(self):
         try:
-            self.webhook_server = make_server(host=self.webhook_host,
-                                              port=self.webhook_port,
-                                              threaded=True,
-                                              app=self.webhook_app)
+            self.webhook_server = make_server(self.webhook_host, self.webhook_port,
+                                              self.webhook_app)
             self.webhook_server_context = self.webhook_app.app_context()
             self.webhook_server_context.push()
         except OSError as e:
@@ -125,7 +136,11 @@ class WebHookService(AbstractService):
         def webhook(webhook_name):
             if webhook_name in self.service_feed_webhooks:
                 if request.method == 'POST':
-                    self.service_feed_webhooks[webhook_name](request.get_data(as_text=True))
+                    data = request.get_data(as_text=True)
+                    if self.service_feed_auth_callbacks[webhook_name](data):
+                        self.service_feed_webhooks[webhook_name](data)
+                    else:
+                        self.logger.error(f"Invalid authentication info on feed, data: {data}")
                     return '', 200
                 abort(400)
             else:
@@ -139,8 +154,6 @@ class WebHookService(AbstractService):
     async def prepare(self) -> None:
         set_logging_level(self.LOGGERS, logging.WARNING)
         ngrok.set_auth_token(self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEBHOOK][CONFIG_NGROK_TOKEN])
-
-        self.webhook_app = flask.Flask(__name__)
         try:
             self.webhook_host = os.getenv(ENV_WEBHOOK_ADDRESS, self.config[CONFIG_CATEGORY_SERVICES]
                                           [CONFIG_WEBHOOK][CONFIG_WEB_IP])
@@ -148,24 +161,36 @@ class WebHookService(AbstractService):
             self.webhook_host = os.getenv(ENV_WEBHOOK_ADDRESS, DEFAULT_WEBHOOK_SERVER_IP)
         try:
             self.webhook_port = int(os.getenv(ENV_WEBHOOK_PORT, self.config[CONFIG_CATEGORY_SERVICES]
-            [CONFIG_WEBHOOK][CONFIG_WEB_PORT]))
+                                    [CONFIG_WEBHOOK][CONFIG_WEB_PORT]))
         except KeyError:
             self.webhook_port = int(os.getenv(ENV_WEBHOOK_PORT, DEFAULT_WEBHOOK_SERVER_PORT))
 
-        try:
-            self._prepare_webhook_server()
-            self._load_webhook_routes()
-            self.ngrok_public_url = self.connect(self.webhook_port, protocol="http")
-            self.webhook_public_url = f"{self.ngrok_public_url}/webhook"
-            self.webhook_server_thread = Thread(target=self.run_webhook_server)
-            self.webhook_server_thread.start()
-        except Exception as e:
-            self.logger.exception(e, True, f"Error when running webhook service: ({e})")
+    def start_webhooks(self) -> bool:
+        if self.webhook_app is None:
+            self.webhook_app = flask.Flask(__name__)
+            try:
+                self._prepare_webhook_server()
+                self._load_webhook_routes()
+                self.ngrok_public_url = self.connect(self.webhook_port, protocol="http")
+                self.webhook_public_url = f"{self.ngrok_public_url}/webhook"
+                self.webhook_server_thread = Thread(target=self.run_webhook_server)
+                self.webhook_server_thread.start()
+                return True
+            except PyngrokNgrokError as e:
+                self.logger.error(f"Error when starting webhook service: Your ngrock.com token might be invalid. ({e})")
+            except Exception as e:
+                self.logger.exception(e, True, f"Error when running webhook service: ({e})")
+            return False
+        return True
+
+    def _is_healthy(self):
+        return self.webhook_host is not None and self.webhook_port is not None
 
     def get_successful_startup_message(self):
-        return f"Global webhook url = {self.ngrok_public_url}/webhook", True
+        return f"Webhook configured on address: {self.webhook_host} and port: {self.webhook_port}", self._is_healthy()
 
     def _prepare_stop(self):
+        ngrok.kill()
         self.webhook_server.server_close()
 
     def stop(self):
