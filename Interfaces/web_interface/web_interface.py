@@ -93,7 +93,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
     async def _async_run(self) -> bool:
         # wait bot is ready
         while not self.is_bot_ready():
-            sleep(0.1)
+            sleep(0.05)
 
         load_routes()
         self._prepare_websocket()
