@@ -40,17 +40,10 @@ class TradingViewServiceFeed(AbstractServiceFeed):
         return bool(self.channel.consumers)
 
     def ensure_callback_auth(self, data) -> bool:
-        if self.expect_token is None or self.expect_token:
+        if self.services[1].requires_token:
             split_result = data.split("TOKEN=")
             if len(split_result) > 1:
-                if self.expect_token is None:
-                    # has token, check it and next the next ones as well
-                    self.expect_token = True
                 return self.hashed_pin_code == self.REQUIRED_SERVICES[1].get_security_token(split_result[-1])
-            elif self.expect_token is None:
-                self.expect_token = False
-                return True
-            # no token given while token is expected
             return False
         # no token expected
         return True
