@@ -15,8 +15,6 @@
 #  License along with this library.
 import uuid
 
-from flask import request, abort
-
 from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
 from octobot_services.constants import FEED_METADATA
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
@@ -38,36 +36,11 @@ class TradingViewServiceFeed(AbstractServiceFeed):
         self.webhook_service_url = ""
 
     def _something_to_watch(self):
-        return True
+        return True or bool(self.channel.consumers)
 
-    def _load_webhook_routes(self) -> None:
-        @self.webhook_app.route('/')
-        def index():
-            """
-            Route to check if webhook server is online
-            """
-            return ''
-
-        @self.webhook_app.route('/webhook', methods=['POST'])
-        def webhook():
-            """
-            Route to handle webhook requests
-            """
-            if request.method == 'POST':
-                data = request.get_data(as_text=True)
-                # Check that the key is correct
-                # if self.service.get_security_token(self.pin_code) == data['key']:
-                self.logger.debug(f"WebHook received : {data}")
-                self._notify_consumers(
-                    {
-                        FEED_METADATA: data,
-                    }
-                )
-                return '', 200
-                # else:
-                #     abort(403)
-            else:
-                abort(400)
+    def ensure_callback_auth(self, data) -> bool:
+        token = data.split("TOKEN=")[-1]
+        return self.pin_code == token or self.services[1].get_security_token(self.pin_code) == token
 
     def webhook_callback(self, data):
         self.logger.debug(f"Received : {data}")
@@ -77,16 +50,17 @@ class TradingViewServiceFeed(AbstractServiceFeed):
             }
         )
 
+    def _register_to_service(self):
+        if not self.services[0].is_subscribed(self.webhook_service_name):
+            self.services[0].subscribe_feed(self.webhook_service_name, self.webhook_callback, self.ensure_callback_auth)
+
     def _initialize(self):
-        pass
+        self._register_to_service()
 
     async def _start_service_feed(self):
-        try:
-            self.webhook_service_url = self.services[0].subscribe_feed(self.webhook_service_name, self.webhook_callback)
-            self.logger.info(f"TradingView webhook url = {self.webhook_service_url}")
-            return True
-        except Exception as e:
-            self.logger.exception(e, True, f"Error when starting TradingView feed: ({e})")
-            self.should_stop = True
-        finally:
-            return False
+        success = self.services[0].start_webhooks()
+        self.webhook_service_url = self.services[0].get_subscribe_url(self.webhook_service_name)
+        if success:
+            self.logger.info(f"Your OctoBot's TradingView webhook url is: {self.webhook_service_url}    "
+                             f"pin code is: {self.pin_code}")
+        return success
