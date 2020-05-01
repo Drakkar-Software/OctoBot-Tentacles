@@ -22,6 +22,7 @@ import requests
 
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from octobot_interfaces.util.util import run_in_bot_main_loop
+from octobot_notifications.api.notification import create_notifier_factory
 from octobot_tentacles_manager.api.configurator import get_tentacles_activation, \
     get_tentacle_config as manager_get_tentacle_config, update_tentacle_config as manager_update_tentacle_config, \
     get_tentacle_config_schema_path, factory_tentacle_reset_config, update_activation_configuration
@@ -422,14 +423,18 @@ def get_metrics_enabled():
 
 def get_services_list():
     services = {}
-    services_names = []
     for service in get_available_services():
         srv = service.instance()
         if srv.get_required_config():
             # do not add services without a config, ex: GoogleService (nothing to show on the web interface)
             services[srv.get_type()] = srv
-            services_names.append(srv.get_type())
-    return services, services_names
+    return services
+
+
+def get_notifiers_list():
+    return [service.instance().get_type()
+            for notifier in create_notifier_factory({}).get_available_notifiers()
+            for service in notifier.REQUIRED_SERVICES]
 
 
 def get_symbol_list(exchanges):

@@ -26,7 +26,7 @@ from tentacles.Interfaces.web_interface.constants import GLOBAL_CONFIG_KEY, EVAL
     DEACTIVATE_OTHERS
 from tentacles.Interfaces.web_interface import server_instance
 from tentacles.Interfaces.web_interface.models.configuration import get_strategy_config, \
-    get_services_list, get_symbol_list, update_global_config, get_all_symbol_list, \
+    get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbol_list, \
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, \
     reset_trading_history, is_trading_persistence_activated, \
     manage_metrics, get_tentacle_from_string, update_tentacle_config, reset_config_to_default, \
@@ -93,7 +93,8 @@ def config():
         display_config = get_edited_config()
 
         # service lists
-        service_list, service_name_list = get_services_list()
+        service_list = get_services_list()
+        notifiers_list = get_notifiers_list()
 
         return render_template('config.html',
 
@@ -112,7 +113,7 @@ def config():
                                ccxt_simulated_tested_exchanges=get_simulated_exchange_list(),
                                ccxt_other_exchanges=sorted(get_other_exchange_list()),
                                services_list=service_list,
-                               service_name_list=service_name_list,
+                               notifiers_list=notifiers_list,
                                symbol_list=sorted(get_symbol_list([exchange
                                                                    for exchange in display_config[CONFIG_EXCHANGES]])),
                                full_symbol_list=get_all_symbol_list(),
