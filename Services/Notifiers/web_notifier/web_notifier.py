@@ -16,7 +16,7 @@
 from octobot_services.notification.notification import Notification
 from octobot_services.notifier.abstract_notifier import AbstractNotifier
 from tentacles.Services.Interfaces.web_interface import add_notification
-from tentacles.Services import WebService
+from tentacles.Services.Services_bases import WebService
 
 
 class WebNotifier(AbstractNotifier):
