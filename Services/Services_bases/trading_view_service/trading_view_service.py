@@ -15,11 +15,19 @@
 #  License along with this library.
 import hashlib
 
-from octobot_services.constants import CONFIG_TRADING_VIEW
+from octobot_services.constants import CONFIG_TRADING_VIEW, CONFIG_REQUIRE_TRADING_VIEW_TOKEN, CONFIG_CATEGORY_SERVICES
 from octobot_services.services.abstract_service import AbstractService
 
 
 class TradingViewService(AbstractService):
+    def __init__(self):
+        super().__init__()
+        self.requires_token = False
+        self.chat_id = None
+        self.telegram_updater = None
+        self.users = []
+        self.text_chat_dispatcher = {}
+
     @staticmethod
     def is_setup_correctly(config):
         return True
@@ -31,6 +39,24 @@ class TradingViewService(AbstractService):
     def has_required_configuration(self):
         return True
 
+    def get_required_config(self):
+        return [CONFIG_REQUIRE_TRADING_VIEW_TOKEN]
+
+    def get_fields_description(self):
+        return {
+            CONFIG_REQUIRE_TRADING_VIEW_TOKEN: "When enabled the Trading View webhook will require a valid token to "
+                                               "process a signal. This token is printed in the terminal at startup."
+        }
+
+    def get_default_value(self):
+        return {
+            CONFIG_REQUIRE_TRADING_VIEW_TOKEN: False
+        }
+
+    @classmethod
+    def get_help_page(cls) -> str:
+        return "https://github.com/Drakkar-Software/OctoBot/wiki/TradingView-webhook"
+
     def get_endpoint(self) -> None:
         return None
 
@@ -38,7 +64,11 @@ class TradingViewService(AbstractService):
         return CONFIG_TRADING_VIEW
 
     async def prepare(self) -> None:
-        pass
+        try:
+            self.requires_token = \
+                self.config[CONFIG_CATEGORY_SERVICES][CONFIG_TRADING_VIEW][CONFIG_REQUIRE_TRADING_VIEW_TOKEN]
+        except KeyError:
+            self.requires_token = self.get_default_value()[CONFIG_REQUIRE_TRADING_VIEW_TOKEN]
 
     @staticmethod
     def get_security_token(pin_code):
