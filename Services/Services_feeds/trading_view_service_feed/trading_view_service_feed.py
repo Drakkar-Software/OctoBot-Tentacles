@@ -31,16 +31,29 @@ class TradingViewServiceFeed(AbstractServiceFeed):
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
-        self.pin_code = uuid.uuid4().hex
+        self.hashed_pin_code = ""
+        self.expect_token = None
         self.webhook_service_name = "trading_view"
         self.webhook_service_url = ""
 
     def _something_to_watch(self):
-        return True or bool(self.channel.consumers)
+        return bool(self.channel.consumers)
 
     def ensure_callback_auth(self, data) -> bool:
-        token = data.split("TOKEN=")[-1]
-        return self.pin_code == token or self.services[1].get_security_token(self.pin_code) == token
+        if self.expect_token is None or self.expect_token:
+            split_result = data.split("TOKEN=")
+            if len(split_result) > 1:
+                if self.expect_token is None:
+                    # has token, check it and next the next ones as well
+                    self.expect_token = True
+                return self.hashed_pin_code == self.REQUIRED_SERVICES[1].get_security_token(split_result[-1])
+            elif self.expect_token is None:
+                self.expect_token = False
+                return True
+            # no token given while token is expected
+            return False
+        # no token expected
+        return True
 
     def webhook_callback(self, data):
         self.logger.debug(f"Received : {data}")
@@ -61,6 +74,8 @@ class TradingViewServiceFeed(AbstractServiceFeed):
         success = self.services[0].start_webhooks()
         self.webhook_service_url = self.services[0].get_subscribe_url(self.webhook_service_name)
         if success:
+            pin = uuid.uuid4().hex
             self.logger.info(f"Your OctoBot's TradingView webhook url is: {self.webhook_service_url}    "
-                             f"pin code is: {self.pin_code}")
+                             f"the pin code for this feed is: {pin}")
+            self.hashed_pin_code = self.REQUIRED_SERVICES[1].get_security_token(pin)
         return success
