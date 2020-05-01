@@ -14,9 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import hashlib
-import logging
-
-from octobot_commons.logging.logging_util import set_logging_level
 
 from octobot_services.constants import CONFIG_TRADING_VIEW
 from octobot_services.services.abstract_service import AbstractService
