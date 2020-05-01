@@ -11,7 +11,7 @@
         {% elif config[key] | is_list %}
             {{ editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier, placeholder_str) }}
         {% elif config[key] | is_bool %}
-            {{ editable_key_bool(config, key, config_key, config_type, config_value, startup_config_value, suggestions) }}
+            {{ editable_key_bool(config, key, config_key, config_type, config_value, startup_config_value, suggestions, tooltip) }}
         {% elif config[key] is number %}
             {{ editable_key_number(config, key, config_key, config_type, config_value, startup_config_value, suggestions, number_step) }}
         {% else %}
@@ -56,7 +56,7 @@
     {% endfor %}
 {%- endmacro %}
 
-{% macro editable_key_bool(config, key, config_key, config_type, config_value, startup_config_value, suggestions) -%}
+{% macro editable_key_bool(config, key, config_key, config_type, config_value, startup_config_value, suggestions, tooltip) -%}
     <div class="custom-control custom-switch">
       <input type="checkbox"
              class="custom-control-input config-element"
@@ -67,7 +67,15 @@
              data-type="bool"
              id="{{config_key}}"
       {% if config[key] == True %}checked{% endif %}>
-      <label class="custom-control-label" for="{{config_key}}">{{ key }}</label>
+
+      <label class="custom-control-label" for="{{config_key}}"
+          {% if tooltip is not none %}
+            data-toggle="tooltip" title="{{tooltip}}"
+          {% endif %}
+      >
+
+          {{ key }}
+      </label>
     </div>
 {%- endmacro %}
 
