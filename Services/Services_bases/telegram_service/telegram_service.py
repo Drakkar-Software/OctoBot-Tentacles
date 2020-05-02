@@ -36,6 +36,7 @@ class TelegramService(AbstractService):
         self.telegram_updater = None
         self.users = []
         self.text_chat_dispatcher = {}
+        self._bot_url = None
 
     def get_fields_description(self):
         return {
@@ -54,6 +55,11 @@ class TelegramService(AbstractService):
 
     def get_required_config(self):
         return [self.CHAT_ID, CONFIG_TOKEN]
+
+    def get_read_only_info(self):
+        return {
+            "Connected to": self._bot_url
+        } if self._bot_url else {}
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -159,12 +165,13 @@ class TelegramService(AbstractService):
             self.logger.error(f"Failed to send message ({e}): invalid telegram configuration.")
         return None
 
-    def _get_bot_url(self):
-        return f"https://web.telegram.org/#/im?p={self.telegram_api.get_me().name}"
+    def _fetch_bot_url(self):
+        self._bot_url = f"https://web.telegram.org/#/im?p={self.telegram_api.get_me().name}"
+        return self._bot_url
 
     def get_successful_startup_message(self):
         try:
-            return f"Successfully initialized and accessible at: {self._get_bot_url()}.", True
+            return f"Successfully initialized and accessible at: {self._fetch_bot_url()}.", True
         except telegram.error.NetworkError as e:
             self.log_connection_error_message(e)
             return "", False
