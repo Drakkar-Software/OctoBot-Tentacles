@@ -14,11 +14,6 @@
             </h4>
         </div>
 
-        <!--Card image-->
-        <div class="view overlay">
-            <!--{{ service_name }}-->
-        </div>
-
         <!--Card content-->
         <div class="card-body" name="{{service_name}}" config-key="services_{{service_name}}">
 
@@ -40,8 +35,21 @@
                     }}
                 {% endfor %}
             </p>
-
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+            <div class="float-right card-text mt-2">
+                {% for key, element in service.get_read_only_info().items() %}
+                <p class="">
+                    <i class="fa fa-check mr-1"></i>
+                    <span class="mr-2">
+                        {{ key }}
+                    </span>
+                    <a class="text-danger external-link" target="_blank" rel="noopener noreferrer" href="{{element}}">
+                        {{element}}
+                    </a>
+                </p>
+                {% endfor %}
+            </div>
+
         </div>
     </div>
 {%- endmacro %}
