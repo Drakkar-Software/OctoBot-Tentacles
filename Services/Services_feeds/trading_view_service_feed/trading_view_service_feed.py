@@ -13,8 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import uuid
-
 from octobot_services.channel.abstract_service_feed import AbstractServiceFeedChannel
 from octobot_services.constants import FEED_METADATA
 from octobot_services.service_feeds.abstract_service_feed import AbstractServiceFeed
@@ -31,8 +29,6 @@ class TradingViewServiceFeed(AbstractServiceFeed):
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
-        self.hashed_pin_code = ""
-        self.expect_token = None
         self.webhook_service_name = "trading_view"
         self.webhook_service_url = ""
 
@@ -43,7 +39,7 @@ class TradingViewServiceFeed(AbstractServiceFeed):
         if self.services[1].requires_token:
             split_result = data.split("TOKEN=")
             if len(split_result) > 1:
-                return self.hashed_pin_code == self.REQUIRED_SERVICES[1].get_security_token(split_result[-1])
+                return self.services[1].token == split_result[-1]
             return False
         # no token expected
         return True
@@ -67,8 +63,7 @@ class TradingViewServiceFeed(AbstractServiceFeed):
         success = self.services[0].start_webhooks()
         self.webhook_service_url = self.services[0].get_subscribe_url(self.webhook_service_name)
         if success:
-            pin = uuid.uuid4().hex
+            self.services[1].register_webhook_url(self.webhook_service_url)
             self.logger.info(f"Your OctoBot's TradingView webhook url is: {self.webhook_service_url}    "
-                             f"the pin code for this feed is: {pin}")
-            self.hashed_pin_code = self.REQUIRED_SERVICES[1].get_security_token(pin)
+                             f"the pin code for this feed is: {self.services[1].token}")
         return success
