@@ -187,6 +187,11 @@ body:before {
 
 .card a:hover {
     color: #42a5f5 !important;
+    font-weight: bolder;
+}
+
+a:hover.external-link {
+    font-weight: inherit;
 }
 
 .card a:link.button {
