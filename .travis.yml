@@ -69,3 +69,8 @@ jobs:
             repo: "$GH_REPO"
             tags: false
             branch: "$DEPLOY_BRANCH"
+
+after_failure:
+  - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
+  - chmod +x send.sh
+  - ./send.sh failure https://discordapp.com/api/webhooks/$WEBHOOK_TOKEN
