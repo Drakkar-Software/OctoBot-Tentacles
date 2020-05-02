@@ -33,6 +33,7 @@ class TwitterService(AbstractService):
     def __init__(self):
         super().__init__()
         self.twitter_api = None
+        self._account_url = None
 
     def get_fields_description(self):
         return {
@@ -52,6 +53,11 @@ class TwitterService(AbstractService):
 
     def get_required_config(self):
         return [self.API_KEY, self.API_SECRET, self.ACCESS_TOKEN, self.ACCESS_TOKEN_SECRET]
+
+    def get_read_only_info(self):
+        return {
+            "Connected to": self._account_url
+        } if self._account_url else {}
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -165,12 +171,13 @@ class TwitterService(AbstractService):
     def get_tweet(self, tweet_id):
         return self.twitter_api.GetStatus(tweet_id)
 
-    def _get_twitter_url(self):
-        return f"https://twitter.com/{self.twitter_api.VerifyCredentials().screen_name}"
+    def _fetch_twitter_url(self):
+        self._account_url = f"https://twitter.com/{self.twitter_api.VerifyCredentials().screen_name}"
+        return self._account_url
 
     def get_successful_startup_message(self):
         try:
-            return f"Successfully initialized and accessible at: {self._get_twitter_url()}.", True
+            return f"Successfully initialized and accessible at: {self._fetch_twitter_url()}.", True
         except requests.exceptions.ConnectionError as e:
             self.log_connection_error_message(e)
             return "", False
