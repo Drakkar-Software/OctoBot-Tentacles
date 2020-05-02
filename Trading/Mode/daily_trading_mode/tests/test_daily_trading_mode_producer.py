@@ -17,6 +17,8 @@ import pytest
 from os.path import join
 from asyncio import create_task
 
+from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
+from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
@@ -45,13 +47,13 @@ async def _get_tools(symbol="BTC/USDT"):
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    exchange_manager.backtesting_files = [join(TEST_CONFIG_FOLDER,
-                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")]
+    backtesting = await initialize_backtesting(config, [join(TEST_CONFIG_FOLDER,
+                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager.exchange_type,
                                                   exchange_manager,
-                                                  exchange_manager.backtesting_files)
+                                                  backtesting)
     await exchange_manager.exchange.initialize()
     for exchange_channel_class_type in [ExchangeChannel, TimeFrameExchangeChannel]:
         await create_all_subclasses_channel(exchange_channel_class_type, set_chan, exchange_manager=exchange_manager)
@@ -69,6 +71,8 @@ async def _get_tools(symbol="BTC/USDT"):
 
 
 async def _stop(trader):
+    for importer in get_importers(trader.exchange_manager.exchange.backtesting):
+        await stop_importer(importer)
     await trader.exchange_manager.stop()
 
 

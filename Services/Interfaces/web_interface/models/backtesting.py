@@ -16,16 +16,16 @@
 from os import remove
 from asyncio import gather
 
-from octobot_backtesting.api.backtesting import create_independent_backtesting, \
+from octobot.api.backtesting import create_independent_backtesting, \
     initialize_and_run_independent_backtesting, \
     get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
     get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting, \
     check_independent_backtesting_remaining_objects
+from octobot.api.strategy_optimizer import is_optimizer_in_progress
+from octobot_commons.logging.logging_util import get_logger
 from octobot_backtesting.api.data_file_converters import convert_data_file
 from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
-from octobot_backtesting.api.strategy_optimizer import is_optimizer_in_progress
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
-from octobot_commons.logging.logging_util import get_logger
 from octobot_backtesting.api.data_file import get_all_available_data_files, get_file_description, delete_data_file
 from octobot_services.interfaces.util.bot import get_global_config, get_bot_api
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
