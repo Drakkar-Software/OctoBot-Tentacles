@@ -34,7 +34,6 @@ from octobot_trading.exchanges.rest_exchange import RestExchange
 from octobot_trading.traders.trader_simulator import TraderSimulator
 from tentacles.Trading.Mode import DipAnalyserTradingMode
 
-
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
@@ -47,8 +46,11 @@ async def _get_tools(symbol="BTC/USDT"):
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    backtesting = await initialize_backtesting(config, [join(TEST_CONFIG_FOLDER,
-                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    backtesting = await initialize_backtesting(
+        config,
+        exchange_ids=[exchange_manager.id],
+        matrix_id=None,
+        data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager.exchange_type,
@@ -119,7 +121,7 @@ async def test_create_bottom_order():
 
         order = get_open_orders(trader.exchange_manager)[0]
         expected_quantity = market_quantity * risk_multiplier * \
-            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(order.origin_quantity, 7) == round(expected_quantity, 7)
         expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
         assert round(order.origin_price, 7) == round(expected_price, 7)
@@ -184,7 +186,7 @@ async def test_create_bottom_order_replace_current():
         first_order = get_open_orders(trader.exchange_manager)[0]
         assert first_order.status == OrderStatus.OPEN
         expected_quantity = market_quantity * risk_multiplier * \
-            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(first_order.origin_quantity, 7) == round(expected_quantity, 7)
         expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
         assert round(first_order.origin_price, 7) == round(expected_price, 7)
@@ -218,7 +220,7 @@ async def test_create_bottom_order_replace_current():
         assert third_order.status == OrderStatus.OPEN
         assert third_order is not second_order and third_order is not first_order
         expected_quantity = market_quantity * \
-            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(third_order.origin_quantity, 7) != round(first_order.origin_quantity, 7)
         assert round(third_order.origin_quantity, 7) == round(expected_quantity, 7)
         assert round(third_order.origin_price, 7) == round(first_order.origin_price, 7)
@@ -248,7 +250,7 @@ async def test_create_bottom_order_replace_current():
         assert fifth_order.status == OrderStatus.OPEN
         assert fifth_order is not third_order and fifth_order is not second_order and fifth_order is not first_order
         expected_quantity = new_market_quantity * risk_multiplier * \
-            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(fifth_order.origin_quantity, 7) != round(first_order.origin_quantity, 7)
         assert round(fifth_order.origin_quantity, 7) != round(third_order.origin_quantity, 7)
         assert round(fifth_order.origin_quantity, 7) == round(expected_quantity, 7)
@@ -280,7 +282,7 @@ async def test_create_sell_orders():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-        assert sell_quantity*0.9999 <= total_sell_quantity <= sell_quantity
+        assert sell_quantity * 0.9999 <= total_sell_quantity <= sell_quantity
 
         max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
         increment = (max_price - buy_price) / consumer.trading_mode.sell_orders_per_buy
@@ -304,13 +306,13 @@ async def test_create_sell_orders():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders if o.origin_price > 150)
-        assert sell_quantity*0.9999 <= total_sell_quantity <= sell_quantity
+        assert sell_quantity * 0.9999 <= total_sell_quantity <= sell_quantity
 
         max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
         increment = (max_price - buy_price) / consumer.trading_mode.sell_orders_per_buy
-        assert round(open_orders[2+0].origin_price, 7) == round(buy_price + increment, 7)
-        assert round(open_orders[2+1].origin_price, 7) == round(buy_price + 2 * increment, 7)
-        assert round(open_orders[2+2].origin_price, 7) == round(buy_price + 3 * increment, 7)
+        assert round(open_orders[2 + 0].origin_price, 7) == round(buy_price + increment, 7)
+        assert round(open_orders[2 + 1].origin_price, 7) == round(buy_price + 2 * increment, 7)
+        assert round(open_orders[2 + 2].origin_price, 7) == round(buy_price + 3 * increment, 7)
 
         # now fill a sell order
         await _fill_order(open_orders[-1], trader, trigger_update_callback=False)
@@ -349,7 +351,7 @@ async def test_create_too_large_sell_orders():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-        assert sell_quantity*0.9999 <= total_sell_quantity <= sell_quantity
+        assert sell_quantity * 0.9999 <= total_sell_quantity <= sell_quantity
 
         max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
         increment = (max_price - buy_price) / 17
@@ -384,7 +386,7 @@ async def test_create_too_small_sell_orders():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-        assert sell_quantity*0.9999 <= total_sell_quantity <= sell_quantity
+        assert sell_quantity * 0.9999 <= total_sell_quantity <= sell_quantity
 
         max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
         assert round(open_orders[0].origin_price, 7) == round(max_price, 7)
@@ -401,7 +403,7 @@ async def test_create_too_small_sell_orders():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         second_total_sell_quantity = sum(o.origin_quantity for o in open_orders if o.origin_price >= 0.0107)
-        assert sell_quantity*0.9999 <= second_total_sell_quantity <= sell_quantity
+        assert sell_quantity * 0.9999 <= second_total_sell_quantity <= sell_quantity
 
         max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
         increment = (max_price - buy_price) / 2
@@ -436,7 +438,7 @@ async def test_order_fill_callback():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-        assert to_fill_order.origin_quantity*0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
+        assert to_fill_order.origin_quantity * 0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
 
         price = to_fill_order.filled_price
         max_price = price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[1]
@@ -486,7 +488,7 @@ async def test_order_fill_callback_not_in_db():
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
         assert all(o.side == TradeOrderSide.SELL for o in open_orders)
         total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-        assert to_fill_order.origin_quantity*0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
+        assert to_fill_order.origin_quantity * 0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
 
         price = to_fill_order.filled_price
         max_price = price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[consumer.DEFAULT_SELL_TARGET]
