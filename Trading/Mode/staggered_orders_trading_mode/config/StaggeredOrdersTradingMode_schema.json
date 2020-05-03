@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "title": "StaggeredOrdersTradingMode",
+  "properties": {
+    "pair_settings": {
+        "type": "array",
+        "title": "Configuration for each traded pairs",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+            "type": "object",
+            "title": "Pair configuration",
+            "properties": {
+              "pair": {
+                "type": "string",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder":  "BTC/USDT"
+                  }
+                },
+                "title": "Name of the traded pair",
+                "minLength": 3,
+                "pattern": "[a-zA-Z]{2,}\\/[a-zA-Z]{2,}"
+              },
+              "mode": {
+                "type": "string",
+                "title": "Mode: way to handle orders size",
+                "default": "neutral",
+                "enum": ["neutral", "mountain", "valley", "sell slope", "buy slope"]
+              },
+              "spread_percent": {
+                "type": "number",
+                "title": "Spread: percent of the current price to use as spread (difference between highest buy and lowest sell)",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "increment_percent": {
+                "type": "number",
+                "title": "Increment: percent of the current price to use as increment between orders (profitability is close to Spread-Increment)",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "lower_bound": {
+                "type": "number",
+                "title": "Lower bound: minimum price to start placing buy orders from",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "upper_bound": {
+                "type": "number",
+                "title": "Upper bound: maximum price to stop placing sell orders from",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "operational_depth": {
+                "type": "number",
+                "title": "Operational depth: total number of orders to be maintained on exchange",
+                "minimum": 1,
+                "multipleOf": 1.0,
+                "exclusiveMinimum": true
+              }
+            }
+        }
+    }
+  }
+}
