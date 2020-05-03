@@ -341,7 +341,7 @@ async def test_invalid_create_new_orders():
         # invalid sell order with not trade data
         import octobot_trading.constants
         octobot_trading.constants.ORDER_DATA_FETCHING_TIMEOUT = 0.1
-        assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT.value, timeout=0.1) == []
+        assert await consumer.create_new_orders(min_trigger_market, 0.6, EvaluatorStates.SHORT.value, timeout=1) == []
 
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
             "BTC": {
