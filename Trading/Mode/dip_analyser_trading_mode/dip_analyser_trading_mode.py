@@ -29,10 +29,10 @@ from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.constants import MODE_CHANNEL, ORDER_DATA_FETCHING_TIMEOUT
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
+from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
 from octobot_trading.orders.order_adapter import adapt_price, check_and_adapt_order_details_if_necessary
 from octobot_trading.orders.order_factory import create_order_instance
 from octobot_trading.orders.order_util import get_pre_order_data, get_min_max_amounts, total_fees_from_order_dict
-from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
 from tentacles.Evaluator.Strategies import DipAnalyserStrategyEvaluator
 
 
