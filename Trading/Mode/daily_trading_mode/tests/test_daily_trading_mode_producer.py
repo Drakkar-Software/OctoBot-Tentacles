@@ -47,8 +47,11 @@ async def _get_tools(symbol="BTC/USDT"):
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    backtesting = await initialize_backtesting(config, [join(TEST_CONFIG_FOLDER,
-                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    backtesting = await initialize_backtesting(
+        config,
+        exchange_ids=[exchange_manager.id],
+        matrix_id=None,
+        data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager.exchange_type,
@@ -153,8 +156,8 @@ async def test_get_delta_risk():
     try:
         producer, consumer, trader = await _get_tools()
         for i in range(0, 100, 1):
-            trader.risk = i/100
-            assert round(producer._get_delta_risk(), 6) == round(producer.RISK_THRESHOLD * i/100, 6)
+            trader.risk = i / 100
+            assert round(producer._get_delta_risk(), 6) == round(producer.RISK_THRESHOLD * i / 100, 6)
 
     finally:
         await _stop(trader)
@@ -165,7 +168,7 @@ async def test_create_state():
         producer, consumer, trader = await _get_tools()
         delta_risk = producer._get_delta_risk()
         for i in range(-100, 100, 1):
-            producer.final_eval = i/100
+            producer.final_eval = i / 100
             await producer.create_state(None, None)
             if producer.final_eval < producer.VERY_LONG_THRESHOLD + delta_risk:
                 assert producer.state == EvaluatorStates.VERY_LONG
