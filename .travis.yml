@@ -14,6 +14,8 @@ env:
     - OCTOBOT_DEFAULT_BRANCH=0.4.0
     - LATEST_TAG=latest
     - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
+    - DEV_DEPLOY_URL=$DEPLOY_URL/dev
+    - TRAVIS_CLEANED_BRANCH=${TRAVIS_BRANCH////_}
 
 install:
   - git clone -q $OCTOBOT_GH_REPO -b $TRAVIS_BRANCH || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
@@ -71,6 +73,14 @@ jobs:
             repo: "$GH_REPO"
             tags: false
             branch: "$DEPLOY_BRANCH"
+        - provider: script
+          script: curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file ../new_tentacles.zip $DEV_DEPLOY_URL/$TRAVIS_CLEANED_BRANCH.zip
+          skip_cleanup: true
+          cleanup: false
+          on:
+            repo: "$GH_REPO"
+            tags: false
+            all_branches: true
 
 after_failure:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
