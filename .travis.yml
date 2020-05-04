@@ -8,14 +8,16 @@ cache: pip
 env:
   global:
     - GH_REPO=Drakkar-Software/OctoBot-Tentacles
+    - OCTOBOT_GH_REPO=https://github.com/Drakkar-Software/OctoBot.git
     - DEPLOY_BRANCH=0.4.0
     - PACKAGE_FOLDER=octobot
-    - OCTOBOT_BRANCH=0.4.0
+    - OCTOBOT_DEFAULT_BRANCH=0.4.0
     - LATEST_TAG=latest
     - DEPLOY_URL=https://www.tentacles.octobot.online/repository/tentacles/officials/base
 
 install:
-  - git clone https://github.com/Drakkar-Software/OctoBot.git -b $OCTOBOT_BRANCH && cd OctoBot
+  - git clone -q $OCTOBOT_GH_REPO -b $TRAVIS_BRANCH || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
+  - cd OctoBot
   - python3 -m pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
   - cd ..
   - mkdir new_tentacles
