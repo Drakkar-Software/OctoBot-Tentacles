@@ -239,6 +239,7 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
         self.flat_increment = None
         self.flat_spread = None
         self.current_price = None
+        self.scheduled_health_check = None
 
         self.healthy = False
 
@@ -286,6 +287,13 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
         if StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START and self.healthy:
             await self._ensure_staggered_orders_and_reschedule()
 
+    async def stop(self):
+        if self.trading_mode is not None:
+            self.trading_mode.consumers[0].flush()
+        if self.scheduled_health_check is not None:
+            self.scheduled_health_check.cancel()
+        await super().stop()
+
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
         # nothing to do: this is not a strategy related trading mode
         pass
@@ -296,7 +304,9 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
 
     async def _ensure_staggered_orders_and_reschedule(self):
         await self._ensure_staggered_orders()
-        get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS, self._schedule_order_refresh)
+        if not self.should_stop:
+            self.scheduled_health_check = get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
+                                                                      self._schedule_order_refresh)
 
     async def _ensure_staggered_orders(self):
         _, _, _, self.current_price, self.symbol_market = await get_pre_order_data(self.exchange_manager,
