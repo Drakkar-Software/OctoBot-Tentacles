@@ -1,4 +1,6 @@
 environment:
+  OCTOBOT_DEFAULT_BRANCH: 0.4.0
+  OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
   matrix:
     - PYTHON: "C:\\Python37"
       PYTHON_VERSION: "3.7"
@@ -11,7 +13,19 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 install:
-  - git clone https://github.com/Drakkar-Software/OctoBot.git -b 0.4.0
+  - ps: |
+      If ($env:APPVEYOR_REPO_TAG -eq "false") {
+        $Env:TENTACLES_URL_TAG = "latest"
+      }
+  - ps: |
+      try
+      {
+         git clone -q $env:OCTOBOT_GH_REPO -b $env:APPVEYOR_REPO_BRANCH
+      }
+      catch
+      {
+         git clone -q $env:OCTOBOT_GH_REPO -b $env:OCTOBOT_DEFAULT_BRANCH
+      }
   - cd OctoBot
   - "%PYTHON%\\python.exe -m pip install --upgrade pip"
   - "%PYTHON%\\python.exe -m pip install --prefer-binary -r requirements.txt -r dev_requirements.txt"
