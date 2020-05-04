@@ -121,7 +121,8 @@ async def test_create_bottom_order():
 
         order = get_open_orders(trader.exchange_manager)[0]
         expected_quantity = market_quantity * risk_multiplier * \
-                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+            consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(order.origin_quantity, 7) == round(expected_quantity, 7)
         expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
         assert round(order.origin_price, 7) == round(expected_price, 7)
@@ -186,7 +187,7 @@ async def test_create_bottom_order_replace_current():
         first_order = get_open_orders(trader.exchange_manager)[0]
         assert first_order.status == OrderStatus.OPEN
         expected_quantity = market_quantity * risk_multiplier * \
-                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(first_order.origin_quantity, 7) == round(expected_quantity, 7)
         expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
         assert round(first_order.origin_price, 7) == round(expected_price, 7)
@@ -220,7 +221,7 @@ async def test_create_bottom_order_replace_current():
         assert third_order.status == OrderStatus.OPEN
         assert third_order is not second_order and third_order is not first_order
         expected_quantity = market_quantity * \
-                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(third_order.origin_quantity, 7) != round(first_order.origin_quantity, 7)
         assert round(third_order.origin_quantity, 7) == round(expected_quantity, 7)
         assert round(third_order.origin_price, 7) == round(first_order.origin_price, 7)
@@ -250,7 +251,7 @@ async def test_create_bottom_order_replace_current():
         assert fifth_order.status == OrderStatus.OPEN
         assert fifth_order is not third_order and fifth_order is not second_order and fifth_order is not first_order
         expected_quantity = new_market_quantity * risk_multiplier * \
-                            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
         assert round(fifth_order.origin_quantity, 7) != round(first_order.origin_quantity, 7)
         assert round(fifth_order.origin_quantity, 7) != round(third_order.origin_quantity, 7)
         assert round(fifth_order.origin_quantity, 7) == round(expected_quantity, 7)
