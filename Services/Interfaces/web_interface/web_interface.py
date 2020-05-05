@@ -16,6 +16,7 @@
 import os
 import threading
 from time import sleep
+from flask_socketio import SocketIO
 
 from octobot_commons.logging import register_error_notifier
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
@@ -75,8 +76,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             self.get_logger().error("Watching trade channels requires OctoBot-Trading package installed")
 
     def _prepare_websocket(self):
-        from tentacles.Services.Interfaces.web_interface import websocket_instance, send_general_notifications
+        from tentacles.Services.Interfaces.web_interface import server_instance, send_general_notifications
         # handles all namespaces without an explicit error handler
+        websocket_instance = SocketIO(server_instance, async_mode="gevent")
 
         @websocket_instance.on_error_default
         def default_error_handler(e):
@@ -89,6 +91,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         run_in_bot_main_loop(self._register_on_channels())
 
         register_error_notifier(send_general_notifications)
+        return websocket_instance
 
     async def _async_run(self) -> bool:
         # wait bot is ready
@@ -96,10 +99,10 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             sleep(0.05)
 
         load_routes()
-        self._prepare_websocket()
+        websocket_instance = self._prepare_websocket()
 
         try:
-            from tentacles.Services.Interfaces.web_interface import server_instance, websocket_instance
+            from tentacles.Services.Interfaces.web_interface import server_instance
 
             register_responses_extra_header(server_instance, True)
 
