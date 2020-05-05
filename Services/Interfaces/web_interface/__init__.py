@@ -23,13 +23,11 @@ import flask
 
 from tentacles.Services.Interfaces.web_interface.api import api
 from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATABASE, LOG_NEW_ERRORS_COUNT
-from flask_socketio import SocketIO
 
 # make WebInterface visible to tentacles module
 from tentacles.Services.Interfaces.web_interface.web_interface import WebInterface
 
 server_instance = flask.Flask(__name__)
-websocket_instance = SocketIO(server_instance, async_mode="gevent")
 
 from tentacles.Services.Interfaces.web_interface.advanced_controllers import advanced
 
