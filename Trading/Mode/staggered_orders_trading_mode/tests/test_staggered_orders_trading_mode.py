@@ -68,8 +68,11 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    backtesting = await initialize_backtesting(config, [join(TEST_CONFIG_FOLDER,
-                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    backtesting = await initialize_backtesting(
+        config,
+        exchange_ids=[exchange_manager.id],
+        matrix_id=None,
+        data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager.exchange_type,
@@ -108,8 +111,11 @@ async def _get_tools_multi_symbol():
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    backtesting = await initialize_backtesting(config, [join(TEST_CONFIG_FOLDER,
-                                               "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    backtesting = await initialize_backtesting(
+        config,
+        exchange_ids=[exchange_manager.id],
+        matrix_id=None,
+        data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager.exchange_type,
