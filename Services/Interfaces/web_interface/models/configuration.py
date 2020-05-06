@@ -388,7 +388,7 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
             for element_name, activated in new_config.items()
         }
         if update_activation_configuration(get_edited_tentacles_config(), updated_config, deactivate_others):
-            run_in_bot_main_loop(save_tentacles_setup_configuration(tentacles_setup_configuration))
+            save_tentacles_setup_configuration(tentacles_setup_configuration)
         return True
     except Exception as e:
         LOGGER.exception(e, True, f"Error when updating tentacles activation {e}")
