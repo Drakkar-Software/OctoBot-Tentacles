@@ -69,7 +69,7 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
                 # This step might take a few ms, comment if optimisation is required
                 check_independent_backtesting_remaining_objects(previous_independant_backtesting)
             if reset_tentacle_config:
-                tentacles_setup_config = run_in_bot_main_loop(get_tentacles_setup_config())
+                tentacles_setup_config = get_tentacles_setup_config()
             else:
                 tentacles_setup_config = get_bot_api().get_edited_tentacles_config()
             config = get_global_config()
