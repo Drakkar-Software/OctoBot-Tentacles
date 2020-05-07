@@ -20,9 +20,13 @@ from asyncio import create_task
 
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
+from octobot_backtesting.channels.time import TimeChannel
+from octobot_channels.channels.channel import del_chan
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
-from octobot_commons.constants import PORTFOLIO_AVAILABLE, PORTFOLIO_TOTAL
+from octobot_commons.constants import PORTFOLIO_AVAILABLE, PORTFOLIO_TOTAL, CONFIG_TIME_FRAME
+from octobot_commons.enums import TimeFrames
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
+from octobot_tentacles_manager.api.configurator import create_tentacles_setup_config_with_tentacles
 from octobot_trading.api.orders import get_open_orders
 from octobot_trading.api.symbol_data import force_set_mark_price
 from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrameExchangeChannel, set_chan
@@ -32,9 +36,13 @@ from octobot_trading.exchanges.exchange_manager import ExchangeManager
 from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
 from octobot_trading.exchanges.rest_exchange import RestExchange
 from octobot_trading.traders.trader_simulator import TraderSimulator
+from tentacles.Evaluator.TA import RSIWeightMomentumEvaluator, KlingerOscillatorReversalConfirmationMomentumEvaluator
+from tentacles.Evaluator.Strategies import DipAnalyserStrategyEvaluator
 from tentacles.Trading.Mode import DipAnalyserTradingMode
 
 # All test coroutines will be treated as marked.
+from tests.test_utils.memory_check_util import run_independent_backtestings_with_memory_check
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -77,6 +85,21 @@ async def _stop(trader):
     for importer in get_importers(trader.exchange_manager.exchange.backtesting):
         await stop_importer(importer)
     await trader.exchange_manager.stop()
+
+
+async def test_run_independent_backtestings_with_memory_check():
+    """
+    Should always be called first here to avoid other tests' related memory check issues
+    """
+    tentacles_setup_config = create_tentacles_setup_config_with_tentacles(
+        DipAnalyserTradingMode,
+        DipAnalyserStrategyEvaluator,
+        KlingerOscillatorReversalConfirmationMomentumEvaluator,
+        RSIWeightMomentumEvaluator
+    )
+    config = load_test_config()
+    config[CONFIG_TIME_FRAME] = [TimeFrames.FOUR_HOURS]
+    await run_independent_backtestings_with_memory_check(config, tentacles_setup_config)
 
 
 async def test_init():

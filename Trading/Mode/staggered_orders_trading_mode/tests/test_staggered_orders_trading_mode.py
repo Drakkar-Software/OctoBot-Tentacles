@@ -22,8 +22,9 @@ from os.path import join
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
-from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE
+from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE, CONFIG_TIME_FRAME
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
+from octobot_tentacles_manager.api.configurator import create_tentacles_setup_config_with_tentacles
 from octobot_trading.api.orders import get_open_orders
 from octobot_trading.api.portfolio import get_portfolio_currency
 from octobot_trading.api.symbol_data import force_set_mark_price
@@ -42,6 +43,8 @@ from tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_tradi
     MULTIPLIER, INCREASING, OrderData, StaggeredOrdersTradingModeProducer
 
 # All test coroutines will be treated as marked.
+from tests.test_utils.memory_check_util import run_independent_backtestings_with_memory_check
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -157,6 +160,19 @@ async def _stop(exchange_manager):
     for importer in get_importers(exchange_manager.exchange.backtesting):
         await stop_importer(importer)
     await exchange_manager.stop()
+
+
+async def test_run_independent_backtestings_with_memory_check():
+    """
+    Should always be called first here to avoid other tests' related memory check issues
+    """
+    tentacles_setup_config = create_tentacles_setup_config_with_tentacles(
+        StaggeredOrdersTradingMode
+    )
+    config = load_test_config()
+    config[CONFIG_SIMULATOR][CONFIG_STARTING_PORTFOLIO]["USDT"] = 10000
+    config[CONFIG_SIMULATOR][CONFIG_STARTING_PORTFOLIO]["ETH"] = 20
+    await run_independent_backtestings_with_memory_check(config, tentacles_setup_config)
 
 
 async def test_ensure_staggered_orders():
