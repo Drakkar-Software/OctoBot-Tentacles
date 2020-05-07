@@ -19,7 +19,8 @@ from math import nan
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_services.interfaces.util.bot import get_global_config, get_bot_api
 from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
-    get_exchange_configurations_from_exchange_name, get_exchange_manager_id
+    get_exchange_configurations_from_exchange_name, get_exchange_manager_id, \
+    get_exchange_manager_from_exchange_name_and_id, get_watched_timeframes
 from octobot_trading.api.trades import parse_trade_type
 from octobot_trading.enums import OrderStatus, ExchangeConstantsOrderColumns, TradeOrderSide, TraderOrderType
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
@@ -104,8 +105,8 @@ def _get_first_exchange_identifiers():
 def get_watched_symbol_data(symbol):
     symbol = parse_get_symbol(symbol)
     try:
-        time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
         _, exchange_name, exchange_id = _get_first_exchange_identifiers()
+        time_frame = _get_time_frame(exchange_name, exchange_id)
         return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except KeyError:
         return {}
@@ -126,11 +127,21 @@ def _find_symbol_evaluator_with_data(evaluators, exchange):
     return symbol_evaluator
 
 
+def _get_time_frame(exchange_name, exchange_id):
+    try:
+        return get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+    except IndexError:
+        # second try with watched timeframes, there might be a real-time time frame available
+        return get_watched_timeframes(
+            get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
+        )[0]
+
+
 def get_first_symbol_data():
     try:
         exchange, exchange_name, exchange_id = _get_first_exchange_identifiers()
         symbol = get_trading_pairs(exchange)[0]
-        time_frame = get_display_time_frame(get_global_config(), TimeFrames(DEFAULT_TIMEFRAME))
+        time_frame = _get_time_frame(exchange_name, exchange_id)
         return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except (KeyError, IndexError):
         return {}

@@ -353,6 +353,7 @@ function deactivate_other_trading_modes(element) {
 }
 
 function update_requirement_activation(element) {
+    const strategy_config_card = $("#strategy-configuration-card");
     const required_elements = element.attr("requirements").split("'");
     const default_elements = element.attr("default-elements").split("'");
     $("#evaluator-config-root").children(".config-element").each(function () {
@@ -369,6 +370,15 @@ function update_requirement_activation(element) {
             update_element_required_marker_and_usability(element, false);
         }
     });
+    if(required_elements.length > 1) {
+        if (strategy_config_card.hasClass(hidden_class)) {
+            strategy_config_card.removeClass(hidden_class);
+        }
+    }else{
+        if (!strategy_config_card.hasClass(hidden_class)) {
+            strategy_config_card.addClass(hidden_class);
+        }
+    }
 }
 
 function get_activated_strategies_count() {
@@ -387,6 +397,7 @@ function get_activated_trading_mode_min_strategies(){
 function check_evaluator_configuration() {
     const activated_trading_modes = $("#trading-modes-config-root").children("."+success_list_item);
     if(activated_trading_modes.length > 0){
+        const strategy_config_card = $("#strategy-configuration-card");
         const activated_trading_mode = activated_trading_modes;
         const required_elements = activated_trading_mode.attr("requirements").split("'");
         let at_least_one_activated_element = false;
@@ -399,9 +410,18 @@ function check_evaluator_configuration() {
                 update_element_required_marker_and_usability(element, false);
             }
         });
-        if(!at_least_one_activated_element){
-            create_alert("error", "Trading modes require at least one strategy to work properly, please activate the " +
-                "strategy(ies) you want for the selected mode.", "");
+        if(required_elements.length > 1){
+            if(strategy_config_card.hasClass(hidden_class)){
+                strategy_config_card.removeClass(hidden_class);
+            }
+            if(!at_least_one_activated_element){
+                create_alert("error", "Trading modes require at least one strategy to work properly, please activate the " +
+                    "strategy(ies) you want for the selected mode.", "");
+            }
+        }else{
+            if(!strategy_config_card.hasClass(hidden_class)){
+                strategy_config_card.addClass(hidden_class);
+            }
         }
     }else{
         create_alert("error", "No trading mode activated, OctoBot need at least one trading mode.", "");
