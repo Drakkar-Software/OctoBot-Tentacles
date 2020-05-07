@@ -24,8 +24,9 @@ from octobot_commons.constants import DAYS_TO_SECONDS, PORTFOLIO_TOTAL
 from octobot_commons.symbol_util import split_symbol
 from octobot_commons import data_util
 from octobot_channels.constants import CHANNEL_WILDCARD
-from octobot_trading.api.exchange import get_fees, get_exchange_current_time
+from octobot_trading.api.exchange import get_fees, get_exchange_current_time, get_is_backtesting
 from octobot_trading.api.portfolio import get_portfolio_currency
+from octobot_trading.api.symbol_data import is_mark_price_initialized
 from octobot_trading.api.trades import get_trade_history
 from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.channels.orders import OrdersChannel
@@ -117,10 +118,6 @@ class StaggeredOrdersTradingMode(AbstractTradingMode):
         else:
             state = EvaluatorStates.NEUTRAL
         return state.name, f"{buy_count} buy {sell_count} sell"
-
-    @staticmethod
-    def is_backtestable():
-        return False
 
     async def create_producers(self) -> list:
         mode_producer = StaggeredOrdersTradingModeProducer(get_chan(MODE_CHANNEL, self.exchange_manager.id),
@@ -303,10 +300,16 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
         create_task(self._ensure_staggered_orders_and_reschedule())
 
     async def _ensure_staggered_orders_and_reschedule(self):
-        await self._ensure_staggered_orders()
+        can_create_orders = not get_is_backtesting(self.exchange_manager) \
+                            or is_mark_price_initialized(self.exchange_manager, symbol=self.symbol)
+        if can_create_orders:
+            await self._ensure_staggered_orders()
         if not self.should_stop:
-            self.scheduled_health_check = get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
-                                                                      self._schedule_order_refresh)
+            if can_create_orders:
+                self.scheduled_health_check = get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
+                                                                          self._schedule_order_refresh)
+            else:
+                self.scheduled_health_check = get_event_loop().call_soon(self._schedule_order_refresh)
 
     async def _ensure_staggered_orders(self):
         _, _, _, self.current_price, self.symbol_market = await get_pre_order_data(self.exchange_manager,
