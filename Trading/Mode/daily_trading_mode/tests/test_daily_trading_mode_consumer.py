@@ -72,6 +72,8 @@ async def _get_tools():
 
     mode = DailyTradingMode(config, exchange_manager)
     await mode.initialize()
+    # add mode to exchange manager so that it can be stopped and freed from memory
+    exchange_manager.trading_modes.append(mode)
     consumer = mode.consumers[0]
 
     # set BTC/USDT price at 7009.194999999998 USDT
@@ -84,6 +86,7 @@ async def _get_tools():
 async def _stop(exchange_manager):
     for importer in get_importers(exchange_manager.exchange.backtesting):
         await stop_importer(importer)
+    await exchange_manager.exchange.backtesting.stop()
     await exchange_manager.stop()
 
 
