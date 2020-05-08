@@ -25,4 +25,4 @@ def tentacle_media(path=None):
     # images
     if is_valid_tentacle_image_path(path):
         # reference point is the web interface directory: use OctoBot root folder as a reference
-        return send_from_directory("../../..", path)
+        return send_from_directory("../../../..", path)
