@@ -18,13 +18,9 @@ install:
         $Env:TENTACLES_URL_TAG = "latest"
       }
   - ps: |
-      try
-      {
-         git clone -q $env:OCTOBOT_GH_REPO -b $env:APPVEYOR_REPO_BRANCH
-      }
-      catch
-      {
-         git clone -q $env:OCTOBOT_GH_REPO -b $env:OCTOBOT_DEFAULT_BRANCH
+      git clone -q $env:OCTOBOT_GH_REPO -b $env:APPVEYOR_REPO_BRANCH
+      if ($LastExitCode -ne 0) {
+        git clone -q $env:OCTOBOT_GH_REPO -b $env:OCTOBOT_DEFAULT_BRANCH
       }
   - cd OctoBot
   - "%PYTHON%\\python.exe -m pip install --upgrade pip"
