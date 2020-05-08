@@ -20,8 +20,6 @@ from asyncio import create_task
 
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
-from octobot_backtesting.channels.time import TimeChannel
-from octobot_channels.channels.channel import del_chan
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
 from octobot_commons.constants import PORTFOLIO_AVAILABLE, PORTFOLIO_TOTAL, CONFIG_TIME_FRAME
 from octobot_commons.enums import TimeFrames
@@ -74,6 +72,8 @@ async def _get_tools(symbol="BTC/USDT"):
     mode = DipAnalyserTradingMode(config, exchange_manager)
     mode.symbol = None if mode.get_is_symbol_wildcard() else symbol
     await mode.initialize()
+    # add mode to exchange manager so that it can be stopped and freed from memory
+    exchange_manager.trading_modes.append(mode)
 
     # set BTC/USDT price at 1000 USDT
     force_set_mark_price(exchange_manager, symbol, 1000)
@@ -81,10 +81,11 @@ async def _get_tools(symbol="BTC/USDT"):
     return mode.producers[0], mode.consumers[0], trader
 
 
-async def _stop(trader):
-    for importer in get_importers(trader.exchange_manager.exchange.backtesting):
+async def _stop(exchange_manager):
+    for importer in get_importers(exchange_manager.exchange.backtesting):
         await stop_importer(importer)
-    await trader.exchange_manager.stop()
+    await exchange_manager.exchange.backtesting.stop()
+    await exchange_manager.stop()
 
 
 async def test_run_independent_backtestings_with_memory_check():
@@ -127,7 +128,7 @@ async def test_init():
             3: 1,
         }
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_bottom_order():
@@ -153,7 +154,7 @@ async def test_create_bottom_order():
         assert portfolio["USDT"][PORTFOLIO_AVAILABLE] > 0
         assert order.order_id in consumer.sell_targets_by_order_id
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_too_large_bottom_order():
@@ -171,7 +172,7 @@ async def test_create_too_large_bottom_order():
         assert portfolio.portfolio["USDT"][PORTFOLIO_AVAILABLE] > 0
 
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_too_small_bottom_order():
@@ -189,7 +190,7 @@ async def test_create_too_small_bottom_order():
         assert portfolio.portfolio["USDT"][PORTFOLIO_AVAILABLE] == 0.01
 
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_bottom_order_replace_current():
@@ -287,7 +288,7 @@ async def test_create_bottom_order_replace_current():
         assert third_order.order_id in consumer.sell_targets_by_order_id
         assert fifth_order.order_id in consumer.sell_targets_by_order_id
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_sell_orders():
@@ -343,7 +344,7 @@ async def test_create_sell_orders():
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy * 2 - 2))
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_too_large_sell_orders():
@@ -382,7 +383,7 @@ async def test_create_too_large_sell_orders():
         assert round(open_orders[0].origin_price, 7) == round(buy_price + increment, 7)
         assert round(open_orders[-1].origin_price, 7) == round(max_price, 7)
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_create_too_small_sell_orders():
@@ -434,7 +435,7 @@ async def test_create_too_small_sell_orders():
         assert round(open_orders[1].origin_price, 7) == round(buy_price + increment, 7)
         assert round(open_orders[2].origin_price, 7) == round(max_price, 7)
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_order_fill_callback():
@@ -481,7 +482,7 @@ async def test_order_fill_callback():
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def test_order_fill_callback_not_in_db():
@@ -521,7 +522,7 @@ async def test_order_fill_callback_not_in_db():
         assert round(open_orders[1].origin_price, 7) == round(price + 2 * increment, 7)
         assert round(open_orders[2].origin_price, 7) == round(price + 3 * increment, 7)
     finally:
-        await _stop(trader)
+        await _stop(trader.exchange_manager)
 
 
 async def _check_open_orders_count(trader, count):
