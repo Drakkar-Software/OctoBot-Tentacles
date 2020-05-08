@@ -22,7 +22,7 @@ from os.path import join
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
-from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE, CONFIG_TIME_FRAME
+from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
 from octobot_tentacles_manager.api.configurator import create_tentacles_setup_config_with_tentacles
 from octobot_trading.api.orders import get_open_orders
@@ -54,6 +54,8 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     mode.symbol = None if mode.get_is_symbol_wildcard() else symbol
     mode.trading_config = _get_multi_symbol_staggered_config()
     await mode.initialize()
+    # add mode to exchange manager so that it can be stopped and freed from memory
+    exchange_manager.trading_modes.append(mode)
     mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
     return mode, mode.producers[0]
 
@@ -159,6 +161,7 @@ async def _get_tools_multi_symbol():
 async def _stop(exchange_manager):
     for importer in get_importers(exchange_manager.exchange.backtesting):
         await stop_importer(importer)
+    await exchange_manager.exchange.backtesting.stop()
     await exchange_manager.stop()
 
 
@@ -169,10 +172,7 @@ async def test_run_independent_backtestings_with_memory_check():
     tentacles_setup_config = create_tentacles_setup_config_with_tentacles(
         StaggeredOrdersTradingMode
     )
-    config = load_test_config()
-    config[CONFIG_SIMULATOR][CONFIG_STARTING_PORTFOLIO]["USDT"] = 10000
-    config[CONFIG_SIMULATOR][CONFIG_STARTING_PORTFOLIO]["ETH"] = 20
-    await run_independent_backtestings_with_memory_check(config, tentacles_setup_config)
+    await run_independent_backtestings_with_memory_check(load_test_config(), tentacles_setup_config)
 
 
 async def test_ensure_staggered_orders():
