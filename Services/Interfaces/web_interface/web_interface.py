@@ -98,10 +98,10 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         while not self.is_bot_ready():
             sleep(0.05)
 
-        load_routes()
-        websocket_instance = self._prepare_websocket()
-
         try:
+            load_routes()
+            websocket_instance = self._prepare_websocket()
+
             from tentacles.Services.Interfaces.web_interface import server_instance
 
             register_responses_extra_header(server_instance, True)
