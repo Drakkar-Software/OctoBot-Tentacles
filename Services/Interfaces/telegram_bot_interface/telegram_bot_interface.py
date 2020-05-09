@@ -54,7 +54,7 @@ class TelegramBotInterface(AbstractBotInterface):
                                     f"{self.REQUIRED_SERVICES[0].get_name()} is unavailable.")
             return False
 
-    def stop(self):
+    async def stop(self):
         self.telegram_service.stop()
 
     def get_bot_handlers(self):
