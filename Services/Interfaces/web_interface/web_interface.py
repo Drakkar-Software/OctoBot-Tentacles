@@ -15,6 +15,7 @@
 #  License along with this library.
 import os
 import threading
+
 from time import sleep
 from flask_socketio import SocketIO
 
@@ -120,9 +121,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         threading.Thread.start(self)
         return True
 
-    def _prepare_stop(self):
-        self.srv.server_close()
-
-    def stop(self):
-        self._prepare_stop()
-        self.srv.shutdown()
+    async def stop(self):
+        try:
+            from tentacles.Services.Interfaces.web_interface import websocket_instance
+            websocket_instance.stop()
+        except Exception as e:
+            self.get_logger().exception(f"Fail to stop web interface : {e}")
