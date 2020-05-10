@@ -46,11 +46,13 @@ class WebInterface(AbstractWebInterface, threading.Thread):
     def __init__(self, config):
         AbstractWebInterface.__init__(self, config)
         threading.Thread.__init__(self, name=self.get_name())
+        self.logger = self.get_logger()
         self.app = None
         self.srv = None
         self.ctx = None
         self.host = None
         self.port = None
+        self.websocket_instance = None
         self._init_web_settings()
 
     def _init_web_settings(self):
@@ -74,7 +76,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             from octobot_trading.api.trades import subscribe_to_trades_channel
             await subscribe_to_trades_channel(self._web_trades_callback)
         except ImportError:
-            self.get_logger().error("Watching trade channels requires OctoBot-Trading package installed")
+            self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
 
     def _prepare_websocket(self):
         from tentacles.Services.Interfaces.web_interface import server_instance, send_general_notifications
@@ -83,7 +85,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
         @websocket_instance.on_error_default
         def default_error_handler(e):
-            self.get_logger().exception(e, True, f"Error with websocket: {e}")
+            self.logger.exception(e, True, f"Error with websocket: {e}")
 
         load_namespaces()
         for namespace in namespaces:
@@ -101,20 +103,20 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
         try:
             load_routes()
-            websocket_instance = self._prepare_websocket()
+            self.websocket_instance = self._prepare_websocket()
 
             from tentacles.Services.Interfaces.web_interface import server_instance
 
             register_responses_extra_header(server_instance, True)
 
-            websocket_instance.run(server_instance,
-                                   host=self.host,
-                                   port=self.port,
-                                   log_output=False,
-                                   debug=False)
+            self.websocket_instance.run(server_instance,
+                                        host=self.host,
+                                        port=self.port,
+                                        log_output=False,
+                                        debug=False)
             return True
         except Exception as e:
-            self.get_logger().exception(f"Fail to start web interface : {e}")
+            self.logger.exception(f"Fail to start web interface : {e}")
         return False
 
     async def _inner_start(self) -> bool:
@@ -122,8 +124,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         return True
 
     async def stop(self):
-        try:
-            from tentacles.Services.Interfaces.web_interface import websocket_instance
-            websocket_instance.stop()
-        except Exception as e:
-            self.get_logger().exception(f"Fail to stop web interface : {e}")
+        if self.websocket_instance is not None:
+            try:
+                self.logger.debug("Stopping web interface")
+                self.websocket_instance.stop()
+            except Exception as e:
+                self.logger.exception(f"Fail to stop web interface : {e}")
