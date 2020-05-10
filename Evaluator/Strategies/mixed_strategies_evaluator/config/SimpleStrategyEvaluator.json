@@ -9,8 +9,7 @@
     "required_time_frames": [
         "1h",
         "4h",
-        "1d",
-        "1w"
+        "1d"
     ],
     "social_evaluators_notification_timeout": 3600,
     "re_evaluate_TA_when_social_or_realtime_notification": true,
