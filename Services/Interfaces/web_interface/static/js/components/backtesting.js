@@ -36,7 +36,8 @@ function handle_backtesting_buttons(){
         lock_interface();
         const request = get_selected_files();
         const update_url = $("#startBacktesting").attr("start-url");
-        start_backtesting(request, update_url);
+        const run_on_common_part_only = false;
+        start_backtesting(request, `${update_url}&run_on_common_part_only=${run_on_common_part_only}`);
     });
 }
 
