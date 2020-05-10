@@ -13,14 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import pytest
 
 from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
 from tentacles.Evaluator.Strategies import MoveSignalsStrategyEvaluator
-# TODO use SignalTradingMode trading mode
-# from tentacles.Trading.Mode import SignalTradingMode
-from tentacles.Trading.Mode import DailyTradingMode
+from tentacles.Trading.Mode import SignalTradingMode
 
 
 # All test coroutines will be treated as marked.
@@ -29,58 +26,53 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 def strategy_tester():
-    strategy_tester_instance = _TestMoveSignalsStrategyEvaluator()
-    # TODO use SignalTradingMode trading mode
-    strategy_tester_instance.initialize(MoveSignalsStrategyEvaluator, DailyTradingMode)
+    strategy_tester_instance = TestMoveSignalsStrategyEvaluator()
+    strategy_tester_instance.initialize(MoveSignalsStrategyEvaluator, SignalTradingMode)
     return strategy_tester_instance
 
 
-# can compare to test_full_mixed_strategies_evaluator: using same timeframes
-# test_full_mixed_strategies_evaluator results: (full_mixed_strategies_evaluator profitability, market profitability)
-# TODO rename this test into TestMoveSignalsStrategyEvaluator(AbstractStrategyTest): to include it in pytest tests list when
-# backtesting randomness is fixed (will require tested values fixes)
-class _TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
+class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_default_run(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (-5.852441652658413, -13.325377883850436)
-        await strategy_tester.run_test_default_run(-2.1)
+        # market: -12.052505966587105
+        await strategy_tester.run_test_default_run(-4.771)
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (-5.852441652658413, -13.325377883850436)
-        # test_full_mixed_strategies_evaluator results: (-4.520148471540537, -13.737528779739065)
-        # test_full_mixed_strategies_evaluator results: (-17.964934829680857, -29.04611614724287)
-        # test_full_mixed_strategies_evaluator results: (-11.422677230943492, -28.89908256880733)
-        await strategy_tester.run_test_slow_downtrend(-2.1, -3.8, -15.8, -7.7)
+        # market: -12.052505966587105
+        # market: -15.195702225633141
+        # market: -29.12366137549725
+        # market: -32.110091743119256
+        await strategy_tester.run_test_slow_downtrend(-4.771, -3.751, -13.849, -19.728)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (-12.780472907249703, -20.281292481438868)
-        # test_full_mixed_strategies_evaluator results: (-21.571523686884376, -31.28953771289538)
-        await strategy_tester.run_test_sharp_downtrend(-7.8, -19)
+        # market: -26.07183938094741
+        # market: -32.1654501216545
+        await strategy_tester.run_test_sharp_downtrend(-9.569, -9.942)
 
     @staticmethod
     async def test_flat_markets(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (-0.9097753768806598, -11.246861924686186)
-        # test_full_mixed_strategies_evaluator results: (0.4784409359433255, -5.834160873882809)
-        # test_full_mixed_strategies_evaluator results: (-8.888333459616902, -9.92366412213741)
-        # test_full_mixed_strategies_evaluator results: (26.253241969042733, -4.723991507431009)
-        await strategy_tester.run_test_flat_markets(-0.2, 1.9, -12.7, -2.9)
+        # market: -10.560669456066947
+        # market: -3.401191658391241
+        # market: -5.7854560064282765
+        # market: -8.067940552016978
+        await strategy_tester.run_test_flat_markets(1.036, 4.074, -8.379, -7.042)
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (7.589434201486512, 14.688152888099395)
-        # test_full_mixed_strategies_evaluator results: (-1.2987367913981132, 10.797424467558201)
-        await strategy_tester.run_test_slow_uptrend(7.1, 6)
+        # market: 17.203948364436457
+        # market: 16.19613670133728
+        await strategy_tester.run_test_slow_uptrend(10.452, 1.864)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (3.808722550442397, 35.989104528430374)
-        # test_full_mixed_strategies_evaluator results: (1.0465276590314687, 16.12679315131882)
-        await strategy_tester.run_test_sharp_uptrend(15.8, 4.7)
+        # market: 30.881852230166828
+        # market: 12.28597871355852
+        await strategy_tester.run_test_sharp_uptrend(6.961, 3.419)
 
     @staticmethod
     async def test_up_then_down(strategy_tester):
-        # test_full_mixed_strategies_evaluator results: (-8.400359202205237, -9.085623368955268)
-        await strategy_tester.run_test_up_then_down(-10.7)
+        # market: -6.040105108015155
+        await strategy_tester.run_test_up_then_down(-8.867)
