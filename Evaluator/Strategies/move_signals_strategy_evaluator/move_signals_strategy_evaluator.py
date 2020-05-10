@@ -30,9 +30,9 @@ class MoveSignalsStrategyEvaluator(StrategyEvaluator):
     SIGNAL_CLASS_NAME = KlingerOscillatorMomentumEvaluator.get_name()
     WEIGHT_CLASS_NAME = BBMomentumEvaluator.get_name()
 
-    SHORT_PERIOD_WEIGHT = 0.40
-    MEDIUM_PERIOD_WEIGHT = 0.30
-    LONG_PERIOD_WEIGHT = 0.30
+    SHORT_PERIOD_WEIGHT = 4
+    MEDIUM_PERIOD_WEIGHT = 3
+    LONG_PERIOD_WEIGHT = 3
 
     SIGNAL_MINIMUM_THRESHOLD = 0.15
 
@@ -41,9 +41,10 @@ class MoveSignalsStrategyEvaluator(StrategyEvaluator):
         self.evaluation_time_frames = [TimeFrames.THIRTY_MINUTES.value,
                                        TimeFrames.ONE_HOUR.value,
                                        TimeFrames.FOUR_HOURS.value]
-        self.short_period_eval = SignalWithWeight(TimeFrames.THIRTY_MINUTES)    # 30min
-        self.medium_period_eval = SignalWithWeight(TimeFrames.ONE_HOUR)   # 1h
-        self.long_period_eval = SignalWithWeight(TimeFrames.FOUR_HOURS)     # 4h
+        self.weights_and_period_evals = []
+        self.short_period_eval = None
+        self.medium_period_eval = None
+        self.long_period_eval = None
 
     async def matrix_callback(self,
                               matrix_id,
@@ -93,10 +94,12 @@ class MoveSignalsStrategyEvaluator(StrategyEvaluator):
                 self.logger.error(f"Missing {e} evaluation in matrix, did you activate the required evaluator ?")
 
     def _compute_final_evaluation(self):
-        composite_evaluation = self._compute_fractal_evaluation(self.short_period_eval, self.SHORT_PERIOD_WEIGHT)
-        composite_evaluation += self._compute_fractal_evaluation(self.medium_period_eval, self.MEDIUM_PERIOD_WEIGHT)
-        composite_evaluation += self._compute_fractal_evaluation(self.long_period_eval, self.LONG_PERIOD_WEIGHT)
-        self.eval_note = composite_evaluation
+        weights = 0
+        composite_evaluation = 0
+        for weight, evaluation in self.weights_and_period_evals:
+            composite_evaluation += self._compute_fractal_evaluation(evaluation, weight)
+            weights += weight
+        self.eval_note = composite_evaluation / weights
 
     @staticmethod
     def _compute_fractal_evaluation(signal_with_weight, multiplier):
@@ -112,9 +115,26 @@ class MoveSignalsStrategyEvaluator(StrategyEvaluator):
         return 0
 
     def _refresh_evaluations(self, TA_by_timeframe):
-        self.short_period_eval.refresh_evaluation(TA_by_timeframe)
-        self.medium_period_eval.refresh_evaluation(TA_by_timeframe)
-        self.long_period_eval.refresh_evaluation(TA_by_timeframe)
+        for _, evaluation in self.weights_and_period_evals:
+            evaluation.refresh_evaluation(TA_by_timeframe)
+
+    def _get_tentacle_registration_topic(self, all_symbols_by_crypto_currencies, time_frames, real_time_time_frames):
+        currencies, symbols, time_frames = super()._get_tentacle_registration_topic(all_symbols_by_crypto_currencies,
+                                                                                    time_frames,
+                                                                                    real_time_time_frames)
+        # register evaluation fractals based on available time frames
+        self._register_time_frame(TimeFrames.THIRTY_MINUTES, self.SHORT_PERIOD_WEIGHT)
+        self._register_time_frame(TimeFrames.ONE_HOUR, self.MEDIUM_PERIOD_WEIGHT)
+        self._register_time_frame(TimeFrames.FOUR_HOURS, self.LONG_PERIOD_WEIGHT)
+        return currencies, symbols, time_frames
+
+    def _register_time_frame(self, time_frame, weight):
+        if time_frame in self.strategy_time_frames:
+            self.weights_and_period_evals.append((weight,
+                                                  SignalWithWeight(time_frame)))
+        else:
+            self.logger.warning(f"Missing {time_frame.value} time frame on {self.exchange_name}, "
+                                f"this strategy will not work at its optimal potential.")
 
 
 class SignalWithWeight:
