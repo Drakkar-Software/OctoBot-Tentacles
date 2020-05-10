@@ -204,6 +204,7 @@ class WebHookService(AbstractService):
         return f"Webhook configured on address: {self.webhook_host} and port: {self.webhook_port}", self._is_healthy()
 
     def stop(self):
-        ngrok.kill()
-        if self.webhook_server:
-            self.webhook_server.stop()
+        if self.connected:
+            ngrok.kill()
+            if self.webhook_server:
+                self.webhook_server.stop()
