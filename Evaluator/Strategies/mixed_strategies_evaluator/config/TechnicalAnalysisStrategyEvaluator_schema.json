@@ -34,7 +34,7 @@
               ]
             },
             "weight": {
-              "title": "Weight of this time frame. This is a multiplier: 0 means this time frame is ignored, 100 means it's 100 time more impactful than another time frame with a weight of 1.",
+              "title": "Weight of this time frame. This is a multiplier: 0 means this time frame is ignored, 100 means it's 100 times more impactful than another time frame with a weight of 1.",
               "type": "number",
               "default": 1,
               "minimum": 0,
