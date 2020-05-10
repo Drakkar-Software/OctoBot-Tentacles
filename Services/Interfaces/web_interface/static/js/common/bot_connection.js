@@ -58,6 +58,9 @@ function handle_route_button(){
                 beforeSend: function() {
                     button.html("<i class='fa fa-circle-notch fa-spin'></i>");
                 },
+                success: function() {
+                    create_alert("info", "OctoBot is stopping", "");
+                },
                 complete: function() {
                    button.html(origin_val);
                 }
