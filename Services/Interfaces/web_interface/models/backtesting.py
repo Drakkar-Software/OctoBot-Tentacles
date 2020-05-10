@@ -54,7 +54,7 @@ def get_data_files_with_description():
     return run_in_bot_main_loop(_retrieve_data_files_with_description(files))
 
 
-def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False):
+def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True):
     try:
         tools = WebInterface.tools
         previous_independant_backtesting = tools[BOT_TOOLS_BACKTESTING]
@@ -71,7 +71,10 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             else:
                 tentacles_setup_config = get_bot_api().get_edited_tentacles_config()
             config = get_global_config()
-            independent_backtesting = create_independent_backtesting(config, tentacles_setup_config, files)
+            independent_backtesting = create_independent_backtesting(config,
+                                                                     tentacles_setup_config,
+                                                                     files,
+                                                                     run_on_common_part_only=run_on_common_part_only)
             run_in_bot_main_loop(initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
             tools[BOT_TOOLS_BACKTESTING] = independent_backtesting
             tools[BOT_TOOLS_BACKTESTING_SOURCE] = source
