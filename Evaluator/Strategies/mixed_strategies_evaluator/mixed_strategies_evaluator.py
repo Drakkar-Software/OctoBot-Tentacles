@@ -272,7 +272,7 @@ class TechnicalAnalysisStrategyEvaluator(StrategyEvaluator):
         strategy_config = get_tentacle_config(cls)
         if TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT in strategy_config:
             tf_to_weight = strategy_config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT]
-            return parse_time_frames(TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(tf_to_weight))
+            return parse_time_frames(list(TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(tf_to_weight)))
         else:
             raise Exception(f"'{TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT}' "
                             f"is missing in configuration file")
