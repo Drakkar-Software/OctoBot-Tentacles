@@ -26,53 +26,79 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 def strategy_tester():
-    strategy_tester_instance = TestMoveSignalsStrategyEvaluator()
+    strategy_tester_instance = MoveSignalsStrategyEvaluatorTest()
     strategy_tester_instance.initialize(MoveSignalsStrategyEvaluator, SignalTradingMode)
     return strategy_tester_instance
 
 
-class TestMoveSignalsStrategyEvaluator(AbstractStrategyTest):
+class MoveSignalsStrategyEvaluatorTest(AbstractStrategyTest):
+    """
+    About using this test framework:
+    To be called by pytest, tests have to be called manually since the cythonized version of AbstractStrategyTest
+    creates an __init__() which prevents the default pytest tests collect process
+    """
 
-    @staticmethod
-    async def test_default_run(strategy_tester):
+    async def test_default_run(self):
         # market: -12.052505966587105
-        await strategy_tester.run_test_default_run(-4.771)
+        await self.run_test_default_run(-4.771)
 
-    @staticmethod
-    async def test_slow_downtrend(strategy_tester):
+    async def test_slow_downtrend(self):
         # market: -12.052505966587105
         # market: -15.195702225633141
         # market: -29.12366137549725
         # market: -32.110091743119256
-        await strategy_tester.run_test_slow_downtrend(-4.771, -3.751, -13.849, -19.728)
+        await self.run_test_slow_downtrend(-4.771, -3.751, -13.849, -19.728)
 
-    @staticmethod
-    async def test_sharp_downtrend(strategy_tester):
+    async def test_sharp_downtrend(self):
         # market: -26.07183938094741
         # market: -32.1654501216545
-        await strategy_tester.run_test_sharp_downtrend(-9.569, -9.942)
+        await self.run_test_sharp_downtrend(-9.569, -9.942)
 
-    @staticmethod
-    async def test_flat_markets(strategy_tester):
+    async def test_flat_markets(self):
         # market: -10.560669456066947
         # market: -3.401191658391241
         # market: -5.7854560064282765
         # market: -8.067940552016978
-        await strategy_tester.run_test_flat_markets(1.036, 4.074, -8.379, -7.042)
+        await self.run_test_flat_markets(1.036, 4.074, -8.379, -7.042)
 
-    @staticmethod
-    async def test_slow_uptrend(strategy_tester):
+    async def test_slow_uptrend(self):
         # market: 17.203948364436457
         # market: 16.19613670133728
-        await strategy_tester.run_test_slow_uptrend(10.452, 1.864)
+        await self.run_test_slow_uptrend(10.452, 1.864)
 
-    @staticmethod
-    async def test_sharp_uptrend(strategy_tester):
+    async def test_sharp_uptrend(self):
         # market: 30.881852230166828
         # market: 12.28597871355852
-        await strategy_tester.run_test_sharp_uptrend(6.961, 3.419)
+        await self.run_test_sharp_uptrend(6.961, 3.419)
 
-    @staticmethod
-    async def test_up_then_down(strategy_tester):
+    async def test_up_then_down(self):
         # market: -6.040105108015155
-        await strategy_tester.run_test_up_then_down(-8.867)
+        await self.run_test_up_then_down(-8.867)
+
+
+async def test_default_run(strategy_tester):
+    await strategy_tester.test_default_run()
+
+
+async def test_slow_downtrend(strategy_tester):
+    await strategy_tester.test_slow_downtrend()
+
+
+async def test_sharp_downtrend(strategy_tester):
+    await strategy_tester.test_sharp_downtrend()
+
+
+async def test_flat_markets(strategy_tester):
+    await strategy_tester.test_flat_markets()
+
+
+async def test_slow_uptrend(strategy_tester):
+    await strategy_tester.test_slow_uptrend()
+
+
+async def test_sharp_uptrend(strategy_tester):
+    await strategy_tester.test_sharp_uptrend()
+
+
+async def test_up_then_down(strategy_tester):
+    await strategy_tester.test_up_then_down()
