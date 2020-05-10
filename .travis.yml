@@ -50,7 +50,7 @@ jobs:
         - python3 setup.py build_ext --inplace
         - python3 setup.py install
         - rm -rf $PACKAGE_FOLDER
-        - pytest tentacles
+        - pytest --durations=0 tentacles
 
     - name: "Linux - Tentacles - Deploy"
       stage: deploy
