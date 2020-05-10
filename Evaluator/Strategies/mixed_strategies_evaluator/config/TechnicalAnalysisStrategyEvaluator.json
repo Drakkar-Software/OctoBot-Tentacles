@@ -13,23 +13,23 @@
     "time_frames_to_weight": [
         {
             "time_frame": "30m",
-            "weight": 0.5
+            "weight": 30
         },
         {
             "time_frame": "1h",
-            "weight": 1
+            "weight": 50
         },
         {
             "time_frame": "2h",
-            "weight": 1
+            "weight": 50
         },
         {
             "time_frame": "4h",
-            "weight": 2
+            "weight": 50
         },
         {
             "time_frame": "1d",
-            "weight": 3
+            "weight": 30
         }
     ]
 }
