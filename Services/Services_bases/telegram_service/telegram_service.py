@@ -13,10 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import logging
 import telegram
 from telegram.ext import Updater, MessageHandler, Filters  # , Dispatcher
-import logging
 
 from octobot_commons.logging.logging_util import set_logging_level
 from octobot_services.constants import CONFIG_TOKEN, CONFIG_USERNAMES_WHITELIST, CONFIG_CATEGORY_SERVICES, CONFIG_TELEGRAM, \
@@ -37,6 +36,7 @@ class TelegramService(AbstractService):
         self.users = []
         self.text_chat_dispatcher = {}
         self._bot_url = None
+        self.connected = False
 
     def get_fields_description(self):
         return {
@@ -113,9 +113,14 @@ class TelegramService(AbstractService):
         self.users.append(user_key)
 
     def start_dispatcher(self):
-        if self.users:
-            self.add_text_handler()
-            self.telegram_updater.start_polling()
+        try:
+            if self.users:
+                self.add_text_handler()
+                self.connected = True
+                self.telegram_updater.start_polling(timeout=2)
+        except Exception as e:
+            self.connected = False
+            raise e
 
     def is_running(self):
         return self.telegram_updater and self.telegram_updater.running
@@ -130,8 +135,9 @@ class TelegramService(AbstractService):
         return self.telegram_updater
 
     def stop(self):
-        if self.telegram_updater:
+        if self.connected and self.telegram_updater:
             self.telegram_updater.stop()
+            self.connected = False
 
     @staticmethod
     def get_is_enabled(config):
