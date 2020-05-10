@@ -37,9 +37,12 @@ def backtesting():
         if action_type == "start_backtesting":
             files = request.get_json()
             source = request.args["source"]
-            reset_tentacle_config = request.args["reset_tentacle_config"] if "reset_tentacle_config" in request.args \
-                else False
-            success, reply = start_backtesting_using_specific_files(files, source, reset_tentacle_config)
+            run_on_common_part_only = request.args.get("run_on_common_part_only", "true") == "true"
+            reset_tentacle_config = request.args.get("reset_tentacle_config", False)
+            success, reply = start_backtesting_using_specific_files(files,
+                                                                    source,
+                                                                    reset_tentacle_config,
+                                                                    run_on_common_part_only)
         if success:
             send_backtesting_status()
             return get_rest_reply(jsonify(reply))
