@@ -17,9 +17,7 @@ import pytest
 
 from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
 from tentacles.Evaluator.Strategies import DipAnalyserStrategyEvaluator
-# TODO use DipAnalyserTradingMode trading mode
-# from tentacles.Trading.Mode import DipAnalyserTradingMode
-from tentacles.Trading.Mode import DailyTradingMode
+from tentacles.Trading.Mode import DipAnalyserTradingMode
 
 
 # All test coroutines will be treated as marked.
@@ -28,15 +26,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 def strategy_tester():
-    strategy_tester_instance = _TestDipAnalyserStrategiesEvaluator()
-    # TODO use DipAnalyserTradingMode trading mode
-    strategy_tester_instance.initialize(DipAnalyserStrategyEvaluator, DailyTradingMode)
+    strategy_tester_instance = TestDipAnalyserStrategiesEvaluator()
+    strategy_tester_instance.initialize(DipAnalyserStrategyEvaluator, DipAnalyserTradingMode)
     return strategy_tester_instance
 
 
-# TODO rename this test into TestDipAnalyserStrategiesEvaluator(AbstractStrategyTest): to include it in pytest tests list when
-# backtesting randomness is fixed (will require tested values fixes)
-class _TestDipAnalyserStrategiesEvaluator(AbstractStrategyTest):
+class TestDipAnalyserStrategiesEvaluator(AbstractStrategyTest):
 
     # Careful with results here, unlike other strategy tests, this one uses only the 4h timeframe, therefore results
     # are not comparable with regular 1h timeframes strategy tests
@@ -48,38 +43,38 @@ class _TestDipAnalyserStrategiesEvaluator(AbstractStrategyTest):
 
     @staticmethod
     async def test_default_run(strategy_tester):
-        # market: -48.381914161120044
-        await strategy_tester.run_test_default_run(-24.1)
+        # market: -49.25407390406244
+        await strategy_tester.run_test_default_run(-25.441)
 
     @staticmethod
     async def test_slow_downtrend(strategy_tester):
-        # market: -48.381914161120044
-        # market: -38.2185273159145
-        await strategy_tester.run_test_slow_downtrend(-24.1, -27.6, None, None, skip_bittrex=True)
+        # market: -49.25407390406244
+        # market: -47.50593824228029
+        await strategy_tester.run_test_slow_downtrend(-25.441, -30.202, None, None, skip_extended=True)
 
     @staticmethod
     async def test_sharp_downtrend(strategy_tester):
-        # market: -20.423625066407965
-        await strategy_tester.run_test_sharp_downtrend(-12.7, None, skip_bittrex=True)
+        # market: -34.67997135795625
+        await strategy_tester.run_test_sharp_downtrend(-23.61, None, skip_extended=True)
 
     @staticmethod
     async def test_flat_markets(strategy_tester):
-        # market: -40.023174971031295
-        # market: -55.80320094842916
-        await strategy_tester.run_test_flat_markets(-27.6, -32.4, None, None, skip_bittrex=True)
+        # market: -38.07647740440325
+        # market: -53.87077652637819
+        await strategy_tester.run_test_flat_markets(-20.69, -30.363, None, None, skip_extended=True)
 
     @staticmethod
     async def test_slow_uptrend(strategy_tester):
-        # market: -6.022425915029842
-        # market: -34.78260869565217
-        await strategy_tester.run_test_slow_uptrend(6.2, -16.6)
+        # market: 11.32644122514472
+        # market: -36.64596273291926
+        await strategy_tester.run_test_slow_uptrend(6.673, -12.312)
 
     @staticmethod
     async def test_sharp_uptrend(strategy_tester):
         # market: -17.004747518342683
-        # market: -3.9076974903149875
-        await strategy_tester.run_test_sharp_uptrend(-2.7, 14.8)
+        # market: -18.25837965302341
+        await strategy_tester.run_test_sharp_uptrend(3.83, 11.743)
 
     @staticmethod
     async def test_up_then_down(strategy_tester):
-        await strategy_tester.run_test_up_then_down(None, skip_bittrex=True)
+        await strategy_tester.run_test_up_then_down(None, skip_extended=True)
