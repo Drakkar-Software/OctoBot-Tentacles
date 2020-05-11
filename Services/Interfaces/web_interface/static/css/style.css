@@ -181,7 +181,7 @@ body:before {
     color: #33b5e5;
 }
 
-.card a:link.btn-primary{
+.card a:link.btn-primary {
     color: #fff;
 }
 
@@ -192,6 +192,10 @@ body:before {
 
 a:hover.external-link {
     font-weight: inherit;
+}
+
+a:hover.badge {
+    font-weight: 700;
 }
 
 .card a:link.button {
