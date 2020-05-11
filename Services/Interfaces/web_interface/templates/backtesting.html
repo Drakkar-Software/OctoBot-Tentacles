@@ -52,7 +52,15 @@
             </div>
         </span>
         {% if activated_trading_mode.is_backtestable() %}
-            <button type="button" id="startBacktesting" class="btn btn-primary waves-effect" start-url="{{ url_for('backtesting', action_type='start_backtesting', source='backtesting') }}">Start backtesting</button>
+            <div class="d-flex">
+                <div class="pr-4">
+                    <button type="button" id="startBacktesting" class="btn btn-primary waves-effect" start-url="{{ url_for('backtesting', action_type='start_backtesting', source='backtesting') }}">Start backtesting</button>
+                </div>
+                <div class="custom-control custom-switch d-none mx-4 my-auto" id="synchronized-data-only-div">
+                    <input type="checkbox" class="custom-control-input" id="synchronized-data-only-checkbox" checked>
+                    <label class="custom-control-label" for="synchronized-data-only-checkbox">Run on synchronized history only</label>
+                </div>
+            </div>
         {% else %}
             <div class="alert alert-warning mt-1 text-center" role="alert">
                 <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> is not compatible with the current backtesting engine.
