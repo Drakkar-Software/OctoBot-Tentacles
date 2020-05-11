@@ -1,6 +1,6 @@
 # OctoBot-Tentacles
 [![Build Status](https://api.travis-ci.com/Drakkar-Software/OctoBot-Tentacles.svg?branch=master)](https://travis-ci.com/Drakkar-Software/OctoBot-Tentacles)
-[![Build status](https://ci.appveyor.com/api/projects/status/13d9le7m2uenbp2m?svg=true)](https://ci.appveyor.com/project/Herklos/octobot-tentacles)
+[![Build Status](https://dev.azure.com/drakkarsoftware/OctoBot-Tentacles/_apis/build/status/Drakkar-Software.OctoBot-Tentacles?branchName=master)](https://dev.azure.com/drakkarsoftware/OctoBot-Tentacles/_build/latest?definitionId=10&branchName=master)
 
 This repository contains default evaluators, strategies, utilitary modules and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
