@@ -36,7 +36,7 @@ function handle_backtesting_buttons(){
         lock_interface();
         const request = get_selected_files();
         const update_url = $("#startBacktesting").attr("start-url");
-        const run_on_common_part_only = false;
+        const run_on_common_part_only = syncDataOnlyCheckbox.is(":checked");
         start_backtesting(request, `${update_url}&run_on_common_part_only=${run_on_common_part_only}`);
     });
 }
@@ -63,11 +63,18 @@ function handle_file_selection(){
                 }
             });
         }
+        if($("#dataFilesTable").find("input[type='checkbox']:checked").length > 1){
+           syncDataOnlyDiv.removeClass(hidden_class);
+        }else{
+            syncDataOnlyDiv.addClass(hidden_class);
+        }
         lock_interface(false);
     });
 }
 
 const dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
+const syncDataOnlyDiv = $("#synchronized-data-only-div");
+const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
 
 $(document).ready(function() {
     lock_interface_callbacks.push(function () {
