@@ -18,7 +18,7 @@ from octobot_commons.logging.logging_util import get_logger
 from octobot_services.interfaces.util.bot import get_bot_api
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
 from octobot_tentacles_manager.api.configurator import get_user_tentacles_packages
-from octobot_tentacles_manager.api.inspector import get_installed_tentacles
+from octobot_tentacles_manager.api.inspector import get_installed_tentacles_modules
 from octobot_tentacles_manager.api.installer import install_all_tentacles
 from octobot_tentacles_manager.api.uninstaller import uninstall_all_tentacles, uninstall_tentacles
 from octobot_tentacles_manager.api.updater import update_all_tentacles, update_tentacles
@@ -89,4 +89,4 @@ def uninstall_modules(modules):
 
 
 def get_tentacles():
-    return get_installed_tentacles()
+    return get_installed_tentacles_modules()
