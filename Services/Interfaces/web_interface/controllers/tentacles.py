@@ -26,7 +26,7 @@ from tentacles.Services.Interfaces.web_interface.models.tentacles import get_ten
 @server_instance.route("/tentacles")
 def tentacles():
     return render_template("tentacles.html",
-                           get_tentacles=get_tentacles)
+                           tentacles=get_tentacles())
 
 
 def _handle_package_operation(update_type):
