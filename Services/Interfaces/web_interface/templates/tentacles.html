@@ -26,7 +26,7 @@
                 </tr>
               </thead>
               <tbody id="module-table" update-update-url="{{ url_for('tentacle_packages', update_type='update_modules') }}" uninstall-update-url="{{ url_for('tentacle_packages', update_type='uninstall_modules') }}">
-                {% for tentacle in get_tentacles().values() %}
+                {% for tentacle in tentacles %}
                     <tr>
                         <td class="selectable_tentacle"><div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input tentacle-module-checkbox" module="{{tentacle.name}}">
