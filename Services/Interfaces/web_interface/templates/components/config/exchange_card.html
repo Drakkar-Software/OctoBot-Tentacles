@@ -1,4 +1,5 @@
-{% macro config_exchange_card(config, exchange, keys_value="*********", add_class='') -%}
+{% import 'components/config/editable_config.html' as m_editable_config %}
+{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True, sandboxed=False, add_class='') -%}
     <!-- Card -->
     <div class="card mb-4 {{add_class}} config-card">
 
@@ -10,57 +11,93 @@
         </div>
 
         <!--Card content-->
-        <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
-
-            <p class="card-text api">
-                API Key : <a href="#"
-                             id="exchange_api-key"
-                             config-key="exchanges_{{exchange}}_api-key"
-                             config-type="global_config"
-                             config-value="{{keys_value}}"
-                             startup-config-value="{{keys_value}}"
-                             data-type="text"
-                             data-pk="1"
-                             data-title="Enter api key"
-                             data-onblur="submit"
-                             data-highlight=true
-                             class="editable editable-click config-element">
-                {{keys_value}}</a><br>
-
-                API Secret : <a href="#"
-                                id="exchange_api-secret"
-                                config-key="exchanges_{{exchange}}_api-secret"
-                                config-type="global_config"
-                                config-value="{{keys_value}}"
-                                startup-config-value="{{keys_value}}"
-                                data-type="text"
-                                data-pk="1"
-                                data-title="Enter exchange api secret"
+        <div class="card-body d-flex" name="{{exchange}}" config-key="exchanges_{{exchange}}">
+            <div class="flex-grow-1">
+                <p class="card-text api">
+                    API Key : <a href="#"
+                                 id="exchange_api-key"
+                                 config-key="exchanges_{{exchange}}_api-key"
+                                 config-type="global_config"
+                                 config-value="{{keys_value}}"
+                                 startup-config-value="{{keys_value}}"
+                                 data-type="text"
+                                 data-pk="1"
+                                 data-title="Enter api key"
                                  data-onblur="submit"
                                  data-highlight=true
-                                class="editable editable-click config-element">
-                {{keys_value}}</a><br>
+                                 class="editable editable-click config-element">
+                    {{keys_value}}</a><br>
 
-                API Password
-                <i class="fa fa-question"
-                   data-toggle="tooltip" data-placement="top"
-                   title="An API password is required by some exchanges, leave as is otherwise.">
-                </i> : <a href="#"
-                          id="exchange_api-secret"
-                          config-key="exchanges_{{exchange}}_api-password"
-                          config-type="global_config"
-                          config-value="{{keys_value}}"
-                          startup-config-value="{{keys_value}}"
-                          data-type="text"
-                          data-pk="1"
-                          data-title="Enter exchange api password"
-                          data-onblur="submit"
-                          data-highlight=true
-                          class="editable editable-click config-element">
-                {{keys_value}}</a><br>
-            </p>
+                    API Secret : <a href="#"
+                                    id="exchange_api-secret"
+                                    config-key="exchanges_{{exchange}}_api-secret"
+                                    config-type="global_config"
+                                    config-value="{{keys_value}}"
+                                    startup-config-value="{{keys_value}}"
+                                    data-type="text"
+                                    data-pk="1"
+                                    data-title="Enter exchange api secret"
+                                     data-onblur="submit"
+                                     data-highlight=true
+                                    class="editable editable-click config-element">
+                    {{keys_value}}</a><br>
 
-            <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+                    <i>API Password</i>
+                    <i class="fa fa-question"
+                       data-toggle="tooltip" data-placement="top"
+                       title="An API password is required by some exchanges, leave as is otherwise.">
+                    </i> : <a href="#"
+                              id="exchange_api-secret"
+                              config-key="exchanges_{{exchange}}_api-password"
+                              config-type="global_config"
+                              config-value="{{keys_value}}"
+                              startup-config-value="{{keys_value}}"
+                              data-type="text"
+                              data-pk="1"
+                              data-title="Enter exchange api password"
+                              data-onblur="submit"
+                              data-highlight=true
+                              class="editable editable-click config-element">
+                    {{keys_value}}</a><br>
+                </p>
+            </div>
+            <div class="">
+                <div
+                        class="custom-control custom-switch"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        title="Disabled exchanges are not used by OctoBot.">
+                    <input type="checkbox"
+                           class="custom-control-input config-element"
+                           id="exchange_{{exchange}}_enabled"
+                           config-key="exchanges_{{exchange}}_enabled"
+                           config-type="global_config"
+                           config-value="{{enabled}}"
+                           startup-config-value="{{enabled}}"
+                           data-type="bool"
+                           {{ 'checked' if enabled else '' }}>
+                    <label class="custom-control-label" for="exchange_{{exchange}}_enabled">Enabled</label>
+                </div>
+                <div
+                        class="custom-control custom-switch"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        title="Enable the sandbox to use the exchange test website. Only works for exchanges supporting this feature.">
+                    <input type="checkbox"
+                           class="custom-control-input config-element"
+                           id="exchange_{{exchange}}_sandboxed"
+                           config-key="exchanges_{{exchange}}_sandboxed"
+                           config-type="global_config"
+                           config-value="{{sandboxed}}"
+                           startup-config-value="{{sandboxed}}"
+                           data-type="bool"
+                           {{ 'checked' if sandboxed else '' }}>
+                    <label class="custom-control-label" for="exchange_{{exchange}}_sandboxed">Trade in exchange sandbox</label>
+                </div>
+            </div>
         </div>
+        <p class="mx-4">
+            <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+        </p>
     </div>
 {%- endmacro %}

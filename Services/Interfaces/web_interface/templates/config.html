@@ -134,7 +134,10 @@
                 <!-- Card deck -->
                 <div class="card-deck config-container">
                     {% for exchange in config_exchanges %}
-                        {{ m_config_exchange_card.config_exchange_card(config_exchanges, exchange) }}
+                        {{ m_config_exchange_card.config_exchange_card(config_exchanges,
+                                                                       exchange,
+                                                                       enabled=config_exchanges[exchange].get('enabled', True),
+                                                                       sandboxed=config_exchanges[exchange].get('sandboxed', False)) }}
                     {% endfor %}
                 </div>
             </div>
