@@ -100,6 +100,8 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         self.MAX_QUANTITY_RATIO = 1
         self.MIN_QUANTITY_RATIO = 0.2
         self.DELTA_RATIO = self.MAX_QUANTITY_RATIO - self.MIN_QUANTITY_RATIO
+        # consider a high ratio not to take too much risk and not to prevent order creation either
+        self.DEFAULT_HOLDING_RATIO = 0.35
 
         self.SELL_MULTIPLIER = 5
         self.FULL_SELL_MIN_RATIO = 0.05
@@ -186,7 +188,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         # consider sell quantity like a buy if base is the reference market
         if quote != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
             weighted_risk *= self.SELL_MULTIPLIER
-        if await self.get_holdings_ratio(quote) < self.FULL_SELL_MIN_RATIO:
+        if await self._get_ratio(quote) < self.FULL_SELL_MIN_RATIO:
             return quantity
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
         checked_factor = check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
@@ -213,9 +215,16 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
         checked_factor = check_factor(self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor)
         return checked_factor * quantity
 
+    async def _get_ratio(self, currency):
+        try:
+            return await self.get_holdings_ratio(currency)
+        except KeyError:
+            # Can happen when ref market is not in the pair, data will be available later (ticker is now registered)
+            return self.DEFAULT_HOLDING_RATIO
+
     async def _get_quantity_ratio(self, currency):
         if self.get_number_of_traded_assets() > 2:
-            ratio = await self.get_holdings_ratio(currency)
+            ratio = await self._get_ratio(currency)
             # returns a linear result between self.MIN_QUANTITY_RATIO and self.MAX_QUANTITY_RATIO: closer to
             # self.MAX_QUANTITY_RATIO when holdings are lower in % and to self.MIN_QUANTITY_RATIO when holdings
             # are higher in %
