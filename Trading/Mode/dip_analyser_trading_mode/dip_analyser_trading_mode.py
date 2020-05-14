@@ -84,6 +84,8 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
 
     LIMIT_PRICE_MULTIPLIER = 0.995
     SOFT_MAX_CURRENCY_RATIO = 0.33
+    # consider a high ratio not to take too much risk and not to prevent order creation either
+    DEFAULT_HOLDING_RATIO = 0.35
     DEFAULT_FULL_VOLUME = 0.5
     DEFAULT_SELL_TARGET = 1
 
@@ -221,7 +223,12 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
             if currency != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
                 # if currency (base) is not ref market => need to check holdings ratio not to spend all ref market
                 # into one currency (at least 3 traded assets are available here)
-                currency_ratio = await self.get_holdings_ratio(currency)
+                try:
+                    currency_ratio = await self.get_holdings_ratio(currency)
+                except KeyError:
+                    # Can happen when ref market is not in the pair, data will be available later (ticker is now
+                    # registered)
+                    currency_ratio = self.DEFAULT_HOLDING_RATIO
             # linear function of % holding in this currency: volume_ratio is in [0, SOFT_MAX_CURRENCY_RATIO*0.8]
             volume_ratio = self.SOFT_MAX_CURRENCY_RATIO * (1 - min(currency_ratio * self.DELTA_RATIO, 1))
             return market_quantity * volume_ratio * weighted_volume
