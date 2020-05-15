@@ -28,11 +28,11 @@
           <thead>
             <tr>
                 <th scope="col">Package Name</th>
-                <th scope="col">Package address</th>
+                <th scope="col">Package origin location</th>
             </tr>
           </thead>
           <tbody>
-            {% for package_path, package_name in get_tentacles_packages().items() %}
+            {% for package_name, package_path in get_tentacles_packages().items() %}
             <tr>
                 <td>{{package_name}}</td>
                 <td>{{package_path}}</td>
