@@ -79,7 +79,7 @@ class WebHookService(AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/TradingView-webhook"
+        return "https://github.com/Drakkar-Software/OctoBot/wiki/Using-a-webhook-with-OctoBot"
 
     def get_endpoint(self) -> None:
         return ngrok
