@@ -19,7 +19,7 @@ from flask import render_template, request, jsonify
 from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.models.tentacles import get_tentacles_packages, \
-    get_tentacles, register_and_install, install_packages, update_packages, reset_packages, update_modules, \
+    get_tentacles, install_packages, update_packages, reset_packages, update_modules, \
     uninstall_modules
 
 
@@ -36,14 +36,8 @@ def _handle_package_operation(update_type):
         if request_data:
             path_or_url, action = next(iter(request_data.items()))
             path_or_url = path_or_url.strip()
-            if action == "description":
-                package_description = {"name": "#TODO"}
-                if package_description:
-                    return get_rest_reply(jsonify(package_description))
-                else:
-                    return get_rest_reply(f'Impossible to find {path_or_url} tentacles package information.', 500)
             if action == "register_and_install":
-                installation_result = register_and_install(path_or_url)
+                installation_result = install_packages(path_or_url)
                 if installation_result:
                     return get_rest_reply(jsonify(installation_result))
                 else:
