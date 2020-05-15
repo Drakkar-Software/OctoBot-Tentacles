@@ -49,7 +49,13 @@ function load_report(report, should_alert=False){
     $.get(url,function(data){
         if ("bot_report" in data){
             report.show();
-            let profitability = data["bot_report"]["profitability"];
+            const profitabilities = [];
+            const show_exchanges = Object.keys(data["bot_report"]["profitability"]).length > 1;
+            $.each( data["bot_report"]["profitability"], function( exchange, profitability ) {
+                const exch = show_exchanges ? `${exchange}: `: "";
+                profitabilities.push(`${exch}${profitability}`);
+            });
+            let profitability = profitabilities.join(", ");
             const errors_count = data["errors_count"];
             if ("error" in data || errors_count > 0) {
                 let error_message = "Warning: error(s) during backtesting";
@@ -77,19 +83,32 @@ function load_report(report, should_alert=False){
             });
             const all_profitability = symbol_reports.join(", ");
             $("#bProf").html(profitability);
-            $("#maProf").html(data["bot_report"]["market_average_profitability"]);
+            const avg_profitabilities = [];
+            $.each( data["bot_report"]["market_average_profitability"], function( exchange, market_average_profitability ) {
+                const exch = show_exchanges ? `${exchange}: `: "";
+                avg_profitabilities.push(`${exch}${market_average_profitability}`)
+            });
+            $("#maProf").html(avg_profitabilities.join(", "));
             $("#refM").html(data["bot_report"]["reference_market"]);
             $("#sProf").html(all_profitability);
             $("#reportTradingModeName").html(data["bot_report"]["trading_mode"]);
             $("#reportTradingModeNameLink").attr("href", $("#reportTradingModeNameLink").attr("base_href") + data["bot_report"]["trading_mode"]);
             const end_portfolio_reports = [];
-                $.each( data["bot_report"]["end_portfolio"], function( symbol, holdings ) {
-                    end_portfolio_reports.push(symbol+": "+holdings["total"]);
+            $.each( data["bot_report"]["end_portfolio"], function( exchange, portfolio ) {
+                let exchange_portfolio = show_exchanges ? `${exchange} `: "";
+                $.each( portfolio, function( symbol, holdings ) {
+                    exchange_portfolio = `${exchange_portfolio} ${symbol}: ${holdings["total"]}`;
                 });
+                end_portfolio_reports.push(exchange_portfolio);
+            });
             $("#ePort").html(end_portfolio_reports.join(", "));
             const starting_portfolio_reports = [];
-                $.each( data["bot_report"]["starting_portfolio"], function( symbol, holdings ) {
-                    starting_portfolio_reports.push(symbol+": "+holdings["total"]);
+                $.each( data["bot_report"]["starting_portfolio"], function( exchange, portfolio ) {
+                    let exchange_portfolio = show_exchanges ? `${exchange} `: "";
+                    $.each( portfolio, function( symbol, holdings ) {
+                        exchange_portfolio = `${exchange_portfolio} ${symbol}: ${holdings["total"]}`;
+                    });
+                    starting_portfolio_reports.push(exchange_portfolio);
                 });
             $("#sPort").html(starting_portfolio_reports.join(", "));
 
