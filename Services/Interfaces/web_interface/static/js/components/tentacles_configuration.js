@@ -22,10 +22,10 @@ function register_and_install_package(){
     const element = $("#register_and_install_package_input");
     const input_text = element.val();
     const request = {};
-    request[$.trim(input_text)] = "description";
+    request[$.trim(input_text)] = "register_and_install";
     const full_config_root = element.parents("."+config_root_class);
     const update_url = full_config_root.attr(update_url_attr);
-    send_and_interpret_bot_update(request, update_url, full_config_root, register_and_install_package_success_callback, register_and_install_package_error_callback)
+    send_and_interpret_bot_update(request, update_url, full_config_root, post_package_action_success_callback, post_package_action_error_callback)
 }
 
 function disable_packages_operations(should_lock=true){
@@ -108,26 +108,6 @@ function packages_operation_error_callback(updated_data, update_url, dom_root_el
     });
     $("#packages_action_progess_bar").hide();
     create_alert("error", "Error when managing packages: "+result.responseText, "");
-}
-
-function register_and_install_package_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    if(confirm("Install " + msg["name"] + " tentacles package ?")) {
-        let request = {};
-        for(const attribute in updated_data) {
-            request[attribute] = "register_and_install";
-        }
-
-        send_and_interpret_bot_update(request, update_url, dom_root_element, post_package_action_success_callback, post_package_action_error_callback)
-    }else{
-        $("#register_and_install_package_progess_bar").hide();
-        disable_packages_operations(false);
-    }
-}
-
-function register_and_install_package_error_callback(updated_data, update_url, dom_root_element, result, status, error){
-    create_alert("error", "Error when getting package: "+result.responseText, "");
-    $("#register_and_install_package_progess_bar").hide();
-    disable_packages_operations(false);
 }
 
 function post_package_action_success_callback(updated_data, update_url, dom_root_element, msg, status){
