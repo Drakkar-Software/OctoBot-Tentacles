@@ -28,7 +28,6 @@ from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_strategy_config, \
     get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbol_list, \
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, \
-    reset_trading_history, is_trading_persistence_activated, \
     manage_metrics, get_tentacle_from_string, update_tentacle_config, reset_config_to_default, \
     get_evaluator_detailed_config, REQUIREMENTS_KEY, get_config_activated_trading_mode, \
     update_tentacles_activation_config, get_tentacles_startup_activation, get_tentacle_config, \
@@ -121,7 +120,6 @@ def config():
                                evaluator_startup_config=get_tentacles_startup_activation(),
                                trading_startup_config=get_tentacles_startup_activation(),
 
-                               is_trading_persistence_activated=is_trading_persistence_activated(),
                                in_backtesting=is_backtesting_enabled(display_config)
                                )
 
@@ -175,14 +173,7 @@ def metrics_settings():
 
 @server_instance.route('/config_actions', methods=['POST'])
 def config_actions():
-    action = request.args.get("action")
-    if action == "reset_trading_history":
-        reset_trading_history()
-        return jsonify({
-            "title": "Trading history reset",
-            "details": "Next trading sessions will not consider past sessions for "
-                       "profitability and trading simulator will start using a fresh portfolio."
-        })
+    # action = request.args.get("action")
     return get_rest_reply("No specified action.", code=500)
 
 
