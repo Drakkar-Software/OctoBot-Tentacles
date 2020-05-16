@@ -2,7 +2,15 @@
 {% set active_page = "home" %}
 {% block body %}
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
-    <br>
+    <div class="alert alert-warning text-center mt-2" role="alert">
+        <h2>Thank you for contributing to OctoBot by testing this alpha version.</h2>
+        <p>
+            Please keep in mind that this version is not yet fully tested and certainly has remaining bugs.
+            Please report errors / improvement ideas or suspicious things into the OctoBot 0.4 channel.
+            <br/>
+            <b>Real trading is not ready yet</b>, while it can be activated, it's not advised to do so for now.
+        </p>
+    </div>
     <span id="exchange-specific-data">
         <div class="card">
             <div class="card-header"><h1>
