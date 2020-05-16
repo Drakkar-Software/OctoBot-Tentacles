@@ -47,32 +47,32 @@ class DipAnalyserStrategiesEvaluatorTest(AbstractStrategyTest):
     # format: results: (bot profitability, market average profitability)
 
     async def test_default_run(self):
-        # market: -49.25407390406244
-        await self.run_test_default_run(-25.441)
+        # market: -49.40503432494279
+        await self.run_test_default_run(-25.195)
 
     async def test_slow_downtrend(self):
-        # market: -49.25407390406244
-        # market: -47.50593824228029
-        await self.run_test_slow_downtrend(-25.441, -30.202, None, None, skip_extended=True)
+        # market: -49.40503432494279
+        # market: -47.12918660287082
+        await self.run_test_slow_downtrend(-25.195, -33.975, None, None, skip_extended=True)
 
     async def test_sharp_downtrend(self):
-        # market: -34.67997135795625
-        await self.run_test_sharp_downtrend(-23.61, None, skip_extended=True)
+        # market: -35.18599161146891
+        await self.run_test_sharp_downtrend(-22.231, None, skip_extended=True)
 
     async def test_flat_markets(self):
-        # market: -38.07647740440325
-        # market: -53.87077652637819
-        await self.run_test_flat_markets(-20.69, -30.363, None, None, skip_extended=True)
+        # market: -38.1194997684113
+        # market: -54.67676179382644
+        await self.run_test_flat_markets(-21.13, -32.759, None, None, skip_extended=True)
 
     async def test_slow_uptrend(self):
-        # market: 11.32644122514472
-        # market: -36.64596273291926
-        await self.run_test_slow_uptrend(6.673, -12.312)
+        # market: 6.6732347206625064
+        # market: -38.74673629242821
+        await self.run_test_slow_uptrend(6.673, -14.477)
 
     async def test_sharp_uptrend(self):
-        # market: -17.004747518342683
-        # market: -18.25837965302341
-        await self.run_test_sharp_uptrend(3.83, 11.743)
+        # market: -18.00341296928329
+        # market: -20.128373930217265
+        await self.run_test_sharp_uptrend(2.64, 10.578)
 
     async def test_up_then_down(self):
         await self.run_test_up_then_down(None, skip_extended=True)
