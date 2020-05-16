@@ -80,16 +80,6 @@ def get_tentacles_startup_activation():
     return get_tentacles_activation(get_startup_tentacles_config())
 
 
-def reset_trading_history():
-    previous_state_manager = get_bot_api().get_previous_states_manager()
-    if previous_state_manager:
-        previous_state_manager.reset_trading_history()
-
-
-def is_trading_persistence_activated():
-    return get_bot_api().get_previous_states_manager() is not None
-
-
 def get_tentacle_documentation(klass, media_url):
     doc_file = get_tentacle_documentation_path(klass)
     if isfile(doc_file):
