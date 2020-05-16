@@ -20,7 +20,7 @@
 <br>
 <div class="card" id="portfoliosCard" update-url="{{ url_for('portfolio_holdings') }}" reference_market="{{reference_unit}}">
     {% if has_real_trader %}
-        {{ display_init_warning }}
+        {{ display_init_warning() }}
         <div class="card-header"><h1>Real portfolio: {{real_total_value}} {{reference_unit}}</h1></div>
         <div class="card-body">
             {% if real_portfolio %}
