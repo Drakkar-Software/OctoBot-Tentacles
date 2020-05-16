@@ -19,7 +19,8 @@ from asyncio import gather
 from octobot.api.backtesting import create_independent_backtesting, \
     initialize_and_run_independent_backtesting, \
     get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
-    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting
+    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting, \
+    is_independent_backtesting_stopped
 from octobot.api.strategy_optimizer import is_optimizer_in_progress
 from octobot_commons.logging.logging_util import get_logger
 from octobot_backtesting.api.data_file_converters import convert_data_file
@@ -88,7 +89,8 @@ def get_backtesting_status():
         independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
         if is_independent_backtesting_in_progress(independent_backtesting):
             return "computing", get_independent_backtesting_progress(independent_backtesting) * 100
-        if is_independent_backtesting_finished(independent_backtesting):
+        if is_independent_backtesting_finished(independent_backtesting) or \
+                is_independent_backtesting_stopped(independent_backtesting):
             return "finished", 100
         return "starting", 0
     return "not started", 0
