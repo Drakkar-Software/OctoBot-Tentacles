@@ -86,7 +86,7 @@ function load_report(report, should_alert=False){
             const avg_profitabilities = [];
             $.each( data["bot_report"]["market_average_profitability"], function( exchange, market_average_profitability ) {
                 const exch = show_exchanges ? `${exchange}: `: "";
-                avg_profitabilities.push(`${exch}${market_average_profitability}`)
+                avg_profitabilities.push(`${exch}${market_average_profitability}`);
             });
             $("#maProf").html(avg_profitabilities.join(", "));
             $("#refM").html(data["bot_report"]["reference_market"]);
