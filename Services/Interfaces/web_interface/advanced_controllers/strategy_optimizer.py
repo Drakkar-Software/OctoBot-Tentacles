@@ -25,7 +25,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import get
 @advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
 def strategy_optimizer():
     from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import get_strategies_list, \
-        get_current_strategy, get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
+        get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
         get_optimizer_results, get_optimizer_report, get_current_run_params
 
     if request.method == 'POST':
@@ -66,14 +66,15 @@ def strategy_optimizer():
                     "evaluators": list(get_evaluators_list(strategy_name))
                 }
                 return jsonify(params)
-
         else:
-            current_strategy = get_current_strategy()
+            trading_mode = get_config_activated_trading_mode()
+            strategies = get_strategies_list(trading_mode)
+            current_strategy = strategies[0] if strategies else ""
             return render_template('advanced_strategy_optimizer.html',
-                                   strategies=get_strategies_list(),
+                                   strategies=strategies,
                                    current_strategy=current_strategy,
                                    time_frames=get_time_frames_list(current_strategy),
                                    evaluators=get_evaluators_list(current_strategy),
                                    risks=get_risks_list(),
-                                   trading_mode=get_config_activated_trading_mode().get_name(),
+                                   trading_mode=trading_mode.get_name(),
                                    run_params=get_current_run_params())
