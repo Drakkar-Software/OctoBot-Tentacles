@@ -21,7 +21,6 @@ import ccxt
 import requests
 
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
-from octobot_services.interfaces.util.util import run_in_bot_main_loop
 from octobot_services.api.notification import create_notifier_factory
 from octobot_tentacles_manager.api.configurator import get_tentacles_activation, \
     get_tentacle_config as manager_get_tentacle_config, update_tentacle_config as manager_update_tentacle_config, \
