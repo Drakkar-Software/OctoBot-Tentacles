@@ -39,10 +39,9 @@ from tentacles.Evaluator import Strategies
 LOGGER = get_logger(__name__)
 
 
-def get_strategies_list():
+def get_strategies_list(trading_mode):
     try:
-        classes = create_advanced_types_list(StrategyEvaluator, get_global_config())
-        return set(strategy.get_name() for strategy in classes)
+        return trading_mode.get_required_strategies_names_and_count()[0]
     except Exception:
         return []
 
@@ -69,16 +68,6 @@ def get_evaluators_list(strategy_name):
 
 def get_risks_list():
     return [i/10 for i in range(10, 0, -1)]
-
-
-def get_current_strategy():
-    try:
-        first_symbol_evaluator = next(iter(get_bot_api().get_symbol_evaluator_list().values()))
-        first_exchange = next(iter(get_bot_api().get_exchanges_list().values()))
-        return first_symbol_evaluator.get_strategies_eval_list(first_exchange)[0].get_name()
-    except Exception:
-        strategy_list = get_strategies_list()
-        return next(iter(strategy_list)) if strategy_list else ""
 
 
 def start_optimizer(strategy, time_frames, evaluators, risks):
