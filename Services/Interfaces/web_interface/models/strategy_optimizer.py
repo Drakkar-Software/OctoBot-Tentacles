@@ -24,12 +24,11 @@ from octobot.api.strategy_optimizer import create_strategy_optimizer, find_optim
 from octobot.api.backtesting import is_independent_backtesting_in_progress, create_independent_backtesting, \
     initialize_independent_backtesting_config
 from octobot_commons.logging.logging_util import get_logger
-from octobot_commons.tentacles_management.advanced_manager import create_advanced_types_list
 from octobot_commons.tentacles_management.class_inspector import get_class_from_string, evaluator_parent_inspection
 from octobot_commons.time_frame_manager import parse_time_frames
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from octobot_evaluators.api.inspection import get_relevant_TAs_for_strategy
-from octobot_services.interfaces.util.util import run_in_bot_main_loop
+from octobot_services.interfaces.util.util import run_in_bot_async_executor
 from octobot_services.interfaces.util.bot import get_bot_api, get_global_config
 from tentacles.Services.Interfaces import WebInterface
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_STRATEGY_OPTIMIZER, BOT_TOOLS_BACKTESTING
@@ -83,7 +82,7 @@ def start_optimizer(strategy, time_frames, evaluators, risks):
             formatted_time_frames = parse_time_frames(time_frames)
             float_risks = [float(risk) for risk in risks]
             temp_independent_backtesting = create_independent_backtesting(get_global_config(), None, [])
-            optimizer_config = run_in_bot_main_loop(
+            optimizer_config = run_in_bot_async_executor(
                 initialize_independent_backtesting_config(temp_independent_backtesting)
             )
             optimizer = create_strategy_optimizer(optimizer_config,
