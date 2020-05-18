@@ -30,7 +30,7 @@ from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from octobot_evaluators.api.inspection import get_relevant_TAs_for_strategy
 from octobot_services.interfaces.util.util import run_in_bot_async_executor
 from octobot_services.interfaces.util.bot import get_bot_api, get_global_config
-from tentacles.Services.Interfaces import WebInterface
+from tentacles.Services.Interfaces.web_interface import WebInterface
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_STRATEGY_OPTIMIZER, BOT_TOOLS_BACKTESTING
 from tentacles.Evaluator import Strategies
 

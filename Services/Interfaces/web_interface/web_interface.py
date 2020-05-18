@@ -116,7 +116,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
                                         debug=False)
             return True
         except Exception as e:
-            self.logger.exception(f"Fail to start web interface : {e}")
+            self.logger.exception(f"Fail to start web interface : {e}", False, e)
         return False
 
     async def _inner_start(self) -> bool:
