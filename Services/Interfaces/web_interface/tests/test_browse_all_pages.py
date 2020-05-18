@@ -49,6 +49,7 @@ async def _init_bot():
     init_trading_mode_config(octobot.config)
     init_trading_mode_config(octobot.config)
     octobot.task_manager.async_loop = asyncio.get_event_loop()
+    octobot.task_manager.create_pool_executor()
     octobot.tentacles_setup_config = tentacles_config
     octobot.configuration_manager.add_element(TENTACLES_SETUP_CONFIG_KEY, tentacles_config)
     octobot.exchange_producer = ExchangeProducer(None, octobot, None, False)
@@ -95,7 +96,7 @@ def _get_all_rules(app):
 
 
 # backlist endpoints expecting additional data
-URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/backtesting", "/data_collector", "/watched_symbols"]
+URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/watched_symbols"]
 
 
 def _start_web_interface(interface):
