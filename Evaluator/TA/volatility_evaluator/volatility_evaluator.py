@@ -43,7 +43,7 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         try:
-            if len(candle_data) > self.period:
+            if len(candle_data) >= self.period*2:
                 stochrsi_value = tulipy.stochrsi(drop_nan(candle_data), self.period)[-1]
 
                 if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
