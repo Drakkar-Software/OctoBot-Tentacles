@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 from ccxt import InsufficientFunds
 
 from octobot_channels.channels.channel import CHANNEL_WILDCARD
@@ -326,7 +327,10 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
         except InsufficientFunds as e:
             raise e
-
+        except asyncio.TimeoutError as e:
+            self.logger.error(f"Impossible to create order on {symbol}: {e} and is necessary to compute the "
+                              f"order details.")
+            return []
         except Exception as e:
             self.logger.exception(e, True, f"Failed to create order : {e}.")
             return []
