@@ -28,7 +28,7 @@ from octobot_backtesting.api.exchange_data_collector import collect_exchange_his
 from octobot_backtesting.constants import BACKTESTING_FILE_PATH
 from octobot_backtesting.api.data_file import get_all_available_data_files, get_file_description, delete_data_file
 from octobot_services.interfaces.util.bot import get_global_config, get_bot_api
-from octobot_services.interfaces.util.util import run_in_bot_main_loop
+from octobot_services.interfaces.util.util import run_in_bot_main_loop, run_in_bot_async_executor
 from octobot_tentacles_manager.api.configurator import get_tentacles_setup_config
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
@@ -51,7 +51,7 @@ async def _retrieve_data_files_with_description(files):
 
 def get_data_files_with_description():
     files = get_all_available_data_files()
-    return run_in_bot_main_loop(_retrieve_data_files_with_description(files))
+    return run_in_bot_async_executor(_retrieve_data_files_with_description(files))
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True):
@@ -65,7 +65,7 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             return False, "A backtesting is already running"
         else:
             if previous_independant_backtesting:
-                run_in_bot_main_loop(stop_independent_backtesting(previous_independant_backtesting))
+                run_in_bot_async_executor(stop_independent_backtesting(previous_independant_backtesting))
             if reset_tentacle_config:
                 tentacles_setup_config = get_tentacles_setup_config()
             else:
@@ -101,7 +101,7 @@ def get_backtesting_report(source):
     if tools[BOT_TOOLS_BACKTESTING]:
         backtesting = tools[BOT_TOOLS_BACKTESTING]
         if tools[BOT_TOOLS_BACKTESTING_SOURCE] == source:
-            return run_in_bot_main_loop(get_independent_backtesting_report(backtesting))
+            return run_in_bot_async_executor(get_independent_backtesting_report(backtesting))
     return {}
 
 
@@ -116,7 +116,7 @@ def get_delete_data_file(file_name):
 def collect_data_file(exchange, symbol):
     success = False
     try:
-        result = run_in_bot_main_loop(collect_exchange_historical_data(exchange, [symbol]))
+        result = run_in_bot_async_executor(collect_exchange_historical_data(exchange, [symbol]))
         success = True
     except Exception as e:
         result = f"data collector error: {e}"
@@ -153,7 +153,7 @@ def save_data_file(name, file):
     try:
         output_file = f"{BACKTESTING_FILE_PATH}/{name}"
         file.save(output_file)
-        message = run_in_bot_main_loop(_convert_into_octobot_data_file_if_necessary(output_file))
+        message = run_in_bot_async_executor(_convert_into_octobot_data_file_if_necessary(output_file))
         LOGGER.info(message)
         return True, message
     except Exception as e:
