@@ -13,26 +13,21 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import aiohttp
 import pytest
-import threading
 import asyncio
-
-from mock import patch, AsyncMock
 from contextlib import asynccontextmanager
-from tentacles.Services.Interfaces.web_interface import WebInterface
-from tentacles.Services.Interfaces.web_interface import server_instance
+
+from octobot_services.interfaces.bots.abstract_bot_interface import AbstractBotInterface
 from octobot_services.interfaces.abstract_interface import AbstractInterface
 
 
 # All test coroutines will be treated as marked.
 
 pytestmark = pytest.mark.asyncio
-PORT = 5555
 
 
-async def _init_bot():
-    # import here to prevent web interface import issues
+async def create_minimalist_unconnected_octobot():
+    # import here to prevent later web interface import issues
     from octobot.octobot import OctoBot
     from octobot.constants import TENTACLES_SETUP_CONFIG_KEY
     from octobot.producers.evaluator_producer import EvaluatorProducer
@@ -60,50 +55,30 @@ async def _init_bot():
 
 # use context manager instead of fixture to prevent pytest threads issues
 @asynccontextmanager
-async def get_web_interface():
-    try:
-        web_interface = WebInterface({})
-        web_interface.port = PORT
-        AbstractInterface.bot_api = (await _init_bot()).octobot_api
-        with patch.object(web_interface, "_register_on_channels", new=AsyncMock()):
-            threading.Thread(target=_start_web_interface, args=(web_interface,)).start()
-            # ensure web interface had time to start or it can't be stopped at the moment
-            await asyncio.sleep(0.3)
-            yield web_interface
-    finally:
-        await web_interface.stop()
+async def get_bot_interface():
+    bot_interface = AbstractBotInterface({})
+    AbstractInterface.initialize_global_project_data((await create_minimalist_unconnected_octobot()).octobot_api,
+                                                     "octobot",
+                                                     "x.y.z-alpha42")
+    yield bot_interface
 
 
-async def test_browse_all_pages():
-    async with get_web_interface():
-        async with aiohttp.ClientSession() as session:
-            await asyncio.gather(*[check_page(f"http://localhost:{PORT}{rule.replace('.', '/')}", session)
-                                   for rule in _get_all_rules(server_instance)])
-
-
-async def check_page(url, session):
-    async with session.get(url) as resp:
-        text = await resp.text()
-        assert "We are sorry, but an unexpected error occurred" not in text
-        assert "We are sorry, but this doesn't exist" not in text
-        assert resp.status == 200
-
-
-def _get_all_rules(app):
-    return set(rule.rule
-               for rule in app.url_map.iter_rules()
-               if "GET" in rule.methods and has_no_empty_params(rule) and rule.rule not in URL_BLACK_LIST)
-
-
-# backlist endpoints expecting additional data
-URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/watched_symbols"]
-
-
-def _start_web_interface(interface):
-    asyncio.run(interface.start())
-
-
-def has_no_empty_params(rule):
-    defaults = rule.defaults if rule.defaults is not None else ()
-    arguments = rule.arguments if rule.arguments is not None else ()
-    return len(defaults) >= len(arguments)
+async def test_all_commands():
+    """
+    Test basing commands interactions, for most of them a default message will be saying that the bot is not ready.
+    :return: None
+    """
+    async with get_bot_interface() as bot_interface:
+        assert len(bot_interface.get_command_configuration()) > 50
+        assert len(bot_interface.get_command_market_status()) > 50
+        assert len(bot_interface.get_command_trades_history()) > 50
+        assert len(bot_interface.get_command_open_orders()) > 50
+        assert len(bot_interface.get_command_fees()) > 50
+        assert "Nothing to sell" in bot_interface.get_command_sell_all_currencies()
+        assert "Nothing to sell for BTC" in bot_interface.get_command_sell_all("BTC")
+        assert len(bot_interface.get_command_portfolio()) > 50
+        assert len(bot_interface.get_command_profitability()) > 50
+        assert "I'm alive since" in bot_interface.get_command_ping()
+        assert all(elem in bot_interface.get_command_version()
+                   for elem in [AbstractInterface.project_name, AbstractInterface.project_version])
+        assert "Hello, I'm OctoBot" in bot_interface.get_command_start()
