@@ -65,7 +65,7 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             return False, "A backtesting is already running"
         else:
             if previous_independant_backtesting:
-                run_in_bot_async_executor(stop_independent_backtesting(previous_independant_backtesting))
+                run_in_bot_main_loop(stop_independent_backtesting(previous_independant_backtesting))
             if reset_tentacle_config:
                 tentacles_setup_config = get_tentacles_setup_config()
             else:
