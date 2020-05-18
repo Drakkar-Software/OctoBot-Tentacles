@@ -20,19 +20,9 @@ import asyncio
 
 from mock import patch, AsyncMock
 from contextlib import asynccontextmanager
-
-from tentacles.Services.Interfaces import WebInterface
+from tentacles.Services.Interfaces.web_interface import WebInterface
 from tentacles.Services.Interfaces.web_interface import server_instance
-from octobot.octobot import OctoBot
-from octobot.constants import TENTACLES_SETUP_CONFIG_KEY
-from octobot.producers.evaluator_producer import EvaluatorProducer
-from octobot.producers.exchange_producer import ExchangeProducer
-from octobot_commons.tests.test_config import load_test_config
 from octobot_services.interfaces.abstract_interface import AbstractInterface
-from octobot_tentacles_manager.loaders.tentacle_loading import reload_tentacle_by_tentacle_class
-from octobot_trading.api.modes import init_trading_mode_config
-from octobot_evaluators.api.evaluators import initialize_evaluators
-from tests.test_utils.config import load_test_tentacles_config
 
 
 # All test coroutines will be treated as marked.
@@ -42,6 +32,15 @@ PORT = 5555
 
 
 async def _init_bot():
+    from octobot.octobot import OctoBot
+    from octobot.constants import TENTACLES_SETUP_CONFIG_KEY
+    from octobot.producers.evaluator_producer import EvaluatorProducer
+    from octobot.producers.exchange_producer import ExchangeProducer
+    from octobot_commons.tests.test_config import load_test_config
+    from octobot_tentacles_manager.loaders.tentacle_loading import reload_tentacle_by_tentacle_class
+    from octobot_trading.api.modes import init_trading_mode_config
+    from octobot_evaluators.api.evaluators import initialize_evaluators
+    from tests.test_utils.config import load_test_tentacles_config
     octobot = OctoBot(load_test_config())
     octobot.initialized = True
     tentacles_config = load_test_tentacles_config()
@@ -68,7 +67,7 @@ async def get_web_interface():
         with patch.object(web_interface, "_register_on_channels", new=AsyncMock()):
             threading.Thread(target=_start_web_interface, args=(web_interface,)).start()
             # ensure web interface had time to start or it can't be stopped at the moment
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)
             yield web_interface
     finally:
         await web_interface.stop()
