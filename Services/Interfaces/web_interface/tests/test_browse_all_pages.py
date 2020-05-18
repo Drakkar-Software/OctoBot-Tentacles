@@ -68,7 +68,7 @@ async def get_web_interface():
         with patch.object(web_interface, "_register_on_channels", new=AsyncMock()):
             threading.Thread(target=_start_web_interface, args=(web_interface,)).start()
             # ensure web interface had time to start or it can't be stopped at the moment
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(1)
             yield web_interface
     finally:
         await web_interface.stop()
