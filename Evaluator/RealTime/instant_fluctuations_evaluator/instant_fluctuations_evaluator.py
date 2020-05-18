@@ -132,9 +132,11 @@ class InstantFluctuationsEvaluator(RealTimeEvaluator):
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, symbol=self.symbol, time_frame=self.time_frame)
+                callback=self.ohlcv_callback, symbol=self.symbol,
+                time_frame=self.time_frame, priority_level=self.priority_level)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, symbol=self.symbol, time_frame=self.time_frame)
+                callback=self.kline_callback, symbol=self.symbol,
+                time_frame=self.time_frame, priority_level=self.priority_level)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
@@ -215,9 +217,9 @@ class InstantMAEvaluator(RealTimeEvaluator):
             from octobot_trading.api.exchange import get_exchange_id_from_matrix_id
             exchange_id = get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await get_trading_chan(OctoBotTradingChannelsName.OHLCV_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.ohlcv_callback, time_frame=self.time_frame)
+                callback=self.ohlcv_callback, time_frame=self.time_frame, priority_level=self.priority_level)
             await get_trading_chan(OctoBotTradingChannelsName.KLINE_CHANNEL.value, exchange_id).new_consumer(
-                callback=self.kline_callback, time_frame=self.time_frame)
+                callback=self.kline_callback, time_frame=self.time_frame, priority_level=self.priority_level)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
