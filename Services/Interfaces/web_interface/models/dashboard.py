@@ -25,7 +25,7 @@ from octobot_trading.api.trades import parse_trade_type
 from octobot_trading.enums import OrderStatus, ExchangeConstantsOrderColumns, TradeOrderSide, TraderOrderType
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
     has_symbol_klines
-from tentacles.Services.Interfaces import WebInterface
+from tentacles.Services.Interfaces.web_interface import WebInterface
 from tentacles.Services.Interfaces.web_interface import add_to_symbol_data_history, get_symbol_data_history
 from tentacles.Services.Interfaces.web_interface.constants import DEFAULT_TIMEFRAME, BOT_TOOLS_BACKTESTING
 from tentacles.Services.Interfaces.web_interface.enums import PriceStrings
