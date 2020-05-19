@@ -18,7 +18,7 @@ import os
 import socket
 from octobot_commons.constants import CONFIG_ENABLED_OPTION
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_SERVICE_INSTANCE, \
-    CONFIG_WEB_PORT, DEFAULT_SERVER_PORT, ENV_WEB_PORT, ENV_WEB_ADDRESS
+    CONFIG_WEB_PORT, DEFAULT_SERVER_PORT, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER
 from octobot_services.services.abstract_service import AbstractService
 
 
@@ -31,12 +31,15 @@ class WebService(AbstractService):
 
     def get_fields_description(self):
         return {
-            CONFIG_WEB_PORT: "Port to access your OctoBot web interface from."
+            CONFIG_WEB_PORT: "Port to access your OctoBot web interface from.",
+            CONFIG_AUTO_OPEN_IN_WEB_BROWSER: "When enabled, OctoBot will open the web interface on your web "
+                                             "browser upon startup."
         }
 
     def get_default_value(self):
         return {
-            CONFIG_WEB_PORT: DEFAULT_SERVER_PORT
+            CONFIG_WEB_PORT: DEFAULT_SERVER_PORT,
+            CONFIG_AUTO_OPEN_IN_WEB_BROWSER: True
         }
 
     def get_required_config(self):
