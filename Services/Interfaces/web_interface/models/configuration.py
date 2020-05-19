@@ -70,6 +70,10 @@ LOGGER = get_logger("WebConfigurationModel")
 
 DEFAULT_EXCHANGE = "binance"
 
+# buffers to faster config page loading
+markets_by_exchanges = {}
+all_symbols_dict = {}
+
 
 def _get_tentacles_activation():
     return get_tentacles_activation(get_edited_tentacles_config())
@@ -428,31 +432,34 @@ def get_notifiers_list():
 
 def get_symbol_list(exchanges):
     result = []
-
     for exchange in exchanges:
+        if exchange in markets_by_exchanges:
+            result += markets_by_exchanges[exchange]
+        else:
+            try:
+                inst = getattr(ccxt, exchange)({'verbose': False})
+                inst.load_markets()
+                # filter symbols with a "." or no "/" because bot can't handle them for now
+                markets_by_exchanges[exchange] = [res for res in inst.symbols if "/" in res]
+                result += markets_by_exchanges[exchange]
+            except Exception as e:
+                LOGGER.error(f"error when loading symbol list for {exchange}: {e}")
+
+    return list(set(result))
+
+
+def get_all_symbols_dict():
+    global all_symbols_dict
+    if not all_symbols_dict:
         try:
-            inst = getattr(ccxt, exchange)({'verbose': False})
-            inst.load_markets()
-            result += inst.symbols
+            all_symbols_dict = {
+                currency_data[NAME_KEY]: currency_data["symbol"]
+                for currency_data in requests.get(CURRENCIES_LIST_URL).json()["data"]
+            }
         except Exception as e:
-            LOGGER.error(f"error when loading symbol list for {exchange}: {e}")
-
-    # filter symbols with a "." or no "/" because bot can't handle them for now
-    symbols = [res for res in result if "/" in res]
-
-    return list(set(symbols))
-
-
-def get_all_symbol_list():
-    try:
-        currencies_list = requests.get(CURRENCIES_LIST_URL).json()
-        return {
-            currency_data[NAME_KEY]: currency_data["symbol"]
-            for currency_data in currencies_list["data"]
-        }
-    except Exception as e:
-        LOGGER.error(f"Failed to get currencies list from coinmarketcap : {e}")
-        return {}
+            LOGGER.error(f"Failed to get currencies list from coinmarketcap : {e}")
+            return {}
+    return all_symbols_dict
 
 
 def get_full_exchange_list(remove_config_exchanges=False):
