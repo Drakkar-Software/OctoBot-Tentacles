@@ -64,6 +64,7 @@ async def get_web_interface():
     try:
         web_interface = WebInterface({})
         web_interface.port = PORT
+        web_interface.should_open_web_interface = False
         AbstractInterface.bot_api = (await _init_bot()).octobot_api
         with patch.object(web_interface, "_register_on_channels", new=AsyncMock()):
             threading.Thread(target=_start_web_interface, args=(web_interface,)).start()
