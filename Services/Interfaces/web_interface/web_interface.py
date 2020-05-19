@@ -55,6 +55,10 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         self.websocket_instance = None
         self._init_web_settings()
 
+    async def register_new_exchange_impl(self, exchange_id):
+        if exchange_id not in self.registered_exchanges_ids:
+            await self._register_on_channels(exchange_id)
+
     def _init_web_settings(self):
         try:
             self.host = os.getenv(ENV_WEB_ADDRESS, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_IP])
@@ -71,10 +75,10 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         send_new_trade(trade,
                        is_trader_simulated(get_exchange_manager_from_exchange_name_and_id(exchange, exchange_id)))
 
-    async def _register_on_channels(self):
+    async def _register_on_channels(self, exchange_id):
         try:
             from octobot_trading.api.trades import subscribe_to_trades_channel
-            await subscribe_to_trades_channel(self._web_trades_callback)
+            await subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
 
@@ -90,8 +94,6 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         load_namespaces()
         for namespace in namespaces:
             websocket_instance.on_namespace(namespace)
-
-        run_in_bot_main_loop(self._register_on_channels())
 
         register_error_notifier(send_general_notifications)
         return websocket_instance
