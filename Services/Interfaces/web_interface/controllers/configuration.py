@@ -26,7 +26,7 @@ from tentacles.Services.Interfaces.web_interface.constants import GLOBAL_CONFIG_
     TRADING_CONFIG_KEY, DEACTIVATE_OTHERS
 from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_strategy_config, \
-    get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbol_list, \
+    get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbols_dict, \
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, \
     manage_metrics, get_tentacle_from_string, update_tentacle_config, reset_config_to_default, \
     get_evaluator_detailed_config, REQUIREMENTS_KEY, get_config_activated_trading_mode, \
@@ -115,7 +115,7 @@ def config():
                                notifiers_list=notifiers_list,
                                symbol_list=sorted(get_symbol_list([exchange
                                                                    for exchange in display_config[CONFIG_EXCHANGES]])),
-                               full_symbol_list=get_all_symbol_list(),
+                               full_symbol_list=get_all_symbols_dict(),
                                strategy_config=get_strategy_config(media_url),
                                evaluator_startup_config=get_tentacles_startup_activation(),
                                trading_startup_config=get_tentacles_startup_activation(),
