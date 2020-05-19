@@ -15,14 +15,16 @@
 #  License along with this library.
 import os
 import threading
+import socket
+import webbrowser
 
 from time import sleep
 from flask_socketio import SocketIO
 
 from octobot_commons.logging import register_error_notifier
-from octobot_services.interfaces.util.util import run_in_bot_main_loop
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
-    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS
+    DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER, \
+    ENV_AUTO_OPEN_IN_WEB_BROWSER
 from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
@@ -68,6 +70,16 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             self.port = int(os.getenv(ENV_WEB_PORT, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]))
         except KeyError:
             self.port = int(os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT))
+        try:
+            env_value = os.getenv(ENV_AUTO_OPEN_IN_WEB_BROWSER, None)
+            if env_value is None:
+                self.should_open_web_interface = \
+                    self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_AUTO_OPEN_IN_WEB_BROWSER]
+            else:
+                self.should_open_web_interface = env_value.lower() == "true"
+        except KeyError:
+            self.should_open_web_interface = True
+
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
@@ -111,6 +123,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
 
             register_responses_extra_header(server_instance, True)
 
+            if self.should_open_web_interface:
+                self._open_web_interface_on_browser()
+
             self.websocket_instance.run(server_instance,
                                         host=self.host,
                                         port=self.port,
@@ -120,6 +135,12 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         except Exception as e:
             self.logger.exception(f"Fail to start web interface : {e}", False, e)
         return False
+
+    def _open_web_interface_on_browser(self):
+        try:
+            webbrowser.open(f"http://{socket.gethostbyname(socket.gethostname())}:{self.port}")
+        except Exception as e:
+            self.logger.warning(f"Impossible to open automatically web interface: {e}")
 
     async def _inner_start(self) -> bool:
         threading.Thread.start(self)
