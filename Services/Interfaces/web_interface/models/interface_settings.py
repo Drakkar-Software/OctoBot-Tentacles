@@ -16,6 +16,7 @@
 
 import copy
 
+from octobot.constants import CONFIG_FILE_SCHEMA
 from octobot_commons.constants import CONFIG_CRYPTO_PAIRS, CONFIG_CRYPTO_CURRENCIES
 from octobot_services.interfaces.util.bot import get_edited_config
 import octobot_commons.config_manager as config_manager
@@ -52,5 +53,5 @@ def remove_watched_symbol(symbol):
 
 
 def _save_edition():
-    config_manager.simple_save_config_update(get_edited_config())
+    config_manager.simple_save_config_update(get_edited_config(), schema_file=CONFIG_FILE_SCHEMA)
     return True

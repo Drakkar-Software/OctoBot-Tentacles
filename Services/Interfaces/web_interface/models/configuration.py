@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+from octobot.constants import CONFIG_FILE_SCHEMA
 from octobot_commons.logging.logging_util import get_logger
 from copy import copy
 from os.path import isfile, sep
@@ -392,6 +392,7 @@ def update_global_config(new_config, delete=False):
     current_edited_config = get_edited_config()
     config_manager.update_global_config(new_config,
                                         current_edited_config,
+                                        CONFIG_FILE_SCHEMA,
                                         is_backtesting_enabled(current_edited_config),
                                         UPDATED_CONFIG_SEPARATOR,
                                         update_input=True,
