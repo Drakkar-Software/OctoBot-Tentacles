@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot.constants import DEFAULT_TENTACLES_URL
+from octobot.constants import DEFAULT_TENTACLES_URL, OCTOBOT_FOLDER
 from octobot_commons.logging.logging_util import get_logger
 from octobot_services.interfaces.util.bot import get_bot_api
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
@@ -43,7 +43,9 @@ def install_packages(path_or_url=None):
             if not call_tentacle_manager(install_all_tentacles,
                                          package_url,
                                          setup_config=get_bot_api().get_edited_tentacles_config(),
-                                         aiohttp_session=get_bot_api().get_aiohttp_session()):
+                                         aiohttp_session=get_bot_api().get_aiohttp_session(),
+                                         bot_install_dir=OCTOBOT_FOLDER
+                                         ):
                 return False
         else:
             message = "Tentacles installed however it is impossible to re-install tentacles with unknown package origin"
