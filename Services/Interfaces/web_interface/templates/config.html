@@ -55,7 +55,7 @@
         </ul>
         <ul class="nav ml-auto">
             <li class="nav-item">
-                <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="nav-link btn red waves-effect">Restart Octobot</button>
+                <button id='save-config-and-restart' update-url="{{ url_for('config') }}" type="button" class="nav-link btn red waves-effect">Save and restart Octobot</button>
             </li>
         </ul>
     </nav>
