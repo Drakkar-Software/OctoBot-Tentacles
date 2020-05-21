@@ -15,7 +15,6 @@
 #  License along with this library.
 from octobot.constants import CONFIG_FILE_SCHEMA
 from octobot_commons.logging.logging_util import get_logger
-from copy import copy
 from os.path import isfile, sep
 import ccxt
 import requests
@@ -31,7 +30,7 @@ from tentacles.Services.Interfaces.web_interface.constants import UPDATED_CONFIG
     CURRENCIES_LIST_URL
 from octobot_evaluators.constants import EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES
-from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION, CONFIG_ADVANCED_CLASSES
+from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION
 from octobot_services.interfaces.util.bot import get_global_config, get_edited_config, get_bot_api, \
     get_startup_tentacles_config, get_edited_tentacles_config
 from octobot_services.api.services import get_available_services
@@ -52,7 +51,6 @@ REQUIREMENTS_COUNT_KEY = "requirements-min-count"
 DEFAULT_CONFIG_KEY = "default-config"
 TRADING_MODES_KEY = "trading-modes"
 STRATEGIES_KEY = "strategies"
-ADVANCED_CLASS_KEY = "advanced_class"
 TRADING_MODE_KEY = "trading mode"
 STRATEGY_KEY = "strategy"
 TA_EVALUATOR_KEY = "technical evaluator"
@@ -94,25 +92,6 @@ def get_tentacle_documentation(klass, media_url):
     return ""
 
 
-def _get_advanced_class_details(class_name, klass, media_url, is_trading_mode=False, is_strategy=False):
-    from octobot_commons.tentacles_management.advanced_manager import get_class
-    details = {}
-    config = get_global_config()
-    advanced_class = get_class(config, klass)
-    if advanced_class and advanced_class.get_name() != class_name:
-        details[NAME_KEY] = advanced_class.get_name()
-        details[DESCRIPTION_KEY] = get_tentacle_documentation(advanced_class, media_url)
-        details[BASE_CLASSES_KEY] = [k.get_name() for k in advanced_class.__bases__]
-        if is_trading_mode:
-            required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count()
-            details[REQUIREMENTS_KEY] = [strategy for strategy in required_strategies]
-            details[REQUIREMENTS_COUNT_KEY] = required_strategies_count
-        elif is_strategy:
-            details[REQUIREMENTS_KEY] = [evaluator for evaluator in advanced_class.get_required_evaluators()]
-            details[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in advanced_class.get_default_evaluators(config)]
-    return details
-
-
 def _get_strategy_activation_state(with_trading_modes, media_url):
     from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
     import tentacles.Trading.Mode as modes
@@ -135,8 +114,6 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
                 strategy_config[TRADING_MODES_KEY][key][EVALUATOR_ACTIVATION] = val
                 strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(config_class,
                                                                                                       media_url)
-                strategy_config[TRADING_MODES_KEY][key][ADVANCED_CLASS_KEY] = \
-                    _get_advanced_class_details(key, config_class, media_url, is_trading_mode=True)
                 strategy_config_classes[TRADING_MODES_KEY][key] = config_class
 
     evaluator_config = _get_tentacles_activation()
@@ -147,8 +124,6 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
             strategy_config[STRATEGIES_KEY][key] = {}
             strategy_config[STRATEGIES_KEY][key][EVALUATOR_ACTIVATION] = val
             strategy_config[STRATEGIES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(config_class, media_url)
-            strategy_config[STRATEGIES_KEY][key][ADVANCED_CLASS_KEY] = \
-                _get_advanced_class_details(key, config_class, media_url, is_strategy=True)
             strategy_config_classes[STRATEGIES_KEY][key] = config_class
 
     return strategy_config, strategy_config_classes
@@ -168,16 +143,12 @@ def _get_tentacle_packages():
     yield rt, AbstractEvaluator, RT_EVALUATOR_KEY
 
 
-def _get_activation_state(name, details):
-    activation_states = _get_tentacles_activation()
-    if ADVANCED_CLASS_KEY in details:
-        for parent_class in details[ADVANCED_CLASS_KEY][BASE_CLASSES_KEY]:
-            if parent_class in activation_states and activation_states[parent_class]:
-                return True
+def _get_activation_state(name, activation_states):
     return name in activation_states and activation_states[name]
 
 
 def get_tentacle_from_string(name, media_url, with_info=True):
+    activation_states = _get_tentacles_activation()
     for package, abstract_class, tentacle_type in _get_tentacle_packages():
         is_trading_mode = tentacle_type == TRADING_MODE_KEY
         parent_inspector = trading_mode_parent_inspection if is_trading_mode else evaluator_parent_inspection
@@ -187,13 +158,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
                 info = {}
                 info[DESCRIPTION_KEY] = get_tentacle_documentation(klass, media_url)
                 info[NAME_KEY] = name
-                for parent_class in klass.__bases__:
-                    if hasattr(parent_class, "get_name"):
-                        advanced_details = _get_advanced_class_details(parent_class.get_name(), parent_class, media_url,
-                                                                       is_strategy=(tentacle_type == STRATEGY_KEY))
-                        if advanced_details:
-                            info[ADVANCED_CLASS_KEY] = advanced_details
-                info[EVALUATOR_ACTIVATION] = _get_activation_state(name, info)
+                info[EVALUATOR_ACTIVATION] = _get_activation_state(name, activation_states)
                 if is_trading_mode:
                     _add_trading_mode_requirements_and_default_config(info, klass)
                 elif tentacle_type == STRATEGY_KEY:
@@ -237,15 +202,12 @@ def reset_config_to_default(tentacle_name):
 
 
 def _get_required_element(elements_config):
-    advanced_class_key = ADVANCED_CLASS_KEY
     requirements = REQUIREMENTS_KEY
     required_elements = set()
     for element_type in elements_config.values():
         for element_name, element in element_type.items():
             if element[EVALUATOR_ACTIVATION]:
-                if element[advanced_class_key] and requirements in element[advanced_class_key]:
-                    required_elements = required_elements.union(element[advanced_class_key][requirements])
-                elif requirements in element:
+                if requirements in element:
                     required_elements = required_elements.union(element[requirements])
     return required_elements
 
@@ -274,9 +236,7 @@ def _add_trading_mode_requirements_and_default_config(desc, klass):
 def _add_strategies_requirements(strategies, strategy_config):
     required_elements = _get_required_element(strategy_config)
     for classKey, klass in strategies.items():
-        if not strategy_config[STRATEGIES_KEY][classKey][ADVANCED_CLASS_KEY]:
-            # no need for requirement if advanced class: requirements are already in advanced class
-            _add_strategy_requirements_and_default_config(strategy_config[STRATEGIES_KEY][classKey], klass)
+        _add_strategy_requirements_and_default_config(strategy_config[STRATEGIES_KEY][classKey], klass)
         strategy_config[STRATEGIES_KEY][classKey][REQUIRED_KEY] = classKey in required_elements
 
 
@@ -317,8 +277,6 @@ def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
         detailed_config[eval_type_key][evaluator_name][DESCRIPTION_KEY] = get_tentacle_documentation(klass, media_url)
         detailed_config[eval_type_key][evaluator_name][EVALUATION_FORMAT_KEY] = "float" \
             if klass.get_eval_type() == EVALUATOR_EVAL_DEFAULT_TYPE else str(klass.get_eval_type())
-        detailed_config[eval_type_key][evaluator_name][ADVANCED_CLASS_KEY] = \
-            _get_advanced_class_details(evaluator_name, klass, media_url, is_strategy=is_strategy)
         return True, klass
     return False, klass
 
@@ -364,13 +322,8 @@ def get_evaluator_detailed_config(media_url):
     return detailed_config
 
 
-def get_config_activated_trading_mode(edited_config=False):
-    config = get_global_config()
-    if edited_config:
-        config = copy(get_edited_config())
-        # rebind advanced classes to use in get_activated_trading_mode
-        config[CONFIG_ADVANCED_CLASSES] = get_global_config()[CONFIG_ADVANCED_CLASSES]
-    return get_activated_trading_mode(config, get_bot_api().get_edited_tentacles_config())
+def get_config_activated_trading_mode():
+    return get_activated_trading_mode(get_bot_api().get_edited_tentacles_config())
 
 
 def update_tentacles_activation_config(new_config, deactivate_others=False):
