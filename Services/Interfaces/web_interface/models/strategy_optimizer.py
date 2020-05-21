@@ -58,7 +58,7 @@ def get_evaluators_list(strategy_name):
     if strategy_name:
         strategy_class = get_class_from_string(strategy_name, StrategyEvaluator,
                                                Strategies, evaluator_parent_inspection)
-        evaluators = get_relevant_TAs_for_strategy(strategy_class, get_global_config(),
+        evaluators = get_relevant_TAs_for_strategy(strategy_class,
                                                    get_bot_api().get_tentacles_setup_config())
         return set(evaluator.get_name() for evaluator in evaluators)
     else:
