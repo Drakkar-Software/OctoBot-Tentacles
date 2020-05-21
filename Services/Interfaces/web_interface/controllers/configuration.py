@@ -162,7 +162,7 @@ def config_tentacle():
                                    evaluator_startup_config=evaluator_startup_config,
                                    strategy_config=strategy_config,
                                    evaluator_config=evaluator_config,
-                                   activated_trading_mode=get_config_activated_trading_mode(edited_config=True),
+                                   activated_trading_mode=get_config_activated_trading_mode(),
                                    data_files=get_data_files_with_description())
         else:
             return render_template('config_tentacle.html')
