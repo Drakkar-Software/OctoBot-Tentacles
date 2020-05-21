@@ -25,6 +25,7 @@ from octobot_services.constants import CONFIG_CATEGORY_NOTIFICATION
 from tentacles.Services.Interfaces.web_interface.constants import GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, \
     TRADING_CONFIG_KEY, DEACTIVATE_OTHERS
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_strategy_config, \
     get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbols_dict, \
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, \
@@ -84,6 +85,8 @@ def config():
             }
 
         if success:
+            if request_data.get("restart_after_save", False):
+                schedule_delayed_command(restart_bot)
             return get_rest_reply(jsonify(response))
         else:
             return get_rest_reply('{"update": "ko"}', 500)
