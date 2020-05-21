@@ -13,13 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 from octobot_commons.logging.logging_util import get_logger
 from flask import render_template, jsonify
 
 from octobot.disclaimer import DISCLAIMER
-from octobot_services.interfaces.util.bot import get_bot_api
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.models.commands import restart_bot, stop_bot
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_metrics_enabled
 
 logger = get_logger("ServerInstance Controller")
@@ -29,11 +28,11 @@ logger = get_logger("ServerInstance Controller")
 @server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
 def commands(cmd=None):
     if cmd == "restart":
-        get_bot_api().restart_bot()
+        restart_bot()
         return jsonify("Success")
 
     elif cmd == "stop":
-        get_bot_api().stop_bot()
+        stop_bot()
         return jsonify("Success")
 
     return render_template('commands.html',
