@@ -190,8 +190,13 @@ body:before {
     font-weight: bolder;
 }
 
-a:hover.external-link {
+a:hover.external-link{
     font-weight: inherit;
+}
+
+a:hover.evaluator-config-element{
+    font-weight: inherit;
+    box-shadow: 0.1rem 0.1rem;
 }
 
 a:hover.badge {
