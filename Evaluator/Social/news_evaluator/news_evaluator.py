@@ -16,7 +16,7 @@
 
 from octobot_commons.constants import CONFIG_CRYPTO_CURRENCIES, CONFIG_CRYPTO_CURRENCY, MINUTE_TO_SECONDS, \
     START_PENDING_EVAL_NOTE
-from octobot_commons.tentacles_management.advanced_manager import get_single_deepest_child_class
+from octobot_commons.tentacles_management.class_inspector import get_single_deepest_child_class
 from octobot_services.constants import CONFIG_TWITTERS_ACCOUNTS, CONFIG_TWITTERS_HASHTAGS, CONFIG_TWEET, \
     CONFIG_TWEET_DESCRIPTION
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
