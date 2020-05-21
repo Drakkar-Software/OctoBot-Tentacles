@@ -39,15 +39,12 @@ async def _init_bot():
     from octobot.producers.exchange_producer import ExchangeProducer
     from octobot_commons.tests.test_config import load_test_config
     from octobot_tentacles_manager.loaders.tentacle_loading import reload_tentacle_by_tentacle_class
-    from octobot_trading.api.modes import init_trading_mode_config
     from octobot_evaluators.api.evaluators import initialize_evaluators
     from tests.test_utils.config import load_test_tentacles_config
     octobot = OctoBot(load_test_config())
     octobot.initialized = True
     tentacles_config = load_test_tentacles_config()
     reload_tentacle_by_tentacle_class()
-    init_trading_mode_config(octobot.config)
-    init_trading_mode_config(octobot.config)
     octobot.task_manager.async_loop = asyncio.get_event_loop()
     octobot.task_manager.create_pool_executor()
     octobot.tentacles_setup_config = tentacles_config

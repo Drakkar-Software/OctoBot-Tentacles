@@ -16,7 +16,7 @@
 import numpy
 
 from octobot_commons.constants import CONFIG_REFRESH_RATE
-from octobot_commons.tentacles_management.advanced_manager import get_single_deepest_child_class
+from octobot_commons.tentacles_management.class_inspector import get_single_deepest_child_class
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
 from octobot_services.constants import FEED_METADATA, CONFIG_TREND_HISTORY_TIME, CONFIG_TREND_TOPICS, CONFIG_TREND
 from tentacles.Evaluator.Util.statistics_analysis import StatisticAnalysis
