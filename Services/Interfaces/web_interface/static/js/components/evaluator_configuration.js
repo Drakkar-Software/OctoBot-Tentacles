@@ -78,32 +78,41 @@ function parse_new_value(element){
     }
 }
 
+function _save_eval_config(element, restart_after_save){
+    const full_config = $("#super-container");
+    const updated_config = {};
+    const update_url = element.attr(update_url_attr);
+
+    // take all tabs into account
+    get_tabs_config().each(function(){
+        $(this).find("."+config_element_class).each(function(){
+            const config_type = $(this).attr(config_type_attr);
+
+            if(!(config_type in updated_config)){
+                updated_config[config_type] = {};
+            }
+
+            const new_value = parse_new_value($(this));
+            const config_key = get_config_key($(this));
+
+            if(get_config_value_changed($(this), new_value, config_key)){
+                updated_config[config_type][config_key] = new_value;
+            }
+        })
+    });
+
+    updated_config["restart_after_save"] = restart_after_save;
+
+    // send update
+    send_and_interpret_bot_update(updated_config, update_url, full_config, handle_save_buttons_success_callback);
+}
+
 function handle_save_buttons(){
     $("#save-config").click(function() {
-        const full_config = $("#super-container");
-        const updated_config = {};
-        const update_url = $("#save-config").attr(update_url_attr);
-
-        // take all tabs into account
-        get_tabs_config().each(function(){
-            $(this).find("."+config_element_class).each(function(){
-                const config_type = $(this).attr(config_type_attr);
-
-                if(!(config_type in updated_config)){
-                    updated_config[config_type] = {};
-                }
-
-                const new_value = parse_new_value($(this));
-                const config_key = get_config_key($(this));
-
-                if(get_config_value_changed($(this), new_value, config_key)){
-                    updated_config[config_type][config_key] = new_value;
-                }
-            })
-        });
-
-        // send update
-        send_and_interpret_bot_update(updated_config, update_url, full_config, handle_save_buttons_success_callback);
+        _save_eval_config($(this), false);
+    })
+    $("#save-config-and-restart").click(function() {
+        _save_eval_config($(this), true);
     })
 }
 

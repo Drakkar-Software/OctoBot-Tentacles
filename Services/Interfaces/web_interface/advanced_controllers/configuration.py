@@ -21,6 +21,7 @@ from . import advanced
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_evaluator_detailed_config, \
     update_tentacles_activation_config, get_tentacles_startup_activation
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
+from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
 
 
 @advanced.route("/evaluator_config")
@@ -41,13 +42,14 @@ def evaluator_config():
             }
 
         if success:
+            if request_data.get("restart_after_save", False):
+                schedule_delayed_command(restart_bot)
             return get_rest_reply(jsonify(response))
         else:
             return get_rest_reply('{"update": "ko"}', 500)
     else:
         media_url = url_for("tentacle_media", _external=True)
         return render_template('advanced_evaluator_config.html',
-
                                evaluator_config=get_evaluator_detailed_config(media_url),
                                evaluator_startup_config=get_tentacles_startup_activation()
                                )
