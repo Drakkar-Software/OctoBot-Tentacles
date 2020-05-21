@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 from octobot_commons.constants import START_PENDING_EVAL_NOTE, CONFIG_CRYPTO_CURRENCY, CONFIG_CRYPTO_CURRENCIES
-from octobot_commons.tentacles_management.advanced_manager import get_single_deepest_child_class
+from octobot_commons.tentacles_management.class_inspector import get_single_deepest_child_class
 from octobot_evaluators.evaluator.social_evaluator import SocialEvaluator
 from octobot_services.constants import FEED_METADATA
 from tentacles.Services.Services_feeds import RedditServiceFeed
