@@ -58,7 +58,7 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
                 if (loadingSelector.length) {
                     loadingSelector.addClass(hidden_class);
                 }
-                $(document.getElementById(element_id)).html(`<h7>Error when loading graph: ${error}</h7>`)
+                $(document.getElementById(element_id)).html(`<h7>Error when loading graph: ${error} ${result} (${status})</h7>`)
             }
         });
     }
@@ -67,15 +67,22 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
 function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, callback=undefined) {
     const url = $("#first_symbol_graph").attr(update_url_attr);
     $.get(url,function(data) {
-        if("time_frame" in data){
-            let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
-            get_symbol_price_graph(element_id, data["exchange_id"], data["exchange_name"], formatted_symbol,
-                data["time_frame"], in_backtesting_mode, false, true,
-                0, undefined, function () {
-                    if(isDefined(callback)){
-                        callback(data["exchange_id"], data["symbol"], data["time_frame"], element_id);
-                    }
-                });
+        if($.isEmptyObject(data)){
+            // no exchange data available yet, retry soon, bot must be starting
+            setTimeout(function(){
+                get_first_symbol_price_graph(element_id, in_backtesting_mode, callback);
+            }, 300);
+        }else{
+            if("time_frame" in data){
+                let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
+                get_symbol_price_graph(element_id, data["exchange_id"], data["exchange_name"], formatted_symbol,
+                    data["time_frame"], in_backtesting_mode, false, true,
+                    0, undefined, function () {
+                        if(isDefined(callback)){
+                            callback(data["exchange_id"], data["symbol"], data["time_frame"], element_id);
+                        }
+                    });
+            }
         }
     });
 }
