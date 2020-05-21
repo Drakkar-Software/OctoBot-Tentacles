@@ -39,40 +39,40 @@ class MoveSignalsStrategyEvaluatorTest(AbstractStrategyTest):
     """
 
     async def test_default_run(self):
-        # market: -12.643224022125636
+        # market: -12.052505966587105
         await self.run_test_default_run(-2.592)
 
     async def test_slow_downtrend(self):
-        # market: -12.643224022125636
-        # market: -16.39871382636656
-        # market: -28.59375
-        # market: -31.162790697674424
+        # market: -12.052505966587105
+        # market: -15.195702225633141
+        # market: -29.12366137549725
+        # market: -32.110091743119256
         await self.run_test_slow_downtrend(-2.592, -2.347, -17.393, -16.913)
 
     async def test_sharp_downtrend(self):
-        # market: -26.019620667102686
-        # market: -31.958511287370357
+        # market: -26.07183938094741
+        # market: -32.1654501216545
         await self.run_test_sharp_downtrend(-8.537, -10.317)
 
     async def test_flat_markets(self):
-        # market: -10.814419225634182
-        # market: -3.2570860268523063
-        # market: -5.367231638418076
-        # market: -7.921318447634235
+        # market: -10.560669456066947
+        # market: -3.401191658391241
+        # market: -5.7854560064282765
+        # market: -8.067940552016978
         await self.run_test_flat_markets(0.953, 1.097, -9.959, -7.033)
 
     async def test_slow_uptrend(self):
-        # market: 16.65469559146318
-        # market: 16.31135349529005
-        await self.run_test_slow_uptrend(8.503, 4.008)
+        # market: 17.203948364436457
+        # market: 16.19613670133728
+        await self.run_test_slow_uptrend(9.014, 4.008)
 
     async def test_sharp_uptrend(self):
-        # market: 30.659415363698173
-        # market: 11.435132032146939
+        # market: 30.881852230166828
+        # market: 12.28597871355852
         await self.run_test_sharp_uptrend(6.868, 6.843)
 
     async def test_up_then_down(self):
-        # market: -6.684034772021235
+        # market: -6.040105108015155
         await self.run_test_up_then_down(-6.691)
 
 
