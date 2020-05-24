@@ -239,7 +239,8 @@ class ADXMomentumEvaluator(TAEvaluator):
     def __init__(self):
         super().__init__()
         self.period_length = 14
-        self.minimal_data = self.period_length + 10
+        # 26 minimal_data length required for 14 period_length
+        self.minimal_data = self.period_length + 12
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
