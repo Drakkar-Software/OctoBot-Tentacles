@@ -537,7 +537,7 @@ async def _fill_order(order, trader, trigger_price=None, trigger_update_callback
     initial_len = len(get_open_orders(trader.exchange_manager))
     await order.update_order_status(last_prices)
     if order.status == OrderStatus.FILLED:
-        await order.close_order()
+        await trader.close_filled_order(order)
         if not ignore_open_orders:
             assert len(get_open_orders(trader.exchange_manager)) == initial_len - 1
         if trigger_update_callback:
