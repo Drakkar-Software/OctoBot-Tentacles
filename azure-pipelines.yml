@@ -36,10 +36,14 @@ jobs:
       addToPath: true
       architecture: $(PYTHON_ARCH)
   - powershell: |
-      If ($env:build_sourceBranch -notcontains "refs/tags/") {
-        $Env:TENTACLES_URL_TAG = "latest"
+      $env:BranchName = switch ($env:Build_Reason) {
+        'PullRequest' { $env:System_PullRequest_SourceBranch.Replace('refs/pull/','').Replace('refs/heads/','') }
+        default { $env:Build_SourceBranchName }
       }
-      git clone -q $env:OCTOBOT_GH_REPO -b $env:build_sourceBranchName
+      If ($env:SourceBranchLongName -notcontains "refs/tags/") {
+        $env:TENTACLES_URL_TAG = "latest"
+      }
+      git clone -q $env:OCTOBOT_GH_REPO -b $env:BranchName
       if ($LastExitCode -ne 0) {
         git clone -q $env:OCTOBOT_GH_REPO -b $env:OCTOBOT_DEFAULT_BRANCH
       }
@@ -82,7 +86,15 @@ jobs:
       addToPath: true
       architecture: $(PYTHON_ARCH)
   - script: |
-      git clone -q $OCTOBOT_GH_REPO -b ${BUILD_SOURCEBRANCHNAME} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
+      case "$BUILD_REASON" in
+         "PullRequest")
+            export HEAD_BRANCH_NAME=${SYSTEM_PULLREQUEST_SOURCEBRANCH//refs\/heads\//}
+            export BRANCH_NAME=${HEAD_BRANCH_NAME//refs\/pull\//}
+         ;;
+         *) export BRANCH_NAME=$BUILD_SOURCEBRANCHNAME
+         ;;
+      esac
+      git clone -q $OCTOBOT_GH_REPO -b $BRANCH_NAME || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
       cd OctoBot
       python -m pip install --upgrade pip setuptools wheel
       python -m pip install --prefer-binary -r requirements.txt -r dev_requirements.txt
