@@ -20,15 +20,18 @@ import asyncio
 
 from mock import patch, AsyncMock
 from contextlib import asynccontextmanager
+
+from octobot_commons.config_manager import get_password_hash
 from tentacles.Services.Interfaces.web_interface import WebInterface
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.controllers.authentication import LoginForm
 from octobot_services.interfaces.abstract_interface import AbstractInterface
 
 
 # All test coroutines will be treated as marked.
-
 pytestmark = pytest.mark.asyncio
 PORT = 5555
+PASSWORD = "123"
 
 
 async def _init_bot():
@@ -57,11 +60,13 @@ async def _init_bot():
 
 # use context manager instead of fixture to prevent pytest threads issues
 @asynccontextmanager
-async def get_web_interface():
+async def get_web_interface(require_password):
     try:
         web_interface = WebInterface({})
         web_interface.port = PORT
         web_interface.should_open_web_interface = False
+        web_interface.requires_password = require_password
+        web_interface.password_hash = get_password_hash(PASSWORD)
         AbstractInterface.bot_api = (await _init_bot()).octobot_api
         with patch.object(web_interface, "_register_on_channels", new=AsyncMock()):
             threading.Thread(target=_start_web_interface, args=(web_interface,)).start()
@@ -72,25 +77,85 @@ async def get_web_interface():
         await web_interface.stop()
 
 
-async def test_browse_all_pages():
-    async with get_web_interface():
+async def test_browse_all_pages_no_required_password():
+    async with get_web_interface(False):
         async with aiohttp.ClientSession() as session:
-            await asyncio.gather(*[check_page(f"http://localhost:{PORT}{rule.replace('.', '/')}", session)
+            await asyncio.gather(*[_check_page_no_login_redirect(f"http://localhost:{PORT}{rule.replace('.', '/')}",
+                                                                 session)
                                    for rule in _get_all_rules(server_instance)])
 
 
-async def check_page(url, session):
+async def test_browse_all_pages_required_password_without_login():
+    async with get_web_interface(True):
+        async with aiohttp.ClientSession() as session:
+            await asyncio.gather(*[check_page_login_redirect(f"http://localhost:{PORT}{rule.replace('.', '/')}",
+                                                             session)
+                                   for rule in _get_all_rules(server_instance)])
+
+
+async def test_browse_all_pages_required_password_with_login():
+    async with get_web_interface(True):
+        async with aiohttp.ClientSession() as session:
+            await _login_user_on_session(session)
+            # correctly display pages: session is logged in
+            await asyncio.gather(*[_check_page_no_login_redirect(f"http://localhost:{PORT}{rule.replace('.', '/')}",
+                                                                 session)
+                                   for rule in _get_all_rules(server_instance, ["/logout"])])
+        async with aiohttp.ClientSession() as unauthenticated_session:
+            # redirect to login page: session is not logged in
+            await asyncio.gather(*[check_page_login_redirect(f"http://localhost:{PORT}{rule.replace('.', '/')}",
+                                                             unauthenticated_session)
+                                   for rule in _get_all_rules(server_instance)])
+
+
+async def test_logout():
+    async with get_web_interface(True):
+        async with aiohttp.ClientSession() as session:
+            await _login_user_on_session(session)
+            await _check_page_no_login_redirect(f"http://localhost:{PORT}/", session)
+            await check_page_login_redirect(f"http://localhost:{PORT}/logout", session)
+            await check_page_login_redirect(f"http://localhost:{PORT}/", session)
+
+
+async def _check_page_no_login_redirect(url, session):
     async with session.get(url) as resp:
         text = await resp.text()
         assert "We are sorry, but an unexpected error occurred" not in text
         assert "We are sorry, but this doesn't exist" not in text
+        if not (url.endswith("/login") or url.endswith("/logout")):
+            assert "input type=submit value=Login" not in text
+            assert not resp.real_url.name == "login"
         assert resp.status == 200
 
 
-def _get_all_rules(app):
+async def check_page_login_redirect(url, session):
+    async with session.get(url) as resp:
+        text = await resp.text()
+        assert "We are sorry, but an unexpected error occurred" not in text
+        assert "We are sorry, but this doesn't exist" not in text
+        if "/api/" not in url:
+            assert "input type=submit value=Login" in text
+            assert resp.real_url.name == "login"
+        assert resp.status == 200
+
+
+async def _login_user_on_session(session):
+    login_data = {
+        "password": PASSWORD,
+        "remember_me": False
+    }
+    with patch.object(LoginForm, "validate_on_submit", new=_force_validate_on_submit):
+        async with session.post(f"http://localhost:{PORT}/login",
+                                data=login_data) as resp:
+            assert resp.status == 200
+
+
+def _get_all_rules(app, black_list=None):
+    if black_list is None:
+        black_list = []
     return set(rule.rule
                for rule in app.url_map.iter_rules()
-               if "GET" in rule.methods and has_no_empty_params(rule) and rule.rule not in URL_BLACK_LIST)
+               if "GET" in rule.methods and _has_no_empty_params(rule) and rule.rule not in URL_BLACK_LIST + black_list)
 
 
 # backlist endpoints expecting additional data
@@ -101,7 +166,11 @@ def _start_web_interface(interface):
     asyncio.run(interface.start())
 
 
-def has_no_empty_params(rule):
+def _has_no_empty_params(rule):
     defaults = rule.defaults if rule.defaults is not None else ()
     arguments = rule.arguments if rule.arguments is not None else ()
     return len(defaults) >= len(arguments)
+
+
+def _force_validate_on_submit(*_):
+    return True

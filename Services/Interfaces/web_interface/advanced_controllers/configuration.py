@@ -22,10 +22,12 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import get
     update_tentacles_activation_config, get_tentacles_startup_activation
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 
 
 @advanced.route("/evaluator_config")
 @advanced.route('/evaluator_config', methods=['GET', 'POST'])
+@login_required_when_activated
 def evaluator_config():
     if request.method == 'POST':
         request_data = request.get_json()

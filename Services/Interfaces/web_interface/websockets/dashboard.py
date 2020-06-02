@@ -24,7 +24,7 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import get_cur
 from octobot_services.interfaces.util.profitability import get_global_profitability
 from tentacles.Services.Interfaces.web_interface.websockets import namespaces
 from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier
+    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
 
 
 class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
@@ -68,6 +68,7 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
             "symbol": symbol
         }
 
+    @websocket_with_login_required_when_activated
     def on_profitability(self):
         emit("profitability", self._get_profitability())
 
@@ -84,6 +85,7 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
+    @websocket_with_login_required_when_activated
     def on_candle_graph_update(self, data):
         try:
             emit("candle_graph_update_data", {
@@ -98,6 +100,7 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
         except KeyError:
             emit("error", "missing exchange manager")
 
+    @websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_profitability()

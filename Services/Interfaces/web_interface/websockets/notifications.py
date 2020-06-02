@@ -21,7 +21,7 @@ from tentacles.Services.Interfaces.web_interface import get_notifications, get_e
     flush_notifications, GENERAL_NOTIFICATION_KEY
 from tentacles.Services.Interfaces.web_interface.websockets import namespaces
 from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier
+    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
 
 
 class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
@@ -45,6 +45,7 @@ class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
+    @websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self._client_context_send_notifications()

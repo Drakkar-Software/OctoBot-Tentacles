@@ -21,6 +21,7 @@ import requests
 
 from octobot_evaluators.evaluator.strategy_evaluator import StrategyEvaluator
 from octobot_services.api.notification import create_notifier_factory
+from octobot_services.constants import CONFIG_CATEGORY_SERVICES, CONFIG_WEB, CONFIG_WEB_PASSWORD
 from octobot_tentacles_manager.api.configurator import get_tentacles_activation, \
     get_tentacle_config as manager_get_tentacle_config, update_tentacle_config as manager_update_tentacle_config, \
     get_tentacle_config_schema_path, factory_tentacle_reset_config, update_activation_configuration
@@ -341,8 +342,19 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
         return False
 
 
+def _handle_special_fields(new_config):
+    try:
+        # replace web interface password by its hash before storage
+        web_password_key = UPDATED_CONFIG_SEPARATOR.join([CONFIG_CATEGORY_SERVICES, CONFIG_WEB, CONFIG_WEB_PASSWORD])
+        new_config[web_password_key] = config_manager.get_password_hash(new_config[web_password_key])
+    except KeyError:
+        pass
+
+
 def update_global_config(new_config, delete=False):
     current_edited_config = get_edited_config()
+    if not delete:
+        _handle_special_fields(new_config)
     config_manager.update_global_config(new_config,
                                         current_edited_config,
                                         CONFIG_FILE_SCHEMA,

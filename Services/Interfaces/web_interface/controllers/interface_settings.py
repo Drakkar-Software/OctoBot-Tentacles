@@ -17,12 +17,14 @@
 from flask import request, jsonify
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.interface_settings import add_watched_symbol, remove_watched_symbol
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 
 
 @server_instance.route("/watched_symbols")
 @server_instance.route('/watched_symbols', methods=['POST'])
+@login_required_when_activated
 def watched_symbols():
     if request.method == 'POST':
         result = False

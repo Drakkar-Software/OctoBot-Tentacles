@@ -11,6 +11,14 @@
     <div class="card-body">
         <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
         <button route="{{ url_for('commands', cmd='stop') }}" type="button" class="btn btn-danger waves-effect">Stop Octobot</button>
+        {% if current_user.is_authenticated %}
+            <div class="float-right">
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-warning waves-effect">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Log out
+                </a>
+            </div>
+        {% endif %}
     </div>
 </div>
 <br>

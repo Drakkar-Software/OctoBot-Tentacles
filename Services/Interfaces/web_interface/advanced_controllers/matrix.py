@@ -18,9 +18,11 @@ from flask import render_template
 
 from octobot_services.interfaces.util.trader import get_matrix_list
 from . import advanced
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 
 
 @advanced.route("/matrix")
+@login_required_when_activated
 def matrix():
     return render_template('advanced_matrix.html',
                            matrix_list=get_matrix_list())
