@@ -134,6 +134,10 @@ body:before {
     background-color: #4B515D !important;
 }
 
+.card .card-deck .card.unique-color-dark-card{
+    background-color: #1c2331 !important;
+}
+
 .card .deck-container-modified {
     background-color: #C66900 !important;
     -webkit-transition: all 0.5s ease;
@@ -191,7 +195,6 @@ body:before {
 
 .card a:hover {
     color: #42a5f5 !important;
-    font-weight: bolder;
 }
 
 a:hover.external-link{
