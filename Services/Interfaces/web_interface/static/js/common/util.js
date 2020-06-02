@@ -20,7 +20,12 @@ function get_websocket(namespace){
     // Connect to the Socket.IO server.
     // The connection URL has the following format, relative to the current page:
     //     http[s]://<domain>:<port>[/<namespace>]
-    return io(namespace);
+    return io(
+        namespace,
+        {
+            // Prevent unexpected disconnection on slow loading pages (ex: first config load)
+            reconnectionDelay: 2000
+        });
 }
 
 function setup_editable(){
