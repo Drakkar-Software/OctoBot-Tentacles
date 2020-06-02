@@ -21,15 +21,15 @@
             {% endfor %}
 
             <!-- Add new pair Card -->
-            <div class="card mb-4 small-size unique-color-dark">
+            <div class="card mb-4 small-size unique-color-dark-card">
 
                 <!--Title-->
-                <div class="card-header unique-color-dark">
+                <div class="card-header">
                     <a class="text-white" href="{{ url_for('config')+'#panelCurrency' }}">New trading pair</a>
                 </div>
 
                 <!--Card image-->
-                <div class="view overlay animated img-fluid text-center unique-color-dark h-100">
+                <div class="view overlay animated text-center">
                   <a href="{{ url_for('config')+'#panelCurrency' }}">
                     <i class="fas fa-8x fa-plus-circle fa-3x"></i>
                   </a>
@@ -37,9 +37,11 @@
 
 
                 <!--Card content-->
-                <div class="card-footer unique-color-dark">
-                    <a class="text-white" href="{{ url_for('config')+'#panelCurrency' }}"> Add a new pair</a>
-                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-transparent">
+                        <a class="text-white" href="{{ url_for('config')+'#panelCurrency' }}"> Add a new pair</a>
+                    </li>
+                </ul>
 
             </div>
         </div>
