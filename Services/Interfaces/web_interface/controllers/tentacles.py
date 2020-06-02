@@ -17,6 +17,7 @@
 from flask import render_template, request, jsonify
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.models.tentacles import get_tentacles_packages, \
     get_tentacles, install_packages, update_packages, reset_packages, update_modules, \
@@ -24,6 +25,7 @@ from tentacles.Services.Interfaces.web_interface.models.tentacles import get_ten
 
 
 @server_instance.route("/tentacles")
+@login_required_when_activated
 def tentacles():
     return render_template("tentacles.html",
                            tentacles=get_tentacles())
@@ -90,6 +92,7 @@ def _handle_tentacles_pages_post(update_type):
 
 @server_instance.route("/tentacle_packages")
 @server_instance.route('/tentacle_packages', methods=['GET', 'POST'])
+@login_required_when_activated
 def tentacle_packages():
     if request.method == 'POST':
         update_type = request.args["update_type"]

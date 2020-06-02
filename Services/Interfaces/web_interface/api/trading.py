@@ -20,9 +20,11 @@ from octobot_services.interfaces.util.order import cancel_orders, get_all_open_o
 from octobot_services.interfaces.util.trader import force_real_traders_refresh
 from . import api
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 
 
 @api.route("/orders", methods=['GET', 'POST'])
+@login_required_when_activated
 def orders():
     if request.method == 'GET':
         real_open_orders, simulated_open_orders = get_all_open_orders()
@@ -44,6 +46,7 @@ def orders():
 
 
 @api.route("/refresh_real_trader", methods=['POST'])
+@login_required_when_activated
 def refresh_real_trader():
     try:
         force_real_traders_refresh()

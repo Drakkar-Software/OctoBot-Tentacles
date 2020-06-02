@@ -13,10 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask_socketio import Namespace
+from functools import wraps
+from flask_login import current_user
+from flask_socketio import Namespace, disconnect
 
 from octobot_commons.logging.logging_util import get_logger
 from tentacles.Services.Interfaces.web_interface import Notifier
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import IS_LOGIN_REQUIRED
 
 
 class AbstractWebSocketNamespaceNotifier(Namespace, Notifier):
@@ -38,3 +41,14 @@ class AbstractWebSocketNamespaceNotifier(Namespace, Notifier):
 
     def _has_clients(self):
         return self.clients_count > 0
+
+
+def websocket_with_login_required_when_activated(func):
+    @wraps(func)
+    def wrapped(self, *args, **kwargs):
+        # Use == because of the flask proxy (this is not a simple python None value)
+        if IS_LOGIN_REQUIRED and (current_user == None or not current_user.is_authenticated):
+            disconnect(self)
+        else:
+            return func(self, *args, **kwargs)
+    return wrapped

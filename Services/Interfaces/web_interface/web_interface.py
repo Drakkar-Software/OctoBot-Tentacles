@@ -24,12 +24,13 @@ from flask_socketio import SocketIO
 from octobot_commons.logging import register_error_notifier
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
     DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER, \
-    ENV_AUTO_OPEN_IN_WEB_BROWSER
+    ENV_AUTO_OPEN_IN_WEB_BROWSER, CONFIG_WEB_SESSION_SECRET_KEY, CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_PASSWORD
 from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
 from tentacles.Services.Interfaces.web_interface.controllers import load_routes
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import WebLoginManager
 from tentacles.Services.Interfaces.web_interface.security import register_responses_extra_header
 from tentacles.Services.Interfaces.web_interface.websockets import load_namespaces, namespaces
 from tentacles.Services.Services_bases import WebService
@@ -54,7 +55,11 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         self.ctx = None
         self.host = None
         self.port = None
+        self.session_secret_key = None
         self.websocket_instance = None
+        self.web_login_manger = None
+        self.requires_password = False
+        self.password_hash = ""
         self._init_web_settings()
 
     async def register_new_exchange_impl(self, exchange_id):
@@ -71,6 +76,18 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         except KeyError:
             self.port = int(os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT))
         try:
+            self.session_secret_key = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_SESSION_SECRET_KEY]
+        except KeyError:
+            self.session_secret_key = WebService.generate_session_secret_key()
+        try:
+            self.requires_password = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_REQUIRES_PASSWORD]
+        except KeyError:
+            pass
+        try:
+            self.password_hash = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PASSWORD]
+        except KeyError:
+            pass
+        try:
             env_value = os.getenv(ENV_AUTO_OPEN_IN_WEB_BROWSER, None)
             if env_value is None:
                 self.should_open_web_interface = \
@@ -79,7 +96,6 @@ class WebInterface(AbstractWebInterface, threading.Thread):
                 self.should_open_web_interface = env_value.lower() == "true"
         except KeyError:
             self.should_open_web_interface = True
-
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
@@ -93,6 +109,9 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             await subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
+
+    def _handle_login(self, server_instance):
+        self.web_login_manger = WebLoginManager(server_instance, self.requires_password, self.password_hash)
 
     def _prepare_websocket(self):
         from tentacles.Services.Interfaces.web_interface import server_instance, send_general_notifications
@@ -116,10 +135,12 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             sleep(0.05)
 
         try:
+            from tentacles.Services.Interfaces.web_interface import server_instance
+            # register session secret key
+            server_instance.secret_key = self.session_secret_key
+            self._handle_login(server_instance)
             load_routes()
             self.websocket_instance = self._prepare_websocket()
-
-            from tentacles.Services.Interfaces.web_interface import server_instance
 
             register_responses_extra_header(server_instance, True)
 

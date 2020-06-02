@@ -26,6 +26,7 @@ from octobot_services.interfaces.util.portfolio import get_global_portfolio_curr
 from octobot_services.interfaces.util.profitability import get_reference_market
 from tentacles.Services.Interfaces.web_interface import server_instance
 from octobot_trading.constants import CONFIG_PORTFOLIO_TOTAL
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_in_backtesting_mode
 from tentacles.Services.Interfaces.web_interface.models.trading import get_exchange_time_frames, get_evaluation, \
     get_initializing_currencies_prices_set
@@ -33,6 +34,7 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
 
 
 @server_instance.route("/portfolio")
+@login_required_when_activated
 def portfolio():
     has_real_trader, has_simulated_trader = has_real_and_or_simulated_traders()
 
@@ -62,6 +64,7 @@ def portfolio():
 
 
 @server_instance.route("/portfolio_holdings")
+@login_required_when_activated
 def portfolio_holdings():
     result = {}
     real_portfolio_holdings, simulated_portfolio_holdings = get_portfolio_holdings()
@@ -72,6 +75,7 @@ def portfolio_holdings():
 
 @server_instance.route("/symbol_market_status")
 @server_instance.route('/symbol_market_status', methods=['GET', 'POST'])
+@login_required_when_activated
 def symbol_market_status():
     exchange_id = request.args["exchange_id"]
     symbol = request.args["symbol"]
@@ -89,6 +93,7 @@ def symbol_market_status():
 
 
 @server_instance.route("/trading")
+@login_required_when_activated
 def trading():
 
     real_open_orders, simulated_open_orders = get_all_open_orders()
@@ -102,6 +107,7 @@ def trading():
 
 
 @server_instance.route("/trades")
+@login_required_when_activated
 def trades():
     real_trades_history, simulated_trades_history = get_trades_history()
     return render_template('trades.html',
