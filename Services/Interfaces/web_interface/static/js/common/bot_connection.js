@@ -115,8 +115,6 @@ function load_metadata() {
     })
 }
 
-const update_rate_millis = 1000;
-
 $(document).ready(function () {
     handle_route_button();
 
