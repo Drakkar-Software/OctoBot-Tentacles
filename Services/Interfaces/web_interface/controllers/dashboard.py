@@ -17,11 +17,13 @@
 from flask import jsonify
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
     get_value_from_dict_or_string, get_first_symbol_data, get_watched_symbol_data
 
 
 @server_instance.route('/dashboard/currency_price_graph_update/<exchange_id>/<symbol>/<time_frame>/<mode>')
+@login_required_when_activated
 def currency_price_graph_update(exchange_id, symbol, time_frame, mode="live"):
     in_backtesting = mode != "live"
     return jsonify(get_currency_price_graph_update(exchange_id,
@@ -31,10 +33,12 @@ def currency_price_graph_update(exchange_id, symbol, time_frame, mode="live"):
 
 
 @server_instance.route('/dashboard/first_symbol')
+@login_required_when_activated
 def first_symbol():
     return jsonify(get_first_symbol_data())
 
 
 @server_instance.route('/dashboard/watched_symbol/<symbol>')
+@login_required_when_activated
 def watched_symbol(symbol):
     return jsonify(get_watched_symbol_data(symbol))

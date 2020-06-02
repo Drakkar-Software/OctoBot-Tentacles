@@ -14,7 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 from datetime import datetime
+from flask import request
 from werkzeug.http import http_date
+from urllib.parse import urlparse, urljoin
+
 
 CACHE_CONTROL_KEY = 'Cache-Control'
 no_cache_headers = {
@@ -59,3 +62,10 @@ def _prepare_response_extra_headers(include_security_headers):
         response_extra_headers.update(response_security_headers)
 
     return response_extra_headers
+
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and \
+        ref_url.netloc == test_url.netloc

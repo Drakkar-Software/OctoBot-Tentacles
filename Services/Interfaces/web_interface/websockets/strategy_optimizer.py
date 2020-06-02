@@ -19,7 +19,7 @@ from flask_socketio import emit
 from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import get_optimizer_status
 from tentacles.Services.Interfaces.web_interface.websockets import namespaces
 from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier
+    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
 
 
 class StrategyOptimizerNamespace(AbstractWebSocketNamespaceNotifier):
@@ -32,9 +32,11 @@ class StrategyOptimizerNamespace(AbstractWebSocketNamespaceNotifier):
                 "overall_progress": overall_progress,
                 "errors": errors}
 
+    @websocket_with_login_required_when_activated
     def on_strategy_optimizer_status(self):
         emit("strategy_optimizer_status", self._get_strategy_optimizer_status())
 
+    @websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_strategy_optimizer_status()
