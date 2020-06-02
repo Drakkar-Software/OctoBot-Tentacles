@@ -18,6 +18,7 @@ from flask import render_template, jsonify
 
 from octobot.disclaimer import DISCLAIMER
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.commands import restart_bot, stop_bot
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_metrics_enabled
 
@@ -26,6 +27,7 @@ logger = get_logger("ServerInstance Controller")
 
 @server_instance.route("/commands")
 @server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
+@login_required_when_activated
 def commands(cmd=None):
     if cmd == "restart":
         restart_bot()

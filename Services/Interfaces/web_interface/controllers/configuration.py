@@ -25,6 +25,7 @@ from octobot_services.constants import CONFIG_CATEGORY_NOTIFICATION
 from tentacles.Services.Interfaces.web_interface.constants import GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, \
     TRADING_CONFIG_KEY, DEACTIVATE_OTHERS
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_strategy_config, \
     get_services_list, get_notifiers_list, get_symbol_list, update_global_config, get_all_symbols_dict, \
@@ -40,6 +41,7 @@ from octobot_services.interfaces.util.trader import has_real_and_or_simulated_tr
 
 
 @server_instance.route('/config', methods=['GET', 'POST'])
+@login_required_when_activated
 def config():
     if request.method == 'POST':
         request_data = request.get_json()
@@ -128,6 +130,7 @@ def config():
 
 
 @server_instance.route('/config_tentacle', methods=['GET', 'POST'])
+@login_required_when_activated
 def config_tentacle():
     if request.method == 'POST':
         tentacle_name = request.args.get("name")
@@ -169,12 +172,14 @@ def config_tentacle():
 
 
 @server_instance.route('/metrics_settings', methods=['POST'])
+@login_required_when_activated
 def metrics_settings():
     enable_metrics = request.get_json()
     return get_rest_reply(jsonify(manage_metrics(enable_metrics)))
 
 
 @server_instance.route('/config_actions', methods=['POST'])
+@login_required_when_activated
 def config_actions():
     # action = request.args.get("action")
     return get_rest_reply("No specified action.", code=500)

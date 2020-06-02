@@ -17,11 +17,13 @@
 from flask import render_template
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.community import can_get_community_metrics, \
     get_community_metrics_to_display
 
 
 @server_instance.route("/community")
+@login_required_when_activated
 def community():
     can_get_metrics = can_get_community_metrics()
     community_metrics = get_community_metrics_to_display() if can_get_metrics else None

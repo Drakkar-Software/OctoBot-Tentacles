@@ -20,7 +20,7 @@ from tentacles.Services.Interfaces.web_interface import BACKTESTING_NOTIFICATION
 from tentacles.Services.Interfaces.web_interface.models.backtesting import get_backtesting_status
 from tentacles.Services.Interfaces.web_interface.websockets import namespaces
 from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier
+    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
 
 
 class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
@@ -30,6 +30,7 @@ class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
         backtesting_status, progress = get_backtesting_status()
         return {"status": backtesting_status, "progress": progress}
 
+    @websocket_with_login_required_when_activated
     def on_backtesting_status(self):
         emit("backtesting_status", self._get_backtesting_status())
 
@@ -42,6 +43,7 @@ class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending backtesting_status: {e}")
         return False
 
+    @websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_backtesting_status()

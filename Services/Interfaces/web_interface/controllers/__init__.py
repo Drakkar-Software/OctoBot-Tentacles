@@ -16,6 +16,7 @@
 
 
 def load_routes():
+    from . import authentication
     from . import errors
     from . import tentacles
     from . import backtesting

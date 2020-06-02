@@ -19,10 +19,12 @@ from flask import render_template, request, jsonify
 from . import advanced
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_config_activated_trading_mode
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 
 
 @advanced.route("/strategy-optimizer")
 @advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
+@login_required_when_activated
 def strategy_optimizer():
     from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import get_strategies_list, \
         get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
