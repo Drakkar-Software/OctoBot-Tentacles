@@ -17,9 +17,11 @@
 from flask import render_template
 
 from . import advanced
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 
 
 @advanced.route("/")
 @advanced.route("/home")
+@login_required_when_activated
 def home():
     return render_template('advanced_index.html')

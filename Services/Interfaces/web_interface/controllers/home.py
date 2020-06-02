@@ -17,6 +17,7 @@
 from flask import render_template, request, redirect
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_in_backtesting_mode, accepted_terms, \
     accept_terms
 from tentacles.Services.Interfaces.web_interface.models.interface_settings import get_watched_symbols
@@ -24,6 +25,7 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
 
 @server_instance.route("/")
 @server_instance.route("/home")
+@login_required_when_activated
 def home():
     if request.args:
         accepted = request.args.get("accept_terms") == "True"
