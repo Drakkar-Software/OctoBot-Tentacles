@@ -20,20 +20,37 @@
     </span>
 {%- endmacro %}
 
-{% macro editable_key_string(config, key, config_key, config_type, config_value, startup_config_value, suggestions, placeholder_str="") -%}
-    {{ key }} : <a href="#"
-                   config-key="{{config_key}}"
-                   config-type="global_config"
-                   config-value="{{config[key]}}"
-                   startup-config-value="{{config[key]}}"
-                   data-type="text"
-                   data-pk="1"
-                   data-clear=false
-                   data-onblur="submit"
-                   data-highlight=true
-                   placeholder="{{ placeholder_str }}"
-                   class="editable editable-click config-element">
-    {{ config[key] }}</a><br>
+{% macro editable_key_string(config, key, config_key, config_type, config_value, startup_config_value, suggestions, placeholder_str="", password_val="*********") -%}
+    {{ key }} :
+    {% if key == "password" %}
+        <a href="#"
+           config-key="{{config_key}}"
+           config-type="global_config"
+           config-value="{{password_val}}"
+           startup-config-value="{{password_val}}"
+           data-type="text"
+           data-pk="1"
+           data-clear=false
+           data-onblur="submit"
+           data-highlight=true
+           placeholder="{{ placeholder_str }}"
+           class="editable editable-click config-element">
+        {{ password_val }}</a><br>
+    {% else %}
+        <a href="#"
+           config-key="{{config_key}}"
+           config-type="global_config"
+           config-value="{{config[key]}}"
+           startup-config-value="{{config[key]}}"
+           data-type="text"
+           data-pk="1"
+           data-clear=false
+           data-onblur="submit"
+           data-highlight=true
+           placeholder="{{ placeholder_str }}"
+           class="editable editable-click config-element">
+        {{ config[key] }}</a><br>
+    {% endif %}
 {%- endmacro %}
 
 {% macro editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str) -%}

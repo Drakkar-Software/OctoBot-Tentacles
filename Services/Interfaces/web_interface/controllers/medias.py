@@ -16,11 +16,13 @@
 from flask import send_from_directory
 
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.medias import is_valid_tentacle_image_path
 
 
 @server_instance.route('/tentacle_media')
 @server_instance.route('/tentacle_media/<path:path>')
+@login_required_when_activated
 def tentacle_media(path=None):
     # images
     if is_valid_tentacle_image_path(path):

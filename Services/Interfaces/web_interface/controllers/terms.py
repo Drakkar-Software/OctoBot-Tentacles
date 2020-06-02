@@ -19,10 +19,12 @@ from flask import render_template
 
 from octobot.disclaimer import DISCLAIMER
 from tentacles.Services.Interfaces.web_interface import server_instance
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.configuration import accepted_terms
 
 
 @server_instance.route("/terms")
+@login_required_when_activated
 def terms():
     return render_template("terms.html",
                            disclaimer=DISCLAIMER,

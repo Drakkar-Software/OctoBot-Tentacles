@@ -309,7 +309,8 @@ function get_config_value_changed(element, new_value, config_key) {
 
 function get_value_changed(new_val, dom_conf_val, config_key){
     const lower_case_val = new_val.toLowerCase();
-    if(new_val.toLowerCase() !== dom_conf_val.toLowerCase()){
+    if(!(lower_case_val === dom_conf_val.toLowerCase() ||
+        ((Number(new_val) === Number(dom_conf_val) && $.isNumeric(new_val))))){
         return true;
     }else if (config_key in validated_updated_global_config){
         return lower_case_val !== validated_updated_global_config[config_key].toString().toLowerCase();

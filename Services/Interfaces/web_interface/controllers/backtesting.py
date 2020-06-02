@@ -18,6 +18,7 @@ from flask import render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
 from tentacles.Services.Interfaces.web_interface import server_instance, send_backtesting_status
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.backtesting import get_data_files_with_description, \
     start_backtesting_using_specific_files, get_backtesting_report, get_delete_data_file, \
     collect_data_file, save_data_file
@@ -29,6 +30,7 @@ from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest
 
 @server_instance.route("/backtesting")
 @server_instance.route('/backtesting', methods=['GET', 'POST'])
+@login_required_when_activated
 def backtesting():
     if request.method == 'POST':
         action_type = request.args["action_type"]
@@ -65,6 +67,7 @@ def backtesting():
 
 @server_instance.route("/data_collector")
 @server_instance.route('/data_collector', methods=['GET', 'POST'])
+@login_required_when_activated
 def data_collector():
     if request.method == 'POST':
         action_type = request.args["action_type"]

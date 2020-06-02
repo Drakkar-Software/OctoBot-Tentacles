@@ -91,7 +91,8 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
             window.console&&console.error(status);
             window.console&&console.error(error);
             if(typeof error_callback === "undefined") {
-                create_alert("error", "Error when handling action: "+result.responseText+".", "");
+                let error_text = result.responseText.length > 100 ? status : result.responseText;
+                create_alert("error", "Error when handling action: "+error_text+".", "");
             }
             else{
                 error_callback(updated_data, update_url, dom_root_element, result, status, error);

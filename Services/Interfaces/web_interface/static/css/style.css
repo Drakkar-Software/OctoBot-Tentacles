@@ -49,6 +49,10 @@ body:before {
     opacity : 0.2;
 }
 
+.login_box {
+    max-width: 450px;
+}
+
 .navbar.navbar-dark .navbar-nav .nav-item  {
     border-bottom: 2px solid transparent;
 }
