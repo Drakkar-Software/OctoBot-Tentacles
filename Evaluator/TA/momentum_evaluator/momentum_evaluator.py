@@ -74,6 +74,20 @@ class RSIMomentumEvaluator(TAEvaluator):
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=get_eval_time(full_candle=candle, time_frame=time_frame))
 
+    @classmethod
+    def get_is_symbol_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not symbol dependant else False
+        """
+        return False
+
+    @classmethod
+    def get_is_time_frame_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not time_frame dependant else False
+        """
+        return False
+
 
 # double RSI analysis
 class RSIWeightMomentumEvaluator(TAEvaluator):
