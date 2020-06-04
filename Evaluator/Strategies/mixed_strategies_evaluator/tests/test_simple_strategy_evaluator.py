@@ -40,40 +40,40 @@ class SimpleStrategyEvaluatorTest(AbstractStrategyTest):
 
     async def test_default_run(self):
         # market: -13.599062133645944
-        await self.run_test_default_run(-3.363)
+        await self.run_test_default_run(-9.26)
 
     async def test_slow_downtrend(self):
         # market: -13.599062133645944
         # market: -44.248234106962656
         # market: -34.87003936300901
         # market: -45.18518518518518
-        await self.run_test_slow_downtrend(-3.363, -10.95, -16.132, -13.422)
+        await self.run_test_slow_downtrend(-9.26, -29.321, -16.191, -16.579)
 
     async def test_sharp_downtrend(self):
         # market: -30.271723049610415
         # market: -32.091097308488614
-        await self.run_test_sharp_downtrend(-11.44, -21.133)
+        await self.run_test_sharp_downtrend(-7.577, -22.088)
 
     async def test_flat_markets(self):
         # market: 5.052093571849795
         # market: 3.4840425531915002
         # market: -12.732688011913623
         # market: -34.64150943396227
-        await self.run_test_flat_markets(-0.817, 9.289, -11.406, -19.348)
+        await self.run_test_flat_markets(2.429, 8.981, -6.847, -18.658)
 
     async def test_slow_uptrend(self):
         # market: 32.524679029957184
         # market: 6.25
-        await self.run_test_slow_uptrend(17.52, 2.159)
+        await self.run_test_slow_uptrend(4.95, 5.146)
 
     async def test_sharp_uptrend(self):
         # market: 24.56254050550875
         # market: 8.665472458575891
-        await self.run_test_sharp_uptrend(10.608, 3.86)
+        await self.run_test_sharp_uptrend(8.606, 9.182)
 
     async def test_up_then_down(self):
         # market: 1.1543668450702853
-        await self.run_test_up_then_down(8.503)
+        await self.run_test_up_then_down(8.714)
 
 
 async def test_default_run(strategy_tester):
