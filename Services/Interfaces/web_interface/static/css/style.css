@@ -16,6 +16,10 @@
  * License along with this library.
  */
 
+/*override mdb <strong> font-weight */
+strong {
+    font-weight: bolder;
+}
 .editable {
     display: inline;
 }

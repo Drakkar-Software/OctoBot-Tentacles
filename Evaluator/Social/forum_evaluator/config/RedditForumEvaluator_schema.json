@@ -22,6 +22,7 @@
             },
             "subreddits": {
               "type": "array",
+              "format": "table",
               "title": "Subreddits to watch",
               "uniqueItems": true,
               "items": {
