@@ -14,6 +14,7 @@
             "time_frame": {
               "title": "Time frame",
               "type": "string",
+              "format": "select2",
               "default": "1h",
               "enum": [
                 "1m",
