@@ -1,53 +1,25 @@
 {% import 'macros/text.html' as m_text %}
 
 {% macro tentacle_description(info, strategy, name) %}
-    {% if info['advanced_class'] %}
-          <h4>Advanced tentacle: {{info['advanced_class']['name']}}</h4>
-          <p class="markdown-content">
-            {{info['advanced_class']['description']}}
-          </p>
-          <h5>{{info['advanced_class']['name']}} is based on {{ tentacle_with_link_list(info['advanced_class']['base_classes']) }}</h5>
-          {% if info['advanced_class']['default-config'] %}
-                <p>
-                    {{ default_config_with_apply(info['advanced_class']['default-config'], strategy, info['advanced_class']['name'], info['advanced_class']['requirements']) }}
-                </p>
-          {% endif %}
-      {% else %}
-          <span class="markdown-content">
-                {{info['description']}}
-          </span>
-          {% if info['default-config'] %}
-                <p>
-                    {{ default_config_with_apply(info['default-config'], strategy, name, info['requirements']) }}
-                </p>
-          {% endif %}
+      <span class="markdown-content">
+            {{info['description']}}
+      </span>
+      {% if info['default-config'] %}
+            <p>
+                {{ default_config_with_apply(info['default-config'], strategy, name, info['requirements']) }}
+            </p>
       {% endif %}
 {% endmacro %}
 
 {% macro tentacle_horizontal_description(info, strategy) %}
     <div class="row">
-    {% if info['advanced_class'] %}
-        <div class="col-8">
-            <h4>Advanced tentacle: {{info['advanced_class']['name']}}</h4>
-            <p class="markdown-content">
-                {{info['advanced_class']['description']}}
-            </p>
-            <h5>{{info['advanced_class']['name']}} is based on {{ tentacle_with_link_list(info['advanced_class']['base_classes']) }}</h5>
+    <div class="col{{'-8' if info['requirements'] else ''}} markdown-content">
+        {{info['description']}}
+    </div>
+    {% if info['requirements'] %}
+        <div class="col border-left border-dark">
+            {{ requirements_and_default_config(info['requirements'], info['default-config'], strategy, info['name']) }}
         </div>
-        {% if info['advanced_class']['requirements'] %}
-            <div class="col border-left border-dark">
-                {{ requirements_and_default_config(info['advanced_class']['requirements'], info['advanced_class']['default-config'], strategy, info['advanced_class']['name'] ) }}
-            </div>
-        {% endif %}
-    {% else %}
-        <div class="col-8 markdown-content">
-            {{info['description']}}
-        </div>
-        {% if info['requirements'] %}
-            <div class="col border-left border-dark">
-                {{ requirements_and_default_config(info['requirements'], info['default-config'], strategy, info['name']) }}
-            </div>
-        {% endif %}
     {% endif %}
     </div>
 {% endmacro %}
