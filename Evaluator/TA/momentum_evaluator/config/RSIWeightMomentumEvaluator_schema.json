@@ -56,13 +56,19 @@
                         "title": "Price weight",
                         "type": "number",
                         "default": 1,
-                        "enum": [1, 2, 3]
+                        "enum": [1, 2, 3],
+                        "options": {
+                          "enum_titles": ["Light","Average","Heavy"]
+                        }
                       },
                       "volume": {
                         "title": "Volume weight",
                         "type": "number",
                         "default": 1,
-                        "enum": [1, 2, 3]
+                        "enum": [1, 2, 3],
+                        "options": {
+                          "enum_titles": ["Light","Average","Heavy"]
+                        }
                       }
                     }
                   }

@@ -4,6 +4,7 @@
   "properties": {
     "required_time_frames": {
         "type": "array",
+        "format": "select2",
         "title": "Analysed time frame: only the first one will be considered for DipAnalyserStrategyEvaluator",
         "uniqueItems": true,
         "minItems": 1,

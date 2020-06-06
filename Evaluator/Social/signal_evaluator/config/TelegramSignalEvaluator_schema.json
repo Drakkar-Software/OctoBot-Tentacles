@@ -5,6 +5,7 @@
     "telegram-channels": {
         "title": "Name of the watched channels",
         "type": "array",
+        "format": "table",
         "uniqueItems": true,
         "items": {
             "title": "Channel name",
