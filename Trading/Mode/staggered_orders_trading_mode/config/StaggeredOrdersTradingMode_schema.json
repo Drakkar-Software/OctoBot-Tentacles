@@ -24,6 +24,8 @@
               },
               "mode": {
                 "type": "string",
+                "format": "select2",
+                "minItems": 1,
                 "title": "Mode: way to handle orders size",
                 "default": "neutral",
                 "enum": ["neutral", "mountain", "valley", "sell slope", "buy slope"]

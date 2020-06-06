@@ -4,6 +4,7 @@
   "properties": {
     "required_time_frames": {
         "type": "array",
+        "format": "select2",
         "title": "Analysed time frames",
         "uniqueItems": true,
         "minItems": 1,
@@ -28,10 +29,10 @@
     },
     "background_social_evaluators": {
         "type": "array",
+        "format": "select2",
         "title": "Social evaluator to consider as background evaluators: they won't trigger technical evaluators re-evaluation when updated. Avoiding unnecessary updates increases performances.",
         "uniqueItems": true,
         "minItems": 0,
-        "format": "list",
         "items": {
             "title": "Evaluator",
             "type": "string",
