@@ -22,6 +22,7 @@
             },
             "accounts": {
               "type": "array",
+              "format": "table",
               "title": "Twitter accounts to watch",
               "uniqueItems": true,
               "items": {
@@ -37,11 +38,12 @@
             },
             "hashtags": {
               "type": "array",
+              "format": "table",
               "title": "Twitter hashtags to watch, warning: might trigger evaluator for irrelevant tweets",
               "uniqueItems": true,
               "items": {
                 "type": "string",
-                "title": "account name",
+                "title": "Account name",
                 "options": {
                   "inputAttributes": {
                     "placeholder": "blockchain"
