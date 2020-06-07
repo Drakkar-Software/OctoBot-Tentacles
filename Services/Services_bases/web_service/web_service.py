@@ -21,7 +21,7 @@ import uuid
 from octobot_commons.constants import CONFIG_ENABLED_OPTION
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_SERVICE_INSTANCE, \
     CONFIG_WEB_PORT, DEFAULT_SERVER_PORT, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER, \
-    CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_SESSION_SECRET_KEY, CONFIG_WEB_PASSWORD
+    CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_PASSWORD
 from octobot_services.services.abstract_service import AbstractService
 
 
@@ -42,7 +42,7 @@ class WebService(AbstractService):
                                              "browser upon startup.",
             CONFIG_WEB_REQUIRES_PASSWORD: "When enabled, OctoBot web interface will be protected by a password. "
                                           "Failing 10 times to enter this password will block the user and require "
-                                          "OctoBot restart before being able to retry to authenticate.",
+                                          "OctoBot to restart before being able to retry to authenticate.",
             CONFIG_WEB_PASSWORD: "Password to enter to access this OctoBot when password protection is enabled. "
                                  "Only a hash of this password will be stored."
         }
@@ -86,27 +86,23 @@ class WebService(AbstractService):
 
     @staticmethod
     def generate_session_secret_key():
+        # always generate a new unique session secret key
+        # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
         return uuid.uuid4().hex
 
     async def prepare(self) -> None:
         try:
             self.requires_password = \
                 self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_REQUIRES_PASSWORD]
-            self.session_secret_key = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_SESSION_SECRET_KEY]
             self.password_hash = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PASSWORD]
         except KeyError:
             if self.requires_password is None:
                 self.requires_password = self.get_default_value()[CONFIG_WEB_REQUIRES_PASSWORD]
-            if self.session_secret_key is None:
-                # generate a new unique session secret key if not existing already to ensure security
-                # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
-                self.session_secret_key = self.generate_session_secret_key()
             if self.password_hash is None:
                 self.password_hash = self.get_default_value()[CONFIG_WEB_PASSWORD]
             # save new values into config file
             updated_config = {
                 CONFIG_WEB_REQUIRES_PASSWORD: self.requires_password,
-                CONFIG_WEB_SESSION_SECRET_KEY: self.session_secret_key,
                 CONFIG_WEB_PASSWORD: self.password_hash
             }
             self.save_service_config(CONFIG_WEB, updated_config, update=True)
