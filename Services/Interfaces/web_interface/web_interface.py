@@ -24,7 +24,7 @@ from flask_socketio import SocketIO
 from octobot_commons.logging import register_error_notifier
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
     DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER, \
-    ENV_AUTO_OPEN_IN_WEB_BROWSER, CONFIG_WEB_SESSION_SECRET_KEY, CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_PASSWORD
+    ENV_AUTO_OPEN_IN_WEB_BROWSER, CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_PASSWORD
 from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
@@ -75,10 +75,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
             self.port = int(os.getenv(ENV_WEB_PORT, self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_PORT]))
         except KeyError:
             self.port = int(os.getenv(ENV_WEB_PORT, DEFAULT_SERVER_PORT))
-        try:
-            self.session_secret_key = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_SESSION_SECRET_KEY]
-        except KeyError:
-            self.session_secret_key = WebService.generate_session_secret_key()
+        self.session_secret_key = WebService.generate_session_secret_key()
         try:
             self.requires_password = self.config[CONFIG_CATEGORY_SERVICES][CONFIG_WEB][CONFIG_WEB_REQUIRES_PASSWORD]
         except KeyError:
