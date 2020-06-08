@@ -42,10 +42,14 @@ function create_pie_chart(element, data, title, fontColor='white'){
     const backgroundColors = [];
     const hoverBackgroundColors = [];
     let index = 0;
+    let totalValue = 0;
+    $.each(data, function (_, value) {
+        totalValue += value;
+    });
     $.each(data, function (key, value) {
         if(value > 0){
             values.push(value);
-            labels.push(key);
+            labels.push(`${key} ${(value/totalValue*100).toFixed(2)}%`);
             const color = get_color(index);
             backgroundColors.push(color);
             hoverBackgroundColors.push(get_dark_color(index));
