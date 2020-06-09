@@ -14,13 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import pytest
-import time
 from os.path import join
 from asyncio import create_task
+from mock import patch, AsyncMock
 
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
+from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 from octobot_commons.constants import PORTFOLIO_AVAILABLE, PORTFOLIO_TOTAL, CONFIG_TIME_FRAME
 from octobot_commons.enums import TimeFrames
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
@@ -37,10 +38,9 @@ from octobot_trading.traders.trader_simulator import TraderSimulator
 from tentacles.Evaluator.TA import RSIWeightMomentumEvaluator, KlingerOscillatorReversalConfirmationMomentumEvaluator
 from tentacles.Evaluator.Strategies import DipAnalyserStrategyEvaluator
 from tentacles.Trading.Mode import DipAnalyserTradingMode
-
-# All test coroutines will be treated as marked.
 from tests.test_utils.memory_check_util import run_independent_backtestings_with_memory_check
 
+# All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
@@ -142,6 +142,7 @@ async def test_create_bottom_order():
         await producer._create_bottom_order(1, volume_weight, 1)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        await wait_asyncio_next_cycle()
 
         order = get_open_orders(trader.exchange_manager)[0]
         expected_quantity = market_quantity * risk_multiplier * \
@@ -168,6 +169,8 @@ async def test_create_too_large_bottom_order():
         }
         await producer._create_bottom_order(1, 1, 1)
         # create as task to allow creator's queue to get processed
+        for _ in range(37):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 37))
         assert portfolio.portfolio["USDT"][PORTFOLIO_AVAILABLE] > 0
 
@@ -207,6 +210,7 @@ async def test_create_bottom_order_replace_current():
         await producer._create_bottom_order(1, volume_weight, 1)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        await wait_asyncio_next_cycle()
 
         first_order = get_open_orders(trader.exchange_manager)[0]
         assert first_order.status == OrderStatus.OPEN
@@ -223,6 +227,7 @@ async def test_create_bottom_order_replace_current():
         await producer._create_bottom_order(1, volume_weight, 1)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        await wait_asyncio_next_cycle()
 
         second_order = get_open_orders(trader.exchange_manager)[0]
         assert first_order.status == OrderStatus.CANCELED
@@ -239,6 +244,7 @@ async def test_create_bottom_order_replace_current():
         await producer._create_bottom_order(1, volume_weight, 1)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        await wait_asyncio_next_cycle()
 
         third_order = get_open_orders(trader.exchange_manager)[0]
         assert second_order.status == OrderStatus.CANCELED
@@ -255,7 +261,7 @@ async def test_create_bottom_order_replace_current():
         assert third_order.order_id in consumer.sell_targets_by_order_id
 
         # fill third order
-        await _fill_order(third_order, trader, trigger_update_callback=False)
+        await _fill_order(third_order, trader, trigger_update_callback=False, consumer=consumer)
 
         # fourth order: can't be placed: an order on this candle got filled
         volume_weight = 3
@@ -269,6 +275,7 @@ async def test_create_bottom_order_replace_current():
         await producer._create_bottom_order(2, volume_weight, 1)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        await wait_asyncio_next_cycle()
 
         fifth_order = get_open_orders(trader.exchange_manager)[0]
         assert third_order.status == OrderStatus.FILLED
@@ -302,6 +309,8 @@ async def test_create_sell_orders():
         consumer.sell_targets_by_order_id[order_id] = sell_target
         await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
         # create as task to allow creator's queue to get processed
+        for _ in range(consumer.trading_mode.sell_orders_per_buy):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
         open_orders = get_open_orders(trader.exchange_manager)
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
@@ -316,7 +325,7 @@ async def test_create_sell_orders():
         assert round(open_orders[2].origin_price, 7) == round(buy_price + 3 * increment, 7)
 
         # now fill a sell order
-        await _fill_order(open_orders[0], trader, trigger_update_callback=False)
+        await _fill_order(open_orders[0], trader, trigger_update_callback=False, consumer=consumer)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy - 1))
         sell_quantity = 3
@@ -326,6 +335,8 @@ async def test_create_sell_orders():
         consumer.sell_targets_by_order_id[order_id_2] = sell_target
         await producer._create_sell_order_if_enabled(order_id_2, sell_quantity, buy_price)
         # create as task to allow creator's queue to get processed
+        for _ in range(consumer.trading_mode.sell_orders_per_buy):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy * 2 - 1))
         open_orders = get_open_orders(trader.exchange_manager)
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
@@ -340,7 +351,7 @@ async def test_create_sell_orders():
         assert round(open_orders[2 + 2].origin_price, 7) == round(buy_price + 3 * increment, 7)
 
         # now fill a sell order
-        await _fill_order(open_orders[-1], trader, trigger_update_callback=False)
+        await _fill_order(open_orders[-1], trader, trigger_update_callback=False, consumer=consumer)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy * 2 - 2))
     finally:
@@ -371,6 +382,8 @@ async def test_create_too_large_sell_orders():
         buy_price = 3000000
         await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
         # create as task to allow creator's queue to get processed
+        for _ in range(17):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 17))
         open_orders = get_open_orders(trader.exchange_manager)
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
@@ -423,6 +436,8 @@ async def test_create_too_small_sell_orders():
         # keep same order id to test no issue with it
         await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
         # create as task to allow creator's queue to get processed
+        for _ in range(3):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 3))
         open_orders = get_open_orders(trader.exchange_manager)
         assert all(o.status == OrderStatus.OPEN for o in open_orders)
@@ -454,8 +469,10 @@ async def test_order_fill_callback():
 
         open_orders = get_open_orders(trader.exchange_manager)
         to_fill_order = open_orders[0]
-        await _fill_order(to_fill_order, trader, trading_mode=consumer.trading_mode)
+        await _fill_order(to_fill_order, trader, consumer=consumer)
         # create as task to allow creator's queue to get processed
+        for _ in range(consumer.trading_mode.sell_orders_per_buy):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
 
         assert to_fill_order.status == OrderStatus.FILLED
@@ -473,7 +490,7 @@ async def test_order_fill_callback():
         assert round(open_orders[2].origin_price, 7) == round(price + 3 * increment, 7)
 
         # now fill a sell order
-        await _fill_order(open_orders[0], trader, trading_mode=consumer.trading_mode)
+        await _fill_order(open_orders[0], trader, consumer=consumer)
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy - 1))
 
@@ -494,7 +511,7 @@ async def test_order_fill_callback_not_in_db():
         await create_task(_check_open_orders_count(trader, 1))
         open_orders = get_open_orders(trader.exchange_manager)
         to_fill_order = open_orders[0]
-        await _fill_order(to_fill_order, trader, trigger_update_callback=False)
+        await _fill_order(to_fill_order, trader, trigger_update_callback=False, consumer=consumer)
 
         # remove order from db
         consumer.sell_targets_by_order_id = {}
@@ -507,6 +524,8 @@ async def test_order_fill_callback_not_in_db():
                                                                  is_closed=True,
                                                                  is_updated=False)
         # create as task to allow creator's queue to get processed
+        for _ in range(3):
+            await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 3))
         open_orders = get_open_orders(trader.exchange_manager)
 
@@ -529,23 +548,14 @@ async def _check_open_orders_count(trader, count):
     assert len(get_open_orders(trader.exchange_manager)) == count
 
 
-async def _fill_order(order, trader, trigger_price=None, trigger_update_callback=True,
-                      ignore_open_orders=False, trading_mode=None):
-    if trigger_price is None:
-        trigger_price = order.origin_price * 0.99 if order.side == TradeOrderSide.BUY else order.origin_price * 1.01
-    last_prices = [{"price": trigger_price, "timestamp": time.time()}]
+async def _fill_order(order, trader, trigger_update_callback=True, ignore_open_orders=False, consumer=None):
     initial_len = len(get_open_orders(trader.exchange_manager))
-    await order.update_order_status(last_prices)
+    await order.on_fill()
     if order.status == OrderStatus.FILLED:
-        await trader.close_filled_order(order)
         if not ignore_open_orders:
             assert len(get_open_orders(trader.exchange_manager)) == initial_len - 1
         if trigger_update_callback:
-            await trading_mode._order_notification_callback(None,
-                                                            trader.exchange_manager.id,
-                                                            None,
-                                                            symbol=order.symbol,
-                                                            order=order.to_dict(),
-                                                            is_from_bot=True,
-                                                            is_closed=True,
-                                                            is_updated=False)
+            await wait_asyncio_next_cycle()
+        else:
+            with patch.object(consumer, "create_new_orders", new=AsyncMock()):
+                await wait_asyncio_next_cycle()
