@@ -21,6 +21,7 @@ import copy
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
+from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
 from octobot_trading.api.symbol_data import force_set_mark_price
@@ -88,6 +89,8 @@ async def _stop(exchange_manager):
         await stop_importer(importer)
     await exchange_manager.exchange.backtesting.stop()
     await exchange_manager.stop()
+    # let updaters gracefully shutdown
+    await wait_asyncio_next_cycle()
 
 
 async def test_valid_create_new_orders_no_ref_market_as_quote():
@@ -176,11 +179,12 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
         assert order.created_last_price == truncated_last_price
         assert order.order_type == TraderOrderType.BUY_MARKET
         assert order.side == TradeOrderSide.BUY
-        assert order.status == OrderStatus.OPEN
-        assert order.exchange_manager == exchange_manager
-        assert order.trader == trader
-        assert order.fee is None
-        assert order.filled_price == 0
+        assert order.status == OrderStatus.FILLED
+        # order has been cleared
+        assert order.exchange_manager is None
+        assert order.trader is None
+        assert order.fee
+        assert order.filled_price == 7009.19499999
         assert order.origin_quantity == 0.11573814
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
@@ -199,12 +203,12 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
         assert order.created_last_price == truncated_last_price
         assert order.order_type == TraderOrderType.SELL_MARKET
         assert order.side == TradeOrderSide.SELL
-        assert order.status == OrderStatus.OPEN
-        assert order.exchange_manager == exchange_manager
-        assert order.trader == trader
-        assert order.fee is None
-        assert order.filled_price == 0
-        assert order.origin_quantity == 2.4
+        assert order.status == OrderStatus.FILLED
+        assert order.exchange_manager is None
+        assert order.trader is None
+        assert order.fee
+        assert order.filled_price == 7009.19499999
+        assert order.origin_quantity == 2.5156224
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
         assert order.linked_to is None
@@ -296,11 +300,8 @@ async def test_valid_create_new_orders_ref_market_as_quote():
         assert order.created_last_price == truncated_last_price
         assert order.order_type == TraderOrderType.BUY_MARKET
         assert order.side == TradeOrderSide.BUY
-        assert order.status == OrderStatus.OPEN
-        assert order.exchange_manager == exchange_manager
-        assert order.trader == trader
-        assert order.fee is None
-        assert order.filled_price == 0
+        assert order.status == OrderStatus.FILLED
+        assert order.filled_price == 7009.19499999
         assert order.origin_quantity == 0.07013502
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
@@ -319,12 +320,10 @@ async def test_valid_create_new_orders_ref_market_as_quote():
         assert order.created_last_price == truncated_last_price
         assert order.order_type == TraderOrderType.SELL_MARKET
         assert order.side == TradeOrderSide.SELL
-        assert order.status == OrderStatus.OPEN
-        assert order.exchange_manager == exchange_manager
-        assert order.trader == trader
-        assert order.fee is None
-        assert order.filled_price == 0
-        assert order.origin_quantity == 4.032
+        assert order.status == OrderStatus.FILLED
+        assert order.fee
+        assert order.filled_price == 7009.19499999
+        assert order.origin_quantity == 4.08244671
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
         assert order.linked_to is None
@@ -386,7 +385,7 @@ async def test_create_new_orders_with_dusts_included():
         orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.VERY_SHORT.value)
         assert len(orders) == 1
         assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"] == {
-            PORTFOLIO_TOTAL:  orders[0].origin_quantity,
+            PORTFOLIO_TOTAL:  0,
             PORTFOLIO_AVAILABLE: 0
         }
 
@@ -620,8 +619,7 @@ def _reset_portfolio(exchange_manager):
 
 async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_reset():
     exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
-
-    gradient_step = 0.001
+    gradient_step = 0.005
     nb_orders = 1
     initial_portfolio = copy.deepcopy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio)
     portfolio_wrapper = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
@@ -696,12 +694,20 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
             orders = await consumer.create_new_orders(symbol, evaluation, state)
             check_orders(orders, evaluation, state, nb_orders, market_status)
             check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            await fill_orders(orders, trader)
+            if any(order
+                   for order in orders
+                   if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+                # no need to fill market orders
+                await fill_orders(orders, trader)
             # orders are impossible
             orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
             check_orders(orders, evaluation, state, 0, market_status)
             check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            await fill_orders(orders, trader)
+            if any(order
+                   for order in orders
+                   if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+                # no need to fill market orders
+                await fill_orders(orders, trader)
 
     _reset_portfolio(exchange_manager)
     for state in _get_states_gradient_with_invald_states():
@@ -748,20 +754,36 @@ async def ensure_smaller_orders(consumer, symbol, trader):
 
     # first call: biggest order
     orders1 = (await consumer.create_new_orders(symbol, -1, state))
-    await fill_orders(orders1, trader)
+    if any(order
+           for order in orders1
+           if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+        # no need to fill market orders
+        await fill_orders(orders1, trader)
 
     state = EvaluatorStates.LONG.value
     # second call: smaller order (same with very long as with long)
     orders2 = (await consumer.create_new_orders(symbol, -0.6, state))
     assert orders1[0].origin_quantity > orders2[0].origin_quantity
-    await fill_orders(orders2, trader)
+    if any(order
+           for order in orders2
+           if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+        # no need to fill market orders
+        await fill_orders(orders2, trader)
 
     # third call: even smaller order
     orders3 = (await consumer.create_new_orders(symbol, -0.6, state))
     assert orders2[0].origin_quantity > orders3[0].origin_quantity
-    await fill_orders(orders3, trader)
+    if any(order
+           for order in orders3
+           if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+        # no need to fill market orders
+        await fill_orders(orders3, trader)
 
     # third call: even-even smaller order
     orders4 = (await consumer.create_new_orders(symbol, -0.6, state))
     assert orders3[0].origin_quantity > orders4[0].origin_quantity
-    await fill_orders(orders4, trader)
+    if any(order
+           for order in orders4
+           if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+        # no need to fill market orders
+        await fill_orders(orders4, trader)

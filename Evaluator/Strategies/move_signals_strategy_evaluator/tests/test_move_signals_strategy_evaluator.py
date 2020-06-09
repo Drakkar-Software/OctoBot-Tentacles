@@ -47,7 +47,7 @@ class MoveSignalsStrategyEvaluatorTest(AbstractStrategyTest):
         # market: -15.195702225633141
         # market: -29.12366137549725
         # market: -32.110091743119256
-        await self.run_test_slow_downtrend(-2.592, -2.347, -17.393, -16.913)
+        await self.run_test_slow_downtrend(-2.592, -2.347, -17.393, -15.889)
 
     async def test_sharp_downtrend(self):
         # market: -26.07183938094741
@@ -59,12 +59,12 @@ class MoveSignalsStrategyEvaluatorTest(AbstractStrategyTest):
         # market: -3.401191658391241
         # market: -5.7854560064282765
         # market: -8.067940552016978
-        await self.run_test_flat_markets(0.953, 1.097, -9.959, -7.033)
+        await self.run_test_flat_markets(0.953, 1.097, -8.131, -7.033)
 
     async def test_slow_uptrend(self):
         # market: 17.203948364436457
         # market: 16.19613670133728
-        await self.run_test_slow_uptrend(9.014, 4.008)
+        await self.run_test_slow_uptrend(9.014, 5.114)
 
     async def test_sharp_uptrend(self):
         # market: 30.881852230166828

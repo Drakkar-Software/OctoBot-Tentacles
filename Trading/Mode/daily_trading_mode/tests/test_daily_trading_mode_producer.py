@@ -20,6 +20,7 @@ from asyncio import create_task
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
+from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 from octobot_commons.constants import INIT_EVAL_NOTE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
 from octobot_evaluators.api.evaluators import create_matrix
@@ -108,23 +109,27 @@ async def test_set_state():
         assert producer.state == EvaluatorStates.VERY_LONG
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        # market order got filled
+        await create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 0
         await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 1
         await producer._set_state(currency, symbol, EvaluatorStates.VERY_SHORT)
         assert producer.state == EvaluatorStates.VERY_SHORT
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 1))
+        # market order got filled
+        await create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 0
         await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
         assert producer.state == EvaluatorStates.NEUTRAL
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = -0.5
         await producer._set_state(currency, symbol, EvaluatorStates.LONG)
@@ -141,6 +146,8 @@ async def test_set_state():
         producer.final_eval = 0.5
         await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
         assert producer.state == EvaluatorStates.SHORT
+        # let both other be created
+        await wait_asyncio_next_cycle()
         # create as task to allow creator's queue to get processed
         await create_task(_check_open_orders_count(trader, 2))  # has stop loss
         # await task
@@ -197,6 +204,8 @@ async def test_set_final_eval():
 
         await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
         assert producer.state == EvaluatorStates.SHORT
+        # let both other be created
+        await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 2))  # has stop loss
         producer.final_eval = "val"
         await producer.set_final_eval(matrix_id, currency, symbol, time_frame)
@@ -219,6 +228,8 @@ async def test_finalize():
 
         await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
         assert producer.state == EvaluatorStates.SHORT
+        # let both other be created
+        await wait_asyncio_next_cycle()
         await create_task(_check_open_orders_count(trader, 2))  # has stop loss
 
         await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
