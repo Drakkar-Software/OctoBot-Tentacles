@@ -19,9 +19,12 @@ import copy
 from asyncio import create_task
 from os.path import join
 
+from mock import AsyncMock, patch
+
 from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
 from octobot_backtesting.api.importer import stop_importer
 from octobot_channels.util.channel_creator import create_all_subclasses_channel
+from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 from octobot_commons.constants import PORTFOLIO_TOTAL, PORTFOLIO_AVAILABLE
 from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
 from octobot_tentacles_manager.api.configurator import create_tentacles_setup_config_with_tentacles
@@ -230,7 +233,7 @@ async def test_multi_symbol():
         # -2 order would be filled
         original_orders = copy.copy(orders)
         to_fill_order = original_orders[-2]
-        await _fill_order(to_fill_order, exchange_manager, 190, trading_mode=eth_usdt_producer.trading_mode)
+        await _fill_order(to_fill_order, exchange_manager, producer=eth_usdt_producer)
         force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 190)
         await nano_usdt_producer._ensure_staggered_orders()
         # did nothing
@@ -312,7 +315,7 @@ async def test_create_orders_from_different_markets():
         # test trigger refresh
         force_set_mark_price(exchange_manager, producer.symbol, 0.0024161)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         # did nothing
         assert original_orders[0] is get_open_orders(exchange_manager)[0]
         assert original_orders[-1] is get_open_orders(exchange_manager)[-1]
@@ -362,7 +365,7 @@ async def test_create_orders_from_different_very_close_refresh():
         # test trigger refresh
         force_set_mark_price(exchange_manager, producer.symbol, 0.0023185)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         # did nothing
         assert original_orders[0] is get_open_orders(exchange_manager)[0]
         assert original_orders[-1] is get_open_orders(exchange_manager)[-1]
@@ -371,7 +374,7 @@ async def test_create_orders_from_different_very_close_refresh():
         # test more trigger refresh
         force_set_mark_price(exchange_manager, producer.symbol, 0.0022991)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         # did nothing
         assert original_orders[0] is get_open_orders(exchange_manager)[0]
         assert original_orders[-1] is get_open_orders(exchange_manager)[-1]
@@ -442,8 +445,8 @@ async def test_start_with_existing_valid_orders():
         # -2 order would be filled
         to_fill_order = original_orders[-2]
         price = 95
-        await _fill_order(to_fill_order, exchange_manager, price, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, price, producer=producer)
+        await create_task(_wait_for_orders_creation(2))
         # did nothing: orders got replaced
         assert len(original_orders) == len(get_open_orders(exchange_manager))
         force_set_mark_price(exchange_manager, producer.symbol, price)
@@ -461,7 +464,7 @@ async def test_start_with_existing_valid_orders():
 
         producer.RECENT_TRADES_ALLOWED_TIME = 0
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         # restored orders
         assert len(get_open_orders(exchange_manager)) == producer.operational_depth
         assert 0 <= get_portfolio_currency(exchange_manager, "USD") <= post_available
@@ -477,7 +480,7 @@ async def test_price_initially_out_of_range_1():
         price = 0.1
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         original_orders = copy.copy(get_open_orders(exchange_manager))
         assert len(original_orders) == producer.operational_depth
         assert all(o.side == TradeOrderSide.SELL for o in original_orders)
@@ -494,7 +497,7 @@ async def test_price_initially_out_of_range_2():
         price = 100000
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         original_orders = copy.copy(get_open_orders(exchange_manager))
         assert len(original_orders) == 2
         assert all(o.side == TradeOrderSide.BUY for o in original_orders)
@@ -545,7 +548,7 @@ async def test_start_after_offline_filled_orders():
         price = 100
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         original_orders = copy.copy(get_open_orders(exchange_manager))
         assert len(original_orders) == producer.operational_depth
         pre_portfolio = get_portfolio_currency(exchange_manager, "USD")
@@ -554,7 +557,7 @@ async def test_start_after_offline_filled_orders():
         open_orders = get_open_orders(exchange_manager)
         offline_filled = [o for o in open_orders if 90 <= o.origin_price <= 110]
         for order in offline_filled:
-            await _fill_order(order, exchange_manager, trigger_update_callback=False)
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
         post_portfolio = get_portfolio_currency(exchange_manager, "USD")
         assert pre_portfolio < post_portfolio
         assert len(get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
@@ -587,7 +590,7 @@ async def test_health_check_during_filled_orders():
         open_orders = get_open_orders(exchange_manager)
         offline_filled = [o for o in open_orders if 90 <= o.origin_price <= 110]
         for order in offline_filled:
-            await _fill_order(order, exchange_manager, trigger_update_callback=False)
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
         post_portfolio = get_portfolio_currency(exchange_manager, "USD")
         assert pre_portfolio < post_portfolio
         assert len(get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
@@ -621,7 +624,7 @@ async def test_compute_minimum_funds_1():
         price = 100
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = get_open_orders(exchange_manager)
         assert len(orders) == producer.operational_depth
         assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 26
@@ -664,16 +667,16 @@ async def test_start_without_enough_funds_to_buy():
         price = 100
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = get_open_orders(exchange_manager)
         assert len(orders) == producer.operational_depth
         assert all([o.side == TradeOrderSide.SELL for o in orders])
 
         # trigger health check
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
 
-        await _fill_order(orders[5], exchange_manager, trading_mode=producer.trading_mode)
+        await _fill_order(orders[5], exchange_manager, producer=producer)
     finally:
         await _stop(exchange_manager)
 
@@ -684,29 +687,29 @@ async def test_start_without_enough_funds_to_sell():
         price = 100
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = get_open_orders(exchange_manager)
         assert len(orders) == 25
         assert all([o.side == TradeOrderSide.BUY for o in orders])
 
         # trigger health check
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = get_open_orders(exchange_manager)
 
         # check order fill callback recreates spread
         to_fill_order = orders[5]
         second_to_fill_order = orders[4]
-        await _fill_order(to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, producer=producer)
+        await create_task(_wait_for_orders_creation(2))
         orders = get_open_orders(exchange_manager)
         newly_created_sell_order = orders[-1]
         assert newly_created_sell_order.side == TradeOrderSide.SELL
         assert newly_created_sell_order.origin_price == to_fill_order.origin_price + \
             (producer.flat_spread - producer.flat_increment)
 
-        await _fill_order(second_to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(second_to_fill_order, exchange_manager, producer=producer)
+        await create_task(_wait_for_orders_creation(2))
         orders = get_open_orders(exchange_manager)
         second_newly_created_sell_order = orders[-1]
         assert second_newly_created_sell_order.side == TradeOrderSide.SELL
@@ -739,7 +742,7 @@ async def test_settings_for_just_one_order_on_a_side():
         price = 100
         force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = get_open_orders(exchange_manager)
         assert len([o for o in orders if o.side == TradeOrderSide.SELL]) == 1
     finally:
@@ -759,7 +762,7 @@ async def test_order_fill_callback():
         now_usd = get_portfolio_currency(exchange_manager, "USD", portfolio_type=PORTFOLIO_TOTAL)
 
         await producer._ensure_staggered_orders()
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(producer.operational_depth))
         price_increment = producer.flat_increment
         price_spread = producer.flat_spread
 
@@ -768,8 +771,7 @@ async def test_order_fill_callback():
 
         # closest to centre buy order is filled => bought btc
         to_fill_order = open_orders[-2]
-        await _fill_order(to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, producer=producer)
         open_orders = get_open_orders(exchange_manager)
 
         # instantly create sell order at price * (1 + increment)
@@ -792,8 +794,7 @@ async def test_order_fill_callback():
 
         # now this new sell order is filled => sold btc
         to_fill_order = open_orders[-1]
-        await _fill_order(to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, producer=producer)
         open_orders = get_open_orders(exchange_manager)
 
         # instantly create buy order at price * (1 + increment)
@@ -816,8 +817,7 @@ async def test_order_fill_callback():
 
         # now this new buy order is filled => bought btc
         to_fill_order = open_orders[-1]
-        await _fill_order(to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, producer=producer)
         open_orders = get_open_orders(exchange_manager)
 
         # instantly create sell order at price * (1 + increment)
@@ -838,8 +838,7 @@ async def test_order_fill_callback():
 
         # now this new sell order is filled => sold btc
         to_fill_order = open_orders[-1]
-        await _fill_order(to_fill_order, exchange_manager, trading_mode=producer.trading_mode)
-        await create_task(_wait_for_orders_creation())
+        await _fill_order(to_fill_order, exchange_manager, producer=producer)
         open_orders = get_open_orders(exchange_manager)
 
         # instantly create buy order at price * (1 + increment)
@@ -1004,11 +1003,14 @@ async def test_create_new_orders():
         await _stop(exchange_manager)
 
 
-async def _wait_for_orders_creation():
-    pass
+async def _wait_for_orders_creation(orders_count=1):
+    for _ in range(orders_count):
+        await wait_asyncio_next_cycle()
 
 
 async def _check_open_orders_count(exchange_manager, count):
+    for _ in range(count):
+        await wait_asyncio_next_cycle()
     assert len(get_open_orders(exchange_manager)) == count
 
 
@@ -1017,25 +1019,16 @@ def _get_total_usd(exchange_manager, btc_price):
         + get_portfolio_currency(exchange_manager, "BTC", portfolio_type=PORTFOLIO_TOTAL) * btc_price
 
 
-async def _fill_order(order, exchange_manager, trigger_price=None, trigger_update_callback=True,
-                      trading_mode=None):
-    if trigger_price is None:
-        trigger_price = order.origin_price*0.99 if order.side == TradeOrderSide.BUY else order.origin_price*1.01
-    last_prices = [{"price": trigger_price, "timestamp": time.time()}]
+async def _fill_order(order, exchange_manager, trigger_update_callback=True, producer=None):
     initial_len = len(get_open_orders(exchange_manager))
-    await order.update_order_status(last_prices)
+    await order.on_fill()
     if order.status == OrderStatus.FILLED:
-        await exchange_manager.trader.close_filled_order(order)
         assert len(get_open_orders(exchange_manager)) == initial_len - 1
         if trigger_update_callback:
-            await trading_mode._order_notification_callback(None,
-                                                            exchange_manager.id,
-                                                            None,
-                                                            symbol=order.symbol,
-                                                            order=order.to_dict(),
-                                                            is_from_bot=True,
-                                                            is_closed=True,
-                                                            is_updated=False)
+            await wait_asyncio_next_cycle()
+        else:
+            with patch.object(producer, "order_filled_callback", new=AsyncMock()):
+                await wait_asyncio_next_cycle()
 
 
 async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowest_buy=None, highest_sell=None,
@@ -1055,10 +1048,10 @@ async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowes
                                                              timeout=1)
         producer.symbol_market = symbol_market
         producer.current_price = price
-        await _check_generate_orders(exchange_manager, producer, expected_buy_count,
-                                     expected_sell_count, price, symbol_market)
+        orders = await _check_generate_orders(exchange_manager, producer, expected_buy_count,
+                                              expected_sell_count, price, symbol_market)
 
-        await create_task(_wait_for_orders_creation())
+        await create_task(_wait_for_orders_creation(len(orders)))
         open_orders = get_open_orders(exchange_manager)
         if expected_buy_count or expected_sell_count:
             assert len(open_orders) <= producer.operational_depth
@@ -1104,6 +1097,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
 
         assert all(producer.highest_sell >= o.price >= producer.lowest_buy
                    for o in buy_orders)
+        return staggered_orders
 
 
 def _check_orders(orders, strategy_mode, producer, exchange_manager):
@@ -1206,7 +1200,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
 
     await producer._create_not_virtual_orders(staggered_orders, price)
 
-    await create_task(_wait_for_orders_creation())
+    await create_task(_wait_for_orders_creation(len(staggered_orders)))
     open_orders = get_open_orders(exchange_manager)
     if expected_buy_count or expected_sell_count:
         assert len(open_orders) <= producer.operational_depth
