@@ -1,0 +1,13 @@
+{% macro display_loading_message() -%}
+    <div class="card w-75 mx-auto">
+        <div class="card-header"><h1>OctoBot is starting, please refresh this page in a few seconds.</h1></div>
+        <div class="card-body text-center" name="loadingSpinner">
+            <h2>
+                <i class="fa fa-spinner fa-spin"></i>
+            </h2>
+        </div>
+        <div class="card-footer text-right">
+            <button type="button" id="reload-button" class="btn btn-lg btn-primary waves-effect">Refresh</button>
+        </div>
+    </div>
+{%- endmacro %}

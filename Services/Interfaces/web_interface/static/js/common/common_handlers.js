@@ -23,4 +23,10 @@ $(document).ready(function() {
             historyGoBack();
         });
     }
+    const reloadButton = $("#reload-button");
+    if(reloadButton){
+        reloadButton.click(function (){
+            location.reload();
+        });
+    }
 });
