@@ -101,6 +101,13 @@ function get_watched_symbol_price_graph(element, callback=undefined) {
                         callback(data["exchange_id"], data["symbol"], data["time_frame"], element.attr("id"));
                     }
                 });
+        }else if($.isEmptyObject(data)){
+            // OctoBot is starting, try again
+            const marketsElement = $("#loadingMarketsDiv");
+            marketsElement.removeClass(disabled_item_class);
+            setTimeout(function(){
+                get_watched_symbol_price_graph(element, callback);
+            }, 1000);
         }
     });
 }
