@@ -94,7 +94,6 @@ body:before {
 .small-size {
   max-width: 18rem;
   min-width: 12rem;
-  max-height: 18rem;
   min-height: 14rem;
 }
 .very-small-size{
@@ -205,7 +204,7 @@ a:hover.external-link{
     font-weight: inherit;
 }
 
-a:hover.evaluator-config-element{
+a:hover.hover_anim{
     font-weight: inherit;
     box-shadow: 0.1rem 0.1rem;
 }
