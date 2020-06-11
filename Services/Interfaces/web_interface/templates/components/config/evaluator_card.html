@@ -2,7 +2,7 @@
 
 {% macro config_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False) %}
     <a href="#" onclick="return false;"
-       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{ 'd-none' if strategy }} {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element evaluator-config-element"
+       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{ 'd-none' if strategy }} {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
        id={{ evaluator_name }} name={{ evaluator_name }}
        config-type={{config_type}} config-key={{evaluator_name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{startup_config[evaluator_name]}}
        requirements="{{info['requirements']}}"
@@ -29,7 +29,7 @@
 
 {% macro tentacle_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False) %}
     <a href="#" onclick="return false;"
-       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element evaluator-config-element"
+       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
        id={{evaluator_name}} name={{ evaluator_name }}
        config-type={{config_type}} config-key={{evaluator_name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{startup_config[evaluator_name]}}
        requirements="{{info['requirements']}}"
