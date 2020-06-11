@@ -18,9 +18,9 @@ from math import nan
 
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot_services.interfaces.util.bot import get_global_config, get_bot_api
-from octobot_trading.api.exchange import get_exchange_names, get_trading_pairs, get_exchange_manager_from_exchange_id, \
-    get_exchange_configurations_from_exchange_name, get_exchange_manager_id, \
-    get_exchange_manager_from_exchange_name_and_id, get_watched_timeframes
+from octobot_services.interfaces.util.util import get_exchange_managers
+from octobot_trading.api.exchange import get_trading_pairs, get_exchange_manager_from_exchange_id, \
+    get_exchange_manager_id, get_exchange_manager_from_exchange_name_and_id, get_watched_timeframes, get_exchange_name
 from octobot_trading.api.trades import parse_trade_type
 from octobot_trading.enums import OrderStatus, ExchangeConstantsOrderColumns, TradeOrderSide, TraderOrderType
 from octobot_trading.api.symbol_data import get_symbol_data, get_symbol_historical_candles, get_symbol_klines, \
@@ -93,12 +93,8 @@ def _get_candles_reply(exchange, exchange_id, symbol, time_frame):
 
 
 def _get_first_exchange_identifiers():
-    exchanges = get_exchange_names()
-    if exchanges:
-        first_exchange_name = next(iter(exchanges))
-        exchange_manager = next(iter(get_exchange_configurations_from_exchange_name(first_exchange_name).values())) \
-            .exchange_manager
-        return exchange_manager, first_exchange_name, get_exchange_manager_id(exchange_manager)
+    for exchange_manager in get_exchange_managers():
+        return exchange_manager, get_exchange_name(exchange_manager), get_exchange_manager_id(exchange_manager)
     raise KeyError("No exchange to be found")
 
 
