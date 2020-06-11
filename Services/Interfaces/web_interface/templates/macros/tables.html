@@ -8,7 +8,7 @@
             {% endif %}
         </td>
         <td>{{ timestamp }}</td>
-        <td>{{ order.exchange_manager.exchange.name }}</td>
+        <td>{{ order.exchange_manager.exchange.name if order.exchange_manager else '' }}</td>
         <td>{{ order.symbol }}</td>
         <td class="text-center">{{ type.replace("_", " ")}}</td>
         <td>{{ order.origin_price }}</td>
@@ -23,7 +23,7 @@
 {% macro trades_tr(trade, type='', timestamp='', sim_or_real='Simulated') -%}
     <tr>
         <td>{{ sim_or_real }}</td>
-        <td>{{ trade.exchange_manager.exchange.name }}</td>
+        <td>{{ trade.exchange_manager.exchange.name if trade.exchange_manager else ''}}</td>
         <td>{{ trade.symbol }}</td>
         <td class="text-center">{{ type.replace("_", " ")}}</td>
         <td>{{ trade.executed_price }}</td>
