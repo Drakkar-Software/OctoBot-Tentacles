@@ -25,7 +25,8 @@ from octobot_commons.logging import register_error_notifier
 from octobot_services.constants import CONFIG_WEB, CONFIG_CATEGORY_SERVICES, CONFIG_WEB_IP, CONFIG_WEB_PORT, \
     DEFAULT_SERVER_PORT, DEFAULT_SERVER_IP, ENV_WEB_PORT, ENV_WEB_ADDRESS, CONFIG_AUTO_OPEN_IN_WEB_BROWSER, \
     ENV_AUTO_OPEN_IN_WEB_BROWSER, CONFIG_WEB_REQUIRES_PASSWORD, CONFIG_WEB_PASSWORD
-from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id
+from octobot_trading.api.exchange import get_exchange_manager_from_exchange_name_and_id, is_exchange_trading, \
+    get_exchange_manager_from_exchange_id
 from octobot_trading.api.trader import is_trader_simulated
 from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
     BOT_TOOLS_STRATEGY_OPTIMIZER
@@ -100,10 +101,24 @@ class WebInterface(AbstractWebInterface, threading.Thread):
         send_new_trade(trade,
                        is_trader_simulated(get_exchange_manager_from_exchange_name_and_id(exchange, exchange_id)))
 
+    @staticmethod
+    async def _web_ohlcv_empty_callback(
+        exchange: str,
+        exchange_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        time_frame,
+        candle
+    ):
+        pass
+
     async def _register_on_channels(self, exchange_id):
         try:
-            from octobot_trading.api.trades import subscribe_to_trades_channel
-            await subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
+            if is_exchange_trading(get_exchange_manager_from_exchange_id(exchange_id)):
+                from octobot_trading.api.trades import subscribe_to_trades_channel
+                from octobot_trading.api.symbol_data import subscribe_to_ohlcv_channel
+                await subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
+                await subscribe_to_ohlcv_channel(self._web_ohlcv_empty_callback, exchange_id)
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
 
