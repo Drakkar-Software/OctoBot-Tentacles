@@ -34,19 +34,22 @@
                     </div>
 
                     <!--Card image-->
-                    <div class="view overlay animated text-center">
+                    <div class="view overlay animated text-center pt-2">
                       <a href="{{ url_for('config')+'#panelCurrency' }}">
                         <i class="fas fa-8x fa-plus-circle fa-3x"></i>
                       </a>
                     </div>
 
 
-                    <!--Card content-->
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item bg-transparent">
-                            <a class="text-white" href="{{ url_for('config')+'#panelCurrency' }}"> Add a new pair</a>
-                        </li>
-                    </ul>
+                    <div class="px-4 pt-4 pb-3">
+                        <!--Card content-->
+                        <div class="list-group list-group-flush">
+                            <a class="list-group-item list-group-item-action bg-transparent text-white hover_anim"
+                               href="{{ url_for('config')+'#panelCurrency' }}">
+                                Add a new pair
+                            </a>
+                        </div>
+                    </div>
 
                 </div>
             </div>
