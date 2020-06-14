@@ -284,6 +284,18 @@ function create_layout(graph_title){
     };
 }
 
+function push_new_candle(price_trace, volume_trace, candles, candle_index, last_candle_time){
+    price_trace.x.push(last_candle_time);
+    price_trace.open.push(candles["open"][candle_index]);
+    price_trace.high.push(candles["high"][candle_index]);
+    price_trace.low.push(candles["low"][candle_index]);
+    price_trace.close.push(candles["close"][candle_index]);
+    volume_trace.y.push(candles["vol"][candle_index]);
+    const vol_color = candles["close"][candle_index] >= candles["open"][candle_index] ?
+        buy_color : sell_color;
+    volume_trace.marker.color.push(vol_color);
+}
+
 function create_or_update_candlestick_graph(element_id, symbol_price_data, symbol, exchange_name, time_frame, replace=false){
     if (symbol_price_data) {
         const candles = symbol_price_data["candles"];
@@ -309,7 +321,7 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
             // keep layout
             layout = prev_layout;
-            // update datarevision to force graph update
+            // update data revision to force graph update
             layout.datarevision = layout.datarevision + 1;
 
             // trades
@@ -322,19 +334,17 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
                 const last_candle_index = candles["close"].length - 1;
                 const last_candle_time = candles["time"][last_candle_index];
 
-                if (last_candle_index > 0 && price_trace.x[last_price_trace_index] !== last_candle_time) {
-                    update_last_candle(price_trace, volume_trace, candles, last_price_trace_index, last_candle_index - 1);
-                    price_trace.x.push(last_candle_time);
-                    price_trace.open.push(candles["open"][last_candle_index]);
-                    price_trace.high.push(candles["high"][last_candle_index]);
-                    price_trace.low.push(candles["low"][last_candle_index]);
-                    price_trace.close.push(candles["close"][last_candle_index]);
-                    volume_trace.y.push(candles["vol"][last_candle_index]);
-                    const vol_color = candles["close"][last_candle_index] >= candles["open"][last_candle_index] ?
-                        buy_color : sell_color;
-                    volume_trace.marker.color.push(vol_color);
-                } else if(price_trace.x[last_price_trace_index] === last_candle_time) {
-                    update_last_candle(price_trace, volume_trace, candles, last_price_trace_index, last_candle_index);
+                if (last_candle_index > 0){
+                    // Candle update with last candle being and in-construction candle
+                    if (price_trace.x[last_price_trace_index] !== last_candle_time) {
+                        update_last_candle(price_trace, volume_trace, candles, last_price_trace_index, last_candle_index - 1);
+                        push_new_candle(price_trace, volume_trace, candles, last_candle_index, last_candle_time);
+                    } else {
+                        update_last_candle(price_trace, volume_trace, candles, last_price_trace_index, last_candle_index);
+                    }
+                } else if(price_trace.x[last_price_trace_index].indexOf(last_candle_time) === -1) {
+                    // Candle update with only one candle but this candle is not displayed (no in-construction candle)
+                    push_new_candle(price_trace, volume_trace, candles, last_candle_index, last_candle_time);
                 }
             }
         }
