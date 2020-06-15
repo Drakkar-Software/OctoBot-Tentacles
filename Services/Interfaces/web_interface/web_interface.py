@@ -115,8 +115,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
     async def _register_on_channels(self, exchange_id):
         try:
             if is_exchange_trading(get_exchange_manager_from_exchange_id(exchange_id)):
-                from octobot_trading.api.trades import subscribe_to_trades_channel
-                from octobot_trading.api.symbol_data import subscribe_to_ohlcv_channel
+                from octobot_trading.api.channels import subscribe_to_trades_channel, subscribe_to_ohlcv_channel
                 await subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
                 await subscribe_to_ohlcv_channel(self._web_ohlcv_empty_callback, exchange_id)
         except ImportError:
