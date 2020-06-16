@@ -43,15 +43,15 @@
         <div class="mask rgba-white-slight waves-effect waves-light"></div>
       </a>
     </div>
-    <div class="card-body pb-3">
+    <div class="card-body pb-3 px-3">
         <!--Card content-->
         <div class="list-group list-group-flush">
             {% for exchange_id, evaluation in status.items() %}
-                <a class="list-group-item list-group-item-action bg-transparent text-white status hover_anim"
+                <a class="list-group-item list-group-item-action bg-transparent text-white status hover_anim px-3"
                    status="{{evaluation[0]}}"
                    href="{{ url_for('symbol_market_status', exchange_id=exchange_id, symbol=pair) }}">
                         {{ evaluation[2] }}: {{ evaluation[0] }} ({{ evaluation[1] }})
-                        <i class="float-right fa fa-chart-bar"> </i>
+                        <i class="float-right fa fa-chart-bar pt-1"> </i>
                 </a>
             {% endfor %}
         </div>
