@@ -98,6 +98,10 @@ class ArbitrageTradingMode(AbstractTradingMode):
         """
         return False
 
+    @staticmethod
+    def is_backtestable():
+        return False
+
 
 class ArbitrageModeConsumer(AbstractTradingModeConsumer):
     ARBITRAGE_CONTAINER_KEY = "arbitrage"
