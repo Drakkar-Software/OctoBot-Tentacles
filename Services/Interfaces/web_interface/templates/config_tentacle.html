@@ -153,7 +153,7 @@
                     </div>
                 {% else %}
                     <div class="col-8 alert alert-warning mt-1 text-center" role="alert">
-                        <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> is not compatible with the current backtesting engine.
+                        <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> can't be used in backtesting for now.
                     </div>
                 {% endif %}
                 <div class="col-2 offset-md-2">
