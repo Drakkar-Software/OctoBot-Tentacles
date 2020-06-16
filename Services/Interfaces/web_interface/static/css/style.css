@@ -29,7 +29,7 @@ strong {
 }
 
 .toast-top-right {
-    top: 70px;
+    top: 4rem;
 }
 
 html, body{
@@ -54,7 +54,7 @@ body:before {
 }
 
 .login_box {
-    max-width: 450px;
+    max-width: 30rem;
 }
 
 .navbar.navbar-dark .navbar-nav .nav-item  {
@@ -116,7 +116,7 @@ body:before {
 }
 
 .card-body.candle-graph{
-    min-height: 490px;
+    min-height: 30.625rem;
     background-color: inherit;
 }
 
@@ -219,11 +219,6 @@ a:hover.badge {
 
 .modal-text {
   color: #4B515D;
-}
-
-.modal,
-.modal-top-left {
-    margin-top: 50px;
 }
 
 .editable-input,
