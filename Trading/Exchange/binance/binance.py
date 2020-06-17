@@ -30,4 +30,4 @@ class Binance(SpotExchange):
         if params is None:
             params = {}
         params.update({'recvWindow': 60000})
-        await SpotExchange.get_balance(self, params=params)
+        return await SpotExchange.get_balance(self, params=params)
