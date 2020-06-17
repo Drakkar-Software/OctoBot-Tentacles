@@ -33,4 +33,4 @@ class Bitmex(FutureExchange):
         if params is None:
             params = {}
         params.update({"reverse": True})
-        await FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, params=params)
+        return await FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, params=params)
