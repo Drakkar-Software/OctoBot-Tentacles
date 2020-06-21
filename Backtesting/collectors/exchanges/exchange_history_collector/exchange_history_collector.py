@@ -45,6 +45,7 @@ class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
             .is_exchange_only() \
             .is_collecting() \
             .is_ignoring_config() \
+            .disable_trading_mode() \
             .build()
 
         self.exchange = self.exchange_manager.exchange
