@@ -72,6 +72,8 @@ DEFAULT_EXCHANGE = "binance"
 # buffers to faster config page loading
 markets_by_exchanges = {}
 all_symbols_dict = {}
+# can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
+exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 
 
 def _get_tentacles_activation():
@@ -399,17 +401,18 @@ def get_notifiers_list():
 def get_symbol_list(exchanges):
     result = []
     for exchange in exchanges:
-        if exchange in markets_by_exchanges:
-            result += markets_by_exchanges[exchange]
-        else:
-            try:
-                inst = getattr(ccxt, exchange)({'verbose': False})
-                inst.load_markets()
-                # filter symbols with a "." or no "/" because bot can't handle them for now
-                markets_by_exchanges[exchange] = [res for res in inst.symbols if "/" in res]
+        if exchange not in exchange_symbol_fetch_blacklist:
+            if exchange in markets_by_exchanges:
                 result += markets_by_exchanges[exchange]
-            except Exception as e:
-                LOGGER.error(f"error when loading symbol list for {exchange}: {e}")
+            else:
+                try:
+                    inst = getattr(ccxt, exchange)({'verbose': False})
+                    inst.load_markets()
+                    # filter symbols with a "." or no "/" because bot can't handle them for now
+                    markets_by_exchanges[exchange] = [res for res in inst.symbols if "/" in res]
+                    result += markets_by_exchanges[exchange]
+                except Exception as e:
+                    LOGGER.error(f"error when loading symbol list for {exchange}: {e}")
 
     return list(set(result))
 
