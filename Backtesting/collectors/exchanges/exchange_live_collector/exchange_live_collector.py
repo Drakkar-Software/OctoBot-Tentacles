@@ -37,6 +37,7 @@ class ExchangeLiveDataCollector(AbstractExchangeLiveCollector):
             .is_rest_only() \
             .is_collecting() \
             .is_ignoring_config() \
+            .disable_trading_mode() \
             .build()
 
         self._load_timeframes_if_necessary()
