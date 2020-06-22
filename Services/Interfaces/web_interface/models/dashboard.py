@@ -153,65 +153,67 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
         real_trades_key: {},
         simulated_trades_key: {},
     }
+    try:
+        if not in_backtesting:
+            add_to_symbol_data_history(symbol, historical_candles, time_frame, False)
+            data = get_symbol_data_history(symbol, time_frame)
+        else:
+            data = historical_candles
 
-    if not in_backtesting:
-        add_to_symbol_data_history(symbol, historical_candles, time_frame, False)
-        data = get_symbol_data_history(symbol, time_frame)
-    else:
-        data = historical_candles
+        # add kline as the last (current) candle that is not yet in history
+        if nan not in kline and data[PriceIndexes.IND_PRICE_TIME.value][-1] != kline[PriceIndexes.IND_PRICE_TIME.value]:
+            data[PriceIndexes.IND_PRICE_TIME.value] = np.append(data[PriceIndexes.IND_PRICE_TIME.value],
+                                                                kline[PriceIndexes.IND_PRICE_TIME.value])
+            data[PriceIndexes.IND_PRICE_CLOSE.value] = np.append(data[PriceIndexes.IND_PRICE_CLOSE.value],
+                                                                 kline[PriceIndexes.IND_PRICE_CLOSE.value])
+            data[PriceIndexes.IND_PRICE_LOW.value] = np.append(data[PriceIndexes.IND_PRICE_LOW.value],
+                                                               kline[PriceIndexes.IND_PRICE_LOW.value])
+            data[PriceIndexes.IND_PRICE_OPEN.value] = np.append(data[PriceIndexes.IND_PRICE_OPEN.value],
+                                                                kline[PriceIndexes.IND_PRICE_OPEN.value])
+            data[PriceIndexes.IND_PRICE_HIGH.value] = np.append(data[PriceIndexes.IND_PRICE_HIGH.value],
+                                                                kline[PriceIndexes.IND_PRICE_HIGH.value])
+            data[PriceIndexes.IND_PRICE_VOL.value] = np.append(data[PriceIndexes.IND_PRICE_VOL.value],
+                                                               kline[PriceIndexes.IND_PRICE_VOL.value])
+        data_x = convert_timestamps_to_datetime(data[PriceIndexes.IND_PRICE_TIME.value],
+                                                time_format="%y-%m-%d %H:%M:%S",
+                                                force_timezone=False)
 
-    # add kline as the last (current) candle that is not yet in history
-    if nan not in kline and data[PriceIndexes.IND_PRICE_TIME.value][-1] != kline[PriceIndexes.IND_PRICE_TIME.value]:
-        data[PriceIndexes.IND_PRICE_TIME.value] = np.append(data[PriceIndexes.IND_PRICE_TIME.value],
-                                                            kline[PriceIndexes.IND_PRICE_TIME.value])
-        data[PriceIndexes.IND_PRICE_CLOSE.value] = np.append(data[PriceIndexes.IND_PRICE_CLOSE.value],
-                                                             kline[PriceIndexes.IND_PRICE_CLOSE.value])
-        data[PriceIndexes.IND_PRICE_LOW.value] = np.append(data[PriceIndexes.IND_PRICE_LOW.value],
-                                                           kline[PriceIndexes.IND_PRICE_LOW.value])
-        data[PriceIndexes.IND_PRICE_OPEN.value] = np.append(data[PriceIndexes.IND_PRICE_OPEN.value],
-                                                            kline[PriceIndexes.IND_PRICE_OPEN.value])
-        data[PriceIndexes.IND_PRICE_HIGH.value] = np.append(data[PriceIndexes.IND_PRICE_HIGH.value],
-                                                            kline[PriceIndexes.IND_PRICE_HIGH.value])
-        data[PriceIndexes.IND_PRICE_VOL.value] = np.append(data[PriceIndexes.IND_PRICE_VOL.value],
-                                                           kline[PriceIndexes.IND_PRICE_VOL.value])
-    data_x = convert_timestamps_to_datetime(data[PriceIndexes.IND_PRICE_TIME.value],
-                                            time_format="%y-%m-%d %H:%M:%S",
-                                            force_timezone=False)
+        independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING] if in_backtesting else None
+        bot_api_for_history = None if in_backtesting else bot_api
+        if not ignore_trades:
+            # handle trades after the 1st displayed candle start time for dashboard
+            first_time_to_handle_in_board = data[PriceIndexes.IND_PRICE_TIME.value][0]
+            real_trades_history, simulated_trades_history = get_trades_history(bot_api_for_history,
+                                                                               symbol,
+                                                                               independent_backtesting,
+                                                                               since=first_time_to_handle_in_board,
+                                                                               as_dict=True)
 
-    independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING] if in_backtesting else None
-    bot_api_for_history = None if in_backtesting else bot_api
-    if not ignore_trades:
-        # handle trades after the 1st displayed candle start time for dashboard
-        first_time_to_handle_in_board = data[PriceIndexes.IND_PRICE_TIME.value][0]
-        real_trades_history, simulated_trades_history = get_trades_history(bot_api_for_history,
-                                                                           symbol,
-                                                                           independent_backtesting,
-                                                                           since=first_time_to_handle_in_board,
-                                                                           as_dict=True)
+            if real_trades_history:
+                result_dict[real_trades_key] = format_trades(real_trades_history)
 
-        if real_trades_history:
-            result_dict[real_trades_key] = format_trades(real_trades_history)
+            if simulated_trades_history:
+                result_dict[simulated_trades_key] = format_trades(simulated_trades_history)
 
-        if simulated_trades_history:
-            result_dict[simulated_trades_key] = format_trades(simulated_trades_history)
-
-    if list_arrays:
-        result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: data_x,
-            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value].tolist(),
-            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value].tolist(),
-            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value].tolist(),
-            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value].tolist(),
-            PriceStrings.STR_PRICE_VOL.value: data[PriceIndexes.IND_PRICE_VOL.value].tolist()
-        }
-    else:
-        result_dict[candles_key] = {
-            PriceStrings.STR_PRICE_TIME.value: data_x,
-            PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value],
-            PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value],
-            PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value],
-            PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value]
-        }
+        if list_arrays:
+            result_dict[candles_key] = {
+                PriceStrings.STR_PRICE_TIME.value: data_x,
+                PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value].tolist(),
+                PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value].tolist(),
+                PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value].tolist(),
+                PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value].tolist(),
+                PriceStrings.STR_PRICE_VOL.value: data[PriceIndexes.IND_PRICE_VOL.value].tolist()
+            }
+        else:
+            result_dict[candles_key] = {
+                PriceStrings.STR_PRICE_TIME.value: data_x,
+                PriceStrings.STR_PRICE_CLOSE.value: data[PriceIndexes.IND_PRICE_CLOSE.value],
+                PriceStrings.STR_PRICE_LOW.value: data[PriceIndexes.IND_PRICE_LOW.value],
+                PriceStrings.STR_PRICE_OPEN.value: data[PriceIndexes.IND_PRICE_OPEN.value],
+                PriceStrings.STR_PRICE_HIGH.value: data[PriceIndexes.IND_PRICE_HIGH.value]
+            }
+    except IndexError:
+        pass
     return result_dict
 
 
