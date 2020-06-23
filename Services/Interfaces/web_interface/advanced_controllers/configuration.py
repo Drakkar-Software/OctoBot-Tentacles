@@ -13,13 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 from flask import render_template, request, jsonify, url_for
 
 from tentacles.Services.Interfaces.web_interface.constants import EVALUATOR_CONFIG_KEY
 from . import advanced
 from tentacles.Services.Interfaces.web_interface.models.configuration import get_evaluator_detailed_config, \
-    update_tentacles_activation_config, get_tentacles_startup_activation
+    update_tentacles_activation_config, get_evaluators_tentacles_startup_activation
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
 from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
@@ -53,5 +52,5 @@ def evaluator_config():
         media_url = url_for("tentacle_media", _external=True)
         return render_template('advanced_evaluator_config.html',
                                evaluator_config=get_evaluator_detailed_config(media_url),
-                               evaluator_startup_config=get_tentacles_startup_activation()
+                               evaluator_startup_config=get_evaluators_tentacles_startup_activation()
                                )
