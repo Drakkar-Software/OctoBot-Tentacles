@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 from flask import render_template, request, jsonify, url_for
 
 from octobot_commons.constants import CONFIG_CRYPTO_CURRENCIES
@@ -32,7 +31,8 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import get
     get_tested_exchange_list, get_simulated_exchange_list, get_other_exchange_list, \
     manage_metrics, get_tentacle_from_string, update_tentacle_config, reset_config_to_default, \
     get_evaluator_detailed_config, REQUIREMENTS_KEY, get_config_activated_trading_mode, \
-    update_tentacles_activation_config, get_tentacles_startup_activation, get_tentacle_config, \
+    update_tentacles_activation_config, get_evaluators_tentacles_startup_activation, \
+    get_trading_tentacles_startup_activation, get_tentacle_config, \
     get_tentacle_config_schema
 from tentacles.Services.Interfaces.web_interface.models.backtesting import get_data_files_with_description
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
@@ -122,8 +122,8 @@ def config():
                                                                    for exchange in display_config[CONFIG_EXCHANGES]])),
                                full_symbol_list=get_all_symbols_dict(),
                                strategy_config=get_strategy_config(media_url),
-                               evaluator_startup_config=get_tentacles_startup_activation(),
-                               trading_startup_config=get_tentacles_startup_activation(),
+                               evaluator_startup_config=get_evaluators_tentacles_startup_activation(),
+                               trading_startup_config=get_trading_tentacles_startup_activation(),
 
                                in_backtesting=is_backtesting_enabled(display_config)
                                )
@@ -155,7 +155,7 @@ def config_tentacle():
                 tentacle_desc[REQUIREMENTS_KEY] == ["*"] else None
             strategy_config = get_strategy_config(media_url) if tentacle_type == "trading mode" and \
                 len(tentacle_desc[REQUIREMENTS_KEY]) > 1 else None
-            evaluator_startup_config = get_tentacles_startup_activation() \
+            evaluator_startup_config = get_evaluators_tentacles_startup_activation() \
                 if evaluator_config or strategy_config else None
             return render_template('config_tentacle.html',
                                    name=tentacle_name,

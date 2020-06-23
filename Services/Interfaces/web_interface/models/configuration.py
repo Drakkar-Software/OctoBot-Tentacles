@@ -13,8 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot.constants import CONFIG_FILE_SCHEMA
-from octobot_commons.logging.logging_util import get_logger
 from os.path import isfile, sep
 import ccxt
 import requests
@@ -26,12 +24,14 @@ from octobot_tentacles_manager.api.configurator import get_tentacles_activation,
     get_tentacle_config as manager_get_tentacle_config, update_tentacle_config as manager_update_tentacle_config, \
     get_tentacle_config_schema_path, factory_tentacle_reset_config, update_activation_configuration
 from octobot_tentacles_manager.api.inspector import get_tentacle_documentation_path
+from octobot_tentacles_manager.constants import TENTACLES_TRADING_PATH
 from octobot_trading.api.modes import get_activated_trading_mode
 from tentacles.Services.Interfaces.web_interface.constants import UPDATED_CONFIG_SEPARATOR, EVALUATOR_ACTIVATION, \
     CURRENCIES_LIST_URL
 from octobot_evaluators.constants import EVALUATOR_EVAL_DEFAULT_TYPE
 from octobot_trading.constants import CONFIG_EXCHANGES, TESTED_EXCHANGES, SIMULATOR_TESTED_EXCHANGES
 from octobot_commons.constants import CONFIG_METRICS, CONFIG_ENABLED_OPTION
+from octobot_commons.logging.logging_util import get_logger
 from octobot_services.interfaces.util.bot import get_global_config, get_edited_config, get_bot_api, \
     get_startup_tentacles_config, get_edited_tentacles_config
 from octobot_services.api.services import get_available_services
@@ -43,6 +43,8 @@ from octobot_backtesting.api.backtesting import is_backtesting_enabled
 from octobot.community.community_manager import CommunityManager
 from octobot_tentacles_manager.api.configurator import save_tentacles_setup_configuration
 from octobot_tentacles_manager.api.inspector import get_tentacle_resources_path
+from octobot_tentacles_manager.constants import TENTACLES_EVALUATOR_PATH
+from octobot.constants import CONFIG_FILE_SCHEMA
 
 NAME_KEY = "name"
 DESCRIPTION_KEY = "description"
@@ -76,12 +78,20 @@ all_symbols_dict = {}
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 
 
-def _get_tentacles_activation():
-    return get_tentacles_activation(get_edited_tentacles_config())
+def _get_evaluators_tentacles_activation():
+    return get_tentacles_activation(get_edited_tentacles_config())[TENTACLES_EVALUATOR_PATH]
 
 
-def get_tentacles_startup_activation():
-    return get_tentacles_activation(get_startup_tentacles_config())
+def _get_trading_tentacles_activation():
+    return get_tentacles_activation(get_edited_tentacles_config())[TENTACLES_TRADING_PATH]
+
+
+def get_evaluators_tentacles_startup_activation():
+    return get_tentacles_activation(get_startup_tentacles_config())[TENTACLES_EVALUATOR_PATH]
+
+
+def get_trading_tentacles_startup_activation():
+    return get_tentacles_activation(get_startup_tentacles_config())[TENTACLES_TRADING_PATH]
 
 
 def get_tentacle_documentation(klass, media_url):
@@ -109,7 +119,7 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
     }
 
     if with_trading_modes:
-        trading_config = _get_tentacles_activation()
+        trading_config = _get_trading_tentacles_activation()
         for key, val in trading_config.items():
             config_class = get_class_from_string(key, AbstractTradingMode, modes, trading_mode_parent_inspection)
             if config_class:
@@ -119,7 +129,7 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
                                                                                                       media_url)
                 strategy_config_classes[TRADING_MODES_KEY][key] = config_class
 
-    evaluator_config = _get_tentacles_activation()
+    evaluator_config = _get_evaluators_tentacles_activation()
     for key, val in evaluator_config.items():
         config_class = get_class_from_string(key, StrategyEvaluator,
                                              strategies, evaluator_parent_inspection)
@@ -151,7 +161,6 @@ def _get_activation_state(name, activation_states):
 
 
 def get_tentacle_from_string(name, media_url, with_info=True):
-    activation_states = _get_tentacles_activation()
     for package, abstract_class, tentacle_type in _get_tentacle_packages():
         is_trading_mode = tentacle_type == TRADING_MODE_KEY
         parent_inspector = trading_mode_parent_inspection if is_trading_mode else evaluator_parent_inspection
@@ -161,11 +170,14 @@ def get_tentacle_from_string(name, media_url, with_info=True):
                 info = {}
                 info[DESCRIPTION_KEY] = get_tentacle_documentation(klass, media_url)
                 info[NAME_KEY] = name
-                info[EVALUATOR_ACTIVATION] = _get_activation_state(name, activation_states)
                 if is_trading_mode:
                     _add_trading_mode_requirements_and_default_config(info, klass)
-                elif tentacle_type == STRATEGY_KEY:
-                    _add_strategy_requirements_and_default_config(info, klass)
+                    activation_states = _get_trading_tentacles_activation()
+                else:
+                    activation_states = _get_evaluators_tentacles_activation()
+                    if tentacle_type == STRATEGY_KEY:
+                        _add_strategy_requirements_and_default_config(info, klass)
+                info[EVALUATOR_ACTIVATION] = _get_activation_state(name, activation_states)
                 return klass, tentacle_type, info
             else:
                 return klass, tentacle_type, None
@@ -298,7 +310,7 @@ def get_evaluator_detailed_config(media_url):
         STRATEGIES_KEY: {}
     }
     strategy_class_by_name = {}
-    evaluator_config = _get_tentacles_activation()
+    evaluator_config = _get_evaluators_tentacles_activation()
     for evaluator_name, activated in evaluator_config.items():
         is_TA, klass = _fill_evaluator_config(evaluator_name, activated, TA_KEY, ta, detailed_config, media_url)
         if not is_TA:
