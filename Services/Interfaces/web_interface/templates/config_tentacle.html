@@ -128,12 +128,12 @@
                     <div class="col-6">
                        <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
                                {{ "disabled" if not tentacle_desc["activation"] }}>
-                        {% for file, description in data_files.items() %}
+                        {% for file, description in data_files.items() | sort(reverse=True) %}
                          <option value={{file}}
                             {% if loop.first %}
                                 selected="selected"
                             {% endif %}>
-                           {{file}} : {{", ".join(description.time_frames)}}
+                           {{", ".join(description.symbols)}} on {{(description.exchange)}} from the {{(description.date)}}
                          </option>
                          {% endfor %}
                        </select>
