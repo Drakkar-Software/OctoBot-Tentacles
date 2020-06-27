@@ -22,7 +22,7 @@ from octobot_trading.constants import CONFIG_EXCHANGES, CONFIG_TRADING, CONFIG_T
 from octobot_services.constants import CONFIG_CATEGORY_SERVICES
 from octobot_services.constants import CONFIG_CATEGORY_NOTIFICATION
 from tentacles.Services.Interfaces.web_interface.constants import GLOBAL_CONFIG_KEY, EVALUATOR_CONFIG_KEY, \
-    TRADING_CONFIG_KEY, DEACTIVATE_OTHERS
+    TRADING_CONFIG_KEY, DEACTIVATE_OTHERS, TENTACLES_CONFIG_KEY
 from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
 from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
@@ -33,7 +33,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import get
     get_evaluator_detailed_config, REQUIREMENTS_KEY, get_config_activated_trading_mode, \
     update_tentacles_activation_config, get_evaluators_tentacles_startup_activation, \
     get_trading_tentacles_startup_activation, get_tentacle_config, \
-    get_tentacle_config_schema
+    get_tentacle_config_schema, get_tentacles_activation_desc_by_group
 from tentacles.Services.Interfaces.web_interface.models.backtesting import get_data_files_with_description
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from octobot_backtesting.api.backtesting import is_backtesting_enabled
@@ -55,6 +55,12 @@ def config():
                 success = success and update_tentacles_activation_config(request_data[TRADING_CONFIG_KEY])
             else:
                 request_data[TRADING_CONFIG_KEY] = ""
+
+            # update tentacles config if required
+            if TENTACLES_CONFIG_KEY in request_data and request_data[TENTACLES_CONFIG_KEY]:
+                success = success and update_tentacles_activation_config(request_data[TENTACLES_CONFIG_KEY])
+            else:
+                request_data[TENTACLES_CONFIG_KEY] = ""
 
             # update evaluator config if required
             if EVALUATOR_CONFIG_KEY in request_data and request_data[EVALUATOR_CONFIG_KEY]:
@@ -82,6 +88,7 @@ def config():
             response = {
                 "evaluator_updated_config": request_data[EVALUATOR_CONFIG_KEY],
                 "trading_updated_config": request_data[TRADING_CONFIG_KEY],
+                "tentacle_updated_config": request_data[TENTACLES_CONFIG_KEY],
                 "global_updated_config": request_data[GLOBAL_CONFIG_KEY],
                 removed_elements_key: request_data[removed_elements_key]
             }
@@ -125,7 +132,9 @@ def config():
                                evaluator_startup_config=get_evaluators_tentacles_startup_activation(),
                                trading_startup_config=get_trading_tentacles_startup_activation(),
 
-                               in_backtesting=is_backtesting_enabled(display_config)
+                               in_backtesting=is_backtesting_enabled(display_config),
+
+                               config_tentacles_by_group=get_tentacles_activation_desc_by_group(media_url)
                                )
 
 
