@@ -51,7 +51,8 @@
 <script>
     $(document).ready(function () {
       $('#open_trades_datatable').DataTable({
-         // "ajax": "{{ url_for('api.orders') }}"
+          // order by date
+          "order": [[ 8, "desc" ]]
       })
     });
 </script>
