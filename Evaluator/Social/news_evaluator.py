@@ -82,11 +82,13 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
 
     # only set eval note when something is happening
     async def _check_eval_note(self, note):
-        if note != START_PENDING_EVAL_NOTE:
-            if abs(note) > self._EVAL_NOTIFICATION_THRESHOLD:
-                self.eval_note = note
-                self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
-                await self.notify_evaluator_task_managers(self.get_name())
+        if (
+            note != START_PENDING_EVAL_NOTE
+            and abs(note) > self._EVAL_NOTIFICATION_THRESHOLD
+        ):
+            self.eval_note = note
+            self.save_evaluation_expiration_time(self._compute_notification_time_to_live(self.eval_note))
+            await self.notify_evaluator_task_managers(self.get_name())
 
     @staticmethod
     def _compute_notification_time_to_live(evaluation):
@@ -101,10 +103,13 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
                 author_screen_name = tweet['user']['screen_name'] if "screen_name" in tweet['user'] \
                     else stupid_useless_name
                 author_name = tweet['user']['name'] if "name" in tweet['user'] else stupid_useless_name
-                if self.social_config[CONFIG_TWITTERS_ACCOUNTS]:
-                    if author_screen_name in self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol] \
-                       or author_name in self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol]:
-                        return -1 * self.sentiment_analyser.analyse(tweet_text)
+                if self.social_config[CONFIG_TWITTERS_ACCOUNTS] and (
+                    author_screen_name
+                    in self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol]
+                    or author_name
+                    in self.social_config[CONFIG_TWITTERS_ACCOUNTS][self.symbol]
+                ):
+                    return -1 * self.sentiment_analyser.analyse(tweet_text)
         except KeyError:
             pass
 
@@ -128,10 +133,12 @@ class TwitterNewsEvaluator(NewsSocialEvaluator, DispatcherAbstractClient):
 
         # true if in hashtags
         if self.social_config[CONFIG_TWITTERS_HASHTAGS]:
-            for hashtags in self.social_config[CONFIG_TWITTERS_HASHTAGS][self.symbol]:
-                if hashtags.lower() in notification_description:
-                    return True
-            return False
+            return any(
+                hashtags.lower() in notification_description
+                for hashtags in self.social_config[CONFIG_TWITTERS_HASHTAGS][
+                    self.symbol
+                ]
+            )
 
     def _get_config_elements(self, key):
         if CONFIG_CRYPTO_CURRENCIES in self.social_config and self.social_config[CONFIG_CRYPTO_CURRENCIES]:

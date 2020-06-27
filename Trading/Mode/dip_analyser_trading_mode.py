@@ -322,8 +322,11 @@ class DipAnalyserTradingModeDecider(AbstractTradingModeDecider):
             last_candle_key = self.SIMUALTOR_KEY if trader.get_simulate() else self.REAL_KEY
             # cancel previous by orders if any
             cancelled_orders = await self._cancel_buy_orders_for_trader(trader)
-            if self.last_buy_candle[last_candle_key] == notification_candle_time and cancelled_orders or \
-                    self.last_buy_candle[last_candle_key] != notification_candle_time:
+            if (
+                cancelled_orders
+                or self.last_buy_candle[last_candle_key]
+                != notification_candle_time
+            ):
                 # if subsequent notification from the same candle: only create order if able to cancel the previous buy
                 # to avoid multiple order on the same candle
                 await self._create_order(trader)

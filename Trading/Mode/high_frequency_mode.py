@@ -74,14 +74,14 @@ class HighFrequencyMode(AbstractTradingMode):
         if trader_simulator.is_enabled():
             self.simulated_creators[symbol] = []
             # create new creators --> simulation
-            for _ in range(0, self.nb_creators):
+            for _ in range(self.nb_creators):
                 self.simulated_creators[symbol].append(
                     self.add_creator(symbol, HighFrequencyModeCreator(self, trader_simulator)))
 
         if trader.is_enabled():
             self.real_creators[symbol] = []
             # create new creators --> real
-            for _ in range(0, self.nb_creators):
+            for _ in range(self.nb_creators):
                 self.real_creators[symbol].append(self.add_creator(symbol, HighFrequencyModeCreator(self, trader)))
 
     def init_nb_creator_from_exchange(self, symbol, exchange):
@@ -97,10 +97,7 @@ class HighFrequencyMode(AbstractTradingMode):
         elif exchange_fees >= min_creators[1]:
             self.nb_creators = min_creators[0]
         else:
-            if exchange_fees <= min_creators[1] / 2:
-                self.nb_creators = 4
-            else:
-                self.nb_creators = 3
+            self.nb_creators = 4 if exchange_fees <= min_creators[1] / 2 else 3
 
 
 class HighFrequencyModeCreator(AbstractTradingModeCreatorWithBot):

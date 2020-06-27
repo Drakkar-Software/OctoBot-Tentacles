@@ -163,10 +163,10 @@ class StaggeredOrdersTradingModeCreator(AbstractTradingModeCreator):
         created_order = None
         currency, market = split_symbol(order_data.symbol)
         try:
+            selling = order_data.side == TradeOrderSide.SELL
             for order_quantity, order_price in self.check_and_adapt_order_details_if_necessary(order_data.quantity,
                                                                                                order_data.price,
                                                                                                symbol_market):
-                selling = order_data.side == TradeOrderSide.SELL
                 if selling:
                     if portfolio.get_portfolio()[currency][Portfolio.AVAILABLE] < order_quantity:
                         return None
@@ -259,17 +259,18 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
             self.final_eval = strategy_evaluation[ExchangeConstantsTickersInfoColumns.LAST_PRICE.value]
 
     async def create_state(self):
-        if self.final_eval != INIT_EVAL_NOTE:
-            self._refresh_symbol_data()
-            async with self.get_lock():
-                if self.symbol_evaluator.has_trader_simulator(self.exchange):
-                    trader_simulator = self.symbol_evaluator.get_trader_simulator(self.exchange)
-                    if trader_simulator.is_enabled():
-                        await self._handle_staggered_orders(self.final_eval, trader_simulator)
-                if self.symbol_evaluator.has_trader(self.exchange):
-                    real_trader = self.symbol_evaluator.get_trader(self.exchange)
-                    if real_trader.is_enabled():
-                        await self._handle_staggered_orders(self.final_eval, real_trader)
+        if self.final_eval == INIT_EVAL_NOTE:
+            return
+        self._refresh_symbol_data()
+        async with self.get_lock():
+            if self.symbol_evaluator.has_trader_simulator(self.exchange):
+                trader_simulator = self.symbol_evaluator.get_trader_simulator(self.exchange)
+                if trader_simulator.is_enabled():
+                    await self._handle_staggered_orders(self.final_eval, trader_simulator)
+            if self.symbol_evaluator.has_trader(self.exchange):
+                real_trader = self.symbol_evaluator.get_trader(self.exchange)
+                if real_trader.is_enabled():
+                    await self._handle_staggered_orders(self.final_eval, real_trader)
 
     async def order_filled_callback(self, filled_order):
         # create order on the order side
@@ -423,13 +424,14 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                         previous_o = None
                         following_o = None
                         for o in sorted_orders:
-                            if previous_o is None:
+                            if (
+                                previous_o is None
+                                or o.origin_price <= missing_order_price
+                            ):
                                 previous_o = o
-                            elif o.origin_price > missing_order_price:
+                            else:
                                 following_o = o
                                 break
-                            else:
-                                previous_o = o
                         if previous_o.side == following_o.side:
                             # missing order between similar orders
                             quantity = min(DataUtil.mean([previous_o.origin_quantity, following_o.origin_quantity]),
@@ -495,10 +497,6 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         bigger_buys_closer_to_center = None
         first_sell = None
         ratio = None
-        state = self.FILL
-
-        missing_orders = []
-
         previous_order = None
 
         only_sell = False
@@ -515,76 +513,77 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                 self.logger.warning(f"Only buy orders are online for {self.symbol}, now waiting for the price to "
                                     f"go down to create new sell orders.")
                 only_buy = True
+            state = self.FILL
+
+            missing_orders = []
+
             for order in sorted_orders:
                 if order.symbol != self.symbol:
                     self.logger.warning(f"Error when analyzing orders for {self.symbol}: order.symbol != self.symbol.")
                     return None, self.ERROR, None
                 spread_point = False
-                if previous_order is None:
-                    previous_order = order
-                else:
-                    if previous_order.side != order.side:
-                        if spread is None:
-                            if self.lowest_buy < self.final_eval < self.highest_sell:
-                                spread_point = True
-                                delta_spread = order.origin_price - previous_order.origin_price
+                if previous_order is not None:
+                    if previous_order.side != order.side and spread is None:
+                        if self.lowest_buy < self.final_eval < self.highest_sell:
+                            spread_point = True
+                            delta_spread = order.origin_price - previous_order.origin_price
 
-                                if increment is None:
-                                    self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment "
-                                                        f"is None.")
-                                    return None, self.ERROR, None
-                                else:
-                                    inferred_spread = self.flat_spread or self.spread*increment/self.increment
-                                    missing_orders_count = (delta_spread-inferred_spread)/increment
-                                    if missing_orders_count > 1*1.2:
-                                        # missing orders around spread point: symmetrical orders were not created when
-                                        # orders were filled => re-create them
-                                        next_missing_order_price = previous_order.origin_price + increment
-                                        half_spread = inferred_spread/2
-                                        spread_lower_boundary = self.final_eval - half_spread
-                                        spread_higher_boundary = self.final_eval + half_spread
-
-                                        # re-create buy orders starting from the closest buy up to spread
-                                        while next_missing_order_price <= spread_lower_boundary:
-                                            # missing buy order
-                                            if not self._is_just_closed_order(next_missing_order_price,
-                                                                              recently_closed_orders):
-                                                missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
-                                            next_missing_order_price += increment
-
-                                        next_missing_order_price = order.origin_price - increment
-                                        # re-create sell orders starting from the closest sell down to spread
-                                        while next_missing_order_price >= spread_higher_boundary:
-                                            # missing sell order
-                                            if not self._is_just_closed_order(next_missing_order_price,
-                                                                              recently_closed_orders):
-                                                missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
-                                            next_missing_order_price -= increment
-
-                                        spread = inferred_spread
-                                    else:
-                                        spread = delta_spread
-
-                                # calculations to infer ratio
-                                last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
-                                first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
-                                bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
-                                first_sell = order
-                                ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
-                                    else first_buy_cost / last_buy_cost
-                            else:
-                                self.logger.info(f"Current price ({self.final_eval}) for {self.symbol} "
-                                                 f"is out of range.")
+                            if increment is None:
+                                self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment "
+                                                    f"is None.")
                                 return None, self.ERROR, None
+                            else:
+                                inferred_spread = self.flat_spread or self.spread*increment/self.increment
+                                missing_orders_count = (delta_spread-inferred_spread)/increment
+                                if missing_orders_count > 1*1.2:
+                                    # missing orders around spread point: symmetrical orders were not created when
+                                    # orders were filled => re-create them
+                                    next_missing_order_price = previous_order.origin_price + increment
+                                    half_spread = inferred_spread/2
+                                    spread_lower_boundary = self.final_eval - half_spread
+                                    spread_higher_boundary = self.final_eval + half_spread
+
+                                    # re-create buy orders starting from the closest buy up to spread
+                                    while next_missing_order_price <= spread_lower_boundary:
+                                        # missing buy order
+                                        if not self._is_just_closed_order(next_missing_order_price,
+                                                                          recently_closed_orders):
+                                            missing_orders.append((next_missing_order_price, TradeOrderSide.BUY))
+                                        next_missing_order_price += increment
+
+                                    next_missing_order_price = order.origin_price - increment
+                                    # re-create sell orders starting from the closest sell down to spread
+                                    while next_missing_order_price >= spread_higher_boundary:
+                                        # missing sell order
+                                        if not self._is_just_closed_order(next_missing_order_price,
+                                                                          recently_closed_orders):
+                                            missing_orders.append((next_missing_order_price, TradeOrderSide.SELL))
+                                        next_missing_order_price -= increment
+
+                                    spread = inferred_spread
+                                else:
+                                    spread = delta_spread
+
+                            # calculations to infer ratio
+                            last_buy_cost = previous_order.origin_price*previous_order.origin_quantity
+                            first_buy_cost = sorted_orders[0].origin_price * sorted_orders[0].origin_quantity
+                            bigger_buys_closer_to_center = last_buy_cost - first_buy_cost > 0
+                            first_sell = order
+                            ratio = last_buy_cost / first_buy_cost if bigger_buys_closer_to_center \
+                                else first_buy_cost / last_buy_cost
+                        else:
+                            self.logger.info(f"Current price ({self.final_eval}) for {self.symbol} "
+                                             f"is out of range.")
+                            return None, self.ERROR, None
                     if increment is None:
                         increment = self.flat_increment or order.origin_price - previous_order.origin_price
                         if increment <= 0:
                             self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment <= 0.")
                             return None, self.ERROR, None
                     elif not spread_point:
-                        delta_increment = order.origin_price - previous_order.origin_price
                         # skip not-yet-updated orders
                         if previous_order.side == order.side:
+                            delta_increment = order.origin_price - previous_order.origin_price
                             missing_orders_count = delta_increment/increment
                             if missing_orders_count > 2.5:
                                 self.logger.warning(f"Error when analyzing orders for {self.symbol}: "
@@ -594,11 +593,15 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                                     return None, self.ERROR, None
                             elif missing_orders_count > 1.5:
                                 order_price = previous_order.origin_price+increment
-                                if not self._is_just_closed_order(order_price, recently_closed_orders):
-                                    if len(sorted_orders) < self.operational_depth and not recently_closed_orders:
-                                        missing_orders.append((order_price, order.side))
-                    previous_order = order
-
+                                if (
+                                    not self._is_just_closed_order(
+                                        order_price, recently_closed_orders
+                                    )
+                                    and len(sorted_orders) < self.operational_depth
+                                    and not recently_closed_orders
+                                ):
+                                    missing_orders.append((order_price, order.side))
+                previous_order = order
             if ratio is not None:
                 first_sell_cost = first_sell.origin_price*first_sell.origin_quantity
                 last_sell_cost = sorted_orders[-1].origin_price * sorted_orders[-1].origin_quantity
@@ -620,7 +623,12 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
                     self.logger.warning(f"Error when analyzing orders for {self.symbol}: mode is None or increment "
                                         f"is None or spread is None.")
                     return None, self.ERROR, None
-            if increment is None or (not(only_sell or only_buy) and spread is None):
+            if (
+                increment is None
+                or not only_sell
+                and not only_buy
+                and spread is None
+            ):
                 self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment is None or "
                                     f"(not(only_sell or only_buy) and spread is None).")
                 return None, self.ERROR, None
@@ -641,10 +649,10 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
 
     @staticmethod
     def _spread_in_recently_closed_order(min_amount, max_amount, sorted_closed_orders):
-        for order in sorted_closed_orders:
-            if min_amount <= order.get_origin_price() <= max_amount:
-                return True
-        return False
+        return any(
+            min_amount <= order.get_origin_price() <= max_amount
+            for order in sorted_closed_orders
+        )
 
     @staticmethod
     def _alternate_not_virtual_orders(buy_orders, sell_orders):
@@ -766,12 +774,14 @@ class StaggeredOrdersTradingModeDecider(AbstractTradingModeDecider):
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
         required_average_quantity = min_order_quantity / (1 - mode_multiplier/2)
 
-        if self.min_cost in self.min_max_order_details:
+        if (
+            self.min_cost in self.min_max_order_details
+            and self.min_max_order_details[self.min_cost]
+        ):
+            min_cost = self.min_max_order_details[self.min_cost]
             average_cost = current_price * required_average_quantity
-            if self.min_max_order_details[self.min_cost]:
-                min_cost = self.min_max_order_details[self.min_cost]
-                if average_cost < min_cost:
-                    required_average_quantity = min_cost/current_price
+            if average_cost < min_cost:
+                required_average_quantity = min_cost/current_price
 
         return orders_count * required_average_quantity
 

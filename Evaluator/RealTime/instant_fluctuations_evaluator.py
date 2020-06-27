@@ -174,10 +174,7 @@ class InstantMAEvaluator(RealTimeExchangeEvaluator):
                 current_ratio = last_price / last_ma_value
                 if current_ratio > 1:
                     # last_price > last_ma_value => sell ? => eval_note > 0
-                    if current_ratio >= 2:
-                        self.eval_note = 1
-                    else:
-                        self.eval_note = current_ratio - 1
+                    self.eval_note = 1 if current_ratio >= 2 else current_ratio - 1
                 elif current_ratio < 1:
                     # last_price < last_ma_value => buy ? => eval_note < 0
                     self.eval_note = -1 * (1 - current_ratio)

@@ -619,7 +619,7 @@ async def test_start_without_enough_funds_to_buy():
     await final_evaluator.finalize()
     orders = trader_inst.get_order_manager().get_open_orders()
     assert len(orders) == final_evaluator.operational_depth
-    assert all([o.side == TradeOrderSide.SELL for o in orders])
+    assert all(o.side == TradeOrderSide.SELL for o in orders)
 
     # trigger health check
     await final_evaluator.create_state()
@@ -636,7 +636,7 @@ async def test_start_without_enough_funds_to_sell():
     await final_evaluator.finalize()
     orders = trader_inst.get_order_manager().get_open_orders()
     assert len(orders) == 25
-    assert all([o.side == TradeOrderSide.BUY for o in orders])
+    assert all(o.side == TradeOrderSide.BUY for o in orders)
 
     # trigger health check
     await final_evaluator.create_state()
@@ -963,9 +963,6 @@ async def _check_generate_orders(trader, decider, expected_buy_count, expected_s
 
 def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
     buy_increase_towards_center = StrategyModeMultipliersDetails[strategy_mode][TradeOrderSide.BUY] == INCREASING
-    sell_increase_towards_center = StrategyModeMultipliersDetails[strategy_mode][TradeOrderSide.SELL] == INCREASING
-    multiplier = StrategyModeMultipliersDetails[strategy_mode][MULTIPLIER]
-
     first_buy = None
     current_buy = None
     current_sell = None
@@ -977,7 +974,7 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
             assert last_order_side == (TradeOrderSide.BUY if order.side == TradeOrderSide.SELL else TradeOrderSide.SELL)
         last_order_side = order.side
 
-        if order.side == TradeOrderSide.BUY:
+        if last_order_side == TradeOrderSide.BUY:
             if current_buy is None:
                 current_buy = order
                 first_buy = order
@@ -992,13 +989,10 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                         order.origin_quantity * order.origin_price
                 current_buy = order
 
-        if order.side == TradeOrderSide.SELL:
-            if current_sell is None:
-                current_sell = order
-            else:
+        if last_order_side == TradeOrderSide.SELL:
+            if current_sell is not None:
                 assert current_sell.origin_price > order.origin_price
-                current_sell = order
-
+            current_sell = order
     order_limiting_currency_amount = trader_inst.get_portfolio().portfolio["USD"][Portfolio.TOTAL]
     _, average_order_quantity = \
         final_evaluator._get_order_count_and_average_quantity(final_evaluator.final_eval,
@@ -1007,6 +1001,8 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                                                               final_evaluator.final_eval,
                                                               order_limiting_currency_amount)
     if orders:
+        multiplier = StrategyModeMultipliersDetails[strategy_mode][MULTIPLIER]
+
         if buy_increase_towards_center:
             assert round(current_buy.origin_quantity * current_buy.origin_price -
                          first_buy.origin_quantity * first_buy.origin_price) == round(multiplier * average_order_quantity)
@@ -1024,6 +1020,7 @@ def _check_orders(orders, strategy_mode, final_evaluator, trader_inst):
                                                                   order_limiting_currency_amount)
 
         if strategy_mode not in [StrategyModes.NEUTRAL, StrategyModes.VALLEY, StrategyModes.SELL_SLOPE]:
+            sell_increase_towards_center = StrategyModeMultipliersDetails[strategy_mode][TradeOrderSide.SELL] == INCREASING
             # not exactly multiplier because of virtual orders and rounds
             if sell_increase_towards_center:
                 expected_quantity = AbstractTradingModeCreator._trunc_with_n_decimal_digits(
@@ -1080,10 +1077,8 @@ async def _light_check_orders(final_evaluator, trader_inst, expected_buy_count, 
             assert last_order_side == (TradeOrderSide.BUY if order.side == TradeOrderSide.SELL else TradeOrderSide.SELL)
         last_order_side = order.side
 
-        if order.side == TradeOrderSide.BUY:
-            if current_buy is None:
-                current_buy = order
-            else:
+        if last_order_side == TradeOrderSide.BUY:
+            if current_buy is not None:
                 # place buy orders from the lowest price up to the current price
                 assert current_buy.origin_price < order.origin_price
                 if buy_increase_towards_center:
@@ -1092,15 +1087,11 @@ async def _light_check_orders(final_evaluator, trader_inst, expected_buy_count, 
                 else:
                     assert current_buy.origin_quantity * current_buy.origin_price > \
                         order.origin_quantity * order.origin_price
-                current_buy = order
-
-        if order.side == TradeOrderSide.SELL:
-            if current_sell is None:
-                current_sell = order
-            else:
+            current_buy = order
+        if last_order_side == TradeOrderSide.SELL:
+            if current_sell is not None:
                 assert current_sell.origin_price > order.origin_price
-                current_sell = order
-
+            current_sell = order
     assert portfolio.get_portfolio()["ETH"][Portfolio.AVAILABLE] >= 0
     assert portfolio.get_portfolio()["RDN"][Portfolio.AVAILABLE] >= 0
 

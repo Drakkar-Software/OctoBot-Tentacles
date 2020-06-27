@@ -72,9 +72,9 @@ class RSIMomentumEvaluator(MomentumEvaluator):
                 # use RSI current value
                 last_rsi_value = rsi_v[-1]
                 if last_rsi_value > 50:
-                    self.set_eval_note(rsi_v[-1] / 200)
+                    self.set_eval_note(last_rsi_value / 200)
                 else:
-                    self.set_eval_note((rsi_v[-1] - 100) / 200)
+                    self.set_eval_note((last_rsi_value - 100) / 200)
 
 
 # double RSI analysis
@@ -292,7 +292,7 @@ class MACDMomentumEvaluator(MomentumEvaluator):
                 macd_hist[zero_crossing_indexes[i]:zero_crossing_indexes[i + 1]])
                 for i in range(len(zero_crossing_indexes) - 1)
             ]
-            if 0 != zero_crossing_indexes[0]:
+            if zero_crossing_indexes[0] != 0:
                 patterns.append(PatternAnalyser.get_pattern(macd_hist[0:zero_crossing_indexes[0]]))
             if len(macd_hist) - 1 != zero_crossing_indexes[-1]:
                 patterns.append(PatternAnalyser.get_pattern(macd_hist[zero_crossing_indexes[-1]:]))
@@ -333,10 +333,13 @@ class MACDMomentumEvaluator(MomentumEvaluator):
             if pattern != PatternAnalyser.UNKNOWN_PATTERN:
 
                 # set sign (-1 buy or 1 sell)
-                sign_multiplier = -1 if pattern == "W" or pattern == "V" else 1
+                sign_multiplier = -1 if pattern in ["W", "V"] else 1
 
                 # set pattern time frame => W and M are on 2 time frames, others 1
-                pattern_move_time = 2 if (pattern == "W" or pattern == "M") and end_index == last_index else 1
+                pattern_move_time = (
+                    2 if pattern in ["W", "M"] and end_index == last_index else 1
+                )
+
 
                 # set weight according to the max value of the pattern and the current value
                 current_pattern_start = start_index
@@ -378,11 +381,7 @@ class KlingerOscillatorMomentumEvaluator(MomentumEvaluator):
                 factor = 0.2
 
                 if TrendAnalysis.peak_has_been_reached_already(ema_difference[zero_crossing_indexes[-1]:]):
-                    if abs(current_difference) > significant_move_threshold:
-                        factor = 1
-                    else:
-                        factor = 0.5
-
+                    factor = 1 if abs(current_difference) > significant_move_threshold else 0.5
                 eval_proposition = current_difference*factor/significant_move_threshold
 
                 if abs(eval_proposition) > 1:

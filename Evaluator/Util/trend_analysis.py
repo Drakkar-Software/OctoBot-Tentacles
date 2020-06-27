@@ -49,7 +49,7 @@ class TrendAnalysis(AbstractUtil):
             else:
                 averages.append(0)
 
-        for a in range(0, len(averages) - 1):
+        for a in range(len(averages) - 1):
             if averages[a] - averages[a + 1] > 0:
                 trend -= inc
             else:
@@ -105,7 +105,7 @@ class TrendAnalysis(AbstractUtil):
             time_averages = [(lambda a: mean_crossing_indexes[a+1]-mean_crossing_indexes[a])(a)
                              for a in range(len(mean_crossing_indexes)-1)]
             # add 1st length
-            if 0 != mean_crossing_indexes[0]:
+            if mean_crossing_indexes[0] != 0:
                 time_averages.append(mean_crossing_indexes[0])
 
             # take double_size_patterns_count into account

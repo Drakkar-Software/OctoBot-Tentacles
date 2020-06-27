@@ -156,23 +156,33 @@ class InstantSocialReactionMixedStrategiesEvaluator(MixedStrategiesEvaluator):
         self.social_evaluation = 0
 
         # TODO : This is an example
-        if InstantFluctuationsEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.REAL_TIME]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.REAL_TIME][
-                                         InstantFluctuationsEvaluator.get_name()],
-                                     self.evaluator_types_matrix.get_evaluator_eval_type(
-                                         InstantFluctuationsEvaluator.get_name())):
-                self.instant_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][
-                    InstantFluctuationsEvaluator.get_name()]
-                self.inc_instant_counter()
+        if InstantFluctuationsEvaluator.get_name() in self.matrix[
+            EvaluatorMatrixTypes.REAL_TIME
+        ] and check_valid_eval_note(
+            self.matrix[EvaluatorMatrixTypes.REAL_TIME][
+                InstantFluctuationsEvaluator.get_name()
+            ],
+            self.evaluator_types_matrix.get_evaluator_eval_type(
+                InstantFluctuationsEvaluator.get_name()
+            ),
+        ):
+            self.instant_evaluation += self.matrix[EvaluatorMatrixTypes.REAL_TIME][
+                InstantFluctuationsEvaluator.get_name()]
+            self.inc_instant_counter()
 
-        if RedditForumEvaluator.get_name() in self.matrix[EvaluatorMatrixTypes.SOCIAL]:
-            if check_valid_eval_note(self.matrix[EvaluatorMatrixTypes.SOCIAL][
-                                         RedditForumEvaluator.get_name()],
-                                     self.evaluator_types_matrix.get_evaluator_eval_type(
-                                         RedditForumEvaluator.get_name())):
-                self.social_evaluation += \
-                    self.matrix[EvaluatorMatrixTypes.SOCIAL][RedditForumEvaluator.get_name()]
-                self.inc_social_counter()
+        if RedditForumEvaluator.get_name() in self.matrix[
+            EvaluatorMatrixTypes.SOCIAL
+        ] and check_valid_eval_note(
+            self.matrix[EvaluatorMatrixTypes.SOCIAL][
+                RedditForumEvaluator.get_name()
+            ],
+            self.evaluator_types_matrix.get_evaluator_eval_type(
+                RedditForumEvaluator.get_name()
+            ),
+        ):
+            self.social_evaluation += \
+                self.matrix[EvaluatorMatrixTypes.SOCIAL][RedditForumEvaluator.get_name()]
+            self.inc_social_counter()
 
         self.finalize()
 

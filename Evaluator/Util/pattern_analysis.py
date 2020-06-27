@@ -47,7 +47,7 @@ class PatternAnalyser:
             # if last_move_data is shaped in W
             shape = PatternAnalyser.get_pattern(last_move_data)
 
-            if shape == "N" or shape == "V":
+            if shape in ["N", "V"]:
                 # check presence of W or M with insignificant move in the other direction
                 backwards_index = 2
                 while backwards_index < len(zero_crossing_indexes) and \
@@ -56,7 +56,7 @@ class PatternAnalyser:
                 extended_last_move_data = data[zero_crossing_indexes[-1 * backwards_index]:]
                 extended_shape = PatternAnalyser.get_pattern(extended_last_move_data)
 
-                if extended_shape == "W" or extended_shape == "M":
+                if extended_shape in ["W", "M"]:
                     # check that values are on the same side (< or >0)
                     first_part = data[zero_crossing_indexes[-1 * backwards_index]:
                                             zero_crossing_indexes[-1*backwards_index+1]]
@@ -75,20 +75,18 @@ class PatternAnalyser:
 
     @staticmethod
     def get_pattern(data):
-        if len(data) > 0:
-            mean_value = np.mean(data) * 0.7
-        else:
-            mean_value = math.nan
+        mean_value = np.mean(data) * 0.7 if len(data) > 0 else math.nan
         if math.isnan(mean_value):
             return PatternAnalyser.UNKNOWN_PATTERN
         indexes_under_mean_value = np.where(data > mean_value)[0] \
             if mean_value < 0 \
             else np.where(data < mean_value)[0]
 
-        nb_gaps = 0
-        for i in range(len(indexes_under_mean_value)-1):
-            if indexes_under_mean_value[i+1]-indexes_under_mean_value[i] > 3:
-                nb_gaps += 1
+        nb_gaps = sum(
+            1
+            for i in range(len(indexes_under_mean_value) - 1)
+            if indexes_under_mean_value[i + 1] - indexes_under_mean_value[i] > 3
+        )
 
         if nb_gaps > 1:
             return "W" if mean_value < 0 else "M"
@@ -98,8 +96,8 @@ class PatternAnalyser:
     # returns a value 0 < value < 1: the higher the stronger is the pattern
     @staticmethod
     def get_pattern_strength(pattern):
-        if pattern == "W" or pattern == "M":
+        if pattern in ["W", "M"]:
             return 1
-        elif pattern == "N" or pattern == "V":
+        elif pattern in ["N", "V"]:
             return 0.75
         return 0
