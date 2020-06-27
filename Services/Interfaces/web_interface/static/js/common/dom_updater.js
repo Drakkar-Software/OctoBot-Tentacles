@@ -138,6 +138,9 @@ function update_dom(root_element, message){
 
     // update trading config
     update_activated_deactivated_tentacles(root_element, message, "trading_updated_config");
+
+    // update tentacles config
+    update_activated_deactivated_tentacles(root_element, message, "tentacle_updated_config");
 }
 
 function create_alert(a_level, a_title, a_msg, url="_blank"){
