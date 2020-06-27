@@ -62,6 +62,7 @@ const config_default_symbol = "btc";
 const evaluator_config_type = "evaluator_config";
 const evaluator_list_config_type = "evaluator_list_config";
 const trading_config_type = "trading_config";
+const tentacles_config_type = "tentacle_config";
 
 const max_attempts = 20;
 

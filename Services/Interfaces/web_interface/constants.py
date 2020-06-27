@@ -24,10 +24,13 @@ CONFIG_WATCHED_SYMBOLS = "watched_symbols"
 # web interface keys
 GLOBAL_CONFIG_KEY = "global_config"
 EVALUATOR_CONFIG_KEY = "evaluator_config"
+TENTACLES_CONFIG_KEY = "tentacle_config"
 DEACTIVATE_OTHERS = "deactivate_others"
 TRADING_CONFIG_KEY = "trading_config"
 UPDATED_CONFIG_SEPARATOR = "_"
-EVALUATOR_ACTIVATION = "activation"
+ACTIVATION_KEY = "activation"
+TENTACLE_CLASS_NAME = "name"
+STARTUP_CONFIG_KEY = "startup_config"
 
 # web display
 DEFAULT_TIMEFRAME = "1h"

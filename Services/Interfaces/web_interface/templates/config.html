@@ -5,6 +5,7 @@
 {% import 'components/config/currency_card.html' as m_config_currency_card %}
 {% import 'components/config/trader_card.html' as m_config_trader_card %}
 {% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
+{% import 'components/config/tentacle_card.html' as m_config_tentacle_card %}
 {% import 'components/config/notification_config.html' as m_config_notification %}
 
 {% set config_default_value = "Bitcoin" %}
@@ -25,21 +26,27 @@
             <li class="nav-item">
                 <a class="nav-link active waves-effect" data-toggle="tab" href="#panelEvaluators" role="tab">Strategies</a>
             </li>
+             <li class="nav-item">
+                <a class="nav-link waves-effect" data-toggle="tab" href="#panelCurrency" role="tab">Currencies</a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link waves-effect" data-toggle="tab" href="#panelExchanges" role="tab">Exchanges</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link waves-effect" data-toggle="tab" href="#panelTrading" role="tab">Trading</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelNotifications" role="tab">Notifications</a>
-            </li>
              <li class="nav-item">
                 <a class="nav-link waves-effect" data-toggle="tab" href="#panelServices" role="tab">Interfaces</a>
             </li>
-             <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelCurrency" role="tab">Currencies</a>
+            <li class="nav-item">
+                <a class="nav-link waves-effect" data-toggle="tab" href="#panelNotifications" role="tab">Notifications</a>
             </li>
+            {% if config_tentacles_by_group %}
+                <li class="nav-item">
+                    <a class="nav-link waves-effect" data-toggle="tab" href="#panelTentacles" role="tab">Tentacles</a>
+                </li>
+            {% endif %}
+
         </ul>
     </nav>
 
@@ -144,78 +151,6 @@
         </div>
     </div>
 
-    <!--Panel Trading-->
-    <div class="tab-pane fade config-root" id="panelTrading" role="tabpanel"><br>
-        <div class="card">
-            <div class="card-header">
-                <h2>
-                    Trading
-                    <span class="float-right badge {{ 'badge-dark' if real_trader_activated else 'badge-primary' }} waves-effect">
-                        {{ 'Real trader currently activated' if real_trader_activated else 'Trader simulator currently activated' }}
-                    </span>
-                </h2>
-            </div>
-            <div class="card-body deck-container">
-                 <!-- Card deck -->
-                <div class="card-deck config-container">
-                    <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link="https://github.com/Drakkar-Software/OctoBot/wiki/Trader#trading-settings") }}
-                    </span>
-                    {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader", link="https://github.com/Drakkar-Software/OctoBot/wiki/Trader#trader") }}
-                    {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator", "Trader simulator", link="https://github.com/Drakkar-Software/OctoBot/wiki/Simulator#simulator") }}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--Panel Notifications-->
-    <div class="tab-pane fade config-root" id="panelNotifications" role="tabpanel"><br>
-        <div class="card">
-            <div class="card-header">
-                <h2>
-                    Notifications
-                    <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="https://github.com/Drakkar-Software/OctoBot/wiki/Notifications#notifications">
-                        <i class="fa fa-question"></i>
-                    </a>
-                </h2>
-            </div>
-            <div class="card-body deck-container">
-                <!-- Card deck -->
-                <div class="card-deck config-container">
-                    {{ m_config_notification.config_notification(config_notifications, "notification", notifiers_list) }}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--Panel Services-->
-    <div class="tab-pane fade config-root" id="panelServices" role="tabpanel"><br>
-        <div class="card">
-            <div class="card-header"><h2>Interfaces</h2></div>
-            <div class="card-body deck-container">
-                <div class="card">
-                    <div class="card-body">Add a new interface :
-                    <select id="AddServiceSelect" class="selectpicker" data-live-search="true">
-                       {% for service in services_list | sort() %}
-                            <option data-tokens="{{ service }}">{{ service }}</option>
-                       {% endfor %}
-                    </select>
-                    <button type="button" id="AddService" class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2" aria-hidden="true"></i> Add</button>
-                    </div>
-                </div>
-                <br>
-                <!-- Card deck -->
-                <div class="card-deck config-container" update-url="{{ url_for('config') }}">
-                    {% for service in services_list %}
-                        {% if service in config_services %}
-                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service]) }}
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!--Panel Currencies-->
     <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel"><br>
         <div class="card">
@@ -253,6 +188,99 @@
             </div>
         </div>
     </div>
+
+    <!--Panel Trading-->
+    <div class="tab-pane fade config-root" id="panelTrading" role="tabpanel"><br>
+        <div class="card">
+            <div class="card-header">
+                <h2>
+                    Trading
+                    <span class="float-right badge {{ 'badge-dark' if real_trader_activated else 'badge-primary' }} waves-effect">
+                        {{ 'Real trader currently activated' if real_trader_activated else 'Trader simulator currently activated' }}
+                    </span>
+                </h2>
+            </div>
+            <div class="card-body deck-container">
+                 <!-- Card deck -->
+                <div class="card-deck config-container">
+                    <span class="col-lg-12">
+                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link="https://github.com/Drakkar-Software/OctoBot/wiki/Trader#trading-settings") }}
+                    </span>
+                    {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader", link="https://github.com/Drakkar-Software/OctoBot/wiki/Trader#trader") }}
+                    {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator", "Trader simulator", link="https://github.com/Drakkar-Software/OctoBot/wiki/Simulator#simulator") }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--Panel Services-->
+    <div class="tab-pane fade config-root" id="panelServices" role="tabpanel"><br>
+        <div class="card">
+            <div class="card-header"><h2>Interfaces</h2></div>
+            <div class="card-body deck-container">
+                <div class="card">
+                    <div class="card-body">Add a new interface :
+                    <select id="AddServiceSelect" class="selectpicker" data-live-search="true">
+                       {% for service in services_list | sort() %}
+                            <option data-tokens="{{ service }}">{{ service }}</option>
+                       {% endfor %}
+                    </select>
+                    <button type="button" id="AddService" class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2" aria-hidden="true"></i> Add</button>
+                    </div>
+                </div>
+                <br>
+                <!-- Card deck -->
+                <div class="card-deck config-container" update-url="{{ url_for('config') }}">
+                    {% for service in services_list %}
+                        {% if service in config_services %}
+                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service]) }}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--Panel Notifications-->
+    <div class="tab-pane fade config-root" id="panelNotifications" role="tabpanel"><br>
+        <div class="card">
+            <div class="card-header">
+                <h2>
+                    Notifications
+                    <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="https://github.com/Drakkar-Software/OctoBot/wiki/Notifications#notifications">
+                        <i class="fa fa-question"></i>
+                    </a>
+                </h2>
+            </div>
+            <div class="card-body deck-container">
+                <!-- Card deck -->
+                <div class="card-deck config-container">
+                    {{ m_config_notification.config_notification(config_notifications, "notification", notifiers_list) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if config_tentacles_by_group %}
+        <!--Panel Tentacles-->
+        <div class="tab-pane fade config-root" id="panelTentacles" role="tabpanel"><br>
+            {% for group, config_tentacles in config_tentacles_by_group.items() %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2>{{group.replace("_", " ").capitalize()}}</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row config-container" id="{{group}}-config-root">
+                            {% for config_tentacle in config_tentacles %}
+                                {{ m_config_tentacle_card.config_tentacle_card(config_tentacle["name"], config_tentacle) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <br>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <!-- Default cards -->
