@@ -346,14 +346,14 @@ function handle_apply_evaluator_default_config_success_callback(updated_data, up
     create_alert("success", "Evaluators activated", "Restart OctoBot for changes to be applied");
 }
 
-function other_trading_mode_activated(){
-    let other_activated_modes_count = $("#trading-modes-config-root").children("."+success_list_item).length;
+function other_element_activated(root_element){
+    let other_activated_modes_count = root_element.children("."+success_list_item).length;
     return other_activated_modes_count > 1;
 }
 
-function deactivate_other_trading_modes(element) {
+function deactivate_other_elements(element, root_element) {
     const element_id = element.attr("id");
-    $("#trading-modes-config-root").children("."+success_list_item).each(function () {
+    root_element.children("."+success_list_item).each(function () {
         const element = $(this);
         if(element.attr("id") !== element_id){
             element.attr(current_value_attr, "false");
@@ -438,7 +438,7 @@ function check_evaluator_configuration() {
     }
 }
 
-function handle_evaluator_configuration_editor(){
+function handle_activation_configuration_editor(){
     $(".config-element").click(function(e){
         if (isDefined($(e.target).attr(no_activation_click_attr))){
             // do not trigger when click on items with no_activation_click_attr set
@@ -449,10 +449,14 @@ function handle_evaluator_configuration_editor(){
         if (element.hasClass(config_element_class) && ! element.hasClass(disabled_class)){
 
             if (element[0].hasAttribute(config_type_attr)) {
-                if(element.attr(config_type_attr) === evaluator_config_type || element.attr(config_type_attr) === trading_config_type) {
+                if(element.attr(config_type_attr) === evaluator_config_type
+                    || element.attr(config_type_attr) === trading_config_type
+                    || element.attr(config_type_attr) === tentacles_config_type) {
 
-                    const is_trading_mode = element.attr(config_type_attr) === trading_config_type;
                     const is_strategy = element.attr(config_type_attr) === evaluator_config_type;
+                    const is_trading_mode = element.attr(config_type_attr) === trading_config_type;
+                    const is_tentacle = element.attr(config_type_attr) === tentacles_config_type;
+                    const allow_only_one_activated_element = is_trading_mode || is_tentacle;
 
                     // build data update
                     let new_value = parse_new_value(element);
@@ -463,10 +467,13 @@ function handle_evaluator_configuration_editor(){
                     } catch (e) {
                         current_value = element.attr(current_value_attr);
                     }
-
+                    let root_element = $("#trading-modes-config-root");
+                    if (is_tentacle){
+                        root_element = element.parent(".config-container");
+                    }
                     if (current_value === "true") {
-                        if (is_trading_mode && !other_trading_mode_activated()) {
-                            create_alert("error", "Impossible to disable all trading modes.", "");
+                        if (allow_only_one_activated_element && !other_element_activated(root_element)) {
+                            create_alert("error", "Impossible to disable all options.", "");
                             return;
                         } else if (is_strategy) {
                             // strategy
@@ -479,8 +486,8 @@ function handle_evaluator_configuration_editor(){
                         new_value = "false";
                     } else if (current_value === "false") {
                         new_value = "true";
-                        if (is_trading_mode) {
-                            deactivate_other_trading_modes(element);
+                        if (allow_only_one_activated_element) {
+                            deactivate_other_elements(element, root_element);
                         }
                     }
                     if (is_trading_mode) {
@@ -541,7 +548,7 @@ $(document).ready(function() {
     
     handle_buttons();
 
-    handle_evaluator_configuration_editor();
+    handle_activation_configuration_editor();
 
     register_edit_events();
 
