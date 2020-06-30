@@ -27,7 +27,7 @@ from octobot_tentacles_manager.api.configurator import get_tentacles_activation,
 from octobot_tentacles_manager.api.inspector import get_tentacle_documentation_path, get_tentacle_resources_path, \
     get_tentacle_group
 from octobot_tentacles_manager.constants import TENTACLES_TRADING_PATH, TENTACLES_EVALUATOR_PATH, \
-    TENTACLES_SERVICES_PATH, TENTACLES_BACKTESTING_PATH
+    TENTACLES_SERVICES_PATH, TENTACLES_BACKTESTING_PATH, TENTACLE_RESOURCES
 from octobot_trading.api.modes import get_activated_trading_mode
 from tentacles.Services.Interfaces.web_interface.constants import UPDATED_CONFIG_SEPARATOR, ACTIVATION_KEY, \
     CURRENCIES_LIST_URL, TENTACLE_CLASS_NAME, STARTUP_CONFIG_KEY
@@ -97,14 +97,19 @@ def get_trading_tentacles_startup_activation():
     return get_tentacles_activation(get_startup_tentacles_config())[TENTACLES_TRADING_PATH]
 
 
-def get_tentacle_documentation(klass, media_url):
-    doc_file = get_tentacle_documentation_path(klass)
-    if isfile(doc_file):
-        resource_url = f"{media_url}/{get_tentacle_resources_path(klass).replace(sep, '/')}/"
-        with open(doc_file) as doc_file:
-            doc_content = doc_file.read()
-            # patch resources paths into the tentacle resource path
-            return doc_content.replace("resources/", resource_url)
+def get_tentacle_documentation(name, media_url):
+    try:
+        doc_file = get_tentacle_documentation_path(name)
+        if isfile(doc_file):
+            resource_url = f"{media_url}/{get_tentacle_resources_path(name).replace(sep, '/')}/"
+            with open(doc_file) as doc_file:
+                doc_content = doc_file.read()
+                # patch resources paths into the tentacle resource path
+                return doc_content.replace(f"{TENTACLE_RESOURCES}/", resource_url)
+    except KeyError as e:
+        LOGGER.error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
+                     f"This is probably an issue with the {name} tentacle matadata.json file, please "
+                     f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
     return ""
 
 
