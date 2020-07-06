@@ -15,6 +15,7 @@
 #  License along with this library.
 from flask import render_template, request
 
+from octobot_commons.logging.logging_util import get_logger
 from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 
@@ -29,7 +30,9 @@ def not_found(_):
 
 
 @server_instance.errorhandler(500)
-def internal_error(_):
+def internal_error(error):
+    get_logger("WebInterfaceErrorHandler").exception(error.original_exception, True, f"Error when displaying page: "
+                                                                                     f"{error.original_exception}")
     if request.content_type == APP_JSON_CONTENT_TYPE:
         return get_rest_reply("We are sorry, but an unexpected error occurred", 500)
     return render_template("500.html")
