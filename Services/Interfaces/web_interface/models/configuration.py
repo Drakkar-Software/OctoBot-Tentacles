@@ -77,6 +77,7 @@ DEFAULT_EXCHANGE = "binance"
 # buffers to faster config page loading
 markets_by_exchanges = {}
 all_symbols_dict = {}
+exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 
@@ -486,6 +487,21 @@ def get_all_symbols_dict():
             LOGGER.error(f"Failed to get currencies list from coinmarketcap : {e}")
             return {}
     return all_symbols_dict
+
+
+def get_exchange_logo(exchange_name):
+    try:
+        return exchange_logos[exchange_name]
+    except KeyError:
+        try:
+            exchange_logos[exchange_name] = {"image": "", "url": ""}
+            if isinstance(exchange_name, str) and exchange_name != "Bitcoin":
+                exchange = getattr(ccxt, exchange_name)()
+                exchange_logos[exchange_name]["image"] = exchange.urls["logo"]
+                exchange_logos[exchange_name]["url"] = exchange.urls["www"]
+        except KeyError:
+            pass
+    return exchange_logos[exchange_name]
 
 
 def get_full_exchange_list(remove_config_exchanges=False):
