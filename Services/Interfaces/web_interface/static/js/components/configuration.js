@@ -306,7 +306,7 @@ function get_config_value_changed(element, new_value, config_key) {
         });
         new_value_str = "[" + str_array.join(", ") + "]";
     }
-    return get_value_changed(new_value_str, element.attr(config_value_attr), config_key);
+    return get_value_changed(new_value_str, replace_spaces(replace_break_line(element.attr(config_value_attr))), config_key);
 }
 
 function get_value_changed(new_val, dom_conf_val, config_key){
