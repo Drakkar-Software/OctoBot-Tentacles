@@ -3,7 +3,16 @@
     <!-- Card -->
     <div class="card mb-4 {{add_class}} config-card">
 
-        <div class="card-header"><h4>{{exchange}}</h4></div>
+        <div class="card-header row">
+            <div class="col-sm-7 col-lg-5">
+                <h4>{{exchange}}</h4>
+            </div>
+            <div class="col-sm-5 col-lg-7">
+                <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
+                    <img class="img-fluid exchange-logo" src="" alt="{{exchange}}-logo" url="{{url_for('exchange_logo', name=exchange, _external=True)}}">
+                </a>
+            </div>
+        </div>
 
         <!--Card image-->
         <div class="view overlay">

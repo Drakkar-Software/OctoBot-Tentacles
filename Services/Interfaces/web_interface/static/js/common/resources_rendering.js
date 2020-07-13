@@ -22,9 +22,25 @@ function markdown_to_html(text) {
     return mardownConverter.makeHtml(text)
 }
 
+function fetch_images() {
+    $(".exchange-logo").each(function () {
+        const element = $(this);
+        if(element.attr("src") === ""){
+            $.get(element.attr("url"), function(data) {
+                element.attr("src", data["image"]);
+                const parentLink = element.parent("a");
+                if (parentLink.attr("href") === ""){
+                    parentLink.attr("href", data["url"]);
+                }
+            });
+        }
+    });
+}
+
 $(document).ready(function() {
     $(".markdown-content").each(function () {
         const element = $(this);
         element.html(markdown_to_html(element.text().trim()))
     });
+    fetch_images();
 });
