@@ -13,10 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask import send_from_directory
+from flask import send_from_directory, jsonify
 
 from tentacles.Services.Interfaces.web_interface import server_instance
 from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+from tentacles.Services.Interfaces.web_interface.models.configuration import get_exchange_logo
 from tentacles.Services.Interfaces.web_interface.models.medias import is_valid_tentacle_image_path
 
 
@@ -28,3 +29,9 @@ def tentacle_media(path=None):
     if is_valid_tentacle_image_path(path):
         # reference point is the web interface directory: use OctoBot root folder as a reference
         return send_from_directory("../../../..", path)
+
+
+@server_instance.route('/exchange_logo/<name>')
+@login_required_when_activated
+def exchange_logo(name):
+    return jsonify(get_exchange_logo(name))
