@@ -75,6 +75,10 @@ function log(text){
 }
 
 function get_events(elem, event_type){
+    const events = $._data( elem[0], 'events' );
+    if(typeof events === "undefined"){
+        return [];
+    }
     return $._data( elem[0], 'events' )[event_type];
 }
 
