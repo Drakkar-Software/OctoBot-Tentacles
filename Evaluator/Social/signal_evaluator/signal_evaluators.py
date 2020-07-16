@@ -28,6 +28,9 @@ class TelegramSignalEvaluator(SocialEvaluator):
             await self.analyse_notification(data)
             await self.evaluation_completed(self.cryptocurrency, self.symbol,
                                             eval_time=self.get_current_exchange_time())
+        else:
+            self.logger.debug(f"Ignored telegram feed: \"{self.symbol.lower()}\" pattern not found in "
+                              f"\"{data[CONFIG_GROUP_MESSAGE_DESCRIPTION].lower()}\"")
 
     # return true if the given notification is relevant for this client
     def _is_interested_by_this_notification(self, notification_description):
@@ -52,9 +55,11 @@ class TelegramSignalEvaluator(SocialEvaluator):
                     self.logger.error(f"Impossible to use notification evaluation: {notification_eval}: "
                                       f"evaluation should be between -1 and 1.")
             except Exception as e:
-                self.logger.error(f"Impossible to parse notification {notification}: {e}")
+                self.logger.error(f"Impossible to parse notification {notification_test}: {e}. Please refer to this "
+                                  f"evaluator documentation to check the notification pattern.")
         else:
-            self.logger.error(f"Impossible to parse notification {notification}")
+            self.logger.error(f"Impossible to parse notification {notification_test}. Please refer to this evaluator "
+                              f"documentation to check the notification pattern.")
 
     @classmethod
     def get_is_cryptocurrencies_wildcard(cls) -> bool:

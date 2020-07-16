@@ -55,9 +55,9 @@ class TelegramServiceFeed(AbstractServiceFeed):
             self.services[0].register_text_polling_handler(self.HANDLED_CHATS, self._feed_callback)
 
     def _feed_callback(self, _, update):
-        if self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] or \
-                update.effective_chat["title"] in self.feed_config[CONFIG_TELEGRAM_CHANNEL]:
-            message = update.effective_message.text
+        message = update.effective_message.text
+        chat = update.effective_chat["title"]
+        if self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] or chat in self.feed_config[CONFIG_TELEGRAM_CHANNEL]:
             message_desc = str(update)
             self._notify_consumers(
                 {
@@ -66,6 +66,8 @@ class TelegramServiceFeed(AbstractServiceFeed):
                     CONFIG_GROUP_MESSAGE_DESCRIPTION: message.lower()
                 }
             )
+        else:
+            self.logger.debug(f"Ignored message from {chat} chat: not in followed telegram chats (message: {message})")
 
     def _something_to_watch(self):
         return self.feed_config[CONFIG_TELEGRAM_ALL_CHANNEL] or self.feed_config[CONFIG_TELEGRAM_CHANNEL]
