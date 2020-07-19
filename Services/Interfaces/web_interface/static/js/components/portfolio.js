@@ -23,6 +23,16 @@ function createPortfolioChart(element_id, data, title){
     }
 }
 
+function handle_portfolio_button(){
+    const refreshButton = $("#refresh-portfolio");
+    if(refreshButton){
+        refreshButton.click(function () {
+            const update_url = refreshButton.attr(update_url_attr);
+            send_and_interpret_bot_update({}, update_url, null, generic_request_success_callback, generic_request_failure_callback);
+        });
+    }
+}
+
 $(document).ready(function() {
     const portfolioElem=$("#portfoliosCard");
     const url = portfolioElem.attr(update_url_attr);
@@ -32,4 +42,5 @@ $(document).ready(function() {
         createPortfolioChart("real_portfolio_doughnutChart", data["real_portfolio_holdings"], chartTitle);
         createPortfolioChart("simulated_portfolio_doughnutChart", data["simulated_portfolio_holdings"], chartTitle);
     });
+    handle_portfolio_button();
 });
