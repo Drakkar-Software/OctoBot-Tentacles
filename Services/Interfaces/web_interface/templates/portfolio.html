@@ -48,12 +48,20 @@
                     </div>
                 {% endif %}
             </div>
+            <div class="card-footer d-flex justify-content-end">
+                <div>
+                    <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}" class="btn btn-outline-danger btn-lg waves-effect"
+                    data-toggle="tooltip" data-placement="top" title="Triggers a total portfolios re-synchronization using exchanges as a reference.">
+                        <i class="fa fa-sync"></i> Force refresh
+                    </button>
+                </div>
+            </div>
         {% endif %}
         {% if has_simulated_trader %}
             {% if has_real_trader %}
-    </div>
-    <br>
-    <div class="card">
+                </div>
+                <br>
+                <div class="card">
             {% endif %}
             <div class="card-header"><h1>Simulated portfolio: {{simulated_total_value}} {{reference_unit}}</h1></div>
             <div class="card-body">

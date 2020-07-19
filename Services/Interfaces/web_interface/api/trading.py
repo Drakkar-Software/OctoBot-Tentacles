@@ -17,7 +17,7 @@ import json
 from flask import request, jsonify
 
 from octobot_services.interfaces.util.order import cancel_orders, get_all_open_orders
-from octobot_services.interfaces.util.trader import force_real_traders_refresh
+from octobot_services.interfaces.util.portfolio import trigger_portfolios_refresh
 from . import api
 from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
 from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
@@ -45,11 +45,11 @@ def orders():
         return jsonify(result)
 
 
-@api.route("/refresh_real_trader", methods=['POST'])
+@api.route("/refresh_portfolio", methods=['POST'])
 @login_required_when_activated
-def refresh_real_trader():
+def refresh_portfolio():
     try:
-        force_real_traders_refresh()
-        return jsonify("Trader(s) refreshed")
+        trigger_portfolios_refresh()
+        return jsonify("Portfolio(s) refreshed")
     except RuntimeError:
-        return get_rest_reply("No trader to refresh", 500)
+        return get_rest_reply("No portfolio to refresh", 500)
