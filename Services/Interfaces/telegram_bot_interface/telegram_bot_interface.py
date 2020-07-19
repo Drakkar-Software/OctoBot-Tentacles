@@ -71,7 +71,7 @@ class TelegramBotInterface(AbstractBotInterface):
             CommandHandler("set_risk", self.command_risk),
             CommandHandler(["market_status", "ms"], self.command_market_status),
             CommandHandler(["configuration", "cf"], self.command_configuration),
-            CommandHandler(["refresh_real_trader", "rrt"], self.command_real_traders_refresh),
+            CommandHandler(["refresh_portfolio", "rpf"], self.command_portfolio_refresh),
             CommandHandler(["version", "v"], self.command_version),
             CommandHandler("stop", self.command_stop),
             CommandHandler("help", self.command_help),
@@ -106,7 +106,7 @@ class TelegramBotInterface(AbstractBotInterface):
                        "for my reference market.`" + EOL
             message += "* - Management - *" + EOL
             message += "/set\_risk: `Changes my current risk setting into your command's parameter.`" + EOL
-            message += "/refresh\_real\_trader or /rrt: `Force OctoBot's real trader data refresh using exchange " \
+            message += "/refresh\_portfolio or /rpf : `Force OctoBot's real trader portfolio refresh using exchange " \
                        "data. Should normally not be necessary.`" + EOL
             message += "/pause or /resume: `Pause or resume me.`" + EOL
             message += "/stop: `Stops me.`" + EOL
@@ -207,11 +207,11 @@ class TelegramBotInterface(AbstractBotInterface):
 
     # refresh current order lists and portfolios and reload tham from exchanges
     @staticmethod
-    def command_real_traders_refresh(update, _):
+    def command_portfolio_refresh(update, _):
         if TelegramBotInterface._is_valid_user(update):
             result = "Refresh"
             try:
-                AbstractBotInterface.set_command_real_traders_refresh()
+                AbstractBotInterface.set_command_portfolios_refresh()
                 TelegramBotInterface._send_message(update, f"`{result} successful`")
             except Exception as e:
                 TelegramBotInterface._send_message(update, f"`{result} failure: {e}`")
