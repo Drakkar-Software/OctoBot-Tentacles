@@ -40,6 +40,9 @@ function manage_alert(data){
         }
         $.each(data["notifications"], function(i, item) {
             create_alert(item["Level"], item["Title"], item["Message"]);
+            $.each(notificationCallbacks, function(_, callback) {
+               callback(item["Title"], item);
+            });
         })
     }
     catch(error) {
@@ -113,6 +116,12 @@ function load_metadata() {
             window.console&&console.error("impossible to get the current OctoBot version");
         }
     })
+}
+
+const notificationCallbacks = [];
+
+function register_notification_callback(callback){
+    notificationCallbacks.push(callback);
 }
 
 $(document).ready(function () {
