@@ -37,6 +37,28 @@ function fetch_images() {
     });
 }
 
+function handleDefaultImage(element, url){
+    element.on("error",function () {
+        if (element.attr("src") !== url){
+            element.attr("src", url);
+        }
+    });
+    if ((element[0].complete && element[0].naturalHeight === 0) && element.attr("src") !== url){
+        element.attr("src", url);
+    }
+}
+
+function handleDefaultImages(){
+    $(".currency-image").each(function () {
+        handleDefaultImage($(this), currencyDefaultImage);
+    });
+}
+
+const currencyDefaultImage = `${window.location.protocol}//${window.location.host}/static/img/svg/default_currency.svg`;
+
+// register error listeners as soon as possible
+handleDefaultImages();
+
 $(document).ready(function() {
     $(".markdown-content").each(function () {
         const element = $(this);

@@ -200,6 +200,11 @@ body:before {
     color: #42a5f5 !important;
 }
 
+.small-image{
+    max-height: 128px;
+    max-width: 128px;
+}
+
 a:hover.external-link{
     font-weight: inherit;
 }
