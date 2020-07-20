@@ -172,3 +172,25 @@ function getValueChangedFromRef(newObject, refObject) {
 function historyGoBack() {
     window.history.back();
 }
+
+// Inspired from https://davidwalsh.name/javascript-debounce-function
+// Function, that, as long as it continues to be invoked, will not
+// be triggered. The function will be called after it stops being called for
+// N milliseconds. If `immediate` is passed, trigger the function on the
+// leading edge, instead of the trailing.
+function debounce(func, wait, immediate) {
+	let debounceTimeout;
+    const context = this, args = arguments;
+    const later = function() {
+        debounceTimeout = null;
+        if (!immediate){
+            func.apply(context, args);
+        }
+    };
+    const callNow = immediate && !debounceTimeout;
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(later, wait);
+    if (callNow){
+        func.apply(context, args);
+    }
+}
