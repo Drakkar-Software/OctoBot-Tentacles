@@ -150,6 +150,14 @@ function reload_orders(){
     });
 }
 
+function ordersNotificationCallback(title, _) {
+    if(title.toLowerCase().indexOf("order") !== -1){
+        debounce(function() {
+            reload_orders();
+        }, 500);
+    }
+}
+
 const cancelButtonIndex = 8;
 let ordersDataTable = null;
 
@@ -162,4 +170,5 @@ $(document).ready(function() {
         "paging":   false,
     });
     handle_cancel_buttons();
+    register_notification_callback(ordersNotificationCallback);
 });
