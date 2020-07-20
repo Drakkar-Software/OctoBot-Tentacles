@@ -129,6 +129,7 @@ function handle_add_buttons(){
             toogle_deck_container_modified(get_deck_container($(this)));
             // refresh images if required
             fetch_images();
+            handleDefaultImages();
 
             register_edit_events();
         }
