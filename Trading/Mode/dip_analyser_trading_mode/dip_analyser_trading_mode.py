@@ -329,7 +329,7 @@ class DipAnalyserTradingModeProducer(AbstractTradingModeProducer):
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
 
-        self.state = None
+        self.state = EvaluatorStates.NEUTRAL
         self.first_trigger = True
 
         self.last_buy_candle = None
