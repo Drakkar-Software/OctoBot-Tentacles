@@ -13,8 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from ccxt import InsufficientFunds
-
 from octobot_channels.constants import CHANNEL_WILDCARD
 from octobot_commons.constants import START_PENDING_EVAL_NOTE
 from octobot_commons.evaluators_util import check_valid_eval_note
@@ -27,6 +25,7 @@ from octobot_trading.enums import TraderOrderType, TradeOrderSide, OrderStatus, 
     ExchangeConstantsOrderColumns
 from octobot_trading.channels.exchange_channel import get_chan
 from octobot_trading.constants import MODE_CHANNEL, ORDER_DATA_FETCHING_TIMEOUT
+from octobot_trading.errors import MissingFunds, MissingMinimalExchangeTradeVolume
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
 from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
@@ -162,9 +161,10 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
                 self._register_buy_order(created_order.order_id, price_weight)
-            return created_orders
-
-        except InsufficientFunds as e:
+            if created_orders:
+                return created_orders
+            raise MissingMinimalExchangeTradeVolume()
+        except MissingFunds as e:
             raise e
 
         except Exception as e:
@@ -191,9 +191,11 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
                                                       price=order_price)
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
-            return created_orders
+            if created_orders:
+                return created_orders
+            raise MissingMinimalExchangeTradeVolume()
 
-        except InsufficientFunds as e:
+        except MissingFunds as e:
             raise e
 
         except Exception as e:
