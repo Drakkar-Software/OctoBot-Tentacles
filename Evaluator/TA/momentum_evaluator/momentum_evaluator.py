@@ -264,7 +264,7 @@ class ADXMomentumEvaluator(TAEvaluator):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         close_candles = get_symbol_close_candles(symbol_candles, time_frame,
                                                  include_in_construction=inc_in_construction_data)
-        if len(close_candles) >= self.minimal_data:
+        if len(close_candles) > self.minimal_data:
             high_candles = get_symbol_high_candles(symbol_candles, time_frame,
                                                    include_in_construction=inc_in_construction_data)
             low_candles = get_symbol_low_candles(symbol_candles, time_frame,
