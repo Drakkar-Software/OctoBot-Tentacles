@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
-from ccxt import InsufficientFunds
 
 from octobot_channels.channels.channel import CHANNEL_WILDCARD
 from octobot_commons.constants import INIT_EVAL_NOTE
@@ -27,6 +26,7 @@ from octobot_evaluators.data_manager.matrix_manager import get_tentacles_value_n
 from octobot_evaluators.enums import EvaluatorMatrixTypes
 from octobot_trading.constants import MODE_CHANNEL, ORDER_DATA_FETCHING_TIMEOUT
 from octobot_trading.channels.exchange_channel import get_chan
+from octobot_trading.errors import MissingFunds, MissingMinimalExchangeTradeVolume
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer, check_factor
 from octobot_trading.producers.abstract_mode_producer import AbstractTradingModeProducer
@@ -256,7 +256,6 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                                                           price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
-                return created_orders
 
             elif state == EvaluatorStates.SHORT.value:
                 quantity = await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
@@ -284,7 +283,6 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                                                               price=stop_price,
                                                               linked_to=updated_limit)
                         await self.trader.create_order(current_order)
-                return created_orders
 
             elif state == EvaluatorStates.NEUTRAL.value:
                 pass
@@ -305,7 +303,6 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                                                           price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
-                return created_orders
 
             elif state == EvaluatorStates.VERY_LONG.value:
                 quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
@@ -320,12 +317,11 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                                                           price=order_price)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
+            if created_orders:
                 return created_orders
+            raise MissingMinimalExchangeTradeVolume()
 
-            # if nothing go returned, return empty list
-            return []
-
-        except InsufficientFunds as e:
+        except MissingFunds as e:
             raise e
         except asyncio.TimeoutError as e:
             self.logger.error(f"Impossible to create order on {symbol}: {e} and is necessary to compute the "
@@ -337,7 +333,11 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
         # creates a new order (or multiple split orders), always check self.can_create_order() first.
-        await self.create_order_if_possible(symbol, final_note, state)
+        try:
+            await self.create_order_if_possible(symbol, final_note, state)
+        except MissingMinimalExchangeTradeVolume:
+            self.logger.info("Not enough funds to create a new order: exchange minimal order volume has not been"
+                             " reached.")
 
 
 class DailyTradingModeProducer(AbstractTradingModeProducer):
