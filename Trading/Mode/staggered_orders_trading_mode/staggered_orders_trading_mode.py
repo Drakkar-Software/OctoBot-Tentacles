@@ -14,7 +14,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from ccxt import InsufficientFunds
 from enum import Enum
 from dataclasses import dataclass
 from math import floor
@@ -33,6 +32,7 @@ from octobot_trading.channels.orders import OrdersChannel
 from octobot_trading.constants import MODE_CHANNEL
 from octobot_trading.enums import EvaluatorStates, TraderOrderType, TradeOrderSide, \
     ExchangeConstantsMarketPropertyColumns, ExchangeConstantsOrderColumns, OrderStatus
+from octobot_trading.errors import MissingFunds
 from octobot_trading.modes.abstract_trading_mode import AbstractTradingMode
 from octobot_trading.consumers.abstract_mode_consumer import AbstractTradingModeConsumer
 from octobot_trading.orders.order_adapter import adapt_price, check_and_adapt_order_details_if_necessary
@@ -195,7 +195,7 @@ class StaggeredOrdersTradingModeConsumer(AbstractTradingModeConsumer):
                                                       quantity=order_quantity,
                                                       price=order_price)
                 created_order = await self.exchange_manager.trader.create_order(current_order)
-        except InsufficientFunds as e:
+        except MissingFunds as e:
             raise e
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: {order_data}")
