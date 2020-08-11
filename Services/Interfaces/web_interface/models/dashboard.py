@@ -63,7 +63,7 @@ def format_trades(dict_trade_history):
     }
 
     for dict_trade in dict_trade_history:
-        status = dict_trade[ExchangeConstantsOrderColumns.STATUS.value]
+        status = dict_trade.get(ExchangeConstantsOrderColumns.STATUS.value, OrderStatus.UNKNOWN.value)
         trade_side = TradeOrderSide(dict_trade[ExchangeConstantsOrderColumns.SIDE.value])
         trade_type = parse_trade_type(dict_trade)
         if trade_type == TraderOrderType.UNKNOWN:
