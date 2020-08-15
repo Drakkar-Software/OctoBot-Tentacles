@@ -521,8 +521,7 @@ async def test_order_fill_callback_not_in_db():
                                                                  symbol=to_fill_order.symbol,
                                                                  order=to_fill_order.to_dict(),
                                                                  is_from_bot=True,
-                                                                 is_closed=True,
-                                                                 is_updated=False)
+                                                                 is_new=False)
         # create as task to allow creator's queue to get processed
         for _ in range(3):
             await wait_asyncio_next_cycle()

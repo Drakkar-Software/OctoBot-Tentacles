@@ -71,7 +71,7 @@ class DipAnalyserTradingMode(AbstractTradingMode):
         return [mode_consumer, order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           is_closed, is_updated, is_from_bot):
+                                           is_new, is_from_bot):
         if order[ExchangeConstantsOrderColumns.STATUS.value] == OrderStatus.FILLED.value and is_from_bot:
             await self.producers[0].order_filled_callback(order)
 
