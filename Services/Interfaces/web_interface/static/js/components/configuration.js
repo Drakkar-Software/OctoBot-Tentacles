@@ -312,14 +312,33 @@ function get_config_value_changed(element, new_value, config_key) {
 
 function get_value_changed(new_val, dom_conf_val, config_key){
     const lower_case_val = new_val.toLowerCase();
-    if(!(lower_case_val === dom_conf_val.toLowerCase() ||
-        ((Number(new_val) === Number(dom_conf_val) && $.isNumeric(new_val))))){
+    if(is_different_value(new_val, lower_case_val, dom_conf_val)){
+        // only push update if the new value is not the previously updated one
+        if (has_element_already_been_updated(config_key)) {
+            return !has_update_already_been_applied(lower_case_val, config_key);
+        }
         return true;
-    }else if (config_key in validated_updated_global_config){
-        return lower_case_val !== validated_updated_global_config[config_key].toString().toLowerCase();
     }else{
+        // nothing changed in DOM but the previously updated value might be different (ex: back on initial value)
+        // only push update if the new value is not the previously updated one
+        if (has_element_already_been_updated(config_key)) {
+            return !has_update_already_been_applied(lower_case_val, config_key);
+        }
         return false;
     }
+}
+
+function is_different_value(new_val, lower_case_new_val, dom_conf_val){
+    return !(lower_case_new_val === dom_conf_val.toLowerCase() ||
+        ((Number(new_val) === Number(dom_conf_val) && $.isNumeric(new_val))))
+}
+
+function has_element_already_been_updated(config_key){
+    return config_key in validated_updated_global_config
+}
+
+function has_update_already_been_applied(lower_case_val, config_key){
+    return lower_case_val === validated_updated_global_config[config_key].toString().toLowerCase();
 }
 
 function handle_save_buttons_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -521,6 +540,17 @@ function updated_validated_updated_global_config(updated_data){
     for (const conf_key in updated_data) {
         validated_updated_global_config[conf_key] = updated_data[conf_key];
     }
+    const to_del_attr = [];
+    $.each(deleted_global_config_elements, function (i, val) {
+        for (const attribute in validated_updated_global_config) {
+            if(attribute.startsWith(val)){
+                to_del_attr.push(attribute);
+            }
+        }
+    });
+    $.each(to_del_attr, function (i, val) {
+        delete validated_updated_global_config[val];
+    });
     deleted_global_config_elements = [];
 }
 
