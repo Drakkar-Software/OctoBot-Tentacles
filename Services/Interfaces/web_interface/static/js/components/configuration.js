@@ -196,11 +196,11 @@ function something_is_unsaved(){
 }
 
 function parse_new_value(element){
-    const raw_data = replace_spaces(replace_break_line(element.text()));
+    const raw_data = element.text().trim();
 
     // simple case
     if(element[0].hasAttribute(current_value_attr)){
-        const value = replace_spaces(replace_break_line(element.attr(current_value_attr)));
+        const value = element.attr(current_value_attr).trim();
         if(element[0].hasAttribute(config_data_type_attr)){
             switch(element.attr(config_data_type_attr)) {
                 case "bool":
@@ -222,7 +222,7 @@ function parse_new_value(element){
             case "list":
                 const new_value = [];
                 element.find(":selected").each(function(index, value){
-                    new_value.splice(index, 0, replace_spaces(replace_break_line(value.text)));
+                    new_value.splice(index, 0, value.text.trim());
                 });
                 return new_value;
             case "number":
@@ -307,7 +307,7 @@ function get_config_value_changed(element, new_value, config_key) {
         });
         new_value_str = "[" + str_array.join(", ") + "]";
     }
-    return get_value_changed(new_value_str, replace_spaces(replace_break_line(element.attr(config_value_attr))), config_key);
+    return get_value_changed(new_value_str, element.attr(config_value_attr).trim(), config_key);
 }
 
 function get_value_changed(new_val, dom_conf_val, config_key){
@@ -330,11 +330,11 @@ function get_value_changed(new_val, dom_conf_val, config_key){
 
 function is_different_value(new_val, lower_case_new_val, dom_conf_val){
     return !(lower_case_new_val === dom_conf_val.toLowerCase() ||
-        ((Number(new_val) === Number(dom_conf_val) && $.isNumeric(new_val))))
+        ((Number(new_val) === Number(dom_conf_val) && $.isNumeric(new_val))));
 }
 
 function has_element_already_been_updated(config_key){
-    return config_key in validated_updated_global_config
+    return config_key in validated_updated_global_config;
 }
 
 function has_update_already_been_applied(lower_case_val, config_key){
