@@ -1,5 +1,5 @@
-{% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True, sandboxed=False, add_class='') -%}
+ {% import 'components/config/editable_config.html' as m_editable_config %}
+{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True, sandboxed=False, add_class='', config_values=None) -%}
     <!-- Card -->
     <div class="card mb-4 {{add_class}} config-card">
 
@@ -28,7 +28,7 @@
                                      id="exchange_api-key"
                                      config-key="exchanges_{{exchange}}_api-key"
                                      config-type="global_config"
-                                     config-value="{{keys_value}}"
+                                     config-value="{{config_values if config_values else keys_value}}"
                                      startup-config-value="{{keys_value}}"
                                      data-type="text"
                                      data-pk="1"
@@ -42,7 +42,7 @@
                                         id="exchange_api-secret"
                                         config-key="exchanges_{{exchange}}_api-secret"
                                         config-type="global_config"
-                                        config-value="{{keys_value}}"
+                                        config-value="{{config_values if config_values else keys_value}}"
                                         startup-config-value="{{keys_value}}"
                                         data-type="text"
                                         data-pk="1"
@@ -60,7 +60,7 @@
                                   id="exchange_api-secret"
                                   config-key="exchanges_{{exchange}}_api-password"
                                   config-type="global_config"
-                                  config-value="{{keys_value}}"
+                                  config-value="{{config_values if config_values else keys_value}}"
                                   startup-config-value="{{keys_value}}"
                                   data-type="text"
                                   data-pk="1"
