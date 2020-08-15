@@ -123,7 +123,7 @@
             </h1>
         </div>
         <div class="card-body">
-            <div class="row">
+            <div class="row w-100">
                 {% if activated_trading_mode.is_backtestable() %}
                     <div class="col-6">
                        <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
@@ -138,7 +138,7 @@
                          {% endfor %}
                        </select>
                     </div>
-                    <div class="col-2">
+                    <div class="col-3">
                         {% if tentacle_desc["activation"] %}
                             <button type="button" id="startBacktesting" class="btn btn-primary waves-effect"
                                     start-url="{{ url_for('backtesting', action_type='start_backtesting', source='config_tentacle', reset_tentacle_config=True) }}">
@@ -156,7 +156,7 @@
                         <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> can't be used in backtesting for now.
                     </div>
                 {% endif %}
-                <div class="col-2 offset-md-2">
+                <div class="col-3">
                     <a href="{{ url_for('data_collector', from=url_for(request.endpoint, name=name)) }}" class="btn btn-outline-info waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
                 </div>
             </div>
