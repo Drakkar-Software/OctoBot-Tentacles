@@ -549,7 +549,7 @@ async def _check_open_orders_count(trader, count):
 
 async def _fill_order(order, trader, trigger_update_callback=True, ignore_open_orders=False, consumer=None):
     initial_len = len(get_open_orders(trader.exchange_manager))
-    await order.on_fill()
+    await order.on_fill(force_fill=True)
     if order.status == OrderStatus.FILLED:
         if not ignore_open_orders:
             assert len(get_open_orders(trader.exchange_manager)) == initial_len - 1
