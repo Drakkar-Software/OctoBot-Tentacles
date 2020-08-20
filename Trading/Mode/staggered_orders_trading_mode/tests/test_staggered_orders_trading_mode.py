@@ -1021,7 +1021,7 @@ def _get_total_usd(exchange_manager, btc_price):
 
 async def _fill_order(order, exchange_manager, trigger_update_callback=True, producer=None):
     initial_len = len(get_open_orders(exchange_manager))
-    await order.on_fill()
+    await order.on_fill(force_fill=True)
     if order.status == OrderStatus.FILLED:
         assert len(get_open_orders(exchange_manager)) == initial_len - 1
         if trigger_update_callback:
