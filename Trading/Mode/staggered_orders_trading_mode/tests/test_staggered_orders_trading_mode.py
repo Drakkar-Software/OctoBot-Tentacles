@@ -1009,8 +1009,7 @@ async def _wait_for_orders_creation(orders_count=1):
 
 
 async def _check_open_orders_count(exchange_manager, count):
-    for _ in range(count):
-        await wait_asyncio_next_cycle()
+    await _wait_for_orders_creation(count)
     assert len(get_open_orders(exchange_manager)) == count
 
 
@@ -1025,7 +1024,16 @@ async def _fill_order(order, exchange_manager, trigger_update_callback=True, pro
     if order.status == OrderStatus.FILLED:
         assert len(get_open_orders(exchange_manager)) == initial_len - 1
         if trigger_update_callback:
-            await wait_asyncio_next_cycle()
+            # Wait twice so allow `await wait_asyncio_next_cycle()` in order.initialize() to finish and complete
+            # order creation AND roll the next cycle that will wake up any pending portfolio lock and allow it to
+            # proceed (here `filled_order_state.terminate()` can be locked if an order has been previously filled AND
+            # a mirror order is being created (and its `await wait_asyncio_next_cycle()` in order.initialize()
+            # is pending: in this case `AbstractTradingModeConsumer.create_order_if_possible()` is still
+            # locking the portfolio cause of the previous order's `await wait_asyncio_next_cycle()`)).
+            # This lock issue can appear here because we don't use `wait_asyncio_next_cycle()` after mirror order
+            # creation (unlike anywhere else in this test file).
+            for _ in range(2):
+                await wait_asyncio_next_cycle()
         else:
             with patch.object(producer, "order_filled_callback", new=AsyncMock()):
                 await wait_asyncio_next_cycle()
