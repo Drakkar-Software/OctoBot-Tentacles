@@ -373,7 +373,7 @@ class MACDMomentumEvaluator(TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = START_PENDING_EVAL_NOTE
-        if len(candle_data) >= self.long_period_length:
+        if len(candle_data) > self.long_period_length:
             macd, macd_signal, macd_hist = tulipy.macd(candle_data, self.short_period_length,
                                                        self.long_period_length, self.signal_period_length)
 
