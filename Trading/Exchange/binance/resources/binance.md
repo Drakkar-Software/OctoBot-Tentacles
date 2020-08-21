@@ -1,1 +1,1 @@
-Binance is a basic SpotExchange adaptation for Binance exchange. 
+Binance is a SpotExchange adaptation for Binance exchange using the REST API. 
