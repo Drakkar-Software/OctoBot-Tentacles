@@ -22,7 +22,8 @@
                                                         config_name + "_" + key,
                                                         "global_config",
                                                         config[key],
-                                                        config[key])
+                                                        config[key],
+                                                        number_step=0.001)
                     }}
                 {% endfor %}
                 {% if action %}
