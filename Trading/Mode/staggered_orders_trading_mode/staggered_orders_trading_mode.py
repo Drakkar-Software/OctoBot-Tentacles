@@ -184,9 +184,9 @@ class StaggeredOrdersTradingModeConsumer(AbstractTradingModeConsumer):
                 selling = order_data.side == TradeOrderSide.SELL
                 if selling:
                     if get_portfolio_currency(self.exchange_manager, currency) < order_quantity:
-                        return None
+                        return []
                 elif get_portfolio_currency(self.exchange_manager, market) < order_quantity * order_price:
-                    return None
+                    return []
                 order_type = TraderOrderType.SELL_LIMIT if selling else TraderOrderType.BUY_LIMIT
                 current_order = create_order_instance(trader=self.exchange_manager.trader,
                                                       order_type=order_type,
@@ -201,7 +201,7 @@ class StaggeredOrdersTradingModeConsumer(AbstractTradingModeConsumer):
             self.logger.error(f"Failed to create order : {e}. Order: {order_data}")
             self.logger.exception(e)
             return None
-        return created_order
+        return [] if created_order is None else [created_order]
 
 
 class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
