@@ -877,9 +877,8 @@ async def test_create_order():
         quantity = 1
         side = TradeOrderSide.SELL
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
-        assert created_order is not None
 
         # not enough quantity in portfolio
         price = 100
@@ -887,26 +886,25 @@ async def test_create_order():
         side = TradeOrderSide.SELL
         to_create_order = OrderData(side, quantity, price, symbol, False)
         created_order = await consumer.create_order(to_create_order, price, symbol_market)
-        assert created_order is None
+        assert created_order == []
 
         # just enough quantity in portfolio
         price = 100
         quantity = 9
         side = TradeOrderSide.SELL
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
         assert get_portfolio_currency(exchange_manager, "BTC") == 0
-        assert created_order is not None
 
         # not enough quantity anymore
         price = 100
         quantity = 0.0001
         side = TradeOrderSide.SELL
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
         assert get_portfolio_currency(exchange_manager, "BTC") == 0
-        assert created_order is None
+        assert created_orders == []
 
         # BUY
 
@@ -915,7 +913,7 @@ async def test_create_order():
         quantity = 1
         side = TradeOrderSide.BUY
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
         assert get_portfolio_currency(exchange_manager, "USD") == 900
         assert created_order is not None
@@ -925,26 +923,25 @@ async def test_create_order():
         quantity = 2
         side = TradeOrderSide.BUY
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
         assert get_portfolio_currency(exchange_manager, "USD") == 900
-        assert created_order is None
+        assert created_orders == []
 
         # enough quantity in portfolio
         price = 40
         quantity = 2
         side = TradeOrderSide.BUY
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
         assert get_portfolio_currency(exchange_manager, "USD") == 820
-        assert created_order is not None
 
         # enough quantity in portfolio
         price = 205
         quantity = 4
         side = TradeOrderSide.BUY
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
         assert get_portfolio_currency(exchange_manager, "USD") == 0
         assert created_order is not None
@@ -954,9 +951,9 @@ async def test_create_order():
         quantity = 1
         side = TradeOrderSide.BUY
         to_create_order = OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
+        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
         assert get_portfolio_currency(exchange_manager, "USD") == 0
-        assert created_order is None
+        assert created_orders == []
     finally:
         await _stop(exchange_manager)
 
@@ -981,7 +978,7 @@ async def test_create_new_orders():
             consumer.CURRENT_PRICE_KEY: price,
             consumer.SYMBOL_MARKET_KEY: symbol_market
         }
-        assert await consumer.create_new_orders(symbol, None, None, data=data) is not None
+        assert await consumer.create_new_orders(symbol, None, None, data=data)
 
         # invalid input 1
         data = {
