@@ -41,6 +41,8 @@ class CoinbasePro(SpotExchange):
                                                                           params=params))
 
     def _uniformize_trades(self, trades):
+        if not trades:
+            return []
         for trade in trades:
             trade[ExchangeConstantsOrderColumns.STATUS.value] = OrderStatus.CLOSED.value
             trade[ExchangeConstantsOrderColumns.ID.value] = trade[ExchangeConstantsOrderColumns.ORDER.value]
