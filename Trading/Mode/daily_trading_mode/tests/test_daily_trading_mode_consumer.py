@@ -98,11 +98,11 @@ async def test_valid_create_new_orders_no_ref_market_as_quote():
         exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
         # change reference market to USDT
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
         exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.currencies_last_prices[
             symbol] = last_btc_price
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
             last_btc_price * 10 + 1000
 
         market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
@@ -222,9 +222,9 @@ async def test_valid_create_new_orders_ref_market_as_quote():
     try:
         exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.currencies_last_prices[
             symbol] = last_btc_price
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
             10 + 1000/last_btc_price
 
         # portfolio: "BTC": 10 "USD": 1000
@@ -415,7 +415,7 @@ async def test_split_create_new_orders():
         exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
         # change reference market to get more orders
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
         exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
         market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
@@ -424,9 +424,9 @@ async def test_split_create_new_orders():
                 PORTFOLIO_AVAILABLE: 2000000001
             }
         }
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.currencies_last_prices[
             symbol] = last_btc_price
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
             last_btc_price * 2000000001 + 1000
 
         # split orders because order too big and coin price too high
@@ -548,11 +548,11 @@ async def test_valid_create_new_orders_without_stop_order():
         exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
         # change reference market to get more orders
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.reference_market = "USDT"
         exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.currencies_last_prices[
             symbol] = last_btc_price
-        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
             last_btc_price * 10 + 1000
         market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
 
@@ -728,12 +728,12 @@ async def test_create_multiple_buy_orders_after_fill():
     exchange_manager, trader, symbol, consumer, last_btc_price = await _get_tools()
 
     # with BTC/USDT
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.currencies_last_prices[symbol] = \
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.currencies_last_prices[symbol] = \
         last_btc_price
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.portfolio_current_value = \
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         10 + 1000/last_btc_price
     # force many traded asset not to create all in orders
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_profitability.origin_crypto_currencies_values \
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.origin_crypto_currencies_values \
         = {
             "a": 0,
             "b": 0,
