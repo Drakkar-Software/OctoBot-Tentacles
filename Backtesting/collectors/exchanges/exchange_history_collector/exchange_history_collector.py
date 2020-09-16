@@ -92,7 +92,7 @@ class ExchangeHistoryDataCollector(AbstractExchangeHistoryCollector):
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = TimeFramesMinutes[time_frame] * MINUTE_TO_SECONDS
         candles = await self.exchange.get_symbol_prices(symbol, time_frame)
-        self.exchange_manager.uniformize_candles_if_necessary(candles)
+        self.exchange.uniformize_candles_if_necessary(candles)
         await self.save_ohlcv(exchange=exchange,
                               cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
                               symbol=symbol, time_frame=time_frame, candle=candles,
