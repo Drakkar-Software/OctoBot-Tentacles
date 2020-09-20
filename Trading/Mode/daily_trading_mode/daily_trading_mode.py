@@ -285,7 +285,7 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                         await self.trader.create_order(current_order)
 
             elif state == EvaluatorStates.NEUTRAL.value:
-                pass
+                return []
 
             # TODO : stop loss
             elif state == EvaluatorStates.LONG.value:
@@ -321,8 +321,8 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
                 return created_orders
             raise MissingMinimalExchangeTradeVolume()
 
-        except MissingFunds as e:
-            raise e
+        except (MissingFunds, MissingMinimalExchangeTradeVolume):
+            raise
         except asyncio.TimeoutError as e:
             self.logger.error(f"Impossible to create order on {symbol}: {e} and is necessary to compute the "
                               f"order details.")

@@ -28,6 +28,7 @@ from octobot_trading.api.symbol_data import force_set_mark_price
 from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrameExchangeChannel, set_chan
 from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
 from octobot_trading.enums import EvaluatorStates, TraderOrderType, TradeOrderSide, OrderStatus
+from octobot_trading.errors import MissingMinimalExchangeTradeVolume
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
 from octobot_trading.exchanges import ExchangeSimulator
 from octobot_trading.orders.order_adapter import trunc_with_n_decimal_digits
@@ -350,8 +351,8 @@ async def test_invalid_create_new_orders():
         }
 
         # invalid sell order with not enough currency to sell
-        orders = await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
-        assert len(orders) == 0
+        with pytest.raises(MissingMinimalExchangeTradeVolume):
+            await consumer.create_new_orders(symbol, 0.6, EvaluatorStates.SHORT.value)
 
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
             "USDT": {
@@ -361,8 +362,8 @@ async def test_invalid_create_new_orders():
         }
 
         # invalid buy order with not enough currency to buy
-        orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG.value)
-        assert len(orders) == 0
+        with pytest.raises(MissingMinimalExchangeTradeVolume):
+            orders = await consumer.create_new_orders(symbol, -0.6, EvaluatorStates.LONG.value)
     finally:
         await _stop(exchange_manager)
 
@@ -628,34 +629,55 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
         for evaluation in _get_evaluations_gradient(gradient_step):
             _reset_portfolio(exchange_manager)
             # orders are possible
-            orders = await consumer.create_new_orders(symbol, evaluation, state)
-            check_orders(orders, evaluation, state, nb_orders, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            try:
+                orders = await consumer.create_new_orders(symbol, evaluation, state)
+                check_orders(orders, evaluation, state, nb_orders, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            except MissingMinimalExchangeTradeVolume:
+                pass
             # orders are impossible
-            orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
-            check_orders(orders, evaluation, state, 0, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            try:
+                orders = []
+                orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
+                check_orders(orders, evaluation, state, 0, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            except MissingMinimalExchangeTradeVolume:
+                pass
 
         for evaluation in _get_irrationnal_numbers():
             # orders are possible
             _reset_portfolio(exchange_manager)
-            orders = await consumer.create_new_orders(symbol, evaluation, state)
-            check_orders(orders, evaluation, state, nb_orders, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            try:
+                orders = await consumer.create_new_orders(symbol, evaluation, state)
+                check_orders(orders, evaluation, state, nb_orders, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            except MissingMinimalExchangeTradeVolume:
+                pass
             # orders are impossible
-            orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
-            check_orders(orders, evaluation, state, 0, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            try:
+                orders = []
+                orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
+                check_orders(orders, evaluation, state, 0, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            except MissingMinimalExchangeTradeVolume:
+                pass
 
         _reset_portfolio(exchange_manager)
         # orders are possible
-        orders = await consumer.create_new_orders(symbol, math.nan, state)
-        check_orders(orders, math.nan, state, nb_orders, market_status)
-        check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+        try:
+            orders = await consumer.create_new_orders(symbol, math.nan, state)
+            check_orders(orders, math.nan, state, nb_orders, market_status)
+            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+        except MissingMinimalExchangeTradeVolume:
+            pass
         # orders are impossible
-        orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
-        check_orders(orders, math.nan, state, 0, market_status)
-        check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+        try:
+            orders = []
+            orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
+            check_orders(orders, math.nan, state, 0, market_status)
+            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+        except MissingMinimalExchangeTradeVolume:
+            pass
     await _stop(exchange_manager)
 
 
@@ -674,50 +696,71 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
     for state in _get_states_gradient_with_invald_states():
         for evaluation in _get_evaluations_gradient(gradient_step):
             # orders are possible
-            orders = await consumer.create_new_orders(symbol, evaluation, state)
-            check_orders(orders, evaluation, state, nb_orders, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            await fill_orders(orders, trader)
+            try:
+                orders = await consumer.create_new_orders(symbol, evaluation, state)
+                check_orders(orders, evaluation, state, nb_orders, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                await fill_orders(orders, trader)
+            except MissingMinimalExchangeTradeVolume:
+                pass
             # orders are impossible
-            orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
-            check_orders(orders, evaluation, state, 0, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            await fill_orders(orders, trader)
+            try:
+                orders = []
+                orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
+                check_orders(orders, evaluation, state, 0, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                await fill_orders(orders, trader)
+            except MissingMinimalExchangeTradeVolume:
+                pass
 
     _reset_portfolio(exchange_manager)
     for state in _get_states_gradient_with_invald_states():
         for evaluation in _get_irrationnal_numbers():
             # orders are possible
-            orders = await consumer.create_new_orders(symbol, evaluation, state)
-            check_orders(orders, evaluation, state, nb_orders, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            if any(order
-                   for order in orders
-                   if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
-                # no need to fill market orders
-                await fill_orders(orders, trader)
+            try:
+                orders = await consumer.create_new_orders(symbol, evaluation, state)
+                check_orders(orders, evaluation, state, nb_orders, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                if any(order
+                       for order in orders
+                       if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+                    # no need to fill market orders
+                    await fill_orders(orders, trader)
+            except MissingMinimalExchangeTradeVolume:
+                pass
             # orders are impossible
-            orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
-            check_orders(orders, evaluation, state, 0, market_status)
-            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-            if any(order
-                   for order in orders
-                   if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
-                # no need to fill market orders
-                await fill_orders(orders, trader)
+            try:
+                orders = []
+                orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
+                check_orders(orders, evaluation, state, 0, market_status)
+                check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                if any(order
+                       for order in orders
+                       if order.order_type not in (TraderOrderType.SELL_MARKET, TraderOrderType.BUY_MARKET)):
+                    # no need to fill market orders
+                    await fill_orders(orders, trader)
+            except MissingMinimalExchangeTradeVolume:
+                pass
 
     _reset_portfolio(exchange_manager)
     for state in _get_states_gradient_with_invald_states():
         # orders are possible
-        orders = await consumer.create_new_orders(symbol, math.nan, state)
-        check_orders(orders, math.nan, state, nb_orders, market_status)
-        check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-        await fill_orders(orders, trader)
+        try:
+            orders = await consumer.create_new_orders(symbol, math.nan, state)
+            check_orders(orders, math.nan, state, nb_orders, market_status)
+            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+            await fill_orders(orders, trader)
+        except MissingMinimalExchangeTradeVolume:
+            pass
         # orders are impossible
-        orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
-        check_orders(orders, math.nan, state, 0, market_status)
-        check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
-        await fill_orders(orders, trader)
+        try:
+            orders = []
+            orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
+            check_orders(orders, math.nan, state, 0, market_status)
+            check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+            await fill_orders(orders, trader)
+        except MissingMinimalExchangeTradeVolume:
+            pass
     await _stop(exchange_manager)
 
 

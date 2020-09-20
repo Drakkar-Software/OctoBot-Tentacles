@@ -164,9 +164,9 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
             if created_orders:
                 return created_orders
             raise MissingMinimalExchangeTradeVolume()
-        except MissingFunds as e:
-            raise e
 
+        except (MissingFunds, MissingMinimalExchangeTradeVolume):
+            raise
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: "
                               f"{current_order.get_string_info() if current_order else None}")
