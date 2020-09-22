@@ -30,7 +30,7 @@ from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLI
 from octobot_trading.enums import EvaluatorStates, TraderOrderType, TradeOrderSide, OrderStatus
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
 from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
-from octobot_trading.exchanges.rest_exchange import RestExchange
+
 from octobot_trading.orders.order_adapter import trunc_with_n_decimal_digits
 from octobot_trading.orders.types import SellMarketOrder, BuyMarketOrder, SellLimitOrder, BuyLimitOrder
 from octobot_trading.traders.trader_simulator import TraderSimulator
@@ -59,9 +59,8 @@ async def _get_tools():
         exchange_ids=[exchange_manager.id],
         matrix_id=None,
         data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
-    exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
+
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
-                                                  exchange_manager.exchange_type,
                                                   exchange_manager,
                                                   backtesting)
     await exchange_manager.exchange.initialize()

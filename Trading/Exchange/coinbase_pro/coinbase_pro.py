@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Private-Tentacles
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -15,13 +15,17 @@
 #  License along with this library.
 from octobot_trading.enums import ExchangeConstantsOrderColumns, OrderStatus, TradeOrderType, \
     ExchangeConstantsMarketPropertyColumns
-from octobot_trading.exchanges.types.spot_exchange import SpotExchange
+from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 
 
-class CoinbasePro(SpotExchange):
+class CoinbasePro(SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'coinbasepro'
+
+    @classmethod
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
     async def cancel_order(self, order_id, symbol=None, params=None):
         self.logger.debug(f"Post cancel for order with id={order_id}")

@@ -13,29 +13,19 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.exchanges.types.future_exchange import FutureExchange
+from octobot_trading.enums import AccountTypes
 from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 
 
-class Bitmex(SpotCCXTExchange, FutureExchange):
-    DESCRIPTION = ""
-
-    BUY_STR = "Buy"
-    SELL_STR = "Sell"
-
-    MARK_PRICE_IN_TICKER = True
-    FUNDING_IN_TICKER = True
+class DefaultCCXTSpotExchange(SpotCCXTExchange):
+    @classmethod
+    def get_name(cls) -> str:
+        return cls.__name__
 
     @classmethod
-    def get_name(cls):
-        return 'bitmex'
+    def is_default_exchange(cls) -> bool:
+        return True
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
-
-    async def get_recent_trades(self, symbol, limit=50, params=None):
-        if params is None:
-            params = {}
-        params.update({"reverse": True})
-        return await FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, params=params)
+    async def switch_to_account(self, account_type: AccountTypes):
+        # Currently not supported
+        pass

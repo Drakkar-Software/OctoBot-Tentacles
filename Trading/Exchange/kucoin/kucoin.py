@@ -13,13 +13,17 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.exchanges.types.spot_exchange import SpotExchange
+from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 
 
-class Kucoin(SpotExchange):
+class Kucoin(SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'kucoin'
+
+    @classmethod
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
     async def get_recent_trades(self, symbol, limit=50, params=None):
         # on ccxt kucoin recent trades are received in reverse order from exchange and therefore should never be

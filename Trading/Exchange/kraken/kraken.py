@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.exchanges.types.spot_exchange import SpotExchange
+from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 
 
-class Kraken(SpotExchange):
+class Kraken(SpotCCXTExchange):
     DESCRIPTION = ""
 
     RECENT_TRADE_FIXED_LIMIT = 1000
@@ -24,6 +24,10 @@ class Kraken(SpotExchange):
     @classmethod
     def get_name(cls):
         return 'kraken'
+
+    @classmethod
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
     async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, params=None):
         if limit is not None and limit != self.RECENT_TRADE_FIXED_LIMIT:

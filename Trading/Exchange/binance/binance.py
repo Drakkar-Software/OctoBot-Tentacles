@@ -15,10 +15,10 @@
 #  License along with this library.
 from octobot_trading.enums import ExchangeConstantsOrderColumns, AccountTypes, OrderStatus, \
     ExchangeConstantsMarketPropertyColumns, TradeOrderType
-from octobot_trading.exchanges.types.spot_exchange import SpotExchange
+from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 
 
-class Binance(SpotExchange):
+class Binance(SpotCCXTExchange):
     DESCRIPTION = ""
 
     BUY_STR = "BUY"
@@ -35,6 +35,10 @@ class Binance(SpotExchange):
     @classmethod
     def get_name(cls):
         return 'binance'
+
+    @classmethod
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
     async def get_balance(self, params=None):
         return await SpotExchange.get_balance(self, params=self._get_params(params))

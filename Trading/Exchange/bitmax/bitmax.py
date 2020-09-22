@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Private-Tentacles
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -14,18 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import copy
+
 import math
-import uuid
 
 from octobot_trading.enums import AccountTypes, TraderOrderType, ExchangeConstantsMarketStatusColumns as Ecmsc, \
     ExchangeConstantsOrderColumns, OrderStatus, TradeOrderSide
+from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
 from octobot_trading.exchanges.types.future_exchange import FutureExchange
 from octobot_trading.exchanges.types.margin_exchange import MarginExchange
-from octobot_trading.exchanges.types.spot_exchange import SpotExchange
 from octobot_trading.exchanges.util.exchange_market_status_fixer import ExchangeMarketStatusFixer
 
 
-class Bitmax(SpotExchange, MarginExchange, FutureExchange):
+class Bitmax(SpotCCXTExchange, MarginExchange, FutureExchange):
     DESCRIPTION = ""
 
     BUY_STR = "Buy"
@@ -40,6 +40,10 @@ class Bitmax(SpotExchange, MarginExchange, FutureExchange):
     @classmethod
     def get_name(cls):
         return 'bitmax'
+
+    @classmethod
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
     async def switch_to_account(self, account_type):
         # TODO
