@@ -120,10 +120,6 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
         self.VOLUME_WEIGH_TO_VOLUME_PERCENT[2] = self.trading_mode.trading_config[self.MEDIUM_VOLUME_WEIGHT]
         self.VOLUME_WEIGH_TO_VOLUME_PERCENT[3] = self.trading_mode.trading_config[self.HEAVY_VOLUME_WEIGHT]
 
-    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
-        # creates a new order (or multiple split orders), always check self.can_create_order() first.
-        await self.create_order_if_possible(symbol, final_note, state, data=data)
-
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         timeout = kwargs.get("timeout", ORDER_DATA_FETCHING_TIMEOUT)
         data = kwargs.get("data", {})

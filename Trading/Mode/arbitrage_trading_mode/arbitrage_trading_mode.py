@@ -48,7 +48,6 @@ class ArbitrageTradingMode(AbstractTradingMode):
         self.merged_symbol = None
 
     def get_current_state(self) -> (str, float):
-        # TODO
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
             self.producers[0].final_eval if self.producers[0].final_eval else "N/A"
 
@@ -115,10 +114,6 @@ class ArbitrageModeConsumer(AbstractTradingModeConsumer):
         self.PORTFOLIO_PERCENT_PER_TRADE = trading_mode.trading_config["portfolio_percent_per_trade"] / 100
         self.STOP_LOSS_DELTA_FROM_OWN_PRICE = trading_mode.trading_config["stop_loss_delta_percent"] / 100
         self.open_arbitrages = []
-
-    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
-        # creates a new order (or multiple split orders), always check self.can_create_order() first.
-        await self.create_order_if_possible(symbol, final_note, state, data=data)
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # no possible default values in kwargs: interrupt if missing element

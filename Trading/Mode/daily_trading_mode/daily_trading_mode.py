@@ -331,14 +331,6 @@ class DailyTradingModeConsumer(AbstractTradingModeConsumer):
             self.logger.exception(e, True, f"Failed to create order : {e}.")
             return []
 
-    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
-        # creates a new order (or multiple split orders), always check self.can_create_order() first.
-        try:
-            await self.create_order_if_possible(symbol, final_note, state)
-        except MissingMinimalExchangeTradeVolume:
-            self.logger.info("Not enough funds to create a new order: exchange minimal order volume has not been"
-                             " reached.")
-
 
 class DailyTradingModeProducer(AbstractTradingModeProducer):
 

@@ -161,11 +161,6 @@ class StaggeredOrdersTradingModeConsumer(AbstractTradingModeConsumer):
     CURRENT_PRICE_KEY = "current_price"
     SYMBOL_MARKET_KEY = "symbol_market"
 
-    # creates a new order
-    async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
-        # creates a new order (or multiple split orders), always check self.can_create_order() first.
-        await self.create_order_if_possible(symbol, final_note, state, data=data)
-
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # use dict default getter: can't afford missing data
         data = kwargs["data"]
@@ -498,16 +493,25 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
                             self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                                        upper_bound, portfolio_total,
                                                                        currency=order_limiting_currency)
+                        self.logger.debug(f"orders_count {orders_count} average_order_quantity: {average_order_quantity}")
+                        self.logger.debug(f"{len(missing_orders_around_spread)} missing_orders_around_spread {missing_orders_around_spread}")
+
                         for missing_order_price, missing_order_side in missing_orders_around_spread:
                             limiting_amount_from_this_order = order_limiting_currency_amount
+                            self.logger.debug(f"missing_order_price {missing_order_price} missing_order_side {missing_order_side}")
+                            self.logger.debug(f"limiting_amount_from_this_order {limiting_amount_from_this_order}")
                             price = starting_bound
                             found_order = False
                             i = 0
                             while not found_order and i < orders_count:
+                                self.logger.debug(f"i {i}")
                                 quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
                                                                              side, i, orders_count,
                                                                              price)
+                                self.logger.debug(f"quantity {quantity}")
+                                self.logger.debug(f"price {price}")
                                 limiting_currency_quantity = quantity if selling else quantity / price
+                                self.logger.debug(f"limiting_currency_quantity {limiting_currency_quantity}")
                                 if price is not None and limiting_amount_from_this_order > 0 and \
                                         price-increment_window <= missing_order_price <= price+increment_window:
 
@@ -515,6 +519,7 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
                                             limiting_currency_quantity > order_limiting_currency_available_amount:
                                         limiting_currency_quantity = min(limiting_amount_from_this_order,
                                                                          order_limiting_currency_available_amount)
+                                    self.logger.debug(f"limiting_currency_quantity after min {limiting_currency_quantity}")
                                     found_order = True
                                     if limiting_currency_quantity is not None:
                                         orders.append(OrderData(side, limiting_currency_quantity, price,
@@ -523,6 +528,7 @@ class StaggeredOrdersTradingModeProducer(AbstractTradingModeProducer):
                                                           f"for {self.symbol}")
                                 price = price - self.flat_increment if selling else price + self.flat_increment
                                 limiting_amount_from_this_order -= limiting_currency_quantity
+                                self.logger.debug(f"limiting_amount_from_this_order post create {limiting_amount_from_this_order}")
                                 i += 1
 
         elif state == self.ERROR:
