@@ -15,7 +15,7 @@
 #  License along with this library.
 from octobot_trading.enums import ExchangeConstantsOrderColumns, AccountTypes, OrderStatus, \
     ExchangeConstantsMarketPropertyColumns, TradeOrderType
-from octobot_trading.exchanges.implementations.spot_ccxt_exchange import SpotCCXTExchange
+from octobot_trading.exchanges import SpotExchange, SpotCCXTExchange
 
 
 class Binance(SpotCCXTExchange):
@@ -40,8 +40,8 @@ class Binance(SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_balance(self, params=None):
-        return await SpotExchange.get_balance(self, params=self._get_params(params))
+    async def get_balance(self, **kwargs):
+        return await SpotCCXTExchange.get_balance(self, **self._get_params(kwargs))
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, params=None):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,

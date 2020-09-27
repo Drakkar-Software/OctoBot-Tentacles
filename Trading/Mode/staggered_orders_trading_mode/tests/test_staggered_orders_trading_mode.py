@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import pytest
-import time
 import copy
 from asyncio import create_task
 from os.path import join
@@ -36,8 +35,7 @@ from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLI
     CONFIG_SIMULATOR_FEES, CONFIG_SIMULATOR_FEES_MAKER
 from octobot_trading.enums import TradeOrderSide, EvaluatorStates, OrderStatus
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
-from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
-
+from octobot_trading.exchanges import ExchangeSimulator
 from octobot_trading.orders.order_adapter import trunc_with_n_decimal_digits
 from octobot_trading.orders.order_util import get_pre_order_data
 from octobot_trading.traders.trader_simulator import TraderSimulator

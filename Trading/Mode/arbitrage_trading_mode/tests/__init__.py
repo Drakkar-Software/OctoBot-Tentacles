@@ -23,8 +23,7 @@ from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLD
 from octobot_trading.api.symbol_data import force_set_mark_price
 from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrameExchangeChannel, set_chan
 from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
-from octobot_trading.exchanges.exchange_manager import ExchangeManager
-from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
+from octobot_trading.exchanges import ExchangeManager, ExchangeSimulator
 
 from octobot_trading.traders.trader_simulator import TraderSimulator
 from tentacles.Trading.Mode import ArbitrageTradingMode

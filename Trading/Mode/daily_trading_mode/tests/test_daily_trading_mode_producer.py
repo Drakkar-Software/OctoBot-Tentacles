@@ -31,8 +31,7 @@ from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrame
 from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
 from octobot_trading.enums import EvaluatorStates
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
-from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
-
+from octobot_trading.exchanges import ExchangeSimulator
 from octobot_trading.traders.trader_simulator import TraderSimulator
 from tentacles.Trading.Mode import DailyTradingMode
 
@@ -53,7 +52,6 @@ async def _get_tools(symbol="BTC/USDT"):
         exchange_ids=[exchange_manager.id],
         matrix_id=None,
         data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
-
     exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager,
                                                   backtesting)
