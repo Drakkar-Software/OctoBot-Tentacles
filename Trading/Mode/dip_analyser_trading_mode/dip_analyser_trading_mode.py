@@ -170,7 +170,7 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: "
                               f"{current_order.get_string_info() if current_order else None}")
-            self.logger.exception(e)
+            self.logger.exception(e, False)
             return []
 
     async def create_sell_orders(self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base):
@@ -201,7 +201,7 @@ class DipAnalyserTradingModeConsumer(AbstractTradingModeConsumer):
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: "
                               f"{current_order.get_string_info() if current_order else None}")
-            self.logger.exception(e)
+            self.logger.exception(e, False)
             return []
 
     def _register_buy_order(self, order_id, price_weight):

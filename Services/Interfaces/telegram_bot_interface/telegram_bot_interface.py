@@ -240,7 +240,7 @@ class TelegramBotInterface(AbstractBotInterface):
 
     @staticmethod
     def command_error(update, _, error=None):
-        TelegramBotInterface.get_logger().exception(error)
+        TelegramBotInterface.get_logger().exception(error, False)
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,
                                                f"Failed to perform this command {update.message.text} : `{error}`")

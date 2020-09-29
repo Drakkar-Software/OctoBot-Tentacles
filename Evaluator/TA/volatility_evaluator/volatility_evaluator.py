@@ -54,7 +54,7 @@ class StochasticRSIVolatilityEvaluator(TAEvaluator):
                     self.eval_note = stochrsi_value - 0.5
         except InvalidOptionError as e:
             self.logger.debug(f"Error when computing StochRSI: {e}")
-            self.logger.exception(e)
+            self.logger.exception(e, False)
             self.eval_note = START_PENDING_EVAL_NOTE
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=get_eval_time(full_candle=candle, time_frame=time_frame))

@@ -125,7 +125,7 @@ class WebHookService(AbstractService):
             self.webhook_server_context.push()
         except OSError as e:
             self.webhook_server = None
-            self.get_logger().exception(f"Fail to start webhook : {e}")
+            self.get_logger().exception(e, False, f"Fail to start webhook : {e}")
 
     def _load_webhook_routes(self) -> None:
         @self.webhook_app.route('/')

@@ -165,7 +165,7 @@ class WebInterface(AbstractWebInterface, threading.Thread):
                                         debug=False)
             return True
         except Exception as e:
-            self.logger.exception(f"Fail to start web interface : {e}", False, e)
+            self.logger.exception(e, False, f"Fail to start web interface : {e}")
         return False
 
     def _open_web_interface_on_browser(self):
@@ -184,4 +184,4 @@ class WebInterface(AbstractWebInterface, threading.Thread):
                 self.logger.debug("Stopping web interface")
                 self.websocket_instance.stop()
             except Exception as e:
-                self.logger.exception(f"Fail to stop web interface : {e}")
+                self.logger.exception(f"Fail to stop web interface : {e}", False)

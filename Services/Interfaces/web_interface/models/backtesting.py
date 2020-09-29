@@ -80,7 +80,7 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             tools[BOT_TOOLS_BACKTESTING_SOURCE] = source
             return True, "Backtesting started"
     except Exception as e:
-        LOGGER.exception(e)
+        LOGGER.exception(e, False)
         return False, f"Error when starting backtesting: {e}"
 
 

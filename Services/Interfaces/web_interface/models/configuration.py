@@ -247,7 +247,7 @@ def update_tentacle_config(tentacle_name, config_update):
         manager_update_tentacle_config(klass, config_update)
         return True, f"{tentacle_name} updated"
     except Exception as e:
-        LOGGER.exception(e)
+        LOGGER.exception(e, False)
         return False, f"Error when updating tentacle config: {e}"
 
 
@@ -257,7 +257,7 @@ def reset_config_to_default(tentacle_name):
         factory_tentacle_reset_config(klass)
         return True, f"{tentacle_name} configuration reset to default values"
     except Exception as e:
-        LOGGER.exception(e)
+        LOGGER.exception(e, False)
         return False, f"Error when resetting factory tentacle config: {e}"
 
 
@@ -305,7 +305,7 @@ def _add_trading_modes_requirements(trading_modes, strategy_config):
         try:
             _add_trading_mode_requirements_and_default_config(strategy_config[TRADING_MODES_KEY][classKey], klass)
         except Exception as e:
-            LOGGER.exception(e)
+            LOGGER.exception(e, False)
 
 
 def get_strategy_config(media_url, with_trading_modes=True):
