@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from enum import Enum
+import enum
 
 
-class PriceStrings(Enum):
+class PriceStrings(enum.Enum):
     STR_PRICE_TIME = "time"
     STR_PRICE_CLOSE = "close"
     STR_PRICE_OPEN = "open"

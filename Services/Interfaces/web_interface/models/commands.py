@@ -16,7 +16,7 @@
 import threading
 import time
 
-from octobot_services.interfaces.util.bot import get_bot_api
+import octobot_services.interfaces.util as interfaces_util
 
 
 def schedule_delayed_command(command, delay=0.5):
@@ -27,8 +27,8 @@ def schedule_delayed_command(command, delay=0.5):
 
 
 def restart_bot():
-    get_bot_api().restart_bot()
+    interfaces_util.get_bot_api().restart_bot()
 
 
 def stop_bot():
-    get_bot_api().stop_bot()
+    interfaces_util.get_bot_api().stop_bot()

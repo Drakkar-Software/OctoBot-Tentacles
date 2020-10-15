@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_tentacles_manager.constants import TENTACLES_PATH
+import octobot_tentacles_manager.constants as tentacles_manager_constants
 
 
 def _is_valid_path(path, header):
@@ -22,4 +22,5 @@ def _is_valid_path(path, header):
 
 def is_valid_tentacle_image_path(path):
     path_ending = path.split(".")[-1].lower()
-    return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path, TENTACLES_PATH)
+    return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path,
+                                                                           tentacles_manager_constants.TENTACLES_PATH)

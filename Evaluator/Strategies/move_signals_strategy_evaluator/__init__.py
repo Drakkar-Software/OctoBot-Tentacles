@@ -1,1 +1,1 @@
-from .move_signals_strategy_evaluator import MoveSignalsStrategyEvaluator
+from .move_signals_strategy import MoveSignalsStrategyEvaluator

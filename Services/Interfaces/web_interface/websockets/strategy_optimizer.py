@@ -14,32 +14,30 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask_socketio import emit
+import flask_socketio
 
-from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import get_optimizer_status
-from tentacles.Services.Interfaces.web_interface.websockets import namespaces
-from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
+import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.websockets as websockets
 
 
-class StrategyOptimizerNamespace(AbstractWebSocketNamespaceNotifier):
+class StrategyOptimizerNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_strategy_optimizer_status():
-        optimizer_status, progress, overall_progress, errors = get_optimizer_status()
+        optimizer_status, progress, overall_progress, errors = models.get_optimizer_status()
         return {"status": optimizer_status,
                 "progress": progress,
                 "overall_progress": overall_progress,
                 "errors": errors}
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_strategy_optimizer_status(self):
-        emit("strategy_optimizer_status", self._get_strategy_optimizer_status())
+        flask_socketio.emit("strategy_optimizer_status", self._get_strategy_optimizer_status())
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_strategy_optimizer_status()
 
 
-namespaces.append(StrategyOptimizerNamespace('/strategy_optimizer'))
+websockets.namespaces.append(StrategyOptimizerNamespace('/strategy_optimizer'))

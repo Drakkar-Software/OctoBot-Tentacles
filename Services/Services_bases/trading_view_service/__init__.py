@@ -1,1 +1,1 @@
-from .trading_view_service import TradingViewService
+from .trading_view import TradingViewService

@@ -15,9 +15,9 @@
 #  License along with this library.
 import pytest
 
-from tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test import AbstractStrategyTest
-from tentacles.Evaluator.Strategies import MoveSignalsStrategyEvaluator
-from tentacles.Trading.Mode import SignalTradingMode
+import tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test as abstract_strategy_test
+import tentacles.Evaluator.Strategies as Strategies
+import tentacles.Trading.Mode as Mode
 
 
 # All test coroutines will be treated as marked.
@@ -27,11 +27,11 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 def strategy_tester():
     strategy_tester_instance = MoveSignalsStrategyEvaluatorTest()
-    strategy_tester_instance.initialize(MoveSignalsStrategyEvaluator, SignalTradingMode)
+    strategy_tester_instance.initialize(Strategies.MoveSignalsStrategyEvaluator, Mode.SignalTradingMode)
     return strategy_tester_instance
 
 
-class MoveSignalsStrategyEvaluatorTest(AbstractStrategyTest):
+class MoveSignalsStrategyEvaluatorTest(abstract_strategy_test.AbstractStrategyTest):
     """
     About using this test framework:
     To be called by pytest, tests have to be called manually since the cythonized version of AbstractStrategyTest

@@ -1,1 +1,1 @@
-from .forum_evaluator import RedditForumEvaluator
+from .forum import RedditForumEvaluator

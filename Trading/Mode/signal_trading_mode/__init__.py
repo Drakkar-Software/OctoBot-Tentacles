@@ -1,1 +1,1 @@
-from .signal_trading_mode import SignalTradingMode
+from .signal_trading import SignalTradingMode

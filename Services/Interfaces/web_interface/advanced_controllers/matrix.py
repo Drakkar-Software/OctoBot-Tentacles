@@ -14,15 +14,15 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template
+import flask
 
-from octobot_services.interfaces.util.trader import get_matrix_list
-from . import advanced
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+import octobot_services.interfaces.util as util
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@advanced.route("/matrix")
-@login_required_when_activated
+@advanced_controllers.advanced.route("/matrix")
+@login.login_required_when_activated
 def matrix():
-    return render_template('advanced_matrix.html',
-                           matrix_list=get_matrix_list())
+    return flask.render_template('advanced_matrix.html',
+                                 matrix_list=util.get_matrix_list())

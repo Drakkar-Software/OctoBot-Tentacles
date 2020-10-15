@@ -1,1 +1,1 @@
-from .twitter_notifier import TwitterNotifier
+from .twitter import TwitterNotifier

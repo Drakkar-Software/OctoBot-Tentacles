@@ -14,11 +14,41 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import Blueprint
+import flask
 
-advanced = Blueprint('advanced', __name__, url_prefix='/advanced', template_folder="../advanced_templates")
+advanced = flask.Blueprint('advanced', __name__, url_prefix='/advanced', template_folder="../advanced_templates")
 
 from . import home
 from . import configuration
 from . import strategy_optimizer
 from . import matrix
+
+
+from tentacles.Services.Interfaces.web_interface.advanced_controllers import configuration
+from tentacles.Services.Interfaces.web_interface.advanced_controllers import home
+from tentacles.Services.Interfaces.web_interface.advanced_controllers import matrix
+from tentacles.Services.Interfaces.web_interface.advanced_controllers import strategy_optimizer
+
+
+from tentacles.Services.Interfaces.web_interface.advanced_controllers.configuration import (
+    evaluator_config,
+)
+from tentacles.Services.Interfaces.web_interface.advanced_controllers.home import (
+    home,
+)
+from tentacles.Services.Interfaces.web_interface.advanced_controllers.matrix import (
+    matrix,
+)
+from tentacles.Services.Interfaces.web_interface.advanced_controllers.strategy_optimizer import (
+    strategy_optimizer,
+)
+
+
+__all__ = [
+    "evaluator_config",
+    "home",
+    "matrix",
+    "strategy_optimizer",
+]
+
+

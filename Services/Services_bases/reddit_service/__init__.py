@@ -1,1 +1,1 @@
-from .reddit_service import RedditService
+from .reddit import RedditService

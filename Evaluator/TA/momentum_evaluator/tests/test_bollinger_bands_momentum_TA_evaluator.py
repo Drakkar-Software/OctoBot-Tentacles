@@ -17,8 +17,8 @@
 import pytest
 
 
-from tests.functional_tests.evaluators_tests.abstract_TA_test import AbstractTATest
-from tentacles.Evaluator.TA import BBMomentumEvaluator
+import tests.functional_tests.evaluators_tests.abstract_TA_test as abstract_TA_test
+import tentacles.Evaluator.TA as TA
 
 
 # All test coroutines will be treated as marked.
@@ -27,12 +27,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 async def evaluator_tester():
-    evaluator_tester_instance = TestBollingerBandsMomentumTAEvaluator()
-    evaluator_tester_instance.TA_evaluator_class = BBMomentumEvaluator
+    evaluator_tester_instance = TestBollingerBandsMomentumeEvaluator()
+    evaluator_tester_instance.TA_evaluator_class = TA.BBMomentumEvaluator
     return evaluator_tester_instance
 
 
-class TestBollingerBandsMomentumTAEvaluator(AbstractTATest):
+class TestBollingerBandsMomentumeEvaluator(abstract_TA_test.AbstractTATest):
 
     @staticmethod
     async def test_stress_test(evaluator_tester):
