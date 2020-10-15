@@ -14,20 +14,19 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template
+import flask
 
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.community import can_get_community_metrics, \
-    get_community_metrics_to_display
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route("/community")
-@login_required_when_activated
+@web_interface.server_instance.route("/community")
+@login.login_required_when_activated
 def community():
-    can_get_metrics = can_get_community_metrics()
-    community_metrics = get_community_metrics_to_display() if can_get_metrics else None
-    return render_template('community.html',
-                           can_get_metrics=can_get_metrics,
-                           community_metrics=community_metrics
-                           )
+    can_get_metrics = models.can_get_community_metrics()
+    community_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
+    return flask.render_template('community.html',
+                                 can_get_metrics=can_get_metrics,
+                                 community_metrics=community_metrics
+                                 )

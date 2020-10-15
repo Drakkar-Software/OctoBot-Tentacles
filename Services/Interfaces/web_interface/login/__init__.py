@@ -13,3 +13,35 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+
+
+from tentacles.Services.Interfaces.web_interface.login import user
+from tentacles.Services.Interfaces.web_interface.login.user import (
+    User,
+)
+
+
+from tentacles.Services.Interfaces.web_interface.login import web_login_manager
+from tentacles.Services.Interfaces.web_interface.login.web_login_manager import (
+    WebLoginManager,
+    login_required_when_activated,
+    register_attempt,
+    is_banned,
+    reset_attempts,
+    is_login_required,
+    GENERIC_USER,
+)
+
+
+__all__ = [
+    "User",
+    "WebLoginManager",
+    "login_required_when_activated",
+    "register_attempt",
+    "is_banned",
+    "reset_attempts",
+    "is_login_required",
+    "GENERIC_USER",
+]
+
+

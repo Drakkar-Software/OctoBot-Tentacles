@@ -17,8 +17,8 @@
 import pytest
 
 
-from tests.functional_tests.evaluators_tests.abstract_TA_test import AbstractTATest
-from tentacles.Evaluator.TA import KlingerOscillatorMomentumEvaluator
+import tests.functional_tests.evaluators_tests.abstract_TA_test as abstract_TA_test
+import tentacles.Evaluator.TA as TA
 
 
 # All test coroutines will be treated as marked.
@@ -27,12 +27,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 async def evaluator_tester():
-    evaluator_tester_instance = TestKlingerTAEvaluator()
-    evaluator_tester_instance.TA_evaluator_class = KlingerOscillatorMomentumEvaluator
+    evaluator_tester_instance = TestKlingerEvaluator()
+    evaluator_tester_instance.TA_evaluator_class = TA.KlingerOscillatorMomentumEvaluator
     return evaluator_tester_instance
 
 
-class TestKlingerTAEvaluator(AbstractTATest):
+class TestKlingerEvaluator(abstract_TA_test.AbstractTATest):
 
     @staticmethod
     async def test_stress_test(evaluator_tester):

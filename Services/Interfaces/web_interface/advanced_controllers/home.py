@@ -14,14 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template
+import flask
 
-from . import advanced
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@advanced.route("/")
-@advanced.route("/home")
-@login_required_when_activated
+@advanced_controllers.advanced.route("/")
+@advanced_controllers.advanced.route("/home")
+@login.login_required_when_activated
 def home():
-    return render_template('advanced_index.html')
+    return flask.render_template('advanced_index.html')

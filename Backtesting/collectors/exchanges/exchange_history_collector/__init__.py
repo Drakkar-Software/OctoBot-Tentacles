@@ -1,1 +1,1 @@
-from .exchange_history_collector import ExchangeHistoryDataCollector
+from .history_collector import ExchangeHistoryDataCollector

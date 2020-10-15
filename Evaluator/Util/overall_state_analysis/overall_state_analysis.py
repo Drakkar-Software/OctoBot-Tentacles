@@ -16,12 +16,12 @@
 
 import numpy
 
-from octobot_commons.constants import START_PENDING_EVAL_NOTE
+import octobot_commons.constants as commons_constants
 
 
 class OverallStateAnalyser:
     def __init__(self):
-        self.overall_state = START_PENDING_EVAL_NOTE
+        self.overall_state = commons_constants.START_PENDING_EVAL_NOTE
         self.evaluation_count = 0
         self.evaluations = []
 

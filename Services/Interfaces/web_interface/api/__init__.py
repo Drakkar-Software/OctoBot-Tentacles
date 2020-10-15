@@ -14,9 +14,29 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import Blueprint
+import flask
 
-api = Blueprint('api', __name__, url_prefix='/api', template_folder="")
+api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
 
-from . import trading
-from . import metadata
+from tentacles.Services.Interfaces.web_interface.api import metadata
+from tentacles.Services.Interfaces.web_interface.api import trading
+
+
+from tentacles.Services.Interfaces.web_interface.api.metadata import (
+    version,
+    user_feedback,
+    announcements,
+)
+from tentacles.Services.Interfaces.web_interface.api.trading import (
+    orders,
+    refresh_portfolio,
+)
+
+
+__all__ = [
+    "version",
+    "user_feedback",
+    "announcements",
+    "orders",
+    "refresh_portfolio",
+]

@@ -1,1 +1,1 @@
-from .telegram_notifier import TelegramNotifier
+from .telegram import TelegramNotifier

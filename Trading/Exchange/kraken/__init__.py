@@ -1,1 +1,1 @@
-from .kraken import Kraken
+from .kraken_exchange import Kraken

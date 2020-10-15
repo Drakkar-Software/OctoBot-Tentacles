@@ -1,1 +1,1 @@
-from .reddit_service_feed import RedditServiceFeed
+from .reddit_feed import RedditServiceFeed

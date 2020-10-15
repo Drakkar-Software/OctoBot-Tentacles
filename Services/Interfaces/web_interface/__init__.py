@@ -17,22 +17,39 @@
 import copy
 import logging
 import time
-from abc import abstractmethod
-
+import abc
 import flask
 
-from tentacles.Services.Interfaces.web_interface.api import api
-from octobot_commons.logging import logs_database, reset_errors_count, LOG_DATABASE, LOG_NEW_ERRORS_COUNT
-
-# make WebInterface visible to tentacles module
-from tentacles.Services.Interfaces.web_interface.web_interface import WebInterface
+import tentacles.Services.Interfaces.web_interface.api as api
+import octobot_commons.logging as bot_logging
 
 server_instance = flask.Flask(__name__)
 
-from tentacles.Services.Interfaces.web_interface.advanced_controllers import advanced
+class Notifier:
+    @abc.abstractmethod
+    def send_notifications(self) -> bool:
+        raise NotImplementedError("send_notifications is not implemented")
 
-server_instance.register_blueprint(advanced)
-server_instance.register_blueprint(api)
+
+notifiers = {}
+
+def register_notifier(notification_key, notifier):
+    if notification_key not in notifiers:
+        notifiers[notification_key] = []
+    notifiers[notification_key].append(notifier)
+
+
+GENERAL_NOTIFICATION_KEY = "general_notifications"
+BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
+DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
+
+# Make WebInterface visible to imports
+from tentacles.Services.Interfaces.web_interface.web import WebInterface
+
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
+
+server_instance.register_blueprint(advanced_controllers.advanced)
+server_instance.register_blueprint(api.api)
 
 # disable server logging
 loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
@@ -40,18 +57,6 @@ for logger in loggers:
     logging.getLogger(logger).setLevel(logging.WARNING)
 
 notifications = []
-
-
-class Notifier:
-    @abstractmethod
-    def send_notifications(self) -> bool:
-        raise NotImplementedError("send_notifications is not implemented")
-
-
-GENERAL_NOTIFICATION_KEY = "general_notifications"
-BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
-DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
-notifiers = {}
 
 matrix_history = []
 symbol_data_history = {}
@@ -62,12 +67,6 @@ portfolio_value_history = {
 }
 
 TIME_AXIS_TITLE = "Time"
-
-
-def register_notifier(notification_key, notifier):
-    if notification_key not in notifiers:
-        notifiers[notification_key] = []
-    notifiers[notification_key].append(notifier)
 
 
 def add_to_matrix_history(matrix):
@@ -177,12 +176,13 @@ def get_notifications():
 
 
 def get_logs():
-    return logs_database[LOG_DATABASE]
+    return bot_logging.logs_database[bot_logging.LOG_DATABASE]
 
 
 def get_errors_count():
-    return logs_database[LOG_NEW_ERRORS_COUNT]
+    return bot_logging.logs_database[bot_logging.LOG_NEW_ERRORS_COUNT]
 
 
 def flush_errors_count():
-    reset_errors_count()
+    bot_logging.reset_errors_count()
+

@@ -1,1 +1,1 @@
-from .volatility_evaluator import StochasticRSIVolatilityEvaluator
+from .volatility import StochasticRSIVolatilityEvaluator

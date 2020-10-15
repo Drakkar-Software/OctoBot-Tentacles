@@ -14,31 +14,31 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import jsonify
+import flask
 
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
-    get_value_from_dict_or_string, get_first_symbol_data, get_watched_symbol_data
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route('/dashboard/currency_price_graph_update/<exchange_id>/<symbol>/<time_frame>/<mode>')
-@login_required_when_activated
+@web_interface.server_instance.route(
+    '/dashboard/currency_price_graph_update/<exchange_id>/<symbol>/<time_frame>/<mode>')
+@login.login_required_when_activated
 def currency_price_graph_update(exchange_id, symbol, time_frame, mode="live"):
     in_backtesting = mode != "live"
-    return jsonify(get_currency_price_graph_update(exchange_id,
-                                                   get_value_from_dict_or_string(symbol),
-                                                   time_frame,
-                                                   backtesting=in_backtesting))
+    return flask.jsonify(models.get_currency_price_graph_update(exchange_id,
+                                                                models.get_value_from_dict_or_string(symbol),
+                                                                time_frame,
+                                                                backtesting=in_backtesting))
 
 
-@server_instance.route('/dashboard/first_symbol')
-@login_required_when_activated
+@web_interface.server_instance.route('/dashboard/first_symbol')
+@login.login_required_when_activated
 def first_symbol():
-    return jsonify(get_first_symbol_data())
+    return flask.jsonify(models.get_first_symbol_data())
 
 
-@server_instance.route('/dashboard/watched_symbol/<symbol>')
-@login_required_when_activated
+@web_interface.server_instance.route('/dashboard/watched_symbol/<symbol>')
+@login.login_required_when_activated
 def watched_symbol(symbol):
-    return jsonify(get_watched_symbol_data(symbol))
+    return flask.jsonify(models.get_watched_symbol_data(symbol))

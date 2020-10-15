@@ -16,7 +16,7 @@
 import tulipy
 import numpy
 
-from octobot_commons.constants import START_PENDING_EVAL_NOTE
+import octobot_commons.constants as commons_constants
 
 
 class StatisticAnalysis:
@@ -40,7 +40,7 @@ class StatisticAnalysis:
 
         # its exactly on all bands
         if current_up == current_low:
-            return START_PENDING_EVAL_NOTE
+            return commons_constants.START_PENDING_EVAL_NOTE
 
         # exactly on the middle
         elif current_value == current_middle:
