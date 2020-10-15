@@ -15,17 +15,17 @@
 #  License along with this library.
 
 
-from flask import render_template
+import flask
 
-from octobot.disclaimer import DISCLAIMER
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.configuration import accepted_terms
+import octobot.disclaimer as disclaimer
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route("/terms")
-@login_required_when_activated
+@web_interface.server_instance.route("/terms")
+@login.login_required_when_activated
 def terms():
-    return render_template("terms.html",
-                           disclaimer=DISCLAIMER,
-                           accepted_terms=accepted_terms())
+    return flask.render_template("terms.html",
+                                 disclaimer=disclaimer.DISCLAIMER,
+                                 accepted_terms=models.accepted_terms())

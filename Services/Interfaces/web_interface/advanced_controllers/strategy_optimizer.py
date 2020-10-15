@@ -14,25 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template, request, jsonify
+import flask
 
-from . import advanced
-from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_config_activated_trading_mode
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
+import tentacles.Services.Interfaces.web_interface.util as util
+import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@advanced.route("/strategy-optimizer")
-@advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
-@login_required_when_activated
+@advanced_controllers.advanced.route("/strategy-optimizer")
+@advanced_controllers.advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
+@login.login_required_when_activated
 def strategy_optimizer():
-    from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import get_strategies_list, \
-        get_time_frames_list, get_evaluators_list, get_risks_list, start_optimizer, \
-        get_optimizer_results, get_optimizer_report, get_current_run_params
-
-    if request.method == 'POST':
-        update_type = request.args["update_type"]
-        request_data = request.get_json()
+    if flask.request.method == 'POST':
+        update_type = flask.request.args["update_type"]
+        request_data = flask.request.get_json()
         success = False
         reply = "Operation OK"
 
@@ -43,40 +39,40 @@ def strategy_optimizer():
                     time_frames = request_data["time_frames"]
                     evaluators = request_data["evaluators"]
                     risks = request_data["risks"]
-                    success, reply = start_optimizer(strategy, time_frames, evaluators, risks)
+                    success, reply = models.start_optimizer(strategy, time_frames, evaluators, risks)
                 except Exception as e:
-                    return get_rest_reply('{"start_optimizer": "ko: ' + str(e) + '"}', 500)
+                    return util.get_rest_reply('{"start_optimizer": "ko: ' + str(e) + '"}', 500)
 
         if success:
-            return get_rest_reply(jsonify(reply))
+            return util.get_rest_reply(flask.jsonify(reply))
         else:
-            return get_rest_reply(reply, 500)
+            return util.get_rest_reply(reply, 500)
 
-    elif request.method == 'GET':
-        if request.args:
-            target = request.args["update_type"]
+    elif flask.request.method == 'GET':
+        if flask.request.args:
+            target = flask.request.args["update_type"]
             if target == "optimizer_results":
-                optimizer_results = get_optimizer_results()
-                return jsonify(optimizer_results)
+                optimizer_results = models.get_optimizer_results()
+                return flask.jsonify(optimizer_results)
             if target == "optimizer_report":
-                optimizer_report = get_optimizer_report()
-                return jsonify(optimizer_report)
+                optimizer_report = models.get_optimizer_report()
+                return flask.jsonify(optimizer_report)
             if target == "strategy_params":
-                strategy_name = request.args["strategy_name"]
+                strategy_name = flask.request.args["strategy_name"]
                 params = {
-                    "time_frames": list(get_time_frames_list(strategy_name)),
-                    "evaluators": list(get_evaluators_list(strategy_name))
+                    "time_frames": list(models.get_time_frames_list(strategy_name)),
+                    "evaluators": list(models.get_evaluators_list(strategy_name))
                 }
-                return jsonify(params)
+                return flask.jsonify(params)
         else:
-            trading_mode = get_config_activated_trading_mode()
-            strategies = get_strategies_list(trading_mode)
+            trading_mode = models.get_config_activated_trading_mode()
+            strategies = models.get_strategies_list(trading_mode)
             current_strategy = strategies[0] if strategies else ""
-            return render_template('advanced_strategy_optimizer.html',
-                                   strategies=strategies,
-                                   current_strategy=current_strategy,
-                                   time_frames=get_time_frames_list(current_strategy),
-                                   evaluators=get_evaluators_list(current_strategy),
-                                   risks=get_risks_list(),
-                                   trading_mode=trading_mode.get_name(),
-                                   run_params=get_current_run_params())
+            return flask.render_template('advanced_strategy_optimizer.html',
+                                         strategies=strategies,
+                                         current_strategy=current_strategy,
+                                         time_frames=models.get_time_frames_list(current_strategy),
+                                         evaluators=models.get_evaluators_list(current_strategy),
+                                         risks=models.get_risks_list(),
+                                         trading_mode=trading_mode.get_name(),
+                                         run_params=models.get_current_run_params())

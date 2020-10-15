@@ -1,1 +1,1 @@
-from .telegram_service import TelegramService
+from .telegram import TelegramService

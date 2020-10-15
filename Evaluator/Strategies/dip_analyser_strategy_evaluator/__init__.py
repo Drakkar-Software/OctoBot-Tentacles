@@ -1,1 +1,1 @@
-from .dip_analyser_strategy_evaluator import DipAnalyserStrategyEvaluator
+from .dip_analyser_strategy import DipAnalyserStrategyEvaluator

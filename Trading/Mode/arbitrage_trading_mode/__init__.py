@@ -1,1 +1,1 @@
-from .arbitrage_trading_mode import ArbitrageTradingMode
+from .arbitrage_trading import ArbitrageTradingMode

@@ -1,1 +1,1 @@
-from .instant_fluctuations_evaluator import InstantFluctuationsEvaluator, InstantMAEvaluator
+from .instant_fluctuations import InstantFluctuationsEvaluator, InstantMAEvaluator

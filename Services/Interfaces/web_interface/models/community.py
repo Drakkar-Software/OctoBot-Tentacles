@@ -14,13 +14,13 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from octobot_services.interfaces.util.bot import get_edited_config
-from octobot.community.community_analysis import can_read_metrics, get_community_metrics
+import octobot_services.interfaces.util as interfaces_util
+import octobot.community as octobot_community
 
 
 def get_community_metrics_to_display():
-    return get_community_metrics()
+    return octobot_community.get_community_metrics()
 
 
 def can_get_community_metrics():
-    return can_read_metrics(get_edited_config())
+    return octobot_community.can_read_metrics(interfaces_util.get_edited_config())

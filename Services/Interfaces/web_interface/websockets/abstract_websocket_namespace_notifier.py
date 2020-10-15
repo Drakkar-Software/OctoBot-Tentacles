@@ -13,20 +13,22 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from functools import wraps
-from flask_login import current_user
-from flask_socketio import Namespace, disconnect
+import functools
+import flask_login
+import flask_socketio
 
-from octobot_commons.logging.logging_util import get_logger
-from tentacles.Services.Interfaces.web_interface import Notifier
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import IS_LOGIN_REQUIRED
+import octobot_commons.logging as bot_logger
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-class AbstractWebSocketNamespaceNotifier(Namespace, Notifier):
+class AbstractWebSocketNamespaceNotifier(flask_socketio.Namespace, web_interface.Notifier):
 
     def __init__(self, namespace=None):
-        super(Namespace, self).__init__(namespace)
-        self.logger = get_logger(self.__class__.__name__)
+        super(flask_socketio.Namespace, self).__init__(namespace)
+        self.logger = bot_logger.get_logger(self.__class__.__name__)
+        # constructor can be called in global project import, in this case manually enable logger
+        self.logger.logger.disabled = False
         self.clients_count = 0
 
     def all_clients_send_notifications(self, **kwargs) -> bool:
@@ -44,11 +46,12 @@ class AbstractWebSocketNamespaceNotifier(Namespace, Notifier):
 
 
 def websocket_with_login_required_when_activated(func):
-    @wraps(func)
+    @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
         # Use == because of the flask proxy (this is not a simple python None value)
-        if IS_LOGIN_REQUIRED and (current_user == None or not current_user.is_authenticated):
-            disconnect(self)
+        if login.is_login_required() and \
+                (flask_login.current_user is None or not flask_login.current_user.is_authenticated):
+            flask_socketio.disconnect(self)
         else:
             return func(self, *args, **kwargs)
     return wrapped

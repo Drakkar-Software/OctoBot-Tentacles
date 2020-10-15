@@ -1,1 +1,1 @@
-from .trading_view_service_feed import TradingViewServiceFeed
+from .trading_view_feed import TradingViewServiceFeed

@@ -16,23 +16,26 @@
 
 import json
 
-from . import api
-from octobot_services.constants import EXTERNAL_RESOURCE_CURRENT_USER_FORM, \
-    EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS
-from octobot_commons.external_resources_manager import get_external_resource
-from octobot_services.interfaces.abstract_interface import AbstractInterface
+import tentacles.Services.Interfaces.web_interface.api as api
+import octobot_services.constants as service_constants
+import octobot_commons.external_resources_manager as external_resources_manager
+import octobot_services.interfaces as interfaces
 
 
-@api.route("/version")
+@api.api.route("/version")
 def version():
-    return json.dumps(f"{AbstractInterface.project_name} {AbstractInterface.project_version}")
+    return json.dumps(f"{interfaces.AbstractInterface.project_name} {interfaces.AbstractInterface.project_version}")
 
 
-@api.route("/user_feedback")
+@api.api.route("/user_feedback")
 def user_feedback():
-    return json.dumps(get_external_resource(EXTERNAL_RESOURCE_CURRENT_USER_FORM, catch_exception=True))
+    return json.dumps(external_resources_manager.get_external_resource(
+        service_constants.EXTERNAL_RESOURCE_CURRENT_USER_FORM,
+        catch_exception=True))
 
 
-@api.route("/announcements")
+@api.api.route("/announcements")
 def announcements():
-    return json.dumps(get_external_resource(EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS, catch_exception=True))
+    return json.dumps(external_resources_manager.get_external_resource(
+        service_constants.EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS,
+        catch_exception=True))

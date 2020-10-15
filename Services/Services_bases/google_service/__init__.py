@@ -1,1 +1,1 @@
-from .google_service import GoogleService
+from .google import GoogleService

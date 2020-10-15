@@ -13,26 +13,27 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask import render_template, request
+import flask
 
-from octobot_commons.logging.logging_util import get_logger
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
+import octobot_commons.logging as bot_logging
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.util as util
 
 APP_JSON_CONTENT_TYPE = "application/json"
 
 
-@server_instance.errorhandler(404)
+@web_interface.server_instance.errorhandler(404)
 def not_found(_):
-    if request.content_type == APP_JSON_CONTENT_TYPE:
-        return get_rest_reply("We are sorry, but this doesn't exist", 404)
-    return render_template("404.html")
+    if flask.request.content_type == APP_JSON_CONTENT_TYPE:
+        return util.get_rest_reply("We are sorry, but this doesn't exist", 404)
+    return flask.render_template("404.html")
 
 
-@server_instance.errorhandler(500)
+@web_interface.server_instance.errorhandler(500)
 def internal_error(error):
-    get_logger("WebInterfaceErrorHandler").exception(error.original_exception, True, f"Error when displaying page: "
-                                                                                     f"{error.original_exception}")
-    if request.content_type == APP_JSON_CONTENT_TYPE:
-        return get_rest_reply("We are sorry, but an unexpected error occurred", 500)
-    return render_template("500.html")
+    bot_logging.get_logger("WebInterfaceErrorHandler").exception(error.original_exception, True,
+                                                                 f"Error when displaying page: "
+                                                                 f"{error.original_exception}")
+    if flask.request.content_type == APP_JSON_CONTENT_TYPE:
+        return util.get_rest_reply("We are sorry, but an unexpected error occurred", 500)
+    return flask.render_template("500.html")

@@ -13,90 +13,90 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.enums import EvaluatorStates
-from tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container import ArbitrageContainer
+import octobot_trading.enums as trading_enums
+import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 
 
 def test_is_similar_with_prices_close_to_own_price():
-    container = ArbitrageContainer(90, 100, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(90, 100, trading_enums.EvaluatorStates.LONG)
     # same price and state
-    assert container.is_similar(90, EvaluatorStates.LONG)
+    assert container.is_similar(90, trading_enums.EvaluatorStates.LONG)
     # same price but different state
-    assert not container.is_similar(90, EvaluatorStates.SHORT)
+    assert not container.is_similar(90, trading_enums.EvaluatorStates.SHORT)
 
     # too different prices comparing to own_exchange_price
     for price in (110, 200, 80, 20, 0):
-        assert not container.is_similar(price, EvaluatorStates.LONG)
-        assert not container.is_similar(price, EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
     # similar prices comparing to own_exchange_price
     for price in (89.97, 90.01):
-        assert container.is_similar(price, EvaluatorStates.LONG)
-        assert container.is_similar(price, EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
 
 def test_is_similar_with_prices_close_to_own_price_very_low_prices():
-    container = ArbitrageContainer(0.00000621, 0.00000645, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(0.00000621, 0.00000645, trading_enums.EvaluatorStates.LONG)
 
     # too different prices comparing to own_exchange_price
     for price in (0.0000060, 0.0000061, 0.0000065, 0.000007):
-        assert not container.is_similar(price, EvaluatorStates.LONG)
-        assert not container.is_similar(price, EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
     # similar prices comparing to own_exchange_price
     for price in (0.000006196, 0.00000620, 0.00000646, 0.000006463):
-        assert container.is_similar(price, EvaluatorStates.LONG)
-        assert container.is_similar(price, EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
-    container = ArbitrageContainer(0.00000062, 0.00000064, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(0.00000062, 0.00000064, trading_enums.EvaluatorStates.LONG)
 
     # too different prices comparing to own_exchange_price
     for price in (0.00000060, 0.00000061, 0.00000065, 0.0000007):
-        assert not container.is_similar(price, EvaluatorStates.LONG)
-        assert not container.is_similar(price, EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert not container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
     # similar prices comparing to own_exchange_price
     for price in (0.0000006199, 0.0000006401):
-        assert container.is_similar(price, EvaluatorStates.LONG)
-        assert container.is_similar(price, EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
 
 def test_is_similar_with_prices_in_arbitrage_range():
-    container = ArbitrageContainer(90, 100, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(90, 100, trading_enums.EvaluatorStates.LONG)
 
     for price in range(container.own_exchange_price, container.target_price):
-        assert container.is_similar(price, EvaluatorStates.LONG)
-        assert container.is_similar(price, EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.LONG)
 
-    container = ArbitrageContainer(100, 90, EvaluatorStates.SHORT)
+    container = arbitrage_container_import.ArbitrageContainer(100, 90, trading_enums.EvaluatorStates.SHORT)
 
     for price in range(container.target_price, container.own_exchange_price):
-        assert container.is_similar(price, EvaluatorStates.SHORT)
-        assert container.is_similar(price, EvaluatorStates.SHORT)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.SHORT)
+        assert container.is_similar(price, trading_enums.EvaluatorStates.SHORT)
 
 
 def test_is_expired():
-    container = ArbitrageContainer(90, 100, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(90, 100, trading_enums.EvaluatorStates.LONG)
     assert not container.is_expired(99.99)
     assert container.is_expired(99)
 
-    container = ArbitrageContainer(100, 90, EvaluatorStates.SHORT)
+    container = arbitrage_container_import.ArbitrageContainer(100, 90, trading_enums.EvaluatorStates.SHORT)
     assert not container.is_expired(90.01)
     assert container.is_expired(91)
 
 
 def test_is_expired_very_low_prices():
-    container = ArbitrageContainer(0.00000621, 0.00000645, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(0.00000621, 0.00000645, trading_enums.EvaluatorStates.LONG)
     assert not container.is_expired(0.00000644)
     assert container.is_expired(0.00000643)
 
-    container = ArbitrageContainer(0.00000062, 0.00000064, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(0.00000062, 0.00000064, trading_enums.EvaluatorStates.LONG)
     assert not container.is_expired(0.000000639)
     assert container.is_expired(0.000000637)
 
 
 def test_should_be_discarded_after_order_cancel():
-    container = ArbitrageContainer(90, 100, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(90, 100, trading_enums.EvaluatorStates.LONG)
     assert not container.should_be_discarded_after_order_cancel("123")
     container.initial_limit_order_id = "123"
     assert container.should_be_discarded_after_order_cancel("123")
@@ -104,7 +104,7 @@ def test_should_be_discarded_after_order_cancel():
 
 
 def test_is_watching_this_order():
-    container = ArbitrageContainer(90, 100, EvaluatorStates.LONG)
+    container = arbitrage_container_import.ArbitrageContainer(90, 100, trading_enums.EvaluatorStates.LONG)
     assert not container.is_watching_this_order("init")
     assert not container.is_watching_this_order("sec")
     assert not container.is_watching_this_order("stop")

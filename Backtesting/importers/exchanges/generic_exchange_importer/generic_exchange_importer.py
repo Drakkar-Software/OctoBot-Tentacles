@@ -13,8 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_backtesting.importers.exchanges.exchange_importer import ExchangeDataImporter
+import octobot_backtesting.importers as importers
 
 
-class GenericExchangeDataImporter(ExchangeDataImporter):
+class GenericExchangeDataImporter(importers.ExchangeDataImporter):
     pass

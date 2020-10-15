@@ -1,1 +1,1 @@
-from .mixed_strategies_evaluator import SimpleStrategyEvaluator, TechnicalAnalysisStrategyEvaluator
+from .mixed_strategies import SimpleStrategyEvaluator, TechnicalAnalysisStrategyEvaluator

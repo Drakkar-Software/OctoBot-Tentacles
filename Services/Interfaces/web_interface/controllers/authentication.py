@@ -13,49 +13,48 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask import request, abort, url_for, redirect, render_template
-from flask_login import login_user, logout_user, login_required
-from flask_wtf import FlaskForm
-from wtforms import PasswordField, BooleanField
+import flask
+import flask_login
+import flask_wtf
+import wtforms
 
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import GENERIC_USER, reset_attempts, \
-    register_attempt
-from tentacles.Services.Interfaces.web_interface.security import is_safe_url
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as web_login
+import tentacles.Services.Interfaces.web_interface.security as security
 
 
-@server_instance.route('/login', methods=['GET', 'POST'])
+@web_interface.server_instance.route('/login', methods=['GET', 'POST'])
 def login():
     # use default constructor to apply default values when no form in request
-    form = LoginForm(request.form) if request.form else LoginForm()
+    form = LoginForm(flask.request.form) if flask.request.form else LoginForm()
     if form.validate_on_submit():
-        if server_instance.login_manager.is_valid_password(request.remote_addr, form.password.data):
-            GENERIC_USER.is_authenticated = True
-            login_user(GENERIC_USER, remember=form.remember_me.data)
-            reset_attempts(request.remote_addr)
+        if web_interface.server_instance.login_manager.is_valid_password(flask.request.remote_addr, form.password.data):
+            web_login.GENERIC_USER.is_authenticated = True
+            flask_login.login_user(web_login.GENERIC_USER, remember=form.remember_me.data)
+            web_login.reset_attempts(flask.request.remote_addr)
 
             return _get_next_url_or_home_redirect()
-        if register_attempt(request.remote_addr):
+        if web_login.register_attempt(flask.request.remote_addr):
             form.password.errors.append('Invalid password')
         else:
             form.password.errors.append('Too many attempts. Please restart your OctoBot to be able to login.')
-    return render_template('login.html', form=form)
+    return flask.render_template('login.html', form=form)
 
 
-@server_instance.route("/logout")
-@login_required
+@web_interface.server_instance.route("/logout")
+@flask_login.login_required
 def logout():
-    logout_user()
+    flask_login.logout_user()
     return _get_next_url_or_home_redirect()
 
 
 def _get_next_url_or_home_redirect():
-    next_url = request.args.get('next')
-    if not is_safe_url(next_url):
-        return abort(400)
-    return redirect(next_url or url_for('home'))
+    next_url = flask.request.args.get('next')
+    if not security.is_safe_url(next_url):
+        return flask.abort(400)
+    return flask.redirect(next_url or flask.url_for('home'))
 
 
-class LoginForm(FlaskForm):
-    password = PasswordField('Password')
-    remember_me = BooleanField('Remember me', default=True)
+class LoginForm(flask_wtf.FlaskForm):
+    password = wtforms.PasswordField('Password')
+    remember_me = wtforms.BooleanField('Remember me', default=True)

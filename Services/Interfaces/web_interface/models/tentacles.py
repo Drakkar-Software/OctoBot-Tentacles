@@ -13,38 +13,36 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot.constants import DEFAULT_TENTACLES_URL, OCTOBOT_FOLDER
-from octobot_commons.logging.logging_util import get_logger
-from octobot_services.interfaces.util.bot import get_bot_api
-from octobot_services.interfaces.util.util import run_in_bot_main_loop
-from octobot_tentacles_manager.api.configurator import get_registered_tentacle_packages
-from octobot_tentacles_manager.api.inspector import get_installed_tentacles_modules
-from octobot_tentacles_manager.api.installer import install_all_tentacles
-from octobot_tentacles_manager.api.uninstaller import uninstall_all_tentacles, uninstall_tentacles
-from octobot_tentacles_manager.api.updater import update_all_tentacles, update_tentacles
-from octobot_tentacles_manager.constants import UNKNOWN_TENTACLES_PACKAGE_LOCATION
 
-logger = get_logger("TentaclesModel")
+import octobot.constants as octobot_constants
+import octobot_commons.logging as bot_logging
+import octobot_services.interfaces.util as interfaces_util
+import octobot_tentacles_manager.api as tentacles_manager_api
+import octobot_tentacles_manager.constants as tentacles_manager_constants
+
+logger = bot_logging.get_logger("TentaclesModel")
 
 
 def get_tentacles_packages():
-    return get_registered_tentacle_packages(get_bot_api().get_edited_tentacles_config())
+    return tentacles_manager_api.get_registered_tentacle_packages(
+        interfaces_util.get_bot_api().get_edited_tentacles_config())
 
 
 def call_tentacle_manager(coro, *args, **kwargs):
-    return run_in_bot_main_loop(coro(*args, **kwargs)) == 0
+    return interfaces_util.run_in_bot_main_loop(coro(*args, **kwargs)) == 0
 
 
 def install_packages(path_or_url=None):
     message = "Tentacles installed"
     for package_url in [path_or_url] if path_or_url else \
-            get_registered_tentacle_packages(get_bot_api().get_edited_tentacles_config()).values():
-        if not package_url == UNKNOWN_TENTACLES_PACKAGE_LOCATION:
-            if not call_tentacle_manager(install_all_tentacles,
+            tentacles_manager_api.get_registered_tentacle_packages(
+                interfaces_util.get_bot_api().get_edited_tentacles_config()).values():
+        if not package_url == tentacles_manager_constants.UNKNOWN_TENTACLES_PACKAGE_LOCATION:
+            if not call_tentacle_manager(tentacles_manager_api.install_all_tentacles,
                                          package_url,
-                                         setup_config=get_bot_api().get_edited_tentacles_config(),
-                                         aiohttp_session=get_bot_api().get_aiohttp_session(),
-                                         bot_install_dir=OCTOBOT_FOLDER
+                                         setup_config=interfaces_util.get_bot_api().get_edited_tentacles_config(),
+                                         aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session(),
+                                         bot_install_dir=octobot_constants.OCTOBOT_FOLDER
                                          ):
                 return False
         else:
@@ -54,11 +52,12 @@ def install_packages(path_or_url=None):
 
 def update_packages():
     message = "Tentacles updated"
-    for package_url in get_registered_tentacle_packages(get_bot_api().get_edited_tentacles_config()).values():
-        if not package_url == UNKNOWN_TENTACLES_PACKAGE_LOCATION:
-            if not call_tentacle_manager(update_all_tentacles,
+    for package_url in tentacles_manager_api.get_registered_tentacle_packages(
+            interfaces_util.get_bot_api().get_edited_tentacles_config()).values():
+        if not package_url == tentacles_manager_constants.UNKNOWN_TENTACLES_PACKAGE_LOCATION:
+            if not call_tentacle_manager(tentacles_manager_api.update_all_tentacles,
                                          package_url,
-                                         aiohttp_session=get_bot_api().get_aiohttp_session()):
+                                         aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session()):
                 return False
         else:
             message = "Tentacles updated however it is impossible to update tentacles with unknown package origin"
@@ -66,8 +65,8 @@ def update_packages():
 
 
 def reset_packages():
-    if call_tentacle_manager(uninstall_all_tentacles,
-                             setup_config=get_bot_api().get_edited_tentacles_config(),
+    if call_tentacle_manager(tentacles_manager_api.uninstall_all_tentacles,
+                             setup_config=interfaces_util.get_bot_api().get_edited_tentacles_config(),
                              use_confirm_prompt=False):
         return "Reset successful"
     else:
@@ -75,17 +74,17 @@ def reset_packages():
 
 
 def update_modules(modules):
-    if call_tentacle_manager(update_tentacles,
+    if call_tentacle_manager(tentacles_manager_api.update_tentacles,
                              modules,
-                             DEFAULT_TENTACLES_URL,
-                             aiohttp_session=get_bot_api().get_aiohttp_session()):
+                             octobot_constants.DEFAULT_TENTACLES_URL,
+                             aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session()):
         return f"{len(modules)} Tentacles updated"
     else:
         return None
 
 
 def uninstall_modules(modules):
-    if call_tentacle_manager(uninstall_tentacles,
+    if call_tentacle_manager(tentacles_manager_api.uninstall_tentacles,
                              modules):
         return f"{len(modules)} Tentacles uninstalled"
     else:
@@ -93,4 +92,4 @@ def uninstall_modules(modules):
 
 
 def get_tentacles():
-    return get_installed_tentacles_modules()
+    return tentacles_manager_api.get_installed_tentacles_modules()

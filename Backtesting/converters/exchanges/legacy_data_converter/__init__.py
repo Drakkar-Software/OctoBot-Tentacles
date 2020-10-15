@@ -1,1 +1,1 @@
-from .legacy_data_converter import LegacyDataConverter
+from .legacy_converter import LegacyDataConverter
