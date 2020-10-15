@@ -27,12 +27,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture()
 async def evaluator_tester():
-    evaluator_tester_instance = TestDoubleMovingAveragesTAEvaluator()
+    evaluator_tester_instance = TestDoubleMovingAveragesEvaluator()
     evaluator_tester_instance.TA_evaluator_class = DoubleMovingAverageTrendEvaluator
     return evaluator_tester_instance
 
 
-class TestDoubleMovingAveragesTAEvaluator(AbstractTATest):
+class TestDoubleMovingAveragesEvaluator(AbstractTATest):
 
     @staticmethod
     async def test_stress_test(evaluator_tester):

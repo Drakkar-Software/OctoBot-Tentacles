@@ -1,1 +1,1 @@
-from .telegram_service_feed import TelegramServiceFeed
+from .telegram_feed import TelegramServiceFeed

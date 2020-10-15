@@ -15,11 +15,17 @@
 #  License along with this library.
 import pytest
 import asyncio
-from contextlib import asynccontextmanager
+import contextlib
 
-from octobot_services.interfaces.bots.abstract_bot_interface import AbstractBotInterface
-from octobot_services.interfaces.abstract_interface import AbstractInterface
-
+import octobot_services.interfaces as interfaces
+import octobot.octobot as octobot
+import octobot.constants as octobot_constants
+import octobot.producers as octobot_producers
+import octobot.producers as trading_producers
+import octobot_commons.tests.test_config as test_config
+import octobot_tentacles_manager.loaders as loaders
+import octobot_evaluators.api as evaluator_api
+import tests.test_utils.config as test_utils_config
 
 # All test coroutines will be treated as marked.
 
@@ -28,35 +34,28 @@ pytestmark = pytest.mark.asyncio
 
 async def create_minimalist_unconnected_octobot():
     # import here to prevent later web interface import issues
-    from octobot.octobot import OctoBot
-    from octobot.constants import TENTACLES_SETUP_CONFIG_KEY
-    from octobot.producers.evaluator_producer import EvaluatorProducer
-    from octobot.producers.exchange_producer import ExchangeProducer
-    from octobot_commons.tests.test_config import load_test_config
-    from octobot_tentacles_manager.loaders.tentacle_loading import reload_tentacle_by_tentacle_class
-    from octobot_evaluators.api.evaluators import initialize_evaluators
-    from tests.test_utils.config import load_test_tentacles_config
-    octobot = OctoBot(load_test_config())
-    octobot.initialized = True
-    tentacles_config = load_test_tentacles_config()
-    reload_tentacle_by_tentacle_class()
-    octobot.task_manager.async_loop = asyncio.get_event_loop()
-    octobot.task_manager.create_pool_executor()
-    octobot.tentacles_setup_config = tentacles_config
-    octobot.configuration_manager.add_element(TENTACLES_SETUP_CONFIG_KEY, tentacles_config)
-    octobot.exchange_producer = ExchangeProducer(None, octobot, None, False)
-    octobot.evaluator_producer = EvaluatorProducer(None, octobot)
-    octobot.evaluator_producer.matrix_id = await initialize_evaluators(octobot.config, tentacles_config)
-    return octobot
+    octobot_instance = octobot.OctoBot(test_config.load_test_config())
+    octobot_instance.initialized = True
+    tentacles_config = test_utils_config.load_test_tentacles_config()
+    loaders.reload_tentacle_by_tentacle_class()
+    octobot_instance.task_manager.async_loop = asyncio.get_event_loop()
+    octobot_instance.task_manager.create_pool_executor()
+    octobot_instance.tentacles_setup_config = tentacles_config
+    octobot_instance.configuration_manager.add_element(octobot_constants.TENTACLES_SETUP_CONFIG_KEY, tentacles_config)
+    octobot_instance.exchange_producer = trading_producers.ExchangeProducer(None, octobot_instance, None, False)
+    octobot_instance.evaluator_producer = octobot_producers.EvaluatorProducer(None, octobot_instance)
+    octobot_instance.evaluator_producer.matrix_id = await evaluator_api.initialize_evaluators(octobot_instance.config, tentacles_config)
+    return octobot_instance
 
 
 # use context manager instead of fixture to prevent pytest threads issues
-@asynccontextmanager
+@contextlib.asynccontextmanager
 async def get_bot_interface():
-    bot_interface = AbstractBotInterface({})
-    AbstractInterface.initialize_global_project_data((await create_minimalist_unconnected_octobot()).octobot_api,
-                                                     "octobot",
-                                                     "x.y.z-alpha42")
+    bot_interface = interfaces.AbstractBotInterface({})
+    interfaces.AbstractInterface.initialize_global_project_data(
+        (await create_minimalist_unconnected_octobot()).octobot_api,
+        "octobot",
+        "x.y.z-alpha42")
     yield bot_interface
 
 
@@ -77,5 +76,6 @@ async def test_all_commands():
         assert len(bot_interface.get_command_profitability()) > 50
         assert "I'm alive since" in bot_interface.get_command_ping()
         assert all(elem in bot_interface.get_command_version()
-                   for elem in [AbstractInterface.project_name, AbstractInterface.project_version])
+                   for elem in
+                   [interfaces.AbstractInterface.project_name, interfaces.AbstractInterface.project_version])
         assert "Hello, I'm OctoBot" in bot_interface.get_command_start()

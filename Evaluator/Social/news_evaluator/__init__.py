@@ -1,1 +1,1 @@
-from .news_evaluator import TwitterNewsEvaluator
+from .news import TwitterNewsEvaluator

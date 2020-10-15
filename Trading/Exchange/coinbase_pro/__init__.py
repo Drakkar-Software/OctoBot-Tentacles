@@ -13,4 +13,4 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from .coinbase_pro import CoinbasePro
+from .coinbase_pro_exchange import CoinbasePro

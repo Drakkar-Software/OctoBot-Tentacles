@@ -1,1 +1,1 @@
-from .daily_trading_mode import DailyTradingMode
+from .daily_trading import DailyTradingMode

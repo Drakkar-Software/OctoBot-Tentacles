@@ -14,25 +14,23 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask_socketio import emit
+import flask_socketio
 
-from tentacles.Services.Interfaces.web_interface import BACKTESTING_NOTIFICATION_KEY, register_notifier
-from tentacles.Services.Interfaces.web_interface.models.backtesting import get_backtesting_status
-from tentacles.Services.Interfaces.web_interface.websockets import namespaces
-from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.websockets as websockets
 
 
-class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
+class BacktestingNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_backtesting_status():
-        backtesting_status, progress = get_backtesting_status()
+        backtesting_status, progress = models.get_backtesting_status()
         return {"status": backtesting_status, "progress": progress}
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_backtesting_status(self):
-        emit("backtesting_status", self._get_backtesting_status())
+        flask_socketio.emit("backtesting_status", self._get_backtesting_status())
 
     def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
@@ -43,12 +41,12 @@ class BacktestingNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending backtesting_status: {e}")
         return False
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_backtesting_status()
 
 
 notifier = BacktestingNamespace('/backtesting')
-register_notifier(BACKTESTING_NOTIFICATION_KEY, notifier)
-namespaces.append(notifier)
+web_interface.register_notifier(web_interface.BACKTESTING_NOTIFICATION_KEY, notifier)
+websockets.namespaces.append(notifier)

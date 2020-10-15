@@ -15,107 +15,97 @@
 #  License along with this library.
 
 import datetime
+import flask
 
-from flask import render_template, request, jsonify
-
-from octobot_services.interfaces.util.order import get_all_open_orders
-from octobot_services.interfaces.util.trader import get_trades_history, get_currencies_with_status, \
-    has_real_and_or_simulated_traders
-from octobot_services.interfaces.util.portfolio import get_global_portfolio_currencies_amounts, get_portfolio_current_value, \
-    get_portfolio_holdings
-from octobot_services.interfaces.util.profitability import get_reference_market
-from tentacles.Services.Interfaces.web_interface import server_instance
-from octobot_trading.constants import CONFIG_PORTFOLIO_TOTAL
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_in_backtesting_mode
-from tentacles.Services.Interfaces.web_interface.models.trading import get_exchange_time_frames, get_evaluation, \
-    get_initializing_currencies_prices_set
-from tentacles.Services.Interfaces.web_interface.models.interface_settings import get_watched_symbols
+import octobot_services.interfaces.util as interfaces_util
+import tentacles.Services.Interfaces.web_interface as web_interface
+import octobot_trading.constants as trading_constants
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route("/portfolio")
-@login_required_when_activated
+@web_interface.server_instance.route("/portfolio")
+@login.login_required_when_activated
 def portfolio():
-    has_real_trader, has_simulated_trader = has_real_and_or_simulated_traders()
+    has_real_trader, has_simulated_trader = interfaces_util.has_real_and_or_simulated_traders()
 
-    real_portfolio, simulated_portfolio = get_global_portfolio_currencies_amounts()
+    real_portfolio, simulated_portfolio = interfaces_util.get_global_portfolio_currencies_amounts()
 
     filtered_real_portfolio = {currency: amounts
                                for currency, amounts in real_portfolio.items()
-                               if amounts[CONFIG_PORTFOLIO_TOTAL] > 0}
+                               if amounts[trading_constants.CONFIG_PORTFOLIO_TOTAL] > 0}
     filtered_simulated_portfolio = {currency: amounts
                                     for currency, amounts in simulated_portfolio.items()
-                                    if amounts[CONFIG_PORTFOLIO_TOTAL] > 0}
+                                    if amounts[trading_constants.CONFIG_PORTFOLIO_TOTAL] > 0}
 
-    _, _, portfolio_real_current_value, portfolio_simulated_current_value = get_portfolio_current_value()
-    reference_market = get_reference_market()
-    initializing_currencies_prices_set = get_initializing_currencies_prices_set()
+    _, _, portfolio_real_current_value, portfolio_simulated_current_value = interfaces_util.get_portfolio_current_value()
+    reference_market = interfaces_util.get_reference_market()
+    initializing_currencies_prices_set = models.get_initializing_currencies_prices_set()
 
-    return render_template('portfolio.html',
-                           has_real_trader=has_real_trader,
-                           has_simulated_trader=has_simulated_trader,
-                           simulated_portfolio=filtered_simulated_portfolio,
-                           real_portfolio=filtered_real_portfolio,
-                           simulated_total_value=round(portfolio_simulated_current_value, 8),
-                           real_total_value=round(portfolio_real_current_value, 8),
-                           reference_unit=reference_market,
-                           initializing_currencies_prices=initializing_currencies_prices_set
-                           )
+    return flask.render_template('portfolio.html',
+                                 has_real_trader=has_real_trader,
+                                 has_simulated_trader=has_simulated_trader,
+                                 simulated_portfolio=filtered_simulated_portfolio,
+                                 real_portfolio=filtered_real_portfolio,
+                                 simulated_total_value=round(portfolio_simulated_current_value, 8),
+                                 real_total_value=round(portfolio_real_current_value, 8),
+                                 reference_unit=reference_market,
+                                 initializing_currencies_prices=initializing_currencies_prices_set
+                                 )
 
 
-@server_instance.route("/portfolio_holdings")
-@login_required_when_activated
+@web_interface.server_instance.route("/portfolio_holdings")
+@login.login_required_when_activated
 def portfolio_holdings():
     result = {}
-    real_portfolio_holdings, simulated_portfolio_holdings = get_portfolio_holdings()
+    real_portfolio_holdings, simulated_portfolio_holdings = interfaces_util.get_portfolio_holdings()
     result["real_portfolio_holdings"] = real_portfolio_holdings
     result["simulated_portfolio_holdings"] = simulated_portfolio_holdings
-    return jsonify(result)
+    return flask.jsonify(result)
 
 
-@server_instance.route("/symbol_market_status")
-@server_instance.route('/symbol_market_status', methods=['GET', 'POST'])
-@login_required_when_activated
+@web_interface.server_instance.route("/symbol_market_status")
+@web_interface.server_instance.route('/symbol_market_status', methods=['GET', 'POST'])
+@login.login_required_when_activated
 def symbol_market_status():
-    exchange_id = request.args["exchange_id"]
-    symbol = request.args["symbol"]
-    symbol_time_frames, exchange = get_exchange_time_frames(exchange_id)
+    exchange_id = flask.request.args["exchange_id"]
+    symbol = flask.request.args["symbol"]
+    symbol_time_frames, exchange = models.get_exchange_time_frames(exchange_id)
     time_frames = list(symbol_time_frames)
     time_frames.reverse()
-    symbol_evaluation = get_evaluation(symbol, exchange, exchange_id)
-    return render_template('symbol_market_status.html',
-                           symbol=symbol,
-                           exchange=exchange,
-                           exchange_id=exchange_id,
-                           symbol_evaluation=symbol_evaluation,
-                           time_frames=time_frames,
-                           backtesting_mode=get_in_backtesting_mode())
+    symbol_evaluation = models.get_evaluation(symbol, exchange, exchange_id)
+    return flask.render_template('symbol_market_status.html',
+                                 symbol=symbol,
+                                 exchange=exchange,
+                                 exchange_id=exchange_id,
+                                 symbol_evaluation=symbol_evaluation,
+                                 time_frames=time_frames,
+                                 backtesting_mode=models.get_in_backtesting_mode())
 
 
-@server_instance.route("/trading")
-@login_required_when_activated
+@web_interface.server_instance.route("/trading")
+@login.login_required_when_activated
 def trading():
+    real_open_orders, simulated_open_orders = interfaces_util.get_all_open_orders()
+    has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
+    return flask.render_template('trading.html',
+                                 real_open_orders=real_open_orders,
+                                 simulated_open_orders=simulated_open_orders,
+                                 watched_symbols=models.get_watched_symbols(),
+                                 pairs_with_status=interfaces_util.get_currencies_with_status(),
+                                 has_real_trader=has_real_trader)
 
-    real_open_orders, simulated_open_orders = get_all_open_orders()
-    has_real_trader, _ = has_real_and_or_simulated_traders()
-    return render_template('trading.html',
-                           real_open_orders=real_open_orders,
-                           simulated_open_orders=simulated_open_orders,
-                           watched_symbols=get_watched_symbols(),
-                           pairs_with_status=get_currencies_with_status(),
-                           has_real_trader=has_real_trader)
 
-
-@server_instance.route("/trades")
-@login_required_when_activated
+@web_interface.server_instance.route("/trades")
+@login.login_required_when_activated
 def trades():
-    real_trades_history, simulated_trades_history = get_trades_history()
-    return render_template('trades.html',
-                           real_trades_history=real_trades_history,
-                           simulated_trades_history=simulated_trades_history)
+    real_trades_history, simulated_trades_history = interfaces_util.get_trades_history()
+    return flask.render_template('trades.html',
+                                 real_trades_history=real_trades_history,
+                                 simulated_trades_history=simulated_trades_history)
 
 
-@server_instance.context_processor
+@web_interface.server_instance.context_processor
 def utility_processor():
     def convert_timestamp(str_time):
         return datetime.datetime.fromtimestamp(str_time).strftime('%Y-%m-%d %H:%M:%S')

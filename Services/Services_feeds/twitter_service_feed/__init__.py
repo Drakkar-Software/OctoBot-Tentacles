@@ -1,1 +1,1 @@
-from .twitter_service_feed import TwitterServiceFeed
+from .twitter_feed import TwitterServiceFeed

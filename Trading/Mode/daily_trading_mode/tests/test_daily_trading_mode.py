@@ -15,21 +15,21 @@
 #  License along with this library.
 import pytest
 
-from octobot_commons.tests.test_config import load_test_config
-from octobot_tentacles_manager.api.configurator import create_tentacles_setup_config_with_tentacles
-from tests.test_utils.memory_check_util import run_independent_backtestings_with_memory_check
-from tentacles.Evaluator.Strategies import SimpleStrategyEvaluator
-from tentacles.Evaluator.TA import RSIMomentumEvaluator, DoubleMovingAverageTrendEvaluator
-from tentacles.Trading.Mode import DailyTradingMode
-
+import octobot_commons.tests.test_config as test_config
+import octobot_tentacles_manager.api as tentacles_manager_api
+import tests.test_utils.memory_check_util as memory_check_util
+import tentacles.Evaluator.Strategies as Strategies
+import tentacles.Evaluator.TA as Evaluator
+import tentacles.Trading.Mode as Mode
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
 async def test_run_independent_backtestings_with_memory_check():
-    tentacles_setup_config = create_tentacles_setup_config_with_tentacles(DailyTradingMode,
-                                                                          SimpleStrategyEvaluator,
-                                                                          RSIMomentumEvaluator,
-                                                                          DoubleMovingAverageTrendEvaluator)
-    await run_independent_backtestings_with_memory_check(load_test_config(), tentacles_setup_config)
+    tentacles_setup_config = tentacles_manager_api.create_tentacles_setup_config_with_tentacles(Mode.DailyTradingMode,
+                                                                                                Strategies.SimpleStrategyEvaluator,
+                                                                                                Evaluator.RSIMomentumEvaluator,
+                                                                                                Evaluator.DoubleMovingAverageTrendEvaluator)
+    await memory_check_util.run_independent_backtestings_with_memory_check(test_config.load_test_config(),
+                                                                           tentacles_setup_config)

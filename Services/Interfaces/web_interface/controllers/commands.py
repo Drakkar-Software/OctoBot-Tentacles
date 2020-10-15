@@ -13,31 +13,30 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_commons.logging.logging_util import get_logger
-from flask import render_template, jsonify
+import flask
 
-from octobot.disclaimer import DISCLAIMER
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.commands import restart_bot, stop_bot
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_metrics_enabled
+import octobot_commons.logging as bot_logging
+import octobot.disclaimer as disclaimer
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
-logger = get_logger("ServerInstance Controller")
+logger = bot_logging.get_logger("ServerInstance Controller")
 
 
-@server_instance.route("/commands")
-@server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
-@login_required_when_activated
+@web_interface.server_instance.route("/commands")
+@web_interface.server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
+@login.login_required_when_activated
 def commands(cmd=None):
     if cmd == "restart":
-        restart_bot()
-        return jsonify("Success")
+        models.restart_bot()
+        return flask.jsonify("Success")
 
     elif cmd == "stop":
-        stop_bot()
-        return jsonify("Success")
+        models.stop_bot()
+        return flask.jsonify("Success")
 
-    return render_template('commands.html',
-                           cmd=cmd,
-                           metrics_enabled=get_metrics_enabled(),
-                           disclaimer=DISCLAIMER)
+    return flask.render_template('commands.html',
+                                 cmd=cmd,
+                                 metrics_enabled=models.get_metrics_enabled(),
+                                 disclaimer=disclaimer.DISCLAIMER)

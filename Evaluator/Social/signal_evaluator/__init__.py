@@ -1,1 +1,1 @@
-from .signal_evaluators import TelegramSignalEvaluator
+from .signal import TelegramSignalEvaluator
