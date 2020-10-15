@@ -13,44 +13,44 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask import render_template, request, jsonify, url_for
+import flask
 
-from tentacles.Services.Interfaces.web_interface.constants import EVALUATOR_CONFIG_KEY
-from . import advanced
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_evaluator_detailed_config, \
-    update_tentacles_activation_config, get_evaluators_tentacles_startup_activation
-from tentacles.Services.Interfaces.web_interface.util.flask_util import get_rest_reply
-from tentacles.Services.Interfaces.web_interface.models.commands import schedule_delayed_command, restart_bot
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+import tentacles.Services.Interfaces.web_interface.constants as constants
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
+import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.util as util
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@advanced.route("/evaluator_config")
-@advanced.route('/evaluator_config', methods=['GET', 'POST'])
-@login_required_when_activated
+@advanced_controllers.advanced.route("/evaluator_config")
+@advanced_controllers.advanced.route('/evaluator_config', methods=['GET', 'POST'])
+@login.login_required_when_activated
 def evaluator_config():
-    if request.method == 'POST':
-        request_data = request.get_json()
+    if flask.request.method == 'POST':
+        request_data = flask.request.get_json()
         success = True
         response = ""
 
         if request_data:
             # update evaluator config if required
-            if EVALUATOR_CONFIG_KEY in request_data and request_data[EVALUATOR_CONFIG_KEY]:
-                success = success and update_tentacles_activation_config(request_data[EVALUATOR_CONFIG_KEY])
+            if constants.EVALUATOR_CONFIG_KEY in request_data and request_data[constants.EVALUATOR_CONFIG_KEY]:
+                success = success and models.update_tentacles_activation_config(
+                    request_data[constants.EVALUATOR_CONFIG_KEY])
 
             response = {
-                "evaluator_updated_config": request_data[EVALUATOR_CONFIG_KEY]
+                "evaluator_updated_config": request_data[constants.EVALUATOR_CONFIG_KEY]
             }
 
         if success:
             if request_data.get("restart_after_save", False):
-                schedule_delayed_command(restart_bot)
-            return get_rest_reply(jsonify(response))
+                models.schedule_delayed_command(models.restart_bot)
+            return util.get_rest_reply(flask.jsonify(response))
         else:
-            return get_rest_reply('{"update": "ko"}', 500)
+            return util.get_rest_reply('{"update": "ko"}', 500)
     else:
-        media_url = url_for("tentacle_media", _external=True)
-        return render_template('advanced_evaluator_config.html',
-                               evaluator_config=get_evaluator_detailed_config(media_url),
-                               evaluator_startup_config=get_evaluators_tentacles_startup_activation()
-                               )
+        media_url = flask.url_for("tentacle_media", _external=True)
+        return flask.render_template(
+            'advanced_evaluator_config.html',
+            evaluator_config=models.get_evaluator_detailed_config(media_url),
+            evaluator_startup_config=models.get_evaluators_tentacles_startup_activation()
+        )

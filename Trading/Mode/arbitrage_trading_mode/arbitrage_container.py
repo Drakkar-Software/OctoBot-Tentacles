@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from octobot_trading.enums import EvaluatorStates
+import octobot_trading.enums as trading_enums
 
 
 class ArbitrageContainer:
@@ -36,7 +36,7 @@ class ArbitrageContainer:
             own_exchange_price == self.own_exchange_price
             or (
                 (
-                    state is EvaluatorStates.LONG and
+                    state is trading_enums.EvaluatorStates.LONG and
                     (
                             self.own_exchange_price * (1 - ArbitrageContainer.SIMILARITY_RATIO)
                             < own_exchange_price
@@ -44,7 +44,7 @@ class ArbitrageContainer:
                     )
                 )
                 or (
-                    state is EvaluatorStates.SHORT and
+                    state is trading_enums.EvaluatorStates.SHORT and
                     (
                             self.target_price * (1 - ArbitrageContainer.SIMILARITY_RATIO)
                             < own_exchange_price
@@ -55,9 +55,9 @@ class ArbitrageContainer:
         )
 
     def is_expired(self, other_exchanges_average_price):
-        if self.state is EvaluatorStates.LONG:
+        if self.state is trading_enums.EvaluatorStates.LONG:
             return other_exchanges_average_price < self.target_price * (1 - ArbitrageContainer.SIMILARITY_RATIO)
-        if self.state is EvaluatorStates.SHORT:
+        if self.state is trading_enums.EvaluatorStates.SHORT:
             return other_exchanges_average_price > self.target_price * (1 + ArbitrageContainer.SIMILARITY_RATIO)
 
     def should_be_discarded_after_order_cancel(self, order_id):

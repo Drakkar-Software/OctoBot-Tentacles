@@ -13,23 +13,23 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from functools import wraps
-from flask_login import LoginManager, login_required
+import functools
+import flask_login
 
-from octobot_commons.config_manager import get_password_hash
-from tentacles.Services.Interfaces.web_interface.login.user import User
+import octobot_commons.config_manager as config_manager
+import tentacles.Services.Interfaces.web_interface.login as login
 
-GENERIC_USER = User()
-IS_LOGIN_REQUIRED = True
+GENERIC_USER = login.User()
+_IS_LOGIN_REQUIRED = True
 IP_TO_CONNECTION_ATTEMPTS = {}
 MAX_CONNECTION_ATTEMPTS = 10
 
 
-class WebLoginManager(LoginManager):
+class WebLoginManager(flask_login.LoginManager):
     def __init__(self, flask_app, requires_login, password_hash):
-        LoginManager.__init__(self)
-        global IS_LOGIN_REQUIRED
-        IS_LOGIN_REQUIRED = requires_login
+        flask_login.LoginManager.__init__(self)
+        global _IS_LOGIN_REQUIRED
+        _IS_LOGIN_REQUIRED = requires_login
         self.init_app(flask_app)
         self.password_hash = password_hash
         # register login view to redirect to when login is required
@@ -37,7 +37,7 @@ class WebLoginManager(LoginManager):
         self._register_callbacks()
 
     def is_valid_password(self, ip, password):
-        return not is_banned(ip) and get_password_hash(password) == self.password_hash
+        return not is_banned(ip) and config_manager.get_password_hash(password) == self.password_hash
 
     def _register_callbacks(self):
         @self.user_loader
@@ -46,15 +46,19 @@ class WebLoginManager(LoginManager):
             return GENERIC_USER
 
 
-@login_required
+def is_login_required():
+    return _IS_LOGIN_REQUIRED
+
+
+@flask_login.login_required
 def _login_required_func(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
 def login_required_when_activated(func):
-    @wraps(func)
+    @functools.wraps(func)
     def decorated_view(*args, **kwargs):
-        if IS_LOGIN_REQUIRED:
+        if is_login_required():
             return _login_required_func(func, *args, **kwargs)
         return func(*args, **kwargs)
     return decorated_view

@@ -14,26 +14,24 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template, request, redirect
+import flask
 
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_in_backtesting_mode, accepted_terms, \
-    accept_terms
-from tentacles.Services.Interfaces.web_interface.models.interface_settings import get_watched_symbols
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route("/")
-@server_instance.route("/home")
-@login_required_when_activated
+@web_interface.server_instance.route("/")
+@web_interface.server_instance.route("/home")
+@login.login_required_when_activated
 def home():
-    if request.args:
-        accepted = request.args.get("accept_terms") == "True"
-        accept_terms(accepted)
-    if accepted_terms():
-        in_backtesting = get_in_backtesting_mode()
-        return render_template('index.html',
-                               watched_symbols=get_watched_symbols(),
-                               backtesting_mode=in_backtesting)
+    if flask.request.args:
+        accepted = flask.request.args.get("accept_terms") == "True"
+        models.accept_terms(accepted)
+    if models.accepted_terms():
+        in_backtesting = models.get_in_backtesting_mode()
+        return flask.render_template('index.html',
+                                     watched_symbols=models.get_watched_symbols(),
+                                     backtesting_mode=in_backtesting)
     else:
-        return redirect("/terms")
+        return flask.redirect("/terms")

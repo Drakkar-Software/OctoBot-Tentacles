@@ -1,1 +1,1 @@
-from .web_service import WebService
+from .web import WebService

@@ -1,3 +1,3 @@
-from .momentum_evaluator import RSIMomentumEvaluator, ADXMomentumEvaluator, RSIWeightMomentumEvaluator, \
+from .momentum import RSIMomentumEvaluator, ADXMomentumEvaluator, RSIWeightMomentumEvaluator, \
     BBMomentumEvaluator, MACDMomentumEvaluator, KlingerOscillatorMomentumEvaluator, \
     KlingerOscillatorReversalConfirmationMomentumEvaluator

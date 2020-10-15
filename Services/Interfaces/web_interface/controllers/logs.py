@@ -14,15 +14,15 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import render_template
+import flask
 
-from tentacles.Services.Interfaces.web_interface import server_instance, get_logs, flush_errors_count
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@server_instance.route("/logs")
-@login_required_when_activated
+@web_interface.server_instance.route("/logs")
+@login.login_required_when_activated
 def logs():
-    flush_errors_count()
-    return render_template("logs.html",
-                           logs=get_logs())
+    web_interface.flush_errors_count()
+    return flask.render_template("logs.html",
+                                 logs=web_interface.get_logs())

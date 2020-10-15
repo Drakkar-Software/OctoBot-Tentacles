@@ -1,1 +1,1 @@
-from .webhook_service import WebHookService
+from .webhook import WebHookService

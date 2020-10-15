@@ -14,27 +14,24 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from copy import copy
-from flask_socketio import emit
+import copy
+import flask_socketio
 
-from tentacles.Services.Interfaces.web_interface import get_notifications, get_errors_count, register_notifier, \
-    flush_notifications, GENERAL_NOTIFICATION_KEY
-from tentacles.Services.Interfaces.web_interface.websockets import namespaces
-from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.websockets as websockets
 
 
-class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
+class NotificationsNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_update_data():
         return {
-            "notifications": copy(get_notifications()),
-            "errors_count": get_errors_count()
+            "notifications": copy.copy(web_interface.get_notifications()),
+            "errors_count": web_interface.get_errors_count()
         }
 
     def _client_context_send_notifications(self):
-        emit("update", self._get_update_data())
+        flask_socketio.emit("update", self._get_update_data())
 
     def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
@@ -45,13 +42,13 @@ class NotificationsNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self._client_context_send_notifications()
-        flush_notifications()
+        web_interface.flush_notifications()
 
 
 notifier = NotificationsNamespace('/notifications')
-register_notifier(GENERAL_NOTIFICATION_KEY, notifier)
-namespaces.append(notifier)
+web_interface.register_notifier(web_interface.GENERAL_NOTIFICATION_KEY, notifier)
+websockets.namespaces.append(notifier)
