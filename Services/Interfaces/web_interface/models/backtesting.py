@@ -13,100 +13,95 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from os import remove
-from asyncio import gather
+import os
+import asyncio
 
-from octobot.api.backtesting import create_independent_backtesting, \
-    initialize_and_run_independent_backtesting, \
-    get_independent_backtesting_progress, is_independent_backtesting_in_progress, \
-    get_independent_backtesting_report, is_independent_backtesting_finished, stop_independent_backtesting, \
-    is_independent_backtesting_stopped
-from octobot.api.strategy_optimizer import is_optimizer_in_progress
-from octobot_commons.logging.logging_util import get_logger
-from octobot_backtesting.api.data_file_converters import convert_data_file
-from octobot_backtesting.api.exchange_data_collector import collect_exchange_historical_data
-from octobot_backtesting.constants import BACKTESTING_FILE_PATH
-from octobot_backtesting.api.data_file import get_all_available_data_files, get_file_description, delete_data_file
-from octobot_services.interfaces.util.bot import get_global_config, get_bot_api
-from octobot_services.interfaces.util.util import run_in_bot_main_loop, run_in_bot_async_executor
-from octobot_tentacles_manager.api.configurator import get_tentacles_setup_config
-from tentacles.Services.Interfaces.web_interface.constants import BOT_TOOLS_BACKTESTING, BOT_TOOLS_BACKTESTING_SOURCE, \
-    BOT_TOOLS_STRATEGY_OPTIMIZER
-from tentacles.Services.Interfaces.web_interface.web_interface import WebInterface
+import octobot_commons.logging as bot_logging
+import octobot.api as octobot_api
+import octobot_backtesting.api as backtesting_api
+import octobot_tentacles_manager.api as tentacles_manager_api
+import octobot_backtesting.constants as backtesting_constants
+import octobot_services.interfaces.util as interfaces_util
+import tentacles.Services.Interfaces.web_interface.constants as constants
+import tentacles.Services.Interfaces.web_interface as web_interface_root
 
-LOGGER = get_logger("DataCollectorWebInterfaceModel")
+LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
 
 
 async def _get_description(data_file, files_with_description):
-    description = await get_file_description(data_file)
+    description = await backtesting_api.get_file_description(data_file)
     if description is not None:
         files_with_description[data_file] = description
 
 
 async def _retrieve_data_files_with_description(files):
     files_with_description = {}
-    await gather(*[_get_description(data_file, files_with_description) for data_file in files])
+    await asyncio.gather(*[_get_description(data_file, files_with_description) for data_file in files])
     return files_with_description
 
 
 def get_data_files_with_description():
-    files = get_all_available_data_files()
-    return run_in_bot_async_executor(_retrieve_data_files_with_description(files))
+    files = backtesting_api.get_all_available_data_files()
+    return interfaces_util.run_in_bot_async_executor(_retrieve_data_files_with_description(files))
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True):
     try:
-        tools = WebInterface.tools
-        previous_independant_backtesting = tools[BOT_TOOLS_BACKTESTING]
-        if tools[BOT_TOOLS_STRATEGY_OPTIMIZER] and is_optimizer_in_progress(tools[BOT_TOOLS_STRATEGY_OPTIMIZER]):
+        tools = web_interface_root.WebInterface.tools
+        previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and octobot_api.is_optimizer_in_progress(
+                tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]):
             return False, "Optimizer already running"
-        elif previous_independant_backtesting and \
-                is_independent_backtesting_in_progress(previous_independant_backtesting):
+        elif previous_independent_backtesting and \
+                octobot_api.is_independent_backtesting_in_progress(previous_independent_backtesting):
             return False, "A backtesting is already running"
         else:
-            if previous_independant_backtesting:
-                run_in_bot_main_loop(stop_independent_backtesting(previous_independant_backtesting))
+            if previous_independent_backtesting:
+                interfaces_util.run_in_bot_main_loop(
+                    octobot_api.stop_independent_backtesting(previous_independent_backtesting))
             if reset_tentacle_config:
-                tentacles_setup_config = get_tentacles_setup_config()
+                tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config()
             else:
-                tentacles_setup_config = get_bot_api().get_edited_tentacles_config()
-            config = get_global_config()
-            independent_backtesting = create_independent_backtesting(config,
-                                                                     tentacles_setup_config,
-                                                                     files,
-                                                                     run_on_common_part_only=run_on_common_part_only)
-            run_in_bot_main_loop(initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
-            tools[BOT_TOOLS_BACKTESTING] = independent_backtesting
-            tools[BOT_TOOLS_BACKTESTING_SOURCE] = source
+                tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
+            config = interfaces_util.get_global_config()
+            independent_backtesting = octobot_api.create_independent_backtesting(config,
+                                                                                 tentacles_setup_config,
+                                                                                 files,
+                                                                                 run_on_common_part_only=run_on_common_part_only)
+            interfaces_util.run_in_bot_main_loop(
+                octobot_api.initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
+            tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
+            tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             return True, "Backtesting started"
     except Exception as e:
-        LOGGER.exception(e)
+        LOGGER.exception(e, False)
         return False, f"Error when starting backtesting: {e}"
 
 
 def get_backtesting_status():
-    if WebInterface.tools[BOT_TOOLS_BACKTESTING] is not None:
-        independent_backtesting = WebInterface.tools[BOT_TOOLS_BACKTESTING]
-        if is_independent_backtesting_in_progress(independent_backtesting):
-            return "computing", get_independent_backtesting_progress(independent_backtesting) * 100
-        if is_independent_backtesting_finished(independent_backtesting) or \
-                is_independent_backtesting_stopped(independent_backtesting):
+    if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] is not None:
+        independent_backtesting = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING]
+        if octobot_api.is_independent_backtesting_in_progress(independent_backtesting):
+            return "computing", octobot_api.get_independent_backtesting_progress(independent_backtesting) * 100
+        if octobot_api.is_independent_backtesting_finished(independent_backtesting) or \
+                octobot_api.is_independent_backtesting_stopped(independent_backtesting):
             return "finished", 100
         return "starting", 0
     return "not started", 0
 
 
 def get_backtesting_report(source):
-    tools = WebInterface.tools
-    if tools[BOT_TOOLS_BACKTESTING]:
-        backtesting = tools[BOT_TOOLS_BACKTESTING]
-        if tools[BOT_TOOLS_BACKTESTING_SOURCE] == source:
-            return run_in_bot_async_executor(get_independent_backtesting_report(backtesting))
+    tools = web_interface_root.WebInterface.tools
+    if tools[constants.BOT_TOOLS_BACKTESTING]:
+        backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        if tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] == source:
+            return interfaces_util.run_in_bot_async_executor(
+                octobot_api.get_independent_backtesting_report(backtesting))
     return {}
 
 
 def get_delete_data_file(file_name):
-    deleted, error = delete_data_file(file_name)
+    deleted, error = backtesting_api.delete_data_file(file_name)
     if deleted:
         return deleted, f"{file_name} deleted"
     else:
@@ -116,7 +111,8 @@ def get_delete_data_file(file_name):
 def collect_data_file(exchange, symbol):
     success = False
     try:
-        result = run_in_bot_async_executor(collect_exchange_historical_data(exchange, [symbol]))
+        result = interfaces_util.run_in_bot_async_executor(
+            backtesting_api.collect_exchange_historical_data(exchange, [symbol]))
         success = True
     except Exception as e:
         result = f"data collector error: {e}"
@@ -129,19 +125,19 @@ def collect_data_file(exchange, symbol):
 
 async def _convert_into_octobot_data_file_if_necessary(output_file):
     try:
-        description = await get_file_description(output_file, data_path="")
+        description = await backtesting_api.get_file_description(output_file, data_path="")
         if description is not None:
             # no error: current bot format data
             return f"{output_file} saved"
         else:
             # try to convert into current bot format
-            converted_output_file = await convert_data_file(output_file)
+            converted_output_file = await backtesting_api.convert_data_file(output_file)
             if converted_output_file is not None:
                 message = f"Saved into {converted_output_file}"
             else:
                 message = "Failed to convert file."
             # remove invalid format file
-            remove(output_file)
+            os.remove(output_file)
             return message
     except Exception as e:
         message = f"Error when handling backtesting data file: {e}"
@@ -151,9 +147,9 @@ async def _convert_into_octobot_data_file_if_necessary(output_file):
 
 def save_data_file(name, file):
     try:
-        output_file = f"{BACKTESTING_FILE_PATH}/{name}"
+        output_file = f"{backtesting_constants.BACKTESTING_FILE_PATH}/{name}"
         file.save(output_file)
-        message = run_in_bot_async_executor(_convert_into_octobot_data_file_if_necessary(output_file))
+        message = interfaces_util.run_in_bot_async_executor(_convert_into_octobot_data_file_if_necessary(output_file))
         LOGGER.info(message)
         return True, message
     except Exception as e:

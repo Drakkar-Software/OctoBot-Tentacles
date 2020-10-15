@@ -1,1 +1,1 @@
-from .web_notifier import WebNotifier
+from .web import WebNotifier

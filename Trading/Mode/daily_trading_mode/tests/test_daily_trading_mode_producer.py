@@ -14,71 +14,65 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import pytest
-from os.path import join
-from asyncio import create_task
+import os.path
+import asyncio
 
-from octobot_backtesting.api.backtesting import initialize_backtesting, get_importers
-from octobot_backtesting.api.importer import stop_importer
-from octobot_channels.util.channel_creator import create_all_subclasses_channel
-from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
-from octobot_commons.constants import INIT_EVAL_NOTE
-from octobot_commons.tests.test_config import load_test_config, TEST_CONFIG_FOLDER
-from octobot_evaluators.api.evaluators import create_matrix
-from octobot_trading.api.exchange import get_exchange_name
-from octobot_trading.api.orders import get_open_orders
-from octobot_trading.api.symbol_data import force_set_mark_price
-from octobot_trading.channels.exchange_channel import ExchangeChannel, TimeFrameExchangeChannel, set_chan
-from octobot_trading.constants import CONFIG_SIMULATOR, CONFIG_STARTING_PORTFOLIO
-from octobot_trading.enums import EvaluatorStates
-from octobot_trading.exchanges.exchange_manager import ExchangeManager
-from octobot_trading.exchanges.exchange_simulator import ExchangeSimulator
-from octobot_trading.exchanges.rest_exchange import RestExchange
-from octobot_trading.traders.trader_simulator import TraderSimulator
-from tentacles.Trading.Mode import DailyTradingMode
+import async_channel.util as channel_util
+import octobot_backtesting.api as backtesting_api
+import octobot_commons.asyncio_tools as asyncio_tools
+import octobot_commons.constants as commons_constants
+import octobot_commons.tests.test_config as test_config
+import octobot_evaluators.api as evaluators_api
+import octobot_trading.api as trading_api
+import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.constants as trading_constants
+import octobot_trading.enums as trading_enums
+import octobot_trading.exchanges as exchanges
+import tentacles.Trading.Mode as Mode
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
 async def _get_tools(symbol="BTC/USDT"):
-    config = load_test_config()
-    config[CONFIG_SIMULATOR][CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
-    exchange_manager = ExchangeManager(config, "binance")
+    config = test_config.load_test_config()
+    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
+    exchange_manager = exchanges.ExchangeManager(config, "binance")
 
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
     exchange_manager.is_backtesting = True
-    backtesting = await initialize_backtesting(
+    backtesting = await backtesting_api.initialize_backtesting(
         config,
         exchange_ids=[exchange_manager.id],
         matrix_id=None,
-        data_files=[join(TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
-    exchange_manager.exchange_type = RestExchange.create_exchange_type(exchange_manager.exchange_class_string)
-    exchange_manager.exchange = ExchangeSimulator(exchange_manager.config,
-                                                  exchange_manager.exchange_type,
-                                                  exchange_manager,
-                                                  backtesting)
+        data_files=[
+            os.path.join(test_config.TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    exchange_manager.exchange = exchanges.ExchangeSimulator(exchange_manager.config,
+                                                            exchange_manager,
+                                                            backtesting)
     await exchange_manager.exchange.initialize()
-    for exchange_channel_class_type in [ExchangeChannel, TimeFrameExchangeChannel]:
-        await create_all_subclasses_channel(exchange_channel_class_type, set_chan, exchange_manager=exchange_manager)
+    for exchange_channel_class_type in [exchanges_channel.ExchangeChannel, exchanges_channel.TimeFrameExchangeChannel]:
+        await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
+                                                         exchange_manager=exchange_manager)
 
-    trader = TraderSimulator(config, exchange_manager)
+    trader = exchanges.TraderSimulator(config, exchange_manager)
     await trader.initialize()
 
-    mode = DailyTradingMode(config, exchange_manager)
+    mode = Mode.DailyTradingMode(config, exchange_manager)
     await mode.initialize()
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
 
     # set BTC/USDT price at 1000 USDT
-    force_set_mark_price(exchange_manager, symbol, 1000)
+    trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
 
     return mode.producers[0], mode.consumers[0], trader
 
 
 async def _stop(trader):
-    for importer in get_importers(trader.exchange_manager.exchange.backtesting):
-        await stop_importer(importer)
+    for importer in backtesting_api.get_importers(trader.exchange_manager.exchange.backtesting):
+        await backtesting_api.stop_importer(importer)
     await trader.exchange_manager.exchange.backtesting.stop()
     await trader.exchange_manager.stop()
 
@@ -99,64 +93,64 @@ async def test_set_state():
         producer, consumer, trader = await _get_tools(symbol)
 
         producer.final_eval = 0
-        await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
-        assert producer.state == EvaluatorStates.NEUTRAL
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 0))
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = -1
-        await producer._set_state(currency, symbol, EvaluatorStates.VERY_LONG)
-        assert producer.state == EvaluatorStates.VERY_LONG
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_LONG)
+        assert producer.state == trading_enums.EvaluatorStates.VERY_LONG
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await asyncio.create_task(_check_open_orders_count(trader, 1))
         # market order got filled
-        await create_task(_check_open_orders_count(trader, 0))
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 0
-        await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 0))
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 1
-        await producer._set_state(currency, symbol, EvaluatorStates.VERY_SHORT)
-        assert producer.state == EvaluatorStates.VERY_SHORT
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_SHORT)
+        assert producer.state == trading_enums.EvaluatorStates.VERY_SHORT
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await asyncio.create_task(_check_open_orders_count(trader, 1))
         # market order got filled
-        await create_task(_check_open_orders_count(trader, 0))
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = 0
-        await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
-        assert producer.state == EvaluatorStates.NEUTRAL
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 0))
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
 
         producer.final_eval = -0.5
-        await producer._set_state(currency, symbol, EvaluatorStates.LONG)
-        assert producer.state == EvaluatorStates.LONG
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.LONG)
+        assert producer.state == trading_enums.EvaluatorStates.LONG
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await asyncio.create_task(_check_open_orders_count(trader, 1))
 
         producer.final_eval = 0
-        await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
-        assert producer.state == EvaluatorStates.NEUTRAL
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 1))
+        await asyncio.create_task(_check_open_orders_count(trader, 1))
 
         producer.final_eval = 0.5
-        await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
-        assert producer.state == EvaluatorStates.SHORT
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+        assert producer.state == trading_enums.EvaluatorStates.SHORT
         # let both other be created
-        await wait_asyncio_next_cycle()
+        await asyncio_tools.wait_asyncio_next_cycle()
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 2))  # has stop loss
+        await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
         # await task
 
         producer.final_eval = 0
-        await producer._set_state(currency, symbol, EvaluatorStates.NEUTRAL)
-        assert producer.state == EvaluatorStates.NEUTRAL
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         # create as task to allow creator's queue to get processed
-        await create_task(_check_open_orders_count(trader, 2))
+        await asyncio.create_task(_check_open_orders_count(trader, 2))
 
     finally:
         await _stop(trader)
@@ -181,15 +175,15 @@ async def test_create_state():
             producer.final_eval = i / 100
             await producer.create_state(None, None)
             if producer.final_eval < producer.VERY_LONG_THRESHOLD + delta_risk:
-                assert producer.state == EvaluatorStates.VERY_LONG
+                assert producer.state == trading_enums.EvaluatorStates.VERY_LONG
             elif producer.final_eval < producer.LONG_THRESHOLD + delta_risk:
-                assert producer.state == EvaluatorStates.LONG
+                assert producer.state == trading_enums.EvaluatorStates.LONG
             elif producer.final_eval < producer.NEUTRAL_THRESHOLD - delta_risk:
-                assert producer.state == EvaluatorStates.NEUTRAL
+                assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
             elif producer.final_eval < producer.SHORT_THRESHOLD - delta_risk:
-                assert producer.state == EvaluatorStates.SHORT
+                assert producer.state == trading_enums.EvaluatorStates.SHORT
             else:
-                assert producer.state == EvaluatorStates.VERY_SHORT
+                assert producer.state == trading_enums.EvaluatorStates.VERY_SHORT
     finally:
         await _stop(trader)
 
@@ -200,18 +194,18 @@ async def test_set_final_eval():
         symbol = "BTC/USDT"
         time_frame = "1h"
         producer, consumer, trader = await _get_tools()
-        matrix_id = create_matrix()
+        matrix_id = evaluators_api.create_matrix()
 
-        await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
-        assert producer.state == EvaluatorStates.SHORT
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+        assert producer.state == trading_enums.EvaluatorStates.SHORT
         # let both other be created
-        await wait_asyncio_next_cycle()
-        await create_task(_check_open_orders_count(trader, 2))  # has stop loss
+        await asyncio_tools.wait_asyncio_next_cycle()
+        await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
         producer.final_eval = "val"
         await producer.set_final_eval(matrix_id, currency, symbol, time_frame)
-        assert producer.state == EvaluatorStates.SHORT  # ensure did not change EvaluatorStates
-        assert producer.final_eval == "val"  # ensure did not change EvaluatorStates
-        await create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders
+        assert producer.state == trading_enums.EvaluatorStates.SHORT  # ensure did not change trading_enums.EvaluatorStates
+        assert producer.final_eval == "val"  # ensure did not change trading_enums.EvaluatorStates
+        await asyncio.create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders
     finally:
         await _stop(trader)
 
@@ -221,23 +215,24 @@ async def test_finalize():
         currency = "BTC"
         symbol = "BTC/USDT"
         producer, consumer, trader = await _get_tools()
-        matrix_id = create_matrix()
+        matrix_id = evaluators_api.create_matrix()
 
-        await producer.finalize(get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol)
-        assert producer.final_eval == INIT_EVAL_NOTE
+        await producer.finalize(trading_api.get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol)
+        assert producer.final_eval == commons_constants.INIT_EVAL_NOTE
 
-        await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
-        assert producer.state == EvaluatorStates.SHORT
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+        assert producer.state == trading_enums.EvaluatorStates.SHORT
         # let both other be created
-        await wait_asyncio_next_cycle()
-        await create_task(_check_open_orders_count(trader, 2))  # has stop loss
+        await asyncio_tools.wait_asyncio_next_cycle()
+        await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
 
-        await producer._set_state(currency, symbol, EvaluatorStates.SHORT)
-        await create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders because neutral state
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+        await asyncio.create_task(
+            _check_open_orders_count(trader, 2))  # ensure did not change orders because neutral state
 
     finally:
         await _stop(trader)
 
 
 async def _check_open_orders_count(trader, count):
-    assert len(get_open_orders(trader.exchange_manager)) == count
+    assert len(trading_api.get_open_orders(trader.exchange_manager)) == count

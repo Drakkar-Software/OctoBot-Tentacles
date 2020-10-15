@@ -14,7 +14,45 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+
 namespaces = []
+
+
+from tentacles.Services.Interfaces.web_interface.websockets import abstract_websocket_namespace_notifier
+from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import (
+    AbstractWebSocketNamespaceNotifier,
+    websocket_with_login_required_when_activated,
+)
+
+
+from tentacles.Services.Interfaces.web_interface.websockets import backtesting
+from tentacles.Services.Interfaces.web_interface.websockets import dashboard
+from tentacles.Services.Interfaces.web_interface.websockets import notifications
+from tentacles.Services.Interfaces.web_interface.websockets import strategy_optimizer
+
+
+from tentacles.Services.Interfaces.web_interface.websockets.backtesting import (
+    BacktestingNamespace,
+)
+from tentacles.Services.Interfaces.web_interface.websockets.dashboard import (
+    DashboardNamespace,
+)
+from tentacles.Services.Interfaces.web_interface.websockets.notifications import (
+    NotificationsNamespace,
+)
+from tentacles.Services.Interfaces.web_interface.websockets.strategy_optimizer import (
+    StrategyOptimizerNamespace,
+)
+
+
+__all__ = [
+    "AbstractWebSocketNamespaceNotifier",
+    "websocket_with_login_required_when_activated",
+    "BacktestingNamespace",
+    "DashboardNamespace",
+    "NotificationsNamespace",
+    "StrategyOptimizerNamespace",
+]
 
 
 def load_namespaces():

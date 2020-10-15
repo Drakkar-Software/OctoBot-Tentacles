@@ -13,42 +13,39 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask_socketio import emit
 
-from octobot_commons.pretty_printer import round_with_decimal_count
-from octobot_trading.enums import ExchangeConstantsOrderColumns
-from tentacles.Services.Interfaces.web_interface import register_notifier, DASHBOARD_NOTIFICATION_KEY
-from tentacles.Services.Interfaces.web_interface.models.dashboard import get_currency_price_graph_update, \
-    get_value_from_dict_or_string, \
-    format_trades
-from octobot_services.interfaces.util.profitability import get_global_profitability
-from tentacles.Services.Interfaces.web_interface.websockets import namespaces
-from tentacles.Services.Interfaces.web_interface.websockets.abstract_websocket_namespace_notifier import \
-    AbstractWebSocketNamespaceNotifier, websocket_with_login_required_when_activated
+import flask_socketio
+
+import octobot_commons.pretty_printer as pretty_printer
+import octobot_trading.enums as trading_enums
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.models as models
+import octobot_services.interfaces as services_interfaces
+import tentacles.Services.Interfaces.web_interface.websockets as websockets
 
 
-class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
+class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_profitability():
         profitability_digits = 4
         has_real_trader, has_simulated_trader, _, _, real_percent_profitability, simulated_percent_profitability, \
-            real_no_trade_profitability, simulated_no_trade_profitability, \
-            market_average_profitability = get_global_profitability()
+        real_no_trade_profitability, simulated_no_trade_profitability, \
+        market_average_profitability = services_interfaces.get_global_profitability()
         profitability_data = {
-            "market_average_profitability": round_with_decimal_count(market_average_profitability,
-                                                                     profitability_digits)
+            "market_average_profitability": pretty_printer.round_with_decimal_count(market_average_profitability,
+                                                                                    profitability_digits)
         }
         if has_real_trader:
             profitability_data["bot_real_profitability"] = \
-                round_with_decimal_count(real_percent_profitability, profitability_digits)
+                pretty_printer.round_with_decimal_count(real_percent_profitability, profitability_digits)
             profitability_data["real_no_trade_profitability"] = \
-                round_with_decimal_count(real_no_trade_profitability, profitability_digits)
+                pretty_printer.round_with_decimal_count(real_no_trade_profitability, profitability_digits)
         if has_simulated_trader:
             profitability_data["bot_simulated_profitability"] = \
-                round_with_decimal_count(simulated_percent_profitability, profitability_digits)
+                pretty_printer.round_with_decimal_count(simulated_percent_profitability, profitability_digits)
             profitability_data["simulated_no_trade_profitability"] = \
-                round_with_decimal_count(simulated_no_trade_profitability, profitability_digits)
+                pretty_printer.round_with_decimal_count(simulated_no_trade_profitability, profitability_digits)
         return profitability_data
 
     @staticmethod
@@ -59,18 +56,18 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
             simulated_trades = []
         symbol = None
         if real_trades:
-            symbol = real_trades[0][ExchangeConstantsOrderColumns.SYMBOL.value]
+            symbol = real_trades[0][trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
         elif simulated_trades:
-            symbol = simulated_trades[0][ExchangeConstantsOrderColumns.SYMBOL.value]
+            symbol = simulated_trades[0][trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
         return {
-            "real_trades": format_trades(real_trades),
-            "simulated_trades": format_trades(simulated_trades),
+            "real_trades": models.format_trades(real_trades),
+            "simulated_trades": models.format_trades(simulated_trades),
             "symbol": symbol
         }
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_profitability(self):
-        emit("profitability", self._get_profitability())
+        flask_socketio.emit("profitability", self._get_profitability())
 
     def all_clients_send_notifications(self, **kwargs) -> bool:
         if self._has_clients():
@@ -85,27 +82,27 @@ class DashboardNamespace(AbstractWebSocketNamespaceNotifier):
                 self.logger.exception(e, True, f"Error when sending web notification: {e}")
         return False
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_candle_graph_update(self, data):
         try:
-            emit("candle_graph_update_data", {
+            flask_socketio.emit("candle_graph_update_data", {
                 "request": data,
-                "data": get_currency_price_graph_update(data["exchange_id"],
-                                                        get_value_from_dict_or_string(data["symbol"]),
-                                                        data["time_frame"],
-                                                        backtesting=False,
-                                                        minimal_candles=True,
-                                                        ignore_trades=True)
+                "data": models.get_currency_price_graph_update(data["exchange_id"],
+                                                               models.get_value_from_dict_or_string(data["symbol"]),
+                                                               data["time_frame"],
+                                                               backtesting=False,
+                                                               minimal_candles=True,
+                                                               ignore_trades=True)
             })
         except KeyError:
-            emit("error", "missing exchange manager")
+            flask_socketio.emit("error", "missing exchange manager")
 
-    @websocket_with_login_required_when_activated
+    @websockets.websocket_with_login_required_when_activated
     def on_connect(self):
         super().on_connect()
         self.on_profitability()
 
 
 notifier = DashboardNamespace('/dashboard')
-register_notifier(DASHBOARD_NOTIFICATION_KEY, notifier)
-namespaces.append(notifier)
+web_interface.register_notifier(web_interface.DASHBOARD_NOTIFICATION_KEY, notifier)
+websockets.namespaces.append(notifier)

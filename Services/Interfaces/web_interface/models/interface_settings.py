@@ -16,27 +16,27 @@
 
 import copy
 
-from octobot.constants import CONFIG_FILE_SCHEMA
-from octobot_commons.constants import CONFIG_CRYPTO_PAIRS, CONFIG_CRYPTO_CURRENCIES
-from octobot_services.interfaces.util.bot import get_edited_config
+import octobot.constants as octobot_contants
+import octobot_commons.constants as commons_constants
+import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.config_manager as config_manager
-from tentacles.Services.Interfaces.web_interface.constants import CONFIG_WATCHED_SYMBOLS
+import tentacles.Services.Interfaces.web_interface.constants as constants
 
 
 def _symbol_in_currencies_config(config, symbol):
-    return any(symbol in crypto_currency_data[CONFIG_CRYPTO_PAIRS]
-               for crypto_currency_data in config[CONFIG_CRYPTO_CURRENCIES].values())
+    return any(symbol in crypto_currency_data[commons_constants.CONFIG_CRYPTO_PAIRS]
+               for crypto_currency_data in config[commons_constants.CONFIG_CRYPTO_CURRENCIES].values())
 
 
 def get_watched_symbols():
-    config = get_edited_config()
-    if CONFIG_WATCHED_SYMBOLS not in config:
-        config[CONFIG_WATCHED_SYMBOLS] = []
+    config = interfaces_util.get_edited_config()
+    if constants.CONFIG_WATCHED_SYMBOLS not in config:
+        config[constants.CONFIG_WATCHED_SYMBOLS] = []
     else:
-        for symbol in copy.copy(config[CONFIG_WATCHED_SYMBOLS]):
+        for symbol in copy.copy(config[constants.CONFIG_WATCHED_SYMBOLS]):
             if not _symbol_in_currencies_config(config, symbol):
-                config[CONFIG_WATCHED_SYMBOLS].remove(symbol)
-    return config[CONFIG_WATCHED_SYMBOLS]
+                config[constants.CONFIG_WATCHED_SYMBOLS].remove(symbol)
+    return config[constants.CONFIG_WATCHED_SYMBOLS]
 
 
 def add_watched_symbol(symbol):
@@ -53,5 +53,6 @@ def remove_watched_symbol(symbol):
 
 
 def _save_edition():
-    config_manager.simple_save_config_update(get_edited_config(), schema_file=CONFIG_FILE_SCHEMA)
+    config_manager.simple_save_config_update(interfaces_util.get_edited_config(),
+                                             schema_file=octobot_contants.CONFIG_FILE_SCHEMA)
     return True

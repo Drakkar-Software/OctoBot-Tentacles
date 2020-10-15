@@ -1,1 +1,1 @@
-from .trends_evaluator import GoogleTrendsEvaluator
+from .trends import GoogleTrendsEvaluator

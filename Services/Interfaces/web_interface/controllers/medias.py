@@ -13,25 +13,24 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from flask import send_from_directory, jsonify
+import flask
 
-from tentacles.Services.Interfaces.web_interface import server_instance
-from tentacles.Services.Interfaces.web_interface.login.web_login_manager import login_required_when_activated
-from tentacles.Services.Interfaces.web_interface.models.configuration import get_exchange_logo
-from tentacles.Services.Interfaces.web_interface.models.medias import is_valid_tentacle_image_path
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@server_instance.route('/tentacle_media')
-@server_instance.route('/tentacle_media/<path:path>')
-@login_required_when_activated
+@web_interface.server_instance.route('/tentacle_media')
+@web_interface.server_instance.route('/tentacle_media/<path:path>')
+@login.login_required_when_activated
 def tentacle_media(path=None):
     # images
-    if is_valid_tentacle_image_path(path):
+    if models.is_valid_tentacle_image_path(path):
         # reference point is the web interface directory: use OctoBot root folder as a reference
-        return send_from_directory("../../../..", path)
+        return flask.send_from_directory("../../../..", path)
 
 
-@server_instance.route('/exchange_logo/<name>')
-@login_required_when_activated
+@web_interface.server_instance.route('/exchange_logo/<name>')
+@login.login_required_when_activated
 def exchange_logo(name):
-    return jsonify(get_exchange_logo(name))
+    return flask.jsonify(models.get_exchange_logo(name))

@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from datetime import datetime
-from flask import request
-from werkzeug.http import http_date
-from urllib.parse import urlparse, urljoin
+import datetime
+import flask
+import werkzeug.http as werk_http
+import urllib.parse as url_parse
 
 
 CACHE_CONTROL_KEY = 'Cache-Control'
@@ -24,7 +24,7 @@ no_cache_headers = {
     CACHE_CONTROL_KEY: 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0',
-    'Last-Modified': http_date(datetime.now()),
+    'Last-Modified': werk_http.http_date(datetime.datetime.now()),
 }
 
 
@@ -46,7 +46,7 @@ def _prepare_response_extra_headers(include_security_headers):
         # 'Cache-Control': 'no-cache, no-store, must-revalidate',
         # 'Pragma': 'no-cache',
         # 'Expires': '0',
-        # 'Last-Modified': http_date(datetime.now()),
+        # 'Last-Modified': werk_http.http_date(datetime.now()),
     }
     if include_security_headers:
         response_security_headers = {
@@ -65,7 +65,7 @@ def _prepare_response_extra_headers(include_security_headers):
 
 
 def is_safe_url(target):
-    ref_url = urlparse(request.host_url)
-    test_url = urlparse(urljoin(request.host_url, target))
+    ref_url = url_parse.urlparse(flask.request.host_url)
+    test_url = url_parse.urlparse(url_parse.urljoin(flask.request.host_url, target))
     return test_url.scheme in ('http', 'https') and \
         ref_url.netloc == test_url.netloc

@@ -1,1 +1,1 @@
-from .twitter_service import TwitterService
+from .twitter import TwitterService

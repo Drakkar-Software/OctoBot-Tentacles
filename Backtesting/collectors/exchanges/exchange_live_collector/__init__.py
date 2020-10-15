@@ -1,1 +1,1 @@
-from .exchange_live_collector import ExchangeLiveDataCollector
+from .live_collector import ExchangeLiveDataCollector

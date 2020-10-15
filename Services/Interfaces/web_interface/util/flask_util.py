@@ -14,10 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from flask import make_response
+import flask
 
 
 def get_rest_reply(json_message, code=200, content_type="application/json"):
-    resp = make_response(json_message, code)
+    resp = flask.make_response(json_message, code)
     resp.headers['Content-Type'] = content_type
     return resp

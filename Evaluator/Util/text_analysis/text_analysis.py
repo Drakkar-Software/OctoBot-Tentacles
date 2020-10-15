@@ -14,9 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-from newspaper import Article
+import vaderSentiment.vaderSentiment as vaderSentiment
+import newspaper
 
 
 class TextAnalysis:
@@ -26,7 +25,7 @@ class TextAnalysis:
 
     def __init__(self):
         super().__init__()
-        self.analyzer = SentimentIntensityAnalyzer()
+        self.analyzer = vaderSentiment.SentimentIntensityAnalyzer()
         # self.test()
 
     def analyse(self,  text):
@@ -37,7 +36,7 @@ class TextAnalysis:
 
     # returns the article object and the analysis result
     def analyse_web_page_article(self, url):
-        article = Article(url)
+        article = newspaper.Article(url)
         article.download()
         article.parse()
         return article, self.analyse(article.text)
