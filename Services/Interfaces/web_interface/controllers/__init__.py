@@ -36,14 +36,7 @@ from tentacles.Services.Interfaces.web_interface.controllers.authentication impo
     logout,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.backtesting import (
-    backtesting,
     data_collector,
-)
-from tentacles.Services.Interfaces.web_interface.controllers.commands import (
-    commands,
-)
-from tentacles.Services.Interfaces.web_interface.controllers.community import (
-    community,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.configuration import (
     config,
@@ -64,31 +57,20 @@ from tentacles.Services.Interfaces.web_interface.controllers.errors import (
     not_found,
     internal_error,
 )
-from tentacles.Services.Interfaces.web_interface.controllers.home import (
-    home,
-)
 from tentacles.Services.Interfaces.web_interface.controllers.interface_settings import (
     watched_symbols,
-)
-from tentacles.Services.Interfaces.web_interface.controllers.logs import (
-    logs,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.medias import (
     tentacle_media,
     exchange_logo,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.tentacles import (
-    tentacles,
     tentacle_packages,
-)
-from tentacles.Services.Interfaces.web_interface.controllers.terms import (
-    terms,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
     portfolio_holdings,
     symbol_market_status,
-    trading,
     trades,
     utility_processor,
 )
@@ -130,20 +112,3 @@ __all__ = [
     "trades",
     "utility_processor",
 ]
-
-
-def load_routes():
-    from . import authentication
-    from . import errors
-    from . import tentacles
-    from . import backtesting
-    from . import commands
-    from . import configuration
-    from . import home
-    from . import dashboard
-    from . import trading
-    from . import logs
-    from . import interface_settings
-    from . import community
-    from . import medias
-    from . import terms
