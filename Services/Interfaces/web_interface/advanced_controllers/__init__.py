@@ -33,15 +33,6 @@ from tentacles.Services.Interfaces.web_interface.advanced_controllers import str
 from tentacles.Services.Interfaces.web_interface.advanced_controllers.configuration import (
     evaluator_config,
 )
-from tentacles.Services.Interfaces.web_interface.advanced_controllers.home import (
-    home,
-)
-from tentacles.Services.Interfaces.web_interface.advanced_controllers.matrix import (
-    matrix,
-)
-from tentacles.Services.Interfaces.web_interface.advanced_controllers.strategy_optimizer import (
-    strategy_optimizer,
-)
 
 
 __all__ = [
