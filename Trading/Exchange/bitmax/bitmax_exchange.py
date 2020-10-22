@@ -16,6 +16,9 @@
 import copy
 import math
 
+import ccxt
+
+import octobot_trading.errors
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
@@ -54,6 +57,8 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
             if with_fixer:
                 market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
             return market_status
+        except ccxt.NotSupported:
+            raise octobot_trading.errors.NotSupported
         except Exception as e:
             self.logger.error(f"Fail to get market status of {symbol}: {e}")
             return {}
