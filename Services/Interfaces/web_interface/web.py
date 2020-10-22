@@ -25,12 +25,14 @@ import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
 import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import tentacles.Services.Interfaces.web_interface.controllers as controllers
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
 import tentacles.Services.Interfaces.web_interface.websockets as websockets
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Services_bases as Service_bases
+
+# import web_interface.controllers to register endpoints
+import tentacles.Services.Interfaces.web_interface.controllers
 
 
 class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
@@ -133,8 +135,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         @websocket_instance.on_error_default
         def default_error_handler(e):
             self.logger.exception(e, True, f"Error with websocket: {e}")
-
-        websockets.load_namespaces()
         for namespace in websockets.namespaces:
             websocket_instance.on_namespace(namespace)
 
@@ -150,7 +150,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             # register session secret key
             web_interface_root.server_instance.secret_key = self.session_secret_key
             self._handle_login(web_interface_root.server_instance)
-            controllers.load_routes()
             self.websocket_instance = self._prepare_websocket()
 
             security.register_responses_extra_header(web_interface_root.server_instance, True)
