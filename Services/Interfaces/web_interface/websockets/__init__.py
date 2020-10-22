@@ -53,10 +53,3 @@ __all__ = [
     "NotificationsNamespace",
     "StrategyOptimizerNamespace",
 ]
-
-
-def load_namespaces():
-    from .notifications import NotificationsNamespace
-    from .backtesting import BacktestingNamespace
-    from .dashboard import DashboardNamespace
-    from .strategy_optimizer import StrategyOptimizerNamespace
