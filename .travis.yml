@@ -1,9 +1,9 @@
 notifications:
   email: false
-dist: xenial
 os: linux
+dist: xenial
 language: python
-python: 3.7-dev
+python: 3.8
 cache: pip
 env:
   global:
@@ -30,21 +30,15 @@ install:
 
 jobs:
   include:
-    - name: "Linux - Python 3.7-dev - Python sources"
+    - name: "Linux - Python 3.8 - Python sources"
       stage: test
-      os: linux
-      python: 3.7-dev
-      language: python
       script:
         - pytest --cov=. --cov-config=../.coveragerc --durations=0 tentacles
       after_success:
         - if [ $TRAVIS_PULL_REQUEST == "false" ]; then coveralls; fi
 
-    - name: "Linux - Python 3.7-dev - Installed"
+    - name: "Linux - Python 3.8 - Installed"
       stage: test
-      os: linux
-      python: 3.7-dev
-      language: python
       script:
         - export CYTHON_IGNORE=true
         - python3 setup.py build_ext --inplace
@@ -54,7 +48,6 @@ jobs:
 
     - name: "Linux - Tentacles - Deploy"
       stage: deploy
-      os: linux
       script: skip
       deploy:
         - provider: script
