@@ -26,8 +26,8 @@ jobs:
     vmImage: 'windows-latest'
   strategy:
     matrix:
-        Python37-64bit-full:
-          PYTHON_VERSION: '3.7'
+        Python38-64bit-full:
+          PYTHON_VERSION: '3.8'
           PYTHON_ARCH: 'x64'
   steps:
   - task: UsePythonVersion@0
@@ -76,8 +76,8 @@ jobs:
   strategy:
     maxParallel: 2
     matrix:
-        Python37-64bit-full:
-          PYTHON_VERSION: '3.7'
+        Python38-64bit-full:
+          PYTHON_VERSION: '3.8'
           PYTHON_ARCH: 'x64'
   steps:
   - task: UsePythonVersion@0
