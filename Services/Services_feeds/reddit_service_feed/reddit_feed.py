@@ -133,6 +133,7 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
                 self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}' this may mean that reddit "
                                                f"login info in config.json are wrong")
                 self.keep_running = False
+                self.should_stop = True
             except prawcore.exceptions.ResponseException as e:
                 message_complement = "this may mean that reddit login info in config.json are invalid." \
                     if not self.credentials_ok else \
@@ -148,4 +149,5 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
                 self.logger.error(f"Error when receiving Reddit feed: '{e}'")
                 self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}'")
                 self.keep_running = False
+                self.should_stop = True
         return False
