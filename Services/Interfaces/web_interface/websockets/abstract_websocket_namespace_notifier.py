@@ -28,7 +28,7 @@ class AbstractWebSocketNamespaceNotifier(flask_socketio.Namespace, web_interface
         super(flask_socketio.Namespace, self).__init__(namespace)
         self.logger = bot_logger.get_logger(self.__class__.__name__)
         # constructor can be called in global project import, in this case manually enable logger
-        self.logger.logger.disabled = False
+        self.logger.disable(False)
         self.clients_count = 0
 
     def all_clients_send_notifications(self, **kwargs) -> bool:
