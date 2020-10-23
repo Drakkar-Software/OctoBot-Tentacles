@@ -83,10 +83,10 @@ def update_modules(modules):
     success = True
     for url in [
         octobot_constants.DEFAULT_TENTACLES_URL,
-        tentacles_manager_api.get_compiled_tentacles_url(
-            octobot_constants.DEFAULT_COMPILED_TENTACLES_URL,
-            octobot_constants.TENTACLES_REQUIRED_VERSION
-        )
+        # tentacles_manager_api.get_compiled_tentacles_url(
+        #     octobot_constants.DEFAULT_COMPILED_TENTACLES_URL,
+        #     octobot_constants.TENTACLES_REQUIRED_VERSION
+        # )
     ]:
         try:
             call_tentacle_manager(tentacles_manager_api.update_tentacles,
