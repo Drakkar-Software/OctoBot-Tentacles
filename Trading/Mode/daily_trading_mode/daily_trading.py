@@ -335,8 +335,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         except (trading_errors.MissingFunds, trading_errors.MissingMinimalExchangeTradeVolume):
             raise
         except asyncio.TimeoutError as e:
-            self.logger.error(f"Impossible to create order on {symbol}: {e} and is necessary to compute the "
-                              f"order details.")
+            self.logger.error(f"Impossible to create order for {symbol} on {self.exchange_manager.exchange_name}: {e} "
+                              f"and is necessary to compute the order details.")
             return []
         except Exception as e:
             self.logger.exception(e, True, f"Failed to create order : {e}.")
