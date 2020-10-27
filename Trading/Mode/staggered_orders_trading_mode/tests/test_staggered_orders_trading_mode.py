@@ -234,6 +234,62 @@ async def test_multi_symbol():
         await _stop(exchange_manager)
 
 
+async def test_set_increment_and_spread():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD")
+        _, _, _, _, symbol_market = await trading_personal_data.get_pre_order_data(exchange_manager,
+                                                                                   symbol=producer.symbol,
+                                                                                   timeout=1)
+        producer.symbol_market = symbol_market
+        assert producer.flat_increment is None
+        assert producer.flat_spread is None
+        producer._set_increment_and_spread(1000)
+        assert producer.flat_increment == 1000 * producer.increment
+        assert producer.flat_spread == 1000 * producer.spread
+
+        producer._set_increment_and_spread(2000)
+        # no change: producer.flat_increment and producer.flat_spread are not None
+        assert producer.flat_increment == 1000 * producer.increment
+        assert producer.flat_spread == 1000 * producer.spread
+
+        # reset
+        producer.flat_increment = None
+        producer.flat_spread = None
+        # use candidate_flat_increment
+        producer._set_increment_and_spread(3000, candidate_flat_increment=500)
+        assert producer.flat_increment == 500
+        assert producer.flat_spread == 500 * producer.spread / producer.increment
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_use_existing_orders_only():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+        _, _, _, _, symbol_market = await trading_personal_data.get_pre_order_data(exchange_manager,
+                                                                                   symbol=producer.symbol,
+                                                                                   timeout=1)
+        producer.symbol_market = symbol_market
+        producer.use_existing_orders_only = True
+        assert producer.flat_increment is None
+        assert producer.flat_spread is None
+        with mock.patch.object(producer, '_create_order', new=mock.AsyncMock()) as mocked_producer_create_order:
+            trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+            await producer._ensure_staggered_orders()
+            # price info: create trades
+            assert producer.current_price == 4000
+            assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+            mocked_producer_create_order.assert_not_called()
+        assert producer.flat_increment is not None
+        assert producer.flat_spread is not None
+        await asyncio.create_task(_wait_for_orders_creation(2))
+        # did not create orders
+        assert not trading_api.get_open_orders(exchange_manager)
+    finally:
+        await _stop(exchange_manager)
+
+
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_100():
     price = 100
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 2475, price)
@@ -862,6 +918,37 @@ async def test_order_fill_callback():
                                                   portfolio_type=commons_constants.PORTFOLIO_TOTAL) > now_usd
         current_total = _get_total_usd(exchange_manager, 100)
         assert previous_total_sell < current_total
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_order_fill_callback_with_mirror_delay():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD", fees=0)
+        # create orders
+        price = 100
+        producer.mode = staggered_orders_trading.StrategyModes.NEUTRAL
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
+
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        assert len(open_orders) == producer.operational_depth
+
+        # closest to centre buy order is filled => bought btc
+        producer.mirror_order_delay = 0.1
+        to_fill_order = open_orders[-2]
+        in_backtesting = "tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading.trading_api.get_is_backtesting"
+        with mock.patch(in_backtesting, return_value=False), \
+             mock.patch.object(producer, "_create_order") as producer_create_order_mock:
+            await _fill_order(to_fill_order, exchange_manager, producer=producer)
+            assert len(producer.mirror_orders_tasks)
+            producer_create_order_mock.assert_not_called()
+            await asyncio.sleep(0.05)
+            producer_create_order_mock.assert_not_called()
+            await asyncio.sleep(0.1)
+            producer_create_order_mock.assert_called_once()
     finally:
         await _stop(exchange_manager)
 
