@@ -26,6 +26,9 @@ jobs:
     vmImage: 'windows-latest'
   strategy:
     matrix:
+        Python38-32bit-full:
+          PYTHON_VERSION: '3.8'
+          PYTHON_ARCH: 'x86'
         Python38-64bit-full:
           PYTHON_VERSION: '3.8'
           PYTHON_ARCH: 'x64'
