@@ -90,8 +90,10 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_INCREMENT_PERCENT = "increment_percent"
     CONFIG_LOWER_BOUND = "lower_bound"
     CONFIG_UPPER_BOUND = "upper_bound"
+    USE_EXISTING_ORDERS_ONLY = "use_existing_orders_only"
     CONFIG_ALLOW_INSTANT_FILL = "allow_instant_fill"
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
+    MIRROR_ORDER_DELAY = "mirror_order_delay"
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -225,6 +227,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.flat_spread = None
         self.current_price = None
         self.scheduled_health_check = None
+        self.mirror_orders_tasks = []
 
         self.healthy = False
 
@@ -263,6 +266,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.operational_depth = self.symbol_trading_config[self.trading_mode.CONFIG_OPERATIONAL_DEPTH]
         self.lowest_buy = self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]
         self.highest_sell = self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]
+        self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.USE_EXISTING_ORDERS_ONLY,
+                                                                       False)
+        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY, 0)
 
         self._check_params()
         self.healthy = True
@@ -277,6 +283,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.trading_mode.consumers[0].flush()
         if self.scheduled_health_check is not None:
             self.scheduled_health_check.cancel()
+        for task in self.mirror_orders_tasks:
+            task.cancel()
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
@@ -337,14 +345,30 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         quantity = new_order_quantity * (1 - quantity_change)
         new_order = OrderData(new_side, quantity, price, self.symbol)
 
+        if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
+            await self._lock_portfolio_and_create_order(new_order, filled_price)
+        else:
+            # create order after waiting time
+            self.mirror_orders_tasks.append(asyncio.get_event_loop().call_later(
+                self.mirror_order_delay,
+                asyncio.create_task,
+                self._lock_portfolio_and_create_order(new_order, filled_price)
+            ))
+
+    async def _lock_portfolio_and_create_order(self, new_order, filled_price):
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
             await self._create_order(new_order, filled_price)
 
     async def _handle_staggered_orders(self, current_price):
-        buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
-        staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
-        async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-            await self._create_not_virtual_orders(staggered_orders, current_price)
+        if self.use_existing_orders_only:
+            # when using existing orders only, no need to check existing orders (they can't be wrong since they are
+            # already on exchange): only initialize increment and order fill events will do the rest
+            self._set_increment_and_spread(current_price)
+        else:
+            buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
+            staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
+            async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
+                await self._create_not_virtual_orders(staggered_orders, current_price)
 
     async def _generate_staggered_orders(self, current_price):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
@@ -366,15 +390,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         missing_orders, state, candidate_flat_increment = self._analyse_current_orders_situation(sorted_orders,
                                                                                                  recently_closed_trades)
-        if self.flat_increment is None and candidate_flat_increment is not None:
-            self.flat_increment = candidate_flat_increment
-        elif self.flat_increment is None:
-            self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, current_price * self.increment)
-        if self.flat_spread is None and self.flat_increment is not None:
-            self.flat_spread = trading_personal_data.adapt_price(self.symbol_market,
-                                                                 self.spread * self.flat_increment / self.increment)
-
-        self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, self.flat_increment)
+        self._set_increment_and_spread(current_price, candidate_flat_increment)
 
         buy_high = min(current_price, self.highest_sell)
         sell_low = max(current_price, self.lowest_buy)
@@ -387,6 +403,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
         return buy_orders, sell_orders
+
+    def _set_increment_and_spread(self, current_price, candidate_flat_increment=None):
+        if self.flat_increment is None and candidate_flat_increment is not None:
+            self.flat_increment = candidate_flat_increment
+        elif self.flat_increment is None:
+            self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, current_price * self.increment)
+        if self.flat_spread is None and self.flat_increment is not None:
+            self.flat_spread = trading_personal_data.adapt_price(self.symbol_market,
+                                                                 self.spread * self.flat_increment / self.increment)
+
+        self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, self.flat_increment)
 
     def _get_interfering_orders_pairs(self, orders):
         current_base, current_quote = symbol_util.split_symbol(self.symbol)
