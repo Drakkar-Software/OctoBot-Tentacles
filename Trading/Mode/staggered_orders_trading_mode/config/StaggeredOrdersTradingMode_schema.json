@@ -60,6 +60,18 @@
                 "minimum": 1,
                 "multipleOf": 1.0,
                 "exclusiveMinimum": true
+              },
+              "mirror_order_delay": {
+                  "title": "Mirror order delay: Seconds to wait for before creating a mirror order when an order is filled. This can generate extra profits on quick market moves.",
+                  "type": "number",
+                  "minimum": 0,
+                  "default": 0
+              },
+              "use_existing_orders_only": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Use existing orders only: when checked, new orders will only be created upon pre-existing orders fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. This mode allows staggered orders to operate on user created orders. Can't work on trading simulator.",
+                "default": false
               }
             }
         }
