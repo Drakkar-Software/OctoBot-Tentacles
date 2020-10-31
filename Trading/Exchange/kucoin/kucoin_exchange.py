@@ -25,12 +25,12 @@ class Kucoin(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_recent_trades(self, symbol, limit=50, params=None):
+    async def get_recent_trades(self, symbol, limit=50, **kwargs):
         # on ccxt kucoin recent trades are received in reverse order from exchange and therefore should never be
         # filtered by limit before reversing (or most recent trades are lost)
-        recent_trades = await super().get_recent_trades(symbol, limit=None, params=params)
+        recent_trades = await super().get_recent_trades(symbol, limit=None, **kwargs)
         return recent_trades[::-1][:limit] if recent_trades else []
 
-    async def get_order_book(self, symbol, limit=20, params=None):
+    async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
-        return super().get_order_book(symbol, limit=limit, params=limit)
+        return super().get_order_book(symbol, limit=limit, **kwargs)
