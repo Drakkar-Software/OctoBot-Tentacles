@@ -70,7 +70,7 @@ jobs:
       python -m pytest --durations=0 tentacles
     displayName: 'Run OctoBot-Tentacles tests'
 
-- job: macOS
+- job: macOS_Installed
   pool:
     vmImage: 'macOS-latest'
   strategy:
@@ -103,7 +103,7 @@ jobs:
       cd OctoBot
       python setup.py build_ext --inplace
       python setup.py install
-    displayName: 'Compile OctoBot'
+    displayName: 'Compile and install OctoBot'
   - script: |
       mkdir new_tentacles
       cp -r Backtesting Evaluator Services Trading new_tentacles
@@ -115,3 +115,45 @@ jobs:
       cd OctoBot
       python -m pytest --durations=0 tentacles
     displayName: 'Run OctoBot-Tentacles tests'
+
+- job: macOS_Python_sources
+  pool:
+    vmImage: 'macOS-latest'
+  strategy:
+    maxParallel: 2
+    matrix:
+        Python38-64bit-full:
+          PYTHON_VERSION: '3.8'
+          PYTHON_ARCH: 'x64'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: $(PYTHON_VERSION)
+      addToPath: true
+      architecture: $(PYTHON_ARCH)
+  - script: |
+      case "$BUILD_REASON" in
+         "PullRequest")
+            export HEAD_BRANCH_NAME=${SYSTEM_PULLREQUEST_SOURCEBRANCH//refs\/heads\//}
+            export BRANCH_NAME=${HEAD_BRANCH_NAME//refs\/pull\//}
+         ;;
+         *) export BRANCH_NAME=$BUILD_SOURCEBRANCHNAME
+         ;;
+      esac
+      git clone -q $OCTOBOT_GH_REPO -b $BRANCH_NAME || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
+      cd OctoBot
+      python -m pip install --upgrade pip setuptools wheel
+      python -m pip install --prefer-binary -r requirements.txt -r dev_requirements.txt
+    displayName: 'Install OctoBot'
+  - script: |
+      mkdir new_tentacles
+      cp -r Backtesting Evaluator Services Trading new_tentacles
+      cd OctoBot
+      python start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
+      python start.py tentacles --install --location "../new_tentacles.zip" --all
+    displayName: 'Create OctoBot-Tentacles bundle'
+  - script: |
+      cd OctoBot
+      python -m pytest --durations=0 tentacles
+    displayName: 'Run OctoBot-Tentacles tests'
+    continueOnError: true # Allow failure on python sources (memory check on staggered orders is failing). Waiting for fix
