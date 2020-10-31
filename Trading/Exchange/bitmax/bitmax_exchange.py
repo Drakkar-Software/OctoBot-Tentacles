@@ -63,11 +63,9 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
             self.logger.error(f"Fail to get market status of {symbol}: {e}")
             return {}
 
-    async def get_my_recent_trades(self, symbol=None, since=None, limit=None, params=None):
+    async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On BitMax, account recent trades is available under fetch_closed_orders
-        if params is None:
-            params = {}
-        return await self.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=params)
+        return await self.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
 
     def _fix_market_status(self, market_status):
         market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][

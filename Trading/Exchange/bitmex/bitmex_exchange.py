@@ -33,8 +33,6 @@ class Bitmex(exchanges.SpotCCXTExchange, exchanges.FutureExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_recent_trades(self, symbol, limit=50, params=None):
-        if params is None:
-            params = {}
-        params.update({"reverse": True})
-        return await exchanges.FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, params=params)
+    async def get_recent_trades(self, symbol, limit=50, **kwargs):
+        kwargs.update({"reverse": True})
+        return await exchanges.FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, **kwargs)
