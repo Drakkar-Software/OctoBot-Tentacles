@@ -100,6 +100,11 @@ jobs:
       python -m pip install --prefer-binary -r requirements.txt -r dev_requirements.txt
     displayName: 'Install OctoBot'
   - script: |
+      cd OctoBot
+      python setup.py build_ext --inplace
+      python setup.py install
+    displayName: 'Compile OctoBot'
+  - script: |
       mkdir new_tentacles
       cp -r Backtesting Evaluator Services Trading new_tentacles
       cd OctoBot
