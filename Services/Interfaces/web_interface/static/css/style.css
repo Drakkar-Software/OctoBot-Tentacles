@@ -242,6 +242,10 @@ table.dataTable,
     color: white;
 }
 
+.dataTables_wrapper .dataTables_filter input {
+    color: white;
+}
+
 .dataTables_wrapper .dataTables_paginate .paginate_button {
     color: #666 !important;
 }
