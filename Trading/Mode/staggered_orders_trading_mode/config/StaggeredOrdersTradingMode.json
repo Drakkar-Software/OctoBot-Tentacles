@@ -9,8 +9,10 @@
     "lower_bound": 3000,
     "upper_bound": 6000,
     "allow_instant_fill": true,
-    "operational_depth": 100
-  },
+    "operational_depth": 100,
+    "mirror_order_delay": 0,
+    "use_existing_orders_only": false
+    },
   {
     "pair": "ADA/ETH",
     "mode": "mountain",
@@ -19,7 +21,9 @@
     "lower_bound": 0.0003,
     "upper_bound": 0.0007,
     "allow_instant_fill": true,
-    "operational_depth": 50
+    "operational_depth": 50,
+    "mirror_order_delay": 0,
+    "use_existing_orders_only": false
   },
   {
     "pair": "ETH/USDT",
@@ -29,7 +33,9 @@
     "lower_bound": 400,
     "upper_bound": 500,
     "allow_instant_fill": true,
-    "operational_depth": 50
+    "operational_depth": 50,
+    "mirror_order_delay": 0,
+    "use_existing_orders_only": false
   }
   ]
 }
