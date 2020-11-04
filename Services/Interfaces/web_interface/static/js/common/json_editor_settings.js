@@ -20,31 +20,28 @@
 JSONEditor.defaults.options.iconlib = 'fontawesome5';
 
 // custom octobot theme
-JSONEditor.defaults.themes.octobot = JSONEditor.defaults.themes.bootstrap4.extend({
-  getButton: function(text, icon, title) {
-    const el = this._super(text, icon, title);
+class OctoBotTheme extends JSONEditor.defaults.themes.bootstrap4 {
+  getButton(text, icon, title) {
+    const el = super.getButton(text, icon, title);
     el.classList.remove("btn-secondary");
     el.classList.add("btn-sm", "btn-primary", "waves-effect");
     return el;
-  },
-  getCheckbox: function() {
+  }
+  getCheckbox() {
     const el = this.getFormInputField('checkbox');
     el.classList.add("custom-control-input");
     return el;
-  },
-  getCheckboxLabel: function(text) {
+  }
+  getCheckboxLabel(text) {
     const el = this.getFormInputLabel(text);
     el.classList.add("custom-control-label");
     return el;
-  },
-  getFormControl: function(label, input, description) {
+  }
+  getFormControl(label, input, description) {
     const group = document.createElement("div");
 
     if (label && input.type === "checkbox") {
       group.classList.add("checkbox", "custom-control", "custom-switch");
-      const id = $(label).text();
-      input.id=id;
-      label.setAttribute("for", id);
       group.appendChild(input);
       group.appendChild(label);
     } else {
@@ -60,11 +57,12 @@ JSONEditor.defaults.themes.octobot = JSONEditor.defaults.themes.bootstrap4.exten
 
     return group;
   }
-});
+}
+
 
 // custom delete confirm prompt
-JSONEditor.defaults.editors.array = JSONEditor.defaults.editors.array.extend({
-  askConfirmation: function() {
+class ConfirmArray extends JSONEditor.defaults.editors.array {
+  askConfirmation() {
     if (this.jsoneditor.options.prompt_before_delete === true) {
       if (confirm("Remove this element ?") === false) {
         return false;
@@ -72,6 +70,8 @@ JSONEditor.defaults.editors.array = JSONEditor.defaults.editors.array.extend({
     }
     return true;
   }
-});
+}
 
+JSONEditor.defaults.themes.octobot = OctoBotTheme;
+JSONEditor.defaults.editors.array = ConfirmArray;
 JSONEditor.defaults.options.theme = 'octobot';
