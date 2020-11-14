@@ -71,13 +71,18 @@ function handle_add_buttons(){
 
         const deck = $(this).parents("." + config_root_class).find(".card-deck");
         const select_input = $("#" + button_id + "Select");
-        const select_value = select_input.val();
-        const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
-        let target_template = $("#" + button_id + "-template-default");
+        let select_value = select_input.val();
 
         // currencies
-        const select_symbol = select_input.children("[data-tokens='"+select_value+"']").attr("symbol");
+        const data_token = select_input.children("[data-tokens='"+select_value+"']");
+        const select_symbol = data_token.attr("symbol");
+        if(data_token[0].hasAttribute("data-model")){
+            select_value = data_token.attr("data-model");
+        }
         const reference_market = select_input.attr("reference_market");
+
+        const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
+        let target_template = $("#" + button_id + "-template-default");
 
         //services
         const in_services = button_id === "AddService";
