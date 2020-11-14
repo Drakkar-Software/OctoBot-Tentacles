@@ -15,9 +15,11 @@
 #  License along with this library.
 import copy
 import math
+import typing
 
 import ccxt
 
+import octobot_commons.enums
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
@@ -66,6 +68,18 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On BitMax, account recent trades is available under fetch_closed_orders
         return await self.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
+
+    async def get_symbol_prices(self,
+                                symbol: str,
+                                time_frame: octobot_commons.enums.TimeFrames,
+                                limit: int = None,
+                                **kwargs: dict) -> typing.Optional[list]:
+        if limit is None:
+            # force default limit on Bitmax since it's not use by default in fetch_ohlcv
+            options = self.client.safe_value(self.client.options, 'fetchOHLCV', {})
+            limit = self.client.safe_integer(options, 'limit', 500)
+        return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
+
 
     def _fix_market_status(self, market_status):
         market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
