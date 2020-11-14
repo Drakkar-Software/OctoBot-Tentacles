@@ -31,10 +31,11 @@ except ImportError:
 class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     IMPORTER = generic_exchange_importer.GenericExchangeDataImporter
 
-    def __init__(self, config, exchange_name, symbols, time_frames, use_all_available_timeframes=False,
+    def __init__(self, config, exchange_name, tentacles_setup_config, symbols, time_frames,
+                 use_all_available_timeframes=False,
                  data_format=backtesting_enums.DataFormats.REGULAR_COLLECTOR_DATA):
-        super().__init__(config, exchange_name, symbols, time_frames, use_all_available_timeframes,
-                         data_format=data_format)
+        super().__init__(config, exchange_name, tentacles_setup_config, symbols, time_frames,
+                         use_all_available_timeframes, data_format=data_format)
         self.exchange = None
         self.exchange_manager = None
 
@@ -48,6 +49,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 .is_collecting() \
                 .is_ignoring_config() \
                 .disable_trading_mode() \
+                .use_tentacles_setup_config(self.tentacles_setup_config) \
                 .build()
 
             self.exchange = self.exchange_manager.exchange

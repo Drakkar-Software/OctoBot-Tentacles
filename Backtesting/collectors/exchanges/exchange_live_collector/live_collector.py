@@ -38,6 +38,7 @@ class ExchangeLiveDataCollector(exchanges.AbstractExchangeLiveCollector):
             .is_collecting() \
             .is_ignoring_config() \
             .disable_trading_mode() \
+            .use_tentacles_setup_config(self.tentacles_setup_config) \
             .build()
 
         self._load_timeframes_if_necessary()

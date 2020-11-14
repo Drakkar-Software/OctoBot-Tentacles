@@ -112,7 +112,9 @@ def collect_data_file(exchange, symbol):
     success = False
     try:
         result = interfaces_util.run_in_bot_async_executor(
-            backtesting_api.collect_exchange_historical_data(exchange, [symbol]))
+            backtesting_api.collect_exchange_historical_data(exchange,
+                                                             interfaces_util.get_bot_api().get_edited_tentacles_config(),
+                                                             [symbol]))
         success = True
     except Exception as e:
         result = f"data collector error: {e}"
