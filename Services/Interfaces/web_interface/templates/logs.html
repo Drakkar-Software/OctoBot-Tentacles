@@ -36,7 +36,10 @@
 {% block additional_scripts %}
 <script>
     $(document).ready(function () {
-      $('#logs_datatable').DataTable();
+      $('#logs_datatable').DataTable({
+          // order by time: most recent first
+          "order": [[ 0, "desc" ]]
+      });
     });
 </script>
 {% endblock additional_scripts %}
