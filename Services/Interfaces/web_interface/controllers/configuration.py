@@ -15,6 +15,7 @@
 #  License along with this library.
 import flask
 
+import octobot_commons.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as trading_constants
 import octobot_services.constants as services_constants
@@ -213,5 +214,12 @@ def tentacles_utils():
     def get_tentacle_config_schema_content(tentacle_class):
         return models.get_tentacle_config_schema(tentacle_class)
 
+    def filter_currency_pairs(currency, symbol_list, full_symbol_list):
+        symbol = full_symbol_list.get(currency, None)
+        if symbol is None:
+            return symbol_list
+        return [s for s in symbol_list if full_symbol_list[currency] in symbol_util.split_symbol(s)]
+
     return dict(get_tentacle_config_file_content=get_tentacle_config_file_content,
-                get_tentacle_config_schema_content=get_tentacle_config_schema_content)
+                get_tentacle_config_schema_content=get_tentacle_config_schema_content,
+                filter_currency_pairs=filter_currency_pairs)
