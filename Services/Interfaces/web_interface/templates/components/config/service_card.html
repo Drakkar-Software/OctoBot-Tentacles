@@ -5,13 +5,28 @@
     <!-- Card -->
     <div class="card mb-4 {{add_class}} config-card">
 
-        <div class="card-header">
-            <h4>
-                {{service_name}}
-                <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="{{service.get_help_page()}}">
-                    <i class="fa fa-question"></i>
-                </a>
-            </h4>
+        <div class="card-header row">
+            <div class="d-flex justify-content-between w-100 px-3">
+                <div>
+                    <h4>
+                        {{service_name}}
+                    </h4>
+                </div>
+                {% if service.get_website_url() %}
+                    <div>
+                        <a href="{{ service.get_website_url() }}" target="_blank" rel="noopener noreferrer" class="waves-effect">
+                            <img class="img-fluid brand-logo" alt="{{service_name}}-logo" src="{{ service.get_logo() }}">
+                        </a>
+                    </div>
+                {% endif %}
+                <div>
+                    <h4>
+                        <a class="text-danger" target="_blank" rel="noopener noreferrer" href="{{service.get_help_page()}}">
+                            <i class="fa fa-question"></i>
+                        </a>
+                    </h4>
+                </div>
+            </div>
         </div>
 
         <!--Card content-->
