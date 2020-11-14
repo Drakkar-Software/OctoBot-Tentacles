@@ -23,7 +23,7 @@ function markdown_to_html(text) {
 }
 
 function fetch_images() {
-    $(".exchange-logo").each(function () {
+    $(".product-logo").each(function () {
         const element = $(this);
         if(element.attr("src") === ""){
             $.get(element.attr("url"), function(data) {

@@ -79,6 +79,9 @@ class RedditService(services.AbstractService):
     def get_type(self):
         return services_constants.CONFIG_REDDIT
 
+    def get_website_url(self):
+        return "https://www.reddit.com"
+
     def get_endpoint(self):
         return self.reddit_api
 

@@ -57,6 +57,13 @@ body:before {
     max-width: 30rem;
 }
 
+.brand-logo {
+    height: 100%;
+    width: 100%;
+    max-height: 2.5rem;
+    max-width: 2.5rem;
+}
+
 .navbar.navbar-dark .navbar-nav .nav-item  {
     border-bottom: 2px solid transparent;
 }

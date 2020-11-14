@@ -84,6 +84,12 @@ class WebService(services.AbstractService):
     def get_type(self) -> None:
         return services_constants.CONFIG_WEB
 
+    def get_website_url(self):
+        return "/home"
+
+    def get_logo(self):
+        return "static/img/svg/octobot.svg"
+
     @staticmethod
     def generate_session_secret_key():
         # always generate a new unique session secret key

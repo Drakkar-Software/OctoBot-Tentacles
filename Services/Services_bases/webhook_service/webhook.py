@@ -86,6 +86,9 @@ class WebHookService(services.AbstractService):
     def get_type(self) -> None:
         return services_constants.CONFIG_WEBHOOK
 
+    def get_logo(self):
+        return None
+
     def is_subscribed(self, feed_name):
         return feed_name in self.service_feed_webhooks
 
