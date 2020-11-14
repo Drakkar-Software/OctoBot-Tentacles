@@ -76,7 +76,7 @@ function handle_add_buttons(){
         // currencies
         const data_token = select_input.children("[data-tokens='"+select_value+"']");
         const select_symbol = data_token.attr("symbol");
-        if(data_token[0].hasAttribute("data-model")){
+        if(isDefined(data_token[0]) && data_token[0].hasAttribute("data-model")){
             select_value = data_token.attr("data-model");
         }
         const reference_market = select_input.attr("reference_market");
@@ -98,15 +98,21 @@ function handle_add_buttons(){
                 template_default = template_default.replace(new RegExp(config_default_symbol + ".png","g"), select_symbol.toLowerCase() + ".png");
             }
             deck.append(template_default).hide().fadeIn();
+
             handle_editable();
 
             // select options with reference market if any
             $(editable_selector).each(function () {
                 if ($(this).siblings('.select2').length === 0 && !$(this).parent().hasClass('default')){
                     $(this).children("option").each(function () {
-                        const symbols = $(this).attr("value").split("/");
+                        const option = $(this);
+                        const symbols = option.attr("value").split("/");
                         if (symbols[0] === select_symbol && symbols[1] === reference_market){
-                            $(this).attr("selected", "selected");
+                            option.attr("selected", "selected");
+                        }
+                        // remove options without this currency symbol
+                        if (!(symbols[0] === select_symbol || symbols[1] === select_symbol)){
+                            option.detach();
                         }
                     });
                 }
