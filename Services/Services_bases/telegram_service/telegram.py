@@ -41,8 +41,10 @@ class TelegramService(services.AbstractService):
         return {
             self.CHAT_ID: "ID of your chat.",
             services_constants.CONFIG_TOKEN: "Token given by 'botfather'.",
-            services_constants.CONFIG_USERNAMES_WHITELIST: "List of telegram usernames allowed to talk to your OctoBot. "
-                                                           "No access restriction if left empty."
+            services_constants.CONFIG_USERNAMES_WHITELIST: "List of telegram usernames (user's @ identifier without "
+                                                           "@) allowed to talk to your OctoBot. This allows you to "
+                                                           "limit your OctoBot's telegram interactions to specific "
+                                                           "users only. No access restriction if left empty."
         }
 
     def get_default_value(self):
