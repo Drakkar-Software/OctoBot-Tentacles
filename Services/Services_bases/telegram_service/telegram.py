@@ -132,6 +132,9 @@ class TelegramService(services.AbstractService):
     def get_type(self):
         return services_constants.CONFIG_TELEGRAM
 
+    def get_website_url(self):
+        return "https://telegram.org/"
+
     def get_endpoint(self):
         return self.telegram_api
 
