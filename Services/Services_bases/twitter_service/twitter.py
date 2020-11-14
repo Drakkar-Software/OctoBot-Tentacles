@@ -93,6 +93,9 @@ class TwitterService(services.AbstractService):
     def get_type(self):
         return services_constants.CONFIG_TWITTER
 
+    def get_website_url(self):
+        return "https://twitter.com/"
+
     def get_endpoint(self):
         return self.twitter_api
 
