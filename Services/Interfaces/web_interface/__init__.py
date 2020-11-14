@@ -25,6 +25,7 @@ import octobot_commons.logging as bot_logging
 
 server_instance = flask.Flask(__name__)
 
+
 class Notifier:
     @abc.abstractmethod
     def send_notifications(self) -> bool:
@@ -32,6 +33,7 @@ class Notifier:
 
 
 notifiers = {}
+
 
 def register_notifier(notification_key, notifier):
     if notification_key not in notifiers:
@@ -86,41 +88,6 @@ def add_to_symbol_data_history(symbol, data, time_frame, force_data_reset=False)
     if symbol not in symbol_data_history:
         symbol_data_history[symbol] = {}
     symbol_data_history[symbol][time_frame] = data
-
-    # TODO: handle candles history (display candles on old trades,
-    #  a way to solve this would be to keep more candle before flushing them)
-    # import numpy
-    # from config import PriceIndexes
-    # if force_data_reset or time_frame not in symbol_data_history[symbol]:
-    #     symbol_data_history[symbol][time_frame] = data
-    # else:
-    #     # merge new data into current data
-    #     # find index from where data is new
-    #     new_data_index = 0
-    #     candle_times = data[PriceIndexes.IND_PRICE_TIME.value]
-    #     current_candle_list = symbol_data_history[symbol][time_frame]
-    #     for i in range(1, len(candle_times)):
-    #         if candle_times[-i] > current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1]:
-    #             new_data_index = i
-    #         else:
-    #             # update last candle if necessary, then break loop
-    #             if current_candle_list[PriceIndexes.IND_PRICE_TIME.value][-1] == candle_times[-i]:
-    #                 current_candle_list[PriceIndexes.IND_PRICE_CLOSE.value][-1] = \
-    #                     data[PriceIndexes.IND_PRICE_CLOSE.value][-i]
-    #                 current_candle_list[PriceIndexes.IND_PRICE_HIGH.value][-1] = \
-    #                     data[PriceIndexes.IND_PRICE_HIGH.value][-i]
-    #                 current_candle_list[PriceIndexes.IND_PRICE_LOW.value][-1] = \
-    #                     data[PriceIndexes.IND_PRICE_LOW.value][-i]
-    #                 current_candle_list[PriceIndexes.IND_PRICE_VOL.value][-1] = \
-    #                     data[PriceIndexes.IND_PRICE_VOL.value][-i]
-    #             break
-    #     if new_data_index > 0:
-    #         data_list = [None] * len(PriceIndexes)
-    #         for i, _ in enumerate(data):
-    #             data_list[i] = data[i][-new_data_index:]
-    #         new_data = numpy.array(data_list)
-    #         symbol_data_history[symbol][time_frame] = numpy.concatenate((symbol_data_history[symbol][time_frame],
-    #                                                                      new_data), axis=1)
 
 
 def flush_notifications():
