@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import logging
+import os
 
 import octobot_backtesting.collectors as collector
 import octobot_backtesting.enums as backtesting_enums
@@ -38,34 +39,45 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         self.exchange_manager = None
 
     async def start(self):
-        self.exchange_manager = await trading_api.create_exchange_builder(self.config, self.exchange_name) \
-            .is_simulated() \
-            .is_rest_only() \
-            .is_exchange_only() \
-            .is_collecting() \
-            .is_ignoring_config() \
-            .disable_trading_mode() \
-            .build()
+        should_stop_database = True
+        try:
+            self.exchange_manager = await trading_api.create_exchange_builder(self.config, self.exchange_name) \
+                .is_simulated() \
+                .is_rest_only() \
+                .is_exchange_only() \
+                .is_collecting() \
+                .is_ignoring_config() \
+                .disable_trading_mode() \
+                .build()
 
-        self.exchange = self.exchange_manager.exchange
-        self._load_timeframes_if_necessary()
+            self.exchange = self.exchange_manager.exchange
+            self._load_timeframes_if_necessary()
 
-        # create description
-        await self._create_description()
+            # create description
+            await self._create_description()
 
-        self.logger.info("Start collecting history")
-        for symbol in self.symbols:
-            self.logger.info(f"Collecting history for {symbol}...")
-            await self.get_ticker_history(self.exchange_name, symbol)
-            await self.get_order_book_history(self.exchange_name, symbol)
-            await self.get_recent_trades_history(self.exchange_name, symbol)
+            self.logger.info(f"Start collecting history on {self.exchange_name}")
+            for symbol in self.symbols:
+                self.logger.info(f"Collecting history for {symbol}...")
+                await self.get_ticker_history(self.exchange_name, symbol)
+                await self.get_order_book_history(self.exchange_name, symbol)
+                await self.get_recent_trades_history(self.exchange_name, symbol)
 
-            for time_frame in self.time_frames:
-                self.logger.info(f"Collecting history on {time_frame}...")
-                await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
-                await self.get_kline_history(self.exchange_name, symbol, time_frame)
-
-        await self.stop()
+                for time_frame in self.time_frames:
+                    self.logger.info(f"Collecting history on {time_frame}...")
+                    await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
+                    await self.get_kline_history(self.exchange_name, symbol, time_frame)
+        except Exception as e:
+            self.logger.exception(e, True, f"Error when collecting {self.exchange_name} history for "
+                                           f"{', '.join(self.symbols)}: {e}")
+            await self.database.stop()
+            should_stop_database = False
+            # Do not keep errored data file
+            if os.path.isfile(self.file_path):
+                os.remove(self.file_path)
+            raise
+        finally:
+            await self.stop(should_stop_database=should_stop_database)
 
     def _load_all_available_timeframes(self):
         allowed_timeframes = set(tf.value for tf in commons_enums.TimeFrames)
@@ -74,9 +86,10 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                             if time_frame in allowed_timeframes] \
             if hasattr(self.exchange.client, "timeframes") else []
 
-    async def stop(self):
+    async def stop(self, should_stop_database=True):
         await self.exchange_manager.stop()
-        await self.database.stop()
+        if should_stop_database:
+            await self.database.stop()
 
     async def get_ticker_history(self, exchange, symbol):
         pass
