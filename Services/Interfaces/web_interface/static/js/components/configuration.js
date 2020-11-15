@@ -75,11 +75,17 @@ function handle_add_buttons(){
 
         // currencies
         const data_token = select_input.children("[data-tokens='"+select_value+"']");
-        const select_symbol = data_token.attr("symbol");
-        if(isDefined(data_token[0]) && data_token[0].hasAttribute("data-model")){
-            select_value = data_token.attr("data-model");
+        const select_symbol = data_token.attr("symbol").toUpperCase();
+        let currency_id = undefined;
+        if(isDefined(data_token[0])){
+            if (data_token[0].hasAttribute("data-model")) {
+                select_value = data_token.attr("data-model");
+            }
+            if (data_token[0].hasAttribute("data-currency-id")) {
+                currency_id = data_token.attr("data-currency-id");
+            }
         }
-        const reference_market = select_input.attr("reference_market");
+        const reference_market = select_input.attr("reference_market").toUpperCase();
 
         const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
         let target_template = $("#" + button_id + "-template-default");
@@ -94,8 +100,8 @@ function handle_add_buttons(){
         if(deck.find("div[name='"+select_value+"']").length === 0){
             let template_default = target_template.html().replace(new RegExp(config_default_value,"g"), select_value);
             template_default = template_default.replace(new RegExp("card-text symbols default","g"), "card-text symbols");
-            if(isDefined(select_symbol)){
-                template_default = template_default.replace(new RegExp(config_default_symbol + ".png","g"), select_symbol.toLowerCase() + ".png");
+            if(isDefined(currency_id)){
+                template_default = template_default.replace(new RegExp(`data-currency-id="${config_default_value.toLowerCase()}"`), `data-currency-id="${currency_id}"`);
             }
             deck.append(template_default).hide().fadeIn();
 
