@@ -21,7 +21,7 @@
 {%- endmacro %}
 
 {% macro editable_key_string(config, key, config_key, config_type, config_value, startup_config_value, suggestions, placeholder_str="", password_val="*********") -%}
-    {{ key }} :
+    <span class="text-capitalize">{{ key }} : </span>
     {% if key == "password" %}
         <a href="#"
            config-key="{{config_key}}"
@@ -54,7 +54,7 @@
 {%- endmacro %}
 
 {% macro editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str) -%}
-    {{ key }} : <br>
+    <span class="text-capitalize">{{ key }} : </span> <br>
     {% for new_key in config[key] %}
         &emsp;{{  editable_key( config[key],
                             new_key,
@@ -85,7 +85,7 @@
              id="{{config_key}}"
       {% if config[key] == True %}checked{% endif %}>
 
-      <label class="custom-control-label" for="{{config_key}}"
+      <label class="custom-control-label text-capitalize" for="{{config_key}}"
           {% if tooltip is not none %}
             data-toggle="tooltip" title="{{tooltip}}"
           {% endif %}
@@ -97,7 +97,7 @@
 {%- endmacro %}
 
 {% macro editable_key_number(config, key, config_key, config_type, config_value, startup_config_value, suggestions, number_step) -%}
-    {{ key }} : <a href="#"
+    <span class="text-capitalize">{{ key }} : </span><a href="#"
                    config-key="{{config_key}}"
                    config-type="global_config"
                    config-value="{{config[key]}}"
@@ -113,7 +113,7 @@
 
 {% macro editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier="", placeholder_str="") -%}
     {% if force_title %}
-        {{ key }} :
+        <span class="text-capitalize">{{ key }} : </span>
     {% endif %}
     <select config-key="{{ config_key }}"
             config-type="global_config"
