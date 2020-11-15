@@ -8,9 +8,11 @@
 
         <!--Card image-->
         <div class="view overlay animated fadeIn">
-            <img class="card-img-top currency-image" src="https://raw.githubusercontent.com/hyperdexapp/cryptocurrency-icons/master/128/icon/{{symbol}}.png"
-                alt="Can't find image for {{ crypto_currency }} :("
-                style="height:100%">
+            <img class="card-img-top currency-image"
+                 src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                 alt="Can't find image for {{ crypto_currency }} :("
+                 data-currency-id="{{full_symbol_list[crypto_currency]['id']}}"
+                 style="height:100%">
             <a href="#!">
                 <div class="mask rgba-white-slight waves-effect waves-light"></div>
             </a>
