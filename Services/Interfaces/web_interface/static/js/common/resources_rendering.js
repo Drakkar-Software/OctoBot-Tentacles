@@ -38,7 +38,7 @@ function fetch_images() {
 }
 
 function handleDefaultImage(element, url){
-    const imgSrc = element.attr("src")
+    const imgSrc = element.attr("src");
     element.on("error",function () {
         if (imgSrc !== url){
             element.attr("src", url);
@@ -87,7 +87,7 @@ function fetchCurrencyImage(element, currencyId){
 }
 
 function fetchCurrencyIds(){
-    currencyIdBySymbol = {}
+    currencyIdBySymbol = {};
     $.get({
         url: currencyListURL,
         dataType: "json",
@@ -108,7 +108,7 @@ function fetchCurrencyIds(){
 function handleDefaultImages(){
     $(".currency-image").each(function () {
         const element = $(this);
-        const imgSrc = element.attr("src")
+        const imgSrc = element.attr("src");
         if (imgSrc === "" || imgSrc.endsWith(currencyLoadingImageName)) {
             if (element[0].hasAttribute("data-currency-id")) {
                 fetchCurrencyImage(element, element.attr("data-currency-id").toLowerCase());
