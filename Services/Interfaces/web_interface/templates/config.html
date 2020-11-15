@@ -165,7 +165,7 @@
                         <select id="AddCurrencySelect" class="selectpicker" data-live-search="true" reference_market="{{ config_reference_market }}">
                            {% for currency in full_symbol_list %}
                                 {% if currency not in config_symbols %}
-                                    <option data-tokens="{{ full_symbol_list[currency]}} - {{ currency }}" symbol="{{ full_symbol_list[currency] }}" data-model="{{ currency }}">{{ full_symbol_list[currency]}} - {{ currency }}</option>
+                                    <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}" data-currency-id="{{ full_symbol_list[currency]['id'] }}" symbol="{{ full_symbol_list[currency]['symbol'] }}" data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{ currency }}</option>
                                 {% endif %}
                            {% endfor %}
                         </select>

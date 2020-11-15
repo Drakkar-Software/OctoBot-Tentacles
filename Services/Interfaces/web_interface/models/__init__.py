@@ -76,6 +76,8 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_other_exchange_list,
     get_current_exchange,
     REQUIREMENTS_KEY,
+    SYMBOL_KEY,
+    ID_KEY,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -194,6 +196,8 @@ __all__ = [
     "get_initializing_currencies_prices_set",
     "get_evaluation",
     "REQUIREMENTS_KEY",
+    "SYMBOL_KEY",
+    "ID_KEY"
 ]
 
 
