@@ -215,10 +215,16 @@ def tentacles_utils():
         return models.get_tentacle_config_schema(tentacle_class)
 
     def filter_currency_pairs(currency, symbol_list, full_symbol_list):
-        symbol = full_symbol_list.get(currency, None)
+        currency_key = currency
+        symbol = full_symbol_list.get(currency_key, None)
+        if symbol is None:
+            # try on uppercase
+            currency_key = currency.upper()
+            symbol = full_symbol_list.get(currency_key, None)
         if symbol is None:
             return symbol_list
-        return [s for s in symbol_list if full_symbol_list[currency][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
+        return [s for s in symbol_list
+                if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
 
     return dict(get_tentacle_config_file_content=get_tentacle_config_file_content,
                 get_tentacle_config_schema_content=get_tentacle_config_schema_content,
