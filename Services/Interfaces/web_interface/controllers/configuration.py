@@ -218,7 +218,7 @@ def tentacles_utils():
         symbol = full_symbol_list.get(currency, None)
         if symbol is None:
             return symbol_list
-        return [s for s in symbol_list if full_symbol_list[currency] in symbol_util.split_symbol(s)]
+        return [s for s in symbol_list if full_symbol_list[currency][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
 
     return dict(get_tentacle_config_file_content=get_tentacle_config_file_content,
                 get_tentacle_config_schema_content=get_tentacle_config_schema_content,
