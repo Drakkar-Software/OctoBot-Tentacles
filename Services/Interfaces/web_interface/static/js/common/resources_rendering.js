@@ -53,6 +53,13 @@ const fetchingCurrencies = [];
 let currencyIdBySymbol = undefined;
 let fetchedCurrencyIds = false;
 
+
+function _useDefaultImage(element, currencyId){
+    handleDefaultImage(element, currencyDefaultImage);
+    fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
+}
+
+
 function fetchCurrencyImage(element, currencyId){
     if(element.parents("#AddCurrency-template-default").length > 0){
         // do not fetch images for default elements
@@ -64,14 +71,16 @@ function fetchCurrencyImage(element, currencyId){
             url: `https://api.coingecko.com/api/v3/coins/${currencyId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false`,
             dataType: "json",
             success: function(data){
-                element.attr("src", data["image"]["large"])
-                fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
-                element.show();
+                if(isDefined(data["image"])){
+                    element.attr("src", data["image"]["large"]);
+                    fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
+                }else{
+                    _useDefaultImage(element, currencyId);
+                }
             },
             error: function(result, status){
                 window.console&&console.error(`Impossible to get the currency image for ${currencyId}: ${result.responseText} (${status})`);
-                handleDefaultImage(element, currencyDefaultImage);
-                fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
+                _useDefaultImage(element, currencyId);
             }
         });
     }
