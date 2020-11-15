@@ -25,7 +25,6 @@ import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.enums as enums
 import octobot_commons.timestamp_util as timestamp_util
 import octobot_commons.time_frame_manager as time_frame_manager
-import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 
 GET_SYMBOL_SEPARATOR = "|"
@@ -102,21 +101,6 @@ def get_watched_symbol_data(symbol):
         return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except KeyError:
         return {}
-
-
-def _find_symbol_evaluator_with_data(evaluators, exchange):
-    symbol_evaluator = next(iter(evaluators.values()))
-    first_symbol = symbol_evaluator.get_symbol()
-    exchange_traded_pairs = exchange.get_exchange_manager().get_traded_pairs()
-    if first_symbol in exchange_traded_pairs:
-        return symbol_evaluator
-    elif first_symbol == commons_constants.CONFIG_WILDCARD:
-        return evaluators[exchange_traded_pairs[0]]
-    else:
-        for symbol in evaluators.keys():
-            if symbol in exchange_traded_pairs:
-                return evaluators[symbol]
-    return symbol_evaluator
 
 
 def _get_time_frame(exchange_name, exchange_id):
