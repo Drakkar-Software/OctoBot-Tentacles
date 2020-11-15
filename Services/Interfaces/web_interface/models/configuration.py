@@ -37,6 +37,9 @@ import octobot.community as community
 import octobot.constants as octobot_constants
 
 NAME_KEY = "name"
+SYMBOL_KEY = "symbol"
+ID_KEY = "id"
+EXCLUDED_CURRENCY_SUBNAME = tuple(("X Long", "X Short"))
 DESCRIPTION_KEY = "description"
 REQUIREMENTS_KEY = "requirements"
 COMPATIBLE_TYPES_KEY = "compatible-types"
@@ -485,16 +488,24 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def _is_legit_currency(currency):
+    return not any(sub_name in currency for sub_name in EXCLUDED_CURRENCY_SUBNAME) and len(currency) < 30
+
+
 def get_all_symbols_dict():
     global all_symbols_dict
     if not all_symbols_dict:
         try:
             all_symbols_dict = {
-                currency_data[NAME_KEY]: currency_data["symbol"]
-                for currency_data in requests.get(constants.CURRENCIES_LIST_URL).json()["data"]
+                currency_data[NAME_KEY]: {
+                    SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
+                    ID_KEY: currency_data[ID_KEY]
+                }
+                for currency_data in requests.get(constants.CURRENCIES_LIST_URL).json()
+                if _is_legit_currency(currency_data[NAME_KEY])
             }
         except Exception as e:
-            _get_logger().error(f"Failed to get currencies list from coincap.io : {e}")
+            _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
             return {}
     return all_symbols_dict
 

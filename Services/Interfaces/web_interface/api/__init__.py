@@ -30,6 +30,7 @@ from tentacles.Services.Interfaces.web_interface.api.metadata import (
 from tentacles.Services.Interfaces.web_interface.api.trading import (
     orders,
     refresh_portfolio,
+    currency_list,
 )
 
 
@@ -39,4 +40,5 @@ __all__ = [
     "announcements",
     "orders",
     "refresh_portfolio",
+    "currency_list",
 ]
