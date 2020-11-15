@@ -20,6 +20,7 @@ import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.enums as enums
@@ -63,12 +64,13 @@ def format_trades(dict_trade_history):
             trade_type = trade_side
         if status is not trading_enums.OrderStatus.CANCELED.value or DISPLAY_CANCELLED_TRADES:
             trade_time = dict_trade[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value]
-            trades[trade_time_key].append(
-                timestamp_util.convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
-            trades[trade_price_key].append(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value])
-            trades[trade_description_key].append(
-                f"{trade_type.name.replace('_', ' ')}: {dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]}")
-            trades[trade_order_side_key].append(trade_side.value)
+            if trade_time > trading_constants.MINIMUM_VAL_TRADE_TIME:
+                trades[trade_time_key].append(
+                    timestamp_util.convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
+                trades[trade_price_key].append(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value])
+                trades[trade_description_key].append(
+                    f"{trade_type.name.replace('_', ' ')}: {dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]}")
+                trades[trade_order_side_key].append(trade_side.value)
 
     return trades
 
