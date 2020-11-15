@@ -20,6 +20,7 @@ import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.models as models
 
 
 @api.api.route("/orders", methods=['GET', 'POST'])
@@ -52,3 +53,9 @@ def refresh_portfolio():
         return flask.jsonify("Portfolio(s) refreshed")
     except RuntimeError:
         return util.get_rest_reply("No portfolio to refresh", 500)
+
+
+@api.api.route("/currency_list", methods=['GET'])
+@login.login_required_when_activated
+def currency_list():
+    return flask.jsonify(models.get_all_symbols_dict())

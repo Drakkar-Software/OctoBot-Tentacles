@@ -16,7 +16,7 @@
 
 
 # utility URLs
-CURRENCIES_LIST_URL = "https://api.coincap.io/v2/assets?limit=1000"
+CURRENCIES_LIST_URL = "https://api.coingecko.com/api/v3/coins/list"
 
 # config keys
 CONFIG_WATCHED_SYMBOLS = "watched_symbols"
