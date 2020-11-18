@@ -14,7 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from tentacles.Services.Interfaces.web_interface.controllers import authentication
+from tentacles.Services.Interfaces.web_interface.controllers import octobot_authentication
+from tentacles.Services.Interfaces.web_interface.controllers import community_authentication
 from tentacles.Services.Interfaces.web_interface.controllers import backtesting
 from tentacles.Services.Interfaces.web_interface.controllers import commands
 from tentacles.Services.Interfaces.web_interface.controllers import community
@@ -30,10 +31,15 @@ from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
 
 
-from tentacles.Services.Interfaces.web_interface.controllers.authentication import (
+from tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication import (
     LoginForm,
     login,
     logout,
+)
+from tentacles.Services.Interfaces.web_interface.controllers.community_authentication import (
+    CommunityLoginForm,
+    community_login,
+    community_logout,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.backtesting import (
     data_collector,
@@ -77,6 +83,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.trading import (
 
 
 __all__ = [
+    "CommunityLoginForm",
+    "community_login",
+    "community_logout",
     "LoginForm",
     "login",
     "logout",
