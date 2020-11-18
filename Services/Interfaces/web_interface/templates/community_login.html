@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% set active_page = "home" %}
+
+{% from "macros/forms.html" import render_field %}
+
+{% block body %}
+<br>
+<div class="login_box mx-auto mt-1 mt-xl-5">
+    <div class="card text-center">
+        <div class="card-header">
+            <h1>
+                OctoBot community
+            </h1>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+              {% endif %}
+            {% endwith %}
+            {% if current_logged_in_email %}
+                <h5>Logged in as {{ current_logged_in_email }}</h5>
+                <a class="btn btn-sm btn-outline-warning waves-effect mt-4" href="{{ url_for('community_logout') }}">Logout</a>
+            {% else %}
+                <h5>Login and access your OctoBot community features.</h5>
+                <form method=post>
+                    <div class="my-4">
+                        {{ form.csrf_token }}
+                        <div class="mb-2">
+                            {{ render_field(form.email, autofocus=true, class="form-control mx-auto", placeholder="Email") }}
+                        </div>
+                        <div>
+                            {{ render_field(form.password, autofocus=true, class="form-control mx-auto", placeholder="Password") }}
+                        </div>
+                        <div class="custom-control custom-switch mt-2">
+                            {{ render_field(form.remember_me, class="custom-control-input") }}
+                            <label class="custom-control-label" for="remember_me">Remember me</label>
+                        </div>
+                    </div>
+                    <input type=submit value=Login class="btn btn-primary waves-effect mt-2">
+                </form>
+            {% endif %}
+        </div>
+        {% if not current_logged_in_email %}
+            <div class="card-footer">
+                New to the OctoBot community ? <a href="{{community_url}}" target="_blank" rel="noopener noreferrer" class="text-white font-weight-bold">You can join it here.</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+{% endblock additional_scripts %}
