@@ -20,7 +20,7 @@ import octobot_commons.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.matrix as matrix
 import octobot_evaluators.enums as evaluators_enums
-import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.modes as trading_modes
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants

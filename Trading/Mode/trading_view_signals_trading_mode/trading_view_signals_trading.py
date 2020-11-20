@@ -22,7 +22,7 @@ import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
-import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.exchange_channel as exchanges_channel
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):

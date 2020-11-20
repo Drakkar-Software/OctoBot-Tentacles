@@ -129,7 +129,7 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
         :return: bool
         """
         try:
-            import octobot_trading.exchanges.channel as exchange_channels
+            import octobot_trading.exchange_channel as exchange_channels
             import octobot_trading.api as trading_api
             exchange_id = trading_api.get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
@@ -218,14 +218,14 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
         :return: bool
         """
         try:
-            import octobot_trading.exchanges.channel as exchange_channels
+            import octobot_trading.exchange_channel as exchange_channels
             import octobot_trading.api as trading_api
             exchange_id = trading_api.get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
-                                                     exchange_id).new_consumer(
+                                             exchange_id).new_consumer(
                 callback=self.ohlcv_callback, time_frame=self.time_frame, priority_level=self.priority_level)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.KLINE_CHANNEL.value,
-                                                     exchange_id).new_consumer(
+                                             exchange_id).new_consumer(
                 callback=self.kline_callback, time_frame=self.time_frame, priority_level=self.priority_level)
             return True
         except ImportError:
