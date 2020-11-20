@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import async_channel.constants as channel_constants
-import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode

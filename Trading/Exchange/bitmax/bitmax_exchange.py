@@ -55,7 +55,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         try:
             # on BitMax, precision is a decimal instead of a number of digits
-            market_status = self._fix_market_status(copy.deepcopy(self.client.market(symbol)))
+            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
             if with_fixer:
                 market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
             return market_status
@@ -67,7 +67,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On BitMax, account recent trades is available under fetch_closed_orders
-        return await self.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
+        return await self.connector.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
 
     async def get_symbol_prices(self,
                                 symbol: str,
@@ -76,8 +76,8 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
                                 **kwargs: dict) -> typing.Optional[list]:
         if limit is None:
             # force default limit on Bitmax since it's not use by default in fetch_ohlcv
-            options = self.client.safe_value(self.client.options, 'fetchOHLCV', {})
-            limit = self.client.safe_integer(options, 'limit', 500)
+            options = self.connector.client.safe_value(self.connector.client.options, 'fetchOHLCV', {})
+            limit = self.connector.client.safe_integer(options, 'limit', 500)
         return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
 
 
