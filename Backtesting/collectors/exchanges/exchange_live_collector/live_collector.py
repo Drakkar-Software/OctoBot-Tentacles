@@ -22,7 +22,7 @@ import octobot_commons.channels_name as channels_name
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
 try:
-    import octobot_trading.exchanges.channel as exchange_channel
+    import octobot_trading.exchange_channel as exchange_channel
     import octobot_trading.api as trading_api
 except ImportError:
     logging.error("ExchangeLiveDataCollector requires OctoBot-Trading package installed")
