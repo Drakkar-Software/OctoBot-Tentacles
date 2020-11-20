@@ -32,7 +32,8 @@ async def test_init():
         # producer
         assert binance_producer.own_exchange_mark_price is None
         assert binance_producer.other_exchanges_mark_prices == {}
-        assert binance_producer.triggering_price_delta_ratio < 1
+        assert binance_producer.sup_triggering_price_delta_ratio > 1
+        assert binance_producer.inf_triggering_price_delta_ratio < 1
         assert binance_producer.base
         assert binance_producer.quote
         assert binance_producer.lock
@@ -220,8 +221,8 @@ async def test_analyse_arbitrage_opportunities():
 
             # with higher numbers
             # higher numbers long opportunity
-            # min long exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 9979.9999
+            # max long exclusive trigger should be 9803.921568627451 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 9802.9999
             binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_called_once_with(10000, trading_enums.EvaluatorStates.LONG)
@@ -230,8 +231,8 @@ async def test_analyse_arbitrage_opportunities():
             trigger_mock.reset_mock()
 
             # higher numbers long opportunity: fail to pass threshold 1
-            # min long exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 9980
+            # max long exclusive trigger should be 9803.921568627451 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 9803.921568627451
             binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_not_called()
@@ -240,8 +241,8 @@ async def test_analyse_arbitrage_opportunities():
             trigger_mock.reset_mock()
 
             # higher numbers long opportunity: fail to pass threshold 2
-            # min long exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 9980.0001
+            # max long exclusive trigger should be 9803.921568627451 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 9803.9216
             binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_not_called()
@@ -250,19 +251,19 @@ async def test_analyse_arbitrage_opportunities():
             trigger_mock.reset_mock()
 
             # higher numbers short opportunity
-            # min short exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 10000
-            binance_producer.other_exchanges_mark_prices = {"kraken": 9979.9999, "binanceje": 9970, "bitfinex": 9990}
+            # min short exclusive trigger should be 10204.081632653062 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 10205
+            binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
-            expiration_mock.assert_called_once_with(9979.999966666668, trading_enums.EvaluatorStates.SHORT)
-            trigger_mock.assert_called_once_with(9979.999966666668, trading_enums.EvaluatorStates.SHORT)
+            expiration_mock.assert_called_once_with(10000, trading_enums.EvaluatorStates.SHORT)
+            trigger_mock.assert_called_once_with(10000, trading_enums.EvaluatorStates.SHORT)
             expiration_mock.reset_mock()
             trigger_mock.reset_mock()
 
             # higher numbers short opportunity: fail to pass threshold 1
-            # min short exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 10000
-            binance_producer.other_exchanges_mark_prices = {"kraken": 9980, "binanceje": 9981, "bitfinex": 9979}
+            # min short exclusive trigger should be 10204.081632653062 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 10203.081632653062
+            binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_not_called()
             trigger_mock.assert_not_called()
@@ -270,9 +271,9 @@ async def test_analyse_arbitrage_opportunities():
             trigger_mock.reset_mock()
 
             # higher numbers short opportunity: fail to pass threshold 2
-            # min short exclusive trigger should be 9980
-            binance_producer.own_exchange_mark_price = 10000
-            binance_producer.other_exchanges_mark_prices = {"kraken": 9980.0001, "binanceje": 9981, "bitfinex": 9979}
+            # min short exclusive trigger should be 10204.081632653062 on own_exchange_mark_price
+            binance_producer.own_exchange_mark_price = 10204.0815
+            binance_producer.other_exchanges_mark_prices = {"kraken": 9000, "binanceje": 10000, "bitfinex": 11000}
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_not_called()
             trigger_mock.assert_not_called()
