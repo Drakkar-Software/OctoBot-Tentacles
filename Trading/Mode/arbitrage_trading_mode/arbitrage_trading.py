@@ -212,7 +212,10 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.own_exchange_mark_price = None
         self.other_exchanges_mark_prices = {}
-        self.triggering_price_delta_ratio = 1 - self.trading_mode.trading_config["minimal_price_delta_percent"] / 100
+        self.sup_triggering_price_delta_ratio = \
+            1 + self.trading_mode.trading_config["minimal_price_delta_percent"] / 100
+        self.inf_triggering_price_delta_ratio = \
+            1 - self.trading_mode.trading_config["minimal_price_delta_percent"] / 100
         self.state = trading_enums.EvaluatorStates.NEUTRAL
         self.final_eval = ""
         self.quote, self.base = symbol_util.split_symbol(self.trading_mode.symbol)
@@ -318,10 +321,10 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
     async def _analyse_arbitrage_opportunities(self):
         other_exchanges_average_price = data_util.mean(self.other_exchanges_mark_prices.values())
         state = None
-        if other_exchanges_average_price > self.own_exchange_mark_price / self.triggering_price_delta_ratio:
+        if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
             # min long = high price > own_price / (1 - 2fees)
             state = trading_enums.EvaluatorStates.LONG
-        elif other_exchanges_average_price < self.own_exchange_mark_price * self.triggering_price_delta_ratio:
+        elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
             # min short = low price < own_price * (1 - 2fees)
             state = trading_enums.EvaluatorStates.SHORT
         if state is not None:

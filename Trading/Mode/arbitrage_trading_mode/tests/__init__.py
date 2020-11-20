@@ -65,7 +65,9 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
         # set BTC/USDT price at 1000 USDT
         trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
         # force triggering_price_delta_ratio equivalent to a 0.2% setting in minimal_price_delta_percent
-        mode.producers[0].triggering_price_delta_ratio = 1 - 0.002
+        delta_percent = 2
+        mode.producers[0].inf_triggering_price_delta_ratio = 1 - delta_percent / 100
+        mode.producers[0].sup_triggering_price_delta_ratio = 1 + delta_percent / 100
         yield mode.producers[0], mode.consumers[0], exchange_manager
     finally:
         if exchange_manager is not None:
