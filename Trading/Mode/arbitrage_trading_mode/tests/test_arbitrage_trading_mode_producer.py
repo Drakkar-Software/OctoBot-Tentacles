@@ -301,7 +301,7 @@ async def test_log_arbitrage_opportunity_details():
         binance_producer, _, _ = exchange_tuple
         binance_producer.own_exchange_mark_price = 100
 
-        with mock.patch.object(binance_producer.logger, "debug", new=mock.AsyncMock()) as debug_mock:
+        with mock.patch.object(binance_producer.logger, "debug", new=mock.Mock()) as debug_mock:
             binance_producer._log_arbitrage_opportunity_details(99.999,  trading_enums.EvaluatorStates.LONG)
             assert f"{pretty_printer.round_with_decimal_count(-0.001)}%" in debug_mock.call_args[0][0]
 
