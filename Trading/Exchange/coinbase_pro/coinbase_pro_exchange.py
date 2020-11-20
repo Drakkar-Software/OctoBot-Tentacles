@@ -34,7 +34,7 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         try:
             # on coinbasepro, precision is a decimal instead of a number of digits
-            market_status = self._fix_market_status(copy.deepcopy(self.client.market(symbol)))
+            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
             if with_fixer:
                 market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
             return market_status

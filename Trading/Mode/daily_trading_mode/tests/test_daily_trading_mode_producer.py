@@ -24,7 +24,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.tests.test_config as test_config
 import octobot_evaluators.api as evaluators_api
 import octobot_trading.api as trading_api
-import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
