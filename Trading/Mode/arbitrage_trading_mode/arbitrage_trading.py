@@ -20,6 +20,7 @@ import async_channel.constants as channel_constants
 import octobot_commons.data_util as data_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbol_util as symbol_util
+import octobot_commons.pretty_printer as pretty_printer
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import octobot_trading.exchanges.channel as exchanges_channel
@@ -221,12 +222,13 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         """
         Start trading mode channels subscriptions
         """
+        self.logger.info(f"Starting on listening for {self.exchange_name} arbitrage opportunities based on other "
+                         f"exchanges.")
         for exchange_id in trading_api.get_all_exchange_ids_with_same_matrix_id(self.exchange_manager.exchange_name,
                                                                                 self.exchange_manager.id):
             # subscribe on existing exchanges
             if exchange_id != self.exchange_manager.id:
                 await self._subscribe_exchange_id_mark_price(exchange_id)
-
         await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id).new_consumer(
             self._own_exchange_mark_price_callback,
             symbol=self.trading_mode.symbol
@@ -333,9 +335,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
     async def _trigger_arbitrage_opportunity(self, other_exchanges_average_price, state):
         # ensure no similar arbitrage is already in place
         if self._ensure_no_existing_arbitrage_on_this_price(state):
-            self.logger.debug(f"Arbitrage opportunity on {self.exchange_manager.exchange_name} {state.name} for "
-                              f"{self.trading_mode.symbol} "
-                              f"({self.own_exchange_mark_price} vs {other_exchanges_average_price} on average)")
+            self._log_arbitrage_opportunity_details(other_exchanges_average_price, state)
             arbitrage_container = arbitrage_container_import.ArbitrageContainer(self.own_exchange_mark_price,
                                                                                 other_exchanges_average_price, state)
             await self._create_arbitrage_initial_order(arbitrage_container)
@@ -430,11 +430,20 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             # order is not open anymore: can't cancel
             return False
 
+    def _log_arbitrage_opportunity_details(self, other_exchanges_average_price, state):
+        price_difference = other_exchanges_average_price / self.own_exchange_mark_price
+        difference_percent = pretty_printer.round_with_decimal_count(price_difference * 100 - 100, 5)
+        self.logger.debug(f"Arbitrage opportunity on {self.exchange_manager.exchange_name} {state.name} for "
+                          f"{self.trading_mode.symbol} "
+                          f"({self.own_exchange_mark_price} vs {other_exchanges_average_price} on average "
+                          f"based on {len(self.other_exchanges_mark_prices)} registered exchange(s): "
+                          f"{'+' if price_difference > 1 else ''}{difference_percent}%).")
+
     def _log_results(self, arbitrage, success, filled_quantity):
         self.logger.info(f"Closed {arbitrage.state.name} arbitrage on {self.exchange_manager.exchange_name} ["
                          f"{'success' if success else 'stop loss triggered'}] with {self.trading_mode.symbol}: "
-                         f"profit before {'final' if arbitrage.state is trading_enums.EvaluatorStates.SHORT else 'all'} fees: "
-                         f"{filled_quantity - arbitrage.initial_before_fee_filled_quantity} "
+                         f"profit before {'final' if arbitrage.state is trading_enums.EvaluatorStates.SHORT else 'all'} "
+                         f"fees: {filled_quantity - arbitrage.initial_before_fee_filled_quantity} "
                          f"{self.quote if arbitrage.state is trading_enums.EvaluatorStates.SHORT else self.base}")
 
     def _close_arbitrage(self, arbitrage):
@@ -461,6 +470,13 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, exchange_id).new_consumer(
             self._mark_price_callback,
             symbol=self.trading_mode.symbol
+        )
+        registered_exchange_name = trading_api.get_exchange_name(
+            trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+        )
+        self.logger.info(
+            f"Arbitrage trading on {self.exchange_name}: registered {registered_exchange_name} exchange as price "
+            f"data feed reference to identify arbitrage opportunities on {self.exchange_name}."
         )
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
