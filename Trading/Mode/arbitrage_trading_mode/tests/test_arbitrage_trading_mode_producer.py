@@ -16,6 +16,7 @@
 import pytest
 import mock
 
+import octobot_commons.pretty_printer as pretty_printer
 import octobot_trading.enums as trading_enums
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 import tentacles.Trading.Mode.arbitrage_trading_mode.tests as arbitrage_trading_mode_tests
@@ -284,11 +285,51 @@ async def test_trigger_arbitrage_opportunity():
         binance_producer, _, _ = exchange_tuple
 
         with mock.patch.object(binance_producer, "_create_arbitrage_initial_order", new=mock.AsyncMock()) as order_mock, \
-                mock.patch.object(binance_producer, "_register_state", new=mock.Mock()) as register_mock:
+                mock.patch.object(binance_producer, "_register_state", new=mock.Mock()) as register_mock, \
+                mock.patch.object(binance_producer, "_log_arbitrage_opportunity_details", new=mock.Mock()) as \
+                log_arbitrage_opportunity_details_mock:
             binance_producer.own_exchange_mark_price = 10
             await binance_producer._trigger_arbitrage_opportunity(15, trading_enums.EvaluatorStates.LONG)
             order_mock.assert_called_once()
             register_mock.assert_called_once_with(trading_enums.EvaluatorStates.LONG, 5)
+            log_arbitrage_opportunity_details_mock.assert_called_once_with(15, trading_enums.EvaluatorStates.LONG)
+
+
+async def test_log_arbitrage_opportunity_details():
+    async with arbitrage_trading_mode_tests.exchange("binance") as exchange_tuple:
+        binance_producer, _, _ = exchange_tuple
+        binance_producer.own_exchange_mark_price = 100
+
+        with mock.patch.object(binance_producer.logger, "debug", new=mock.AsyncMock()) as debug_mock:
+            binance_producer._log_arbitrage_opportunity_details(99.999,  trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(-0.001)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(90, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(-10)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(1, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(-99)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(0, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(-100)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(0, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(0)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(100.00001, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(0.00001)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(110, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(10)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(150, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(50)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(250, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(150)}%" in debug_mock.call_args[0][0]
+
+            binance_producer._log_arbitrage_opportunity_details(20100, trading_enums.EvaluatorStates.LONG)
+            assert f"{pretty_printer.round_with_decimal_count(20000)}%" in debug_mock.call_args[0][0]
 
 
 async def test_trigger_arbitrage_secondary_order():
