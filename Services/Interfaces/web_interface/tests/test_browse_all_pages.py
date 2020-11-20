@@ -51,6 +51,8 @@ async def _init_bot():
     octobot.exchange_producer = producers.ExchangeProducer(None, octobot, None, False)
     octobot.evaluator_producer = producers.EvaluatorProducer(None, octobot)
     octobot.evaluator_producer.matrix_id = await evaluators_api.initialize_evaluators(octobot.config, tentacles_config)
+    # Do not edit config file
+    octobot.community_auth.edited_config = None
     return octobot
 
 
@@ -118,7 +120,7 @@ async def _check_page_no_login_redirect(url, session):
         text = await resp.text()
         assert "We are sorry, but an unexpected error occurred" not in text
         assert "We are sorry, but this doesn't exist" not in text
-        if not (url.endswith("/login") or url.endswith("/logout")):
+        if not (url.endswith("login") or url.endswith("logout")):
             assert "input type=submit value=Login" not in text
             assert not resp.real_url.name == "login"
         assert resp.status == 200

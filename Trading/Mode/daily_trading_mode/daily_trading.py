@@ -24,7 +24,7 @@ import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
-import octobot_trading.exchanges.channel as exchanges_channel
+import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
