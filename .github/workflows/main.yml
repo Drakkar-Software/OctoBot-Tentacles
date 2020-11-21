@@ -107,22 +107,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.x'
+          architecture: 'x64'
+
+      - name: Produce tentacles package
+        env:
+          GH_REPO: Drakkar-Software/OctoBot-Tentacles
+          OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
+          OCTOBOT_DEFAULT_BRANCH: 0.4.0
+        run: |
+          git clone -q $OCTOBOT_GH_REPO -b ${GITHUB_REF##*/} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
+          cd OctoBot
+          git status
+          pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
+          cd ..
+          mkdir new_tentacles
+          cp -r Backtesting Evaluator Services Trading new_tentacles
+          cd OctoBot
+          python start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
 
       - name: Publish tag tentacles
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         run: |
-          curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${GITHUB_REF#refs/*/}.zip
+          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${GITHUB_REF#refs/*/}.zip
 
       - name: Publish latest tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/0.4.0'
         run: |
-          curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${{ secrets.LATEST_TAG }}.zip
+          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${{ secrets.LATEST_TAG }}.zip
 
       - name: Publish cleaned branch tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags')
         run: |
-          curl -v --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE_DEV }}/${GITHUB_REF////_}.zip
-
+          branch="${GITHUB_REF##*/}"
+          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE_DEV }}/${branch////_}.zip
 
   notify:
     name: Notify
