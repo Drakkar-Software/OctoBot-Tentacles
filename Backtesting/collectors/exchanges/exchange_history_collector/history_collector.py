@@ -18,6 +18,7 @@ import os
 
 import octobot_backtesting.collectors as collector
 import octobot_backtesting.enums as backtesting_enums
+import octobot_backtesting.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
@@ -69,15 +70,15 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                     self.logger.info(f"Collecting history on {time_frame}...")
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
                     await self.get_kline_history(self.exchange_name, symbol, time_frame)
-        except Exception as e:
-            self.logger.exception(e, True, f"Error when collecting {self.exchange_name} history for "
-                                           f"{', '.join(self.symbols)}: {e}")
+        except Exception as err:
+            self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
+                                             f"{', '.join(self.symbols)}: {err}")
             await self.database.stop()
             should_stop_database = False
             # Do not keep errored data file
             if os.path.isfile(self.file_path):
                 os.remove(self.file_path)
-            raise
+            raise errors.DataCollectorError(err)
         finally:
             await self.stop(should_stop_database=should_stop_database)
 
@@ -91,6 +92,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         await self.exchange_manager.stop()
         if should_stop_database:
             await self.database.stop()
+        self.exchange_manager = None
 
     async def get_ticker_history(self, exchange, symbol):
         pass
