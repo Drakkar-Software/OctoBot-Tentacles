@@ -84,9 +84,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     def _load_all_available_timeframes(self):
         allowed_timeframes = set(tf.value for tf in commons_enums.TimeFrames)
         self.time_frames = [commons_enums.TimeFrames(time_frame)
-                            for time_frame in self.exchange.client.timeframes
-                            if time_frame in allowed_timeframes] \
-            if hasattr(self.exchange.client, "timeframes") else []
+                            for time_frame in self.exchange_manager.client_time_frames
+                            if time_frame in allowed_timeframes]
 
     async def stop(self, should_stop_database=True):
         await self.exchange_manager.stop()
