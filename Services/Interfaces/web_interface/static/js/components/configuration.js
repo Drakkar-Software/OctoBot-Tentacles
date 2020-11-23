@@ -75,7 +75,8 @@ function handle_add_buttons(){
 
         // currencies
         const data_token = select_input.children("[data-tokens='"+select_value+"']");
-        const select_symbol = data_token.attr("symbol").toUpperCase();
+        const symbol_attr = data_token.attr("symbol");
+        const select_symbol = isDefined(symbol_attr) ? symbol_attr.toUpperCase(): "";
         let currency_id = undefined;
         if(isDefined(data_token[0])){
             if (data_token[0].hasAttribute("data-model")) {
@@ -85,7 +86,6 @@ function handle_add_buttons(){
                 currency_id = data_token.attr("data-currency-id");
             }
         }
-        const reference_market = select_input.attr("reference_market").toUpperCase();
 
         const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
         let target_template = $("#" + button_id + "-template-default");
@@ -113,6 +113,7 @@ function handle_add_buttons(){
                     $(this).children("option").each(function () {
                         const option = $(this);
                         const symbols = option.attr("value").split("/");
+                        const reference_market = select_input.attr("reference_market").toUpperCase();
                         if (symbols[0] === select_symbol && symbols[1] === reference_market){
                             option.attr("selected", "selected");
                         }
