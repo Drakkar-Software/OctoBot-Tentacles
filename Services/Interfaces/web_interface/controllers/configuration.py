@@ -107,7 +107,7 @@ def config():
                                      config_notifications=display_config[
                                          services_constants.CONFIG_CATEGORY_NOTIFICATION],
                                      config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
-                                     config_symbols=display_config[commons_constants.CONFIG_CRYPTO_CURRENCIES],
+                                     config_symbols=models.format_config_symbols(display_config),
                                      config_reference_market=display_config[trading_constants.CONFIG_TRADING][
                                          trading_constants.CONFIG_TRADER_REFERENCE_MARKET],
 
