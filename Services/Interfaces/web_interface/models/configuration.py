@@ -488,6 +488,14 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def format_config_symbols(config):
+    for currency, data in config[commons_constants.CONFIG_CRYPTO_CURRENCIES].items():
+        if commons_constants.CONFIG_ENABLED_OPTION not in data:
+            config[commons_constants.CONFIG_CRYPTO_CURRENCIES][currency] = \
+                {**{commons_constants.CONFIG_ENABLED_OPTION: True}, **data}
+    return config[commons_constants.CONFIG_CRYPTO_CURRENCIES]
+
+
 def _is_legit_currency(currency):
     return not any(sub_name in currency for sub_name in EXCLUDED_CURRENCY_SUBNAME) and len(currency) < 30
 

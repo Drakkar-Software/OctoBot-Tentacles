@@ -22,17 +22,17 @@
         <div class="card-body" name="{{crypto_currency}}" config-key="crypto-currencies_{{crypto_currency}}">
 
             <p class="card-text symbols {{additional_classes}}">
-                     {{ m_editable_config.editable_key( config_symbols,
-                                                        crypto_currency,
-                                                        "crypto-currencies_" + crypto_currency,
-                                                        "global_config",
-                                                        config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols else [],
-                                                        config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols else [],
-                                                        symbol_list,
-                                                        no_select,
-                                                        identifier=crypto_currency,
-                                                        placeholder_str="Select trading pair(s)")
-                    }}
+                 {{ m_editable_config.editable_key( config_symbols,
+                                                    crypto_currency,
+                                                    "crypto-currencies_" + crypto_currency,
+                                                    "global_config",
+                                                    config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols else [],
+                                                    config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols else [],
+                                                    symbol_list,
+                                                    no_select,
+                                                    identifier=crypto_currency,
+                                                    placeholder_str="Select trading pair(s)")
+                }}
             </p>
 
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
