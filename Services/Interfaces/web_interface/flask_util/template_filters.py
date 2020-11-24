@@ -14,11 +14,19 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from tentacles.Services.Interfaces.web_interface.util import flask_util
-from tentacles.Services.Interfaces.web_interface.util.flask_util import (
-    get_rest_reply,
-)
+import tentacles.Services.Interfaces.web_interface as web_interface
 
-__all__ = [
-    "get_rest_reply",
-]
+
+@web_interface.server_instance.template_filter()
+def is_dict(value):
+    return isinstance(value, dict)
+
+
+@web_interface.server_instance.template_filter()
+def is_list(value):
+    return isinstance(value, list)
+
+
+@web_interface.server_instance.template_filter()
+def is_bool(value):
+    return isinstance(value, bool)
