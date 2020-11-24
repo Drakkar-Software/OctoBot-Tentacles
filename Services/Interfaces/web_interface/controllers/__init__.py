@@ -49,10 +49,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.configuration impor
     config_tentacle,
     metrics_settings,
     config_actions,
-    is_dict,
-    is_list,
-    is_bool,
-    tentacles_utils,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.dashboard import (
     currency_price_graph_update,
@@ -97,10 +93,6 @@ __all__ = [
     "config_tentacle",
     "metrics_settings",
     "config_actions",
-    "is_dict",
-    "is_list",
-    "is_bool",
-    "tentacles_utils",
     "currency_price_graph_update",
     "first_symbol",
     "watched_symbol",
