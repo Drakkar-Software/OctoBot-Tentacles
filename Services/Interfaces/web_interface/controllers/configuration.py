@@ -15,13 +15,11 @@
 #  License along with this library.
 import flask
 
-import octobot_commons.symbol_util as symbol_util
-import octobot_commons.constants as commons_constants
 import octobot_trading.constants as trading_constants
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 import octobot_backtesting.api as backtesting_api
@@ -189,43 +187,3 @@ def metrics_settings():
 def config_actions():
     # action = flask.request.args.get("action")
     return util.get_rest_reply("No specified action.", code=500)
-
-
-@web_interface.server_instance.template_filter()
-def is_dict(value):
-    return isinstance(value, dict)
-
-
-@web_interface.server_instance.template_filter()
-def is_list(value):
-    return isinstance(value, list)
-
-
-@web_interface.server_instance.template_filter()
-def is_bool(value):
-    return isinstance(value, bool)
-
-
-@web_interface.server_instance.context_processor
-def tentacles_utils():
-    def get_tentacle_config_file_content(tentacle_class):
-        return models.get_tentacle_config(tentacle_class)
-
-    def get_tentacle_config_schema_content(tentacle_class):
-        return models.get_tentacle_config_schema(tentacle_class)
-
-    def filter_currency_pairs(currency, symbol_list, full_symbol_list):
-        currency_key = currency
-        symbol = full_symbol_list.get(currency_key, None)
-        if symbol is None:
-            # try on uppercase
-            currency_key = currency.upper()
-            symbol = full_symbol_list.get(currency_key, None)
-        if symbol is None:
-            return symbol_list
-        return [s for s in symbol_list
-                if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
-
-    return dict(get_tentacle_config_file_content=get_tentacle_config_file_content,
-                get_tentacle_config_schema_content=get_tentacle_config_schema_content,
-                filter_currency_pairs=filter_currency_pairs)
