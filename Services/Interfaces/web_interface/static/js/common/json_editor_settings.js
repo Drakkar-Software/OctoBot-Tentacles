@@ -18,7 +18,6 @@
 
 // set bootstrap 4 theme for JSONEditor (https://github.com/json-editor/json-editor#css-integration)
 JSONEditor.defaults.options.iconlib = 'fontawesome5';
-
 // custom octobot theme
 class OctoBotTheme extends JSONEditor.defaults.themes.bootstrap4 {
   getButton(text, icon, title) {
