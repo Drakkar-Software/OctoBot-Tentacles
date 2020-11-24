@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block additional_scripts %}
-    <script src="{{ url_for('static', filename='js/common/custom_elements.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/common/candlesticks.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/components/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common/custom_elements.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+    <script src="{{ url_for('static', filename='js/common/candlesticks.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+    <script src="{{ url_for('static', filename='js/components/dashboard.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

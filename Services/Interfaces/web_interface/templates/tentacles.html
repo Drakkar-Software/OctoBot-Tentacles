@@ -60,5 +60,5 @@
 {% endblock %}
 
 {% block additional_scripts %}
-<script src="{{ url_for('static', filename='js/components/tentacles_configuration.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/tentacles_configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
