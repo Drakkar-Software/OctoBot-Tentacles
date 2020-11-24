@@ -14,11 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-from tentacles.Services.Interfaces.web_interface.util import flask_util
-from tentacles.Services.Interfaces.web_interface.util.flask_util import (
-    get_rest_reply,
+from tentacles.Services.Interfaces.web_interface.flask_util import context_processor
+from tentacles.Services.Interfaces.web_interface.flask_util.context_processor import (
+    context_processor_register,
+)
+
+from tentacles.Services.Interfaces.web_interface.flask_util import template_filters
+from tentacles.Services.Interfaces.web_interface.flask_util.template_filters import (
+    is_dict,
+    is_list,
+    is_bool,
 )
 
 __all__ = [
-    "get_rest_reply",
+    "context_processor_register",
+    "is_dict",
+    "is_list",
+    "is_bool",
 ]
