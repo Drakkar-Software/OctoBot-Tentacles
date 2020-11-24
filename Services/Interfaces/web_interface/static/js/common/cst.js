@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library.
  */
-
 // dom data attributes and classes
 const config_key_attr = "config-key";
 const config_value_attr = "config-value";

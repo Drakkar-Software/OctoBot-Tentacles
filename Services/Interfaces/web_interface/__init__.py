@@ -19,6 +19,7 @@ import logging
 import time
 import abc
 import flask
+import os.path
 
 import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as bot_logging
@@ -69,6 +70,18 @@ portfolio_value_history = {
 }
 
 TIME_AXIS_TITLE = "Time"
+
+
+def dir_last_updated(folder):
+    return str(max(os.path.getmtime(os.path.join(root_path, f))
+                   for root_path, dirs, files in os.walk(folder)
+                   for f in files))
+
+
+LAST_UPDATED_STATIC_FILES = dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))
+
+# register flask utilities
+import tentacles.Services.Interfaces.web_interface.flask_util
 
 
 def add_to_matrix_history(matrix):
