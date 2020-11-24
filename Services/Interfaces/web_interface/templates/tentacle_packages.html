@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% set active_page = "tentacles" %}
-<script src="{{ url_for('static', filename='js/components/tentacles.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/tentacles.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% block body %}
 <br>
 <div class="card">
@@ -73,5 +73,5 @@
 {% endblock %}
 
 {% block additional_scripts %}
-<script src="{{ url_for('static', filename='js/components/tentacles_configuration.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/tentacles_configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

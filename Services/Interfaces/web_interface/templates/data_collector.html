@@ -100,7 +100,7 @@
 {% endblock %}
 
 {% block additional_scripts %}
-<script src="{{ url_for('static', filename='js/components/data_collector.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/data_collector.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% if alert %}
 <script>
     display_alert("{{alert["success"]}}", "{{alert["message"]}}");
