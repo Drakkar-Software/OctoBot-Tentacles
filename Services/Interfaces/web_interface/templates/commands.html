@@ -84,5 +84,5 @@ Nothing else is ever shared: no personal data, zero identification enabling data
 {% endblock %}
 
 {% block additional_scripts %}
-<script src="{{ url_for('static', filename='js/components/commands.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
