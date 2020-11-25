@@ -58,6 +58,12 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.web_login_manger = None
         self.requires_password = False
         self.password_hash = ""
+        # Set services_constants.ENV_CORS_ALLOWED_ORIGINS env variable add stricter cors rules allowed origins
+        # example: http://localhost:5000
+        # Note: you can specify multiple origins using comma as a separator, ex: http://localhost:5000,https://a.com
+        self.cors_allowed_origins = os.getenv(services_constants.ENV_CORS_ALLOWED_ORIGINS, "*")
+        if "," in self.cors_allowed_origins:
+            self.cors_allowed_origins = self.cors_allowed_origins.split(",")
         self._init_web_settings()
 
     async def register_new_exchange_impl(self, exchange_id):
@@ -130,7 +136,11 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
 
     def _prepare_websocket(self):
         # handles all namespaces without an explicit error handler
-        websocket_instance = flask_socketio.SocketIO(web_interface_root.server_instance, async_mode="gevent")
+        websocket_instance = flask_socketio.SocketIO(
+            web_interface_root.server_instance,
+            async_mode="gevent",
+            cors_allowed_origins=self.cors_allowed_origins
+        )
 
         @websocket_instance.on_error_default
         def default_error_handler(e):
