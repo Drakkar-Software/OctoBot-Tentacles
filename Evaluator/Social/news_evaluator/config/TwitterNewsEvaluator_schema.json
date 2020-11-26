@@ -39,7 +39,7 @@
             "hashtags": {
               "type": "array",
               "format": "table",
-              "title": "Twitter hashtags to watch, warning: might trigger evaluator for irrelevant tweets",
+              "title": "Twitter hashtags to watch, warning: might trigger evaluator for irrelevant tweets.",
               "uniqueItems": true,
               "items": {
                 "type": "string",
