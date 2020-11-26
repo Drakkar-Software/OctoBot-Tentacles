@@ -18,7 +18,7 @@
                     "placeholder":  "BTC/USDT"
                   }
                 },
-                "title": "Name of the traded pair",
+                "title": "Name of the traded pair.",
                 "minLength": 3,
                 "pattern": "[a-zA-Z]{2,}\\/[a-zA-Z]{2,}"
               },
@@ -26,37 +26,37 @@
                 "type": "string",
                 "format": "select2",
                 "minItems": 1,
-                "title": "Mode: way to allocate funds in created orders",
+                "title": "Mode: way to allocate funds in created orders.",
                 "default": "neutral",
                 "enum": ["neutral", "mountain", "valley", "sell slope", "buy slope"]
               },
               "spread_percent": {
                 "type": "number",
-                "title": "Spread, price difference between buy and sell orders: percent of the current price to use as spread (difference between highest buy and lowest sell)",
+                "title": "Spread, price difference between buy and sell orders: percent of the current price to use as spread (difference between highest buy and lowest sell).",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "increment_percent": {
                 "type": "number",
-                "title": "Increment, price difference between grid orders: percent of the current price to use as increment between orders. WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment",
+                "title": "Increment, price difference between grid orders: percent of the current price to use as increment between orders. WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment.",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "lower_bound": {
                 "type": "number",
-                "title": "Lower bound, lower limit of the grid: minimum price to start placing buy orders from: lower limit of the grid",
+                "title": "Lower bound, lower limit of the grid: minimum price to start placing buy orders from: lower limit of the grid.",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "upper_bound": {
                 "type": "number",
-                "title": "Upper bound, upper limit of the grid: maximum price to stop placing sell orders from",
+                "title": "Upper bound, upper limit of the grid: maximum price to stop placing sell orders from.",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "operational_depth": {
                 "type": "number",
-                "title": "Operational depth: maximum number of orders to be maintained on exchange",
+                "title": "Operational depth: maximum number of orders to be maintained on exchange.",
                 "minimum": 1,
                 "multipleOf": 1.0,
                 "exclusiveMinimum": true
