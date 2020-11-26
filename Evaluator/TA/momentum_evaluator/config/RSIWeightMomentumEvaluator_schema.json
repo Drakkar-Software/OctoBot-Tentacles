@@ -3,19 +3,19 @@
   "title": "RSIWeightMomentumEvaluator",
   "properties": {
     "period": {
-        "title": "Period: length RSI period",
+        "title": "Period: length RSI period.",
         "type": "number",
         "multipleOf": 1.0,
         "minimum": 1
     },
     "slow_eval_count": {
-        "title": "Number of recent RSI values to consider to get the current slow moving market sentiment",
+        "title": "Number of recent RSI values to consider to get the current slow moving market sentiment.",
         "type": "number",
         "multipleOf": 1.0,
         "minimum": 1
     },
     "fast_eval_count": {
-        "title": "Number of recent RSI values to consider to get the current fast moving market sentiment",
+        "title": "Number of recent RSI values to consider to get the current fast moving market sentiment.",
         "type": "number",
         "multipleOf": 1.0,
         "minimum": 1

@@ -4,7 +4,7 @@
   "properties": {
     "time_frames_to_weight": {
         "type": "array",
-        "title": "Analysed time frames and their associated weight",
+        "title": "Analysed time frames and their associated weight.",
         "uniqueItems": true,
         "minItems": 1,
         "items": {
