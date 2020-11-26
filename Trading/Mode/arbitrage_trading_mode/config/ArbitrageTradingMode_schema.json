@@ -30,7 +30,7 @@
         "uniqueItems": true,
         "minItems": 0,
         "items": {
-            "title": "Arbitrage trading enabled exchange",
+            "title": "Arbitrage trading enabled exchange.",
             "type": "string",
             "minLength": 2,
             "options": {
