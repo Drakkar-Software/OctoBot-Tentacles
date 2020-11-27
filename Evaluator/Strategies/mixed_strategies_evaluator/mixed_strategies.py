@@ -125,6 +125,7 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
                 for available_time_frame in available_rt_time_frames
             }
             if self.re_evaluate_TA_when_social_or_realtime_notification \
+                    and any(value for value in TA_by_timeframe.values()) \
                     and evaluator_type != evaluators_enums.EvaluatorMatrixTypes.TA.value \
                     and evaluator_type in self.re_evaluation_triggering_eval_types \
                     and evaluator_name not in self.background_social_evaluators:
