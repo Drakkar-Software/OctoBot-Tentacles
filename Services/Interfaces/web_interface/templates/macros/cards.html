@@ -33,7 +33,7 @@
 
     <!--Title-->
     <div class="card-header">{{ pair }}
-        <a class="float-right" href="#">
+        <a class="float-right">
             <i class="{{'fas' if pair in watched_symbols else 'far'}} fa-star watched_element text-white" symbol="{{ pair }}" update_url="{{ url_for('watched_symbols') }}"
                data-toggle="tooltip" data-placement="top" title="Add to / Remove from watched markets"></i>
         </a>
