@@ -97,6 +97,11 @@ body:before {
 .medium-size {
   max-width: 18rem;
   min-width: 12rem;
+  justify-content: space-between;
+  display: flex;
+}
+.medium-size .card-body {
+  flex: 0 0 auto;
 }
 .small-size {
   max-width: 18rem;
