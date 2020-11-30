@@ -4,6 +4,23 @@
 {% import 'macros/cards.html' as m_cards %}
 {% import 'macros/starting_waiter.html' as m_waiter %}
 
+{% set vars = {'exchange_overload': False} %}
+
+{% macro exchange_overload_warning(exchange, load) -%}
+    {% if load["overloaded"] %}
+        <div class="alert alert-danger font-weight-normal" role="alert">
+            <span class="text-capitalize">{{ exchange }}</span> exchange is overloaded by
+            <span class="font-weight-bold">{{ (load["load"] * 100 / load["max_load"] - 100) | round | int }}%</span>.
+            <span class="d-none d-sm-inline">
+                <span class="text-capitalize">{{ exchange }}</span> capacity is
+                <span class="font-weight-bold">{{ load["max_load"] }}</span> simultaneous traded pair/time frame
+                couples and the current configuration involves <span class="font-weight-bold">{{ load["load"] }}</span>.
+            </span>
+        </div>
+        {% set _ = vars.update({'exchange_overload': True}) %}
+    {% endif %}
+{%- endmacro %}
+
 {% macro extract_orders(order_list, sim_or_real) -%}
     {% for order in order_list %}
         {{ m_tables.order_tr(order, convert_type(order.order_type), convert_timestamp(order.creation_time), sim_or_real) }}
@@ -16,6 +33,17 @@
 {% if not (pairs_with_status or simulated_open_orders or has_real_trader) %}
     {{ m_waiter.display_loading_message() }}
 {% else %}
+    {% for exchange, load in exchanges_load.items() %}
+        {{ exchange_overload_warning(exchange, load) }}
+    {% endfor %}
+    {% if vars['exchange_overload'] %}
+    <div class="d-none d-md-block alert alert-warning font-weight-normal" role="alert">
+        This limit is due to the exchange's REST API rate limit and prevents OctoBot from getting banned for spam.
+        OctoBot is operating with the given configuration but this exchange trading will be slowed down and might
+        underperform due to this rate limit restrictions.
+        Consider using websocket connections to handle as many pairs and time frames as wanted.
+    </div>
+    {% endif %}
     <div class="card">
         <div class="card-header"><h1>Market status</h1></div>
         <div class="card-body">
