@@ -88,12 +88,14 @@ def symbol_market_status():
 def trading():
     real_open_orders, simulated_open_orders = interfaces_util.get_all_open_orders()
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
+    exchanges_load = models.get_exchanges_load()
     return flask.render_template('trading.html',
                                  real_open_orders=real_open_orders,
                                  simulated_open_orders=simulated_open_orders,
                                  watched_symbols=models.get_watched_symbols(),
                                  pairs_with_status=interfaces_util.get_currencies_with_status(),
-                                 has_real_trader=has_real_trader)
+                                 has_real_trader=has_real_trader,
+                                 exchanges_load=exchanges_load)
 
 
 @web_interface.server_instance.route("/trades")
