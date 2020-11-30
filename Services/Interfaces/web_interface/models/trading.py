@@ -49,3 +49,14 @@ def get_evaluation(symbol, exchange_name, exchange_id):
     except KeyError:
         pass
     return "N/A"
+
+
+def get_exchanges_load():
+    return {
+        trading_api.get_exchange_name(exchange_manager): {
+            "load": trading_api.get_currently_handled_pair_with_time_frame(exchange_manager),
+            "max_load": trading_api.get_max_handled_pair_with_time_frame(exchange_manager),
+            "overloaded": trading_api.is_overloaded(exchange_manager)
+        }
+        for exchange_manager in interfaces_util.get_exchange_managers()
+    }
