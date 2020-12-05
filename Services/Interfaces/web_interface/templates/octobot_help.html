@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% set active_page = "help" %}
+
+{% block body %}
+<br>
+<div class="card w-75 mx-auto">
+    <div class="card-header">
+        <h1>Understanding OctoBot</h1>
+    </div>
+    <div class="card-body pt-1">
+        <p class="help-section">
+            <h4>
+                Help buttons: <a class="text-danger" target="_blank"><i class="fa fa-question"></i></a>
+            </h4>
+            When using OctoBot, you will find these buttons: <a class="text-danger" target="_blank"><i class="fa fa-question"></i></a>.
+            They are links to the <a target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}"> OctoBot wiki</a> article related
+            to the associated element.
+        </p>
+        <p class="help-section">
+            <h4>
+                Frequently asked questions
+            </h4>
+            We keep track of many of our community users questions so that everyone can benefit from the answers in
+            <a target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/Frequently-asked-questions-(FAQ)">our dedicated FAQ</a>.
+        </p>
+        <p class="help-section">
+            <h4>
+                Troubleshoot
+            </h4>
+            Some issues are pretty common and sometimes they are due to factors that are external to OctoBot. In the
+            <a target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/Installation-Troubleshoot">troubleshoot section </a> you will
+            find many possible issues happening on various situations and how to fix them.
+        </p>
+        <p class="help-section">
+            <h4>
+                OctoBot wiki
+            </h4>
+            In the <a target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}"> OctoBot wiki</a>, you will find many article on various subjects including:
+            <ul>
+                <li>
+                    Different ways to install OctoBot
+                </li>
+                <li>
+                    OctoBot configuration
+                </li>
+                <li>
+                    OctoBot usage and interfaces
+                </li>
+                <li>
+                    Advanced resources on OctoBot architecture, development guides and specific features
+                </li>
+            </ul>
+        </p>
+        <p class="help-section">
+            <h4>
+                Telegram and Discord channels
+            </h4>
+            In case none of the above resources helped you to solve your issue or answer your question, you can always ask for help in the
+            <a class href="https://t.me/joinchat/F9cyfxV97ZOaXQ47H5dRWw" target="_blank" rel="noopener noreferrer"><i class="fab fa-telegram"></i> Telegram</a>
+            or <a class href="https://discordapp.com/invite/vHkcb8W" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> Discord</a>
+            community channels.
+        </p>
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+{% endblock additional_scripts %}
