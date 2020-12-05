@@ -21,6 +21,7 @@ import uuid
 import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot.constants as constants
 
 
 class WebService(services.AbstractService):
@@ -58,7 +59,7 @@ class WebService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/Web-interface#web-interface"
+        return f"{constants.OCTOBOT_WIKI_URL}/Web-interface#web-interface"
 
     @staticmethod
     def is_setup_correctly(config):
