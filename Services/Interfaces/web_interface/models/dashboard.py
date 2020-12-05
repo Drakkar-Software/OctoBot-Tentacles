@@ -15,6 +15,7 @@
 #  License along with this library.
 import numpy as np
 import math
+import copy
 
 import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
@@ -114,6 +115,25 @@ def _get_time_frame(exchange_name, exchange_id):
         return trading_api.get_watched_timeframes(
             trading_api.get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
         )[0]
+
+
+def _is_symbol_data_available(exchange_manager, symbol):
+    return symbol in trading_api.get_trading_pairs(exchange_manager)
+
+
+def get_watched_symbols():
+    config = interfaces_util.get_edited_config()
+    if constants.CONFIG_WATCHED_SYMBOLS not in config:
+        config[constants.CONFIG_WATCHED_SYMBOLS] = []
+    else:
+        try:
+            exchange_manager, _, _ = _get_first_exchange_identifiers()
+            for symbol in copy.copy(config[constants.CONFIG_WATCHED_SYMBOLS]):
+                if not _is_symbol_data_available(exchange_manager, symbol):
+                    config[constants.CONFIG_WATCHED_SYMBOLS].remove(symbol)
+        except KeyError:
+            config[constants.CONFIG_WATCHED_SYMBOLS] = []
+    return config[constants.CONFIG_WATCHED_SYMBOLS]
 
 
 def get_first_symbol_data():

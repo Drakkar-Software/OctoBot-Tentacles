@@ -85,11 +85,11 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     get_value_from_dict_or_string,
     format_trades,
     get_watched_symbol_data,
+    get_watched_symbols,
     get_first_symbol_data,
     get_currency_price_graph_update,
 )
 from tentacles.Services.Interfaces.web_interface.models.interface_settings import (
-    get_watched_symbols,
     add_watched_symbol,
     remove_watched_symbol,
 )
