@@ -22,6 +22,7 @@ from tentacles.Services.Interfaces.web_interface.controllers import community
 from tentacles.Services.Interfaces.web_interface.controllers import configuration
 from tentacles.Services.Interfaces.web_interface.controllers import dashboard
 from tentacles.Services.Interfaces.web_interface.controllers import errors
+from tentacles.Services.Interfaces.web_interface.controllers import octobot_help
 from tentacles.Services.Interfaces.web_interface.controllers import home
 from tentacles.Services.Interfaces.web_interface.controllers import interface_settings
 from tentacles.Services.Interfaces.web_interface.controllers import logs
@@ -99,6 +100,7 @@ __all__ = [
     "not_found",
     "internal_error",
     "home",
+    "octobot_help",
     "watched_symbols",
     "logs",
     "tentacle_media",
