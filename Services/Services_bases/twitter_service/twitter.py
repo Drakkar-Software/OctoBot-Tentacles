@@ -22,6 +22,7 @@ import twitter.twitter_utils
 
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot.constants as constants
 
 
 class TwitterService(services.AbstractService):
@@ -61,7 +62,7 @@ class TwitterService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/Twitter-interface#twitter-interface"
+        return f"{constants.OCTOBOT_WIKI_URL}/Twitter-interface#twitter-interface"
 
     @staticmethod
     def is_setup_correctly(config):

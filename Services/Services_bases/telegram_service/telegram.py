@@ -20,6 +20,7 @@ import telegram.ext
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot.constants as constants
 
 
 class TelegramService(services.AbstractService):
@@ -64,7 +65,7 @@ class TelegramService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/Telegram-interface#telegram-interface"
+        return f"{constants.OCTOBOT_WIKI_URL}/Telegram-interface#telegram-interface"
 
     @staticmethod
     def is_setup_correctly(config):

@@ -18,6 +18,7 @@ import uuid
 
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot.constants as constants
 
 
 class TradingViewService(services.AbstractService):
@@ -65,7 +66,7 @@ class TradingViewService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/TradingView-webhook"
+        return f"{constants.OCTOBOT_WIKI_URL}/TradingView-webhook"
 
     def get_endpoint(self) -> None:
         return None
