@@ -217,6 +217,10 @@ body:before {
     max-width: 128px;
 }
 
+.help-section{
+    padding-bottom: 0.4rem;
+}
+
 a:hover.external-link{
     font-weight: inherit;
 }
