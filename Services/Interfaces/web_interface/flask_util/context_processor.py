@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot_commons.symbol_util as symbol_util
+import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface as web_interface
 
@@ -41,6 +42,7 @@ def context_processor_register():
 
     return dict(
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
+        OCTOBOT_WIKI_URL=constants.OCTOBOT_WIKI_URL,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         filter_currency_pairs=filter_currency_pairs
