@@ -18,6 +18,7 @@ import praw
 
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot.constants as constants
 
 
 class RedditService(services.AbstractService):
@@ -51,7 +52,7 @@ class RedditService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return "https://github.com/Drakkar-Software/OctoBot/wiki/Reddit-interface#reddit-interface"
+        return f"{constants.OCTOBOT_WIKI_URL}/Reddit-interface#reddit-interface"
 
     @staticmethod
     def is_setup_correctly(config):
