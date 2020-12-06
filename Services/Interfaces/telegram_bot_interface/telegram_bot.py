@@ -105,9 +105,9 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                        "for my reference market.`" + interfaces_bots.EOL
             message += "* - Management - *" + interfaces_bots.EOL
             message += "/set\_risk: `Changes my current risk setting into your command's parameter.`" + interfaces_bots.EOL
-            message += "/refresh\_portfolio or /rpf : `Force OctoBot's real trader portfolio refresh using exchange " \
+            message += "/refresh\_portfolio or /rpf : `Forces OctoBot's real trader portfolio refresh using exchange " \
                        "data. Should normally not be necessary.`" + interfaces_bots.EOL
-            message += "/pause or /resume: `Pause or resume me.`" + interfaces_bots.EOL
+            message += "/pause or /resume: `Pauses or resumes me.`" + interfaces_bots.EOL
             message += "/stop: `Stops me.`" + interfaces_bots.EOL
             message += "/version or /v: `Displays my current software version.`" + interfaces_bots.EOL
             message += "/help: `Displays this help.`"
