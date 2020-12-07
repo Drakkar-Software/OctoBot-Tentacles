@@ -18,59 +18,31 @@
 {% endblock additional_style %}
 
 {% block body %}
-<div id="nav-config" class="animated slideInDown sticky-top">
-    <nav class="navbar nav-tabs navbar-dark primary-color-dark" data-toggle="affix">
-        <!-- Nav tabs -->
-         <ul class="nav mr-auto md-pills nav-justified">
-
-            <li class="nav-item">
-                <a class="nav-link active waves-effect" data-toggle="tab" href="#panelEvaluators" role="tab">Strategies</a>
-            </li>
-             <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelCurrency" role="tab">Currencies</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelExchanges" role="tab">Exchanges</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelTrading" role="tab">Trading</a>
-            </li>
-             <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelServices" role="tab">Interfaces</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" data-toggle="tab" href="#panelNotifications" role="tab">Notifications</a>
-            </li>
-            {% if config_tentacles_by_group %}
-                <li class="nav-item">
-                    <a class="nav-link waves-effect" data-toggle="tab" href="#panelTentacles" role="tab">Tentacles</a>
-                </li>
-            {% endif %}
-
-        </ul>
-    </nav>
-
-    <nav class="navbar nav-tabs navbar-dark primary-color">
-        <span class="white-text"> Any configuration change will be applied after OctoBot restarts.</span>
-        <ul class="nav mx-auto">
-            <li class="nav-item">
-                <a class="nav-link btn green waves-effect" id='save-config' href="#" role="tab" update-url="{{ url_for('config') }}">Save and restart later</a>
-            </li>
-            <li class="nav-item mr-4">
-                <a class="nav-link btn orange waves-effect" id='reset-config' href="#" role="tab">Reset all</a>
-            </li>
-            <li class="nav-item ml-4">
-                <button id='save-config-and-restart' update-url="{{ url_for('config') }}" type="button" class="nav-link btn red waves-effect">Save and restart Octobot</button>
-            </li>
-        </ul>
-    </nav>
-</div>
-<!-- Tab panels -->
-<div class="tab-content" id="super-container">
-
-    <!--Panel Evaluators-->
-    <div class="tab-pane fade in show active config-root" id="panelEvaluators" role="tabpanel"><br>
-        <div class="card">
+<div class="mt-4">
+  <div class="sidenav shadow">
+    <div class="nav-title">
+        <h5>Profile: </h5>
+        <h4>Default</h4>
+    </div>
+    <div class="nav flex-column bordered" id="v-tab" role="tablist" aria-orientation="vertical">
+      <a class="nav-link waves-effect active" id="panelEvaluators-tab" data-toggle="pill" href="#panelEvaluators" role="tab" aria-controls="panelEvaluators" aria-selected="true">Strategies</a>
+      <a class="nav-link waves-effect" id="panelCurrency-tab" data-toggle="pill" href="#panelCurrency" role="tab" aria-controls="panelCurrency" aria-selected="false">Currencies</a>
+      <a class="nav-link waves-effect" id="panelExchanges-tab" data-toggle="pill" href="#panelExchanges" role="tab" aria-controls="panelExchanges" aria-selected="false">Exchanges</a>
+      <a class="nav-link waves-effect" id="panelTrading-tab" data-toggle="pill" href="#panelTrading" role="tab" aria-controls="panelTrading" aria-selected="false">Trading</a>
+      <a class="nav-link waves-effect" id="panelServices-tab" data-toggle="pill" href="#panelServices" role="tab" aria-controls="panelServices" aria-selected="false">Interfaces</a>
+      <a class="nav-link waves-effect" id="panelNotifications-tab" data-toggle="pill" href="#panelNotifications" role="tab" aria-controls="panelNotifications" aria-selected="false">Notifications</a>
+      {% if config_tentacles_by_group %}
+        <a class="nav-link" id="panelTentacles-tab" data-toggle="pill" href="#panelTentacles" role="tab" aria-controls="panelTentacles" aria-selected="false">Tentacles</a>
+      {% endif %}
+    </div>
+    <a class="nav-link btn green waves-effect" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}">Save and restart later</a>
+    <a class="nav-link btn orange waves-effect" id="reset-config" href="#" role="tab" aria-selected="false">Reset all</a>
+    <button class="nav-link btn red waves-effect mt-5" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}">Save and restart</button>
+  </div>
+  <div class="sided-content">
+    <div class="tab-content" id="super-container">
+      <div class="tab-pane fade config-root show active" id="panelEvaluators" role="tabpanel" aria-labelledby="panelEvaluators-tab">
+          <div class="card">
             <div class="card-header">
                 <h2>Trading modes
                     <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/Customize-your-OctoBot">
@@ -100,11 +72,45 @@
                 <p class="mb-0">Strategy customization on <a class="btn btn-outline-white btn-md waves-effect" href="{{ url_for('advanced.evaluator_config') }}">OctoBot advanced configuration interface</a></p>
             </div>
         </div>
-    </div>
-
-    <!--Panel Exchanges-->
-    <div class="tab-pane fade config-root" id="panelExchanges" role="tabpanel"><br>
-        <div class="card">
+      </div>
+      <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel" aria-labelledby="panelCurrency-tab">
+          <div class="card">
+            <div class="card-header"><h2>Currencies</h2></div>
+            <div class="card-body deck-container">
+                {%  if in_backtesting %}
+                <div class="alert alert-warning" role="alert">
+                    OctoBot is currently running in backtesting analysis, information in this section may not be accurate and changes won't be saved.
+                </div>
+                {%  endif %}
+                <div class="card">
+                    <div class="card-body">
+                        Add a new currency :
+                        <select id="AddCurrencySelect" class="selectpicker" data-live-search="true" reference_market="{{ config_reference_market }}">
+                           {% for currency in full_symbol_list %}
+                                {% if currency not in config_symbols %}
+                                    <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}" data-currency-id="{{ full_symbol_list[currency]['id'] }}" symbol="{{ full_symbol_list[currency]['symbol'] }}" data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{ currency }}</option>
+                                {% endif %}
+                           {% endfor %}
+                        </select>
+                        <button type="button" id="AddCurrency" class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2" aria-hidden="true"></i> Add</button>
+                    </div>
+                </div>
+                <br>
+                {%  if not symbol_list %}
+                    <div class="alert alert-danger" role="alert">Can't find any symbol suggestion because no exchange were configured.</div>
+                    <br>
+                {% endif %}
+                <!-- Card deck -->
+                <div class="card-deck config-container" update-url="{{ url_for('config') }}">
+                    {% for crypto_currency in config_symbols %}
+                       {{ m_config_currency_card.config_currency_card(config_symbols, crypto_currency, filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list), full_symbol_list, symbol=config_symbols[crypto_currency]['pairs'][0].split('/')[0].lower() if config_symbols[crypto_currency]['pairs'])}}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+      </div>
+      <div class="tab-pane fade config-root" id="panelExchanges" role="tabpanel" aria-labelledby="panelExchanges-tab">
+          <div class="card">
             <div class="card-header">
                 <h2>Exchanges
                     <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/Exchanges#exchanges">
@@ -147,49 +153,9 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!--Panel Currencies-->
-    <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel"><br>
-        <div class="card">
-            <div class="card-header"><h2>Currencies</h2></div>
-            <div class="card-body deck-container">
-                {%  if in_backtesting %}
-                <div class="alert alert-warning" role="alert">
-                    OctoBot is currently running in backtesting analysis, information in this section may not be accurate and changes won't be saved.
-                </div>
-                {%  endif %}
-                <div class="card">
-                    <div class="card-body">
-                        Add a new currency :
-                        <select id="AddCurrencySelect" class="selectpicker" data-live-search="true" reference_market="{{ config_reference_market }}">
-                           {% for currency in full_symbol_list %}
-                                {% if currency not in config_symbols %}
-                                    <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}" data-currency-id="{{ full_symbol_list[currency]['id'] }}" symbol="{{ full_symbol_list[currency]['symbol'] }}" data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{ currency }}</option>
-                                {% endif %}
-                           {% endfor %}
-                        </select>
-                        <button type="button" id="AddCurrency" class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2" aria-hidden="true"></i> Add</button>
-                    </div>
-                </div>
-                <br>
-                {%  if not symbol_list %}
-                    <div class="alert alert-danger" role="alert">Can't find any symbol suggestion because no exchange were configured.</div>
-                    <br>
-                {% endif %}
-                <!-- Card deck -->
-                <div class="card-deck config-container" update-url="{{ url_for('config') }}">
-                    {% for crypto_currency in config_symbols %}
-                       {{ m_config_currency_card.config_currency_card(config_symbols, crypto_currency, filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list), full_symbol_list, symbol=config_symbols[crypto_currency]['pairs'][0].split('/')[0].lower() if config_symbols[crypto_currency]['pairs'])}}
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--Panel Trading-->
-    <div class="tab-pane fade config-root" id="panelTrading" role="tabpanel"><br>
-        <div class="card">
+      </div>
+      <div class="tab-pane fade config-root" id="panelTrading" role="tabpanel" aria-labelledby="panelTrading-tab">
+          <div class="card">
             <div class="card-header">
                 <h2>
                     Trading
@@ -209,11 +175,9 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!--Panel Services-->
-    <div class="tab-pane fade config-root" id="panelServices" role="tabpanel"><br>
-        <div class="card">
+      </div>
+      <div class="tab-pane fade config-root" id="panelServices" role="tabpanel" aria-labelledby="panelServices-tab">
+          <div class="card">
             <div class="card-header"><h2>Interfaces</h2></div>
             <div class="card-body deck-container">
                 <div class="card">
@@ -237,11 +201,9 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!--Panel Notifications-->
-    <div class="tab-pane fade config-root" id="panelNotifications" role="tabpanel"><br>
-        <div class="card">
+      </div>
+      <div class="tab-pane fade config-root" id="panelNotifications" role="tabpanel" aria-labelledby="panelNotifications-tab">
+          <div class="card">
             <div class="card-header">
                 <h2>
                     Notifications
@@ -257,12 +219,10 @@
                 </div>
             </div>
         </div>
-    </div>
-
+      </div>
     {% if config_tentacles_by_group %}
-        <!--Panel Tentacles-->
-        <div class="tab-pane fade config-root" id="panelTentacles" role="tabpanel"><br>
-            {% for group, config_tentacles in config_tentacles_by_group.items() %}
+      <div class="tab-pane fade config-root" id="panelTentacles" role="tabpanel" aria-labelledby="panelTentacles-tab">
+          {% for group, config_tentacles in config_tentacles_by_group.items() %}
                 <div class="card">
                     <div class="card-header text-capitalize">
                         <h2>{{group.replace("_", " ")}}</h2>
@@ -277,8 +237,10 @@
                 </div>
                 <br>
             {% endfor %}
-        </div>
+      </div>
     {% endif %}
+    </div>
+  </div>
 </div>
 
 <!-- Default cards -->
