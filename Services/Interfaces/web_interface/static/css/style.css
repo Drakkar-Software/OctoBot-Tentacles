@@ -78,6 +78,61 @@ body:before {
     font-weight: bolder;
 }
 
+.sidenav {
+    position: fixed;
+    width: 12rem;
+    height: 100%;
+    z-index: 1;
+    padding-top: 5rem;
+    top: 0;
+    left: 0;
+    overflow-x: hidden;
+    color: white;
+    background-color: #212121;
+}
+
+.sidenav .nav-title {
+    margin-left: 2rem;
+}
+
+.sidenav .bordered {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #424242;
+    border-top: 1px solid #424242;
+}
+
+.sidenav .nav .nav-link  {
+    color: white;
+    width: 100%;
+}
+
+.sidenav .nav .nav-link:hover  {
+    animation: all 0.2s ease-in forwards;
+    color: white;
+    background-color: #1565C0;
+}
+
+.sidenav .nav .nav-link.active  {
+    font-weight: bolder;
+    background-color: #0D47A1;
+}
+
+.sidenav .btn  {
+    padding: .84rem 1rem;
+    width: inherit;
+}
+
+.sidenav .btn:hover  {
+    padding: .84rem 1rem;
+    width: inherit;
+    color: inherit;
+}
+
+.sided-content {
+    margin-left: 12rem; /* Same as the width of the sidebar */
+}
+
 /* Cards */
 .card-deck {
   display: flex;
@@ -209,7 +264,7 @@ body:before {
 }
 
 .card a:hover {
-    color: #42a5f5 !important;
+    color: #1565C0 !important;
 }
 
 .small-image{
