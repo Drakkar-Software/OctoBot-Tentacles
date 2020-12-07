@@ -64,6 +64,10 @@ body:before {
     max-width: 2.5rem;
 }
 
+.navbar.navbar-dark, .page-footer {
+    background-color: #C62828;
+}
+
 .navbar.navbar-dark .navbar-nav .nav-item  {
     border-bottom: 2px solid transparent;
 }
