@@ -19,9 +19,9 @@ import os.path
 import octobot_backtesting.api as backtesting_api
 import async_channel.util as channel_util
 import octobot_commons.tests.test_config as test_config
+import octobot_commons.constants as commons_constants
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
-import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import tentacles.Trading.Mode as modes
 
@@ -31,7 +31,7 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
     exchange_manager = None
     try:
         config = test_config.load_test_config()
-        config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
         exchange_manager = exchanges.ExchangeManager(config, exchange_name)
 
         # use backtesting not to spam exchanges apis

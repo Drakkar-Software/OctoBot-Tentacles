@@ -15,7 +15,7 @@
 #  License along with this library.
 import flask
 
-import octobot_trading.constants as trading_constants
+import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -98,16 +98,16 @@ def config():
 
         return flask.render_template('config.html',
 
-                                     config_exchanges=display_config[trading_constants.CONFIG_EXCHANGES],
-                                     config_trading=display_config[trading_constants.CONFIG_TRADING],
-                                     config_trader=display_config[trading_constants.CONFIG_TRADER],
-                                     config_trader_simulator=display_config[trading_constants.CONFIG_SIMULATOR],
+                                     config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+                                     config_trading=display_config[commons_constants.CONFIG_TRADING],
+                                     config_trader=display_config[commons_constants.CONFIG_TRADER],
+                                     config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
                                      config_notifications=display_config[
                                          services_constants.CONFIG_CATEGORY_NOTIFICATION],
                                      config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
                                      config_symbols=models.format_config_symbols(display_config),
-                                     config_reference_market=display_config[trading_constants.CONFIG_TRADING][
-                                         trading_constants.CONFIG_TRADER_REFERENCE_MARKET],
+                                     config_reference_market=display_config[commons_constants.CONFIG_TRADING][
+                                         commons_constants.CONFIG_TRADER_REFERENCE_MARKET],
 
                                      real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
@@ -118,7 +118,7 @@ def config():
                                      notifiers_list=notifiers_list,
                                      symbol_list=sorted(models.get_symbol_list([exchange
                                                                                 for exchange in display_config[
-                                                                                    trading_constants.CONFIG_EXCHANGES]])),
+                                                                                    commons_constants.CONFIG_EXCHANGES]])),
                                      full_symbol_list=models.get_all_symbols_dict(),
                                      strategy_config=models.get_strategy_config(media_url),
                                      evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
