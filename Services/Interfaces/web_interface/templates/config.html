@@ -18,28 +18,50 @@
 {% endblock additional_style %}
 
 {% block body %}
-<div class="mt-4">
-  <div class="sidenav shadow">
-    <div class="nav-title">
-        <h5>Profile: </h5>
-        <h4>Default</h4>
+<div class="row mt-md-4 mt-2">
+  <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
+      <div class="sidebar-sticky">
+        <div class="nav-title d-none d-md-block">
+            <h5>Profile: </h5>
+            <h4>Default</h4>
+        </div>
+        <div class="nav flex-column bordered mt-0 mt-md-4" id="v-tab" role="tablist" aria-orientation="vertical">
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" id="panelEvaluators-tab" data-toggle="pill" href="#panelEvaluators" role="tab" aria-controls="panelEvaluators" aria-selected="true">
+              <i class="fab fa-octopus-deploy"></i><span class="d-none d-md-block pl-3">Strategies</span>
+          </a>
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelCurrency-tab" data-toggle="pill" href="#panelCurrency" role="tab" aria-controls="panelCurrency" aria-selected="false">
+              <i class="fab fa-bitcoin"></i><span class="d-none d-md-block pl-3">Currencies</span>
+          </a>
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelExchanges-tab" data-toggle="pill" href="#panelExchanges" role="tab" aria-controls="panelExchanges" aria-selected="false">
+              <i class="fas fa-exchange-alt"></i><span class="d-none d-md-block pl-3">Exchanges</span>
+          </a>
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelTrading-tab" data-toggle="pill" href="#panelTrading" role="tab" aria-controls="panelTrading" aria-selected="false">
+              <i class="fas fa-wallet"></i><span class="d-none d-md-block pl-3">Trading</span>
+          </a>
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelServices-tab" data-toggle="pill" href="#panelServices" role="tab" aria-controls="panelServices" aria-selected="false">
+              <i class="fas fa-share-alt"></i><span class="d-none d-md-block pl-3">Interfaces</span>
+          </a>
+          <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelNotifications-tab" data-toggle="pill" href="#panelNotifications" role="tab" aria-controls="panelNotifications" aria-selected="false">
+              <i class="fas fa-bell"></i><span class="d-none d-md-block pl-3">Notifications</span>
+          </a>
+          {% if config_tentacles_by_group %}
+            <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelTentacles-tab" data-toggle="pill" href="#panelTentacles" role="tab" aria-controls="panelTentacles" aria-selected="false">
+                <i class="fas fa-cogs"></i><span class="d-none d-md-block pl-3">Tentacles</span>
+            </a>
+          {% endif %}
+        </div>
+        <a class="nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}">
+            <i class="fas fa-save"></i><span class="d-none d-md-block pl-2">Save and restart later</span>
+        </a>
+        <a class="nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#" role="tab" aria-selected="false">
+            <i class="fas fa-redo-alt"></i><span class="d-none d-md-block pl-2">Reset all</span>
+        </a>
+        <button class="nav-link pl-2 pl-sm-3 btn red waves-effect d-flex mx-0 mx-md-auto mt-3 mt-mb-5 mb-5" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}">
+            <i class="fas fa-power-off"></i><span class="d-none d-md-block pl-2">Save and restart</span>
+        </button>
     </div>
-    <div class="nav flex-column bordered" id="v-tab" role="tablist" aria-orientation="vertical">
-      <a class="nav-link waves-effect active" id="panelEvaluators-tab" data-toggle="pill" href="#panelEvaluators" role="tab" aria-controls="panelEvaluators" aria-selected="true">Strategies</a>
-      <a class="nav-link waves-effect" id="panelCurrency-tab" data-toggle="pill" href="#panelCurrency" role="tab" aria-controls="panelCurrency" aria-selected="false">Currencies</a>
-      <a class="nav-link waves-effect" id="panelExchanges-tab" data-toggle="pill" href="#panelExchanges" role="tab" aria-controls="panelExchanges" aria-selected="false">Exchanges</a>
-      <a class="nav-link waves-effect" id="panelTrading-tab" data-toggle="pill" href="#panelTrading" role="tab" aria-controls="panelTrading" aria-selected="false">Trading</a>
-      <a class="nav-link waves-effect" id="panelServices-tab" data-toggle="pill" href="#panelServices" role="tab" aria-controls="panelServices" aria-selected="false">Interfaces</a>
-      <a class="nav-link waves-effect" id="panelNotifications-tab" data-toggle="pill" href="#panelNotifications" role="tab" aria-controls="panelNotifications" aria-selected="false">Notifications</a>
-      {% if config_tentacles_by_group %}
-        <a class="nav-link" id="panelTentacles-tab" data-toggle="pill" href="#panelTentacles" role="tab" aria-controls="panelTentacles" aria-selected="false">Tentacles</a>
-      {% endif %}
-    </div>
-    <a class="nav-link btn green waves-effect" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}">Save and restart later</a>
-    <a class="nav-link btn orange waves-effect" id="reset-config" href="#" role="tab" aria-selected="false">Reset all</a>
-    <button class="nav-link btn red waves-effect mt-5" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}">Save and restart</button>
-  </div>
-  <div class="sided-content">
+  </nav>
+  <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
     <div class="tab-content" id="super-container">
       <div class="tab-pane fade config-root show active" id="panelEvaluators" role="tabpanel" aria-labelledby="panelEvaluators-tab">
           <div class="card">
@@ -240,7 +262,7 @@
       </div>
     {% endif %}
     </div>
-  </div>
+  </main>
 </div>
 
 <!-- Default cards -->
