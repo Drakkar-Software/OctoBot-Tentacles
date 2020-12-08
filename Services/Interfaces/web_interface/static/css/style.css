@@ -20,11 +20,12 @@
 strong {
     font-weight: bolder;
 }
+
 .editable {
     display: inline;
 }
 
-.bg-warning-dark{
+.bg-warning-dark {
     background-color: #FF8800 !important;
 }
 
@@ -32,9 +33,9 @@ strong {
     top: 4rem;
 }
 
-html, body{
-   height: 100%;
-   min-height: 100%;
+html, body {
+    height: 100%;
+    min-height: 100%;
 }
 
 body:before {
@@ -50,7 +51,7 @@ body:before {
     background-size: cover;
     width: 100%;
     height: 100%;
-    opacity : 0.2;
+    opacity: 0.2;
 }
 
 .login_box {
@@ -68,110 +69,128 @@ body:before {
     background-color: #C62828;
 }
 
-.navbar.navbar-dark .navbar-nav .nav-item  {
+.navbar.navbar-dark .navbar-nav .nav-item {
     border-bottom: 2px solid transparent;
 }
 
-.navbar.navbar-dark .navbar-nav .nav-item:hover  {
+.navbar.navbar-dark .navbar-nav .nav-item:hover {
     animation: all 0.2s ease-in forwards;
     border-bottom: 2px solid white;
 }
 
-.navbar.navbar-dark .navbar-nav .nav-item.active  {
+.navbar.navbar-dark .navbar-nav .nav-item.active {
     border-bottom: 2px solid white;
     font-weight: bolder;
 }
 
-.sidenav {
+.sidebar {
     position: fixed;
-    width: 12rem;
-    height: 100%;
-    z-index: 1;
-    padding-top: 5rem;
     top: 0;
+    bottom: 0;
     left: 0;
-    overflow-x: hidden;
+    z-index: 100; /* Behind the navbar */
+    padding: 48px 0 0; /* Height of navbar */
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     color: white;
-    background-color: #212121;
 }
 
-.sidenav .nav-title {
+@supports ((position: -webkit-sticky) or (position: sticky)) {
+    .sidebar-sticky {
+        position: -webkit-sticky;
+        position: sticky;
+    }
+}
+
+.sidebar-sticky {
+    position: relative;
+    top: 0;
+    height: calc(100vh - 48px);
+    padding-top: .5rem;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}
+
+.sidebar .nav-title {
     margin-left: 2rem;
 }
 
-.sidenav .bordered {
-    margin-top: 2rem;
+.sidebar .bordered {
     margin-bottom: 2rem;
     border-bottom: 1px solid #424242;
     border-top: 1px solid #424242;
 }
 
-.sidenav .nav .nav-link  {
+.sidebar .nav .nav-link {
     color: white;
     width: 100%;
 }
 
-.sidenav .nav .nav-link:hover  {
+.sidebar .nav .nav-link:hover {
     animation: all 0.2s ease-in forwards;
     color: white;
     background-color: #1565C0;
 }
 
-.sidenav .nav .nav-link.active  {
+.sidebar .nav .nav-link.active {
     font-weight: bolder;
     background-color: #0D47A1;
 }
 
-.sidenav .btn  {
+.sidebar .btn {
     padding: .84rem 1rem;
-    width: inherit;
+    width: 100%;
 }
 
-.sidenav .btn:hover  {
+.sidebar i {
+    line-height:inherit;
+}
+
+.sidebar .btn:hover {
     padding: .84rem 1rem;
-    width: inherit;
     color: inherit;
-}
-
-.sided-content {
-    margin-left: 12rem; /* Same as the width of the sidebar */
 }
 
 /* Cards */
 .card-deck {
-  display: flex;
-  justify-content: flex-start;
-  flex-flow: row wrap;
-  align-items: stretch;
+    display: flex;
+    justify-content: flex-start;
+    flex-flow: row wrap;
+    align-items: stretch;
 }
+
 .card {
-  display: block;
-  flex-basis: 33.3%;
-  .rounded-bottom !important;
+    display: block;
+    flex-basis: 33.3%;
+. rounded-bottom !important;
 }
+
 .card,
 .table-card {
-  flex-basis: 45% !important;
+    flex-basis: 45% !important;
 }
+
 .medium-size {
-  max-width: 18rem;
-  min-width: 12rem;
-  justify-content: space-between;
-  display: flex;
+    max-width: 18rem;
+    min-width: 12rem;
+    justify-content: space-between;
+    display: flex;
 }
+
 .medium-size .card-body {
-  flex: 0 0 auto;
+    flex: 0 0 auto;
 }
+
 .small-size {
-  max-width: 18rem;
-  min-width: 12rem;
-  min-height: 14rem;
+    max-width: 18rem;
+    min-width: 12rem;
+    min-height: 14rem;
 }
-.very-small-size{
-  max-width: 3rem;
-  min-width: 2rem;
-  max-height: 3rem;
-  min-height: 2rem;
+
+.very-small-size {
+    max-width: 3rem;
+    min-width: 2rem;
+    max-height: 3rem;
+    min-height: 2rem;
 }
 
 /* elegant-color white-text */
@@ -181,12 +200,11 @@ body:before {
 .card,
 .card-body,
 .card-text,
-.select2-selection__choice
-{
+.select2-selection__choice {
     background-color: #3E4551 !important;
 }
 
-.card-body.candle-graph{
+.card-body.candle-graph {
     min-height: 30.625rem;
     background-color: inherit;
 }
@@ -195,7 +213,7 @@ body:before {
 .card-body,
 .card-text,
 .select2 li span,
-.card-text{
+.card-text {
     color: white !important;
 }
 
@@ -204,11 +222,11 @@ body:before {
 .card .card .card-text,
 .card .card-deck .card,
 .card .card-deck .card .card-body,
- .card .card-deck .card .card-text{
+.card .card-deck .card .card-text {
     background-color: #4B515D !important;
 }
 
-.card .card-deck .card.unique-color-dark-card{
+.card .card-deck .card.unique-color-dark-card {
     background-color: #1c2331 !important;
 }
 
@@ -225,7 +243,7 @@ body:before {
 .card .card-modified .card-text,
 .card .card-deck .card-modified,
 .card .card-deck .card-modified .card-body,
- .card .card-deck .card-modified .card-text{
+.card .card-deck .card-modified .card-text {
     background-color: #FF9800 !important;
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
@@ -238,7 +256,7 @@ body:before {
 .card .card-long .card-text,
 .card .card-deck .card-long,
 .card .card-deck .card-long .card-body,
- .card .card-deck .card-long .card-text{
+.card .card-deck .card-long .card-text {
     background-color: seagreen !important;
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
@@ -251,7 +269,7 @@ body:before {
 .card .card-short .card-text,
 .card .card-deck .card-short,
 .card .card-deck .card-short .card-body,
- .card .card-deck .card-short .card-text{
+.card .card-deck .card-short .card-text {
     background-color: darkred !important;
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
@@ -271,20 +289,20 @@ body:before {
     color: #1565C0 !important;
 }
 
-.small-image{
+.small-image {
     max-height: 128px;
     max-width: 128px;
 }
 
-.help-section{
+.help-section {
     padding-bottom: 0.4rem;
 }
 
-a:hover.external-link{
+a:hover.external-link {
     font-weight: inherit;
 }
 
-a:hover.hover_anim{
+a:hover.hover_anim {
     font-weight: inherit;
     box-shadow: 0.1rem 0.1rem;
 }
@@ -298,7 +316,7 @@ a:hover.badge {
 }
 
 .modal-text {
-  color: #4B515D;
+    color: #4B515D;
 }
 
 .editable-input,
