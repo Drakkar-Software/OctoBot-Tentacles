@@ -27,7 +27,6 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.tests.test_config as test_config
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
-import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
@@ -53,15 +52,15 @@ async def _init_trading_mode(config, exchange_manager, symbol):
 
 async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=None):
     config = test_config.load_test_config()
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USD"] = 1000
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO][
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USD"] = 1000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
         "BTC"] = 10 if btc_holdings is None else btc_holdings
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO].update(additional_portfolio)
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO].update(additional_portfolio)
     if fees is not None:
-        config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_SIMULATOR_FEES][
-            trading_constants.CONFIG_SIMULATOR_FEES_TAKER] = fees
-        config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_SIMULATOR_FEES][
-            trading_constants.CONFIG_SIMULATOR_FEES_MAKER] = fees
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES][
+            commons_constants.CONFIG_SIMULATOR_FEES_TAKER] = fees
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES][
+            commons_constants.CONFIG_SIMULATOR_FEES_MAKER] = fees
     exchange_manager = exchanges.ExchangeManager(config, "binance")
 
     # use backtesting not to spam exchanges apis
@@ -100,11 +99,11 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
 
 async def _get_tools_multi_symbol():
     config = test_config.load_test_config()
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USD"] = 1000
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["BTC"] = 10
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["ETH"] = 20
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["NANO"] = 2000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USD"] = 1000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["BTC"] = 10
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["ETH"] = 20
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["NANO"] = 2000
     exchange_manager = exchanges.ExchangeManager(config, "binance")
 
     # use backtesting not to spam exchanges apis
