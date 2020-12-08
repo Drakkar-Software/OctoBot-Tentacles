@@ -64,12 +64,13 @@
         <script src="{{ url_for('static', filename='js/common/util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/bot_connection.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
         {% set active_page = active_page|default('home') -%}
         {% set show_nab_bar = show_nab_bar|default(True) -%}
 
         {% if show_nab_bar %}
-            <nav class="navbar navbar-default navbar-expand-md navbar-dark sticky-top py-0 py-md-2">
+            <nav class="navbar navbar-expand-md navbar-dark sticky-top py-0 py-md-2">
                 <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                     <ul class="navbar-nav mr-auto">
                         <li class="nav-item mx-1 px-0 {% if 'home' == active_page %} active{% endif %}">
@@ -87,7 +88,7 @@
                     </ul>
                 </div>
                 <div class="mx-auto order-0">
-                    <a class="navbar-brand mx-auto font-weight-bolder" href="{{ url_for('commands') }}">OctoBot <i id="navbar-bot-status" class="fa fa-check"  data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i></a>
+                    <a class="navbar-brand mx-auto font-weight-bolder" href="{{ url_for('commands') }}">OctoBot <i id="navbar-bot-status" class="fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i></a>
                     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2">
                         <span class="navbar-toggler-icon"></span>
                     </button>
