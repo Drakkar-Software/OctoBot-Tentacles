@@ -27,9 +27,9 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import octobot_evaluators.constants as evaluators_constants
+import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
-import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.config_manager as config_manager
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_backtesting.api as backtesting_api
@@ -536,7 +536,7 @@ def get_exchange_logo(exchange_name):
 def get_full_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
     if remove_config_exchanges:
-        user_exchanges = [e for e in g_config[trading_constants.CONFIG_EXCHANGES]]
+        user_exchanges = [e for e in g_config[commons_constants.CONFIG_EXCHANGES]]
         full_exchange_list = list(set(ccxt.exchanges) - set(user_exchanges))
     else:
         full_exchange_list = list(set(ccxt.exchanges))
@@ -563,7 +563,7 @@ def get_other_exchange_list(remove_config_exchanges=False):
 
 def get_current_exchange():
     g_config = interfaces_util.get_global_config()
-    exchanges = g_config[trading_constants.CONFIG_EXCHANGES]
+    exchanges = g_config[commons_constants.CONFIG_EXCHANGES]
     if exchanges:
         return next(iter(exchanges))
     else:
