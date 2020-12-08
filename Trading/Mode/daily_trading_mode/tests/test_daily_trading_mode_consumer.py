@@ -40,11 +40,11 @@ pytestmark = pytest.mark.asyncio
 async def _get_tools():
     symbol = "BTC/USDT"
     config = test_config.load_test_config()
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO][
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
         "SUB"] = 0.000000000000000000005
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO][
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
         "BNB"] = 0.000000000000000000005
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
     exchange_manager = exchanges.ExchangeManager(config, "binance")
 
     # use backtesting not to spam exchanges apis

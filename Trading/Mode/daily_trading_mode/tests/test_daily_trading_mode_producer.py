@@ -25,7 +25,6 @@ import octobot_commons.tests.test_config as test_config
 import octobot_evaluators.api as evaluators_api
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
-import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import tentacles.Trading.Mode as Mode
@@ -36,7 +35,7 @@ pytestmark = pytest.mark.asyncio
 
 async def _get_tools(symbol="BTC/USDT"):
     config = test_config.load_test_config()
-    config[trading_constants.CONFIG_SIMULATOR][trading_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
     exchange_manager = exchanges.ExchangeManager(config, "binance")
 
     # use backtesting not to spam exchanges apis
