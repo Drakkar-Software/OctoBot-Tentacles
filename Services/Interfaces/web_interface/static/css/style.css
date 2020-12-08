@@ -65,7 +65,7 @@ body:before {
     max-width: 2.5rem;
 }
 
-.navbar.navbar-dark, .page-footer {
+.navbar.navbar-dark, footer.page-footer .footer-copyright {
     background-color: #C62828;
 }
 
