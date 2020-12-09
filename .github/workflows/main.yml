@@ -32,7 +32,7 @@ jobs:
       env:
         GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
-        OCTOBOT_DEFAULT_BRANCH: 0.4.0
+        OCTOBOT_DEFAULT_BRANCH: dev
       run: |
         git clone -q $OCTOBOT_GH_REPO -b ${GITHUB_REF##*/} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
         cd OctoBot
@@ -50,7 +50,7 @@ jobs:
       env:
         GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
-        OCTOBOT_DEFAULT_BRANCH: 0.4.0
+        OCTOBOT_DEFAULT_BRANCH: dev
       run: |
         If ($env:GITHUB_REF -notcontains "refs/tags/") {
           $env:TENTACLES_URL_TAG = "latest"
@@ -117,7 +117,7 @@ jobs:
         env:
           GH_REPO: Drakkar-Software/OctoBot-Tentacles
           OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
-          OCTOBOT_DEFAULT_BRANCH: 0.4.0
+          OCTOBOT_DEFAULT_BRANCH: dev
         run: |
           git clone -q $OCTOBOT_GH_REPO -b ${GITHUB_REF##*/} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
           cd OctoBot
@@ -135,7 +135,7 @@ jobs:
           curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${GITHUB_REF#refs/*/}.zip
 
       - name: Publish latest tentacles
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/0.4.0'
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/dev'
         run: |
           curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${{ secrets.LATEST_TAG }}.zip
 
