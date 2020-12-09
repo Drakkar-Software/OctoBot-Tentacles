@@ -2,15 +2,8 @@
 {% set active_page = "home" %}
 {% block body %}
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
-    <div class="alert alert-warning text-center mt-2" role="alert">
-        <h2>Thank you for contributing to OctoBot by testing this alpha version.</h2>
-        <p>
-            Please keep in mind that this version is not yet fully tested and certainly has remaining bugs.
-            Please report any error / improvement idea or issue into the OctoBot channel.
-        </p>
-    </div>
     <span id="exchange-specific-data">
-        <div class="card">
+        <div class="card mt-2 mt-md-4">
             <div class="card-header"><h1>
                 Profitability
                 <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/Understanding-profitability#profitability-in-octobot">
