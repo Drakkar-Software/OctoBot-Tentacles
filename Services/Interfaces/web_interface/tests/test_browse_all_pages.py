@@ -20,7 +20,7 @@ import asyncio
 import mock
 import contextlib
 
-import octobot_commons.config_manager as config_manager
+import octobot_commons.configuration as configuration
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.controllers as controllers
 import octobot_services.interfaces as interfaces
@@ -40,7 +40,7 @@ async def _init_bot():
     import octobot_tentacles_manager.loaders as loaders
     import octobot_evaluators.api as evaluators_api
     import tests.test_utils.config as config
-    octobot = octobot.OctoBot(test_config.load_test_config())
+    octobot = octobot.OctoBot(test_config.load_test_config(dict_only=False))
     octobot.initialized = True
     tentacles_config = config.load_test_tentacles_config()
     loaders.reload_tentacle_by_tentacle_class()
@@ -64,7 +64,7 @@ async def get_web_interface(require_password):
         web_interface_instance.port = PORT
         web_interface_instance.should_open_web_interface = False
         web_interface_instance.requires_password = require_password
-        web_interface_instance.password_hash = config_manager.get_password_hash(PASSWORD)
+        web_interface_instance.password_hash = configuration.get_password_hash(PASSWORD)
         interfaces.AbstractInterface.bot_api = (await _init_bot()).octobot_api
         with mock.patch.object(web_interface_instance, "_register_on_channels", new=mock.AsyncMock()):
             threading.Thread(target=_start_web_interface, args=(web_interface_instance,)).start()

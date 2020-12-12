@@ -30,11 +30,10 @@ import octobot_evaluators.constants as evaluators_constants
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
-import octobot_commons.config_manager as config_manager
+import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
-import octobot.constants as octobot_constants
 
 NAME_KEY = "name"
 SYMBOL_KEY = "symbol"
@@ -328,11 +327,11 @@ def get_in_backtesting_mode():
 
 
 def accepted_terms():
-    return config_manager.accepted_terms(interfaces_util.get_edited_config())
+    return interfaces_util.get_edited_config(dict_only=False).accepted_terms()
 
 
 def accept_terms(accepted):
-    return config_manager.accept_terms(interfaces_util.get_edited_config(), accepted)
+    return interfaces_util.get_edited_config(dict_only=False).accept_terms(accepted)
 
 
 def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
@@ -417,40 +416,38 @@ def _handle_special_fields(new_config):
         web_password_key = constants.UPDATED_CONFIG_SEPARATOR.join([services_constants.CONFIG_CATEGORY_SERVICES,
                                                                     services_constants.CONFIG_WEB,
                                                                     services_constants.CONFIG_WEB_PASSWORD])
-        new_config[web_password_key] = config_manager.get_password_hash(new_config[web_password_key])
+        new_config[web_password_key] = configuration.get_password_hash(new_config[web_password_key])
     except KeyError:
         pass
 
 
 def update_global_config(new_config, delete=False):
-    current_edited_config = interfaces_util.get_edited_config()
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
     if not delete:
         _handle_special_fields(new_config)
-    config_manager.update_global_config(new_config,
-                                        current_edited_config,
-                                        octobot_constants.CONFIG_FILE_SCHEMA,
-                                        backtesting_api.is_backtesting_enabled(current_edited_config),
-                                        constants.UPDATED_CONFIG_SEPARATOR,
-                                        update_input=True,
-                                        delete=delete)
+    current_edited_config.update_config_fields(new_config,
+                                               backtesting_api.is_backtesting_enabled(current_edited_config.config),
+                                               constants.UPDATED_CONFIG_SEPARATOR,
+                                               update_current_config=True,
+                                               delete=delete)
     return True
 
 
 def manage_metrics(enable_metrics):
-    current_edited_config = interfaces_util.get_edited_config()
-    if commons_constants.CONFIG_METRICS not in current_edited_config:
-        current_edited_config[commons_constants.CONFIG_METRICS] = {
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
+    if commons_constants.CONFIG_METRICS not in current_edited_config.config:
+        current_edited_config.config[commons_constants.CONFIG_METRICS] = {
             commons_constants.CONFIG_ENABLED_OPTION: enable_metrics}
     else:
-        current_edited_config[commons_constants.CONFIG_METRICS][
+        current_edited_config.config[commons_constants.CONFIG_METRICS][
             commons_constants.CONFIG_ENABLED_OPTION] = enable_metrics
     if enable_metrics and community.CommunityManager.should_register_bot(current_edited_config):
         community.CommunityManager.background_get_id_and_register_bot(interfaces_util.get_bot_api())
-    config_manager.simple_save_config_update(current_edited_config)
+    current_edited_config.save()
 
 
 def get_metrics_enabled():
-    return config_manager.get_metrics_enabled(interfaces_util.get_edited_config())
+    return interfaces_util.get_edited_config(dict_only=False).get_metrics_enabled()
 
 
 def get_services_list():
