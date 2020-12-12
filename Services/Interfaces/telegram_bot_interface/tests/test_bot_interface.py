@@ -34,7 +34,7 @@ pytestmark = pytest.mark.asyncio
 
 async def create_minimalist_unconnected_octobot():
     # import here to prevent later web interface import issues
-    octobot_instance = octobot.OctoBot(test_config.load_test_config())
+    octobot_instance = octobot.OctoBot(test_config.load_test_config(dict_only=False))
     octobot_instance.initialized = True
     tentacles_config = test_utils_config.load_test_tentacles_config()
     loaders.reload_tentacle_by_tentacle_class()

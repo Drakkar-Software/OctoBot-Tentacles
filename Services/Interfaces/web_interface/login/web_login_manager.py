@@ -16,7 +16,7 @@
 import functools
 import flask_login
 
-import octobot_commons.config_manager as config_manager
+import octobot_commons.configuration as configuration
 import tentacles.Services.Interfaces.web_interface.login as login
 
 GENERIC_USER = login.User()
@@ -37,7 +37,7 @@ class WebLoginManager(flask_login.LoginManager):
         self._register_callbacks()
 
     def is_valid_password(self, ip, password):
-        return not is_banned(ip) and config_manager.get_password_hash(password) == self.password_hash
+        return not is_banned(ip) and configuration.get_password_hash(password) == self.password_hash
 
     def _register_callbacks(self):
         @self.user_loader
