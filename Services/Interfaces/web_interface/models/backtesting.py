@@ -60,7 +60,8 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
                 interfaces_util.run_in_bot_main_loop(
                     octobot_api.stop_independent_backtesting(previous_independent_backtesting))
             if reset_tentacle_config:
-                tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config()
+                tentacles_config = interfaces_util.get_edited_config(dict_only=False).get_tentacles_config_path()
+                tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(tentacles_config)
             else:
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_global_config()

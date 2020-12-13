@@ -79,12 +79,13 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
             await self.producers[0].order_cancelled_callback(order)
 
     @classmethod
-    def get_is_trading_on_exchange(cls, exchange_name) -> bool:
+    def get_is_trading_on_exchange(cls, exchange_name, tentacles_setup_config) -> bool:
         """
         :return: True if exchange_name is in exchanges_to_trade_on (case insensitive)
         or if exchanges_to_trade_on is missing or empty
         """
-        exchanges_to_trade_on = tentacles_manager_api.get_tentacle_config(cls).get("exchanges_to_trade_on", [])
+        exchanges_to_trade_on = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls)\
+            .get("exchanges_to_trade_on", [])
         return not exchanges_to_trade_on or exchange_name.lower() in [exchange.lower()
                                                                       for exchange in exchanges_to_trade_on]
 

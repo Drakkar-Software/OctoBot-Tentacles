@@ -31,10 +31,10 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
-
-# All test coroutines will be treated as marked.
+import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
 
+# All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
@@ -62,6 +62,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES][
             commons_constants.CONFIG_SIMULATOR_FEES_MAKER] = fees
     exchange_manager = exchanges.ExchangeManager(config, "binance")
+    exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
@@ -105,6 +106,7 @@ async def _get_tools_multi_symbol():
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["ETH"] = 20
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["NANO"] = 2000
     exchange_manager = exchanges.ExchangeManager(config, "binance")
+    exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
