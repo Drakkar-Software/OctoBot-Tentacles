@@ -29,8 +29,8 @@ class Kraken(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, params=None):
+    async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, **kwargs):
         if limit is not None and limit != self.RECENT_TRADE_FIXED_LIMIT:
             self.logger.debug(f"Trying to get_recent_trades with limit != {self.RECENT_TRADE_FIXED_LIMIT} : ({limit})")
             limit = self.RECENT_TRADE_FIXED_LIMIT
-        return await exchanges.SpotExchange.get_recent_trades(self, symbol=symbol, limit=limit, params=params)
+        return await super().get_recent_trades(symbol=symbol, limit=limit, **kwargs)
