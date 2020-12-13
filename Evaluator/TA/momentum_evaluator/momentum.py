@@ -30,8 +30,8 @@ import tentacles.Evaluator.Util as EvaluatorUtil
 
 class RSIMomentumEvaluator(evaluators.TAEvaluator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.pertinence = 1
         self.period_length = 14
         self.short_term_averages = [7, 5, 4, 3, 2, 1]
@@ -108,9 +108,9 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
     def get_eval_type():
         return typing.Dict[str, int]
 
-    def __init__(self):
-        super().__init__()
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.__class__)
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.period_length = self.evaluator_config[self.PERIOD]
         self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
         self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]
@@ -195,8 +195,8 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
 # bollinger_bands
 class BBMomentumEvaluator(evaluators.TAEvaluator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.period_length = 20
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
@@ -258,8 +258,8 @@ class BBMomentumEvaluator(evaluators.TAEvaluator):
 # ADX --> trend_strength
 class ADXMomentumEvaluator(evaluators.TAEvaluator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.period_length = 14
         # 26 minimal_data length required for 14 period_length
         self.minimal_data = self.period_length + 12
@@ -333,8 +333,8 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
 
 
 class MACDMomentumEvaluator(evaluators.TAEvaluator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.previous_note = None
         self.long_period_length = 26
         self.short_period_length = 12
@@ -419,8 +419,8 @@ class MACDMomentumEvaluator(evaluators.TAEvaluator):
 
 
 class KlingerOscillatorMomentumEvaluator(evaluators.TAEvaluator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.short_period = 35  # standard with klinger
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
@@ -486,8 +486,8 @@ class KlingerOscillatorMomentumEvaluator(evaluators.TAEvaluator):
 
 
 class KlingerOscillatorReversalConfirmationMomentumEvaluator(evaluators.TAEvaluator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.short_period = 35  # standard with klinger
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger

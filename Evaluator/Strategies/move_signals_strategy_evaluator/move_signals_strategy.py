@@ -35,8 +35,8 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
 
     SIGNAL_MINIMUM_THRESHOLD = 0.15
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.evaluation_time_frames = [commons_enum.TimeFrames.THIRTY_MINUTES.value,
                                        commons_enum.TimeFrames.ONE_HOUR.value,
                                        commons_enum.TimeFrames.FOUR_HOURS.value]

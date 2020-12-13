@@ -113,8 +113,8 @@ def get_tentacle_documentation(name, media_url):
                 return doc_content.replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
     except KeyError as e:
         _get_logger().error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
-                     f"This is probably an issue with the {name} tentacle matadata.json file, please "
-                     f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
+                            f"This is probably an issue with the {name} tentacle matadata.json file, please "
+                            f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
     return ""
 
 
@@ -199,7 +199,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
 
 
 def get_tentacle_config(klass):
-    return tentacles_manager_api.get_tentacle_config(klass)
+    return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 
 
 def get_tentacle_config_schema(klass):
@@ -250,7 +250,9 @@ def get_tentacles_activation_desc_by_group(media_url):
 def update_tentacle_config(tentacle_name, config_update):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
-        tentacles_manager_api.update_tentacle_config(klass, config_update)
+        tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
+                                                     klass,
+                                                     config_update)
         return True, f"{tentacle_name} updated"
     except Exception as e:
         _get_logger().exception(e, False)
@@ -260,7 +262,8 @@ def update_tentacle_config(tentacle_name, config_update):
 def reset_config_to_default(tentacle_name):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
-        tentacles_manager_api.factory_tentacle_reset_config(klass)
+        tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
+                                                            klass)
         return True, f"{tentacle_name} configuration reset to default values"
     except Exception as e:
         _get_logger().exception(e, False)
@@ -279,20 +282,26 @@ def _get_required_element(elements_config):
 
 
 def _add_strategy_requirements_and_default_config(desc, klass):
+    tentacles_config = interfaces_util.get_startup_tentacles_config()
     strategy_config = get_tentacle_config(klass)
-    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(strategy_config)]
-    desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(strategy_config)]
-    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(strategy_config)]
+    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(tentacles_config,
+                                                                                       strategy_config)]
+    desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(tentacles_config,
+                                                                                                   strategy_config)]
+    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(tentacles_config,
+                                                                                        strategy_config)]
 
 
 def _add_trading_mode_requirements_and_default_config(desc, klass):
+    tentacles_config = interfaces_util.get_startup_tentacles_config()
     mode_config = get_tentacle_config(klass)
-    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(mode_config)
+    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(tentacles_config,
+                                                                                                   mode_config)
     if required_strategies:
         desc[REQUIREMENTS_KEY] = \
             [strategy for strategy in required_strategies]
         desc[DEFAULT_CONFIG_KEY] = \
-            [strategy for strategy in klass.get_default_strategies(mode_config)]
+            [strategy for strategy in klass.get_default_strategies(tentacles_config, mode_config)]
         desc[REQUIREMENTS_COUNT_KEY] = required_strategies_count
     else:
         desc[REQUIREMENTS_KEY] = []
@@ -410,13 +419,24 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
         return False
 
 
-def _handle_special_fields(new_config):
+def _handle_special_fields(config, new_config):
     try:
         # replace web interface password by its hash before storage
         web_password_key = constants.UPDATED_CONFIG_SEPARATOR.join([services_constants.CONFIG_CATEGORY_SERVICES,
                                                                     services_constants.CONFIG_WEB,
                                                                     services_constants.CONFIG_WEB_PASSWORD])
-        new_config[web_password_key] = configuration.get_password_hash(new_config[web_password_key])
+        if web_password_key in new_config:
+            new_config[web_password_key] = configuration.get_password_hash(new_config[web_password_key])
+        # add exchange enabled param if missing
+        for key in list(new_config.keys()):
+            values = key.split(constants.UPDATED_CONFIG_SEPARATOR)
+            if values[0] == commons_constants.CONFIG_EXCHANGES and \
+                    values[1] not in config[commons_constants.CONFIG_EXCHANGES]:
+                enabled_key = constants.UPDATED_CONFIG_SEPARATOR.join([commons_constants.CONFIG_EXCHANGES,
+                                                                       values[1],
+                                                                       commons_constants.CONFIG_ENABLED_OPTION])
+                if enabled_key not in new_config:
+                    new_config[enabled_key] = True
     except KeyError:
         pass
 
@@ -424,11 +444,10 @@ def _handle_special_fields(new_config):
 def update_global_config(new_config, delete=False):
     current_edited_config = interfaces_util.get_edited_config(dict_only=False)
     if not delete:
-        _handle_special_fields(new_config)
+        _handle_special_fields(current_edited_config.config, new_config)
     current_edited_config.update_config_fields(new_config,
                                                backtesting_api.is_backtesting_enabled(current_edited_config.config),
                                                constants.UPDATED_CONFIG_SEPARATOR,
-                                               update_current_config=True,
                                                delete=delete)
     return True
 

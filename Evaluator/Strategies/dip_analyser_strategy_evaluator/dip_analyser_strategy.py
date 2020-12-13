@@ -36,10 +36,11 @@ class DipAnalyserStrategyEvaluator(evaluators.StrategyEvaluator):
     def get_eval_type():
         return typing.Dict[str, int]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.evaluation_time_frame = \
-            commons_enums.TimeFrames(tentacles_manager_api.get_tentacle_config(self.__class__)[
+            commons_enums.TimeFrames(tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config,
+                                                                               self.__class__)[
                                          evaluator_constants.STRATEGIES_REQUIRED_TIME_FRAME][0]).value
 
     async def matrix_callback(self,

@@ -32,7 +32,7 @@ LOGGER = bot_logging.get_logger(__name__)
 
 def get_strategies_list(trading_mode):
     try:
-        return trading_mode.get_required_strategies_names_and_count()[0]
+        return trading_mode.get_required_strategies_names_and_count(interfaces_util.get_startup_tentacles_config())[0]
     except Exception:
         return []
 
@@ -42,7 +42,9 @@ def get_time_frames_list(strategy_name):
         strategy_class = tentacles_management.get_class_from_string(strategy_name, evaluators.StrategyEvaluator,
                                                                     TentaclesStrategies,
                                                                     tentacles_management.evaluator_parent_inspection)
-        return [tf.value for tf in strategy_class.get_required_time_frames(interfaces_util.get_global_config())]
+        return [tf.value for tf in strategy_class.get_required_time_frames(
+            interfaces_util.get_global_config(),
+            interfaces_util.get_bot_api().get_tentacles_setup_config())]
     else:
         return []
 
@@ -52,8 +54,8 @@ def get_evaluators_list(strategy_name):
         strategy_class = tentacles_management.get_class_from_string(strategy_name, evaluators.StrategyEvaluator,
                                                                     TentaclesStrategies,
                                                                     tentacles_management.evaluator_parent_inspection)
-        found_evaluators = evaluators_api.get_relevant_TAs_for_strategy(strategy_class,
-                                                                        interfaces_util.get_bot_api().get_tentacles_setup_config())
+        found_evaluators = evaluators_api.get_relevant_TAs_for_strategy(
+            strategy_class, interfaces_util.get_bot_api().get_tentacles_setup_config())
         return set(evaluator.get_name() for evaluator in found_evaluators)
     else:
         return []

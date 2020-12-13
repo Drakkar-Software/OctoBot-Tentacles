@@ -27,13 +27,13 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
-import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_commons.constants as commons_constants
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.memory_check_util as memory_check_util
+import tests.test_utils.config as test_utils_config
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -43,6 +43,7 @@ async def _get_tools(symbol="BTC/USDT"):
     config = test_config.load_test_config()
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
     exchange_manager = exchanges.ExchangeManager(config, "binance")
+    exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
     # use backtesting not to spam exchanges apis
     exchange_manager.is_simulated = True
