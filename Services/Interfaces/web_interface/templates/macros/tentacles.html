@@ -61,3 +61,17 @@
     <hr>
     {{ default_config_with_apply(default_config, strategy, name, requirements) }}
 {% endmacro %}
+
+{% macro missing_tentacles_warning(missing_tentacles) %}
+    {% if missing_tentacles %}
+        <div class="alert alert-warning" role="alert">
+            <h4>Missing tentacles</h4>
+            <p>
+                <span class="font-weight-bold">{{ missing_tentacles | join(', ') }}</span>
+                tentacle{{"s are" if missing_tentacles|length > 1 else " is"}} missing in
+                your OctoBot tentacles but {{"are" if missing_tentacles|length > 1 else " is"}} referenced in your
+                current profile. Your OctoBot might now work as expected as long as this will be the case.
+                </p>
+        </div>
+    {% endif %}
+{% endmacro %}

@@ -46,6 +46,7 @@
     </div>
     <br>
     {% if (tentacle_type == "trading mode" and tentacle_desc['requirements']|length > 1) or tentacle_desc['requirements'] == ["*"] %}
+            {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
         <div class="card" id="super-container">
             <div class="card-header">
                 <h1>Compatible {{"strategies" if tentacle_type == "trading mode" else "evaluators"}}</h1>

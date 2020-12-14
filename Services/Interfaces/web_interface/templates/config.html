@@ -7,6 +7,7 @@
 {% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
 {% import 'components/config/tentacle_card.html' as m_config_tentacle_card %}
 {% import 'components/config/notification_config.html' as m_config_notification %}
+{% import 'macros/tentacles.html' as m_tentacles %}
 
 {% set config_default_value = "Bitcoin" %}
 {% set config_default_symbol = "btc" %}
@@ -60,6 +61,7 @@
   <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
     <div class="tab-content" id="super-container">
       <div class="tab-pane fade config-root show active" id="panelEvaluators" role="tabpanel" aria-labelledby="panelEvaluators-tab">
+          {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
           <div class="card">
             <div class="card-header">
                 <h2>Trading modes
@@ -240,6 +242,7 @@
       </div>
     {% if config_tentacles_by_group %}
       <div class="tab-pane fade config-root" id="panelTentacles" role="tabpanel" aria-labelledby="panelTentacles-tab">
+          {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
           {% for group, config_tentacles in config_tentacles_by_group.items() %}
                 <div class="card">
                     <div class="card-header text-capitalize">
