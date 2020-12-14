@@ -49,8 +49,10 @@ def evaluator_config():
             return util.get_rest_reply('{"update": "ko"}', 500)
     else:
         media_url = flask.url_for("tentacle_media", _external=True)
+        missing_tentacles = set()
         return flask.render_template(
             'advanced_evaluator_config.html',
-            evaluator_config=models.get_evaluator_detailed_config(media_url),
-            evaluator_startup_config=models.get_evaluators_tentacles_startup_activation()
+            evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
+            evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
+            missing_tentacles=missing_tentacles
         )

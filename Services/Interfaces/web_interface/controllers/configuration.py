@@ -96,8 +96,9 @@ def config():
         service_list = models.get_services_list()
         notifiers_list = models.get_notifiers_list()
 
-        return flask.render_template('config.html',
+        missing_tentacles = set()
 
+        return flask.render_template('config.html',
                                      config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
                                      config_trading=display_config[commons_constants.CONFIG_TRADING],
                                      config_trader=display_config[commons_constants.CONFIG_TRADER],
@@ -120,13 +121,15 @@ def config():
                                                                                 for exchange in display_config[
                                                                                     commons_constants.CONFIG_EXCHANGES]])),
                                      full_symbol_list=models.get_all_symbols_dict(),
-                                     strategy_config=models.get_strategy_config(media_url),
+                                     strategy_config=models.get_strategy_config(media_url, missing_tentacles),
                                      evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
                                      trading_startup_config=models.get_trading_tentacles_startup_activation(),
+                                     missing_tentacles=missing_tentacles,
 
                                      in_backtesting=backtesting_api.is_backtesting_enabled(display_config),
 
-                                     config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url)
+                                     config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
+                                                                                                             missing_tentacles)
                                      )
 
 
@@ -150,15 +153,18 @@ def config_tentacle():
     else:
         if flask.request.args:
             tentacle_name = flask.request.args.get("name")
+            missing_tentacles = set()
             media_url = flask.url_for("tentacle_media", _external=True)
             tentacle_class, tentacle_type, tentacle_desc = models.get_tentacle_from_string(tentacle_name, media_url)
-            evaluator_config = models.get_evaluator_detailed_config(media_url) if tentacle_type == "strategy" and \
-                                                                                  tentacle_desc[
-                                                                                      models.REQUIREMENTS_KEY] == [
-                                                                                      "*"] else None
-            strategy_config = models.get_strategy_config(media_url) if tentacle_type == "trading mode" and \
-                                                                       len(tentacle_desc[
-                                                                               models.REQUIREMENTS_KEY]) > 1 else None
+            evaluator_config = models.get_evaluator_detailed_config(media_url,
+                                                                    missing_tentacles) if tentacle_type == "strategy" and \
+                                                                                          tentacle_desc[
+                                                                                              models.REQUIREMENTS_KEY] == [
+                                                                                              "*"] else None
+            strategy_config = models.get_strategy_config(media_url,
+                                                         missing_tentacles) if tentacle_type == "trading mode" and \
+                                                                               len(tentacle_desc[
+                                                                                       models.REQUIREMENTS_KEY]) > 1 else None
             evaluator_startup_config = models.get_evaluators_tentacles_startup_activation() \
                 if evaluator_config or strategy_config else None
             return flask.render_template('config_tentacle.html',
@@ -170,7 +176,9 @@ def config_tentacle():
                                          strategy_config=strategy_config,
                                          evaluator_config=evaluator_config,
                                          activated_trading_mode=models.get_config_activated_trading_mode(),
-                                         data_files=models.get_data_files_with_description())
+                                         data_files=models.get_data_files_with_description(),
+                                         missing_tentacles=missing_tentacles
+                                         )
         else:
             return flask.render_template('config_tentacle.html')
 

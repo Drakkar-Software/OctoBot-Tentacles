@@ -1,6 +1,7 @@
 {% extends "advanced_layout.html" %}
 {% set active_page = "advanced.evaluator_config" %}
 {% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
+{% import 'macros/tentacles.html' as m_tentacles %}
 
 {% block additional_style %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/configuration.css', u=LAST_UPDATED_STATIC_FILES) }}">
@@ -37,6 +38,7 @@
 </div>
 <div id="super-container">
     <div class="config-root" id="panelEvaluators"><br>
+        {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
         <div class="card">
             <div class="card-header"><h2>Technical analysis</h2></div>
             <div class="card-body">
