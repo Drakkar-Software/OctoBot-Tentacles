@@ -22,7 +22,7 @@ function init_status_websocket(){
         unlock_ui();
         manage_alert(data);
     });
-    socket.on('reconnect_attempt', function() {
+    socket.on('disconnect', function() {
         lock_ui();
     });
 }
