@@ -281,8 +281,8 @@ body:before {
     color: #33b5e5;
 }
 
-.card a:link.btn-primary {
-    color: #fff;
+.card a:link.btn-primary, a:link.btn-primary:hover {
+    color: #fff !important;
 }
 
 .card a:hover {
@@ -298,6 +298,14 @@ body:before {
     padding-bottom: 0.4rem;
 }
 
+.fa-1_5x {
+    font-size: 1.5em;
+}
+
+span.large-editable div.editable-input {
+    width: 100%;
+}
+
 a:hover.external-link {
     font-weight: inherit;
 }
@@ -305,6 +313,10 @@ a:hover.external-link {
 a:hover.hover_anim {
     font-weight: inherit;
     box-shadow: 0.1rem 0.1rem;
+}
+
+a:hover.hover-color-anim {
+    color: #1565C0 !important;
 }
 
 a:hover.badge {

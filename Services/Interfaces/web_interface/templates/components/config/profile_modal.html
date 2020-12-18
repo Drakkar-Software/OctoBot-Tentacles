@@ -1,0 +1,94 @@
+{% macro profile_modal(current_profile, profiles) %}
+<div class="modal" id="profileModal" tabindex="-1" role="dialog" aria-labelledby="profileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content modal-text mt-4">
+            <div class="modal-header primary-text">
+                <h2 class="modal-title" id="#profileModalLabel">
+                    Current profile: <span class="text-bold">{{current_profile.name}}</span>
+                    <button data-url="{{url_for('profiles_management', action='export')}}" class="btn btn-primary rounded-circle waves-effect px-3 mx-4"
+                        role="button" data-toggle="tooltip" title="Share this profile">
+                        <i class="fas fa-share-square" aria-hidden="true"></i>
+                    </button>
+                </h2>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex pb-1">
+                    <div id="current-profile" data-id="{{current_profile.profile_id}}" class="flex-grow-1">
+                        <h4>About
+                            <span
+                               id="current-profile-name"
+                               data-pk="1"
+                               data-type="text"
+                               data-clear=false
+                               data-onblur="submit"
+                               data-highlight=true
+                               data-emptytext="my profile"
+                               class="editable ">{{ current_profile.name }}</span>
+                            profile:</h4>
+                        <p>
+                            <span class="large-editable">
+                                <span
+                                   id="current-profile-description"
+                                   data-pk="1"
+                                   data-type="textarea"
+                                   data-clear=false
+                                   data-onblur="submit"
+                                   data-highlight=true
+                                   data-emptytext="my description"
+                                   data-inputclass="w-100"
+                                   class="editable">{{ current_profile.description }}</span>
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <button id="save-current-profile"
+                                data-url="{{url_for('profiles_management', action='update')}}"
+                                class="btn btn-success rounded-circle waves-effect px-3"
+                                role="button" data-toggle="tooltip" title="Save" disabled>
+                            <i class="fas fa-share-square" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h4>Use another profile</h4>
+                    <div class="row mt-4 mb-2 text-center">
+                        <div class="col-7">
+                            <div>
+                                <select class="selectpicker"
+                                        data-live-search="{{'true' if profiles|length > 7 else 'false'}}"
+                                        data-width="75%" id="profile-select">
+                                    {% for profile_id, profile in profiles.items() %}
+                                    <option value="{{profile_id}}"
+                                            data-desc="{{profile.description}}"
+                                            data-name="{{profile.name}}">
+                                        {{profile.name}}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <button class="btn btn-success waves-effect" disabled id="save-profile"
+                                    data-url="{{url_for('profile', select='')}}">Use this profile
+                            </button>
+                        </div>
+                    </div>
+                    <h5>About <span id="selected-profile-name">{{current_profile.name}}</span> profile:</h5>
+                    <p id="selected-profile-description">
+                        {{current_profile.description}}
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button data-url="{{url_for('profiles_management', action='import')}}" class="btn btn-outline-primary waves-effect"
+                        role="button"><i class="fas fa-download"></i> Import profile
+                </button>
+                <button class="btn btn-primary waves-effect" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
