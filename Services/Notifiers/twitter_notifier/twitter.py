@@ -44,7 +44,7 @@ class TwitterNotifier(notifier.AbstractNotifier):
             result = await self.services[0].respond(previous_tweet_id, self._get_tweet_text(notification), True)
             notification.metadata[self.NOTIFICATION_TYPE_KEY] = result
             return result
-        except KeyError:
+        except (KeyError, AttributeError):
             return await self._send_regular_tweet(notification)
 
     @staticmethod
