@@ -26,111 +26,140 @@ import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
 
 
-@web_interface.server_instance.route('/config', methods=['GET', 'POST'])
+@web_interface.server_instance.route('/profile')
+@login.login_required_when_activated
+def profile():
+    selected_profile = flask.request.args.get("select", None)
+    if selected_profile is not None:
+        models.select_profile(selected_profile)
+    media_url = flask.url_for("tentacle_media", _external=True)
+    display_config = interfaces_util.get_edited_config()
+
+    missing_tentacles = set()
+
+    return flask.render_template('profile.html',
+                                 current_profile=models.get_current_profile(),
+                                 profiles=models.get_profiles(),
+
+                                 config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+                                 config_trading=display_config[commons_constants.CONFIG_TRADING],
+                                 config_trader=display_config[commons_constants.CONFIG_TRADER],
+                                 config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
+                                 config_symbols=models.format_config_symbols(display_config),
+                                 config_reference_market=display_config[commons_constants.CONFIG_TRADING][
+                                     commons_constants.CONFIG_TRADER_REFERENCE_MARKET],
+
+                                 real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
+
+                                 ccxt_tested_exchanges=models.get_tested_exchange_list(),
+                                 ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
+                                 ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
+                                 symbol_list=sorted(models.get_symbol_list([exchange
+                                                                            for exchange in display_config[
+                                                                                commons_constants.CONFIG_EXCHANGES]])),
+                                 full_symbol_list=models.get_all_symbols_dict(),
+                                 strategy_config=models.get_strategy_config(media_url, missing_tentacles),
+                                 evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
+                                 trading_startup_config=models.get_trading_tentacles_startup_activation(),
+                                 missing_tentacles=missing_tentacles,
+
+                                 in_backtesting=backtesting_api.is_backtesting_enabled(display_config),
+
+                                 config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
+                                                                                                         missing_tentacles)
+                                 )
+
+
+@web_interface.server_instance.route('/profiles_management/<action>', methods=["POST"])
+@login.login_required_when_activated
+def profiles_management(action):
+    if action == "update":
+        data = flask.request.get_json()
+        models.update_profile(data["id"], data)
+        return util.get_rest_reply(flask.jsonify("Profile updated"))
+
+
+@web_interface.server_instance.route('/accounts')
+@login.login_required_when_activated
+def accounts():
+    display_config = interfaces_util.get_edited_config()
+
+    # service lists
+    service_list = models.get_services_list()
+    notifiers_list = models.get_notifiers_list()
+
+    return flask.render_template('accounts.html',
+                                 config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+                                 config_notifications=display_config[
+                                     services_constants.CONFIG_CATEGORY_NOTIFICATION],
+                                 config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
+
+                                 services_list=service_list,
+                                 notifiers_list=notifiers_list,
+                                 )
+
+
+@web_interface.server_instance.route('/config', methods=['POST'])
 @login.login_required_when_activated
 def config():
-    if flask.request.method == 'POST':
-        request_data = flask.request.get_json()
-        success = True
-        response = ""
+    request_data = flask.request.get_json()
+    success = True
+    response = ""
 
-        if request_data:
+    if request_data:
 
-            # update trading config if required
-            if constants.TRADING_CONFIG_KEY in request_data and request_data[constants.TRADING_CONFIG_KEY]:
-                success = success and models.update_tentacles_activation_config(
-                    request_data[constants.TRADING_CONFIG_KEY])
-            else:
-                request_data[constants.TRADING_CONFIG_KEY] = ""
-
-            # update tentacles config if required
-            if constants.TENTACLES_CONFIG_KEY in request_data and request_data[constants.TENTACLES_CONFIG_KEY]:
-                success = success and models.update_tentacles_activation_config(
-                    request_data[constants.TENTACLES_CONFIG_KEY])
-            else:
-                request_data[constants.TENTACLES_CONFIG_KEY] = ""
-
-            # update evaluator config if required
-            if constants.EVALUATOR_CONFIG_KEY in request_data and request_data[constants.EVALUATOR_CONFIG_KEY]:
-                deactivate_others = False
-                if constants.DEACTIVATE_OTHERS in request_data:
-                    deactivate_others = request_data[constants.DEACTIVATE_OTHERS]
-                success = success and models.update_tentacles_activation_config(
-                    request_data[constants.EVALUATOR_CONFIG_KEY],
-                    deactivate_others)
-            else:
-                request_data[constants.EVALUATOR_CONFIG_KEY] = ""
-
-            # remove elements from global config if any to remove
-            removed_elements_key = "removed_elements"
-            if removed_elements_key in request_data and request_data[removed_elements_key]:
-                success = success and models.update_global_config(request_data[removed_elements_key], delete=True)
-            else:
-                request_data[removed_elements_key] = ""
-
-            # update global config if required
-            if constants.GLOBAL_CONFIG_KEY in request_data and request_data[constants.GLOBAL_CONFIG_KEY]:
-                success = models.update_global_config(request_data[constants.GLOBAL_CONFIG_KEY])
-            else:
-                request_data[constants.GLOBAL_CONFIG_KEY] = ""
-
-            response = {
-                "evaluator_updated_config": request_data[constants.EVALUATOR_CONFIG_KEY],
-                "trading_updated_config": request_data[constants.TRADING_CONFIG_KEY],
-                "tentacle_updated_config": request_data[constants.TENTACLES_CONFIG_KEY],
-                "global_updated_config": request_data[constants.GLOBAL_CONFIG_KEY],
-                removed_elements_key: request_data[removed_elements_key]
-            }
-
-        if success:
-            if request_data.get("restart_after_save", False):
-                models.schedule_delayed_command(models.restart_bot)
-            return util.get_rest_reply(flask.jsonify(response))
+        # update trading config if required
+        if constants.TRADING_CONFIG_KEY in request_data and request_data[constants.TRADING_CONFIG_KEY]:
+            success = success and models.update_tentacles_activation_config(
+                request_data[constants.TRADING_CONFIG_KEY])
         else:
-            return util.get_rest_reply('{"update": "ko"}', 500)
+            request_data[constants.TRADING_CONFIG_KEY] = ""
+
+        # update tentacles config if required
+        if constants.TENTACLES_CONFIG_KEY in request_data and request_data[constants.TENTACLES_CONFIG_KEY]:
+            success = success and models.update_tentacles_activation_config(
+                request_data[constants.TENTACLES_CONFIG_KEY])
+        else:
+            request_data[constants.TENTACLES_CONFIG_KEY] = ""
+
+        # update evaluator config if required
+        if constants.EVALUATOR_CONFIG_KEY in request_data and request_data[constants.EVALUATOR_CONFIG_KEY]:
+            deactivate_others = False
+            if constants.DEACTIVATE_OTHERS in request_data:
+                deactivate_others = request_data[constants.DEACTIVATE_OTHERS]
+            success = success and models.update_tentacles_activation_config(
+                request_data[constants.EVALUATOR_CONFIG_KEY],
+                deactivate_others)
+        else:
+            request_data[constants.EVALUATOR_CONFIG_KEY] = ""
+
+        # remove elements from global config if any to remove
+        removed_elements_key = "removed_elements"
+        if removed_elements_key in request_data and request_data[removed_elements_key]:
+            success = success and models.update_global_config(request_data[removed_elements_key], delete=True)
+        else:
+            request_data[removed_elements_key] = ""
+
+        # update global config if required
+        if constants.GLOBAL_CONFIG_KEY in request_data and request_data[constants.GLOBAL_CONFIG_KEY]:
+            success = models.update_global_config(request_data[constants.GLOBAL_CONFIG_KEY])
+        else:
+            request_data[constants.GLOBAL_CONFIG_KEY] = ""
+
+        response = {
+            "evaluator_updated_config": request_data[constants.EVALUATOR_CONFIG_KEY],
+            "trading_updated_config": request_data[constants.TRADING_CONFIG_KEY],
+            "tentacle_updated_config": request_data[constants.TENTACLES_CONFIG_KEY],
+            "global_updated_config": request_data[constants.GLOBAL_CONFIG_KEY],
+            removed_elements_key: request_data[removed_elements_key]
+        }
+
+    if success:
+        if request_data.get("restart_after_save", False):
+            models.schedule_delayed_command(models.restart_bot)
+        return util.get_rest_reply(flask.jsonify(response))
     else:
-        media_url = flask.url_for("tentacle_media", _external=True)
-        display_config = interfaces_util.get_edited_config()
-
-        # service lists
-        service_list = models.get_services_list()
-        notifiers_list = models.get_notifiers_list()
-
-        missing_tentacles = set()
-
-        return flask.render_template('config.html',
-                                     config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
-                                     config_trading=display_config[commons_constants.CONFIG_TRADING],
-                                     config_trader=display_config[commons_constants.CONFIG_TRADER],
-                                     config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
-                                     config_notifications=display_config[
-                                         services_constants.CONFIG_CATEGORY_NOTIFICATION],
-                                     config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
-                                     config_symbols=models.format_config_symbols(display_config),
-                                     config_reference_market=display_config[commons_constants.CONFIG_TRADING][
-                                         commons_constants.CONFIG_TRADER_REFERENCE_MARKET],
-
-                                     real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
-
-                                     ccxt_tested_exchanges=models.get_tested_exchange_list(),
-                                     ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
-                                     ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
-                                     services_list=service_list,
-                                     notifiers_list=notifiers_list,
-                                     symbol_list=sorted(models.get_symbol_list([exchange
-                                                                                for exchange in display_config[
-                                                                                    commons_constants.CONFIG_EXCHANGES]])),
-                                     full_symbol_list=models.get_all_symbols_dict(),
-                                     strategy_config=models.get_strategy_config(media_url, missing_tentacles),
-                                     evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
-                                     trading_startup_config=models.get_trading_tentacles_startup_activation(),
-                                     missing_tentacles=missing_tentacles,
-
-                                     in_backtesting=backtesting_api.is_backtesting_enabled(display_config),
-
-                                     config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
-                                                                                                             missing_tentacles)
-                                     )
+        return util.get_rest_reply('{"update": "ko"}', 500)
 
 
 @web_interface.server_instance.route('/config_tentacle', methods=['GET', 'POST'])
