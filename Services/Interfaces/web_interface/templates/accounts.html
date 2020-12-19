@@ -78,7 +78,8 @@
                         {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                                                                        exchange,
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
-                                                                       sandboxed=config_exchanges[exchange].get('sandboxed', False)) }}
+                                                                       sandboxed=config_exchanges[exchange].get('sandboxed', False),
+                                                                       full_config=True)}}
                     {% endfor %}
                 </div>
             </div>
@@ -140,7 +141,8 @@
                                                         exchange=config_default_value,
                                                         add_class=added_class,
                                                         keys_value="NO KEY",
-                                                        config_values="no value") }}
+                                                        config_values="no value",
+                                                        full_config=True) }}
     </div>
 
     <!-- Services -->
