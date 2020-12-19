@@ -4,9 +4,11 @@
         <div class="modal-content modal-text mt-4">
             <div class="modal-header primary-text">
                 <h2 class="modal-title" id="#profileModalLabel">
-                    Current profile: <span class="text-bold">{{current_profile.name}}</span>
-                    <button data-url="{{url_for('profiles_management', action='export')}}" class="btn btn-primary rounded-circle waves-effect px-3 mx-4"
-                        role="button" data-toggle="tooltip" title="Share this profile">
+                    Current profile: <span data-role="profile-name" class="text-bold">{{current_profile.name}}</span>
+                    <button id="export-profile"
+                            data-url="{{url_for('profiles_management', action='export')}}"
+                            class="btn btn-primary rounded-circle waves-effect px-3 mx-4"
+                            role="button" data-toggle="tooltip" title="Share this profile">
                         <i class="fas fa-share-square" aria-hidden="true"></i>
                     </button>
                 </h2>
@@ -48,12 +50,20 @@
                                 data-url="{{url_for('profiles_management', action='update')}}"
                                 class="btn btn-success rounded-circle waves-effect px-3"
                                 role="button" data-toggle="tooltip" title="Save" disabled>
-                            <i class="fas fa-share-square" aria-hidden="true"></i>
+                            <i class="fas fa-save" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
                 <div class="mt-4">
-                    <h4>Use another profile</h4>
+                    <h4>
+                        Use another profile
+                        <button id="create-new-profile"
+                                data-url="{{url_for('profiles_management', action='create')}}"
+                                class="btn btn-primary rounded-circle waves-effect px-3"
+                                role="button" data-toggle="tooltip" title="New profile">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                        </button>
+                    </h4>
                     <div class="row mt-4 mb-2 text-center">
                         <div class="col-7">
                             <div>
@@ -83,8 +93,12 @@
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
-                <button data-url="{{url_for('profiles_management', action='import')}}" class="btn btn-outline-primary waves-effect"
-                        role="button"><i class="fas fa-download"></i> Import profile
+                <form class="d-none" id="import-form" action="{{ url_for('profiles_management', action='import') }}" method="POST"
+                 enctype = "multipart/form-data">
+                    <input id="profile-input" type="file" name="file" accept=".zip"/>
+                </form>
+                <button class="btn btn-outline-primary waves-effect" id="import-profile-button">
+                    <i class="fas fa-download"></i> Import profile
                 </button>
                 <button class="btn btn-primary waves-effect" data-dismiss="modal">Close</button>
             </div>

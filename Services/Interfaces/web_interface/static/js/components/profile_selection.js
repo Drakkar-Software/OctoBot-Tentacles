@@ -12,7 +12,6 @@ function onProfileSelection(profileSelector, selectedDesc, selectedName, savePro
     }
 }
 
-
 function handleProfileSelector(){
     const profileSelector = $("#profile-select");
     const selectedDesc = $("#selected-profile-description");
@@ -35,7 +34,6 @@ function handleProfileSelector(){
     }
 }
 
-
 function handleProfileEditor(){
     const saveCurrentProfile = $("#save-current-profile");
     const currentProfileName = $('#current-profile-name');
@@ -48,13 +46,13 @@ function handleProfileEditor(){
     });
     saveCurrentProfile.click(function (){
         saveCurrentProfile.attr("disabled", true);
+        saveCurrentProfile.tooltip("hide");
         const updateURL = saveCurrentProfile.attr("data-url");
         const data = {
             id: $("#current-profile").attr("data-id"),
             name: currentProfileName.editable("getValue", true),
             description: currentProfileDescription.editable("getValue", true)
         }
-        log(data)
         send_and_interpret_bot_update(data, updateURL, null,
             saveCurrentProfileSuccessCallback, saveCurrentProfileFailureCallback)
     });
@@ -62,15 +60,63 @@ function handleProfileEditor(){
 
 function saveCurrentProfileSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Profile updated");
+    $("[data-role=profile-name]").each(function (){
+        $(this).html(updated_data["name"]);
+    })
 }
 
 
 function saveCurrentProfileFailureCallback(updated_data, update_url, dom_root_element, msg, status) {
-    $('#current-profile-description').attr("disabled", false);
+    $("#save-current-profile").attr("disabled", false);
     create_alert("error", msg.responseText, "");
+}
+
+function handleProfileCreator(){
+    const createButton = $("#create-new-profile");
+    if(createButton.length){
+        createButton.click(function (){
+            send_and_interpret_bot_update({}, createButton.attr("data-url"), null,
+                createProfileSuccessCallback, createProfileFailureCallback);
+        });
+    }
+}
+
+function createProfileSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    location.reload();
+}
+
+
+function createProfileFailureCallback(updated_data, update_url, dom_root_element, msg, status) {
+    create_alert("error", msg.responseText, "");
+}
+
+function handleProfileImporter(){
+    const importButton = $("#import-profile-button");
+    const profileInput = $("#profile-input");
+    const importForm = $("#import-form");
+    if(importButton.length && profileInput.length && importForm.length){
+        importButton.click(function (){
+            profileInput.click();
+        })
+        profileInput.on("change", function (){
+            importForm.submit();
+        })
+    }
+}
+
+function handleProfileExporter(){
+    const exportButton = $("#export-profile");
+    if(exportButton.length){
+        exportButton.click(function (){
+            window.window.location  = exportButton.attr("data-url");
+        })
+    }
 }
 
 $(document).ready(function() {
     handleProfileEditor();
+    handleProfileCreator();
     handleProfileSelector();
+    handleProfileImporter();
+    handleProfileExporter();
 });

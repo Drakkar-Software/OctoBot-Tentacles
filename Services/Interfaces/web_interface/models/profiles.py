@@ -15,16 +15,34 @@
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
+import octobot_tentacles_manager.api as tentacles_manager_api
 
 
 def get_current_profile():
     return interfaces_util.get_edited_config(dict_only=False).profile
 
 
+def duplicate_and_select_current_profile():
+    config = interfaces_util.get_edited_config(dict_only=False)
+    new_profile = config.profile.duplicate(name="New profile", description="New profile description.")
+    config.load_profiles()
+    _select_and_save(config, new_profile.profile_id)
+
+
 def select_profile(profile_id):
     config = interfaces_util.get_edited_config(dict_only=False)
+    _select_and_save(config, profile_id)
+
+
+def _select_and_save(config, profile_id):
     config.select_profile(profile_id)
+    _update_edited_tentacles_config(config)
     config.save()
+
+
+def _update_edited_tentacles_config(config):
+    updated_tentacles_config = tentacles_manager_api.get_tentacles_setup_config(config.get_tentacles_config_path())
+    interfaces_util.set_edited_tentacles_config(updated_tentacles_config)
 
 
 def get_profiles():
@@ -40,12 +58,14 @@ def update_profile(profile_id, json_profile):
     config.save()
 
 
-def export_profile(profile_id, export_path):
-    profiles.export_profile(
+def export_current_profile(export_path) -> str:
+    profile_id = interfaces_util.get_edited_config(dict_only=False).profile.profile_id
+    return profiles.export_profile(
         interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id],
         export_path
     )
 
 
-def import_profile(profile_path):
-    profiles.import_profile(profile_path)
+def import_profile(profile_path, name):
+    profiles.import_profile(profile_path, name=name)
+    interfaces_util.get_edited_config(dict_only=False).load_profiles()

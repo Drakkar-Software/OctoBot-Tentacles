@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import flask
+import werkzeug
+import os
 
 import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
@@ -32,13 +34,17 @@ def profile():
     selected_profile = flask.request.args.get("select", None)
     if selected_profile is not None:
         models.select_profile(selected_profile)
+        current_profile = models.get_current_profile()
+        flask.flash(f"Switched to {current_profile.name} profile.", "success")
+    else:
+        current_profile = models.get_current_profile()
     media_url = flask.url_for("tentacle_media", _external=True)
     display_config = interfaces_util.get_edited_config()
 
     missing_tentacles = set()
 
     return flask.render_template('profile.html',
-                                 current_profile=models.get_current_profile(),
+                                 current_profile=current_profile,
                                  profiles=models.get_profiles(),
 
                                  config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
@@ -70,13 +76,36 @@ def profile():
                                  )
 
 
-@web_interface.server_instance.route('/profiles_management/<action>', methods=["POST"])
+@web_interface.server_instance.route('/profiles_management/<action>', methods=["POST", "GET"])
 @login.login_required_when_activated
 def profiles_management(action):
     if action == "update":
         data = flask.request.get_json()
         models.update_profile(data["id"], data)
-        return util.get_rest_reply(flask.jsonify("Profile updated"))
+        return util.get_rest_reply(flask.jsonify(data))
+    if action == "create":
+        models.duplicate_and_select_current_profile()
+        flask.flash(f"New profile successfully created and selected.", "success")
+        return util.get_rest_reply(flask.jsonify("Profile created"))
+    if action == "import":
+        file = flask.request.files['file']
+        name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
+        models.import_profile(file, name)
+        flask.flash(f"{name} profile successfully imported.", "success")
+        return flask.redirect(flask.url_for('profile'))
+    if action == "export":
+        temp_file = os.path.abspath("profile")
+        file_path = models.export_current_profile(temp_file)
+        try:
+            return flask.send_file(file_path, as_attachment=True, attachment_filename="profile.zip", cache_timeout=0)
+        finally:
+            # cleanup temp_file
+            def remove_file(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+            models.schedule_delayed_command(remove_file, file_path, delay=2)
 
 
 @web_interface.server_instance.route('/accounts')
