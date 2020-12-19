@@ -1,4 +1,4 @@
-{% macro profile_modal(current_profile, profiles) %}
+{% macro profile_modal(current_profile, profiles, OCTOBOT_WIKI_URL) %}
 <div class="modal" id="profileModal" tabindex="-1" role="dialog" aria-labelledby="profileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content modal-text mt-4">
@@ -12,9 +12,16 @@
                         <i class="fas fa-share-square" aria-hidden="true"></i>
                     </button>
                 </h2>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <div>
+                    <h2>
+                        <a class="text-danger" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/profiles">
+                            &nbsp <i class="fa fa-question"></i>
+                        </a>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </h2>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="d-flex pb-1">
