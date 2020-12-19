@@ -1,5 +1,6 @@
  {% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True, sandboxed=False, add_class='', config_values=None) -%}
+{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True,
+                              sandboxed=False, add_class='', config_values=None, full_config=True) -%}
     <!-- Card -->
     <div class="card mb-4 {{add_class}} config-card">
 
@@ -22,7 +23,8 @@
         <!--Card content-->
         <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
             <div class="d-flex">
-                <div class="flex-grow-1">
+                {% if full_config %}
+                    <div class="flex-grow-1">
                     <p class="card-text api">
                         API Key : <a href="#"
                                      id="exchange_api-key"
@@ -71,6 +73,7 @@
                         {{keys_value}}</a><br>
                     </p>
                 </div>
+                {% endif %}
                 <div class="">
                     <div
                             class="custom-control custom-switch"
@@ -88,6 +91,7 @@
                                {{ 'checked' if enabled else '' }}>
                         <label class="custom-control-label" for="exchange_{{exchange}}_enabled">Enabled</label>
                     </div>
+                    {% if full_config %}
                     <div
                             class="custom-control custom-switch"
                             data-toggle="tooltip"
@@ -104,9 +108,12 @@
                                {{ 'checked' if sandboxed else '' }}>
                         <label class="custom-control-label" for="exchange_{{exchange}}_sandboxed">Trade in exchange sandbox</label>
                     </div>
+                    {% endif %}
                 </div>
             </div>
+            {% if full_config %}
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+            {% endif %}
         </div>
     </div>
 {%- endmacro %}
