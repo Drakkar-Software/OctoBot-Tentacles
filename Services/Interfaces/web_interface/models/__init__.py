@@ -99,10 +99,11 @@ from tentacles.Services.Interfaces.web_interface.models.medias import (
 )
 from tentacles.Services.Interfaces.web_interface.models.profiles import (
     get_current_profile,
+    duplicate_and_select_current_profile,
     select_profile,
     get_profiles,
     update_profile,
-    export_profile,
+    export_current_profile,
     import_profile,
 )
 from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import (
@@ -188,10 +189,11 @@ __all__ = [
     "remove_watched_symbol",
     "is_valid_tentacle_image_path",
     "get_current_profile",
+    "duplicate_and_select_current_profile",
     "select_profile",
     "get_profiles",
     "update_profile",
-    "export_profile",
+    "export_current_profile",
     "import_profile",
     "get_strategies_list",
     "get_time_frames_list",

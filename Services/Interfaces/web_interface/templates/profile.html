@@ -7,6 +7,7 @@
 {% import 'components/config/tentacle_card.html' as m_config_tentacle_card %}
 {% import 'components/config/profile_modal.html' as m_config_profile_modal %}
 {% import 'macros/tentacles.html' as m_tentacles %}
+{% import 'macros/flash_messages.html' as m_flash_messages %}
 
 {% set config_default_value = "Bitcoin" %}
 {% set config_default_symbol = "btc" %}
@@ -28,7 +29,7 @@
                 <div class="col-8 d-none d-md-block">
                     <div class="px-1 px-md-4">
                         <h4>Profile</h4>
-                        <h2>{{current_profile.name}}</h2>
+                        <h2 data-role="profile-name">{{current_profile.name}}</h2>
                     </div>
                 </div>
                 <div class="col-4 text-right pr-4">
@@ -78,6 +79,7 @@
         </div>
     </nav>
     <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
+        {{ m_flash_messages.flash_messages() }}
         <div class="tab-content" id="super-container">
             <div class="tab-pane fade config-root show active" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
