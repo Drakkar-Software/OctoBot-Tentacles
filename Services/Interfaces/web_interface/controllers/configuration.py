@@ -32,7 +32,7 @@ import octobot_services.interfaces.util as interfaces_util
 @login.login_required_when_activated
 def profile():
     selected_profile = flask.request.args.get("select", None)
-    if selected_profile is not None:
+    if selected_profile is not None and selected_profile != models.get_current_profile().profile_id:
         models.select_profile(selected_profile)
         current_profile = models.get_current_profile()
         flask.flash(f"Switched to {current_profile.name} profile.", "success")
@@ -57,9 +57,6 @@ def profile():
 
                                  real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
-                                 ccxt_tested_exchanges=models.get_tested_exchange_list(),
-                                 ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
-                                 ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
                                  symbol_list=sorted(models.get_symbol_list([exchange
                                                                             for exchange in display_config[
                                                                                 commons_constants.CONFIG_EXCHANGES]])),
@@ -118,6 +115,10 @@ def accounts():
     notifiers_list = models.get_notifiers_list()
 
     return flask.render_template('accounts.html',
+                                 ccxt_tested_exchanges=models.get_tested_exchange_list(),
+                                 ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
+                                 ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
+
                                  config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
                                  config_notifications=display_config[
                                      services_constants.CONFIG_CATEGORY_NOTIFICATION],

@@ -132,7 +132,6 @@ body:before {
 }
 
 .sidebar .nav .nav-link.active {
-    font-weight: bolder;
     background-color: #0D47A1;
 }
 
