@@ -132,6 +132,8 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
     get_initializing_currencies_prices_set,
     get_evaluation,
     get_exchanges_load,
+    get_exchange_holdings_per_symbol,
+    get_symbols_values,
 )
 
 
@@ -218,7 +220,9 @@ __all__ = [
     "get_exchanges_load",
     "REQUIREMENTS_KEY",
     "SYMBOL_KEY",
-    "ID_KEY"
+    "ID_KEY",
+    "get_exchange_holdings_per_symbol",
+    "get_symbols_values",
 ]
 
 

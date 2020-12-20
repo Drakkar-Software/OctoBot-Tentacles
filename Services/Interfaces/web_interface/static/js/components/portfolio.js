@@ -16,10 +16,17 @@
  * License along with this library.
  */
 
-function createPortfolioChart(element_id, data, title){
+function createPortfolioChart(element_id, title){
+    const data = {};
+    $(".symbol-holding").each(function (){
+        const total_value = $(this).find(".total-value").text();
+        if($.isNumeric(total_value)){
+            data[$(this).find(".symbol").text()] = Number(total_value);
+        }
+    });
     const element = $("#"+element_id);
     if(element.length > 0 ){
-        create_pie_chart(element[0], data, title);
+        create_doughnut_chart(element[0], data, title);
     }
 }
 
@@ -34,13 +41,13 @@ function handle_portfolio_button(){
 }
 
 $(document).ready(function() {
-    const portfolioElem=$("#portfoliosCard");
-    const url = portfolioElem.attr(update_url_attr);
+    const portfolioElem = $("#portfoliosCard");
     const referenceMarket = portfolioElem.attr("reference_market");
     const chartTitle = "Traded assets value in "+referenceMarket;
-    $.get(url,function(data) {
-        createPortfolioChart("real_portfolio_doughnutChart", data["real_portfolio_holdings"], chartTitle);
-        createPortfolioChart("simulated_portfolio_doughnutChart", data["simulated_portfolio_holdings"], chartTitle);
+    ordersDataTable = $('#holdings-table').DataTable({
+        "paging": false,
+        "order": [[ 4, "desc" ]]
     });
+    createPortfolioChart("portfolio_doughnutChart", chartTitle);
     handle_portfolio_button();
 });
