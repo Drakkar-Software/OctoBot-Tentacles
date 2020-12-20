@@ -29,7 +29,8 @@ def portfolio():
     has_real_trader, has_simulated_trader = interfaces_util.has_real_and_or_simulated_traders()
 
     displayed_portfolio = models.get_exchange_holdings_per_symbol()
-    symbols_values = models.get_symbols_values(displayed_portfolio.keys(), has_real_trader, has_simulated_trader)
+    symbols_values = models.get_symbols_values(displayed_portfolio.keys(), has_real_trader, has_simulated_trader) \
+        if displayed_portfolio else {}
 
     _, _, portfolio_real_current_value, portfolio_simulated_current_value = \
         interfaces_util.get_portfolio_current_value()

@@ -90,7 +90,7 @@ def _add_exchange_portfolio(portfolio, exchange, holdings_per_symbol):
 def get_exchange_holdings_per_symbol():
     holdings_per_symbol = {}
     for exchange_manager in interfaces_util.get_exchange_managers():
-        if trading_api.is_trader_enabled(exchange_manager):
+        if trading_api.is_trader_existing_and_enabled(exchange_manager):
             portfolio = trading_api.get_portfolio(exchange_manager)
             _add_exchange_portfolio(portfolio, trading_api.get_exchange_name(exchange_manager), holdings_per_symbol)
     return holdings_per_symbol
