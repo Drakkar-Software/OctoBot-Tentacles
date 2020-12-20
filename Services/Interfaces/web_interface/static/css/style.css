@@ -250,30 +250,35 @@ body:before {
     transition: all 0.5s ease;
 }
 
-.card .card-long,
-.card .card-long .card-body,
-.card .card-long .card-text,
-.card .card-deck .card-long,
-.card .card-deck .card-long .card-body,
-.card .card-deck .card-long .card-text {
-    background-color: seagreen !important;
+
+.card .card-deck .card-status-color,
+.card .card-deck .card-status-color .card-body,
+.card .card-deck .card-status-color .card-body a:hover{
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
     -o-transition: all 0.5s ease;
     transition: all 0.5s ease;
+    color: white !important;
 }
 
-.card .card-short,
-.card .card-short .card-body,
-.card .card-short .card-text,
+.card .card-deck .card-very-long,
+.card .card-deck .card-very-long .card-body{
+    background-color: darkgreen !important;
+}
+
+.card .card-deck .card-long,
+.card .card-deck .card-long .card-body{
+    background-color: seagreen !important;
+}
+
 .card .card-deck .card-short,
-.card .card-deck .card-short .card-body,
-.card .card-deck .card-short .card-text {
+.card .card-deck .card-short .card-body{
+    background-color: #C62828 !important;
+}
+
+.card .card-deck .card-very-short,
+.card .card-deck .card-very-short .card-body {
     background-color: darkred !important;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
 }
 
 .card a:link {
