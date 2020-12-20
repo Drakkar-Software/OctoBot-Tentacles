@@ -44,6 +44,7 @@
         Consider using websocket connections to handle as many pairs and time frames as wanted.
     </div>
     {% endif %}
+    {% if pairs_with_status %}
     <div class="card">
         <div class="card-header"><h1>Market status</h1></div>
         <div class="card-body">
@@ -84,6 +85,7 @@
         </div>
     </div>
     <br>
+    {% endif %}
     <div class="card">
         <div class="card-header">
             <h1>Open orders
