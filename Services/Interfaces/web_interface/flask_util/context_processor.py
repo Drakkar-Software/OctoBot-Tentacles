@@ -28,6 +28,10 @@ def context_processor_register():
     def get_tentacle_config_schema_content(tentacle_class):
         return models.get_tentacle_config_schema(tentacle_class)
 
+    def get_exchange_holdings(holdings, holding_type):
+        return ', '.join(f'{exchange.capitalize()}: {holding[holding_type]}'
+                         for exchange, holding in holdings['exchanges'].items())
+
     def filter_currency_pairs(currency, symbol_list, full_symbol_list):
         currency_key = currency
         symbol = full_symbol_list.get(currency_key, None)
@@ -45,5 +49,6 @@ def context_processor_register():
         OCTOBOT_WIKI_URL=constants.OCTOBOT_WIKI_URL,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
-        filter_currency_pairs=filter_currency_pairs
+        filter_currency_pairs=filter_currency_pairs,
+        get_exchange_holdings=get_exchange_holdings,
     )

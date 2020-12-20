@@ -75,7 +75,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.tentacles import (
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
-    portfolio_holdings,
     symbol_market_status,
     trades,
     utility_processor,
@@ -115,7 +114,6 @@ __all__ = [
     "tentacle_packages",
     "terms",
     "portfolio",
-    "portfolio_holdings",
     "symbol_market_status",
     "trading",
     "trades",

@@ -36,7 +36,7 @@ function create_circular_progress_doughnut(element, label1="% Done", label2="% R
     });
 }
 
-function create_pie_chart(element, data, title, fontColor='white'){
+function create_doughnut_chart(element, data, title, fontColor='white'){
     const labels = [];
     const values = [];
     const backgroundColors = [];
@@ -57,7 +57,7 @@ function create_pie_chart(element, data, title, fontColor='white'){
         }
     });
     return new Chart(element.getContext('2d'), {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: labels,
             datasets: [
