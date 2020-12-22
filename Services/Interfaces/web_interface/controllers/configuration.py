@@ -78,12 +78,22 @@ def profile():
 def profiles_management(action):
     if action == "update":
         data = flask.request.get_json()
-        models.update_profile(data["id"], data)
+        models.update_profile(flask.request.get_json()["id"], data)
         return util.get_rest_reply(flask.jsonify(data))
-    if action == "create":
-        models.duplicate_and_select_current_profile()
+    if action == "duplicate":
+        profile_id = flask.request.args.get("profile_id")
+        models.duplicate_and_select_profile(profile_id)
         flask.flash(f"New profile successfully created and selected.", "success")
         return util.get_rest_reply(flask.jsonify("Profile created"))
+    if action == "remove":
+        data = flask.request.get_json()
+        to_remove_id = data["id"]
+        removed_profile, err = models.remove_profile(to_remove_id)
+        if err is not None:
+            return util.get_rest_reply(flask.jsonify(str(err)), code=400)
+        else:
+            flask.flash(f"{removed_profile.name} profile removed.", "success")
+            return util.get_rest_reply(flask.jsonify("Profile created"))
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
@@ -91,8 +101,9 @@ def profiles_management(action):
         flask.flash(f"{name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
     if action == "export":
+        profile_id = flask.request.args.get("profile_id")
         temp_file = os.path.abspath("profile")
-        file_path = models.export_current_profile(temp_file)
+        file_path = models.export_profile(profile_id, temp_file)
         try:
             return flask.send_file(file_path, as_attachment=True, attachment_filename="profile.zip", cache_timeout=0)
         finally:

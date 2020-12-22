@@ -5,7 +5,7 @@
 {% import 'components/config/trader_card.html' as m_config_trader_card %}
 {% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
 {% import 'components/config/tentacle_card.html' as m_config_tentacle_card %}
-{% import 'components/config/profile_modal.html' as m_config_profile_modal %}
+{% import 'components/config/profile_tab.html' as m_config_profile_tab %}
 {% import 'macros/tentacles.html' as m_tentacles %}
 {% import 'macros/flash_messages.html' as m_flash_messages %}
 
@@ -21,25 +21,41 @@
 
 {% block body %}
 
-{{m_config_profile_modal.profile_modal(current_profile, profiles, OCTOBOT_WIKI_URL)}}
 <div class="row mt-md-4 mt-2">
     <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
         <div class="sidebar-sticky mt-0 pt-0">
-            <div class="row">
-                <div class="col-8 d-none d-md-block">
-                    <div class="px-1 px-md-4">
-                        <h4>Profile</h4>
-                        <h2 data-role="profile-name">{{current_profile.name}}</h2>
-                    </div>
-                </div>
-                <div class="col-4 text-right pr-4">
-                    <a class="hover-color-anim waves-effect" data-toggle="modal" data-target="#profileModal">
-                        <i class="pl-2 pl-sm-3 pl-md-0 fas fa-cog fa-1_5x"></i>
-                    </a>
-                </div>
+            <div class="px-1 px-md-4">
+                <a data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
+                    <h5>
+                        <span class="d-none d-md-block">Current profile</span>
+                        <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
+                    </h5>
+                </a>
             </div>
             <div class="nav flex-column bordered pt-0 mt-0 mt-md-4" id="v-tab" role="tablist"
                  aria-orientation="vertical">
+                <span>
+                    <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex justify-content-between dropdown-toggle collapsed"
+                       data-toggle="collapse"
+                       href="#profilesSubmenu" role="tab" aria-expanded="false">
+                        <span class="d-flex">
+                            <i class="fas fa-user"></i><span class="d-none d-md-block pl-3">Profiles</span>
+                        </span>
+                    </a>
+                    <ul class="collapse nav" id="profilesSubmenu">
+                        {% for profile_id, profile in profiles.items() %}
+                        <li class="w-100">
+                            <a class="nav-link pl-2 pl-sm-4 waves-effect d-flex" id="profile-{{profile_id}}-tab"
+                               data-toggle="pill"
+                               href="#panelProfile{{profile_id}}" role="tab" aria-controls="panelProfile{{profile_id}}"
+                               aria-selected="false">
+                                <i class="fas fa-{{'check' if profile_id == current_profile.profile_id else 'id-card'}}"></i>
+                                <span class="d-none d-md-block pl-3" data-role="profile-name" data-profile-id="{{profile_id}}">{{profile.name}}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </span>
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" id="panelStrategies-tab" data-toggle="pill"
                    href="#panelStrategies" role="tab" aria-controls="panelStrategies" aria-selected="true">
                     <i class="fab fa-octopus-deploy"></i><span class="d-none d-md-block pl-3">Strategies</span>
@@ -63,16 +79,16 @@
                 </a>
                 {% endif %}
             </div>
-            <a class="nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#"
-               role="tab" aria-selected="false" update-url="{{ url_for('config') }}">
+            <button class="nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#"
+               aria-selected="false" update-url="{{ url_for('config') }}">
                 <i class="fas fa-save"></i><span class="d-none d-md-block pl-2">Save and restart later</span>
-            </a>
-            <a class="nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#"
-               role="tab" aria-selected="false">
+            </button>
+            <button class="nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#"
+               aria-selected="false">
                 <i class="fas fa-redo-alt"></i><span class="d-none d-md-block pl-2">Reset all</span>
-            </a>
+            </button>
             <button class="nav-link pl-2 pl-sm-3 btn red waves-effect d-flex mx-0 mx-md-auto mt-3 mt-mb-5 mb-5"
-                    id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false"
+                    id="save-config-and-restart" href="#" type="button" aria-selected="false"
                     update-url="{{ url_for('config') }}">
                 <i class="fas fa-power-off"></i><span class="d-none d-md-block pl-2">Save and restart</span>
             </button>
@@ -81,6 +97,9 @@
     <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
         {{ m_flash_messages.flash_messages() }}
         <div class="tab-content" id="super-container">
+            {% for profile_id, profile in profiles.items() %}
+            {{m_config_profile_tab.profile_tab(current_profile, profile, OCTOBOT_WIKI_URL)}}
+            {% endfor %}
             <div class="tab-pane fade config-root show active" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
                 {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
@@ -267,5 +286,5 @@
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-<script src="{{ url_for('static', filename='js/components/profile_selection.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/profile_management.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

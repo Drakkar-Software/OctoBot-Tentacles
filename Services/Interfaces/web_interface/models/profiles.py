@@ -15,6 +15,7 @@
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
+import octobot_commons.errors as errors
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 
@@ -22,9 +23,11 @@ def get_current_profile():
     return interfaces_util.get_edited_config(dict_only=False).profile
 
 
-def duplicate_and_select_current_profile():
+def duplicate_and_select_profile(profile_id):
     config = interfaces_util.get_edited_config(dict_only=False)
-    new_profile = config.profile.duplicate(name="New profile", description="New profile description.")
+    to_duplicate = config.profile_by_id[profile_id]
+    new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name} (copy)",
+                                                             description=to_duplicate.description)
     config.load_profiles()
     _select_and_save(config, new_profile.profile_id)
 
@@ -55,11 +58,22 @@ def update_profile(profile_id, json_profile):
     profile.name = json_profile.get("name", profile.name)
     profile.description = json_profile.get("description", profile.description)
     profile.avatar = json_profile.get("avatar", profile.avatar)
-    config.save()
+    profile.validate_and_save_config()
 
 
-def export_current_profile(export_path) -> str:
-    profile_id = interfaces_util.get_edited_config(dict_only=False).profile.profile_id
+def remove_profile(profile_id):
+    profile = None
+    if get_current_profile().profile_id == profile_id:
+        return profile, "Can't remove the activated profile"
+    try:
+        profile = interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id]
+        interfaces_util.get_edited_config(dict_only=False).remove_profile(profile_id)
+    except errors.ProfileRemovalError as err:
+        return profile, err
+    return profile, None
+
+
+def export_profile(profile_id, export_path) -> str:
     return profiles.export_profile(
         interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id],
         export_path
