@@ -16,8 +16,27 @@
  * License along with this library.
  */
 
-function get_active_tab_config(){
-    return $(document).find("." + config_root_class + ".active").find("." + config_container_class);
+
+const sidebarNavLinks = $(".sidebar").find(".nav-link[role='tab']:not(.dropdown-toggle)");
+
+
+function activate_tab(tabElement){
+    if(!tabElement.hasClass("active")){
+        // manually handle sidebar navigation to work with nested elements
+        sidebarNavLinks.each(function (){
+            $(this).removeClass("active");
+        })
+        tabElement.tab('show');
+    }
+}
+
+function handle_nested_sidenav(){
+    sidebarNavLinks.each(function (){
+        $(this).on("click",function (e){
+            e.preventDefault();
+            activate_tab($(this));
+        });
+    });
 }
 
 function get_tabs_config(){
@@ -593,6 +612,8 @@ $(document).ready(function() {
 
     setup_editable();
     handle_editable();
+
+    handle_nested_sidenav();
 
     handle_reset_buttons();
     handle_save_buttons();

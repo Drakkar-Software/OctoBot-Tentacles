@@ -1,0 +1,110 @@
+{% macro profile_tab(current_profile, profile, OCTOBOT_WIKI_URL) %}
+<div class="tab-pane fade" id="panelProfile{{profile.profile_id}}" role="tabpanel"
+     aria-labelledby="panelExchanges-tab">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" id="#profileModalLabel">
+                <span class="d-none d-md-inline">Profile: </span><span data-role="profile-name" data-profile-id="{{profile.profile_id}}"
+                               class="text-bold">{{profile.name}}</span>
+                <button class="btn btn-sm rounded-circle btn-primary waves-effect activate-profile-button"
+                        data-url="{{url_for('profile', select=profile.profile_id)}}"
+                        {{ 'disabled' if current_profile.profile_id == profile.profile_id else '' }}
+                        data-toggle="tooltip" title="Use this profile">
+                    <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                </button>
+                <a class="float-right text-danger" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_WIKI_URL}}/profiles">
+                    &nbsp <i class="fa fa-question"></i>
+                </a>
+            </h2>
+        </div>
+        <div class="card-body deck-container">
+            <div class="profile-details d-flex pb-1" data-id="{{profile.profile_id}}">
+                <div class="flex-grow-1">
+                    <h4>About
+                        <span
+                           id="profile-name-{{profile.profile_id}}"
+                           data-pk="1"
+                           data-type="text"
+                           data-clear=false
+                           data-onblur="submit"
+                           data-highlight=true
+                           data-emptytext="my profile"
+                           class="editable profile-name-editor">{{ profile.name }}</span>
+                        profile:
+                    </h4>
+                    <p>
+                        <span class="large-editable">
+                            <span
+                               id="profile-description-{{profile.profile_id}}"
+                               data-pk="1"
+                               data-type="textarea"
+                               data-clear=false
+                               data-onblur="submit"
+                               data-highlight=true
+                               data-emptytext="my description"
+                               data-inputclass="w-100"
+                               class="editable profile-description-editor">{{ profile.description }}</span>
+                        </span>
+                    </p>
+                </div>
+                <div>
+                    <button id="save-profile-{{profile.profile_id}}"
+                            data-url="{{url_for('profiles_management', action='update')}}"
+                            class="btn btn-success rounded-circle waves-effect px-3 save-profile"
+                            role="button" data-toggle="tooltip" title="Save" disabled>
+                        <i class="fas fa-save" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <h4>Profile overview</h4>
+                <div>
+                    blabla
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+            <div>
+                <button id="export-profile"
+                        data-url="{{url_for('profiles_management', action='export', profile_id=profile.profile_id)}}"
+                        class="btn btn-outline-primary waves-effect export-profile-button"
+                        data-toggle="tooltip" title="Share this profile">
+                    <i class="fas fa-share-square"></i> <span class="d-none d-md-inline">Share</span>
+                </button>
+            </div>
+
+            <button class="btn btn{{ '-outline' if current_profile.profile_id == profile.profile_id else '' }}-primary waves-effect activate-profile-button"
+                    data-url="{{url_for('profile', select=profile.profile_id)}}"
+                    {{ 'disabled' if current_profile.profile_id == profile.profile_id else '' }}>
+                <i class="fa fa-exchange-alt" aria-hidden="true"></i> <span class="d-none d-md-inline">
+                    {{ 'This is your current profile' if current_profile.profile_id == profile.profile_id else 'Use this profile' }}
+                </span>
+            </button>
+            <div>
+                <button id="duplicate-profile"
+                        data-url="{{url_for('profiles_management', action='duplicate', profile_id=profile.profile_id)}}"
+                        class="btn btn-primary waves-effect duplicate-profile px-3">
+                    <i class="fas fa-copy" aria-hidden="true"></i> <span class="d-none d-md-inline">Duplicate</span>
+                </button>
+                {% if current_profile.profile_id != profile.profile_id and not profile.read_only %}
+                <button class="btn btn-outline-danger px-3 waves-effect remove-profile-button"
+                        id="removeProfile{{profile.profile_id}}"
+                        data-profile-id="{{profile.profile_id}}"
+                        data-url="{{url_for('profiles_management', action='remove')}}">
+                    <i class="fa fa-ban" aria-hidden="true"></i> <span class="d-none d-md-inline">Remove</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="float-right">
+        <form class="d-none profile-import-form" action="{{ url_for('profiles_management', action='import') }}" method="POST"
+         enctype = "multipart/form-data">
+            <input class="profile-input" type="file" name="file" accept=".zip"/>
+        </form>
+        <button class="btn btn-outline-primary waves-effect import-profile-button">
+            <i class="fas fa-download"></i> Import a new profile
+        </button>
+    </div>
+</div>
+{% endmacro %}

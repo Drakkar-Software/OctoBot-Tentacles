@@ -83,6 +83,22 @@ body:before {
     font-weight: bolder;
 }
 
+.dropdown-toggle::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: rotate(180deg);
+}
+
+.dropdown-toggle.collapsed::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: none;
+}
+
+.nav .collapse {
+    background: rgba(0, 0, 0, 0.3);
+}
+
 .sidebar {
     position: fixed;
     top: 0;
@@ -147,6 +163,11 @@ body:before {
 .sidebar .btn:hover {
     padding: .84rem 1rem;
     color: inherit;
+}
+
+.btn.btn-sm.rounded-circle {
+    padding-left: 0.64rem;
+    padding-right: 0.64rem;
 }
 
 /* Cards */
