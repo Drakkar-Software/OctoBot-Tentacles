@@ -94,9 +94,8 @@ def profiles_management(action):
         removed_profile, err = models.remove_profile(to_remove_id)
         if err is not None:
             return util.get_rest_reply(flask.jsonify(str(err)), code=400)
-        else:
-            flask.flash(f"{removed_profile.name} profile removed.", "success")
-            return util.get_rest_reply(flask.jsonify("Profile created"))
+        flask.flash(f"{removed_profile.name} profile removed.", "success")
+        return util.get_rest_reply(flask.jsonify("Profile created"))
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
