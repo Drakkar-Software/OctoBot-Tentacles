@@ -48,8 +48,7 @@ def context_processor_register():
 
     def get_profile_traded_pairs_by_currency(profile):
         return {
-            symbol_util.split_symbol(val[commons_constants.CONFIG_CRYPTO_PAIRS][0])[0]:
-                val[commons_constants.CONFIG_CRYPTO_PAIRS]
+            currency: val[commons_constants.CONFIG_CRYPTO_PAIRS]
             for currency, val in profile.config[commons_constants.CONFIG_CRYPTO_CURRENCIES].items()
             if commons_constants.CONFIG_CRYPTO_PAIRS in val
                 and val[commons_constants.CONFIG_CRYPTO_PAIRS]
