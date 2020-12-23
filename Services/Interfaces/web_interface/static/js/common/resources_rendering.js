@@ -72,7 +72,18 @@ function fetchCurrencyImage(element, currencyId){
             dataType: "json",
             success: function(data){
                 if(isDefined(data["image"])){
-                    element.attr("src", data["image"]["large"]);
+                    const symbol = element.attr('symbol')
+                    if(typeof symbol !== 'undefined'){
+                        $(`img[symbol='${symbol.toLowerCase()}']`).each(function (){
+                            $(this).attr("src", data["image"]["large"]);
+                        });
+                    }
+                    const currencyId = element.attr('data-currency-id')
+                    if(typeof currencyId !== 'undefined'){
+                        $(`img[data-currency-id='${currencyId.toLowerCase()}']`).each(function (){
+                            $(this).attr("src", data["image"]["large"]);
+                        });
+                    }
                     fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
                 }else{
                     _useDefaultImage(element, currencyId);
