@@ -127,6 +127,14 @@
         {% endif %}
 
         <div class="container-fluid">
+            <noscript>
+                <br>
+                <div class="alert alert-warning" role="alert">
+                    <h2>Javascript is disabled</h2>
+                    <p>Your browser doesn't allow javascript to be executed. To use the OctoBot web interface, please enable javascript and reload this page.</p>
+                </div>
+            </noscript>
+
             {% block body %}{% endblock %}
         </div>
 
