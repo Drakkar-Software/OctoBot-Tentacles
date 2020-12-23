@@ -1,6 +1,6 @@
 {% import 'macros/tentacles.html' as m_tentacles %}
 
-{% macro config_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False) %}
+{% macro config_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False, include_modal=True) %}
     <a href="#" onclick="return false;"
        class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{ 'd-none' if strategy }} {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
        id={{ evaluator_name }} name={{ evaluator_name }}
@@ -24,7 +24,9 @@
             <button class="btn btn-outline-primary btn-md waves-effect" data-toggle="modal" data-target="#{{evaluator_name}}Modal" no-activation-click="true"><i class="fa fa-info-circle" no-activation-click="true"></i></button>
         </span>
     </a>
-    {{ evaluator_card_modal(evaluator_name, info, strategy) }}
+    {% if include_modal %}
+        {{ evaluator_card_modal(evaluator_name, info, strategy) }}
+    {% endif %}
 {% endmacro %}
 
 {% macro tentacle_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False) %}

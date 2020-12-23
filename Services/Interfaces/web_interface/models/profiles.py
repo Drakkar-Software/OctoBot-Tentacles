@@ -52,6 +52,19 @@ def get_profiles():
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id
 
 
+def get_profiles_activated_tentacles(profiles_list):
+    tentacles_by_profile_id = {}
+    for profile in profiles_list.values():
+        try:
+            tentacles_by_profile_id[profile.profile_id] = tentacles_manager_api.get_activated_tentacles(
+                tentacles_manager_api.get_tentacles_setup_config(profile.get_tentacles_config_path())
+            )
+        except Exception:
+            # do not raise here to prevent avoid config display
+            pass
+    return tentacles_by_profile_id
+
+
 def update_profile(profile_id, json_profile):
     config = interfaces_util.get_edited_config(dict_only=False)
     profile = config.profile_by_id[profile_id]

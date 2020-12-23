@@ -65,6 +65,22 @@ body:before {
     max-width: 2.5rem;
 }
 
+.profile-overview-values {
+    font-weight: bold;
+}
+
+a.profile-overview-values {
+    color: #4285f4;
+}
+
+.card a.profile-overview-values:hover {
+    color: white !important;
+}
+
+.profile-overview-explanation {
+    font-weight: inherit;
+}
+
 .navbar.navbar-dark, footer.page-footer .footer-copyright {
     background-color: #C62828;
 }
@@ -181,7 +197,11 @@ body:before {
 .card {
     display: block;
     flex-basis: 33.3%;
-. rounded-bottom !important;
+    . rounded-bottom !important;
+}
+
+.card.profile-card {
+    flex-basis: inherit !important;
 }
 
 .card,
