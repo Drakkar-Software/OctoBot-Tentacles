@@ -4,7 +4,7 @@ function handleProfileActivator(){
         profileActivatorButton.click(function (){
             const changeProfileURL = $(this).attr("data-url");
             window.location.replace(changeProfileURL);
-        })
+        });
     }
 }
 
@@ -33,9 +33,9 @@ function handleProfileEditor(){
             id: profileDetails.attr("data-id"),
             name: profileDetails.find(".profile-name-editor").editable("getValue", true),
             description: profileDetails.find(".profile-description-editor").editable("getValue", true)
-        }
+        };
         send_and_interpret_bot_update(data, updateURL, null,
-            saveCurrentProfileSuccessCallback, saveCurrentProfileFailureCallback)
+            saveCurrentProfileSuccessCallback, saveCurrentProfileFailureCallback);
     });
 }
 
@@ -46,7 +46,7 @@ function saveCurrentProfileSuccessCallback(updated_data, update_url, dom_root_el
         if(typeof profileIdAttr === "undefined" || profileIdAttr === updated_data["id"]){
             $(this).html(updated_data["name"]);
         }
-    })
+    });
 }
 
 
@@ -81,7 +81,7 @@ function handleProfileImporter(){
     if(importForm.length && importButton.length && profileInput.length){
         importButton.click(function () {
             $(this).siblings(".profile-import-form").find(".profile-input").click();
-        })
+        });
         profileInput.on("change", function () {
             $(this).parents(".profile-import-form").submit();
         });
@@ -93,7 +93,7 @@ function handleProfileExporter(){
     if(exportButton.length){
         exportButton.click(function (){
             window.window.location  = $(this).attr("data-url");
-        })
+        });
     }
 }
 
@@ -103,7 +103,7 @@ function handleProfileSelector(){
         $("#profilesSubmenu").collapse("show");
         const profileId = profileNameDisplay.attr("data-profile-id");
         activate_tab($(`#profile-${profileId}-tab`));
-    })
+    });
 }
 
 function handleProfileRemover(){
