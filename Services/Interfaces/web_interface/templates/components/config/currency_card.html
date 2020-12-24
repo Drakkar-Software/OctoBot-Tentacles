@@ -8,7 +8,7 @@
 
         <!--Card image-->
         <div class="view overlay animated fadeIn">
-            <img class="card-img-top currency-image"
+            <img class="card-img-top currency-image {{additional_classes}}"
                  src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
                  alt="Can't find image for {{ crypto_currency }} :("
                  data-currency-id="{{full_symbol_list[crypto_currency]['id'] if crypto_currency in full_symbol_list else crypto_currency}}"
