@@ -76,13 +76,17 @@ function fetchCurrencyImage(element, currencyId){
                     const symbol = this.element.attr('symbol');
                     if(typeof symbol !== 'undefined'){
                         $(`img[symbol='${symbol.toLowerCase()}']`).each(function (){
-                            $(this).attr("src", data["image"]["large"]);
+                            if(!$(this).hasClass("default")){
+                                $(this).attr("src", data["image"]["large"]);
+                            }
                         });
                     }
                     const currencyId = this.element.attr('data-currency-id');
                     if(typeof currencyId !== 'undefined'){
                         $(`img[data-currency-id='${currencyId.toLowerCase()}']`).each(function (){
-                            $(this).attr("src", data["image"]["large"]);
+                            if(!$(this).hasClass("default")) {
+                                $(this).attr("src", data["image"]["large"]);
+                            }
                         });
                     }
                     fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);

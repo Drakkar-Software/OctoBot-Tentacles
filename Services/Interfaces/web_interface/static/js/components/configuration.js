@@ -119,6 +119,7 @@ function handle_add_buttons(){
         if(deck.find("div[name='"+select_value+"']").length === 0){
             let template_default = target_template.html().replace(new RegExp(config_default_value,"g"), select_value);
             template_default = template_default.replace(new RegExp("card-text symbols default","g"), "card-text symbols");
+            template_default = template_default.replace(new RegExp("card-img-top currency-image default","g"), "card-img-top currency-image");
             if(isDefined(currency_id)){
                 template_default = template_default.replace(new RegExp(`data-currency-id="${config_default_value.toLowerCase()}"`), `data-currency-id="${currency_id}"`);
             }
