@@ -90,7 +90,8 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
             except errors.UnsetTentacleEvaluation as e:
                 self.logger.debug(f"Tentacles evaluation initialization: not ready yet for a strategy update ({e})")
             except KeyError as e:
-                self.logger.error(f"Missing {e} evaluation in matrix, did you activate the required evaluator ?")
+                self.logger.exception(e, True, f"Missing {e} evaluation in matrix for {symbol} on {time_frame}, "
+                                      f"did you activate the required evaluator ?")
 
     def _compute_final_evaluation(self):
         weights = 0
