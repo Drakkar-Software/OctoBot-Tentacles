@@ -136,18 +136,18 @@ jobs:
       - name: Publish tag tentacles
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         run: |
-          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -ite -ute ${{ secrets.NEXUS_OFFICIAL_BASE_PATH }}/tentacles -upe ${{ secrets.NEXUS_OFFICIAL_BASE_PATH }}/packages ${GITHUB_REF#refs/*/}.zip
+          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -ite -ute ${{ secrets.NEXUS_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/${{ secrets.TENTACLES_REPOSITORY_NAME }} ${GITHUB_REF#refs/*/}.zip
 
       - name: Publish latest tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/dev'
         run: |
-          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -upe ${{ secrets.NEXUS_OFFICIAL_BASE_PATH }}/packages ${{ secrets.LATEST_TAG }}.zip
+          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/${{ secrets.TENTACLES_REPOSITORY_NAME }} ${{ secrets.LATEST_TAG }}.zip
 
       - name: Publish cleaned branch tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags')
         run: |
           branch="${GITHUB_REF##*/}"
-          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -upe ${{ secrets.NEXUS_OFFICIAL_BASE_PATH }}/dev/packages ${branch////_}.zip
+          cd OctoBot && python start.py tentacles -d "../new_tentacles" -p "../../new_tentacles.zip" -upe ${{ secrets.NEXUS_DEV_PATH }}/packages ${branch////_}.zip
 
   notify:
     name: Notify
