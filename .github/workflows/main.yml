@@ -30,7 +30,6 @@ jobs:
     - name: Install OctoBot on Unix
       if: matrix.os != 'windows-latest'
       env:
-        GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
@@ -48,7 +47,6 @@ jobs:
     - name: Install OctoBot on Windows
       if: matrix.os == 'windows-latest'
       env:
-        GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
@@ -121,7 +119,6 @@ jobs:
 
       - name: Produce tentacles package
         env:
-          GH_REPO: Drakkar-Software/OctoBot-Tentacles
           OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
           OCTOBOT_DEFAULT_BRANCH: dev
         run: |
