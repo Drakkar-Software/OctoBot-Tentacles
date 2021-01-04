@@ -422,8 +422,38 @@ function deactivate_other_elements(element, root_element) {
     })
 }
 
+function updateTradingModeSummary(selectedElement){
+    const elementDocModal = $(`#${selectedElement.attr("name")}Modal`);
+    const elementDoc = elementDocModal.find(".modal-body").text().trim();
+    const blocks = elementDoc.trim().split(".\n");
+    let summaryBlocks = `${blocks[0]}.`;
+    if (summaryBlocks.length < 80 && blocks.length > 1){
+        summaryBlocks = `${summaryBlocks} ${blocks[1]}.`
+    }
+    $("#selected-trading-mode-summary").html(summaryBlocks);
+}
+
+function updateStrategySelector(required_elements){
+    const noStrategyInfo = $("#no-strategy-info");
+    const strategyConfig = $("#evaluator-config-root");
+    if (required_elements.length > 1) {
+        if (!noStrategyInfo.hasClass(hidden_class)) {
+            noStrategyInfo.addClass(hidden_class);
+        }
+        if (strategyConfig.hasClass(hidden_class)) {
+            strategyConfig.removeClass(hidden_class);
+        }
+    } else {
+        if (noStrategyInfo.hasClass(hidden_class)) {
+            noStrategyInfo.removeClass(hidden_class);
+        }
+        if (!strategyConfig.hasClass(hidden_class)) {
+            strategyConfig.addClass(hidden_class);
+        }
+    }
+}
+
 function update_requirement_activation(element) {
-    const strategy_config_card = $("#strategy-configuration-card");
     const required_elements = element.attr("requirements").split("'");
     const default_elements = element.attr("default-elements").split("'");
     $("#evaluator-config-root").children(".config-element").each(function () {
@@ -440,15 +470,7 @@ function update_requirement_activation(element) {
             update_element_required_marker_and_usability(element, false);
         }
     });
-    if(required_elements.length > 1) {
-        if (strategy_config_card.hasClass(hidden_class)) {
-            strategy_config_card.removeClass(hidden_class);
-        }
-    }else{
-        if (!strategy_config_card.hasClass(hidden_class)) {
-            strategy_config_card.addClass(hidden_class);
-        }
-    }
+    updateStrategySelector(required_elements);
 }
 
 function get_activated_strategies_count() {
@@ -469,9 +491,7 @@ function check_evaluator_configuration() {
     if(trading_modes.length) {
         const activated_trading_modes = trading_modes.children("." + success_list_item);
         if (activated_trading_modes.length) {
-            const strategy_config_card = $("#strategy-configuration-card");
-            const activated_trading_mode = activated_trading_modes;
-            const required_elements = activated_trading_mode.attr("requirements").split("'");
+            const required_elements = activated_trading_modes.attr("requirements").split("'");
             let at_least_one_activated_element = false;
             $("#evaluator-config-root").children(".config-element").each(function () {
                 const element = $(this);
@@ -482,19 +502,12 @@ function check_evaluator_configuration() {
                     update_element_required_marker_and_usability(element, false);
                 }
             });
-            if (required_elements.length > 1) {
-                if (strategy_config_card.hasClass(hidden_class)) {
-                    strategy_config_card.removeClass(hidden_class);
-                }
-                if (!at_least_one_activated_element) {
-                    create_alert("error", "Trading modes require at least one strategy to work properly, please activate the " +
-                        "strategy(ies) you want for the selected mode.", "");
-                }
-            } else {
-                if (!strategy_config_card.hasClass(hidden_class)) {
-                    strategy_config_card.addClass(hidden_class);
-                }
+            if (required_elements.length > 1 && !at_least_one_activated_element) {
+                create_alert("error", "Trading modes require at least one strategy to work properly, please activate the " +
+                    "strategy(ies) you want for the selected mode.", "");
             }
+           updateStrategySelector(required_elements);
+           updateTradingModeSummary(activated_trading_modes);
         } else {
             create_alert("error", "No trading mode activated, OctoBot need at least one trading mode.", "");
         }
@@ -555,6 +568,7 @@ function handle_activation_configuration_editor(){
                     }
                     if (is_trading_mode) {
                         update_requirement_activation(element);
+                        updateTradingModeSummary(element);
                     }
 
                     // update current value
