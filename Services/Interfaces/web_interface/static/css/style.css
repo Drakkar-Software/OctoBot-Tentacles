@@ -33,6 +33,10 @@ strong {
     top: 4rem;
 }
 
+.quote {
+    border-left: 5px solid #1565C0;;
+}
+
 html, body {
     height: 100%;
     min-height: 100%;
@@ -146,10 +150,8 @@ a.profile-overview-values {
     margin-left: 2rem;
 }
 
-.sidebar .bordered {
-    margin-bottom: 2rem;
+.separator {
     border-bottom: 1px solid #424242;
-    border-top: 1px solid #424242;
 }
 
 .sidebar .nav .nav-link {
