@@ -428,7 +428,7 @@ function updateTradingModeSummary(selectedElement){
     const blocks = elementDoc.trim().split(".\n");
     let summaryBlocks = `${blocks[0]}.`;
     if (summaryBlocks.length < 80 && blocks.length > 1){
-        summaryBlocks = `${summaryBlocks} ${blocks[1]}.`
+        summaryBlocks = `${summaryBlocks} ${blocks[1]}.`;
     }
     $("#selected-trading-mode-summary").html(summaryBlocks);
 }
