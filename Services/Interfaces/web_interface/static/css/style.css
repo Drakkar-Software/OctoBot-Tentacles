@@ -81,7 +81,7 @@ a.profile-overview-values {
     font-weight: inherit;
 }
 
-.navbar.navbar-dark, footer.page-footer .footer-copyright {
+.navbar.navbar-dark, footer.page-footer .footer-copyright, .progress-bar {
     background-color: #C62828;
 }
 
