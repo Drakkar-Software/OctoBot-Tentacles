@@ -79,7 +79,7 @@ class WebHookService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_WIKI_URL}/Using-a-webhook-with-OctoBot"
+        return f"{constants.OCTOBOT_DOCS_URL}/pages/Using-a-webhook-with-OctoBot.html"
 
     def get_endpoint(self) -> None:
         return ngrok

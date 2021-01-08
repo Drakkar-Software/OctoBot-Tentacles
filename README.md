@@ -10,4 +10,4 @@ python start.py -p install all
 
 Modules in this tentacles are installed in the **Default** folder of the associated module types
 
-To add custom tentacles to your OctoBot, see the [dedicated wiki page](https://github.com/Drakkar-Software/OctoBot/wiki/Customize-your-OctoBot).
+To add custom tentacles to your OctoBot, see the [dedicated docs page](https://docs.octobot.online/pages/Customize-your-OctoBot.html).

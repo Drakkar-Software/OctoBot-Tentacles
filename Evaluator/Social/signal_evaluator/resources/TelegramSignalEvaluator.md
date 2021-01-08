@@ -11,4 +11,4 @@ Remember that OctoBot can only see messages from a
 chat/group where its Telegram bot (in OctoBot configuration) has been invited. Keep also in mind that you
 need to disable the privacy mode of your Telegram bot to allow it to see group messages.
 
-See [OctoBot wiki about Telegram interface](https://github.com/Drakkar-Software/OctoBot/wiki/Telegram-interface#telegram-interface) for more information.
+See [OctoBot docs about Telegram interface](https://docs.octobot.online/pages/Telegram-interface.html) for more information.
