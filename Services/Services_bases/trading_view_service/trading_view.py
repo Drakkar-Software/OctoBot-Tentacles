@@ -66,7 +66,7 @@ class TradingViewService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_WIKI_URL}/TradingView-webhook"
+        return f"{constants.OCTOBOT_DOCS_URL}/pages/TradingView-webhook.html"
 
     def get_endpoint(self) -> None:
         return None

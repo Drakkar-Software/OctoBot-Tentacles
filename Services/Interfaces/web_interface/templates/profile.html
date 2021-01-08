@@ -107,7 +107,7 @@
         <div class="tab-content" id="super-container">
             {% for profile_id, profile in profiles.items() %}
             {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_activated_tentacles[profile_id], strategy_config, evaluator_config,
-                                               get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_WIKI_URL)}}
+                                               get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
             {% endfor %}
             <div class="tab-pane fade config-root show active" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
@@ -116,7 +116,7 @@
                     <div class="card-header">
                         <h2>Trading modes
                             <a class="float-right blue-text" target="_blank" rel="noopener noreferrer"
-                               href="{{OCTOBOT_WIKI_URL}}/Customize-your-OctoBot">
+                               href="{{OCTOBOT_DOCS_URL}}/pages/Customize-your-OctoBot.html">
                                 <i class="fa fa-question"></i>
                             </a>
                         </h2>
@@ -212,7 +212,7 @@
                     <div class="card-header">
                         <h2>Exchanges
                             <a class="float-right blue-text" target="_blank" rel="noopener noreferrer"
-                               href="{{OCTOBOT_WIKI_URL}}/Exchanges#exchanges">
+                               href="{{OCTOBOT_DOCS_URL}}/pages/Exchanges.html">
                                 <i class="fa fa-question"></i>
                             </a>
                         </h2>
@@ -245,12 +245,12 @@
                         <!-- Card deck -->
                         <div class="card-deck config-container">
                     <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_WIKI_URL+"/Trader#trading-settings") }}
+                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
                     </span>
                             {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader",
-                            link=OCTOBOT_WIKI_URL+"/Trader#trader") }}
+                            link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
                             {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator",
-                            "Trader simulator", link=OCTOBOT_WIKI_URL+"/Simulator#simulator") }}
+                            "Trader simulator", link=OCTOBOT_DOCS_URL+"/pages/Simulator.html") }}
                         </div>
                     </div>
                 </div>

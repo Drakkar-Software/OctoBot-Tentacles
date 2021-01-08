@@ -79,7 +79,7 @@ def context_processor_register():
 
     return dict(
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
-        OCTOBOT_WIKI_URL=constants.OCTOBOT_WIKI_URL,
+        OCTOBOT_DOCS_URL=constants.OCTOBOT_DOCS_URL,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         filter_currency_pairs=filter_currency_pairs,
