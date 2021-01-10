@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "title": "SimpleMixedStrategyEvaluator",
+  "properties": {
+    "required_time_frames": {
+        "type": "array",
+        "format": "select2",
+        "title": "Analysed time frames",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+            "title": "Time frame",
+            "type": "string",
+            "default": "1h",
+            "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
+        }
+    },
+    "social_evaluators_notification_timeout": {
+        "title": "Number of seconds to consider a social evaluation valid from the moment it appears on OctoBot. Example: a tweet evaluation.",
+        "type": "integer",
+        "minimum": 0,
+        "default": 3600
+    },
+    "re_evaluate_TA_when_social_or_realtime_notification": {
+        "title": "When activated, technical evaluators will be asked to recompute their evaluation based on up-to-date price data for each new evaluation appearing on social or real-time evaluators. After such an event, this strategy will finalize its evaluation only once this updated technical analyses will be completed. If deactivated, social and real-time evaluations will be taken into account alongside the last technical analysis results.",
+        "type": "boolean",
+        "format": "checkbox",
+        "default": true
+    },
+    "background_social_evaluators": {
+        "type": "array",
+        "format": "select2",
+        "title": "Social evaluator to consider as background evaluators: they won't trigger technical evaluators re-evaluation when updated. Avoiding unnecessary updates increases performances.",
+        "uniqueItems": true,
+        "minItems": 0,
+        "items": {
+            "title": "Evaluator",
+            "type": "string",
+            "default": "RedditForumEvaluator",
+            "enum": ["RedditForumEvaluator", "TwitterNewsEvaluator", "TelegramSignalEvaluator", "GoogleTrendsEvaluator"]
+        }
+    }
+  }
+}

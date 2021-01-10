@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "title": "ArbitrageTradingMode",
+  "properties": {
+    "minimal_price_delta_percent": {
+        "title": "Cross exchange triggering delta: minimal percent difference to trigger an arbitrage order. Remember to set it higher than twice your trading exchanges' fees since two orders will be placed each time.",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 0.25
+    },
+    "portfolio_percent_per_trade": {
+        "title": "Trade size: percent of your portfolio to include in each arbitrage order.",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 25
+    },
+    "stop_loss_delta_percent": {
+        "title": "Stop loss price: price percent from the price of the initial order to set the stop loss on.",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 0.1
+    },
+    "exchanges_to_trade_on": {
+        "title": "Trading exchanges: exchanges on which to perform arbitrage trading: these will be used to create arbitrage orders. Leaving this empty will result in arbitrage trading on every exchange, which is sub-optimal.",
+        "type": "array",
+        "format": "table",
+        "uniqueItems": true,
+        "minItems": 0,
+        "items": {
+            "title": "Arbitrage trading enabled exchange.",
+            "type": "string",
+            "minLength": 2,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "kucoin"
+              }
+            }
+        }
+    }
+  }
+}

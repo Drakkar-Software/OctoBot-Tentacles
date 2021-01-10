@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "title": "DailyTradingMode",
+  "properties": {
+    "use_stop_orders": {
+        "title": "Stop orders: Use stop loss orders.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "use_maximum_size_orders": {
+        "title": "All in trades: Trade with all available funds at each order.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "use_prices_close_to_current_price": {
+        "title": "Fixed limit prices: Use a fixed ratio to compute prices in sell / buy orders.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "close_to_current_price_difference": {
+        "title": "Fixed limit prices difference: Difference to take into account when placing a limit order (used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: buy price would be 199 and sell price 201.",
+        "type": "number",
+        "minimum": 0,
+        "default": 0.005
+    }
+  }
+}

@@ -1,0 +1,53 @@
+/*
+ * Drakkar-Software OctoBot
+ * Copyright (c) Drakkar-Software, All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ */
+
+function createPortfolioChart(element_id, title){
+    const data = {};
+    $(".symbol-holding").each(function (){
+        const total_value = $(this).find(".total-value").text();
+        if($.isNumeric(total_value)){
+            data[$(this).find(".symbol").text()] = Number(total_value);
+        }
+    });
+    const element = $("#"+element_id);
+    if(element.length > 0 ){
+        create_doughnut_chart(element[0], data, title);
+    }
+}
+
+function handle_portfolio_button(){
+    const refreshButton = $("#refresh-portfolio");
+    if(refreshButton){
+        refreshButton.click(function () {
+            const update_url = refreshButton.attr(update_url_attr);
+            send_and_interpret_bot_update({}, update_url, null, generic_request_success_callback, generic_request_failure_callback);
+        });
+    }
+}
+
+$(document).ready(function() {
+    const portfolioElem = $("#portfoliosCard");
+    const referenceMarket = portfolioElem.attr("reference_market");
+    const chartTitle = "Traded assets value in "+referenceMarket;
+    ordersDataTable = $('#holdings-table').DataTable({
+        "paging": false,
+        "order": [[ 4, "desc" ]]
+    });
+    createPortfolioChart("portfolio_doughnutChart", chartTitle);
+    handle_portfolio_button();
+});

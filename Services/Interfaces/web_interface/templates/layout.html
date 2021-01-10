@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>OctoBot</title>
+
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Favicon -->
+        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+        {% block additional_meta %}
+        {% endblock additional_meta %}
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+
+        <!-- Fontawesome CSS -->
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.1/css/all.css" integrity="sha384-vp86vTRFVJgpjF9jiIGPEEqYqlDwgyBgEF109VFjmqGmIY/Y4HV4d3Gp2irVfcrp" crossorigin="anonymous">
+
+        <!-- toaster -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css" integrity="sha384-YzEqZ2pBV0i9OmlTyoz75PqwTR8If8GsXBv7HLQclEVqIC3VxIt98/U94ES6CJTR" crossorigin="anonymous">
+
+        <!-- mdb CSS -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" integrity="sha384-VB0/w/SA4yj77RioXx1gUta4sczGrqbM4McYM8Lbixo0bQjK270LMDrUcp12DETJ" rel="stylesheet" crossorigin="anonymous">
+
+        <!-- Datatables -->
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/jquery.dataTables.css" integrity="sha384-7KIeJ1Ar3lrPS5Iit9Y11rIbAUWT5ikZDgwL0JeAvLN2dKQZF5Rx9GuePUYzcR7a" crossorigin="anonymous">
+
+        <!-- Select -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css" integrity="sha384-2SvkxRa9G/GlZMyFexHk+WN9p0n2T+r38dvBmw5l2/J3gjUcxs9R1GwKs0seeSh3" crossorigin="anonymous">
+
+        <!-- Editable -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.css', u=LAST_UPDATED_STATIC_FILES) }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" integrity="sha384-KZO2FRYNmIHerhfYMjCIUaJeGBRXP7CN24SiNSG+wdDzgwvxWbl16wMVtWiJTcMt" crossorigin="anonymous"/>
+
+        <!-- Own -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', u=LAST_UPDATED_STATIC_FILES) }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css', u=LAST_UPDATED_STATIC_FILES) }}">
+
+        {% block additional_style %}
+        {% endblock additional_style %}
+    </head>
+    <body class="bg-dark" style="{% block body_style %}{% endblock body_style %}">
+        <!-- Scripts -->
+        <!-- At the beginning of the page : be available for template scripts -->
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.min.js" integrity="sha384-Ufv70Zye3D2W1mcNRIoB2+SbEXO7apUkVjoCH2r6/BErCfhUOXuRJSkQ+3ZjSxa8" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js" integrity="sha384-VDls8ImYGI8SwVxpmjX2Bn27U2TcNodzTNROTusVEWO55+lmL+H9NczoQJk6mwZR" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js" integrity="sha384-FbwKLBNNjVSNRt5ofr/4WX4UOVqG2xcQwoOipC0xnFMB/BqfRaDsuyKay/hVaPE6" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" integrity="sha384-TTjj1KxpUMxMChPbgmSWLlfEep0/67X86v9lnJMkldzkQGHZNAhZRgE9owovIRyz" crossorigin="anonymous"></script>
+        <script src="https://cdn.plot.ly/plotly-finance-1.57.1.min.js" integrity="sha384-j305CgWh6pD6ywC0581lSnC4MeJ0YUyJRdh5Gfj9JX1sDlOu+PFK0zMSJYQ3bBe0" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.5.1/dist/jsoneditor.min.js" integrity="sha384-9C8nNDpQOW6OP1l3p4ggWPXoI3NZ5vCWQaflbPD7/nf2+SzaM1mI9c2W1R4aJbC0" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js" integrity="sha384-XnTxmviuqUy3cHBf+lkYWuTSDlhxCDxd9RgSo5zvzsCq93P9xNa6eENuAITCwxNh" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js" integrity="sha384-SfMwgGnc3UiUUZF50PsPetXLqH2HSl/FmkMW/Ja3N2WaJ/fHLbCHPUsXzzrM6aet"  crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js" integrity="sha384-JnbsSLBmv2/R0fUmF2XYIcAEMPHEAO51Gitn9IjL4l89uFTIgtLF1+jqIqqd9FSk" crossorigin="anonymous"></script>
+
+        <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/cst.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/json_editor_settings.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/bot_connection.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+
+        {% set active_page = active_page|default('home') -%}
+        {% set show_nab_bar = show_nab_bar|default(True) -%}
+
+        {% if show_nab_bar %}
+            <nav class="navbar navbar-expand-md navbar-dark sticky-top py-0 py-md-2">
+                <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item mx-1 px-0 {% if 'home' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'trading' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('trading') }}">Trading</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'portfolio' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('portfolio') }}">Portfolio</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'profile' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'accounts' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="mx-auto order-0">
+                    <a class="navbar-brand mx-auto font-weight-bolder" href="{{ url_for('commands') }}">OctoBot <i id="navbar-bot-status" class="fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i></a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+                <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item mx-1 px-0 {% if 'backtesting' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'community' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('community') }}">Community</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'help' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('octobot_help') }}">Help</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'tentacles' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('tentacles') }}">Tentacles</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'logs' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('logs') }}" aria-label="Logs"><i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="Event logs">
+                                <span id="errors-count-badge" class="badge badge-warning"></span>
+                            </i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link mx-1 px-0 " href="{{ url_for('advanced.home') }}" aria-label="Advanced OctoBot"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 {% if 'commands' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('commands') }}" aria-label="Commands"><i id="navbar-bot-reboot" class="fa fa-sync" data-toggle="tooltip" data-placement="top" title="Commands"></i></a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        {% endif %}
+
+        <div class="container-fluid">
+            <noscript>
+                <br>
+                <div class="alert alert-warning" role="alert">
+                    <h2>Javascript is disabled</h2>
+                    <p>Your browser doesn't allow javascript to be executed. To use the OctoBot web interface, please enable javascript and reload this page.</p>
+                </div>
+            </noscript>
+
+            {% block body %}{% endblock %}
+        </div>
+
+        <!-- Artificial padding to separate footer from the rest of the page -->
+        <div class="pb-5"></div>
+        <div class="pb-5"></div>
+        <!-- Artificial padding  -->
+
+        {% include "footer.html" %}
+
+        {% block additional_scripts %}
+        {% endblock additional_scripts %}
+    </body>
+</html>

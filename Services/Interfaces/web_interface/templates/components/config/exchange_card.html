@@ -1,0 +1,119 @@
+ {% import 'components/config/editable_config.html' as m_editable_config %}
+{% macro config_exchange_card(config, exchange, keys_value="*********", enabled=True,
+                              sandboxed=False, add_class='', config_values=None, full_config=True) -%}
+    <!-- Card -->
+    <div class="card mb-4 {{add_class}} config-card">
+
+        <div class="card-header row">
+            <div class="col-sm-7 col-lg-5">
+                <h4 class="text-capitalize">{{exchange}}</h4>
+            </div>
+            <div class="col-sm-5 col-lg-7">
+                <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
+                    <img class="img-fluid product-logo" src="" alt="{{exchange}}-logo" url="{{url_for('exchange_logo', name=exchange, _external=True)}}">
+                </a>
+            </div>
+        </div>
+
+        <!--Card image-->
+        <div class="view overlay">
+          <!--{{ exchange }}-->
+        </div>
+
+        <!--Card content-->
+        <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
+            <div class="d-flex">
+                {% if full_config %}
+                    <div class="flex-grow-1">
+                    <p class="card-text api">
+                        API Key : <a href="#"
+                                     id="exchange_api-key"
+                                     config-key="exchanges_{{exchange}}_api-key"
+                                     config-type="global_config"
+                                     config-value="{{config_values if config_values else keys_value}}"
+                                     startup-config-value="{{keys_value}}"
+                                     data-type="text"
+                                     data-pk="1"
+                                     data-title="Enter api key"
+                                     data-onblur="submit"
+                                     data-highlight=true
+                                     class="editable editable-click config-element">
+                        {{keys_value}}</a><br>
+
+                        API Secret : <a href="#"
+                                        id="exchange_api-secret"
+                                        config-key="exchanges_{{exchange}}_api-secret"
+                                        config-type="global_config"
+                                        config-value="{{config_values if config_values else keys_value}}"
+                                        startup-config-value="{{keys_value}}"
+                                        data-type="text"
+                                        data-pk="1"
+                                        data-title="Enter exchange api secret"
+                                         data-onblur="submit"
+                                         data-highlight=true
+                                        class="editable editable-click config-element">
+                        {{keys_value}}</a><br>
+
+                        <i>API Password</i>
+                        <i class="fa fa-question"
+                           data-toggle="tooltip" data-placement="top"
+                           title="An API password is required by some exchanges, leave as is otherwise.">
+                        </i> : <a href="#"
+                                  id="exchange_api-secret"
+                                  config-key="exchanges_{{exchange}}_api-password"
+                                  config-type="global_config"
+                                  config-value="{{config_values if config_values else keys_value}}"
+                                  startup-config-value="{{keys_value}}"
+                                  data-type="text"
+                                  data-pk="1"
+                                  data-title="Enter exchange api password"
+                                  data-onblur="submit"
+                                  data-highlight=true
+                                  class="editable editable-click config-element">
+                        {{keys_value}}</a><br>
+                    </p>
+                </div>
+                {% endif %}
+                <div class="">
+                    <div
+                            class="custom-control custom-switch"
+                            data-toggle="tooltip"
+                            data-placement="top"
+                            title="Disabled exchanges are not used by OctoBot.">
+                        <input type="checkbox"
+                               class="custom-control-input config-element"
+                               id="exchange_{{exchange}}_enabled"
+                               config-key="exchanges_{{exchange}}_enabled"
+                               config-type="global_config"
+                               config-value="{{enabled}}"
+                               startup-config-value="{{enabled}}"
+                               data-type="bool"
+                               {{ 'checked' if enabled else '' }}>
+                        <label class="custom-control-label" for="exchange_{{exchange}}_enabled">Enabled</label>
+                    </div>
+                    {% if full_config %}
+                    <div
+                            class="custom-control custom-switch"
+                            data-toggle="tooltip"
+                            data-placement="top"
+                            title="Enable the sandbox to use the exchange test website. Only works for exchanges supporting this feature.">
+                        <input type="checkbox"
+                               class="custom-control-input config-element"
+                               id="exchange_{{exchange}}_sandboxed"
+                               config-key="exchanges_{{exchange}}_sandboxed"
+                               config-type="global_config"
+                               config-value="{{sandboxed}}"
+                               startup-config-value="{{sandboxed}}"
+                               data-type="bool"
+                               {{ 'checked' if sandboxed else '' }}>
+                        <label class="custom-control-label" for="exchange_{{exchange}}_sandboxed">Trade in exchange sandbox</label>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if full_config %}
+            <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+            {% endif %}
+        </div>
+    </div>
+{%- endmacro %}

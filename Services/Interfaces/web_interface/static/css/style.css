@@ -1,0 +1,423 @@
+/*
+ * Drakkar-Software OctoBot
+ * Copyright (c) Drakkar-Software, All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ */
+
+/*override mdb <strong> font-weight */
+strong {
+    font-weight: bolder;
+}
+
+.editable {
+    display: inline;
+}
+
+.bg-warning-dark {
+    background-color: #FF8800 !important;
+}
+
+.toast-top-right {
+    top: 4rem;
+}
+
+.quote {
+    border-left: 5px solid #1565C0;
+}
+
+html, body {
+    height: 100%;
+    min-height: 100%;
+}
+
+body:before {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: -1;
+
+    background-image: url('../img/svg/octobot.svg');
+
+    background-repeat: no-repeat;
+    background-size: cover;
+    width: 100%;
+    height: 100%;
+    opacity: 0.2;
+}
+
+.login_box {
+    max-width: 30rem;
+}
+
+.brand-logo {
+    height: 100%;
+    width: 100%;
+    max-height: 2.5rem;
+    max-width: 2.5rem;
+}
+
+.profile-overview-values {
+    font-weight: bold;
+}
+
+a.profile-overview-values {
+    color: #4285f4;
+}
+
+.card a.profile-overview-values:hover {
+    color: white !important;
+}
+
+.profile-overview-explanation {
+    font-weight: inherit;
+}
+
+.navbar.navbar-dark, footer.page-footer .footer-copyright, .progress-bar {
+    background-color: #C62828;
+}
+
+.navbar.navbar-dark .navbar-nav .nav-item {
+    border-bottom: 2px solid transparent;
+}
+
+.navbar.navbar-dark .navbar-nav .nav-item:hover {
+    animation: all 0.2s ease-in forwards;
+    border-bottom: 2px solid white;
+}
+
+.navbar.navbar-dark .navbar-nav .nav-item.active {
+    border-bottom: 2px solid white;
+    font-weight: bolder;
+}
+
+.dropdown-toggle::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: rotate(180deg);
+}
+
+.dropdown-toggle.collapsed::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: none;
+}
+
+.nav .collapse {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100; /* Behind the navbar */
+    padding: 48px 0 0; /* Height of navbar */
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    color: white;
+}
+
+@supports ((position: -webkit-sticky) or (position: sticky)) {
+    .sidebar-sticky {
+        position: -webkit-sticky;
+        position: sticky;
+    }
+}
+
+.sidebar-sticky {
+    position: relative;
+    top: 0;
+    height: calc(100vh - 48px);
+    padding-top: .5rem;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}
+
+.sidebar .nav-title {
+    margin-left: 2rem;
+}
+
+.separator {
+    border-bottom: 1px solid #424242;
+}
+
+.sidebar .nav .nav-link {
+    color: white;
+    width: 100%;
+}
+
+.sidebar .nav .nav-link:hover {
+    animation: all 0.2s ease-in forwards;
+    color: white;
+    background-color: #1565C0;
+}
+
+.sidebar .nav .nav-link.active {
+    background-color: #0D47A1;
+}
+
+.sidebar .btn {
+    padding: .84rem 1rem;
+    width: 100%;
+}
+
+.sidebar i {
+    line-height:inherit;
+}
+
+.sidebar .btn:hover {
+    padding: .84rem 1rem;
+    color: inherit;
+}
+
+.btn.btn-sm.rounded-circle {
+    padding-left: 0.64rem;
+    padding-right: 0.64rem;
+}
+
+/* Cards */
+.card-deck {
+    display: flex;
+    justify-content: flex-start;
+    flex-flow: row wrap;
+    align-items: stretch;
+}
+
+.card {
+    display: block;
+    flex-basis: 33.3%;
+    . rounded-bottom !important;
+}
+
+.card.profile-card {
+    flex-basis: inherit !important;
+}
+
+.card,
+.table-card {
+    flex-basis: 45% !important;
+}
+
+.medium-size {
+    max-width: 18rem;
+    min-width: 12rem;
+    justify-content: space-between;
+    display: flex;
+}
+
+.medium-size .card-body {
+    flex: 0 0 auto;
+}
+
+.small-size {
+    max-width: 18rem;
+    min-width: 12rem;
+    min-height: 14rem;
+}
+
+.very-small-size {
+    max-width: 3rem;
+    min-width: 2rem;
+    max-height: 3rem;
+    min-height: 2rem;
+}
+
+/* elegant-color white-text */
+
+/* Theme */
+/* Elegant */
+.card,
+.card-body,
+.card-text,
+.select2-selection__choice {
+    background-color: #3E4551 !important;
+}
+
+.card-body.candle-graph {
+    min-height: 30.625rem;
+    background-color: inherit;
+}
+
+.card,
+.card-body,
+.card-text,
+.select2 li span,
+.card-text {
+    color: white !important;
+}
+
+.card .card,
+.card .card .card-body,
+.card .card .card-text,
+.card .card-deck .card,
+.card .card-deck .card .card-body,
+.card .card-deck .card .card-text {
+    background-color: #4B515D !important;
+}
+
+.card .card-deck .card.unique-color-dark-card {
+    background-color: #1c2331 !important;
+}
+
+.card .deck-container-modified {
+    background-color: #C66900 !important;
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+
+.card .card-modified,
+.card .card-modified .card-body,
+.card .card-modified .card-text,
+.card .card-deck .card-modified,
+.card .card-deck .card-modified .card-body,
+.card .card-deck .card-modified .card-text {
+    background-color: #FF9800 !important;
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+
+
+.card .card-deck .card-status-color,
+.card .card-deck .card-status-color .card-body,
+.card .card-deck .card-status-color .card-body a:hover{
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+    color: white !important;
+}
+
+.card .card-deck .card-very-long,
+.card .card-deck .card-very-long .card-body{
+    background-color: darkgreen !important;
+}
+
+.card .card-deck .card-long,
+.card .card-deck .card-long .card-body{
+    background-color: seagreen !important;
+}
+
+.card .card-deck .card-short,
+.card .card-deck .card-short .card-body{
+    background-color: #C62828 !important;
+}
+
+.card .card-deck .card-very-short,
+.card .card-deck .card-very-short .card-body {
+    background-color: darkred !important;
+}
+
+.card a:link {
+    color: #33b5e5;
+}
+
+.card a:link.btn-primary, a:link.btn-primary:hover {
+    color: #fff !important;
+}
+
+.card a:hover {
+    color: #1565C0 !important;
+}
+
+.small-image {
+    max-height: 128px;
+    max-width: 128px;
+}
+
+.help-section {
+    padding-bottom: 0.4rem;
+}
+
+.fa-1_5x {
+    font-size: 1.5em;
+}
+
+span.large-editable div.editable-input {
+    width: 100%;
+}
+
+a:hover.external-link {
+    font-weight: inherit;
+}
+
+a:hover.hover_anim {
+    font-weight: inherit;
+    box-shadow: 0.1rem 0.1rem;
+}
+
+a:hover.hover-color-anim {
+    color: #1565C0 !important;
+}
+
+a:hover.badge {
+    font-weight: 700;
+}
+
+.card a:link.button {
+    color: inherit;
+}
+
+.modal-text {
+    color: #4B515D;
+}
+
+.editable-input,
+.editable-submit,
+.editable-cancel {
+    position: relative;
+    z-index: 2;
+}
+
+/* tables */
+table tbody tr,
+table.dataTable,
+.dataTables_wrapper label,
+.dataTables_wrapper caption,
+.dataTables_wrapper .dataTables_info {
+    color: white;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    color: white;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #666 !important;
+}
+
+table tr,
+table.dataTable tbody tr {
+    color: white;
+    background-color: #4B515D;
+}
+
+table tbody tr:hover td,
+table.dataTable tbody tr:hover td {
+    -moz-box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.25);
+    -webkit-box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+table.dataTable thead th,
+table.dataTable tfoot th {
+    background: #343a40;
+    font-weight: normal;
+}

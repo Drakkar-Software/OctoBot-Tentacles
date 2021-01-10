@@ -1,0 +1,70 @@
+{% import 'components/config/editable_config.html' as m_editable_config %}
+{% macro config_service_card(config, service_name, service, add_class='', no_select=False, default_values=False) -%}
+    {% set service_config_fields = service.get_default_value() %}
+
+    <!-- Card -->
+    <div class="card mb-4 {{add_class}} config-card">
+
+        <div class="card-header row">
+            <div class="d-flex justify-content-between w-100 px-3">
+                <div>
+                    <h4 class="text-capitalize">
+                        {{service_name}}
+                    </h4>
+                </div>
+                {% if service.get_website_url() %}
+                    <div>
+                        <a href="{{ service.get_website_url() }}" target="_blank" rel="noopener noreferrer" class="waves-effect">
+                            <img class="img-fluid brand-logo" alt="{{service_name}}-logo" src="{{ service.get_logo() }}">
+                        </a>
+                    </div>
+                {% endif %}
+                <div>
+                    <h4>
+                        <a class="blue-text" target="_blank" rel="noopener noreferrer" href="{{service.get_help_page()}}">
+                            <i class="fa fa-question"></i>
+                        </a>
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <!--Card content-->
+        <div class="card-body" name="{{service_name}}" config-key="services_{{service_name}}">
+
+            <p class="card-text api">
+                {% for req in service_config_fields %}
+                    {{ m_editable_config.editable_key(  service_config_fields if (default_values or req not in config[service_name]) else config[service_name],
+                                                        req,
+                                                        "services_" + service_name + "_" + req,
+                                                        "global_config",
+                                                        service_config_fields[req] if default_values else config[service_name][req],
+                                                        service_config_fields[req] if default_values else config[service_name][req],
+                                                        suggestions=service_config_fields[req] if default_values else config[service_name][req],
+                                                        no_select=no_select,
+                                                        number_step=1,
+                                                        force_title=True,
+                                                        tooltip=service.get_fields_description()[req],
+                                                        identifier=service_name,
+                                                        placeholder_str="Add user(s) in whitelist")
+                    }}
+                {% endfor %}
+            </p>
+            <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
+            <div class="float-right card-text mt-2">
+                {% for key, element in service.get_read_only_info().items() %}
+                <p class="">
+                    <i class="fa fa-check mr-1"></i>
+                    <span class="mr-2">
+                        {{ key }}
+                    </span>
+                    <a class="text-danger external-link" target="_blank" rel="noopener noreferrer" href="{{element}}">
+                        {{element}}
+                    </a>
+                </p>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+{%- endmacro %}

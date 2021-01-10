@@ -1,0 +1,38 @@
+{% macro pair_status_card(pair, status, watched_symbols) -%}
+    <!-- Card -->
+    <div class="card card-status-color pair_status_card mb-4 small-size">
+
+    <!--Title-->
+    <div class="card-header">{{ pair }}
+        <a class="float-right">
+            <i class="{{'fas' if pair in watched_symbols else 'far'}} fa-star watched_element text-white" symbol="{{ pair }}" update_url="{{ url_for('watched_symbols') }}"
+               data-toggle="tooltip" data-placement="top" title="Add to / Remove from watched markets"></i>
+        </a>
+    </div>
+
+    <!--Card image-->
+    <div class="view overlay animated fadeIn mx-auto pt-2">
+      <img class="img-fluid mx-auto currency-image small-image"
+           src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+           alt="Can't find image for {{ pair.split('/')[0] }} :("
+           symbol="{{pair.split('/')[0].lower()}}">
+        <a href="{{ url_for('symbol_market_status', exchange_id=status.keys()|list|first if status else '', symbol=pair) }}">
+      </a>
+    </div>
+    <div class="card-body pb-3 px-3">
+        <!--Card content-->
+        <div class="list-group list-group-flush">
+            {% for exchange_id, evaluation in status.items() %}
+                <a class="list-group-item list-group-item-action bg-transparent text-white status hover_anim px-3"
+                   status="{{evaluation[0]}}"
+                   href="{{ url_for('symbol_market_status', exchange_id=exchange_id, symbol=pair) }}">
+                        {{ evaluation[2] }}: {{ evaluation[0] }} ({{ evaluation[1] }})
+                        <i class="float-right fa fa-chart-bar pt-1"> </i>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    </div>
+    <!-- Card -->
+{%- endmacro %}

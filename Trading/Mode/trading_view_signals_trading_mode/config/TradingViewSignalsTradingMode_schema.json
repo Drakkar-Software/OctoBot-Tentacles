@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "title": "TradingViewSignalsTradingMode",
+  "properties": {
+    "use_maximum_size_orders": {
+        "title": "All in trades: Trade with all available funds at each order.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "use_market_orders": {
+        "title": "Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices are set using the Fixed limit prices difference value.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "close_to_current_price_difference": {
+        "title": "Fixed limit prices difference: Difference to take into account when placing a limit order (used if Use market orders is disabled). For a 200 USD price and 0.005 in difference: buy price would be 199 and sell price 201.",
+        "type": "number",
+        "minimum": 0,
+        "default": 0.005
+    }
+  }
+}
