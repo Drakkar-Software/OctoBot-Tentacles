@@ -90,9 +90,7 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
             }
         },
         error: function(result, status, error){
-            window.console&&console.error(result);
-            window.console&&console.error(status);
-            window.console&&console.error(error);
+            window.console&&console.error(result, status, error);
             if(typeof error_callback === "undefined") {
                 let error_text = result.responseText.length > 100 ? status : result.responseText;
                 create_alert("error", "Error when handling action: "+error_text+".", "");
@@ -113,7 +111,7 @@ function load_metadata() {
             botVersionTag.text(msg);
         },
         error: function(result, status, error){
-            window.console&&console.error("impossible to get the current OctoBot version");
+            window.console&&console.error(`Impossible to get the current OctoBot version: ${result.responseText}. More details in logs.`);
         }
     })
 }
