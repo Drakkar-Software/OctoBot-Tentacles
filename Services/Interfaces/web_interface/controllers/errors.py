@@ -26,7 +26,7 @@ APP_JSON_CONTENT_TYPE = "application/json"
 def not_found(_):
     if flask.request.content_type == APP_JSON_CONTENT_TYPE:
         return util.get_rest_reply("We are sorry, but this doesn't exist", 404)
-    return flask.render_template("404.html")
+    return flask.render_template("404.html"), 404
 
 
 @web_interface.server_instance.errorhandler(500)
@@ -35,5 +35,7 @@ def internal_error(error):
                                                                  f"Error when displaying page: "
                                                                  f"{error.original_exception}")
     if flask.request.content_type == APP_JSON_CONTENT_TYPE:
-        return util.get_rest_reply("We are sorry, but an unexpected error occurred", 500)
-    return flask.render_template("500.html")
+        return util.get_rest_reply(f"We are sorry, but an unexpected error occurred: {error.original_exception} "
+                                   f"({error.original_exception.__class__.__name__})", 500)
+    return flask.render_template("500.html",
+                                 error=error.original_exception), 500

@@ -53,12 +53,12 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
                 }
             },
             error: function(result, status, error){
-                window.console&&console.error(error);
+                window.console&&console.error(error, result, status);
                 const loadingSelector = $("div[name='loadingSpinner']");
                 if (loadingSelector.length) {
                     loadingSelector.addClass(hidden_class);
                 }
-                $(document.getElementById(element_id)).html(`<h7>Error when loading graph: ${error} ${result} (${status})</h7>`)
+                $(document.getElementById(element_id)).html(`<h7>Error when loading graph: ${error} [${result.responseText}]. More details in logs.</h7>`)
             }
         });
     }

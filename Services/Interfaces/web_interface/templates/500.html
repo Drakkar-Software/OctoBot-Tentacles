@@ -6,9 +6,14 @@
         <h1>We are sorry, but an unexpected error occurred.</h1>
     </div>
     <div class="card-body">
-        To fix this, please open an issue describing what happened on the
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/Drakkar-Software/OctoBot/issues"
-           class="btn btn-outline-white btn-md waves-effect">OctoBot issues report system.</a>
+        <p>
+            Error: {{ error }} ({{ error.__class__.__name__ }}). More details in logs.
+        </p>
+        <p>
+            To fix this, please open an issue describing what happened on the
+            <a target="_blank" rel="noopener noreferrer" href="https://github.com/Drakkar-Software/OctoBot/issues"
+               class="btn btn-outline-white btn-md waves-effect">OctoBot issues report system.</a>
+        </p>
     </div>
     <div class="card-footer">
         <button type="button" id="back-button" class="btn btn-lg btn-primary waves-effect">Go back</button>
