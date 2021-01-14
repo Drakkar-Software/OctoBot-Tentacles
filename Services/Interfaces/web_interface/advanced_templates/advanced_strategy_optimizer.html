@@ -34,7 +34,7 @@
                 <option value={{strategy}}
                     {% if run_params['strategy_name'] and strategy in run_params['strategy_name'] %}
                         selected="selected"
-                    {% elif strategy == current_strategy %}
+                    {% elif strategy == current_strategy and not run_params['strategy_name'] %}
                         selected="selected"
                     {% endif %}>
                       {{strategy}}
@@ -51,7 +51,7 @@
                 <option value={{evaluator}}
                     {% if run_params['evaluators'] and evaluator in run_params['evaluators'] %}
                         selected="selected"
-                    {% elif loop.index == 1 %}
+                    {% elif loop.index == 1 and not run_params['evaluators'] %}
                         selected="selected"
                     {% endif %}>
                       {{evaluator}}
@@ -68,7 +68,7 @@
                 <option value={{timeframe}}
                     {% if run_params['time_frames'] and timeframe in run_params['time_frames'] %}
                         selected="selected"
-                    {% elif loop.index == 1 %}
+                    {% elif loop.index == 1 and not run_params['time_frames']%}
                         selected="selected"
                     {% endif %}>
                       {{timeframe}}
@@ -85,7 +85,7 @@
                 <option value={{risk}}
                     {% if run_params['risks'] and risk in run_params['risks'] %}
                         selected="selected"
-                    {% elif loop.index == 1 %}
+                    {% elif loop.index == 1 and not run_params['risks'] %}
                         selected="selected"
                     {% endif %}>
                       {{risk}}
