@@ -25,7 +25,7 @@ import tentacles.Evaluator.TA as TA
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 async def evaluator_tester():
     evaluator_tester_instance = TestMACDEvaluator()
     evaluator_tester_instance.TA_evaluator_class = TA.MACDMomentumEvaluator
