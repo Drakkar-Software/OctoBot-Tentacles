@@ -24,7 +24,7 @@ import tentacles.Trading.Mode as Mode
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 def strategy_tester():
     strategy_tester_instance = TechnicalAnalysisStrategyEvaluatorTest()
     strategy_tester_instance.initialize(Strategies.TechnicalAnalysisStrategyEvaluator, Mode.DailyTradingMode)
