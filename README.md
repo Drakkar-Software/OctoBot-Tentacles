@@ -1,7 +1,7 @@
 # OctoBot-Tentacles
 [![OctoBot-Tentacles-CI](https://github.com/Drakkar-Software/OctoBot-Tentacles/workflows/OctoBot-Tentacles-CI/badge.svg)](https://github.com/Drakkar-Software/OctoBot-Tentacles/actions)
 
-This repository contains default evaluators, strategies, utilitary modules and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
+This repository contains default evaluators, strategies, utilitary modules, interfaces and trading modes for the [OctoBot](https://github.com/Drakkar-Software/OctoBot) project.
 
 Evaluators, utilitary modules, strategies and trading modes in this tentacles package are automatically installed on OctoBot when using the following command:
 ```bash

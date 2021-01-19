@@ -150,6 +150,7 @@ jobs:
           branch="${GITHUB_REF##*/}"
           sed -i "s/VERSION_PLACEHOLDER/$branch/g" metadata.yaml
           sed -i "s/base/$branch/g" metadata.yaml
+          sed -i "s/officials/dev/g" metadata.yaml
           cd OctoBot
           python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_DEV_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
