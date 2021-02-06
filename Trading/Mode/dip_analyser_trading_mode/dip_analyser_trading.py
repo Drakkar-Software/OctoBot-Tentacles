@@ -434,8 +434,5 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         cancelled_orders = False
         for order in self._get_current_buy_orders():
             await trader.cancel_order(order)
-            for consumer in self.trading_mode.consumers:
-                if isinstance(consumer, DipAnalyserTradingModeConsumer):
-                    consumer.unregister_buy_order(order.order_id)
             cancelled_orders = True
         return cancelled_orders
