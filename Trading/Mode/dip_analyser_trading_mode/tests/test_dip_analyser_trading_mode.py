@@ -230,7 +230,8 @@ async def test_create_bottom_order_replace_current():
         assert round(second_order.origin_quantity, 7) == round(first_order.origin_quantity, 7)
         assert round(second_order.origin_price, 7) == round(first_order.origin_price, 7)
         assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == available_after_order
-        assert first_order.order_id not in consumer.sell_targets_by_order_id
+        # order still in sell_targets_by_order_id: cancelling orders doesn't remove them for this
+        assert first_order.order_id in consumer.sell_targets_by_order_id
         assert second_order.order_id in consumer.sell_targets_by_order_id
 
         # third order, different weight
@@ -251,7 +252,7 @@ async def test_create_bottom_order_replace_current():
         assert round(third_order.origin_price, 7) == round(first_order.origin_price, 7)
         available_after_third_order = portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]
         assert available_after_third_order < available_after_order
-        assert second_order.order_id not in consumer.sell_targets_by_order_id
+        assert second_order.order_id in consumer.sell_targets_by_order_id
         assert third_order.order_id in consumer.sell_targets_by_order_id
 
         # fill third order
@@ -282,8 +283,8 @@ async def test_create_bottom_order_replace_current():
         assert round(fifth_order.origin_quantity, 7) == round(expected_quantity, 7)
         assert round(fifth_order.origin_price, 7) == round(first_order.origin_price, 7)
         assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] < available_after_third_order
-        assert first_order.order_id not in consumer.sell_targets_by_order_id
-        assert second_order.order_id not in consumer.sell_targets_by_order_id
+        assert first_order.order_id in consumer.sell_targets_by_order_id
+        assert second_order.order_id in consumer.sell_targets_by_order_id
 
         # third_order still in _get_order_identifier to keep history
         assert third_order.order_id in consumer.sell_targets_by_order_id
