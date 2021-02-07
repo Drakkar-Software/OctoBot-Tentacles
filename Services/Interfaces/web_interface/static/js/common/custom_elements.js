@@ -36,7 +36,7 @@ function create_circular_progress_doughnut(element, label1="% Done", label2="% R
     });
 }
 
-function create_doughnut_chart(element, data, title, fontColor='white'){
+function create_doughnut_chart(element, data, title, fontColor='white', animate=true){
     const labels = [];
     const values = [];
     const backgroundColors = [];
@@ -70,6 +70,10 @@ function create_doughnut_chart(element, data, title, fontColor='white'){
             ]
         },
         options: {
+            animation: {
+                animateRotate: animate,
+                animateScale: false
+            },
             responsive: true,
             title: {
                 text: title,

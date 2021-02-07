@@ -4,94 +4,96 @@
 {% import 'macros/starting_waiter.html' as m_waiter %}
 {% block body %}
 
-{% macro display_init_warning() -%}
-    {% if initializing_currencies_prices %}
-    <div class="alert alert-warning" role="alert">
-        OctoBot is currently initializing prices for {{ initializing_currencies_prices | join(", ") }}.
-        These assets might take a few seconds to load.
-    </div>
-    {% endif %}
-{%- endmacro %}
-
-{% macro holding_row(holdings, holding_type) -%}
-        <td class="align-middle" data-toggle="tooltip" title="{{get_exchange_holdings(holdings, holding_type)}}">
-            {{holdings[holding_type]}}
-        </td>
-{%- endmacro %}
-
-{% macro portfolio_holding(currency, holdings, value) -%}
-    <tr class="symbol-holding text-center">
-        <td class="row mx-0">
-            <div class="col col-md-5 animated px-2 fadeIn img-fluid very-small-size">
-                <img class="card-img-top currency-image"
-                     src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
-                     alt="Can't find image for {{ currency }} :("
-                     symbol="{{currency.lower()}}">
-            </div>
-            <div class="d-none d-md-inline col-7 my-auto">
-                <span class="symbol">{{currency}}</span></div>
-        </td>
-        {{ holding_row(holdings, "total") }}
-        {{ holding_row(holdings, "free") }}
-        {{ holding_row(holdings, "locked") }}
-        <td class="total-value align-middle">{{value}}</td>
-    </tr>
-{%- endmacro %}
-
-<br>
-{% if not has_real_trader and not has_simulated_trader %}
-    {{ m_waiter.display_loading_message() }}
-{% else %}
-    <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
-        {{ display_init_warning() }}
-        <div class="card-header"><h1>Portfolio: {{displayed_portfolio_value}} {{reference_unit}}</h1></div>
-        <div class="card-body row mx-0">
-            {% if displayed_portfolio %}
-                <div class="col col-md-8">
-                    <table class="table table-hover table-responsive-lg" id="holdings-table">
-                      <thead>
-                        <tr class="text-center">
-                            <th scope="col">Asset</th>
-                            <th scope="col">Total</th>
-                            <th scope="col">Available</th>
-                            <th scope="col">Locked in orders</th>
-                            <th scope="col">Value in {{reference_unit}}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for currency, holdings in displayed_portfolio.items() %}
-                            {{ portfolio_holding(currency, holdings, symbols_values[currency]) }}
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                </div>
-                <div class="col col-md-4">
-                    <canvas id="portfolio_doughnutChart" height="150"></canvas>
-                </div>
-            {% else %}
-                <div class="card-subtitle">
-                    <h2 class="text-muted">Nothing there.</h2>
-                    <p>
-                        If a trader is enabled, please check <a href="{{url_for('logs')}}">your OctoBot logs</a>.
-                        There might be an issue with your exchange credentials.
-                    </p>
-                </div>
-            {% endif %}
-        </div>
-        {% if has_real_trader%}
-        <div class="card-footer d-flex justify-content-end">
-            <div>
-                <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}" class="btn btn-outline-danger btn-lg waves-effect"
-                data-toggle="tooltip" data-placement="top" title="Triggers a total portfolios re-synchronization using exchanges as a reference.">
-                    <i class="fa fa-sync"></i> Force refresh
-                </button>
-            </div>
+<div id="portfolio-display">
+    {% macro display_init_warning() -%}
+        {% if initializing_currencies_prices %}
+        <div class="alert alert-warning" role="alert">
+            OctoBot is currently initializing prices for {{ initializing_currencies_prices | join(", ") }}.
+            These assets might take a few seconds to load.
         </div>
         {% endif %}
-    </div>
-{% endif %}
-<br>
-{% endblock %}
+    {%- endmacro %}
+
+    {% macro holding_row(holdings, holding_type) -%}
+            <td class="align-middle" data-toggle="tooltip" title="{{get_exchange_holdings(holdings, holding_type)}}">
+                {{holdings[holding_type]}}
+            </td>
+    {%- endmacro %}
+
+    {% macro portfolio_holding(currency, holdings, value) -%}
+        <tr class="symbol-holding text-center">
+            <td class="row mx-0">
+                <div class="col col-md-5 animated px-2 fadeIn img-fluid very-small-size">
+                    <img class="card-img-top currency-image"
+                         src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                         alt="Can't find image for {{ currency }} :("
+                         symbol="{{currency.lower()}}">
+                </div>
+                <div class="d-none d-md-inline col-7 my-auto">
+                    <span class="symbol">{{currency}}</span></div>
+            </td>
+            {{ holding_row(holdings, "total") }}
+            {{ holding_row(holdings, "free") }}
+            {{ holding_row(holdings, "locked") }}
+            <td class="total-value align-middle">{{value}}</td>
+        </tr>
+    {%- endmacro %}
+
+    <br>
+    {% if not has_real_trader and not has_simulated_trader %}
+        {{ m_waiter.display_loading_message() }}
+    {% else %}
+        <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
+            {{ display_init_warning() }}
+            <div class="card-header"><h1>Portfolio: {{displayed_portfolio_value}} {{reference_unit}}</h1></div>
+            <div class="card-body row mx-0">
+                {% if displayed_portfolio %}
+                    <div class="col col-md-8">
+                        <table class="table table-hover table-responsive-lg" id="holdings-table">
+                          <thead>
+                            <tr class="text-center">
+                                <th scope="col">Asset</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Available</th>
+                                <th scope="col">Locked in orders</th>
+                                <th scope="col">Value in {{reference_unit}}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for currency, holdings in displayed_portfolio.items() %}
+                                {{ portfolio_holding(currency, holdings, symbols_values[currency]) }}
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                    </div>
+                    <div class="col col-md-4">
+                        <canvas id="portfolio_doughnutChart" height="150"></canvas>
+                    </div>
+                {% else %}
+                    <div class="card-subtitle">
+                        <h2 class="text-muted">Nothing there.</h2>
+                        <p>
+                            If a trader is enabled, please check <a href="{{url_for('logs')}}">your OctoBot logs</a>.
+                            There might be an issue with your exchange credentials.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+            {% if has_real_trader%}
+            <div class="card-footer d-flex justify-content-end">
+                <div>
+                    <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}" class="btn btn-outline-danger btn-lg waves-effect"
+                    data-toggle="tooltip" data-placement="top" title="Triggers a total portfolios re-synchronization using exchanges as a reference.">
+                        <i class="fa fa-sync"></i> Force refresh
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    {% endif %}
+    <br>
+    {% endblock %}
+</div>
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
