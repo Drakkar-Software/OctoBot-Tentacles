@@ -29,9 +29,12 @@ class TelegramNotifier(notifier.AbstractNotifier):
         await self._send_message(notification, text, use_markdown)
 
     async def _send_message(self, notification, text, use_markdown):
-        previous_message_id = notification.linked_notification.metadata[self.NOTIFICATION_TYPE_KEY].message_id \
-            if notification.linked_notification and \
-               self.NOTIFICATION_TYPE_KEY in notification.linked_notification.metadata else None
+        try:
+            previous_message_id = notification.linked_notification.metadata[self.NOTIFICATION_TYPE_KEY].message_id \
+                if notification.linked_notification and \
+                   self.NOTIFICATION_TYPE_KEY in notification.linked_notification.metadata else None
+        except (KeyError, AttributeError):
+            previous_message_id = None
         sent_message = await self.services[0].send_message(text,
                                                            markdown=use_markdown,
                                                            reply_to_message_id=previous_message_id)

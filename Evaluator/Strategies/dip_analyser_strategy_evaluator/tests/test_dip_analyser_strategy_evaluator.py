@@ -23,7 +23,7 @@ import tentacles.Trading.Mode as Mode
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 def strategy_tester():
     strategy_tester_instance = DipAnalyserStrategiesEvaluatorTest()
     strategy_tester_instance.initialize(Strategies.DipAnalyserStrategyEvaluator, Mode.DipAnalyserTradingMode)

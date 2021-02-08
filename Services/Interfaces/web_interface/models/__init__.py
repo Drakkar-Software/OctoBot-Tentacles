@@ -22,6 +22,7 @@ from tentacles.Services.Interfaces.web_interface.models import configuration
 from tentacles.Services.Interfaces.web_interface.models import dashboard
 from tentacles.Services.Interfaces.web_interface.models import interface_settings
 from tentacles.Services.Interfaces.web_interface.models import medias
+from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
@@ -96,6 +97,17 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
 from tentacles.Services.Interfaces.web_interface.models.medias import (
     is_valid_tentacle_image_path,
 )
+from tentacles.Services.Interfaces.web_interface.models.profiles import (
+    get_current_profile,
+    duplicate_and_select_profile,
+    select_profile,
+    get_profiles,
+    get_profiles_activated_tentacles,
+    update_profile,
+    remove_profile,
+    export_profile,
+    import_profile,
+)
 from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import (
     get_strategies_list,
     get_time_frames_list,
@@ -122,6 +134,8 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
     get_initializing_currencies_prices_set,
     get_evaluation,
     get_exchanges_load,
+    get_exchange_holdings_per_symbol,
+    get_symbols_values,
 )
 
 
@@ -178,6 +192,15 @@ __all__ = [
     "add_watched_symbol",
     "remove_watched_symbol",
     "is_valid_tentacle_image_path",
+    "get_current_profile",
+    "duplicate_and_select_profile",
+    "select_profile",
+    "get_profiles",
+    "get_profiles_activated_tentacles",
+    "update_profile",
+    "remove_profile",
+    "export_profile",
+    "import_profile",
     "get_strategies_list",
     "get_time_frames_list",
     "get_evaluators_list",
@@ -201,7 +224,9 @@ __all__ = [
     "get_exchanges_load",
     "REQUIREMENTS_KEY",
     "SYMBOL_KEY",
-    "ID_KEY"
+    "ID_KEY",
+    "get_exchange_holdings_per_symbol",
+    "get_symbols_values",
 ]
 
 

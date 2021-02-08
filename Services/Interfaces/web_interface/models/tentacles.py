@@ -48,6 +48,8 @@ def install_packages(path_or_url=None):
                 success = False
         else:
             message = "Tentacles installed however it is impossible to re-install tentacles with unknown package origin"
+    # reload profiles to display newly installed ones if any
+    interfaces_util.get_edited_config(dict_only=False).load_profiles()
     if success:
         return message
     return False

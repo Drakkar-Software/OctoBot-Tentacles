@@ -78,15 +78,15 @@ function load_report(report, should_alert=False){
             const symbol_reports = [];
             $.each( data["symbol_report"], function( index, value ) {
                 $.each( value, function( symbol, profitability ) {
-                    symbol_reports.push(symbol+": "+profitability);
+                    symbol_reports.push(`${symbol}: ${round_digits(profitability, 4)}%`);
                 });
             });
             const all_profitability = symbol_reports.join(", ");
-            $("#bProf").html(profitability);
+            $("#bProf").html(`${round_digits(profitability, 4)}%`);
             const avg_profitabilities = [];
             $.each( data["bot_report"]["market_average_profitability"], function( exchange, market_average_profitability ) {
                 const exch = show_exchanges ? `${exchange}: `: "";
-                avg_profitabilities.push(`${exch}${market_average_profitability}`);
+                avg_profitabilities.push(`${exch}${round_digits(market_average_profitability, 4)}%`);
             });
             $("#maProf").html(avg_profitabilities.join(", "));
             $("#refM").html(data["bot_report"]["reference_market"]);
@@ -97,7 +97,8 @@ function load_report(report, should_alert=False){
             $.each( data["bot_report"]["end_portfolio"], function( exchange, portfolio ) {
                 let exchange_portfolio = show_exchanges ? `${exchange} `: "";
                 $.each( portfolio, function( symbol, holdings ) {
-                    exchange_portfolio = `${exchange_portfolio} ${symbol}: ${holdings["total"]}`;
+                    const digits = holdings["total"] > 10 ? 2: 10;
+                    exchange_portfolio = `${exchange_portfolio} ${symbol}: ${round_digits(holdings["total"], digits)}`;
                 });
                 end_portfolio_reports.push(exchange_portfolio);
             });

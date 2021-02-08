@@ -29,8 +29,8 @@ import tentacles.Evaluator.Util as EvaluatorUtil
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
 class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.long_period_length = 10
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
@@ -106,9 +106,9 @@ class EMADivergenceTrendEvaluator(evaluators.TAEvaluator):
     SHORT_VALUE = "short"
     LONG_VALUE = "long"
 
-    def __init__(self):
-        super().__init__()
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.__class__)
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.period = self.evaluator_config[self.EMA_SIZE]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,

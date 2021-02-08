@@ -25,7 +25,7 @@ from tentacles.Evaluator.TA import DoubleMovingAverageTrendEvaluator
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 async def evaluator_tester():
     evaluator_tester_instance = TestDoubleMovingAveragesEvaluator()
     evaluator_tester_instance.TA_evaluator_class = DoubleMovingAverageTrendEvaluator

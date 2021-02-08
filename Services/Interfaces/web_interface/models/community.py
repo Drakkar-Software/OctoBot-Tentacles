@@ -23,4 +23,4 @@ def get_community_metrics_to_display():
 
 
 def can_get_community_metrics():
-    return octobot_community.can_read_metrics(interfaces_util.get_edited_config())
+    return octobot_community.can_read_metrics(interfaces_util.get_edited_config(dict_only=False))

@@ -34,8 +34,8 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
     PRICE_THRESHOLD_KEY = "price_difference_threshold_percent"
     VOLUME_THRESHOLD_KEY = "volume_difference_threshold_percent"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.something_is_happening = False
         self.last_notification_eval = 0
 
@@ -159,8 +159,8 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
 
 class InstantMAEvaluator(evaluators.RealTimeEvaluator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.last_candle_data = {}
         self.last_moving_average_values = {}
         self.period = 6

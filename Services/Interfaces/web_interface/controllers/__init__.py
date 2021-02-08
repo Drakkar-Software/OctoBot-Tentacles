@@ -47,6 +47,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.backtesting import 
 )
 from tentacles.Services.Interfaces.web_interface.controllers.configuration import (
     config,
+    profile,
+    profiles_management,
+    accounts,
     config_tentacle,
     metrics_settings,
     config_actions,
@@ -72,7 +75,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.tentacles import (
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
-    portfolio_holdings,
     symbol_market_status,
     trades,
     utility_processor,
@@ -90,7 +92,10 @@ __all__ = [
     "data_collector",
     "commands",
     "community",
+    "profile",
+    "profiles_management",
     "config",
+    "accounts",
     "config_tentacle",
     "metrics_settings",
     "config_actions",
@@ -109,7 +114,6 @@ __all__ = [
     "tentacle_packages",
     "terms",
     "portfolio",
-    "portfolio_holdings",
     "symbol_market_status",
     "trading",
     "trades",

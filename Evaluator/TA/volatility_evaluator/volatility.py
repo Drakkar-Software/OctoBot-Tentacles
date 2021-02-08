@@ -29,9 +29,9 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
     LOW_LEVEL = "low_level"
     TULIPY_INDICATOR_MULTIPLICATOR = 100
 
-    def __init__(self):
-        super().__init__()
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.__class__)
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.period = self.evaluator_config[self.STOCHRSI_PERIOD]
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,

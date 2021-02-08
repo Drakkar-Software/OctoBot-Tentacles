@@ -30,11 +30,10 @@ import octobot_evaluators.constants as evaluators_constants
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
-import octobot_commons.config_manager as config_manager
+import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
-import octobot.constants as octobot_constants
 
 NAME_KEY = "name"
 SYMBOL_KEY = "symbol"
@@ -103,7 +102,7 @@ def get_trading_tentacles_startup_activation():
         tentacles_manager_constants.TENTACLES_TRADING_PATH]
 
 
-def get_tentacle_documentation(name, media_url):
+def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
     try:
         doc_file = tentacles_manager_api.get_tentacle_documentation_path(name)
         if path.isfile(doc_file):
@@ -113,13 +112,14 @@ def get_tentacle_documentation(name, media_url):
                 # patch resources paths into the tentacle resource path
                 return doc_content.replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
     except KeyError as e:
-        _get_logger().error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
-                     f"This is probably an issue with the {name} tentacle matadata.json file, please "
-                     f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
-    return ""
+        if missing_tentacles is None or name not in missing_tentacles:
+            _get_logger().error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
+                                f"This is probably an issue with the {name} tentacle matadata.json file, please "
+                                f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
+        return ""
 
 
-def _get_strategy_activation_state(with_trading_modes, media_url):
+def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set):
     import tentacles.Trading.Mode as modes
     import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
@@ -141,6 +141,8 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
                 strategy_config[TRADING_MODES_KEY][key][constants.ACTIVATION_KEY] = val
                 strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(key, media_url)
                 strategy_config_classes[TRADING_MODES_KEY][key] = config_class
+            else:
+                _add_to_missing_tentacles_if_missing(key, missing_tentacles)
 
     evaluator_config = _get_evaluators_tentacles_activation()
     for key, val in evaluator_config.items():
@@ -152,8 +154,18 @@ def _get_strategy_activation_state(with_trading_modes, media_url):
             strategy_config[STRATEGIES_KEY][key][constants.ACTIVATION_KEY] = val
             strategy_config[STRATEGIES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(key, media_url)
             strategy_config_classes[STRATEGIES_KEY][key] = config_class
+        else:
+            _add_to_missing_tentacles_if_missing(key, missing_tentacles)
 
     return strategy_config, strategy_config_classes
+
+
+def _add_to_missing_tentacles_if_missing(tentacle_name: str, missing_tentacles: set):
+    # if tentacle_name can't be accessed in tentacles manager, this tentacle is not available
+    try:
+        tentacles_manager_api.get_tentacle_version(tentacle_name)
+    except KeyError:
+        missing_tentacles.add(tentacle_name)
 
 
 def _get_tentacle_packages():
@@ -200,7 +212,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
 
 
 def get_tentacle_config(klass):
-    return tentacles_manager_api.get_tentacle_config(klass)
+    return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 
 
 def get_tentacle_config_schema(klass):
@@ -211,27 +223,28 @@ def get_tentacle_config_schema(klass):
         return ""
 
 
-def _get_tentacle_activation_desc(name, activated, startup_val, media_url):
+def _get_tentacle_activation_desc(name, activated, startup_val, media_url, missing_tentacles: set):
     return {
                constants.TENTACLE_CLASS_NAME: name,
                constants.ACTIVATION_KEY: activated,
-               DESCRIPTION_KEY: get_tentacle_documentation(name, media_url),
+               DESCRIPTION_KEY: get_tentacle_documentation(name, media_url, missing_tentacles),
                constants.STARTUP_CONFIG_KEY: startup_val
            }, tentacles_manager_api.get_tentacle_group(name)
 
 
 def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation, startup_tentacles_activation,
-                                             root_element, media_url):
+                                             root_element, media_url, missing_tentacles: set):
     for tentacle_class_name, activated in tentacles_activation[root_element].items():
         startup_val = startup_tentacles_activation[root_element][tentacle_class_name]
-        tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url)
+        tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
+                                                        missing_tentacles)
         if group in activation_by_group:
             activation_by_group[group].append(tentacle)
         else:
             activation_by_group[group] = [tentacle]
 
 
-def get_tentacles_activation_desc_by_group(media_url):
+def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
     tentacles_activation = tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())
     startup_tentacles_activation = tentacles_manager_api.get_tentacles_activation(
         interfaces_util.get_startup_tentacles_config())
@@ -239,7 +252,8 @@ def get_tentacles_activation_desc_by_group(media_url):
     for root_element in NON_TRADING_STRATEGY_RELATED_TENTACLES:
         try:
             _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation,
-                                                     startup_tentacles_activation, root_element, media_url)
+                                                     startup_tentacles_activation, root_element, media_url,
+                                                     missing_tentacles)
         except KeyError:
             pass
     # only return tentacle groups for which there is an activation choice to simplify the config interface
@@ -251,7 +265,9 @@ def get_tentacles_activation_desc_by_group(media_url):
 def update_tentacle_config(tentacle_name, config_update):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
-        tentacles_manager_api.update_tentacle_config(klass, config_update)
+        tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
+                                                     klass,
+                                                     config_update)
         return True, f"{tentacle_name} updated"
     except Exception as e:
         _get_logger().exception(e, False)
@@ -261,7 +277,8 @@ def update_tentacle_config(tentacle_name, config_update):
 def reset_config_to_default(tentacle_name):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
-        tentacles_manager_api.factory_tentacle_reset_config(klass)
+        tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
+                                                            klass)
         return True, f"{tentacle_name} configuration reset to default values"
     except Exception as e:
         _get_logger().exception(e, False)
@@ -280,20 +297,26 @@ def _get_required_element(elements_config):
 
 
 def _add_strategy_requirements_and_default_config(desc, klass):
+    tentacles_config = interfaces_util.get_startup_tentacles_config()
     strategy_config = get_tentacle_config(klass)
-    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(strategy_config)]
-    desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(strategy_config)]
-    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(strategy_config)]
+    desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(tentacles_config,
+                                                                                       strategy_config)]
+    desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(tentacles_config,
+                                                                                                   strategy_config)]
+    desc[DEFAULT_CONFIG_KEY] = [evaluator for evaluator in klass.get_default_evaluators(tentacles_config,
+                                                                                        strategy_config)]
 
 
 def _add_trading_mode_requirements_and_default_config(desc, klass):
+    tentacles_config = interfaces_util.get_startup_tentacles_config()
     mode_config = get_tentacle_config(klass)
-    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(mode_config)
+    required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(tentacles_config,
+                                                                                                   mode_config)
     if required_strategies:
         desc[REQUIREMENTS_KEY] = \
             [strategy for strategy in required_strategies]
         desc[DEFAULT_CONFIG_KEY] = \
-            [strategy for strategy in klass.get_default_strategies(mode_config)]
+            [strategy for strategy in klass.get_default_strategies(tentacles_config, mode_config)]
         desc[REQUIREMENTS_COUNT_KEY] = required_strategies_count
     else:
         desc[REQUIREMENTS_KEY] = []
@@ -315,8 +338,10 @@ def _add_trading_modes_requirements(trading_modes_list, strategy_config):
             _get_logger().exception(e, False)
 
 
-def get_strategy_config(media_url, with_trading_modes=True):
-    strategy_config, strategy_config_classes = _get_strategy_activation_state(with_trading_modes, media_url)
+def get_strategy_config(media_url, missing_tentacles: set, with_trading_modes=True):
+    strategy_config, strategy_config_classes = _get_strategy_activation_state(with_trading_modes,
+                                                                              media_url,
+                                                                              missing_tentacles)
     if with_trading_modes:
         _add_trading_modes_requirements(strategy_config_classes[TRADING_MODES_KEY], strategy_config)
     _add_strategies_requirements(strategy_config_classes[STRATEGIES_KEY], strategy_config)
@@ -328,11 +353,11 @@ def get_in_backtesting_mode():
 
 
 def accepted_terms():
-    return config_manager.accepted_terms(interfaces_util.get_edited_config())
+    return interfaces_util.get_edited_config(dict_only=False).accepted_terms()
 
 
 def accept_terms(accepted):
-    return config_manager.accept_terms(interfaces_util.get_edited_config(), accepted)
+    return interfaces_util.get_edited_config(dict_only=False).accept_terms(accepted)
 
 
 def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
@@ -350,7 +375,7 @@ def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
     return False, klass
 
 
-def get_evaluator_detailed_config(media_url):
+def get_evaluator_detailed_config(media_url, missing_tentacles: set):
     import tentacles.Evaluator.Strategies as strategies
     import tentacles.Evaluator.TA as ta
     import tentacles.Evaluator.Social as social
@@ -379,6 +404,8 @@ def get_evaluator_detailed_config(media_url):
                                                                 is_strategy=True)
                     if is_strategy:
                         strategy_class_by_name[evaluator_name] = klass
+                    else:
+                        _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
 
     _add_strategies_requirements(strategy_class_by_name, strategy_config)
     required_elements = _get_required_element(strategy_config)
@@ -411,46 +438,54 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
         return False
 
 
-def _handle_special_fields(new_config):
+def _handle_special_fields(config, new_config):
     try:
         # replace web interface password by its hash before storage
         web_password_key = constants.UPDATED_CONFIG_SEPARATOR.join([services_constants.CONFIG_CATEGORY_SERVICES,
                                                                     services_constants.CONFIG_WEB,
                                                                     services_constants.CONFIG_WEB_PASSWORD])
-        new_config[web_password_key] = config_manager.get_password_hash(new_config[web_password_key])
+        if web_password_key in new_config:
+            new_config[web_password_key] = configuration.get_password_hash(new_config[web_password_key])
+        # add exchange enabled param if missing
+        for key in list(new_config.keys()):
+            values = key.split(constants.UPDATED_CONFIG_SEPARATOR)
+            if values[0] == commons_constants.CONFIG_EXCHANGES and \
+                    values[1] not in config[commons_constants.CONFIG_EXCHANGES]:
+                enabled_key = constants.UPDATED_CONFIG_SEPARATOR.join([commons_constants.CONFIG_EXCHANGES,
+                                                                       values[1],
+                                                                       commons_constants.CONFIG_ENABLED_OPTION])
+                if enabled_key not in new_config:
+                    new_config[enabled_key] = True
     except KeyError:
         pass
 
 
 def update_global_config(new_config, delete=False):
-    current_edited_config = interfaces_util.get_edited_config()
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
     if not delete:
-        _handle_special_fields(new_config)
-    config_manager.update_global_config(new_config,
-                                        current_edited_config,
-                                        octobot_constants.CONFIG_FILE_SCHEMA,
-                                        backtesting_api.is_backtesting_enabled(current_edited_config),
-                                        constants.UPDATED_CONFIG_SEPARATOR,
-                                        update_input=True,
-                                        delete=delete)
+        _handle_special_fields(current_edited_config.config, new_config)
+    current_edited_config.update_config_fields(new_config,
+                                               backtesting_api.is_backtesting_enabled(current_edited_config.config),
+                                               constants.UPDATED_CONFIG_SEPARATOR,
+                                               delete=delete)
     return True
 
 
 def manage_metrics(enable_metrics):
-    current_edited_config = interfaces_util.get_edited_config()
-    if commons_constants.CONFIG_METRICS not in current_edited_config:
-        current_edited_config[commons_constants.CONFIG_METRICS] = {
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
+    if commons_constants.CONFIG_METRICS not in current_edited_config.config:
+        current_edited_config.config[commons_constants.CONFIG_METRICS] = {
             commons_constants.CONFIG_ENABLED_OPTION: enable_metrics}
     else:
-        current_edited_config[commons_constants.CONFIG_METRICS][
+        current_edited_config.config[commons_constants.CONFIG_METRICS][
             commons_constants.CONFIG_ENABLED_OPTION] = enable_metrics
     if enable_metrics and community.CommunityManager.should_register_bot(current_edited_config):
         community.CommunityManager.background_get_id_and_register_bot(interfaces_util.get_bot_api())
-    config_manager.simple_save_config_update(current_edited_config)
+    current_edited_config.save()
 
 
 def get_metrics_enabled():
-    return config_manager.get_metrics_enabled(interfaces_util.get_edited_config())
+    return interfaces_util.get_edited_config(dict_only=False).get_metrics_enabled()
 
 
 def get_services_list():

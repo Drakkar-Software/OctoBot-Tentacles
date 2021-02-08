@@ -32,8 +32,8 @@ class RedditForumEvaluator(evaluators.SocialEvaluator):
 
     SERVICE_FEED_CLASS = Services_feeds.RedditServiceFeed
 
-    def __init__(self):
-        evaluators.SocialEvaluator.__init__(self)
+    def __init__(self, tentacles_setup_config):
+        evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)
         self.overall_state_analyser = EvaluatorUtil.OverallStateAnalyser()
         self.count = 0
         self.sentiment_analyser = None

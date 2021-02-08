@@ -19,10 +19,10 @@ import time
 import octobot_services.interfaces.util as interfaces_util
 
 
-def schedule_delayed_command(command, delay=0.5):
+def schedule_delayed_command(command, *args, delay=0.5):
     def _delayed_command():
         time.sleep(delay)
-        command()
+        command(*args)
     threading.Thread(target=_delayed_command).start()
 
 

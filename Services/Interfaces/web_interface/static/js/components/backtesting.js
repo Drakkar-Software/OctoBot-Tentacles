@@ -19,15 +19,18 @@
 
 
 function get_selected_files(){
-    const selected_modules = [];
-    dataFilesTable.rows(
+    const selected_files = [];
+    const selectedRows = dataFilesTable.rows(
         function ( idx, data, node ) {
             return $(node).find("input[type='checkbox']:checked").length > 0;
         }
-    ).eq(0).each(function( index ) {
-        selected_modules.push(dataFilesTable.row( index ).data()[1]);
-    });
-    return selected_modules;
+    ).eq(0);
+    if(selectedRows){
+        selectedRows.each(function( index ) {
+            selected_files.push(dataFilesTable.row( index ).data()[5]);
+        });
+    }
+    return selected_files;
 }
 
 function handle_backtesting_buttons(){

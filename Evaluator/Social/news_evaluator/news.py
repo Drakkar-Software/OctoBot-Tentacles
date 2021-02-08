@@ -31,8 +31,8 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
     # absolute value above which a notification is triggered
     _EVAL_NOTIFICATION_THRESHOLD = 0.6
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.count = 0
         self.sentiment_analyser = None
         self.is_self_refreshing = True

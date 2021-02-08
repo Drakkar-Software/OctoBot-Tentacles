@@ -33,6 +33,10 @@ strong {
     top: 4rem;
 }
 
+.quote {
+    border-left: 5px solid #1565C0;
+}
+
 html, body {
     height: 100%;
     min-height: 100%;
@@ -65,7 +69,23 @@ body:before {
     max-width: 2.5rem;
 }
 
-.navbar.navbar-dark, footer.page-footer .footer-copyright {
+.profile-overview-values {
+    font-weight: bold;
+}
+
+a.profile-overview-values {
+    color: #4285f4;
+}
+
+.card a.profile-overview-values:hover {
+    color: white !important;
+}
+
+.profile-overview-explanation {
+    font-weight: inherit;
+}
+
+.navbar.navbar-dark, footer.page-footer .footer-copyright, .progress-bar {
     background-color: #C62828;
 }
 
@@ -81,6 +101,22 @@ body:before {
 .navbar.navbar-dark .navbar-nav .nav-item.active {
     border-bottom: 2px solid white;
     font-weight: bolder;
+}
+
+.dropdown-toggle::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: rotate(180deg);
+}
+
+.dropdown-toggle.collapsed::after {
+    margin-top: auto;
+    margin-bottom: auto;
+    transform: none;
+}
+
+.nav .collapse {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .sidebar {
@@ -114,10 +150,8 @@ body:before {
     margin-left: 2rem;
 }
 
-.sidebar .bordered {
-    margin-bottom: 2rem;
+.separator {
     border-bottom: 1px solid #424242;
-    border-top: 1px solid #424242;
 }
 
 .sidebar .nav .nav-link {
@@ -132,7 +166,6 @@ body:before {
 }
 
 .sidebar .nav .nav-link.active {
-    font-weight: bolder;
     background-color: #0D47A1;
 }
 
@@ -150,6 +183,11 @@ body:before {
     color: inherit;
 }
 
+.btn.btn-sm.rounded-circle {
+    padding-left: 0.64rem;
+    padding-right: 0.64rem;
+}
+
 /* Cards */
 .card-deck {
     display: flex;
@@ -161,7 +199,11 @@ body:before {
 .card {
     display: block;
     flex-basis: 33.3%;
-. rounded-bottom !important;
+    . rounded-bottom !important;
+}
+
+.card.profile-card {
+    flex-basis: inherit !important;
 }
 
 .card,
@@ -251,38 +293,43 @@ body:before {
     transition: all 0.5s ease;
 }
 
-.card .card-long,
-.card .card-long .card-body,
-.card .card-long .card-text,
-.card .card-deck .card-long,
-.card .card-deck .card-long .card-body,
-.card .card-deck .card-long .card-text {
-    background-color: seagreen !important;
+
+.card .card-deck .card-status-color,
+.card .card-deck .card-status-color .card-body,
+.card .card-deck .card-status-color .card-body a:hover{
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
     -o-transition: all 0.5s ease;
     transition: all 0.5s ease;
+    color: white !important;
 }
 
-.card .card-short,
-.card .card-short .card-body,
-.card .card-short .card-text,
+.card .card-deck .card-very-long,
+.card .card-deck .card-very-long .card-body{
+    background-color: darkgreen !important;
+}
+
+.card .card-deck .card-long,
+.card .card-deck .card-long .card-body{
+    background-color: seagreen !important;
+}
+
 .card .card-deck .card-short,
-.card .card-deck .card-short .card-body,
-.card .card-deck .card-short .card-text {
+.card .card-deck .card-short .card-body{
+    background-color: #C62828 !important;
+}
+
+.card .card-deck .card-very-short,
+.card .card-deck .card-very-short .card-body {
     background-color: darkred !important;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
 }
 
 .card a:link {
     color: #33b5e5;
 }
 
-.card a:link.btn-primary {
-    color: #fff;
+.card a:link.btn-primary, a:link.btn-primary:hover {
+    color: #fff !important;
 }
 
 .card a:hover {
@@ -298,6 +345,14 @@ body:before {
     padding-bottom: 0.4rem;
 }
 
+.fa-1_5x {
+    font-size: 1.5em;
+}
+
+span.large-editable div.editable-input {
+    width: 100%;
+}
+
 a:hover.external-link {
     font-weight: inherit;
 }
@@ -305,6 +360,10 @@ a:hover.external-link {
 a:hover.hover_anim {
     font-weight: inherit;
     box-shadow: 0.1rem 0.1rem;
+}
+
+a:hover.hover-color-anim {
+    color: #1565C0 !important;
 }
 
 a:hover.badge {

@@ -24,6 +24,7 @@ import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.errors as errors
 import octobot_evaluators.evaluators as evaluators
 import octobot_tentacles_manager.api.configurator as tentacles_manager_api
+import octobot_tentacles_manager.configuration as tm_configuration
 import octobot_trading.api as trading_api
 
 
@@ -32,11 +33,11 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
     RE_EVAL_TA_ON_RT_OR_SOCIAL = "re_evaluate_TA_when_social_or_realtime_notification"
     BACKGROUND_SOCIAL_EVALUATORS = "background_social_evaluators"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.re_evaluation_triggering_eval_types = [evaluators_enums.EvaluatorMatrixTypes.SOCIAL.value,
                                                     evaluators_enums.EvaluatorMatrixTypes.REAL_TIME.value]
-        config = tentacles_manager_api.get_tentacle_config(self.__class__)
+        config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.social_evaluators_default_timeout = config.get(
             SimpleStrategyEvaluator.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY, 1 * commons_constants.HOURS_TO_SECONDS)
         self.re_evaluate_TA_when_social_or_realtime_notification = config.get(
@@ -196,11 +197,11 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
     WEIGHT = "weight"
     DEFAULT_WEIGHT = 1
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.allowed_evaluator_types = [evaluators_enums.EvaluatorMatrixTypes.TA.value,
                                         evaluators_enums.EvaluatorMatrixTypes.REAL_TIME.value]
-        config = tentacles_manager_api.get_tentacle_config(self.__class__)
+        config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.weight_by_time_frames = TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(
             config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT])
 
@@ -266,10 +267,11 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
             self.logger.error(f"Missing technical evaluator data for ({e})")
 
     @classmethod
-    def get_required_time_frames(cls, config: dict):
+    def get_required_time_frames(cls, config: dict,
+                                 tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration):
         if evaluators_constants.CONFIG_FORCED_TIME_FRAME in config:
             return time_frame_manager.parse_time_frames(config[evaluators_constants.CONFIG_FORCED_TIME_FRAME])
-        strategy_config = tentacles_manager_api.get_tentacle_config(cls)
+        strategy_config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls)
         if TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT in strategy_config:
             tf_to_weight = strategy_config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT]
             return time_frame_manager.parse_time_frames(

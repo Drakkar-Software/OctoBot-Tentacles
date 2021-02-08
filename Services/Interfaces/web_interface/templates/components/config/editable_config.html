@@ -1,6 +1,6 @@
 {% macro editable_key(config, key, config_key, config_type, config_value, startup_config_value, suggestions="", no_select=False, number_step=0.01, force_title=False, tooltip=None, identifier="", placeholder_str="") -%}
     <span
-        {% if tooltip is not none %}
+        {% if tooltip is not none and not config[key] | is_bool %}
             data-toggle="tooltip" title="{{tooltip}}"
         {% endif %}
     >

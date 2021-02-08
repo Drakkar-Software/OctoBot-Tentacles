@@ -19,7 +19,6 @@ import flask
 
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
-import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
@@ -29,39 +28,26 @@ import tentacles.Services.Interfaces.web_interface.models as models
 def portfolio():
     has_real_trader, has_simulated_trader = interfaces_util.has_real_and_or_simulated_traders()
 
-    real_portfolio, simulated_portfolio = interfaces_util.get_global_portfolio_currencies_amounts()
+    displayed_portfolio = models.get_exchange_holdings_per_symbol()
+    symbols_values = models.get_symbols_values(displayed_portfolio.keys(), has_real_trader, has_simulated_trader) \
+        if displayed_portfolio else {}
 
-    filtered_real_portfolio = {currency: amounts
-                               for currency, amounts in real_portfolio.items()
-                               if amounts[trading_constants.CONFIG_PORTFOLIO_TOTAL] > 0}
-    filtered_simulated_portfolio = {currency: amounts
-                                    for currency, amounts in simulated_portfolio.items()
-                                    if amounts[trading_constants.CONFIG_PORTFOLIO_TOTAL] > 0}
+    _, _, portfolio_real_current_value, portfolio_simulated_current_value = \
+        interfaces_util.get_portfolio_current_value()
 
-    _, _, portfolio_real_current_value, portfolio_simulated_current_value = interfaces_util.get_portfolio_current_value()
+    displayed_portfolio_value = portfolio_real_current_value if has_real_trader else portfolio_simulated_current_value
     reference_market = interfaces_util.get_reference_market()
     initializing_currencies_prices_set = models.get_initializing_currencies_prices_set()
 
     return flask.render_template('portfolio.html',
                                  has_real_trader=has_real_trader,
                                  has_simulated_trader=has_simulated_trader,
-                                 simulated_portfolio=filtered_simulated_portfolio,
-                                 real_portfolio=filtered_real_portfolio,
-                                 simulated_total_value=round(portfolio_simulated_current_value, 8),
-                                 real_total_value=round(portfolio_real_current_value, 8),
+                                 displayed_portfolio=displayed_portfolio,
+                                 symbols_values=symbols_values,
+                                 displayed_portfolio_value=round(displayed_portfolio_value, 8),
                                  reference_unit=reference_market,
                                  initializing_currencies_prices=initializing_currencies_prices_set
                                  )
-
-
-@web_interface.server_instance.route("/portfolio_holdings")
-@login.login_required_when_activated
-def portfolio_holdings():
-    result = {}
-    real_portfolio_holdings, simulated_portfolio_holdings = interfaces_util.get_portfolio_holdings()
-    result["real_portfolio_holdings"] = real_portfolio_holdings
-    result["simulated_portfolio_holdings"] = simulated_portfolio_holdings
-    return flask.jsonify(result)
 
 
 @web_interface.server_instance.route("/symbol_market_status")

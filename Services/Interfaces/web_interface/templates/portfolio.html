@@ -4,50 +4,82 @@
 {% import 'macros/starting_waiter.html' as m_waiter %}
 {% block body %}
 
-{% macro display_init_warning() -%}
-    {% if initializing_currencies_prices %}
-    <div class="alert alert-warning" role="alert">
-        OctoBot is currently initializing prices for {{ initializing_currencies_prices | join(", ") }}.
-        These assets might take a few seconds to load.
-    </div>
-    {% endif %}
-{%- endmacro %}
+<div id="portfolio-display">
+    {% macro display_init_warning() -%}
+        {% if initializing_currencies_prices %}
+        <div class="alert alert-warning" role="alert">
+            OctoBot is currently initializing prices for {{ initializing_currencies_prices | join(", ") }}.
+            These assets might take a few seconds to load.
+        </div>
+        {% endif %}
+    {%- endmacro %}
 
-<style>
-.card-deck .card{
-    max-width: 230px;
-}
-</style>
-<br>
-{% if not has_real_trader and not has_simulated_trader %}
-    {{ m_waiter.display_loading_message() }}
-{% else %}
-    <div class="card" id="portfoliosCard" update-url="{{ url_for('portfolio_holdings') }}" reference_market="{{reference_unit}}">
-        {% if has_real_trader %}
+    {% macro holding_row(holdings, holding_type) -%}
+            <td class="align-middle" data-toggle="tooltip" title="{{get_exchange_holdings(holdings, holding_type)}}">
+                {{holdings[holding_type]}}
+            </td>
+    {%- endmacro %}
+
+    {% macro portfolio_holding(currency, holdings, value) -%}
+        <tr class="symbol-holding text-center">
+            <td class="row mx-0">
+                <div class="col col-md-5 animated px-2 fadeIn img-fluid very-small-size">
+                    <img class="card-img-top currency-image"
+                         src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                         alt="Can't find image for {{ currency }} :("
+                         symbol="{{currency.lower()}}">
+                </div>
+                <div class="d-none d-md-inline col-7 my-auto">
+                    <span class="symbol">{{currency}}</span></div>
+            </td>
+            {{ holding_row(holdings, "total") }}
+            {{ holding_row(holdings, "free") }}
+            {{ holding_row(holdings, "locked") }}
+            <td class="total-value align-middle">{{value}}</td>
+        </tr>
+    {%- endmacro %}
+
+    <br>
+    {% if not has_real_trader and not has_simulated_trader %}
+        {{ m_waiter.display_loading_message() }}
+    {% else %}
+        <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
             {{ display_init_warning() }}
-            <div class="card-header"><h1>Real portfolio: {{real_total_value}} {{reference_unit}}</h1></div>
-            <div class="card-body">
-                {% if real_portfolio %}
-                    <div>
-                        <canvas id="real_portfolio_doughnutChart" height="70%" ></canvas>
+            <div class="card-header"><h1>Portfolio: {{displayed_portfolio_value}} {{reference_unit}}</h1></div>
+            <div class="card-body row mx-0">
+                {% if displayed_portfolio %}
+                    <div class="col col-md-8">
+                        <table class="table table-hover table-responsive-lg" id="holdings-table">
+                          <thead>
+                            <tr class="text-center">
+                                <th scope="col">Asset</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Available</th>
+                                <th scope="col">Locked in orders</th>
+                                <th scope="col">Value in {{reference_unit}}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for currency, holdings in displayed_portfolio.items() %}
+                                {{ portfolio_holding(currency, holdings, symbols_values[currency]) }}
+                            {% endfor %}
+                          </tbody>
+                        </table>
                     </div>
-                    <div class="card-subtitle text-muted"><h2>Full portfolio</h2></div>
-                    <div class="card-deck">
-                        {% for currency in real_portfolio %}
-                            {{ m_cards.currency_card(currency, real_portfolio) }}
-                        {% endfor %}
+                    <div class="col col-md-4">
+                        <canvas id="portfolio_doughnutChart" height="150"></canvas>
                     </div>
                 {% else %}
                     <div class="card-subtitle">
                         <h2 class="text-muted">Nothing there.</h2>
                         <p>
-                            If real trading is enabled and you expect your exchange holdings to be displayed,
-                            please check <a href="{{url_for('logs')}}">your OctoBot logs</a>. There might be an issue
-                            with your exchange credentials.
+                            If a trader is enabled, please check <a href="{{url_for('logs')}}">your OctoBot logs</a>.
+                            There might be an issue with your exchange credentials.
                         </p>
                     </div>
                 {% endif %}
             </div>
+            {% if has_real_trader%}
             <div class="card-footer d-flex justify-content-end">
                 <div>
                     <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}" class="btn btn-outline-danger btn-lg waves-effect"
@@ -56,36 +88,12 @@
                     </button>
                 </div>
             </div>
-        {% endif %}
-        {% if has_simulated_trader %}
-            {% if has_real_trader %}
-                </div>
-                <br>
-                <div class="card">
             {% endif %}
-            <div class="card-header"><h1>Simulated portfolio: {{simulated_total_value}} {{reference_unit}}</h1></div>
-            <div class="card-body">
-                {% if simulated_portfolio %}
-                    {{ display_init_warning() }}
-                    <div>
-                        <canvas id="simulated_portfolio_doughnutChart" height="70%"></canvas>
-                    </div>
-                    <div class="card-subtitle text-muted"><h2>Full portfolio</h2></div>
-                    <div class="card-deck">
-                        {% for currency in simulated_portfolio %}
-                            {{ m_cards.currency_card(currency, simulated_portfolio) }}
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="card-subtitle text-muted"><h2>Nothing there. </h2>
-                    </div>
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
-{% endif %}
-<br>
-{% endblock %}
+        </div>
+    {% endif %}
+    <br>
+    {% endblock %}
+</div>
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>

@@ -112,6 +112,11 @@ function generic_request_failure_callback(updated_data, update_url, dom_root_ele
     create_alert("error", msg.responseText, "");
 }
 
+function round_digits(number, decimals) {
+    const rounded = Number(Math.round(`${number}e${decimals}`) + `e-${decimals}`);
+    return isNaN(rounded) ? 0 : rounded;
+}
+
 function handle_numbers(number) {
     let regEx2 = /[0]+$/;
     let regEx3 = /[.]$/;

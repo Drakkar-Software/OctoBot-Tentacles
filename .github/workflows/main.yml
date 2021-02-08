@@ -30,7 +30,6 @@ jobs:
     - name: Install OctoBot on Unix
       if: matrix.os != 'windows-latest'
       env:
-        GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
@@ -42,13 +41,12 @@ jobs:
         mkdir new_tentacles
         cp -r Backtesting Evaluator Services Trading new_tentacles
         cd OctoBot
-        python start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
-        python start.py tentacles --install --location "../new_tentacles.zip" --all
+        python start.py tentacles -d "../new_tentacles" -p "../../any_platform.zip"
+        python start.py tentacles --install --location "../any_platform.zip" --all
 
     - name: Install OctoBot on Windows
       if: matrix.os == 'windows-latest'
       env:
-        GH_REPO: Drakkar-Software/OctoBot-Tentacles
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
@@ -70,8 +68,8 @@ jobs:
         xcopy Services new_tentacles\\Services /E/H/I
         xcopy Trading new_tentacles\\Trading /E/H/I
         cd OctoBot
-        python start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
-        python start.py tentacles --install --location "../new_tentacles.zip" --all
+        python start.py tentacles -d "../new_tentacles" -p "../../any_platform.zip"
+        python start.py tentacles --install --location "../any_platform.zip" --all
       shell: powershell
 
     - name: Compile project
@@ -107,6 +105,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Set Environment Variables
+        run: |
+          echo "NEXUS_USERNAME=${{ secrets.NEXUS_USERNAME }}" >> $GITHUB_ENV
+          echo "NEXUS_PASSWORD=${{ secrets.NEXUS_PASSWORD }}" >> $GITHUB_ENV
+          echo "NEXUS_URL=${{ secrets.NEXUS_URL }}" >> $GITHUB_ENV
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
@@ -115,7 +119,6 @@ jobs:
 
       - name: Produce tentacles package
         env:
-          GH_REPO: Drakkar-Software/OctoBot-Tentacles
           OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
           OCTOBOT_DEFAULT_BRANCH: dev
         run: |
@@ -126,24 +129,30 @@ jobs:
           cd ..
           mkdir new_tentacles
           cp -r Backtesting Evaluator Services Trading new_tentacles
-          cd OctoBot
-          python start.py tentacles -d "../new_tentacles" -p "../new_tentacles.zip"
 
       - name: Publish tag tentacles
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         run: |
-          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${GITHUB_REF#refs/*/}.zip
+          sed -i "s/VERSION_PLACEHOLDER/${GITHUB_REF#refs/*/}/g" metadata.yaml
+          cd OctoBot
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.NEXUS_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish latest tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/dev'
         run: |
-          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE }}/${{ secrets.LATEST_TAG }}.zip
+          sed -i "s/VERSION_PLACEHOLDER/latest/g" metadata.yaml
+          cd OctoBot
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish cleaned branch tentacles
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags')
         run: |
           branch="${GITHUB_REF##*/}"
-          curl -v --user "${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }}" --upload-file new_tentacles.zip ${{ secrets.TENTACLES_NEXUS_OFFICIAL_BASE_DEV }}/${branch////_}.zip
+          sed -i "s/VERSION_PLACEHOLDER/$branch/g" metadata.yaml
+          sed -i "s/base/$branch/g" metadata.yaml
+          sed -i "s/officials/dev/g" metadata.yaml
+          cd OctoBot
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_DEV_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
   notify:
     name: Notify

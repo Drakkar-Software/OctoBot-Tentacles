@@ -15,7 +15,6 @@
 #  License along with this library.
 
 import octobot.constants as octobot_contants
-import octobot_commons.config_manager as config_manager
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.models as models
 
@@ -34,6 +33,5 @@ def remove_watched_symbol(symbol):
 
 
 def _save_edition():
-    config_manager.simple_save_config_update(interfaces_util.get_edited_config(),
-                                             schema_file=octobot_contants.CONFIG_FILE_SCHEMA)
+    interfaces_util.get_edited_config(dict_only=False).save(schema_file=octobot_contants.CONFIG_FILE_SCHEMA)
     return True

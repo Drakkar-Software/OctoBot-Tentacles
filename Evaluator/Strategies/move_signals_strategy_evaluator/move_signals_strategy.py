@@ -35,8 +35,8 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
 
     SIGNAL_MINIMUM_THRESHOLD = 0.15
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
         self.evaluation_time_frames = [commons_enum.TimeFrames.THIRTY_MINUTES.value,
                                        commons_enum.TimeFrames.ONE_HOUR.value,
                                        commons_enum.TimeFrames.FOUR_HOURS.value]
@@ -90,7 +90,8 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
             except errors.UnsetTentacleEvaluation as e:
                 self.logger.debug(f"Tentacles evaluation initialization: not ready yet for a strategy update ({e})")
             except KeyError as e:
-                self.logger.error(f"Missing {e} evaluation in matrix, did you activate the required evaluator ?")
+                self.logger.exception(e, True, f"Missing {e} evaluation in matrix for {symbol} on {time_frame}, "
+                                      f"did you activate the required evaluator ?")
 
     def _compute_final_evaluation(self):
         weights = 0

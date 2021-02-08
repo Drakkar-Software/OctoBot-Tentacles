@@ -45,7 +45,7 @@ function handle_profitability(socket){
         if(!waiting_profitability_update){
             // re-schedule profitability refresh
             waiting_profitability_update = true;
-            setTimeout(function () {_refresh_profitability(socket)}, 2000);
+            setTimeout(function () {_refresh_profitability(socket)}, profitability_graph_update_interval);
         }
     })
 }

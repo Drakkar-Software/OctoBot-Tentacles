@@ -16,10 +16,17 @@
  * License along with this library.
  */
 
-function createPortfolioChart(element_id, data, title){
+function createPortfolioChart(element_id, title, animate){
+    const data = {};
+    $(".symbol-holding").each(function (){
+        const total_value = $(this).find(".total-value").text();
+        if($.isNumeric(total_value)){
+            data[$(this).find(".symbol").text()] = Number(total_value);
+        }
+    });
     const element = $("#"+element_id);
-    if(element.length > 0 ){
-        create_pie_chart(element[0], data, title);
+    if(Object.keys(data).length > 0 && element.length > 0){
+        create_doughnut_chart(element[0], data, title, 'white', animate);
     }
 }
 
@@ -33,14 +40,35 @@ function handle_portfolio_button(){
     }
 }
 
-$(document).ready(function() {
-    const portfolioElem=$("#portfoliosCard");
-    const url = portfolioElem.attr(update_url_attr);
+function start_periodic_refresh(){
+    setInterval(function() {
+        $("#portfolio-display").load(location.href + " #portfolio-display", function (){
+            update_display(true, false);
+        });
+    }, portfolio_update_interval);
+}
+
+function update_display(withImages, animate){
+    const portfolioElem = $("#portfoliosCard");
     const referenceMarket = portfolioElem.attr("reference_market");
     const chartTitle = "Traded assets value in "+referenceMarket;
-    $.get(url,function(data) {
-        createPortfolioChart("real_portfolio_doughnutChart", data["real_portfolio_holdings"], chartTitle);
-        createPortfolioChart("simulated_portfolio_doughnutChart", data["simulated_portfolio_holdings"], chartTitle);
+    ordersDataTable = $('#holdings-table').DataTable({
+        "paging": false,
+        "bDestroy": true,
+        "order": [[ 4, "desc" ]]
     });
-    handle_portfolio_button();
+    createPortfolioChart("portfolio_doughnutChart", chartTitle, animate);
+    if(withImages){
+        handleDefaultImages();
+    }
+}
+
+let firstLoad = true;
+
+$(document).ready(function() {
+    update_display(false, true);
+    if(firstLoad){
+        start_periodic_refresh();
+        handle_portfolio_button();
+    }
 });
