@@ -69,6 +69,12 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
                                              limit=self._fix_limit(limit),
                                              **kwargs)
 
+    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return await super().get_closed_orders(symbol=symbol,
+                                               since=since,
+                                               limit=self._fix_limit(limit),
+                                               **kwargs)
+
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit)
 
