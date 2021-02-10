@@ -23,6 +23,8 @@ import octobot_trading.exchanges as exchanges
 
 
 class CoinbasePro(exchanges.SpotCCXTExchange):
+    MAX_PAGINATION_LIMIT: int = 100  # value from https://docs.pro.coinbase.com/#pagination
+
     @classmethod
     def get_name(cls):
         return 'coinbasepro'
@@ -58,8 +60,17 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
                                                                           since=since,
-                                                                          limit=limit,
+                                                                          limit=self._fix_limit(limit),
                                                                           **kwargs))
+
+    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return await super().get_open_orders(symbol=symbol,
+                                             since=since,
+                                             limit=self._fix_limit(limit),
+                                             **kwargs)
+
+    def _fix_limit(self, limit: int) -> int:
+        return min(self.MAX_PAGINATION_LIMIT, limit)
 
     def _uniformize_trades(self, trades):
         if not trades:
