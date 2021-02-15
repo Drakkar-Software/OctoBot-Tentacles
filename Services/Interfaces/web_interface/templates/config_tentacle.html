@@ -9,7 +9,7 @@
 {% if tentacle_desc %}
     <div class="card">
         <div class="card-header">
-            <h1 id='{{ name }}' config-type="evaluator_config" default-elements="{{tentacle_desc['default-config']}}">
+            <h2 id='{{ name }}' config-type="evaluator_config" default-elements="{{tentacle_desc['default-config']}}">
                 {{ name }}
                 <a href='{{ url_for("profile") if tentacle_type in ["trading mode", "strategy"] else url_for("advanced.evaluator_config") }}'>
                     {% if tentacle_desc["activation"] %}
@@ -18,7 +18,7 @@
                         <span class="badge badge-warning float-right waves-effect">Deactivated</span>
                     {% endif %}
                 </a>
-            </h1>
+            </h2>
         </div>
         <div class="card-body" id='defaultConfigDiv' update-url="{{ url_for('config') }}">
           {{ m_tentacles.tentacle_horizontal_description(tentacle_desc, tentacle_type=="strategy") }}
@@ -27,11 +27,11 @@
     <br>
     <div class="card">
         <div class="card-header">
-            <h1>Configuration
+            <h2>Configuration
                 <a class="float-right blue-text" target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}/pages/Configuration.html#specific-evaluator-configuration">
                     <i class="fa fa-question"></i>
                 </a>
-            </h1>
+            </h2>
         </div>
         <div class="card-body" id="configEditorBody" schema="{{ get_tentacle_config_schema_content(tentacle_class) }}" config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
             <div id="configEditor"></div>
@@ -49,7 +49,7 @@
             {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
         <div class="card" id="super-container">
             <div class="card-header">
-                <h1>Compatible {{"strategies" if tentacle_type == "trading mode" else "evaluators"}}</h1>
+                <h2>Compatible {{"strategies" if tentacle_type == "trading mode" else "evaluators"}}</h2>
             </div>
             <div class="card-body" id="activatedElementsBody">
                 {% if tentacle_type == "trading mode" %}
@@ -107,7 +107,7 @@
     {% endif %}
     <div class="card" id="backtestingInputPart">
         <div class="card-header" id="backtestingPage" update-url="{{ url_for('backtesting', update_type='backtesting_status') }}">
-            <h1>Test configuration
+            <h2>Test configuration
                 {% if tentacle_desc["activation"] %}
                     <span class="badge badge-primary text-center waves-effect">Ready to test</span>
                 {% else %}
@@ -121,7 +121,7 @@
                 <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                     Current trading mode: {{ activated_trading_mode.get_name() }}
                 </a>
-            </h1>
+            </h2>
         </div>
         <div class="card-body">
             <div class="row w-100">
@@ -246,7 +246,7 @@
 {% else %}
     <div class="card">
         <div class="card-header">
-            <h1>{{ name }}</h1>
+            <h2>{{ name }}</h2>
         </div>
         <div class="card-body">
           Can't find any tentacle named {{ name }}
