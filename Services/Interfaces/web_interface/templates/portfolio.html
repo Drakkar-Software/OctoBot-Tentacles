@@ -45,7 +45,7 @@
     {% else %}
         <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
             {{ display_init_warning() }}
-            <div class="card-header"><h1>Portfolio: {{displayed_portfolio_value}} {{reference_unit}}</h1></div>
+            <div class="card-header"><h2>Portfolio: <span class="rounded-number">{{displayed_portfolio_value}}</span> {{reference_unit}}</h2></div>
             <div class="card-body row mx-0">
                 {% if displayed_portfolio %}
                     <div class="col col-md-8">

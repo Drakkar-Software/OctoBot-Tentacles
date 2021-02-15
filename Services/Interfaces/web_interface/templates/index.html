@@ -4,12 +4,12 @@
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
     <span id="exchange-specific-data">
         <div class="card mt-2 mt-md-4">
-            <div class="card-header"><h1>
+            <div class="card-header"><h2>
                 Profitability
                 <a class="float-right blue-text" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_DOCS_URL}}/pages/Understanding-profitability.html">
                     <i class="fa fa-question"></i>
                 </a>
-                </h1></div>
+                </h2></div>
             <div class="card-body card-text" id="profitability_graph">
                 <div id="graph-profitability-description"></div>
                 <canvas id="graph-profitability" height="30%"></canvas>
@@ -17,7 +17,7 @@
         </div>
         <br>
         <div class="card">
-            <div class="card-header"><h1>Watched markets</h1></div>
+            <div class="card-header"><h2>Watched markets</h2></div>
             <div class="card-body d-none text-center" id="loadingMarketsDiv">
                 <h2>
                     OctoBot is starting, markets will be refreshed when available.
