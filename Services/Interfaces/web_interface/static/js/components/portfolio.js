@@ -48,14 +48,27 @@ function start_periodic_refresh(){
     }, portfolio_update_interval);
 }
 
+function handle_rounded_numbers_display(){
+    $(".rounded-number").each(function (){
+        const text = $(this).text().trim();
+        if (!isNaN(text)){
+            const value = Number(text);
+            const decimal = value > 1 ? 3 : 8;
+            $(this).text(handle_numbers(round_digits(text, decimal)));
+        }
+    });
+}
+
 function update_display(withImages, animate){
     const portfolioElem = $("#portfoliosCard");
     const referenceMarket = portfolioElem.attr("reference_market");
     const chartTitle = "Traded assets value in "+referenceMarket;
+    handle_rounded_numbers_display();
     ordersDataTable = $('#holdings-table').DataTable({
         "paging": false,
         "bDestroy": true,
-        "order": [[ 4, "desc" ]]
+        "order": [[ 2, "desc" ]],
+        "searching": $("tr.symbol-holding").length > 10,
     });
     createPortfolioChart("portfolio_doughnutChart", chartTitle, animate);
     if(withImages){
