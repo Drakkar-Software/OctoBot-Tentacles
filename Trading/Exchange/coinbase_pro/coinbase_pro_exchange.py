@@ -46,17 +46,6 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
             self.logger.error(f"Fail to get market status of {symbol}: {e}")
             return {}
 
-    async def cancel_order(self, order_id, symbol=None, **kwargs):
-        self.logger.debug(f"Post cancel for order with id={order_id}")
-        try:
-            if await super().cancel_order(order_id, symbol=symbol, **kwargs):
-                # on coinbasepro, impossible to get a cancelled order
-                self.logger.debug(f"Ensure cancel for order with id={order_id}")
-                return await self.get_order(order_id, symbol=symbol, **kwargs) is None
-        except KeyError as e:
-            self.logger.error(f"Order {order_id} failed to cancel | KeyError: {e}")
-        return False
-
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
                                                                           since=since,
