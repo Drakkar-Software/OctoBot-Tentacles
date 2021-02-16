@@ -46,7 +46,7 @@
     {% endif %}
     {% if pairs_with_status %}
     <div class="card">
-        <div class="card-header"><h1>Market status</h1></div>
+        <div class="card-header"><h2>Market status</h2></div>
         <div class="card-body">
             <br>
             <div class="card-deck">
@@ -88,12 +88,12 @@
     {% endif %}
     <div class="card">
         <div class="card-header">
-            <h1>Open orders
+            <h2>Open orders
                 <button type="button" class="btn btn-outline-danger waves-effect float-right" id="cancel_all_orders" update-url="{{ url_for('api.orders', action='cancel_orders') }}"
                         {{ "disabled" if not(real_open_orders or simulated_open_orders) }}>
                     <i id="cancel_all_icon" class="fas fa-ban"></i> Cancel all
                 </button>
-            </h1>
+            </h2>
         </div>
         <div class="card-body">
             <div class='progress mb-1' id='cancel_progress_bar' style='display: none;'>

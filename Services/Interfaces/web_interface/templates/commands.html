@@ -6,7 +6,7 @@
 <br>
 <div class="card">
     <div class="card-header">
-        <h1>Your OctoBot</h1>
+        <h2>Your OctoBot</h2>
     </div>
     <div class="card-body">
         <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
@@ -24,12 +24,14 @@
 <br>
 <div class="card">
     <div class="card-header">
-        <h1>Help us to improve OctoBot</h1>
+        <h2>Help us to improve OctoBot</h2>
     </div>
     <div class="card-body">
         <div class="mb-4">
-            Any question ? Please have a look at our
-            <a target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_DOCS_URL}}/pages/Frequently-asked-questions-%28FAQ%29.html">
+            Any question ?
+            Please Checkout the <a target="_blank" rel="noopener" href="{{OCTOBOT_WEBSITE_URL}}">OctoBot official website</a>
+            and have a look at our
+            <a target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}/pages/Frequently-asked-questions-%28FAQ%29.html">
                 Frequently ask question (FAQ) section
             </a>
             first !
@@ -54,14 +56,15 @@ Nothing else is ever shared: no personal data, zero identification enabling data
                 In order to improve OctoBot, your user feedback is extremely helpful. The best way to make this project better and better is by telling us about your experience
                 (positive and negative) when using OctoBot.
             </p>
-            <a update-url="{{ url_for('api.user_feedback') }}" href="" id=feedbackButton class="btn btn-primary waves-effect disabled" target="_blank" rel="noopener noreferrer">
+            <a update-url="{{ url_for('api.user_feedback') }}" href="" id=feedbackButton class="btn btn-primary waves-effect disabled" target="_blank" rel="noopener">
                 Tell us what you think about OctoBot
             </a>
         </div>
     </div>
     <div class="card-footer">
         <p>
-            We are two developers working on the project on our free time. If you enjoy the OctoBot, tips are much appreciated <i class="far fa-smile"></i>
+            We are <a target="_blank" rel="noopener" href="{{OCTOBOT_WEBSITE_URL}}/about"> two developers working on the project on our free time</a>.
+            If you enjoy OctoBot, tips are much appreciated <i class="far fa-smile"></i>
         </p>
         <div><i class="fab fa-bitcoin"></i> 1DHfjxD3C4e2Xi37FsoTbVJ6e4zNtesiwf</div>
         <div> <i class="fab fa-ethereum"></i> 0xF154aA84B66e2bCacd74e201496D9ac3f81234D5</div>
@@ -70,7 +73,7 @@ Nothing else is ever shared: no personal data, zero identification enabling data
 <br>
 
 <div class="card">
-    <div class="card-header"><h1>Disclaimer</h1></div>
+    <div class="card-header"><h2>Disclaimer</h2></div>
     <div class="card-body">
         {{ m_text.text_lines(disclaimer) }}
         <p>

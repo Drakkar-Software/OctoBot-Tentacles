@@ -15,7 +15,7 @@
     {%- endmacro %}
 
     {% macro holding_row(holdings, holding_type) -%}
-            <td class="align-middle" data-toggle="tooltip" title="{{get_exchange_holdings(holdings, holding_type)}}">
+            <td class="align-middle rounded-number" data-toggle="tooltip" title="{{get_exchange_holdings(holdings, holding_type)}}">
                 {{holdings[holding_type]}}
             </td>
     {%- endmacro %}
@@ -33,9 +33,9 @@
                     <span class="symbol">{{currency}}</span></div>
             </td>
             {{ holding_row(holdings, "total") }}
+            <td class="total-value align-middle rounded-number">{{value}}</td>
             {{ holding_row(holdings, "free") }}
             {{ holding_row(holdings, "locked") }}
-            <td class="total-value align-middle">{{value}}</td>
         </tr>
     {%- endmacro %}
 
@@ -45,18 +45,21 @@
     {% else %}
         <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
             {{ display_init_warning() }}
-            <div class="card-header"><h1>Portfolio: {{displayed_portfolio_value}} {{reference_unit}}</h1></div>
-            <div class="card-body row mx-0">
+            <div class="card-header"><h2>Portfolio: <span class="rounded-number">{{displayed_portfolio_value}}</span> {{reference_unit}}</h2></div>
+            <div class="card-body row mx-0 justify-content-center">
                 {% if displayed_portfolio %}
-                    <div class="col col-md-8">
+                    <div class="col col-md-6">
+                        <canvas id="portfolio_doughnutChart" height="165"></canvas>
+                    </div>
+                    <div class="col-12">
                         <table class="table table-hover table-responsive-lg" id="holdings-table">
                           <thead>
                             <tr class="text-center">
                                 <th scope="col">Asset</th>
                                 <th scope="col">Total</th>
+                                <th scope="col">Value in {{reference_unit}}</th>
                                 <th scope="col">Available</th>
                                 <th scope="col">Locked in orders</th>
-                                <th scope="col">Value in {{reference_unit}}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -65,9 +68,6 @@
                             {% endfor %}
                           </tbody>
                         </table>
-                    </div>
-                    <div class="col col-md-4">
-                        <canvas id="portfolio_doughnutChart" height="150"></canvas>
                     </div>
                 {% else %}
                     <div class="card-subtitle">

@@ -328,7 +328,8 @@ a.profile-overview-values {
     color: #33b5e5;
 }
 
-.card a:link.btn-primary, a:link.btn-primary:hover {
+.card a.btn-primary, .card a.btn-primary:hover,
+.card a.btn-outline-white, .card a.btn-outline-white:hover {
     color: #fff !important;
 }
 
