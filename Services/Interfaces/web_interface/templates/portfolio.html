@@ -48,8 +48,10 @@
             <div class="card-header"><h2>Portfolio: <span class="rounded-number">{{displayed_portfolio_value}}</span> {{reference_unit}}</h2></div>
             <div class="card-body row mx-0 justify-content-center">
                 {% if displayed_portfolio %}
-                    <div class="col col-md-6">
-                        <canvas id="portfolio_doughnutChart" height="165"></canvas>
+                    <div class="col col-md-6 mb-2 mb-md-4">
+                        <canvas id="portfolio_doughnutChart"
+                                data-md-height="150"
+                                data-sm-height="200"></canvas>
                     </div>
                     <div class="col-12">
                         <table class="table table-hover table-responsive-lg" id="holdings-table">
