@@ -18,15 +18,27 @@
 
 function createPortfolioChart(element_id, title, animate){
     const data = {};
+    const element = $("#"+element_id);
+    let displayLegend = true;
+    let graphHeight = element.attr("data-md-height");
+    if(isMobileDisplay()){
+        graphHeight = element.attr("data-sm-height");
+    }
+    element.attr("height", graphHeight);
+
     $(".symbol-holding").each(function (){
         const total_value = $(this).find(".total-value").text();
         if($.isNumeric(total_value)){
             data[$(this).find(".symbol").text()] = Number(total_value);
         }
     });
-    const element = $("#"+element_id);
-    if(Object.keys(data).length > 0 && element.length > 0){
-        create_doughnut_chart(element[0], data, title, 'white', animate);
+    const dataLength = Object.keys(data).length;
+    if(dataLength > 0 && element.length > 0){
+        if(isMobileDisplay() && dataLength > 6){
+            // legend is hiding the chart on smaller displays if too many elements are present
+            displayLegend = false;
+        }
+        create_doughnut_chart(element[0], data, title, 'white', animate, displayLegend);
     }
 }
 
