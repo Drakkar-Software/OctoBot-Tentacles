@@ -182,7 +182,10 @@ async def test_ensure_staggered_orders():
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
-        await producer._ensure_staggered_orders()
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
         # price info: create trades
         assert producer.current_price == 4000
         assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
@@ -1090,6 +1093,38 @@ async def test_create_new_orders():
         # invalid input 3
         with pytest.raises(KeyError):
             await consumer.create_new_orders(symbol, None, None)
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_ensure_current_price_in_limit_parameters():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD")
+        producer.already_errored_on_out_of_window_price = False
+
+        with mock.patch.object(producer, "_log_window_error_or_warning", mock.Mock()) \
+                as _log_window_error_or_warning_mock:
+            # price too low (lower bound is 1)
+            producer._ensure_current_price_in_limit_parameters(0.1)
+            _log_window_error_or_warning_mock.assert_called_once()
+            assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is True
+            _log_window_error_or_warning_mock.reset_mock()
+            assert producer.already_errored_on_out_of_window_price is True
+            producer._ensure_current_price_in_limit_parameters(0.1)
+            assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is False
+            _log_window_error_or_warning_mock.reset_mock()
+            assert producer.already_errored_on_out_of_window_price is True
+
+            producer.already_errored_on_out_of_window_price = False
+            # price too high (higher bound is 10000)
+            producer._ensure_current_price_in_limit_parameters(999999)
+            assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is True
+            _log_window_error_or_warning_mock.reset_mock()
+            assert producer.already_errored_on_out_of_window_price is True
+            producer._ensure_current_price_in_limit_parameters(999999)
+            assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is False
+            _log_window_error_or_warning_mock.reset_mock()
+            assert producer.already_errored_on_out_of_window_price is True
     finally:
         await _stop(exchange_manager)
 
