@@ -18,7 +18,7 @@
 
 function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting=false,
                                 replace=false, should_retry=false, attempts=0,
-                                data=undefined, success_callback=undefined){
+                                data=undefined, success_callback=undefined, no_data_callback=undefined){
     if(isDefined(data)){
         create_or_update_candlestick_graph(element_id, data, symbol, exchange_name, time_frame, replace);
     }else{
@@ -30,8 +30,12 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
             type: "GET",
             dataType: "json",
             contentType: 'application/json',
-            success: function(msg, status){
-                if (!create_or_update_candlestick_graph(element_id, msg, symbol, exchange_name, time_frame, replace)){
+            success: function(data, status){
+                if(data !== null && "error" in data && data["error"].includes("no data for")){
+                    if(isDefined(no_data_callback)) {
+                        no_data_callback(element_id);
+                    }
+                }else if (!create_or_update_candlestick_graph(element_id, data, symbol, exchange_name, time_frame, replace)){
                     if (should_retry && attempts < max_attempts){
                         const marketsElement = $("#loadingMarketsDiv");
                         marketsElement.removeClass(disabled_item_class);
@@ -87,7 +91,7 @@ function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, cal
     });
 }
 
-function get_watched_symbol_price_graph(element, callback=undefined) {
+function get_watched_symbol_price_graph(element, callback=undefined, no_data_callback=undefined) {
     const symbol = element.attr("symbol");
     let formatted_symbol = symbol.replace(new RegExp("/","g"), "|");
     const ajax_url = "/dashboard/watched_symbol/"+ formatted_symbol;
@@ -100,13 +104,13 @@ function get_watched_symbol_price_graph(element, callback=undefined) {
                     if(isDefined(callback)){
                         callback(data["exchange_id"], data["symbol"], data["time_frame"], element.attr("id"));
                     }
-                });
+                }, no_data_callback);
         }else if($.isEmptyObject(data)){
             // OctoBot is starting, try again
             const marketsElement = $("#loadingMarketsDiv");
             marketsElement.removeClass(disabled_item_class);
             setTimeout(function(){
-                get_watched_symbol_price_graph(element, callback);
+                get_watched_symbol_price_graph(element, callback, no_data_callback);
             }, 1000);
         }
     });
