@@ -40,12 +40,14 @@ function handle_profitability(socket){
             display_profitability("graph-profitability");
         }
         else{
-            $("#graph-profitability-description").html("<h4>Nothing to display yet: profitability is 0 for the moment.</h4>")
+            $("#graph-profitability-description").html("<h4>Nothing to display yet: profitability is 0 for the moment.</h4>");
         }
         if(!waiting_profitability_update){
             // re-schedule profitability refresh
             waiting_profitability_update = true;
-            setTimeout(function () {_refresh_profitability(socket)}, profitability_graph_update_interval);
+            setTimeout(function () {
+                _refresh_profitability(socket);
+            }, profitability_graph_update_interval);
         }
     })
 }
@@ -169,7 +171,7 @@ function update_graph(data, re_update=true) {
     if(isDefined(data.request)){
         update_detail = data.request;
     }else{
-        update_detail = _find_symbol_details(candle_data.symbol)
+        update_detail = _find_symbol_details(candle_data.symbol);
     }
     if(isDefined(update_detail)){
         get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
@@ -178,7 +180,7 @@ function update_graph(data, re_update=true) {
         if(re_update){
             setTimeout(function () {
                 socket.emit("candle_graph_update", update_detail);
-            }, price_graph_update_interval)
+            }, price_graph_update_interval);
         }
     }
 }

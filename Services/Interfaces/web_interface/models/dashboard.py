@@ -15,7 +15,6 @@
 #  License along with this library.
 import numpy as np
 import math
-import copy
 
 import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
