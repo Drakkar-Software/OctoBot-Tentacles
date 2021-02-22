@@ -15,7 +15,6 @@
 #  License along with this library.
 import numpy as np
 import math
-import copy
 
 import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
@@ -125,14 +124,6 @@ def get_watched_symbols():
     config = interfaces_util.get_edited_config()
     if constants.CONFIG_WATCHED_SYMBOLS not in config:
         config[constants.CONFIG_WATCHED_SYMBOLS] = []
-    else:
-        try:
-            exchange_manager, _, _ = _get_first_exchange_identifiers()
-            for symbol in copy.copy(config[constants.CONFIG_WATCHED_SYMBOLS]):
-                if not _is_symbol_data_available(exchange_manager, symbol):
-                    config[constants.CONFIG_WATCHED_SYMBOLS].remove(symbol)
-        except KeyError:
-            config[constants.CONFIG_WATCHED_SYMBOLS] = []
     return config[constants.CONFIG_WATCHED_SYMBOLS]
 
 
@@ -251,6 +242,10 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
                 return _create_candles_data(symbol, time_frame, historical_candles,
                                             kline, bot_api, list_arrays, in_backtesting, ignore_trades)
         except KeyError:
-            # not started yet
-            return None
+            traded_pairs = trading_api.get_trading_pairs(exchange_manager)
+            if not traded_pairs or symbol in traded_pairs:
+                # not started yet
+                return None
+            else:
+                return {"error": f"no data for {symbol}"}
     return None

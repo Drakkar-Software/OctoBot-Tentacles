@@ -46,6 +46,10 @@ GENERAL_NOTIFICATION_KEY = "general_notifications"
 BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
+# Override system configuration content types
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+flask_util.init_content_types()
+
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface
 

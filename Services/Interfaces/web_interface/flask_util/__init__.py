@@ -14,6 +14,11 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+from tentacles.Services.Interfaces.web_interface.flask_util import content_types_management
+from tentacles.Services.Interfaces.web_interface.flask_util.content_types_management import (
+    init_content_types,
+)
+
 from tentacles.Services.Interfaces.web_interface.flask_util import context_processor
 from tentacles.Services.Interfaces.web_interface.flask_util.context_processor import (
     context_processor_register,
@@ -27,6 +32,7 @@ from tentacles.Services.Interfaces.web_interface.flask_util.template_filters imp
 )
 
 __all__ = [
+    "init_content_types",
     "context_processor_register",
     "is_dict",
     "is_list",

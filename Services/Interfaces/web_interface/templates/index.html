@@ -38,10 +38,10 @@
                         <div class="watched-symbol-graph" id="{{pair}}_graph-symbol-price" symbol="{{pair}}"></div>
                     </div>
                 {% endfor %}
+                <div class="card-body candle-graph d-none" id="first_symbol_graph" update-url="{{ url_for('first_symbol') }}" backtesting_mode={{backtesting_mode}}>
+                    <div id="graph-symbol-price"></div>
+                </div>
                 {% if not watched_symbols %}
-                    <div class="card-body candle-graph" id="first_symbol_graph" update-url="{{ url_for('first_symbol') }}" backtesting_mode={{backtesting_mode}}>
-                        <div id="graph-symbol-price"></div>
-                    </div>
                     <div class="card-footer">No watched markets: using a default one. You can add <a href="#"><i class="far fa-star text-white" aria-label="Watched markets star"></i></a> watched markets in the <a href="{{ url_for('trading') }}">trading section</a>.</div>
                 {% endif %}
             {% endif %}

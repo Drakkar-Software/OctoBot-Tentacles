@@ -40,12 +40,14 @@ function handle_profitability(socket){
             display_profitability("graph-profitability");
         }
         else{
-            $("#graph-profitability-description").html("<h4>Nothing to display yet: profitability is 0 for the moment.</h4>")
+            $("#graph-profitability-description").html("<h4>Nothing to display yet: profitability is 0 for the moment.</h4>");
         }
         if(!waiting_profitability_update){
             // re-schedule profitability refresh
             waiting_profitability_update = true;
-            setTimeout(function () {_refresh_profitability(socket)}, profitability_graph_update_interval);
+            setTimeout(function () {
+                _refresh_profitability(socket);
+            }, profitability_graph_update_interval);
         }
     })
 }
@@ -169,7 +171,7 @@ function update_graph(data, re_update=true) {
     if(isDefined(data.request)){
         update_detail = data.request;
     }else{
-        update_detail = _find_symbol_details(candle_data.symbol)
+        update_detail = _find_symbol_details(candle_data.symbol);
     }
     if(isDefined(update_detail)){
         get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
@@ -178,7 +180,7 @@ function update_graph(data, re_update=true) {
         if(re_update){
             setTimeout(function () {
                 socket.emit("candle_graph_update", update_detail);
-            }, price_graph_update_interval)
+            }, price_graph_update_interval);
         }
     }
 }
@@ -199,15 +201,28 @@ function init_updater(exchange_id, symbol, time_frame, elem_id){
     }
 }
 
+function enable_default_graph(){
+    $("#first_symbol_graph").removeClass(hidden_class);
+    get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater);
+}
+
+function no_data_for_graph(element_id){
+    document.getElementById(element_id).parentElement.classList.add(hidden_class);
+    if($(".candle-graph").not(`.${hidden_class}`).length === 0){
+       // enable default graph if no watched symbol graph can be displayed
+       enable_default_graph();
+    }
+}
+
 function init_graphs() {
     update_details = [];
     let useDefaultGraph = true;
     $(".watched-symbol-graph").each(function () {
         useDefaultGraph = false;
-        get_watched_symbol_price_graph($(this), init_updater);
+        get_watched_symbol_price_graph($(this), init_updater, no_data_for_graph);
     });
     if(useDefaultGraph){
-        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater);
+        enable_default_graph();
     }
     handle_graph_update(socket);
     handle_profitability(socket);

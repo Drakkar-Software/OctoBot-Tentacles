@@ -272,6 +272,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         self._check_params()
         self.healthy = True
+        self.already_errored_on_out_of_window_price = False
 
     async def start(self) -> None:
         await super().start()
@@ -360,6 +361,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             await self._create_order(new_order, filled_price)
 
     async def _handle_staggered_orders(self, current_price):
+        self._ensure_current_price_in_limit_parameters(current_price)
         if self.use_existing_orders_only:
             # when using existing orders only, no need to check existing orders (they can't be wrong since they are
             # already on exchange): only initialize increment and order fill events will do the rest
@@ -369,6 +371,29 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
                 await self._create_not_virtual_orders(staggered_orders, current_price)
+
+    def _ensure_current_price_in_limit_parameters(self, current_price):
+        message = None
+        if self.highest_sell < current_price:
+            message = f"The current price is hover the staggered orders boundaries for {self.symbol}: upper " \
+                      f"bound is {self.highest_sell} and price is {current_price}. OctoBot can't trade using " \
+                      f"these settings at this current price. Adjust your staggered orders upper bound settings to " \
+                      f"use this trading mode."
+        if self.lowest_buy > current_price:
+            message = f"The current price is bellow the staggered orders boundaries for {self.symbol}: lower " \
+                      f"bound is {self.lowest_buy} and price is {current_price}. OctoBot can't trade using " \
+                      f"these settings at this current price. Adjust your staggered orders lower bound settings to " \
+                      f"use this trading mode."
+        if message is not None:
+            # Only log once in error, use warning of later messages.
+            self._log_window_error_or_warning(message, not self.already_errored_on_out_of_window_price)
+            self.already_errored_on_out_of_window_price = True
+        else:
+            self.already_errored_on_out_of_window_price = False
+
+    def _log_window_error_or_warning(self, message, using_error):
+        log_func = self.logger.error if using_error else self.logger.warning
+        log_func(message)
 
     async def _generate_staggered_orders(self, current_price):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager

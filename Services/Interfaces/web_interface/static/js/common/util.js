@@ -112,6 +112,10 @@ function generic_request_failure_callback(updated_data, update_url, dom_root_ele
     create_alert("error", msg.responseText, "");
 }
 
+function isMobileDisplay() {
+    return $(window).width() < mobile_width_breakpoint;
+}
+
 function round_digits(number, decimals) {
     const rounded = Number(Math.round(`${number}e${decimals}`) + `e-${decimals}`);
     return isNaN(rounded) ? 0 : rounded;
