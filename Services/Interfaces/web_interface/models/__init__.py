@@ -21,6 +21,7 @@ from tentacles.Services.Interfaces.web_interface.models import community
 from tentacles.Services.Interfaces.web_interface.models import configuration
 from tentacles.Services.Interfaces.web_interface.models import dashboard
 from tentacles.Services.Interfaces.web_interface.models import interface_settings
+from tentacles.Services.Interfaces.web_interface.models import logs
 from tentacles.Services.Interfaces.web_interface.models import medias
 from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
@@ -93,6 +94,9 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import (
 from tentacles.Services.Interfaces.web_interface.models.interface_settings import (
     add_watched_symbol,
     remove_watched_symbol,
+)
+from tentacles.Services.Interfaces.web_interface.models.logs import (
+    export_logs,
 )
 from tentacles.Services.Interfaces.web_interface.models.medias import (
     is_valid_tentacle_image_path,
@@ -191,6 +195,7 @@ __all__ = [
     "get_watched_symbols",
     "add_watched_symbol",
     "remove_watched_symbol",
+    "export_logs",
     "is_valid_tentacle_image_path",
     "get_current_profile",
     "duplicate_and_select_profile",

@@ -89,12 +89,7 @@ function handleProfileImporter(){
 }
 
 function handleProfileExporter(){
-    const exportButton = $(".export-profile-button");
-    if(exportButton.length){
-        exportButton.click(function (){
-            window.window.location  = $(this).attr("data-url");
-        });
-    }
+    trigger_file_downloader_on_click($(".export-profile-button"));
 }
 
 function handleProfileSelector(){
