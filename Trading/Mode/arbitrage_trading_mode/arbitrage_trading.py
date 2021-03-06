@@ -427,15 +427,16 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def _cancel_order(self, arbitrage_container) -> bool:
         try:
-            await self.exchange_manager.trader.cancel_order(
-                self.exchange_manager.exchange_personal_data.orders_manager.get_order(
-                    arbitrage_container.initial_limit_order_id
-                )
-            )
-            self.logger.info(f"Arbitrage opportunity expired: cancelled initial order on "
-                             f"{self.exchange_manager.exchange_name} for {self.trading_mode.symbol} at"
-                             f"{arbitrage_container.own_exchange_price}")
-            return True
+            if await self.exchange_manager.trader.cancel_order(
+                    self.exchange_manager.exchange_personal_data.orders_manager.get_order(
+                        arbitrage_container.initial_limit_order_id
+                    )
+            ):
+                self.logger.info(f"Arbitrage opportunity expired: cancelled initial order on "
+                                 f"{self.exchange_manager.exchange_name} for {self.trading_mode.symbol} at"
+                                 f"{arbitrage_container.own_exchange_price}")
+                return True
+            return False
         except KeyError:
             # order is not open anymore: can't cancel
             return False
