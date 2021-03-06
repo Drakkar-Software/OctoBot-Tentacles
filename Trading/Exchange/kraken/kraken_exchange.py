@@ -22,6 +22,11 @@ class Kraken(exchanges.SpotCCXTExchange):
 
     RECENT_TRADE_FIXED_LIMIT = 1000
 
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.logger.error("Kraken is not providing free and used data for account balance. "
+                          "OctoBot wont be able to manage a real portfolio correctly.")
+
     @classmethod
     def get_name(cls):
         return 'kraken'
