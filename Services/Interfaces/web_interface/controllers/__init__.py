@@ -45,6 +45,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.community_authentic
 from tentacles.Services.Interfaces.web_interface.controllers.backtesting import (
     data_collector,
 )
+from tentacles.Services.Interfaces.web_interface.controllers.logs import (
+    export_logs,
+)
 from tentacles.Services.Interfaces.web_interface.controllers.configuration import (
     config,
     profile,
@@ -108,6 +111,7 @@ __all__ = [
     "octobot_help",
     "watched_symbols",
     "logs",
+    "export_logs",
     "tentacle_media",
     "exchange_logo",
     "tentacles",

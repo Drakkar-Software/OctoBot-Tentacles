@@ -48,6 +48,14 @@ function handle_editable(){
     });
 }
 
+function trigger_file_downloader_on_click(element){
+    if(element.length){
+        element.click(function (){
+            window.window.location  = $(this).attr("data-url");
+        });
+    }
+}
+
 function replace_break_line(str, replacement=""){
     return str.replace(/(?:\r\n|\r|\n)/g, replacement);
 }

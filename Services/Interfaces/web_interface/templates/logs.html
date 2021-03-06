@@ -29,17 +29,16 @@
       </table>
     </div>
 </div>
-
-<br>
+<div class="text-center mb-2">
+    <button id="export-logs"
+            data-url="{{url_for('export_logs')}}"
+            class="btn btn-outline-primary waves-effect export-logs-button"
+            data-toggle="tooltip" title="Export your logs into a zipped file to help fixing the issues you might have.">
+        <i class="fas fa-share-square"></i> <span class="d-none d-md-inline">Export event logs</span>
+    </button>
+</div>
 {% endblock %}
 
 {% block additional_scripts %}
-<script>
-    $(document).ready(function () {
-      $('#logs_datatable').DataTable({
-          // order by time: most recent first
-          "order": [[ 0, "desc" ]]
-      });
-    });
-</script>
+<script src="{{ url_for('static', filename='js/components/logs.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

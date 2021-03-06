@@ -24,6 +24,11 @@ from tentacles.Services.Interfaces.web_interface.flask_util.context_processor im
     context_processor_register,
 )
 
+from tentacles.Services.Interfaces.web_interface.flask_util import file_services
+from tentacles.Services.Interfaces.web_interface.flask_util.file_services import (
+    send_and_remove_file,
+)
+
 from tentacles.Services.Interfaces.web_interface.flask_util import template_filters
 from tentacles.Services.Interfaces.web_interface.flask_util.template_filters import (
     is_dict,
@@ -34,6 +39,7 @@ from tentacles.Services.Interfaces.web_interface.flask_util.template_filters imp
 __all__ = [
     "init_content_types",
     "context_processor_register",
+    "send_and_remove_file",
     "is_dict",
     "is_list",
     "is_bool",
