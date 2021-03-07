@@ -59,6 +59,8 @@ cdef class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     cdef public double CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
     cdef public bint BUY_WITH_MAXIMUM_SIZE_ORDERS
     cdef public bint SELL_WITH_MAXIMUM_SIZE_ORDERS
+    cdef public bint DISABLE_BUY_ORDERS
+    cdef public bint DISABLE_SELL_ORDERS
     cdef public bint USE_STOP_ORDERS
 
     cpdef __get_limit_price_from_risk(self, object eval_note)

@@ -17,6 +17,16 @@
         "type": "boolean",
         "format": "checkbox"
     },
+    "disable_buy_orders": {
+        "title": "Disable buy orders (buy market and buy limit).",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "disable_sell_orders": {
+        "title": "Disable sell orders (sell market and sell limit).",
+        "type": "boolean",
+        "format": "checkbox"
+    },
     "use_prices_close_to_current_price": {
         "title": "Fixed limit prices: Use a fixed ratio to compute prices in sell / buy orders.",
         "type": "boolean",
