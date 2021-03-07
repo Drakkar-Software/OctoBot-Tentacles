@@ -55,6 +55,14 @@ cdef class DailyTradingModeConsumer(AbstractTradingModeConsumer):
     cdef public double SELL_MULTIPLIER
     cdef public double FULL_SELL_MIN_RATIO
 
+    cdef public bint USE_CLOSE_TO_CURRENT_PRICE
+    cdef public double CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO
+    cdef public bint BUY_WITH_MAXIMUM_SIZE_ORDERS
+    cdef public bint SELL_WITH_MAXIMUM_SIZE_ORDERS
+    cdef public bint DISABLE_BUY_ORDERS
+    cdef public bint DISABLE_SELL_ORDERS
+    cdef public bint USE_STOP_ORDERS
+
     cpdef __get_limit_price_from_risk(self, object eval_note)
     cpdef __get_stop_price_from_risk(self)
     cpdef __get_buy_limit_quantity_from_risk(self, object eval_note, double quantity, str quote)

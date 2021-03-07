@@ -107,7 +107,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
         self.USE_CLOSE_TO_CURRENT_PRICE = trading_config.get("use_prices_close_to_current_price", False)
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = trading_config.get("close_to_current_price_difference", 0.02)
-        self.USE_MAXIMUM_SIZE_ORDERS = trading_config.get("use_maximum_size_orders", False)
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("buy_with_maximum_size_orders", False)
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("sell_with_maximum_size_orders", False)
+        self.DISABLE_SELL_ORDERS = trading_config.get("disable_sell_orders", False)
+        self.DISABLE_BUY_ORDERS = trading_config.get("disable_buy_orders", False)
         self.USE_STOP_ORDERS = trading_config.get("use_stop_orders", True)
 
     def flush(self):
@@ -160,7 +163,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     """
 
     def _get_buy_limit_quantity_from_risk(self, eval_note, quantity, quote):
-        if self.USE_MAXIMUM_SIZE_ORDERS:
+        if self.BUY_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider buy quantity like a sell if quote is the reference market
@@ -183,7 +186,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     """
 
     async def _get_sell_limit_quantity_from_risk(self, eval_note, quantity, quote):
-        if self.USE_MAXIMUM_SIZE_ORDERS:
+        if self.SELL_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider sell quantity like a buy if base is the reference market
@@ -245,7 +248,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             quote, _ = symbol_util.split_symbol(symbol)
             created_orders = []
 
-            if state == trading_enums.EvaluatorStates.VERY_SHORT.value:
+            if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
                 quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
@@ -261,7 +264,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
 
-            elif state == trading_enums.EvaluatorStates.SHORT.value:
+            elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
                 quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
@@ -296,7 +299,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 return []
 
             # TODO : stop loss
-            elif state == trading_enums.EvaluatorStates.LONG.value:
+            elif state == trading_enums.EvaluatorStates.LONG.value and not self.DISABLE_BUY_ORDERS:
                 quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
                 quantity = quantity * await self._get_quantity_ratio(quote)
                 limit_price = trading_personal_data.adapt_price(symbol_market,
@@ -314,7 +317,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
 
-            elif state == trading_enums.EvaluatorStates.VERY_LONG.value:
+            elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
                 quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
                 quantity = quantity * await self._get_quantity_ratio(quote)
                 for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(

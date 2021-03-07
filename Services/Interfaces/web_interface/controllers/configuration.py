@@ -24,6 +24,7 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot_backtesting.api as backtesting_api
 import octobot_services.interfaces.util as interfaces_util
 
@@ -106,16 +107,7 @@ def profiles_management(action):
         profile_id = flask.request.args.get("profile_id")
         temp_file = os.path.abspath("profile")
         file_path = models.export_profile(profile_id, temp_file)
-        try:
-            return flask.send_file(file_path, as_attachment=True, attachment_filename="profile.zip", cache_timeout=0)
-        finally:
-            # cleanup temp_file
-            def remove_file(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception:
-                    pass
-            models.schedule_delayed_command(remove_file, file_path, delay=2)
+        return flask_util.send_and_remove_file(file_path, "profile.zip")
 
 
 @web_interface.server_instance.route('/accounts')

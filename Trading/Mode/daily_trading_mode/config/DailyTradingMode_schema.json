@@ -7,8 +7,23 @@
         "type": "boolean",
         "format": "checkbox"
     },
-    "use_maximum_size_orders": {
-        "title": "All in trades: Trade with all available funds at each order.",
+    "sell_with_maximum_size_orders": {
+        "title": "All in sell trades: Trade with all available funds at each sell order.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "buy_with_maximum_size_orders": {
+        "title": "All in buy trades: Trade with all available funds at each buy order.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "disable_buy_orders": {
+        "title": "Disable buy orders (buy market and buy limit).",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "disable_sell_orders": {
+        "title": "Disable sell orders (sell market and sell limit).",
         "type": "boolean",
         "format": "checkbox"
     },

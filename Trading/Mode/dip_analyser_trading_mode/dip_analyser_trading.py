@@ -426,12 +426,11 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     def _get_current_buy_orders(self):
         return [order
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
-                self.trading_mode.symbol)
+                    self.trading_mode.symbol)
                 if order.side == trading_enums.TradeOrderSide.BUY]
 
     async def _cancel_buy_orders_for_trader(self, trader):
         cancelled_orders = False
         for order in self._get_current_buy_orders():
-            await trader.cancel_order(order)
-            cancelled_orders = True
+            cancelled_orders = await trader.cancel_order(order) or cancelled_orders
         return cancelled_orders

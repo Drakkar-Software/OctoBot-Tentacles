@@ -157,7 +157,7 @@ def _get_all_rules(app, black_list=None):
 
 
 # backlist endpoints expecting additional data
-URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/watched_symbols"]
+URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/watched_symbols", "/export_logs"]
 
 
 def _start_web_interface(interface):

@@ -15,24 +15,18 @@
 #  License along with this library.
 import flask
 import os
-
-import tentacles.Services.Interfaces.web_interface as web_interface
-import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
-import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 
-@web_interface.server_instance.route("/logs")
-@login.login_required_when_activated
-def logs():
-    web_interface.flush_errors_count()
-    return flask.render_template("logs.html",
-                                 logs=web_interface.get_logs())
+def send_and_remove_file(file_path, attachment_filename):
+    try:
+        return flask.send_file(file_path, as_attachment=True, attachment_filename=attachment_filename, cache_timeout=0)
+    finally:
+        # cleanup temp_file
+        def remove_file(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
 
-
-@web_interface.server_instance.route("/export_logs")
-@login.login_required_when_activated
-def export_logs():
-    temp_file = os.path.abspath("exported_logs")
-    file_path = models.export_logs(temp_file)
-    return flask_util.send_and_remove_file(file_path, "logs_export.zip")
+        models.schedule_delayed_command(remove_file, file_path, delay=2)
