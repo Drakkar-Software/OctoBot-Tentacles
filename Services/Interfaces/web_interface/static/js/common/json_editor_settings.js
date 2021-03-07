@@ -74,3 +74,4 @@ class ConfirmArray extends JSONEditor.defaults.editors.array {
 JSONEditor.defaults.themes.octobot = OctoBotTheme;
 JSONEditor.defaults.editors.array = ConfirmArray;
 JSONEditor.defaults.options.theme = 'octobot';
+JSONEditor.defaults.options.required_by_default = true;
