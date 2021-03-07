@@ -107,7 +107,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
         self.USE_CLOSE_TO_CURRENT_PRICE = trading_config.get("use_prices_close_to_current_price", False)
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = trading_config.get("close_to_current_price_difference", 0.02)
-        self.USE_MAXIMUM_SIZE_ORDERS = trading_config.get("use_maximum_size_orders", False)
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("buy_with_maximum_size_orders", False)
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("sell_with_maximum_size_orders", False)
         self.USE_STOP_ORDERS = trading_config.get("use_stop_orders", True)
 
     def flush(self):
@@ -160,7 +161,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     """
 
     def _get_buy_limit_quantity_from_risk(self, eval_note, quantity, quote):
-        if self.USE_MAXIMUM_SIZE_ORDERS:
+        if self.BUY_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider buy quantity like a sell if quote is the reference market
@@ -183,7 +184,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     """
 
     async def _get_sell_limit_quantity_from_risk(self, eval_note, quantity, quote):
-        if self.USE_MAXIMUM_SIZE_ORDERS:
+        if self.SELL_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         # consider sell quantity like a buy if base is the reference market

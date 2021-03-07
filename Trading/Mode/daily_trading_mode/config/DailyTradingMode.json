@@ -8,7 +8,8 @@
         "TechnicalAnalysisStrategyEvaluator"
     ],
     "required_strategies_min_count": 1,
-    "use_maximum_size_orders": false,
+    "sell_with_maximum_size_orders": false,
+    "buy_with_maximum_size_orders": false,
     "use_prices_close_to_current_price": false,
     "use_stop_orders": true
 }
