@@ -301,6 +301,7 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 2475, price)
     await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 2475, price)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 2475, price)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 2475, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_347():
@@ -310,23 +311,25 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 695, price)
     await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 695, price)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 695, price)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 695, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_0_347():
     price = 0.347
-    # await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 0, 0, price)
     lowest_buy = 0.001
     highest_sell = 400
     btc_holdings = 400
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 23918, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 23918, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
+                     btc_holdings)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
 
 
@@ -1239,10 +1242,15 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                       trading_enums.TradeOrderSide.BUY] == staggered_orders_trading.INCREASING
     sell_increase_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
                                        trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.INCREASING
+    buy_flat_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
+                                       trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.STABLE
+    sell_flat_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
+                                       trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.STABLE
     multiplier = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
         staggered_orders_trading.MULTIPLIER]
 
     first_buy = None
+    first_sell = None
     current_buy = None
     current_sell = None
     last_order_side = None
@@ -1264,6 +1272,10 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 if buy_increase_towards_center:
                     assert current_buy.origin_quantity * current_buy.origin_price < \
                            order.origin_quantity * order.origin_price
+                elif buy_flat_towards_center:
+                    assert first_buy.origin_quantity * first_buy.origin_price * 0.99\
+                           <= current_buy.origin_quantity * current_buy.origin_price \
+                           <= first_buy.origin_quantity * first_buy.origin_price * 1.01
                 else:
                     assert current_buy.origin_quantity * current_buy.origin_price > \
                            order.origin_quantity * order.origin_price
@@ -1272,9 +1284,14 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
         if order.side == trading_enums.TradeOrderSide.SELL:
             if current_sell is None:
                 current_sell = order
+                first_sell = order
             else:
                 assert current_sell.origin_price > order.origin_price
                 current_sell = order
+                if sell_flat_towards_center:
+                    assert first_sell.origin_quantity * first_sell.origin_price * 0.99\
+                           <= current_sell.origin_quantity * current_sell.origin_price \
+                           <= first_sell.origin_quantity * first_sell.origin_price * 1.01
 
     order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "USD",
                                                                         portfolio_type=commons_constants.PORTFOLIO_TOTAL)
@@ -1313,11 +1330,11 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                     8)
                 assert abs(current_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
-            else:
+            elif not sell_flat_towards_center:
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 - multiplier / 2),
                     8)
-                assert abs(current_sell.origin_quantity == expected_quantity) < \
+                assert abs(current_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
 
 
@@ -1388,7 +1405,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
 
 def _get_multi_symbol_staggered_config():
     return {
-        "required_strategies": ["StaggeredOrdersStrategiesEvaluator"],
+        "required_strategies": [],
         "pair_settings": [
             {
                 "pair": "BTC/USD",

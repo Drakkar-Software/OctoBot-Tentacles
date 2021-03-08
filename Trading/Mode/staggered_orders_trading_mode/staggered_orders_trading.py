@@ -38,13 +38,20 @@ class StrategyModes(enum.Enum):
     VALLEY = "valley"
     SELL_SLOPE = "sell slope"
     BUY_SLOPE = "buy slope"
+    FLAT = "flat"
 
 
 INCREASING = "increasing_towards_current_price"
 DECREASING = "decreasing_towards_current_price"
+STABLE = "stable_towards_current_price"
 MULTIPLIER = "multiplier"
 
 StrategyModeMultipliersDetails = {
+    StrategyModes.FLAT: {
+        MULTIPLIER: 0,
+        trading_enums.TradeOrderSide.BUY: STABLE,
+        trading_enums.TradeOrderSide.SELL: STABLE
+    },
     StrategyModes.NEUTRAL: {
         MULTIPLIER: 0.3,
         trading_enums.TradeOrderSide.BUY: INCREASING,
@@ -253,6 +260,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"details into your staggered orders configuration or remove it from current traded "
                               f"pairs. Configured staggered orders pairs are {', '.join(configured_staggered_pairs)}")
             return
+        self.mode = self.spread \
+            = self.increment = self.operational_depth \
+            = self.lowest_buy = self.highest_sell \
+            = self.use_existing_orders_only = self.mirror_order_delay \
+            = None
+        self.read_config()
+        self._check_params()
+        self.healthy = True
+        self.already_errored_on_out_of_window_price = False
+
+    def read_config(self):
         mode = ""
         try:
             mode = self.symbol_trading_config[self.trading_mode.CONFIG_MODE]
@@ -270,9 +288,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                        False)
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY, 0)
 
-        self._check_params()
-        self.healthy = True
-        self.already_errored_on_out_of_window_price = False
 
     async def start(self) -> None:
         await super().start()
@@ -303,8 +318,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             await self._ensure_staggered_orders()
         if not self.should_stop:
             if can_create_orders:
-                self.scheduled_health_check = asyncio.get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
-                                                                                  self._schedule_order_refresh)
+                # a None self.HEALTH_CHECK_INTERVAL_SECS disables health check
+                if self.HEALTH_CHECK_INTERVAL_SECS is not None:
+                    self.scheduled_health_check = asyncio.get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
+                                                                                      self._schedule_order_refresh)
             else:
                 self.scheduled_health_check = asyncio.get_event_loop().call_soon(self._schedule_order_refresh)
 
@@ -417,11 +434,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                                                  recently_closed_trades)
         self._set_increment_and_spread(current_price, candidate_flat_increment)
 
-        buy_high = min(current_price, self.highest_sell)
-        sell_low = max(current_price, self.lowest_buy)
-        buy_orders = self._create_orders(self.lowest_buy, buy_high, trading_enums.TradeOrderSide.BUY, sorted_orders,
+        highest_buy = min(current_price, self.highest_sell)
+        lowest_sell = max(current_price, self.lowest_buy)
+        buy_orders = self._create_orders(self.lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
                                          current_price, missing_orders, state)
-        sell_orders = self._create_orders(sell_low, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
+        sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
                                           current_price, missing_orders, state)
 
         if state == self.NEW:
@@ -481,26 +498,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             order_limiting_currency)
         if state == self.NEW:
             # create staggered orders
-
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
             self.flat_spread = trading_personal_data.adapt_price(self.symbol_market, current_price * self.spread)
-            orders_count, average_order_quantity = \
-                self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
-                                                           upper_bound, order_limiting_currency_amount,
-                                                           currency=order_limiting_currency)
-            for i in range(orders_count):
-                price = self._get_price_from_iteration(starting_bound, selling, i)
-                if price is not None:
-                    quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
-                                                                 side, i, orders_count, price)
-                    if quantity is not None:
-                        orders.append(OrderData(side, quantity, price, self.symbol))
-            if not orders:
-                self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
-                                  f"For the strategy to work better, add {order_limiting_currency} funds or "
-                                  f"change change the strategy settings to make less but bigger orders.")
-            else:
-                orders.reverse()
+            self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
+                                    order_limiting_currency_amount, order_limiting_currency, starting_bound, side, True)
 
         if state == self.FILL:
             # complete missing orders
@@ -554,7 +555,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                             while not found_order and i < orders_count:
                                 quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
                                                                              side, i, orders_count,
-                                                                             price)
+                                                                             price, price)
                                 limiting_currency_quantity = quantity if selling else quantity / price
                                 if price is not None and limiting_amount_from_this_order > 0 and \
                                         price - increment_window <= missing_order_price <= price + increment_window:
@@ -577,6 +578,27 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.error(f"Impossible to create staggered orders for {self.symbol} when incompatible order "
                               f"are already in place. Cancel these orders of you want to use this trading mode.")
         return orders
+
+    def _create_new_orders(self, orders, current_price, selling, lower_bound, upper_bound,
+                           order_limiting_currency_amount, order_limiting_currency, starting_bound, side,
+                           virtual_orders):
+        orders_count, average_order_quantity = \
+            self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
+                                                       upper_bound, order_limiting_currency_amount,
+                                                       currency=order_limiting_currency)
+        for i in range(orders_count):
+            price = self._get_price_from_iteration(starting_bound, selling, i)
+            if price is not None:
+                quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
+                                                             side, i, orders_count, price, starting_bound)
+                if quantity is not None:
+                    orders.append(OrderData(side, quantity, price, self.symbol, virtual_orders))
+        if not orders:
+            self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
+                              f"For the strategy to work better, add {order_limiting_currency} funds or "
+                              f"change change the strategy settings to make less but bigger orders.")
+        else:
+            orders.reverse()
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_trades):
         mode = None
@@ -798,6 +820,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
                                 f"not enough funds.")
             return 0, 0
+        return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings, currency)
+
+    def _ensure_average_order_quantity(self, orders_count, current_price, selling, holdings, currency=None):
         average_order_quantity = holdings / orders_count
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
         if self.min_max_order_details[self.min_quantity] is not None \
@@ -826,7 +851,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             return None
         return price
 
-    def _get_quantity_from_iteration(self, average_order_quantity, mode, side, iteration, max_iteration, price):
+    def _get_quantity_from_iteration(self, average_order_quantity, mode, side,
+                                     iteration, max_iteration, price, min_price):
         multiplier_price_ratio = 1
         min_quantity, max_quantity = self._get_min_max_quantity(average_order_quantity, mode)
         delta = max_quantity - min_quantity
@@ -834,14 +860,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if max_iteration == 1:
             quantity = average_order_quantity
         else:
+            iterations_progress = iteration / (max_iteration - 1)
             if StrategyModeMultipliersDetails[mode][side] == INCREASING:
-                multiplier_price_ratio = 1 - iteration / (max_iteration - 1)
+                multiplier_price_ratio = 1 - iterations_progress
             elif StrategyModeMultipliersDetails[mode][side] == DECREASING:
-                multiplier_price_ratio = iteration / (max_iteration - 1)
+                multiplier_price_ratio = iterations_progress
+            elif StrategyModeMultipliersDetails[mode][side] == STABLE:
+                multiplier_price_ratio = 0
             if price <= 0:
                 return None
             quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
-            quantity = quantity_with_delta / price if side == trading_enums.TradeOrderSide.BUY else quantity_with_delta
+            quantity = quantity_with_delta / price if side == trading_enums.TradeOrderSide.BUY else quantity_with_delta * min_price / price
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1:
