@@ -263,8 +263,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.mode = self.spread \
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
-            = self.use_existing_orders_only = self.mirror_order_delay \
             = None
+        self.use_existing_orders_only = False
+        self.mirror_order_delay = 0
         self.read_config()
         self._check_params()
         self.healthy = True
