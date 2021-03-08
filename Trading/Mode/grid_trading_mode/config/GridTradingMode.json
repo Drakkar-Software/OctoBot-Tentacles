@@ -1,0 +1,29 @@
+{
+  "required_strategies": [],
+  "pair_settings": [
+    {
+      "pair": "BTC/USDT",
+      "flat_spread": 2000,
+      "flat_increment": 1000,
+      "buy_orders_count": 25,
+      "sell_orders_count": 25,
+      "use_existing_orders_only": false
+    },
+    {
+      "pair": "ADA/ETH",
+      "flat_spread": 0.00002,
+      "flat_increment": 0.00001,
+      "buy_orders_count": 25,
+      "sell_orders_count": 25,
+      "use_existing_orders_only": false
+    },
+    {
+      "pair": "ETH/USDT",
+      "flat_spread": 10,
+      "flat_increment": 5,
+      "buy_orders_count": 25,
+      "sell_orders_count": 25,
+      "use_existing_orders_only": false
+    }
+  ]
+}

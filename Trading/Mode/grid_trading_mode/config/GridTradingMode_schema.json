@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "title": "GridTradingMode",
+  "properties": {
+    "pair_settings": {
+        "type": "array",
+        "title": "Configuration for each traded pairs",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+            "type": "object",
+            "title": "Pair configuration",
+            "properties": {
+              "pair": {
+                "type": "string",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder":  "BTC/USDT"
+                  }
+                },
+                "title": "Name of the traded pair.",
+                "minLength": 3,
+                "pattern": "[a-zA-Z]{2,}\\/[a-zA-Z]{2,}"
+              },
+              "flat_spread": {
+                "type": "number",
+                "title": "Spread, price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT)",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "flat_increment": {
+                "type": "number",
+                "title": "Increment, price difference between two orders of the same side in the base currency (USDT for BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment.",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "buy_orders_count": {
+                "type": "number",
+                "title": "Number of initial buy orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "sell_orders_count": {
+                "type": "number",
+                "title": "Number of initial sell orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "use_existing_orders_only": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Use existing orders only: when checked, new orders will only be created upon pre-existing orders fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
+                "default": false
+              }
+            }
+        }
+    }
+  }
+}
