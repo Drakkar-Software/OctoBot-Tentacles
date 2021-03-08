@@ -28,7 +28,7 @@
                 "minItems": 1,
                 "title": "Mode: way to allocate funds in created orders.",
                 "default": "neutral",
-                "enum": ["neutral", "mountain", "valley", "sell slope", "buy slope"]
+                "enum": ["neutral", "flat", "mountain", "valley", "sell slope", "buy slope"]
               },
               "spread_percent": {
                 "type": "number",
