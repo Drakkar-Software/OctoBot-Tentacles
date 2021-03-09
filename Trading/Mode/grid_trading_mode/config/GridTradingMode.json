@@ -7,6 +7,8 @@
       "flat_increment": 1000,
       "buy_orders_count": 25,
       "sell_orders_count": 25,
+      "sell_funds": 0,
+      "buy_funds": 0,
       "use_existing_orders_only": false
     },
     {
@@ -15,6 +17,8 @@
       "flat_increment": 0.00001,
       "buy_orders_count": 25,
       "sell_orders_count": 25,
+      "sell_funds": 0,
+      "buy_funds": 0,
       "use_existing_orders_only": false
     },
     {
@@ -23,6 +27,8 @@
       "flat_increment": 5,
       "buy_orders_count": 25,
       "sell_orders_count": 25,
+      "sell_funds": 0,
+      "buy_funds": 0,
       "use_existing_orders_only": false
     }
   ]

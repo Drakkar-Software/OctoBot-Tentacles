@@ -101,6 +101,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_ALLOW_INSTANT_FILL = "allow_instant_fill"
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
     MIRROR_ORDER_DELAY = "mirror_order_delay"
+    BUY_FUNDS = "buy_funds"
+    SELL_FUNDS = "sell_funds"
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -219,6 +221,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     RECENT_TRADES_ALLOWED_TIME = 10
     # when True, orders creation/health check will be performed on start()
     SCHEDULE_ORDERS_CREATION_ON_START = True
+    ORDERS_DESC = "staggered"
+    # keep track of available funds in order placement process to avoid spending multiple times
+    # the same funds due to async between producers and consumers and the possibility to trade multiple pairs with
+    # shared quote or base
+    AVAILABLE_FUNDS = {}
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -248,24 +255,25 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
                     self.symbol_trading_config = config
         except KeyError as e:
-            error_message = f"Impossible to start staggered orders for {self.symbol}: missing configuration in " \
-                            f"trading mode config file. See Default/StaggeredOrdersTradingMode.json for a config example."
+            error_message = f"Impossible to start {self.ORDERS_DESC} orders for {self.symbol}: missing " \
+                            f"configuration in trading mode config file. "
             self.logger.exception(e, True, error_message)
             return
         if self.symbol_trading_config is None:
-            configured_staggered_pairs = \
+            configured_pairs = \
                 [c[self.trading_mode.CONFIG_PAIR]
                  for c in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]]
-            self.logger.error(f"No staggered orders configuration for trading pair: {self.symbol}. Add this pair's "
-                              f"details into your staggered orders configuration or remove it from current traded "
-                              f"pairs. Configured staggered orders pairs are {', '.join(configured_staggered_pairs)}")
+            self.logger.error(f"No {self.ORDERS_DESC} orders configuration for trading pair: {self.symbol}. Add "
+                              f"this pair's details into your {self.ORDERS_DESC} orders configuration or disable this "
+                              f"trading pairs. Configured {self.ORDERS_DESC} orders pairs are"
+                              f" {', '.join(configured_pairs)}")
             return
         self.mode = self.spread \
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
             = None
         self.use_existing_orders_only = False
-        self.mirror_order_delay = 0
+        self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
         self.read_config()
         self._check_params()
         self.healthy = True
@@ -277,7 +285,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             mode = self.symbol_trading_config[self.trading_mode.CONFIG_MODE]
             self.mode = StrategyModes(mode)
         except ValueError as e:
-            self.logger.error(f"Invalid staggered orders strategy mode: {mode} for {self.symbol}"
+            self.logger.error(f"Invalid {self.ORDERS_DESC} orders strategy mode: {mode} for {self.symbol}"
                               f"supported modes are {[m.value for m in StrategyModes]}")
             raise e
         self.spread = self.symbol_trading_config[self.trading_mode.CONFIG_SPREAD] / 100
@@ -286,9 +294,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.lowest_buy = self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]
         self.highest_sell = self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]
         self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.USE_EXISTING_ORDERS_ONLY,
-                                                                       False)
-        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY, 0)
-
+                                                                       self.use_existing_orders_only)
+        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY,
+                                                                 self.mirror_order_delay)
+        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
+        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
 
     async def start(self) -> None:
         await super().start()
@@ -302,6 +312,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.scheduled_health_check.cancel()
         for task in self.mirror_orders_tasks:
             task.cancel()
+        if self.exchange_manager and self.exchange_manager.id in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
+            # remove self.exchange_manager.id from available funds
+            StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
@@ -385,23 +398,23 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # already on exchange): only initialize increment and order fill events will do the rest
             self._set_increment_and_spread(current_price)
         else:
-            buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
-            staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
+                buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
+                staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
                 await self._create_not_virtual_orders(staggered_orders, current_price)
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
         if self.highest_sell < current_price:
-            message = f"The current price is hover the staggered orders boundaries for {self.symbol}: upper " \
+            message = f"The current price is hover the {self.ORDERS_DESC} orders boundaries for {self.symbol}: upper " \
                       f"bound is {self.highest_sell} and price is {current_price}. OctoBot can't trade using " \
-                      f"these settings at this current price. Adjust your staggered orders upper bound settings to " \
-                      f"use this trading mode."
+                      f"these settings at this current price. Adjust your {self.ORDERS_DESC} orders upper bound " \
+                      f"settings to use this trading mode."
         if self.lowest_buy > current_price:
-            message = f"The current price is bellow the staggered orders boundaries for {self.symbol}: lower " \
-                      f"bound is {self.lowest_buy} and price is {current_price}. OctoBot can't trade using " \
-                      f"these settings at this current price. Adjust your staggered orders lower bound settings to " \
-                      f"use this trading mode."
+            message = f"The current price is bellow the {self.ORDERS_DESC} orders boundaries for {self.symbol}: " \
+                      f"lower bound is {self.lowest_buy} and price is {current_price}. OctoBot can't trade using " \
+                      f"these settings at this current price. Adjust your {self.ORDERS_DESC} orders " \
+                      f"lower bound settings to use this trading mode."
         if message is not None:
             # Only log once in error, use warning of later messages.
             self._log_window_error_or_warning(message, not self.already_errored_on_out_of_window_price)
@@ -417,9 +430,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
         if interfering_orders_pairs:
-            self.logger.error(f"Impossible to create staggered orders for {self.symbol} with interfering orders "
-                              f"using pair(s): {interfering_orders_pairs}. Staggered orders require no other orders "
-                              f"in both quote and base.")
+            self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} with "
+                              f"interfering orders using pair(s): {interfering_orders_pairs}. "
+                              f"{self.ORDERS_DESC.capitalize()} orders require no other orders in both quote and base.")
             return [], []
         existing_orders = order_manager.get_open_orders(self.symbol)
 
@@ -438,9 +451,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         highest_buy = min(current_price, self.highest_sell)
         lowest_sell = max(current_price, self.lowest_buy)
         buy_orders = self._create_orders(self.lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state)
+                                         current_price, missing_orders, state, self.buy_funds)
         sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state)
+                                          current_price, missing_orders, state, self.sell_funds)
 
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
@@ -459,15 +472,19 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, self.flat_increment)
 
     def _get_interfering_orders_pairs(self, orders):
-        current_base, current_quote = symbol_util.split_symbol(self.symbol)
-        interfering_pairs = set()
-        for order in orders:
-            order_symbol = order.symbol
-            if order_symbol != self.symbol:
-                base, quote = symbol_util.split_symbol(order_symbol)
-                if current_base == base or current_base == quote or current_quote == base or current_quote == quote:
-                    interfering_pairs.add(order_symbol)
-        return interfering_pairs
+        # Not a problem if allowed funds are set
+        if self.buy_funds > 0 and self.sell_funds > 0:
+            return []
+        else:
+            current_base, current_quote = symbol_util.split_symbol(self.symbol)
+            interfering_pairs = set()
+            for order in orders:
+                order_symbol = order.symbol
+                if order_symbol != self.symbol:
+                    base, quote = symbol_util.split_symbol(order_symbol)
+                    if current_base == base or current_base == quote or current_quote == base or current_quote == quote:
+                        interfering_pairs.add(order_symbol)
+            return interfering_pairs
 
     def _check_params(self):
         if self.increment >= self.spread:
@@ -483,7 +500,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return self._bootstrap_parameters(sorted_orders, recently_closed_trades)
 
     def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                       current_price, missing_orders, state):
+                       current_price, missing_orders, state, allowed_funds):
 
         if lower_bound >= upper_bound:
             self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
@@ -499,10 +516,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             order_limiting_currency)
         if state == self.NEW:
             # create staggered orders
+            funds_to_use = self._get_maximum_traded_funds(allowed_funds, order_limiting_currency_amount, order_limiting_currency)
+            if funds_to_use == 0:
+                return []
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
             self.flat_spread = trading_personal_data.adapt_price(self.symbol_market, current_price * self.spread)
             self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    order_limiting_currency_amount, order_limiting_currency, starting_bound, side, True)
+                                    funds_to_use, order_limiting_currency, starting_bound, side, True)
 
         if state == self.FILL:
             # complete missing orders
@@ -576,9 +596,34 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                 i += 1
 
         elif state == self.ERROR:
-            self.logger.error(f"Impossible to create staggered orders for {self.symbol} when incompatible order "
-                              f"are already in place. Cancel these orders of you want to use this trading mode.")
+            self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} when incompatible "
+                              f"order are already in place. Cancel these orders of you want to use this trading mode.")
         return orders
+
+    def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency):
+        to_trade_funds = total_available_funds
+        if allowed_funds > 0:
+            if total_available_funds < allowed_funds:
+                self.logger.warning(
+                    f"Impossible to create every {self.ORDERS_DESC} orders for {self.symbol} using the required "
+                    f"funds ({allowed_funds}): not enough available {currency} funds ({total_available_funds}). "
+                    f"Trying to use available funds only.")
+                to_trade_funds = total_available_funds
+            else:
+                to_trade_funds = allowed_funds
+        if self._is_initially_available_funds_set(currency):
+            # check if enough funds are available
+            unlocked_funds = self._get_available_funds(currency)
+            if to_trade_funds > unlocked_funds:
+                if unlocked_funds <= 0:
+                    self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol}: {currency} "
+                                      f"funds are already locked for other trading pairs.")
+                    return 0
+                self.logger.warning(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} using the "
+                                    f"required funds ({allowed_funds}): {currency} funds are already locked for other "
+                                    f"trading pairs. Trying to use remaining funds only.")
+                to_trade_funds = unlocked_funds
+        return to_trade_funds
 
     def _create_new_orders(self, orders, current_price, selling, lower_bound, upper_bound,
                            order_limiting_currency_amount, order_limiting_currency, starting_bound, side,
@@ -599,6 +644,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"For the strategy to work better, add {order_limiting_currency} funds or "
                               f"change change the strategy settings to make less but bigger orders.")
         else:
+            # register the locked orders funds
+            if not self._is_initially_available_funds_set(order_limiting_currency):
+                self._set_initially_available_funds(order_limiting_currency, order_limiting_currency_amount)
             orders.reverse()
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_trades):
@@ -836,11 +884,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     return 0, 0
                 else:
                     min_funds = self._get_min_funds(orders_count, min_quantity, self.mode, current_price)
-                    self.logger.error(f"Impossible to create {self.symbol} staggered "
-                                      f"{trading_enums.TradeOrderSide.SELL.name if selling else trading_enums.TradeOrderSide.BUY.name} orders: "
-                                      f"minimum quantity for {self.mode.value} mode is lower than the minimum allowed "
-                                      f"for this trading pair on this exchange: requested minimum: {min_order_quantity}"
-                                      f" and exchange minimum is {min_quantity}. "
+                    self.logger.error(f"Impossible to create {self.symbol} {self.ORDERS_DESC} "
+                                      f"{trading_enums.TradeOrderSide.SELL.name if selling else trading_enums.TradeOrderSide.BUY.name} "
+                                      f"orders: minimum quantity for {self.mode.value} mode is lower than the minimum "
+                                      f"allowed for this trading pair on this exchange: requested minimum: "
+                                      f"{min_order_quantity} and exchange minimum is {min_quantity}. "
                                       f"Minimum required funds are {min_funds}{f' {currency}' if currency else ''}.")
                 return 0, 0
         return orders_count, average_order_quantity
@@ -871,7 +919,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             if price <= 0:
                 return None
             quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
-            quantity = quantity_with_delta / price if side == trading_enums.TradeOrderSide.BUY else quantity_with_delta * min_price / price
+            quantity = quantity_with_delta / price if side == trading_enums.TradeOrderSide.BUY \
+                else quantity_with_delta * min_price / price
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1:
@@ -920,6 +969,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def _create_not_virtual_orders(self, orders_to_create, current_price):
         for order in orders_to_create:
             await self._create_order(order, current_price)
+            quote, base = symbol_util.split_symbol(order.symbol)
+            # keep track of the required funds
+            volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \
+                else order.price * order.quantity
+            self._remove_from_available_funds(quote if order.side is trading_enums.TradeOrderSide.SELL else base,
+                                              volume)
 
     def _refresh_symbol_data(self, symbol_market):
         min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = trading_personal_data.get_min_max_amounts(
@@ -934,6 +989,27 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     @classmethod
     def get_should_cancel_loaded_orders(cls):
         return False
+
+    def _remove_from_available_funds(self, currency, amount) -> None:
+        StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id][currency] = \
+            StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id][currency] - amount
+
+    def _set_initially_available_funds(self, currency, amount) -> None:
+        if self.exchange_manager.id not in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
+            StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id] = {}
+        StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id][currency] = amount
+
+    def _is_initially_available_funds_set(self, currency) -> bool:
+        try:
+            return currency in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id]
+        except KeyError:
+            return False
+
+    def _get_available_funds(self, currency) -> float:
+        try:
+            return StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[self.exchange_manager.id][currency]
+        except KeyError:
+            return 0
 
     # syntax: "async with xxx.get_lock():"
     def get_lock(self):

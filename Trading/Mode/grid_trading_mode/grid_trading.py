@@ -46,6 +46,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
 class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingModeProducer):
     # Disable health check
     HEALTH_CHECK_INTERVAL_SECS = None
+    ORDERS_DESC = "grid"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         self.buy_orders_count = self.sell_orders_count = None
@@ -59,8 +60,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.flat_increment = self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]
         self.buy_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_BUY_ORDERS_COUNT]
         self.sell_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_SELL_ORDERS_COUNT]
-        self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.USE_EXISTING_ORDERS_ONLY,
-                                                                       False)
+        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY,
+                                                                 self.mirror_order_delay)
+        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
+        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
 
     async def _handle_staggered_orders(self, current_price):
         self._init_allowed_price_ranges(current_price)
@@ -87,10 +90,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
         buy_orders = self._create_orders(self.buy_price_range.lower_bound, self.buy_price_range.higher_bound,
                                          trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state)
+                                         current_price, missing_orders, state, self.buy_funds)
         sell_orders = self._create_orders(self.sell_price_range.lower_bound, self.sell_price_range.higher_bound,
                                           trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state)
+                                          current_price, missing_orders, state, self.sell_funds)
 
         return buy_orders, sell_orders
 
@@ -108,7 +111,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                               f" parameter: average profit is spread-increment. ({self.symbol})")
 
     def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                       current_price, missing_orders, state):
+                       current_price, missing_orders, state, allowed_funds):
 
         if lower_bound >= upper_bound:
             self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
@@ -124,10 +127,14 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                             order_limiting_currency)
         if state == self.NEW:
             # create grid orders
+            funds_to_use = self._get_maximum_traded_funds(allowed_funds,
+                                                          order_limiting_currency_amount,
+                                                          order_limiting_currency)
+            if funds_to_use == 0:
+                return []
             starting_bound = lower_bound if selling else upper_bound
             self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    order_limiting_currency_amount, order_limiting_currency,
-                                    starting_bound, side, False)
+                                    funds_to_use, order_limiting_currency, starting_bound, side, False)
         return orders
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
