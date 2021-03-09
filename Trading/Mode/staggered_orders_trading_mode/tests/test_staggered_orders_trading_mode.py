@@ -236,6 +236,187 @@ async def test_multi_symbol():
         await asyncio.create_task(_check_open_orders_count(exchange_manager, len(original_orders)))
     finally:
         await _stop(exchange_manager)
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+
+async def test_available_funds_management():
+    try:
+        btcusd_producer, eth_usdt_producer, nano_usdt_producer, exchange_manager = await _get_tools_multi_symbol()
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+        trading_api.force_set_mark_price(exchange_manager, btcusd_producer.symbol, 100)
+        await btcusd_producer._ensure_staggered_orders()
+        available_funds = \
+            staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[exchange_manager.id]
+        assert len(available_funds) == 2
+        btc_available_funds = available_funds["BTC"]
+        usd_available_funds = available_funds["USD"]
+        assert btc_available_funds < 9.9
+        assert usd_available_funds < 0.1
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        # ensure there at least the same (or more) actual portfolio available funds than on the producer value
+        # (due to exchange rounding reducing some amounts)
+        assert pf_btc_available_funds * 0.999 <= btc_available_funds <= pf_btc_available_funds
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_usd_available_funds * 0.999 <= usd_available_funds <= pf_usd_available_funds
+        assert len(orders) == btcusd_producer.operational_depth
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 25
+
+        trading_api.force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 200)
+        await eth_usdt_producer._ensure_staggered_orders()
+        assert len(available_funds) == 4
+        # did not change previous funds
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        eth_available_funds = available_funds["ETH"]
+        usdt_available_funds = available_funds["USDT"]
+        assert eth_available_funds < 19.6
+        assert usdt_available_funds < 707
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
+                                                           eth_usdt_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        pf_eth_available_funds = trading_api.get_portfolio_currency(exchange_manager, "ETH")
+        assert pf_eth_available_funds * 0.999 <= eth_available_funds <= pf_eth_available_funds
+        pf_usdt_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        assert pf_usdt_available_funds * 0.999 <= usdt_available_funds <= pf_usdt_available_funds
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 40
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 40
+
+        trading_api.force_set_mark_price(exchange_manager, nano_usdt_producer.symbol, 200)
+        await nano_usdt_producer._ensure_staggered_orders()
+        # did not change available funds
+        assert len(available_funds) == 4
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        assert eth_available_funds == available_funds["ETH"]
+        assert usdt_available_funds == available_funds["USDT"]
+        # no new order
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
+                                                           eth_usdt_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 40
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 40
+
+        assert nano_usdt_producer._get_interfering_orders_pairs(orders) == {"ETH/USDT"}
+
+        # new ETH USDT evaluation, price changed
+        # -2 order would be filled
+        original_orders = copy.copy(orders)
+        to_fill_order = original_orders[-2]
+        await _fill_order(to_fill_order, exchange_manager, producer=eth_usdt_producer)
+        trading_api.force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 190)
+        await nano_usdt_producer._ensure_staggered_orders()
+        # did nothing
+        # did not change available funds
+        assert len(available_funds) == 4
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        assert eth_available_funds == available_funds["ETH"]
+        assert usdt_available_funds == available_funds["USDT"]
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, len(original_orders)))
+    finally:
+        await _stop(exchange_manager)
+        # clear available funds
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+
+async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer.sell_funds = 0.001
+        producer.buy_funds = 100
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USD")
+        # btc_available_funds for reduced because orders are not created
+        assert btc_available_funds < 0.001
+        assert usd_available_funds < 100
+        # price info: create trades
+        assert producer.current_price == 4000
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_btc_available_funds >= 9.999
+        assert pf_usd_available_funds >= 900
+
+        # - 9 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_btc_available_funds - 9.999 >= btc_available_funds
+        # - 600 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_usd_available_funds - 900 >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_ensure_staggered_orders_with_unavailable_funds():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer._set_initially_available_funds("BTC", 1)
+        producer._set_initially_available_funds("USD", 400)
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USD")
+        # btc_available_funds for reduced because orders are not created
+        assert btc_available_funds < 1
+        assert usd_available_funds < 400
+        # price info: create trades
+        assert producer.current_price == 4000
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_btc_available_funds >= 9
+        assert pf_usd_available_funds >= 600
+
+        # - 9 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_btc_available_funds - 9 >= btc_available_funds
+        # - 600 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_usd_available_funds - 600 >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_get_maximum_traded_funds():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD")
+
+        # part 1: no available funds set
+        # no allowed_funds set
+        # can trade total_available_funds
+        assert producer._get_maximum_traded_funds(0, 10, "BTC") == 10
+        # allowed_funds set
+        # can trade allowed_funds
+        assert producer._get_maximum_traded_funds(5, 10, "BTC") == 5
+        # allowed_funds set, allowed_funds larger than total_available_funds
+        # can trade total_available_funds
+        assert producer._get_maximum_traded_funds(15, 10, "BTC") == 10
+
+        # part 2: available funds set is set
+        producer._set_initially_available_funds("BTC", 8)
+        # no allowed_funds set
+        # can trade available funds only
+        assert producer._get_maximum_traded_funds(0, 10, "BTC") == 8
+        # allowed_funds set
+        # can trade allowed_funds (lower than available funds)
+        assert producer._get_maximum_traded_funds(5, 10, "BTC") == 5
+        # allowed_funds set, allowed_funds larger than total_available_funds
+        # can trade available funds only
+        assert producer._get_maximum_traded_funds(15, 10, "BTC") == 8
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_set_increment_and_spread():

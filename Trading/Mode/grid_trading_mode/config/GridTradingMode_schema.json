@@ -24,7 +24,7 @@
               },
               "flat_spread": {
                 "type": "number",
-                "title": "Spread, price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT)",
+                "title": "Spread, price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT).",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
@@ -38,13 +38,25 @@
                 "type": "number",
                 "title": "Number of initial buy orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
                 "minimum": 0,
-                "exclusiveMinimum": true
+                "exclusiveMinimum": false
               },
               "sell_orders_count": {
                 "type": "number",
                 "title": "Number of initial sell orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
                 "minimum": 0,
-                "exclusiveMinimum": true
+                "exclusiveMinimum": false
+              },
+              "buy_funds": {
+                "type": "number",
+                "title": "Total funds to use for buy orders creation (in base currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Required when using the same quote or base in multiple pairs.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "sell_funds": {
+                "type": "number",
+                "title": "Total funds to use for sell orders creation (in quote currency: BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Required when using the same quote or base in multiple pairs.",
+                "minimum": 0,
+                "exclusiveMinimum": false
               },
               "use_existing_orders_only": {
                 "type": "boolean",
