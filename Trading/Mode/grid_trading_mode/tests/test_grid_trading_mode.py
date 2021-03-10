@@ -106,6 +106,7 @@ async def test_run_independent_backtestings_with_memory_check():
     """
     Should always be called first here to avoid other tests' related memory check issues
     """
+    staggered_orders_trading.StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START = True
     tentacles_setup_config = tentacles_manager_api.create_tentacles_setup_config_with_tentacles(
         grid_trading.GridTradingMode
     )
@@ -147,6 +148,13 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         await producer._ensure_staggered_orders()
         btc_available_funds = producer._get_available_funds("BTC")
         usd_available_funds = producer._get_available_funds("USDT")
+
+        used_btc = 10 - btc_available_funds
+        used_usd = 1000 - usd_available_funds
+
+        assert used_usd >= producer.buy_funds * 0.99
+        assert used_btc >= producer.sell_funds * 0.99
+
         # btc_available_funds for reduced because orders are not created
         assert 10 - 0.001 <= btc_available_funds < 10
         assert 1000 - 100 <= usd_available_funds < 1000
@@ -171,6 +179,57 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
         assert pf_btc_available_funds >= 10 - 0.00006
         assert pf_usd_available_funds >= 1000 - 0.5
+
+        assert pf_btc_available_funds >= btc_available_funds
+        assert pf_usd_available_funds >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders():
+    try:
+        symbol = "BTC/USDT"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer.buy_funds = 0.07  # 1 order
+        producer.sell_funds = 0.000025  # 2 orders
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USDT")
+
+        used_btc = 10 - btc_available_funds
+        used_usd = 1000 - usd_available_funds
+
+        assert used_usd >= producer.buy_funds * 0.99
+        assert used_btc >= producer.sell_funds * 0.99
+
+        # btc_available_funds for reduced because orders are not created
+        assert 10 - 0.001 <= btc_available_funds < 10
+        assert 1000 - 100 <= usd_available_funds < 1000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 1 + 2))
+        created_orders = trading_api.get_open_orders(exchange_manager)
+        created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
+        created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
+        assert len(created_buy_orders) < producer.buy_orders_count
+        assert len(created_buy_orders) == 1
+        assert len(created_sell_orders) < producer.sell_orders_count
+        assert len(created_sell_orders) == 2
+        # ensure only orders closest to the current price have been created
+        min_buy_price = 4000 - (producer.flat_spread / 2) - (producer.flat_increment * (len(created_buy_orders) - 1))
+        assert all(
+            o.origin_price >= min_buy_price for o in created_buy_orders
+        )
+        max_sell_price = 4000 + (producer.flat_spread / 2) + (producer.flat_increment * (len(created_sell_orders) - 1))
+        assert all(
+            o.origin_price <= max_sell_price for o in created_sell_orders
+        )
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        assert pf_btc_available_funds >= 10 - 0.000025
+        assert pf_usd_available_funds >= 1000 - 0.07
 
         assert pf_btc_available_funds >= btc_available_funds
         assert pf_usd_available_funds >= usd_available_funds
