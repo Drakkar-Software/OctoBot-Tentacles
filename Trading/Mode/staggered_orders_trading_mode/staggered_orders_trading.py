@@ -905,8 +905,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _adapt_orders_count_and_quantity(self, holdings, min_quantity, mode):
         # called when there are enough funds for at least one order but too many orders are requested
-        average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
-        max_orders_count = math.floor(holdings / average_quantity)
+        min_average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
+        max_orders_count = math.floor(holdings / min_average_quantity)
+        # count remaining holdings if any
+        average_quantity = min_average_quantity + \
+                           (holdings - min_average_quantity * max_orders_count) / max_orders_count
         return max_orders_count, average_quantity
 
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):

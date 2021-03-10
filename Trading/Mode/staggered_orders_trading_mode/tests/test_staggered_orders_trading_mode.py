@@ -164,6 +164,7 @@ async def test_run_independent_backtestings_with_memory_check():
     """
     Should always be called first here to avoid other tests' related memory check issues
     """
+    staggered_orders_trading.StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START = True
     tentacles_setup_config = tentacles_manager_api.create_tentacles_setup_config_with_tentacles(
         staggered_orders_trading.StaggeredOrdersTradingMode
     )
