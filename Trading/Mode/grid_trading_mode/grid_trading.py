@@ -34,6 +34,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     CONFIG_FLAT_INCREMENT = "flat_increment"
     CONFIG_BUY_ORDERS_COUNT = "buy_orders_count"
     CONFIG_SELL_ORDERS_COUNT = "sell_orders_count"
+    LIMIT_ORDERS_IF_NECESSARY = "limit_orders_if_necessary"
 
     async def create_producers(self) -> list:
         mode_producer = GridTradingModeProducer(
@@ -64,6 +65,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                  self.mirror_order_delay)
         self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
         self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
+        self.limit_orders_count_if_necessary = \
+            self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
 
     async def _handle_staggered_orders(self, current_price):
         self._init_allowed_price_ranges(current_price)
@@ -134,13 +137,15 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 return []
             starting_bound = lower_bound if selling else upper_bound
             self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    funds_to_use, order_limiting_currency, starting_bound, side, False)
+                                    funds_to_use, order_limiting_currency, starting_bound, side, False,
+                                    self.mode, order_limiting_currency_amount)
         return orders
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
-                                              currency=None):
+                                              currency, mode):
         if lower_bound >= upper_bound:
             self.logger.error(f"Invalid bounds for {self.symbol}: too close to the current price")
             return 0, 0
         orders_count = self.sell_orders_count if selling else self.buy_orders_count
-        return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings, currency)
+        return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
+                                                   currency, mode)
