@@ -252,7 +252,7 @@ async def test_available_funds_management():
         btc_available_funds = available_funds["BTC"]
         usd_available_funds = available_funds["USD"]
         assert btc_available_funds < 9.9
-        assert usd_available_funds < 0.1
+        assert usd_available_funds < 31
         await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
         pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
@@ -274,7 +274,7 @@ async def test_available_funds_management():
         eth_available_funds = available_funds["ETH"]
         usdt_available_funds = available_funds["USDT"]
         assert eth_available_funds < 19.6
-        assert usdt_available_funds < 707
+        assert usdt_available_funds < 753
         await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
                                                            eth_usdt_producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
@@ -337,8 +337,8 @@ async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
         btc_available_funds = producer._get_available_funds("BTC")
         usd_available_funds = producer._get_available_funds("USD")
         # btc_available_funds for reduced because orders are not created
-        assert btc_available_funds < 0.001
-        assert usd_available_funds < 100
+        assert 10 - 0.001 <= btc_available_funds < 10
+        assert 1000 - 100 <= usd_available_funds < 1000
         # price info: create trades
         assert producer.current_price == 4000
         assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
@@ -348,10 +348,8 @@ async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
         assert pf_btc_available_funds >= 9.999
         assert pf_usd_available_funds >= 900
 
-        # - 9 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
-        assert pf_btc_available_funds - 9.999 >= btc_available_funds
-        # - 600 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
-        assert pf_usd_available_funds - 900 >= usd_available_funds
+        assert pf_btc_available_funds >= btc_available_funds
+        assert pf_usd_available_funds >= usd_available_funds
     finally:
         await _stop(exchange_manager)
 
@@ -1481,16 +1479,20 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                                        False,
                                                        producer.lowest_buy,
                                                        producer.current_price,
-                                                       order_limiting_currency_amount)
+                                                       order_limiting_currency_amount,
+                                                       "USD",
+                                                       strategy_mode)
     if orders:
         if buy_increase_towards_center:
-            assert round(current_buy.origin_quantity * current_buy.origin_price -
-                         first_buy.origin_quantity * first_buy.origin_price) == round(multiplier *
-                                                                                      average_order_quantity)
+            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+                   <= round(current_buy.origin_quantity * current_buy.origin_price -
+                            first_buy.origin_quantity * first_buy.origin_price) \
+                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
         else:
-            assert round(first_buy.origin_quantity * first_buy.origin_price -
-                         current_buy.origin_quantity * current_buy.origin_price) == round(multiplier *
-                                                                                          average_order_quantity)
+            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+                   <= round(first_buy.origin_quantity * first_buy.origin_price -
+                            current_buy.origin_quantity * current_buy.origin_price) \
+                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC",
                                                                             portfolio_type=commons_constants.PORTFOLIO_TOTAL)
@@ -1499,7 +1501,9 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                                            True,
                                                            producer.current_price,
                                                            producer.highest_sell,
-                                                           order_limiting_currency_amount)
+                                                           order_limiting_currency_amount,
+                                                           "BTC",
+                                                           strategy_mode)
 
         if strategy_mode not in [staggered_orders_trading.StrategyModes.NEUTRAL,
                                  staggered_orders_trading.StrategyModes.VALLEY,

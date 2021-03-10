@@ -15,15 +15,18 @@
 #  License along with this library.
 import pytest
 import os.path
+import asyncio
 
 import async_channel.util as channel_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.api as backtesting_api
 import octobot_commons.constants as commons_constants
 import octobot_commons.tests.test_config as test_config
+import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
@@ -34,7 +37,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _init_trading_mode(config, exchange_manager, symbol):
-    staggered_orders_trading.SCHEDULE_ORDERS_CREATION_ON_START = False
+    staggered_orders_trading.StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START = False
     mode = grid_trading.GridTradingMode(config, exchange_manager)
     mode.symbol = None if mode.get_is_symbol_wildcard() else symbol
     # mode.trading_config = _get_multi_symbol_staggered_config()
@@ -47,7 +50,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
 
 async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=None):
     config = test_config.load_test_config()
-    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USD"] = 1000
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
         "BTC"] = 10 if btc_holdings is None else btc_holdings
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO].update(additional_portfolio)
@@ -84,11 +87,10 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
 
     mode, producer = await _init_trading_mode(config, exchange_manager, symbol)
 
-    producer.lowest_buy = 1
-    producer.highest_sell = 10000
-    producer.operational_depth = 50
-    producer.spread = 0.06
-    producer.increment = 0.04
+    producer.flat_spread = 10
+    producer.flat_increment = 5
+    producer.buy_orders_count = 25
+    producer.sell_orders_count = 25
 
     return producer, mode.consumers[0], exchange_manager
 
@@ -113,7 +115,7 @@ async def test_run_independent_backtestings_with_memory_check():
 
 async def test_init_allowed_price_ranges():
     try:
-        symbol = "BTC/USD"
+        symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
         producer.sell_price_range = grid_trading.AllowedPriceRange()
         producer.buy_price_range = grid_trading.AllowedPriceRange()
@@ -130,3 +132,57 @@ async def test_init_allowed_price_ranges():
         assert producer.buy_price_range.lower_bound == 100 - 12/2 - 5*(5-1)
     finally:
         await _stop(exchange_manager)
+
+
+async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders():
+    try:
+        symbol = "BTC/USDT"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer.sell_funds = 0.00006  # 5 orders
+        producer.buy_funds = 0.5  # 12 orders
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USDT")
+        # btc_available_funds for reduced because orders are not created
+        assert 10 - 0.001 <= btc_available_funds < 10
+        assert 1000 - 100 <= usd_available_funds < 1000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + 12))
+        created_orders = trading_api.get_open_orders(exchange_manager)
+        created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
+        created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
+        assert len(created_buy_orders) < producer.buy_orders_count
+        assert len(created_buy_orders) == 12
+        assert len(created_sell_orders) < producer.sell_orders_count
+        assert len(created_sell_orders) == 5
+        # ensure only orders closest to the current price have been created
+        min_buy_price = 4000 - (producer.flat_spread / 2) - (producer.flat_increment * (len(created_buy_orders) - 1))
+        assert all(
+            o.origin_price >= min_buy_price for o in created_buy_orders
+        )
+        max_sell_price = 4000 + (producer.flat_spread / 2) + (producer.flat_increment * (len(created_sell_orders) - 1))
+        assert all(
+            o.origin_price <= max_sell_price for o in created_sell_orders
+        )
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        assert pf_btc_available_funds >= 10 - 0.00006
+        assert pf_usd_available_funds >= 1000 - 0.5
+
+        assert pf_btc_available_funds >= btc_available_funds
+        assert pf_usd_available_funds >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def _wait_for_orders_creation(orders_count=1):
+    for _ in range(orders_count):
+        await asyncio_tools.wait_asyncio_next_cycle()
+
+
+async def _check_open_orders_count(exchange_manager, count):
+    await _wait_for_orders_creation(count)
+    assert len(trading_api.get_open_orders(exchange_manager)) == count

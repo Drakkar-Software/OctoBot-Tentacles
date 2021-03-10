@@ -272,7 +272,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
             = None
-        self.use_existing_orders_only = False
+        self.use_existing_orders_only = self.limit_orders_count_if_necessary = False
         self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
         self.read_config()
         self._check_params()
@@ -522,7 +522,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
             self.flat_spread = trading_personal_data.adapt_price(self.symbol_market, current_price * self.spread)
             self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    funds_to_use, order_limiting_currency, starting_bound, side, True)
+                                    funds_to_use, order_limiting_currency, starting_bound, side,
+                                    True, self.mode, order_limiting_currency_amount)
 
         if state == self.FILL:
             # complete missing orders
@@ -566,7 +567,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         orders_count, average_order_quantity = \
                             self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                                        upper_bound, portfolio_total,
-                                                                       currency=order_limiting_currency)
+                                                                       currency, self.mode)
 
                         for missing_order_price, missing_order_side in missing_orders_around_spread:
                             limiting_amount_from_this_order = order_limiting_currency_amount
@@ -627,15 +628,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _create_new_orders(self, orders, current_price, selling, lower_bound, upper_bound,
                            order_limiting_currency_amount, order_limiting_currency, starting_bound, side,
-                           virtual_orders):
+                           virtual_orders, mode, total_available_funds):
         orders_count, average_order_quantity = \
             self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                        upper_bound, order_limiting_currency_amount,
-                                                       currency=order_limiting_currency)
+                                                       order_limiting_currency, mode)
         for i in range(orders_count):
             price = self._get_price_from_iteration(starting_bound, selling, i)
             if price is not None:
-                quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
+                quantity = self._get_quantity_from_iteration(average_order_quantity, mode,
                                                              side, i, orders_count, price, starting_bound)
                 if quantity is not None:
                     orders.append(OrderData(side, quantity, price, self.symbol, virtual_orders))
@@ -646,7 +647,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         else:
             # register the locked orders funds
             if not self._is_initially_available_funds_set(order_limiting_currency):
-                self._set_initially_available_funds(order_limiting_currency, order_limiting_currency_amount)
+                self._set_initially_available_funds(order_limiting_currency, total_available_funds)
             orders.reverse()
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_trades):
@@ -855,7 +856,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         sell_orders.reverse()
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
-                                              currency=None):
+                                              currency, mode):
         if lower_bound >= upper_bound:
             self.logger.error(f"Invalid bounds for {self.symbol}: too close to the current price")
             return 0, 0
@@ -869,19 +870,28 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
                                 f"not enough funds.")
             return 0, 0
-        return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings, currency)
+        return self._ensure_average_order_quantity(orders_count, current_price, selling,
+                                                   holdings, currency, mode)
 
-    def _ensure_average_order_quantity(self, orders_count, current_price, selling, holdings, currency=None):
-        average_order_quantity = holdings / orders_count
+    def _ensure_average_order_quantity(self, orders_count, current_price, selling,
+                                       holdings, currency, mode):
+        holdings_in_quote = holdings if selling else holdings / current_price
+        average_order_quantity = holdings_in_quote / orders_count
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
         if self.min_max_order_details[self.min_quantity] is not None \
                 and self.min_max_order_details[self.min_cost] is not None:
             min_quantity = max(self.min_max_order_details[self.min_quantity],
-                               self.min_max_order_details[self.min_cost] / current_price) if selling \
-                else self.min_max_order_details[self.min_cost]
+                               self.min_max_order_details[self.min_cost] / current_price)
             if min_order_quantity < min_quantity:
-                if holdings < average_order_quantity:
+                # 1.01 to account for order creation rounding
+                if holdings_in_quote < average_order_quantity * 1.01:
                     return 0, 0
+                elif self.limit_orders_count_if_necessary:
+                    self.logger.warning(f"Not enough funds to create every {self.symbol} {self.ORDERS_DESC} "
+                                        f"{trading_enums.TradeOrderSide.SELL.name if selling else trading_enums.TradeOrderSide.BUY.name} "
+                                        f"orders according to exchange's rules. Creating the maximum possible number "
+                                        f"of valid orders instead.")
+                    return self._adapt_orders_count_and_quantity(holdings_in_quote, min_quantity, mode)
                 else:
                     min_funds = self._get_min_funds(orders_count, min_quantity, self.mode, current_price)
                     self.logger.error(f"Impossible to create {self.symbol} {self.ORDERS_DESC} "
@@ -893,6 +903,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 return 0, 0
         return orders_count, average_order_quantity
 
+    def _adapt_orders_count_and_quantity(self, holdings, min_quantity, mode):
+        # called when there are enough funds for at least one order but too many orders are requested
+        average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
+        max_orders_count = math.floor(holdings / average_quantity)
+        return max_orders_count, average_quantity
+
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):
         price_step = self.flat_increment * iteration
         price = starting_bound + price_step if is_selling else starting_bound - price_step
@@ -901,7 +917,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return price
 
     def _get_quantity_from_iteration(self, average_order_quantity, mode, side,
-                                     iteration, max_iteration, price, min_price):
+                                     iteration, max_iteration, price, starting_bound):
         multiplier_price_ratio = 1
         min_quantity, max_quantity = self._get_min_max_quantity(average_order_quantity, mode)
         delta = max_quantity - min_quantity
@@ -919,8 +935,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             if price <= 0:
                 return None
             quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
-            quantity = quantity_with_delta / price if side == trading_enums.TradeOrderSide.BUY \
-                else quantity_with_delta * min_price / price
+            quantity = quantity_with_delta * starting_bound / price
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1:
@@ -945,6 +960,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     required_average_quantity = min_cost / current_price
 
         return orders_count * required_average_quantity
+
+    @staticmethod
+    def _get_average_quantity_from_exchange_minimal_requirements(exchange_min, mode):
+        mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
+        # add 1% to prevent rounding issues
+        return exchange_min / (1 - mode_multiplier / 2) * 1.01
 
     @staticmethod
     def _get_min_max_quantity(average_order_quantity, mode):
