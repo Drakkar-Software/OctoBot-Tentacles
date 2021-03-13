@@ -14,12 +14,15 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import dataclasses
+import math
 
+import async_channel.constants as channel_constants
 import octobot_commons.symbol_util as symbol_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
+import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
@@ -43,6 +46,28 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         await mode_producer.run()
         return [mode_producer]
 
+    async def create_consumers(self) -> list:
+        # trading mode consumer
+        mode_consumer = GridTradingModeConsumer(self)
+        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
+            consumer_instance=mode_consumer,
+            trading_mode_name=self.get_name(),
+            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
+            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
+            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
+
+        # order consumer: filter by symbol not be triggered only on this symbol's orders
+        order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
+                                                          self.exchange_manager.id).new_consumer(
+            self._order_notification_callback,
+            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
+        )
+        return [mode_consumer, order_consumer]
+
+
+class GridTradingModeConsumer(staggered_orders_trading.StaggeredOrdersTradingModeConsumer):
+    pass
+
 
 class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingModeProducer):
     # Disable health check
@@ -65,6 +90,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                  self.mirror_order_delay)
         self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
         self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
+        self.quote_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_ORDER_QUOTE_VOLUME,
+                                                                     self.quote_volume_per_order)
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
 
@@ -147,5 +174,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.logger.error(f"Invalid bounds for {self.symbol}: too close to the current price")
             return 0, 0
         orders_count = self.sell_orders_count if selling else self.buy_orders_count
-        return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
-                                                   currency, mode)
+        if self.quote_volume_per_order == 0:
+            return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
+                                                       currency, mode)
+        else:
+            volume_in_currency = self.quote_volume_per_order if selling else current_price * self.quote_volume_per_order
+            orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
+            return orders_count, self.quote_volume_per_order

@@ -237,6 +237,31 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
         await _stop(exchange_manager)
 
 
+async def test_create_orders_with_quote_volume_per_order():
+    try:
+        symbol = "BTC/USDT"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer.quote_volume_per_order = 0.1
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 27))
+        created_orders = trading_api.get_open_orders(exchange_manager)
+        created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
+        created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
+        assert len(created_buy_orders) == 2  # not enough funds to create more orders
+        assert len(created_sell_orders) == producer.sell_orders_count  # 25
+
+        # ensure only closest buy orders got created
+        assert created_buy_orders[0].origin_price == 3990
+        assert created_buy_orders[1].origin_price == 3995
+        assert all(o.origin_quantity == producer.quote_volume_per_order for o in created_orders)
+    finally:
+        await _stop(exchange_manager)
+
+
 async def _wait_for_orders_creation(orders_count=1):
     for _ in range(orders_count):
         await asyncio_tools.wait_asyncio_next_cycle()

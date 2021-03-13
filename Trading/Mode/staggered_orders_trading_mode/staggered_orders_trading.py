@@ -103,6 +103,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     MIRROR_ORDER_DELAY = "mirror_order_delay"
     BUY_FUNDS = "buy_funds"
     SELL_FUNDS = "sell_funds"
+    CONFIG_ORDER_QUOTE_VOLUME = "quote_volume_per_order"
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -241,6 +242,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.flat_spread = None
         self.current_price = None
         self.scheduled_health_check = None
+        self.quote_volume_per_order = 0
         self.mirror_orders_tasks = []
 
         self.healthy = False
@@ -870,8 +872,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
                                 f"not enough funds.")
             return 0, 0
-        return self._ensure_average_order_quantity(orders_count, current_price, selling,
-                                                   holdings, currency, mode)
+        if self.quote_volume_per_order == 0:
+            return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
+                                                       currency, mode)
+        else:
+            volume_in_currency = self.quote_volume_per_order if selling else current_price * self.quote_volume_per_order
+            orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
+            return orders_count, self.quote_volume_per_order
 
     def _ensure_average_order_quantity(self, orders_count, current_price, selling,
                                        holdings, currency, mode):
@@ -938,10 +945,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             if price <= 0:
                 return None
             quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
-            quantity = quantity_with_delta * starting_bound / price
+            # when self.quote_volume_per_order is set, keep the same volume everywhere
+            quantity = quantity_with_delta * (starting_bound / price if self.quote_volume_per_order == 0 else 1)
 
         # reduce last order quantity to avoid python float representation issues
-        if iteration == max_iteration - 1:
+        if iteration == max_iteration - 1 and self.quote_volume_per_order == 0:
             quantity = quantity * 0.999
 
         if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:

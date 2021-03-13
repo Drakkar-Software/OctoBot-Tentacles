@@ -9,6 +9,8 @@
       "sell_orders_count": 25,
       "sell_funds": 0,
       "buy_funds": 0,
+      "quote_volume_per_order": 0,
+      "mirror_order_delay": 0,
       "use_existing_orders_only": false
     },
     {
@@ -19,6 +21,8 @@
       "sell_orders_count": 25,
       "sell_funds": 0,
       "buy_funds": 0,
+      "quote_volume_per_order": 0,
+      "mirror_order_delay": 0,
       "use_existing_orders_only": false
     },
     {
@@ -29,6 +33,8 @@
       "sell_orders_count": 25,
       "sell_funds": 0,
       "buy_funds": 0,
+      "quote_volume_per_order": 0,
+      "mirror_order_delay": 0,
       "use_existing_orders_only": false
     }
   ]
