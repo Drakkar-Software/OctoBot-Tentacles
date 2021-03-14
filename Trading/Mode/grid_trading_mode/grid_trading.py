@@ -90,8 +90,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                  self.mirror_order_delay)
         self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
         self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
-        self.quote_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_ORDER_QUOTE_VOLUME,
-                                                                     self.quote_volume_per_order)
+        self.sell_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_VOLUME_PER_ORDER,
+                                                                    self.sell_volume_per_order)
+        self.buy_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_VOLUME_PER_ORDER,
+                                                                   self.buy_volume_per_order)
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
 
@@ -159,7 +161,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             # create grid orders
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
                                                           order_limiting_currency_amount,
-                                                          order_limiting_currency)
+                                                          order_limiting_currency,
+                                                          selling)
             if funds_to_use == 0:
                 return []
             starting_bound = lower_bound if selling else upper_bound
@@ -174,10 +177,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.logger.error(f"Invalid bounds for {self.symbol}: too close to the current price")
             return 0, 0
         orders_count = self.sell_orders_count if selling else self.buy_orders_count
-        if self.quote_volume_per_order == 0:
+        if self._use_variable_orders_volume(trading_enums.TradeOrderSide.SELL if selling
+            else trading_enums.TradeOrderSide.BUY):
             return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
                                                        currency, mode)
         else:
-            volume_in_currency = self.quote_volume_per_order if selling else current_price * self.quote_volume_per_order
-            orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
-            return orders_count, self.quote_volume_per_order
+            return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)

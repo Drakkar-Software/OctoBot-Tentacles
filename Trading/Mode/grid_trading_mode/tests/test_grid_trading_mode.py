@@ -237,12 +237,13 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
         await _stop(exchange_manager)
 
 
-async def test_create_orders_with_quote_volume_per_order():
+async def test_create_orders_with_fixed_volume_per_order():
     try:
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer.quote_volume_per_order = 0.1
+        producer.buy_volume_per_order = 0.1
+        producer.sell_volume_per_order = 0.3
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -257,7 +258,8 @@ async def test_create_orders_with_quote_volume_per_order():
         # ensure only closest buy orders got created
         assert created_buy_orders[0].origin_price == 3990
         assert created_buy_orders[1].origin_price == 3995
-        assert all(o.origin_quantity == producer.quote_volume_per_order for o in created_orders)
+        assert all(o.origin_quantity == producer.buy_volume_per_order for o in created_buy_orders)
+        assert all(o.origin_quantity == producer.sell_volume_per_order for o in created_sell_orders)
     finally:
         await _stop(exchange_manager)
 

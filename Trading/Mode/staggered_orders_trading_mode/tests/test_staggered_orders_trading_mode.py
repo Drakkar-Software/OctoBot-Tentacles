@@ -395,25 +395,25 @@ async def test_get_maximum_traded_funds():
         # part 1: no available funds set
         # no allowed_funds set
         # can trade total_available_funds
-        assert producer._get_maximum_traded_funds(0, 10, "BTC") == 10
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", True) == 10
         # allowed_funds set
         # can trade allowed_funds
-        assert producer._get_maximum_traded_funds(5, 10, "BTC") == 5
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", False) == 5
         # allowed_funds set, allowed_funds larger than total_available_funds
         # can trade total_available_funds
-        assert producer._get_maximum_traded_funds(15, 10, "BTC") == 10
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", True) == 10
 
         # part 2: available funds set is set
         producer._set_initially_available_funds("BTC", 8)
         # no allowed_funds set
         # can trade available funds only
-        assert producer._get_maximum_traded_funds(0, 10, "BTC") == 8
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", False) == 8
         # allowed_funds set
         # can trade allowed_funds (lower than available funds)
-        assert producer._get_maximum_traded_funds(5, 10, "BTC") == 5
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", True) == 5
         # allowed_funds set, allowed_funds larger than total_available_funds
         # can trade available funds only
-        assert producer._get_maximum_traded_funds(15, 10, "BTC") == 8
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", False) == 8
     finally:
         await _stop(exchange_manager)
 
