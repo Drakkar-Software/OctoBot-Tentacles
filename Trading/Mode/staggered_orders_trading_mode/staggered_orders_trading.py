@@ -103,7 +103,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     MIRROR_ORDER_DELAY = "mirror_order_delay"
     BUY_FUNDS = "buy_funds"
     SELL_FUNDS = "sell_funds"
-    CONFIG_ORDER_QUOTE_VOLUME = "quote_volume_per_order"
+    CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
+    CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -242,7 +243,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.flat_spread = None
         self.current_price = None
         self.scheduled_health_check = None
-        self.quote_volume_per_order = 0
+        self.sell_volume_per_order = self.buy_volume_per_order = 0
         self.mirror_orders_tasks = []
 
         self.healthy = False
@@ -518,7 +519,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             order_limiting_currency)
         if state == self.NEW:
             # create staggered orders
-            funds_to_use = self._get_maximum_traded_funds(allowed_funds, order_limiting_currency_amount, order_limiting_currency)
+            funds_to_use = self._get_maximum_traded_funds(allowed_funds,
+                                                          order_limiting_currency_amount,
+                                                          order_limiting_currency,
+                                                          selling)
             if funds_to_use == 0:
                 return []
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
@@ -603,14 +607,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"order are already in place. Cancel these orders of you want to use this trading mode.")
         return orders
 
-    def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency):
+    def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency, selling):
         to_trade_funds = total_available_funds
         if allowed_funds > 0:
             if total_available_funds < allowed_funds:
                 self.logger.warning(
-                    f"Impossible to create every {self.ORDERS_DESC} orders for {self.symbol} using the required "
-                    f"funds ({allowed_funds}): not enough available {currency} funds ({total_available_funds}). "
-                    f"Trying to use available funds only.")
+                    f"Impossible to create every {self.ORDERS_DESC} orders for {self.symbol} using the total "
+                    f"{'sell' if selling else 'buy'} funds configuration ({allowed_funds}): not enough "
+                    f"available {currency} funds ({total_available_funds}). Trying to use available funds only.")
                 to_trade_funds = total_available_funds
             else:
                 to_trade_funds = allowed_funds
@@ -623,7 +627,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                       f"funds are already locked for other trading pairs.")
                     return 0
                 self.logger.warning(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} using the "
-                                    f"required funds ({allowed_funds}): {currency} funds are already locked for other "
+                                    f"total funds ({allowed_funds}): {currency} funds are already locked for other "
                                     f"trading pairs. Trying to use remaining funds only.")
                 to_trade_funds = unlocked_funds
         return to_trade_funds
@@ -643,9 +647,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if quantity is not None:
                     orders.append(OrderData(side, quantity, price, self.symbol, virtual_orders))
         if not orders:
+            advise = "change change the strategy settings to make less but bigger orders." \
+                if self._use_variable_orders_volume(side) else \
+                f"reduce {'buy' if side is trading_enums.TradeOrderSide.BUY else 'sell'} the orders volume."
             self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
                               f"For the strategy to work better, add {order_limiting_currency} funds or "
-                              f"change change the strategy settings to make less but bigger orders.")
+                              f"{advise}")
         else:
             # register the locked orders funds
             if not self._is_initially_available_funds_set(order_limiting_currency):
@@ -872,13 +879,21 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
                                 f"not enough funds.")
             return 0, 0
-        if self.quote_volume_per_order == 0:
+        if self._use_variable_orders_volume(trading_enums.TradeOrderSide.SELL if selling
+            else trading_enums.TradeOrderSide.BUY):
             return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
                                                        currency, mode)
         else:
-            volume_in_currency = self.quote_volume_per_order if selling else current_price * self.quote_volume_per_order
-            orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
-            return orders_count, self.quote_volume_per_order
+            return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)
+
+    def _use_variable_orders_volume(self, side):
+        return (self.sell_volume_per_order == 0 and side is trading_enums.TradeOrderSide.SELL) \
+               or self.buy_volume_per_order == 0
+
+    def _get_orders_count_from_fixed_volume(self, selling, current_price, holdings, orders_count):
+        volume_in_currency = self.sell_volume_per_order if selling else current_price * self.buy_volume_per_order
+        orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
+        return orders_count, self.sell_volume_per_order if selling else self.buy_volume_per_order
 
     def _ensure_average_order_quantity(self, orders_count, current_price, selling,
                                        holdings, currency, mode):
@@ -931,7 +946,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         multiplier_price_ratio = 1
         min_quantity, max_quantity = self._get_min_max_quantity(average_order_quantity, mode)
         delta = max_quantity - min_quantity
-
         if max_iteration == 1:
             quantity = average_order_quantity
         else:
@@ -946,10 +960,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 return None
             quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
             # when self.quote_volume_per_order is set, keep the same volume everywhere
-            quantity = quantity_with_delta * (starting_bound / price if self.quote_volume_per_order == 0 else 1)
+            quantity = quantity_with_delta * (starting_bound / price if self._use_variable_orders_volume(side) else 1)
 
         # reduce last order quantity to avoid python float representation issues
-        if iteration == max_iteration - 1 and self.quote_volume_per_order == 0:
+        if iteration == max_iteration - 1 and self._use_variable_orders_volume(side):
             quantity = quantity * 0.999
 
         if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:

@@ -24,48 +24,54 @@
               },
               "flat_spread": {
                 "type": "number",
-                "title": "Spread, price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT).",
+                "title": "Spread: price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT).",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "flat_increment": {
                 "type": "number",
-                "title": "Increment, price difference between two orders of the same side in the base currency (USDT for BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment.",
+                "title": "Increment: price difference between two orders of the same side in the base currency (USDT for BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment.",
                 "minimum": 0,
                 "exclusiveMinimum": true
               },
               "buy_orders_count": {
                 "type": "number",
-                "title": "Number of initial buy orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
+                "title": "Buy orders count: number of initial buy orders to create. Make sure to have enough funds to create that many orders.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
               "sell_orders_count": {
                 "type": "number",
-                "title": "Number of initial sell orders to create. Make sure to have enough funds to create that many orders. Funds are evenly split across orders.",
+                "title": "Sell orders count: Number of initial sell orders to create. Make sure to have enough funds to create that many orders.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
               "buy_funds": {
                 "type": "number",
-                "title": "Total funds to use for buy orders creation (in base currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Required when using the same quote or base in multiple pairs.",
+                "title": "[Optional] Total buy funds: total funds to use for buy orders creation (in base currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
               "sell_funds": {
                 "type": "number",
-                "title": "Total funds to use for sell orders creation (in quote currency: BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Required when using the same quote or base in multiple pairs.",
+                "title": "[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
-              "quote_volume_per_order": {
+              "buy_volume_per_order": {
                 "type": "number",
-                "title": "Exact value of each order in quote currency (BTC for BTC/USDT). Set 0 to compute automatically and use all available funds in portfolio and in allowed buy and sell funds.",
+                "title": "[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all available base funds in portfolio (or total buy funds if set) to create orders with constant total order cost (price * volume).",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "sell_volume_per_order": {
+                "type": "number",
+                "title": "[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all available quote funds in portfolio (or total sell funds if set) to create orders with constant total order cost (price * volume).",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
               "mirror_order_delay": {
-                  "title": "Mirror order delay: Seconds to wait for before creating a mirror order when an order is filled. This can generate extra profits on quick market moves.",
+                  "title": "[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order is filled. This can generate extra profits on quick market moves.",
                   "type": "number",
                   "minimum": 0,
                   "default": 0
