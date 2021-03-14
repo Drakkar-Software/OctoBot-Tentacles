@@ -105,6 +105,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     SELL_FUNDS = "sell_funds"
     CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
+    CONFIG_REINVEST_PROFITS = "reinvest_profits"
+    CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
 
     def __init__(self, config, exchange):
         super().__init__(config, exchange)
@@ -275,7 +277,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
             = None
-        self.use_existing_orders_only = self.limit_orders_count_if_necessary = False
+        self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
+            self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
         self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
         self.read_config()
         self._check_params()
@@ -302,6 +305,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                  self.mirror_order_delay)
         self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
         self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
+        self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
+                                                               self.reinvest_profits)
 
     async def start(self) -> None:
         await super().start()
@@ -372,13 +377,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         filled_price = filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
         filled_volume = filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
         price = filled_price + price_increment if now_selling else filled_price - price_increment
-        new_order_quantity = filled_volume
-        if not now_selling:
-            # buying => adapt order quantity
-            new_order_quantity = filled_price / price * filled_volume
-        quantity_change = self.max_fees
-        quantity = new_order_quantity * (1 - quantity_change)
-        new_order = OrderData(new_side, quantity, price, self.symbol)
+        volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
+        new_order = OrderData(new_side, volume, price, self.symbol)
 
         if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
             await self._lock_portfolio_and_create_order(new_order, filled_price)
@@ -389,6 +389,26 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 asyncio.create_task,
                 self._lock_portfolio_and_create_order(new_order, filled_price)
             ))
+
+    def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume):
+        # use target volumes if set
+        if self.sell_volume_per_order != 0 and now_selling:
+            return self.sell_volume_per_order
+        if self.buy_volume_per_order != 0 and not now_selling:
+            return self.buy_volume_per_order
+        # otherwise: compute mirror volume
+        new_order_quantity = filled_volume
+        if not now_selling:
+            # buying => adapt order quantity
+            new_order_quantity = filled_price / target_price * filled_volume
+        # use max possible volume
+        if self.reinvest_profits:
+            return new_order_quantity
+        # remove exchange fees
+        quantity_change = self.max_fees
+        quantity = new_order_quantity * (1 - quantity_change)
+        return quantity
+
 
     async def _lock_portfolio_and_create_order(self, new_order, filled_price):
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:

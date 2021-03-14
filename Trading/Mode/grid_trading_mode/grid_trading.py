@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import dataclasses
-import math
 
 import async_channel.constants as channel_constants
 import octobot_commons.symbol_util as symbol_util
@@ -96,6 +95,12 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                    self.buy_volume_per_order)
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
+        self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
+                                                               self.reinvest_profits)
+        self.use_fixed_volume_for_mirror_orders = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS,
+            self.use_fixed_volume_for_mirror_orders
+        )
 
     async def _handle_staggered_orders(self, current_price):
         self._init_allowed_price_ranges(current_price)

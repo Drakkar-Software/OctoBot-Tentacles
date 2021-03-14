@@ -1140,6 +1140,42 @@ async def test_order_fill_callback_with_mirror_delay():
         await _stop(exchange_manager)
 
 
+async def test_compute_mirror_order_volume():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD", fees=0)
+        # no profit reinvesting
+        # no fixed volumes
+        producer.reinvest_profits = producer.use_fixed_volume_for_mirror_orders = False
+        # 1% max fees
+        producer.max_fees = 0.01
+        # take exchange fees into account
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2 * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+
+        # with profits reinvesting
+        producer.reinvest_profits = True
+        # consider fees already taken, sell everything
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80)
+
+        # with fixed volumes
+        producer.reinvest_profits = False
+        producer.sell_volume_per_order = 3
+        # consider fees already taken, sell everything
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        # buy order
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        producer.buy_volume_per_order = 5
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+
+        # with fixed volumes and profits reinvesting
+        producer.reinvest_profits = True
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+    finally:
+        await _stop(exchange_manager)
+
+
 async def test_create_order():
     try:
         symbol = "BTC/USD"
