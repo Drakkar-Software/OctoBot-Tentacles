@@ -11,6 +11,8 @@
       "buy_funds": 0,
       "buy_volume_per_order": 0,
       "sell_volume_per_order": 0,
+      "reinvest_profits": false,
+      "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
       "use_existing_orders_only": false
     },
@@ -24,6 +26,8 @@
       "buy_funds": 0,
       "buy_volume_per_order": 0,
       "sell_volume_per_order": 0,
+      "reinvest_profits": false,
+      "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
       "use_existing_orders_only": false
     },
@@ -37,6 +41,8 @@
       "buy_funds": 0,
       "buy_volume_per_order": 0,
       "sell_volume_per_order": 0,
+      "reinvest_profits": false,
+      "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
       "use_existing_orders_only": false
     }

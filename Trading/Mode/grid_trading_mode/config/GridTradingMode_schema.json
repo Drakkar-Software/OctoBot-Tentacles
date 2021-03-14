@@ -76,6 +76,18 @@
                   "minimum": 0,
                   "default": 0
               },
+              "reinvest_profits": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
+                "default": false
+              },
+              "use_fixed_volume_for_mirror_orders": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for mirror orders. WARNING: incompatible with profits reinvesting.",
+                "default": false
+              },
               "use_existing_orders_only": {
                 "type": "boolean",
                 "format": "checkbox",
