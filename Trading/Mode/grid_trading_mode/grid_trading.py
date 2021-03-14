@@ -112,12 +112,13 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
     async def _generate_staggered_orders(self, current_price):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
-        interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
-        if interfering_orders_pairs:
-            self.logger.error(f"Impossible to create grid orders for {self.symbol} with interfering orders "
-                              f"using pair(s): {interfering_orders_pairs}. Configure funds to use for each pairs "
-                              f"to be able to use interfering pairs.")
-            return [], []
+        if not self.single_pair_setup:
+            interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
+            if interfering_orders_pairs:
+                self.logger.error(f"Impossible to create grid orders for {self.symbol} with interfering orders "
+                                  f"using pair(s): {interfering_orders_pairs}. Configure funds to use for each pairs "
+                                  f"to be able to use interfering pairs.")
+                return [], []
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)

@@ -279,6 +279,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             = None
         self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
             self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
+        self.single_pair_setup = len(self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]) <= 1
         self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
         self.read_config()
         self._check_params()
@@ -496,7 +497,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _get_interfering_orders_pairs(self, orders):
         # Not a problem if allowed funds are set
-        if self.buy_funds > 0 and self.sell_funds > 0:
+        if (self.buy_funds > 0 and self.sell_funds > 0) \
+                or (self.buy_volume_per_order > 0 and self.sell_volume_per_order > 0):
             return []
         else:
             current_base, current_quote = symbol_util.split_symbol(self.symbol)
