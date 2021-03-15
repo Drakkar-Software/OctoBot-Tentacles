@@ -44,6 +44,57 @@
             <button class="btn btn-outline-warning waves-effect float-right" id='factoryResetConfig' update-url="{{ url_for('config_tentacle', name=name, action='factory_reset') }}"><i class="fas fa-recycle"></i> Reset configuration to default values</button>
         </div>
     </div>
+    {% if user_commands %}
+    <div class="card mt-2">
+        <div class="card-header">
+            <h2>Commands</h2>
+        </div>
+        <div class="card-body">
+            {% for command_action, command_params in user_commands.items() %}
+                <!-- Button trigger modal -->
+                <button type="button" class="btn btn-primary waves-effect"
+                        data-toggle="modal" data-target="#{{ command_action | replace (' ', '') }}Modal">
+                    {{ command_action }}
+                </button>
+
+                <!-- Modal -->
+                <div class="modal text-dark" id="{{ command_action | replace (' ', '') }}Modal" tabindex="-1" role="dialog" aria-labelledby="{{ command_action | replace (' ', '') }}ModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content p-2">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="{{ command_action | replace (' ', '') }}ModalLabel">{{ command_action | capitalize }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      {% if command_params %}
+                      <div class="modal-body text-justify">
+                        {% for param_name, param_type in command_params.items() %}
+                        <label class="required, form-control-label"
+                               for="{{ command_action | replace (' ', '') }}{{ param_name | replace (' ', '') }}input">
+                            {{ param_name | capitalize }}:
+                        </label>
+                          <input type="{{ param_type }}" class="form-control command-param" data-param-name="{{param_name}}"
+                                 id="{{ command_action | replace (' ', '') }}{{ param_name | replace (' ', '') }}input">
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                      <div class="modal-footer">
+                        <button class="btn btn-primary waves-effect user-command"
+                            update-url="{{ url_for('api.user_command') }}"
+                            data-action="{{ command_action }}"
+                            data-subject="{{ name }}"
+                            data-dismiss="modal">
+                            {{ command_action | capitalize }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
     <br>
     {% if (tentacle_type == "trading mode" and tentacle_desc['requirements']|length > 1) or tentacle_desc['requirements'] == ["*"] %}
             {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
