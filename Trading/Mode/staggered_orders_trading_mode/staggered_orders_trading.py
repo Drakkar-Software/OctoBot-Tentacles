@@ -97,12 +97,13 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_INCREMENT_PERCENT = "increment_percent"
     CONFIG_LOWER_BOUND = "lower_bound"
     CONFIG_UPPER_BOUND = "upper_bound"
-    USE_EXISTING_ORDERS_ONLY = "use_existing_orders_only"
+    CONFIG_USE_EXISTING_ORDERS_ONLY = "use_existing_orders_only"
     CONFIG_ALLOW_INSTANT_FILL = "allow_instant_fill"
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
-    MIRROR_ORDER_DELAY = "mirror_order_delay"
-    BUY_FUNDS = "buy_funds"
-    SELL_FUNDS = "sell_funds"
+    CONFIG_MIRROR_ORDER_DELAY = "mirror_order_delay"
+    CONFIG_STARTING_PRICE = "starting_price"
+    CONFIG_BUY_FUNDS = "buy_funds"
+    CONFIG_SELL_FUNDS = "sell_funds"
     CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
@@ -245,7 +246,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.flat_spread = None
         self.current_price = None
         self.scheduled_health_check = None
-        self.sell_volume_per_order = self.buy_volume_per_order = 0
+        self.sell_volume_per_order = self.buy_volume_per_order = self.starting_price = 0
         self.mirror_orders_tasks = []
 
         self.healthy = False
@@ -300,12 +301,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.operational_depth = self.symbol_trading_config[self.trading_mode.CONFIG_OPERATIONAL_DEPTH]
         self.lowest_buy = self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]
         self.highest_sell = self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]
-        self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.USE_EXISTING_ORDERS_ONLY,
-                                                                       self.use_existing_orders_only)
-        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY,
+        self.use_existing_orders_only = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_USE_EXISTING_ORDERS_ONLY,
+            self.use_existing_orders_only)
+        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
-        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
-        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
+        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS, self.buy_funds)
+        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS, self.sell_funds)
         self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
                                                                self.reinvest_profits)
 
@@ -355,7 +357,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.exchange_manager,
             symbol=self.symbol,
             timeout=self.PRICE_FETCHING_TIMEOUT)
-        await self.create_state(self.current_price)
+        await self.create_state(self._get_new_state_price())
+
+    def _get_new_state_price(self):
+        return self.current_price if self.starting_price == 0 else self.starting_price
 
     async def create_state(self, current_price):
         if current_price is not None:

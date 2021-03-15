@@ -58,6 +58,12 @@
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
+              "starting_price": {
+                "type": "number",
+                "title": "[Optional] Starting price: price price to compute initial orders from. Set 0 to use current exchange price during orders creations.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
               "buy_volume_per_order": {
                 "type": "number",
                 "title": "[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all available base funds in portfolio (or total buy funds if set) to create orders with constant total order cost (price * volume).",

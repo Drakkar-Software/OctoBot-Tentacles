@@ -85,8 +85,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.flat_increment = self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]
         self.buy_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_BUY_ORDERS_COUNT]
         self.sell_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_SELL_ORDERS_COUNT]
-        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.BUY_FUNDS, self.buy_funds)
-        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.SELL_FUNDS, self.sell_funds)
+        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS, self.buy_funds)
+        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS, self.sell_funds)
+        self.starting_price = self.symbol_trading_config.get(self.trading_mode.CONFIG_STARTING_PRICE,
+                                                             self.starting_price)
         self.sell_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_VOLUME_PER_ORDER,
                                                                     self.sell_volume_per_order)
         self.buy_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_VOLUME_PER_ORDER,
@@ -99,9 +101,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.trading_mode.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS,
             self.use_fixed_volume_for_mirror_orders
         )
-        self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.USE_EXISTING_ORDERS_ONLY,
+        self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.CONFIG_USE_EXISTING_ORDERS_ONLY,
                                                                        self.use_existing_orders_only)
-        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.MIRROR_ORDER_DELAY,
+        self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
 
     async def _handle_staggered_orders(self, current_price):
@@ -186,7 +188,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             return 0, 0
         orders_count = self.sell_orders_count if selling else self.buy_orders_count
         if self._use_variable_orders_volume(trading_enums.TradeOrderSide.SELL if selling
-            else trading_enums.TradeOrderSide.BUY):
+           else trading_enums.TradeOrderSide.BUY):
             return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
                                                        currency, mode)
         else:

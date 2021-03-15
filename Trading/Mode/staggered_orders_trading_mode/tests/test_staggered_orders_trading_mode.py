@@ -418,6 +418,19 @@ async def test_get_maximum_traded_funds():
         await _stop(exchange_manager)
 
 
+async def test_get_new_state_price():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+        producer.current_price = 4000
+        assert producer._get_new_state_price() == 4000
+
+        producer.starting_price = 2
+        assert producer._get_new_state_price() == 2
+    finally:
+        await _stop(exchange_manager)
+
+
 async def test_set_increment_and_spread():
     try:
         producer, _, exchange_manager = await _get_tools("BTC/USD")
