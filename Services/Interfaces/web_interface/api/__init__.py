@@ -20,6 +20,7 @@ api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
 
 from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
+from tentacles.Services.Interfaces.web_interface.api import user_commands
 
 
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
@@ -32,6 +33,9 @@ from tentacles.Services.Interfaces.web_interface.api.trading import (
     refresh_portfolio,
     currency_list,
 )
+from tentacles.Services.Interfaces.web_interface.api.user_commands import (
+    user_command,
+)
 
 
 __all__ = [
@@ -41,4 +45,5 @@ __all__ = [
     "orders",
     "refresh_portfolio",
     "currency_list",
+    "user_command",
 ]

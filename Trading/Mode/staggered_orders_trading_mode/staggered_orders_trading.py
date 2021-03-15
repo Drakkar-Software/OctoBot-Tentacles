@@ -352,22 +352,25 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             else:
                 self.scheduled_health_check = asyncio.get_event_loop().call_soon(self._schedule_order_refresh)
 
-    async def _ensure_staggered_orders(self):
+    async def trigger_staggered_orders_creation(self):
+        await self._ensure_staggered_orders(ignore_mirror_orders_only=True)
+
+    async def _ensure_staggered_orders(self, ignore_mirror_orders_only=False):
         _, _, _, self.current_price, self.symbol_market = await trading_personal_data.get_pre_order_data(
             self.exchange_manager,
             symbol=self.symbol,
             timeout=self.PRICE_FETCHING_TIMEOUT)
-        await self.create_state(self._get_new_state_price())
+        await self.create_state(self._get_new_state_price(), ignore_mirror_orders_only)
 
     def _get_new_state_price(self):
         return self.current_price if self.starting_price == 0 else self.starting_price
 
-    async def create_state(self, current_price):
+    async def create_state(self, current_price, ignore_mirror_orders_only):
         if current_price is not None:
             self._refresh_symbol_data(self.symbol_market)
             async with self.get_lock():
                 if self.exchange_manager.trader.is_enabled:
-                    await self._handle_staggered_orders(current_price)
+                    await self._handle_staggered_orders(current_price, ignore_mirror_orders_only)
 
     async def order_filled_callback(self, filled_order):
         # create order on the order side
@@ -421,9 +424,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
             await self._create_order(new_order, filled_price)
 
-    async def _handle_staggered_orders(self, current_price):
+    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only):
         self._ensure_current_price_in_limit_parameters(current_price)
-        if self.use_existing_orders_only:
+        if not ignore_mirror_orders_only and self.use_existing_orders_only:
             # when using existing orders only, no need to check existing orders (they can't be wrong since they are
             # already on exchange): only initialize increment and order fill events will do the rest
             self._set_increment_and_spread(current_price)
@@ -943,10 +946,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # called when there are enough funds for at least one order but too many orders are requested
         min_average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
         max_orders_count = math.floor(holdings / min_average_quantity)
-        # count remaining holdings if any
-        average_quantity = min_average_quantity + \
-                           (holdings - min_average_quantity * max_orders_count) / max_orders_count
-        return max_orders_count, average_quantity
+        if max_orders_count > 0:
+            # count remaining holdings if any
+            average_quantity = min_average_quantity + \
+                               (holdings - min_average_quantity * max_orders_count) / max_orders_count
+            return max_orders_count, average_quantity
+        return 0, 0
 
     def _get_price_from_iteration(self, starting_bound, is_selling, iteration):
         price_step = self.flat_increment * iteration

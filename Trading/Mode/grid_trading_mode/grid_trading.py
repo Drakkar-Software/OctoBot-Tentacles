@@ -16,7 +16,9 @@
 import dataclasses
 
 import async_channel.constants as channel_constants
+import async_channel.channels as channels
 import octobot_commons.symbol_util as symbol_util
+import octobot_services.channel as services_channels
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchange_channel as exchanges_channel
@@ -37,6 +39,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     CONFIG_BUY_ORDERS_COUNT = "buy_orders_count"
     CONFIG_SELL_ORDERS_COUNT = "sell_orders_count"
     LIMIT_ORDERS_IF_NECESSARY = "limit_orders_if_necessary"
+    USER_COMMAND_CREATE_ORDERS = "create initial orders"
+    USER_COMMAND_CREATE_ORDERS_TRADING_PAIR = "trading pair"
 
     async def create_producers(self) -> list:
         mode_producer = GridTradingModeProducer(
@@ -61,7 +65,33 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        try:
+            user_commands_consumer = \
+                await channels.get_chan(services_channels.UserCommandsChannel.get_name()).new_consumer(
+                    self._user_commands_callback,
+                    {"bot_id": self.bot_id, "subject": self.get_name()}
+                )
+        except KeyError:
+            return [mode_consumer, order_consumer]
+        return [mode_consumer, order_consumer, user_commands_consumer]
+
+    async def _user_commands_callback(self, bot_id, subject, action, data) -> None:
+        if action == GridTradingMode.USER_COMMAND_CREATE_ORDERS and \
+           data.get(GridTradingMode.USER_COMMAND_CREATE_ORDERS_TRADING_PAIR, "").upper() == self.symbol:
+            self.logger.info(f"Creating initial orders on user command for {self.symbol}.")
+            await self.producers[0].trigger_staggered_orders_creation()
+
+    @classmethod
+    def get_user_commands(cls) -> dict:
+        """
+        Return the dict of user commands for this tentacle
+        :return: the commands dict
+        """
+        return {
+            GridTradingMode.USER_COMMAND_CREATE_ORDERS: {
+                GridTradingMode.USER_COMMAND_CREATE_ORDERS_TRADING_PAIR: "text"
+            }
+        }
 
 
 class GridTradingModeConsumer(staggered_orders_trading.StaggeredOrdersTradingModeConsumer):
@@ -106,9 +136,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
 
-    async def _handle_staggered_orders(self, current_price):
+    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only):
         self._init_allowed_price_ranges(current_price)
-        if not self.use_existing_orders_only:
+        if ignore_mirror_orders_only or not self.use_existing_orders_only:
             buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
             grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
