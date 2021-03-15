@@ -255,9 +255,12 @@ async def test_create_orders_with_fixed_volume_per_order():
         assert len(created_buy_orders) == 2  # not enough funds to create more orders
         assert len(created_sell_orders) == producer.sell_orders_count  # 25
 
-        # ensure only closest buy orders got created
-        assert created_buy_orders[0].origin_price == 3990
-        assert created_buy_orders[1].origin_price == 3995
+        # ensure only closest orders got created with the right value and in the right order
+        assert created_buy_orders[0].origin_price == 3995
+        assert created_buy_orders[1].origin_price == 3990
+        assert created_sell_orders[0].origin_price == 4005
+        assert created_sell_orders[1].origin_price == 4010
+        assert created_sell_orders[0] is created_orders[0]
         assert all(o.origin_quantity == producer.buy_volume_per_order for o in created_buy_orders)
         assert all(o.origin_quantity == producer.sell_volume_per_order for o in created_sell_orders)
     finally:

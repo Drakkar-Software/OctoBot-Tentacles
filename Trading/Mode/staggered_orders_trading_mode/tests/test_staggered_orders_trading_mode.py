@@ -693,10 +693,11 @@ async def test_start_with_existing_valid_orders():
         assert original_orders[0] is trading_api.get_open_orders(exchange_manager)[0]
         assert original_orders[-1] is trading_api.get_open_orders(exchange_manager)[-1]
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth
+        first_buy_index = int(len(trading_api.get_open_orders(exchange_manager)) / 2)
 
         # new evaluation, price changed
         # -2 order would be filled
-        to_fill_order = original_orders[-2]
+        to_fill_order = original_orders[first_buy_index]
         price = 95
         await _fill_order(to_fill_order, exchange_manager, price, producer=producer)
         await asyncio.create_task(_wait_for_orders_creation(2))
@@ -707,9 +708,9 @@ async def test_start_with_existing_valid_orders():
         # did nothing
         assert len(original_orders) == len(trading_api.get_open_orders(exchange_manager))
 
-        # a orders gets cancelled
+        # orders gets cancelled
         open_orders = trading_api.get_open_orders(exchange_manager)
-        to_cancel = [open_orders[20], open_orders[19], open_orders[40]]
+        to_cancel = [open_orders[20], open_orders[18], open_orders[3]]
         for order in to_cancel:
             await exchange_manager.trader.cancel_order(order)
         post_available = trading_api.get_portfolio_currency(exchange_manager, "USD")
@@ -1452,7 +1453,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
         sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "BTC")
         assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
-        staggered_orders = producer._alternate_not_virtual_orders(buy_orders, sell_orders)
+        staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
         if staggered_orders:
             assert not any(order for order in staggered_orders if order.is_virtual)
 
@@ -1482,14 +1483,12 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
     first_sell = None
     current_buy = None
     current_sell = None
-    last_order_side = None
+    in_sell_orders = True
     for order in orders:
-
-        if last_order_side is not None:
-            # alternate sell and buy orders
-            assert last_order_side == (
-                trading_enums.TradeOrderSide.BUY if order.side == trading_enums.TradeOrderSide.SELL else trading_enums.TradeOrderSide.SELL)
-        last_order_side = order.side
+        # first should be sell orders followed by buy orders
+        if order.side is trading_enums.TradeOrderSide.BUY:
+            in_sell_orders = False
+        assert order.side is (trading_enums.TradeOrderSide.SELL if in_sell_orders else trading_enums.TradeOrderSide.BUY)
 
         if order.side == trading_enums.TradeOrderSide.BUY:
             if current_buy is None:
@@ -1497,16 +1496,16 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 first_buy = order
             else:
                 # place buy orders from the lowest price up to the current price
-                assert current_buy.origin_price < order.origin_price
+                assert current_buy.origin_price > order.origin_price
                 if buy_increase_towards_center:
-                    assert current_buy.origin_quantity * current_buy.origin_price < \
+                    assert current_buy.origin_quantity * current_buy.origin_price > \
                            order.origin_quantity * order.origin_price
                 elif buy_flat_towards_center:
                     assert first_buy.origin_quantity * first_buy.origin_price * 0.99\
                            <= current_buy.origin_quantity * current_buy.origin_price \
                            <= first_buy.origin_quantity * first_buy.origin_price * 1.01
                 else:
-                    assert current_buy.origin_quantity * current_buy.origin_price > \
+                    assert current_buy.origin_quantity * current_buy.origin_price < \
                            order.origin_quantity * order.origin_price
                 current_buy = order
 
@@ -1515,7 +1514,7 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 current_sell = order
                 first_sell = order
             else:
-                assert current_sell.origin_price > order.origin_price
+                assert current_sell.origin_price < order.origin_price
                 current_sell = order
                 if sell_flat_towards_center:
                     assert first_sell.origin_quantity * first_sell.origin_price * 0.99\
@@ -1535,13 +1534,13 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
     if orders:
         if buy_increase_towards_center:
             assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
-                   <= round(current_buy.origin_quantity * current_buy.origin_price -
-                            first_buy.origin_quantity * first_buy.origin_price) \
+                   <= round(first_buy.origin_quantity * first_buy.origin_price -
+                            current_buy.origin_quantity * current_buy.origin_price) \
                    <= round(multiplier * average_order_quantity * producer.current_price) + 1
         else:
             assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
-                   <= round(first_buy.origin_quantity * first_buy.origin_price -
-                            current_buy.origin_quantity * current_buy.origin_price) \
+                   <= round(current_buy.origin_quantity * current_buy.origin_price -
+                            first_buy.origin_quantity * first_buy.origin_price) \
                    <= round(multiplier * average_order_quantity * producer.current_price) + 1
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC",
@@ -1563,13 +1562,13 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 + multiplier / 2),
                     8)
-                assert abs(current_sell.origin_quantity - expected_quantity) < \
+                assert abs(first_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
             elif not sell_flat_towards_center:
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 - multiplier / 2),
                     8)
-                assert abs(current_sell.origin_quantity - expected_quantity) < \
+                assert abs(first_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
 
 
@@ -1587,7 +1586,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
     sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "RDN")
     assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
-    staggered_orders = producer._alternate_not_virtual_orders(buy_orders, sell_orders)
+    staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
     if staggered_orders:
         assert not any(order for order in staggered_orders if order.is_virtual)
 
@@ -1604,26 +1603,24 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
 
     current_buy = None
     current_sell = None
-    last_order_side = None
+    in_sell_orders = True
     for order in open_orders:
-
-        if last_order_side is not None:
-            # alternate sell and buy orders
-            assert last_order_side == (
-                trading_enums.TradeOrderSide.BUY if order.side == trading_enums.TradeOrderSide.SELL else trading_enums.TradeOrderSide.SELL)
-        last_order_side = order.side
+        # first should be sell orders followed by buy orders
+        if order.side is trading_enums.TradeOrderSide.BUY:
+            in_sell_orders = False
+        assert order.side is (trading_enums.TradeOrderSide.SELL if in_sell_orders else trading_enums.TradeOrderSide.BUY)
 
         if order.side == trading_enums.TradeOrderSide.BUY:
             if current_buy is None:
                 current_buy = order
             else:
-                # place buy orders from the lowest price up to the current price
-                assert current_buy.origin_price < order.origin_price
+                # place buy orders from the current price down to the lowest price
+                assert current_buy.origin_price > order.origin_price
                 if buy_increase_towards_center:
-                    assert current_buy.origin_quantity * current_buy.origin_price < \
+                    assert current_buy.origin_quantity * current_buy.origin_price > \
                            order.origin_quantity * order.origin_price
                 else:
-                    assert current_buy.origin_quantity * current_buy.origin_price > \
+                    assert current_buy.origin_quantity * current_buy.origin_price < \
                            order.origin_quantity * order.origin_price
                 current_buy = order
 
@@ -1631,7 +1628,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
             if current_sell is None:
                 current_sell = order
             else:
-                assert current_sell.origin_price > order.origin_price
+                assert current_sell.origin_price < order.origin_price
                 current_sell = order
 
     assert trading_api.get_portfolio_currency(exchange_manager, "ETH") >= 0

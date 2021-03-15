@@ -110,9 +110,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self._init_allowed_price_ranges(current_price)
         if not self.use_existing_orders_only:
             buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
-            staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
+            grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-                await self._create_not_virtual_orders(staggered_orders, current_price)
+                await self._create_not_virtual_orders(grid_orders, current_price)
 
     async def _generate_staggered_orders(self, current_price):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager

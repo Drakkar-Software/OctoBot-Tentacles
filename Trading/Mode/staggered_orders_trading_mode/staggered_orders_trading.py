@@ -417,7 +417,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         quantity = new_order_quantity * (1 - quantity_change)
         return quantity
 
-
     async def _lock_portfolio_and_create_order(self, new_order, filled_price):
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
             await self._create_order(new_order, filled_price)
@@ -431,7 +430,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         else:
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
                 buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
-                staggered_orders = self._alternate_not_virtual_orders(buy_orders, sell_orders)
+                staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
                 await self._create_not_virtual_orders(staggered_orders, current_price)
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
@@ -562,8 +561,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         if state == self.FILL:
             # complete missing orders
-            if missing_orders:
-                max_quant_per_order = order_limiting_currency_amount / len([o for o in missing_orders if o[1] == side])
+            if missing_orders and [o for o in missing_orders if o[1] is side]:
+                max_quant_per_order = order_limiting_currency_amount / len([o for o in missing_orders if o[1] is side])
                 missing_orders_around_spread = []
                 for missing_order_price, missing_order_side in missing_orders:
                     if missing_order_side == side:
@@ -668,6 +667,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
                                                        upper_bound, order_limiting_currency_amount,
                                                        order_limiting_currency, mode)
+        # orders closest to the current price are added first
         for i in range(orders_count):
             price = self._get_price_from_iteration(starting_bound, selling, i)
             if price is not None:
@@ -686,7 +686,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # register the locked orders funds
             if not self._is_initially_available_funds_set(order_limiting_currency):
                 self._set_initially_available_funds(order_limiting_currency, total_available_funds)
-            orders.reverse()
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_trades):
         mode = None
@@ -849,16 +848,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return False
 
     @staticmethod
-    def _alternate_not_virtual_orders(buy_orders, sell_orders):
-        not_virtual_buy_orders = StaggeredOrdersTradingModeProducer._filter_virtual_order(buy_orders)
-        not_virtual_sell_orders = StaggeredOrdersTradingModeProducer._filter_virtual_order(sell_orders)
-        alternated_orders_list = []
-        for i in range(max(len(not_virtual_buy_orders), len(not_virtual_sell_orders))):
-            if i < len(not_virtual_buy_orders):
-                alternated_orders_list.append(not_virtual_buy_orders[i])
-            if i < len(not_virtual_sell_orders):
-                alternated_orders_list.append(not_virtual_sell_orders[i])
-        return alternated_orders_list
+    def _merged_and_sort_not_virtual_orders(buy_orders, sell_orders):
+        # create sell orders first follows by buy orders
+        return StaggeredOrdersTradingModeProducer._filter_virtual_order(sell_orders) + \
+               StaggeredOrdersTradingModeProducer._filter_virtual_order(buy_orders)
 
     @staticmethod
     def _filter_virtual_order(orders):
@@ -866,10 +859,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     @staticmethod
     def _set_virtual_orders(buy_orders, sell_orders, operational_depth):
-        # reverse orders to put orders closer to the current price first in order to set virtual orders
-        buy_orders.reverse()
-        sell_orders.reverse()
-
         # all orders that are further than self.operational_depth are virtual
         orders_count = 0
         buy_index = 0
@@ -888,10 +877,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 sell_index += 1
                 orders_count += 1
                 at_least_one_added = True
-
-        # reverse back
-        buy_orders.reverse()
-        sell_orders.reverse()
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
                                               currency, mode):
