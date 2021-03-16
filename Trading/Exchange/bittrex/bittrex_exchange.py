@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import ccxt
+
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors
 
@@ -46,3 +48,17 @@ class Bittrex(exchanges.SpotCCXTExchange):
             return candles
         except Exception as e:
             raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+
+    async def get_price_ticker(self, symbol: str, **kwargs: dict):
+        """
+        Multiple calls are required to get all ticker data
+        https://github.com/ccxt/ccxt/issues/7893
+        Default ccxt call is using publicGetMarketsMarketSymbolTicker
+        But the mandatory data is available by calling publicGetMarketsMarketSymbolSummary
+        """
+        try:
+            return await self.connector.client.fetch_ticker(symbol, params={
+                'method': 'publicGetMarketsMarketSymbolSummary'
+            })
+        except ccxt.BaseError as e:
+            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
