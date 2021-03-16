@@ -20,8 +20,8 @@ import typing
 import ccxt
 
 import octobot_commons.enums
-import octobot_trading.errors
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 
 
@@ -64,6 +64,14 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
         except Exception as e:
             self.logger.error(f"Fail to get market status of {symbol}: {e}")
             return {}
+
+    async def get_price_ticker(self, symbol: str, **kwargs: dict):
+        try:
+            ticker = await self.connector.client.fetch_ticker(symbol, params=kwargs)
+            ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+            return ticker
+        except ccxt.BaseError as e:
+            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On BitMax, account recent trades is available under fetch_closed_orders
