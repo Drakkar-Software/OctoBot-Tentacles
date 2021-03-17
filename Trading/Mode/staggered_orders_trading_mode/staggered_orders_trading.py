@@ -170,13 +170,30 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
     CURRENT_PRICE_KEY = "current_price"
     SYMBOL_MARKET_KEY = "symbol_market"
 
+    def __init__(self, trading_mode):
+        super().__init__(trading_mode)
+        self.skip_orders_creation = False
+
+    async def cancel_orders_creation(self):
+        self.logger.info(f"Cancelling all orders creation for {self.trading_mode.symbol}")
+        self.skip_orders_creation = True
+        try:
+            while not self.queue.empty():
+                await asyncio.sleep(0.1)
+        finally:
+            self.logger.info(f"Orders creation fully cancelled for {self.trading_mode.symbol}")
+            self.skip_orders_creation = False
+
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # use dict default getter: can't afford missing data
         data = kwargs["data"]
-        order_data = data[self.ORDER_DATA_KEY]
-        current_price = data[self.CURRENT_PRICE_KEY]
-        symbol_market = data[self.SYMBOL_MARKET_KEY]
-        return await self.create_order(order_data, current_price, symbol_market)
+        if not self.skip_orders_creation:
+            order_data = data[self.ORDER_DATA_KEY]
+            current_price = data[self.CURRENT_PRICE_KEY]
+            symbol_market = data[self.SYMBOL_MARKET_KEY]
+            return await self.create_order(order_data, current_price, symbol_market)
+        else:
+            self.logger.info(f"Skipped {data.get(self.ORDER_DATA_KEY, '')}")
 
     async def create_order(self, order_data, current_price, symbol_market):
         created_order = None
@@ -257,9 +274,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # staggered orders strategy parameters
         self.symbol_trading_config = None
         try:
-            for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
-                if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
-                    self.symbol_trading_config = config
+            self._load_symbol_trading_config()
         except KeyError as e:
             error_message = f"Impossible to start {self.ORDERS_DESC} orders for {self.symbol}: missing " \
                             f"configuration in trading mode config file. "
@@ -282,10 +297,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
         self.single_pair_setup = len(self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]) <= 1
         self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
+        self.mirroring_pause_task = None
+        self.allowed_mirror_orders = asyncio.Event()
+        self.allowed_mirror_orders.set()
         self.read_config()
         self._check_params()
         self.healthy = True
         self.already_errored_on_out_of_window_price = False
+
+    def _load_symbol_trading_config(self):
+        for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
+            if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
+                self.symbol_trading_config = config
 
     def read_config(self):
         mode = ""
@@ -321,6 +344,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.trading_mode.consumers[0].flush()
         if self.scheduled_health_check is not None:
             self.scheduled_health_check.cancel()
+        if self.mirroring_pause_task is not None and not self.mirroring_pause_task.done():
+            self.mirroring_pause_task.cancel()
         for task in self.mirror_orders_tasks:
             task.cancel()
         if self.exchange_manager and self.exchange_manager.id in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
@@ -355,22 +380,37 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def trigger_staggered_orders_creation(self):
         await self._ensure_staggered_orders(ignore_mirror_orders_only=True)
 
-    async def _ensure_staggered_orders(self, ignore_mirror_orders_only=False):
+    def start_mirroring_pause(self, delay):
+        if self.allowed_mirror_orders.is_set():
+            self.mirroring_pause_task = asyncio.create_task(self.stop_mirror_orders(delay))
+        else:
+            self.logger.info(f"Cancelling previous {self.symbol} mirror order delay")
+            self.mirroring_pause_task.cancel()
+            self.mirroring_pause_task = asyncio.create_task(self.stop_mirror_orders(delay))
+
+    async def stop_mirror_orders(self, delay):
+        self.logger.info(f"Pausing {self.symbol} mirror orders creation for the next {delay} seconds")
+        self.allowed_mirror_orders.clear()
+        await asyncio.sleep(delay)
+        self.allowed_mirror_orders.set()
+        self.logger.info(f"Resuming {self.symbol} mirror orders creation after a {delay} seconds pause")
+
+    async def _ensure_staggered_orders(self, ignore_mirror_orders_only=False, ignore_available_funds=False):
         _, _, _, self.current_price, self.symbol_market = await trading_personal_data.get_pre_order_data(
             self.exchange_manager,
             symbol=self.symbol,
             timeout=self.PRICE_FETCHING_TIMEOUT)
-        await self.create_state(self._get_new_state_price(), ignore_mirror_orders_only)
+        await self.create_state(self._get_new_state_price(), ignore_mirror_orders_only, ignore_available_funds)
 
     def _get_new_state_price(self):
         return self.current_price if self.starting_price == 0 else self.starting_price
 
-    async def create_state(self, current_price, ignore_mirror_orders_only):
+    async def create_state(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         if current_price is not None:
             self._refresh_symbol_data(self.symbol_market)
             async with self.get_lock():
                 if self.exchange_manager.trader.is_enabled:
-                    await self._handle_staggered_orders(current_price, ignore_mirror_orders_only)
+                    await self._handle_staggered_orders(current_price, ignore_mirror_orders_only, ignore_available_funds)
 
     async def order_filled_callback(self, filled_order):
         # create order on the order side
@@ -390,15 +430,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         price = filled_price + price_increment if now_selling else filled_price - price_increment
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
         new_order = OrderData(new_side, volume, price, self.symbol)
-
         if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
-            await self._lock_portfolio_and_create_order(new_order, filled_price)
+            await self._lock_portfolio_and_create_order_when_possible(new_order, filled_price)
         else:
             # create order after waiting time
             self.mirror_orders_tasks.append(asyncio.get_event_loop().call_later(
                 self.mirror_order_delay,
                 asyncio.create_task,
-                self._lock_portfolio_and_create_order(new_order, filled_price)
+                self._lock_portfolio_and_create_order_when_possible(new_order, filled_price)
             ))
 
     def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume):
@@ -420,11 +459,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         quantity = new_order_quantity * (1 - quantity_change)
         return quantity
 
-    async def _lock_portfolio_and_create_order(self, new_order, filled_price):
+    async def _lock_portfolio_and_create_order_when_possible(self, new_order, filled_price):
+        await asyncio.wait_for(self.allowed_mirror_orders.wait(), timeout=None)
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
             await self._create_order(new_order, filled_price)
 
-    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only):
+    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._ensure_current_price_in_limit_parameters(current_price)
         if not ignore_mirror_orders_only and self.use_existing_orders_only:
             # when using existing orders only, no need to check existing orders (they can't be wrong since they are
@@ -432,7 +472,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self._set_increment_and_spread(current_price)
         else:
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-                buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
+                buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
                 staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
                 await self._create_not_virtual_orders(staggered_orders, current_price)
 
@@ -459,7 +499,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         log_func = self.logger.error if using_error else self.logger.warning
         log_func(message)
 
-    async def _generate_staggered_orders(self, current_price):
+    async def _generate_staggered_orders(self, current_price, ignore_available_funds):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
         if interfering_orders_pairs:
@@ -484,9 +524,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         highest_buy = min(current_price, self.highest_sell)
         lowest_sell = max(current_price, self.lowest_buy)
         buy_orders = self._create_orders(self.lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state, self.buy_funds)
+                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds)
         sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state, self.sell_funds)
+                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds)
 
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
@@ -534,7 +574,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return self._bootstrap_parameters(sorted_orders, recently_closed_trades)
 
     def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                       current_price, missing_orders, state, allowed_funds):
+                       current_price, missing_orders, state, allowed_funds, ignore_available_funds):
 
         if lower_bound >= upper_bound:
             self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
@@ -553,7 +593,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
                                                           order_limiting_currency_amount,
                                                           order_limiting_currency,
-                                                          selling)
+                                                          selling,
+                                                          ignore_available_funds)
             if funds_to_use == 0:
                 return []
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
@@ -638,7 +679,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"order are already in place. Cancel these orders of you want to use this trading mode.")
         return orders
 
-    def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency, selling):
+    def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency, selling, ignore_available_funds):
         to_trade_funds = total_available_funds
         if allowed_funds > 0:
             if total_available_funds < allowed_funds:
@@ -649,7 +690,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 to_trade_funds = total_available_funds
             else:
                 to_trade_funds = allowed_funds
-        if self._is_initially_available_funds_set(currency):
+        if not ignore_available_funds and self._is_initially_available_funds_set(currency):
             # check if enough funds are available
             unlocked_funds = self._get_available_funds(currency)
             if to_trade_funds > unlocked_funds:
