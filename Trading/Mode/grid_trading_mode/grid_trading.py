@@ -40,7 +40,10 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     CONFIG_SELL_ORDERS_COUNT = "sell_orders_count"
     LIMIT_ORDERS_IF_NECESSARY = "limit_orders_if_necessary"
     USER_COMMAND_CREATE_ORDERS = "create initial orders"
-    USER_COMMAND_CREATE_ORDERS_TRADING_PAIR = "trading pair"
+    USER_COMMAND_STOP_ORDERS_CREATION = "stop initial orders creation"
+    USER_COMMAND_PAUSE_ORDER_MIRRORING = "pause orders mirroring"
+    USER_COMMAND_TRADING_PAIR = "trading pair"
+    USER_COMMAND_PAUSE_TIME = "pause length in seconds"
 
     async def create_producers(self) -> list:
         mode_producer = GridTradingModeProducer(
@@ -76,10 +79,15 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         return [mode_consumer, order_consumer, user_commands_consumer]
 
     async def _user_commands_callback(self, bot_id, subject, action, data) -> None:
-        if action == GridTradingMode.USER_COMMAND_CREATE_ORDERS and \
-           data.get(GridTradingMode.USER_COMMAND_CREATE_ORDERS_TRADING_PAIR, "").upper() == self.symbol:
-            self.logger.info(f"Creating initial orders on user command for {self.symbol}.")
-            await self.producers[0].trigger_staggered_orders_creation()
+        if data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
+            self.logger.info(f"Received {action} command for {self.symbol}.")
+            if action == GridTradingMode.USER_COMMAND_CREATE_ORDERS:
+                await self.producers[0].trigger_staggered_orders_creation()
+            elif action == GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION:
+                await self.consumers[0].cancel_orders_creation()
+            elif action == GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING:
+                delay = float(data.get(GridTradingMode.USER_COMMAND_PAUSE_TIME, 0))
+                self.producers[0].start_mirroring_pause(delay)
 
     @classmethod
     def get_user_commands(cls) -> dict:
@@ -89,7 +97,14 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         """
         return {
             GridTradingMode.USER_COMMAND_CREATE_ORDERS: {
-                GridTradingMode.USER_COMMAND_CREATE_ORDERS_TRADING_PAIR: "text"
+                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
+            },
+            GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION: {
+                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
+            },
+            GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING: {
+                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text",
+                GridTradingMode.USER_COMMAND_PAUSE_TIME: "number"
             }
         }
 
@@ -136,15 +151,22 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
 
-    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only):
+    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
         if ignore_mirror_orders_only or not self.use_existing_orders_only:
-            buy_orders, sell_orders = await self._generate_staggered_orders(current_price)
+            buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
             grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
                 await self._create_not_virtual_orders(grid_orders, current_price)
 
-    async def _generate_staggered_orders(self, current_price):
+    async def trigger_staggered_orders_creation(self):
+        # reload configuration
+        self.trading_mode.load_config()
+        self._load_symbol_trading_config()
+        self.read_config()
+        await self._ensure_staggered_orders(ignore_mirror_orders_only=True, ignore_available_funds=True)
+
+    async def _generate_staggered_orders(self, current_price, ignore_available_funds):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         if not self.single_pair_setup:
             interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
@@ -162,10 +184,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
         buy_orders = self._create_orders(self.buy_price_range.lower_bound, self.buy_price_range.higher_bound,
                                          trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state, self.buy_funds)
+                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds)
         sell_orders = self._create_orders(self.sell_price_range.lower_bound, self.sell_price_range.higher_bound,
                                           trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state, self.sell_funds)
+                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds)
 
         return buy_orders, sell_orders
 
@@ -183,7 +205,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                               f" parameter: average profit is spread-increment. ({self.symbol})")
 
     def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                       current_price, missing_orders, state, allowed_funds):
+                       current_price, missing_orders, state, allowed_funds, ignore_available_funds):
 
         if lower_bound >= upper_bound:
             self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
@@ -202,7 +224,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
                                                           order_limiting_currency_amount,
                                                           order_limiting_currency,
-                                                          selling)
+                                                          selling,
+                                                          ignore_available_funds)
             if funds_to_use == 0:
                 return []
             starting_bound = lower_bound if selling else upper_bound

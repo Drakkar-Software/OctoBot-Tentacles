@@ -395,25 +395,25 @@ async def test_get_maximum_traded_funds():
         # part 1: no available funds set
         # no allowed_funds set
         # can trade total_available_funds
-        assert producer._get_maximum_traded_funds(0, 10, "BTC", True) == 10
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", True, False) == 10
         # allowed_funds set
         # can trade allowed_funds
-        assert producer._get_maximum_traded_funds(5, 10, "BTC", False) == 5
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", False, False) == 5
         # allowed_funds set, allowed_funds larger than total_available_funds
         # can trade total_available_funds
-        assert producer._get_maximum_traded_funds(15, 10, "BTC", True) == 10
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", True, False) == 10
 
         # part 2: available funds set is set
         producer._set_initially_available_funds("BTC", 8)
         # no allowed_funds set
         # can trade available funds only
-        assert producer._get_maximum_traded_funds(0, 10, "BTC", False) == 8
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", False, False) == 8
         # allowed_funds set
         # can trade allowed_funds (lower than available funds)
-        assert producer._get_maximum_traded_funds(5, 10, "BTC", True) == 5
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", True, False) == 5
         # allowed_funds set, allowed_funds larger than total_available_funds
         # can trade available funds only
-        assert producer._get_maximum_traded_funds(15, 10, "BTC", False) == 8
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", False, False) == 8
     finally:
         await _stop(exchange_manager)
 
@@ -1434,7 +1434,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
                                  expected_sell_count, price, symbol_market):
     async with exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
         producer._refresh_symbol_data(symbol_market)
-        buy_orders, sell_orders = await producer._generate_staggered_orders(price)
+        buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
         assert len(buy_orders) == expected_buy_count
         assert len(sell_orders) == expected_sell_count
 
@@ -1573,7 +1573,7 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
 
 
 async def _light_check_orders(producer, exchange_manager, expected_buy_count, expected_sell_count, price):
-    buy_orders, sell_orders = await producer._generate_staggered_orders(price)
+    buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
     assert len(buy_orders) == expected_buy_count
     assert len(sell_orders) == expected_sell_count
 
