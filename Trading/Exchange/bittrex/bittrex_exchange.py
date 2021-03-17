@@ -33,7 +33,7 @@ class Bittrex(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_order_book(self, symbol, limit=5, **kwargs):
+    async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:
             self.logger.debug(f"Trying to get_order_book with limit not {self.SUPPORTED_ORDER_BOOK_LIMITS} : ({limit})")
             limit = self.DEFAULT_ORDER_BOOK_LIMIT
