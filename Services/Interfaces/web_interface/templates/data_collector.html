@@ -28,7 +28,7 @@
                 <tr class="selectable_datafile">
                     <td>{{", ".join(description.symbols)}}</td>
                     <td>{{description.date}}</td>
-                    <td>{{description.exchange}}</td>
+                    <td data-order="{{description.timestamp}}">{{description.exchange}}</td>
                     <td>{{", ".join(description.time_frames)}}</td>
                     <td>{{file}}</td>
                     <td class="text-center">
