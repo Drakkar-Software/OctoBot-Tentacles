@@ -2,8 +2,7 @@ name: OctoBot-Tentacles-CI
 on:
   push:
     branches:
-      - 'master'
-      - 'dev'
+      - '*'
     tags:
       - '*'
   pull_request:
@@ -101,7 +100,7 @@ jobs:
         pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles
 
     - name: Publish coverage
-      if: matrix.type == 'sources'
+      if: matrix.type == 'sources' && github.event_name == 'push'
       run: coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
