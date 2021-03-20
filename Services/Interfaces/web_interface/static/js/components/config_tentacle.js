@@ -83,6 +83,10 @@ function handle_save_buttons_success_callback(updated_data, update_url, dom_root
     create_alert("success", "Configuration successfully updated", "Restart OctoBot for changes to be applied.");
 }
 
+function send_command_success_callback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", `${updated_data.subject} command sent`, "");
+}
+
 function handle_save_button(){
     $("#saveActivationConfig").click(function() {
         const full_config = $("#activatedElementsBody");
@@ -109,10 +113,29 @@ function handle_save_button(){
     })
 }
 
+function handleUserCommands(){
+    $(".user-command").click(function () {
+        const button = $(this);
+        const update_url = button.attr("update-url");
+        const commandData = {};
+        button.parents(".modal-content").find(".command-param").each(function (){
+            const element = $(this);
+            commandData[element.data("param-name")] = element.val();
+        })
+        const data = {
+            action: button.data("action"),
+            subject: button.data("subject"),
+            data: commandData,
+        };
+        send_and_interpret_bot_update(data, update_url, null, send_command_success_callback);
+    });
+}
+
 function handleButtons() {
 
     handleConfigDisplay();
     handle_save_button();
+    handleUserCommands();
 
     $("#applyDefaultConfig").click(function () {
         const tentacle_name = $(this).attr("tentacle");

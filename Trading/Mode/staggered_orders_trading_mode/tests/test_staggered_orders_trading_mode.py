@@ -164,6 +164,7 @@ async def test_run_independent_backtestings_with_memory_check():
     """
     Should always be called first here to avoid other tests' related memory check issues
     """
+    staggered_orders_trading.StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START = True
     tentacles_setup_config = tentacles_manager_api.create_tentacles_setup_config_with_tentacles(
         staggered_orders_trading.StaggeredOrdersTradingMode
     )
@@ -236,6 +237,198 @@ async def test_multi_symbol():
         await asyncio.create_task(_check_open_orders_count(exchange_manager, len(original_orders)))
     finally:
         await _stop(exchange_manager)
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+
+async def test_available_funds_management():
+    try:
+        btcusd_producer, eth_usdt_producer, nano_usdt_producer, exchange_manager = await _get_tools_multi_symbol()
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+        trading_api.force_set_mark_price(exchange_manager, btcusd_producer.symbol, 100)
+        await btcusd_producer._ensure_staggered_orders()
+        available_funds = \
+            staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS[exchange_manager.id]
+        assert len(available_funds) == 2
+        btc_available_funds = available_funds["BTC"]
+        usd_available_funds = available_funds["USD"]
+        assert btc_available_funds < 9.9
+        assert usd_available_funds < 31
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        # ensure there at least the same (or more) actual portfolio available funds than on the producer value
+        # (due to exchange rounding reducing some amounts)
+        assert pf_btc_available_funds * 0.999 <= btc_available_funds <= pf_btc_available_funds
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_usd_available_funds * 0.999 <= usd_available_funds <= pf_usd_available_funds
+        assert len(orders) == btcusd_producer.operational_depth
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 25
+
+        trading_api.force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 200)
+        await eth_usdt_producer._ensure_staggered_orders()
+        assert len(available_funds) == 4
+        # did not change previous funds
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        eth_available_funds = available_funds["ETH"]
+        usdt_available_funds = available_funds["USDT"]
+        assert eth_available_funds < 19.6
+        assert usdt_available_funds < 753
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
+                                                           eth_usdt_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        pf_eth_available_funds = trading_api.get_portfolio_currency(exchange_manager, "ETH")
+        assert pf_eth_available_funds * 0.999 <= eth_available_funds <= pf_eth_available_funds
+        pf_usdt_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        assert pf_usdt_available_funds * 0.999 <= usdt_available_funds <= pf_usdt_available_funds
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 40
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 40
+
+        trading_api.force_set_mark_price(exchange_manager, nano_usdt_producer.symbol, 200)
+        await nano_usdt_producer._ensure_staggered_orders()
+        # did not change available funds
+        assert len(available_funds) == 4
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        assert eth_available_funds == available_funds["ETH"]
+        assert usdt_available_funds == available_funds["USDT"]
+        # no new order
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
+                                                           eth_usdt_producer.operational_depth))
+        orders = trading_api.get_open_orders(exchange_manager)
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 40
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 40
+
+        assert nano_usdt_producer._get_interfering_orders_pairs(orders) == {"ETH/USDT"}
+
+        # new ETH USDT evaluation, price changed
+        # -2 order would be filled
+        original_orders = copy.copy(orders)
+        to_fill_order = original_orders[-2]
+        await _fill_order(to_fill_order, exchange_manager, producer=eth_usdt_producer)
+        trading_api.force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 190)
+        await nano_usdt_producer._ensure_staggered_orders()
+        # did nothing
+        # did not change available funds
+        assert len(available_funds) == 4
+        assert btc_available_funds == available_funds["BTC"]
+        assert usd_available_funds == available_funds["USD"]
+        assert eth_available_funds == available_funds["ETH"]
+        assert usdt_available_funds == available_funds["USDT"]
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, len(original_orders)))
+    finally:
+        await _stop(exchange_manager)
+        # clear available funds
+        assert staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS == {}
+
+
+async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer.sell_funds = 0.001
+        producer.buy_funds = 100
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USD")
+        # btc_available_funds for reduced because orders are not created
+        assert 10 - 0.001 <= btc_available_funds < 10
+        assert 1000 - 100 <= usd_available_funds < 1000
+        # price info: create trades
+        assert producer.current_price == 4000
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_btc_available_funds >= 9.999
+        assert pf_usd_available_funds >= 900
+
+        assert pf_btc_available_funds >= btc_available_funds
+        assert pf_usd_available_funds >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_ensure_staggered_orders_with_unavailable_funds():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+
+        producer._set_initially_available_funds("BTC", 1)
+        producer._set_initially_available_funds("USD", 400)
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USD")
+        # btc_available_funds for reduced because orders are not created
+        assert btc_available_funds < 1
+        assert usd_available_funds < 400
+        # price info: create trades
+        assert producer.current_price == 4000
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        assert pf_btc_available_funds >= 9
+        assert pf_usd_available_funds >= 600
+
+        # - 9 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_btc_available_funds - 9 >= btc_available_funds
+        # - 600 to make it as if itr was starting with 1 btc (to compare with btc_available_funds)
+        assert pf_usd_available_funds - 600 >= usd_available_funds
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_get_maximum_traded_funds():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD")
+
+        # part 1: no available funds set
+        # no allowed_funds set
+        # can trade total_available_funds
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", True, False) == 10
+        # allowed_funds set
+        # can trade allowed_funds
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", False, False) == 5
+        # allowed_funds set, allowed_funds larger than total_available_funds
+        # can trade total_available_funds
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", True, False) == 10
+
+        # part 2: available funds set is set
+        producer._set_initially_available_funds("BTC", 8)
+        # no allowed_funds set
+        # can trade available funds only
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", False, False) == 8
+        # allowed_funds set
+        # can trade allowed_funds (lower than available funds)
+        assert producer._get_maximum_traded_funds(5, 10, "BTC", True, False) == 5
+        # allowed_funds set, allowed_funds larger than total_available_funds
+        # can trade available funds only
+        assert producer._get_maximum_traded_funds(15, 10, "BTC", False, False) == 8
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_get_new_state_price():
+    try:
+        symbol = "BTC/USD"
+        producer, _, exchange_manager = await _get_tools(symbol)
+        producer.current_price = 4000
+        assert producer._get_new_state_price() == 4000
+
+        producer.starting_price = 2
+        assert producer._get_new_state_price() == 2
+    finally:
+        await _stop(exchange_manager)
 
 
 async def test_set_increment_and_spread():
@@ -301,6 +494,7 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 2475, price)
     await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 2475, price)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 2475, price)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 2475, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_347():
@@ -310,23 +504,25 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 695, price)
     await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 695, price)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 695, price)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 695, price)
 
 
 async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_price_0_347():
     price = 0.347
-    # await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 0, 0, price)
     lowest_buy = 0.001
     highest_sell = 400
     btc_holdings = 400
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 23918, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 23918, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
+                     btc_holdings)
+    await _test_mode(staggered_orders_trading.StrategyModes.FLAT, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
 
 
@@ -497,10 +693,11 @@ async def test_start_with_existing_valid_orders():
         assert original_orders[0] is trading_api.get_open_orders(exchange_manager)[0]
         assert original_orders[-1] is trading_api.get_open_orders(exchange_manager)[-1]
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth
+        first_buy_index = int(len(trading_api.get_open_orders(exchange_manager)) / 2)
 
         # new evaluation, price changed
         # -2 order would be filled
-        to_fill_order = original_orders[-2]
+        to_fill_order = original_orders[first_buy_index]
         price = 95
         await _fill_order(to_fill_order, exchange_manager, price, producer=producer)
         await asyncio.create_task(_wait_for_orders_creation(2))
@@ -511,9 +708,9 @@ async def test_start_with_existing_valid_orders():
         # did nothing
         assert len(original_orders) == len(trading_api.get_open_orders(exchange_manager))
 
-        # a orders gets cancelled
+        # orders gets cancelled
         open_orders = trading_api.get_open_orders(exchange_manager)
-        to_cancel = [open_orders[20], open_orders[19], open_orders[40]]
+        to_cancel = [open_orders[20], open_orders[18], open_orders[3]]
         for order in to_cancel:
             await exchange_manager.trader.cancel_order(order)
         post_available = trading_api.get_portfolio_currency(exchange_manager, "USD")
@@ -957,6 +1154,42 @@ async def test_order_fill_callback_with_mirror_delay():
         await _stop(exchange_manager)
 
 
+async def test_compute_mirror_order_volume():
+    try:
+        producer, _, exchange_manager = await _get_tools("BTC/USD", fees=0)
+        # no profit reinvesting
+        # no fixed volumes
+        producer.reinvest_profits = producer.use_fixed_volume_for_mirror_orders = False
+        # 1% max fees
+        producer.max_fees = 0.01
+        # take exchange fees into account
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2 * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+
+        # with profits reinvesting
+        producer.reinvest_profits = True
+        # consider fees already taken, sell everything
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80)
+
+        # with fixed volumes
+        producer.reinvest_profits = False
+        producer.sell_volume_per_order = 3
+        # consider fees already taken, sell everything
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        # buy order
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        producer.buy_volume_per_order = 5
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+
+        # with fixed volumes and profits reinvesting
+        producer.reinvest_profits = True
+        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+    finally:
+        await _stop(exchange_manager)
+
+
 async def test_create_order():
     try:
         symbol = "BTC/USD"
@@ -1201,7 +1434,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
                                  expected_sell_count, price, symbol_market):
     async with exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
         producer._refresh_symbol_data(symbol_market)
-        buy_orders, sell_orders = await producer._generate_staggered_orders(price)
+        buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
         assert len(buy_orders) == expected_buy_count
         assert len(sell_orders) == expected_sell_count
 
@@ -1220,7 +1453,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
         sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "BTC")
         assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
-        staggered_orders = producer._alternate_not_virtual_orders(buy_orders, sell_orders)
+        staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
         if staggered_orders:
             assert not any(order for order in staggered_orders if order.is_virtual)
 
@@ -1239,20 +1472,23 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                       trading_enums.TradeOrderSide.BUY] == staggered_orders_trading.INCREASING
     sell_increase_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
                                        trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.INCREASING
+    buy_flat_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
+                                       trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.STABLE
+    sell_flat_towards_center = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
+                                       trading_enums.TradeOrderSide.SELL] == staggered_orders_trading.STABLE
     multiplier = staggered_orders_trading.StrategyModeMultipliersDetails[strategy_mode][
         staggered_orders_trading.MULTIPLIER]
 
     first_buy = None
+    first_sell = None
     current_buy = None
     current_sell = None
-    last_order_side = None
+    in_sell_orders = True
     for order in orders:
-
-        if last_order_side is not None:
-            # alternate sell and buy orders
-            assert last_order_side == (
-                trading_enums.TradeOrderSide.BUY if order.side == trading_enums.TradeOrderSide.SELL else trading_enums.TradeOrderSide.SELL)
-        last_order_side = order.side
+        # first should be sell orders followed by buy orders
+        if order.side is trading_enums.TradeOrderSide.BUY:
+            in_sell_orders = False
+        assert order.side is (trading_enums.TradeOrderSide.SELL if in_sell_orders else trading_enums.TradeOrderSide.BUY)
 
         if order.side == trading_enums.TradeOrderSide.BUY:
             if current_buy is None:
@@ -1260,21 +1496,30 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 first_buy = order
             else:
                 # place buy orders from the lowest price up to the current price
-                assert current_buy.origin_price < order.origin_price
+                assert current_buy.origin_price > order.origin_price
                 if buy_increase_towards_center:
-                    assert current_buy.origin_quantity * current_buy.origin_price < \
-                           order.origin_quantity * order.origin_price
-                else:
                     assert current_buy.origin_quantity * current_buy.origin_price > \
+                           order.origin_quantity * order.origin_price
+                elif buy_flat_towards_center:
+                    assert first_buy.origin_quantity * first_buy.origin_price * 0.99\
+                           <= current_buy.origin_quantity * current_buy.origin_price \
+                           <= first_buy.origin_quantity * first_buy.origin_price * 1.01
+                else:
+                    assert current_buy.origin_quantity * current_buy.origin_price < \
                            order.origin_quantity * order.origin_price
                 current_buy = order
 
         if order.side == trading_enums.TradeOrderSide.SELL:
             if current_sell is None:
                 current_sell = order
+                first_sell = order
             else:
-                assert current_sell.origin_price > order.origin_price
+                assert current_sell.origin_price < order.origin_price
                 current_sell = order
+                if sell_flat_towards_center:
+                    assert first_sell.origin_quantity * first_sell.origin_price * 0.99\
+                           <= current_sell.origin_quantity * current_sell.origin_price \
+                           <= first_sell.origin_quantity * first_sell.origin_price * 1.01
 
     order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "USD",
                                                                         portfolio_type=commons_constants.PORTFOLIO_TOTAL)
@@ -1283,16 +1528,20 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                                        False,
                                                        producer.lowest_buy,
                                                        producer.current_price,
-                                                       order_limiting_currency_amount)
+                                                       order_limiting_currency_amount,
+                                                       "USD",
+                                                       strategy_mode)
     if orders:
         if buy_increase_towards_center:
-            assert round(current_buy.origin_quantity * current_buy.origin_price -
-                         first_buy.origin_quantity * first_buy.origin_price) == round(multiplier *
-                                                                                      average_order_quantity)
+            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+                   <= round(first_buy.origin_quantity * first_buy.origin_price -
+                            current_buy.origin_quantity * current_buy.origin_price) \
+                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
         else:
-            assert round(first_buy.origin_quantity * first_buy.origin_price -
-                         current_buy.origin_quantity * current_buy.origin_price) == round(multiplier *
-                                                                                          average_order_quantity)
+            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+                   <= round(current_buy.origin_quantity * current_buy.origin_price -
+                            first_buy.origin_quantity * first_buy.origin_price) \
+                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC",
                                                                             portfolio_type=commons_constants.PORTFOLIO_TOTAL)
@@ -1301,7 +1550,9 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                                                            True,
                                                            producer.current_price,
                                                            producer.highest_sell,
-                                                           order_limiting_currency_amount)
+                                                           order_limiting_currency_amount,
+                                                           "BTC",
+                                                           strategy_mode)
 
         if strategy_mode not in [staggered_orders_trading.StrategyModes.NEUTRAL,
                                  staggered_orders_trading.StrategyModes.VALLEY,
@@ -1311,18 +1562,18 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 + multiplier / 2),
                     8)
-                assert abs(current_sell.origin_quantity - expected_quantity) < \
+                assert abs(first_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
-            else:
+            elif not sell_flat_towards_center:
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 - multiplier / 2),
                     8)
-                assert abs(current_sell.origin_quantity == expected_quantity) < \
+                assert abs(first_sell.origin_quantity - expected_quantity) < \
                        multiplier * producer.increment / (2 * producer.current_price)
 
 
 async def _light_check_orders(producer, exchange_manager, expected_buy_count, expected_sell_count, price):
-    buy_orders, sell_orders = await producer._generate_staggered_orders(price)
+    buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
     assert len(buy_orders) == expected_buy_count
     assert len(sell_orders) == expected_sell_count
 
@@ -1335,7 +1586,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
     sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "RDN")
     assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
-    staggered_orders = producer._alternate_not_virtual_orders(buy_orders, sell_orders)
+    staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
     if staggered_orders:
         assert not any(order for order in staggered_orders if order.is_virtual)
 
@@ -1352,26 +1603,24 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
 
     current_buy = None
     current_sell = None
-    last_order_side = None
+    in_sell_orders = True
     for order in open_orders:
-
-        if last_order_side is not None:
-            # alternate sell and buy orders
-            assert last_order_side == (
-                trading_enums.TradeOrderSide.BUY if order.side == trading_enums.TradeOrderSide.SELL else trading_enums.TradeOrderSide.SELL)
-        last_order_side = order.side
+        # first should be sell orders followed by buy orders
+        if order.side is trading_enums.TradeOrderSide.BUY:
+            in_sell_orders = False
+        assert order.side is (trading_enums.TradeOrderSide.SELL if in_sell_orders else trading_enums.TradeOrderSide.BUY)
 
         if order.side == trading_enums.TradeOrderSide.BUY:
             if current_buy is None:
                 current_buy = order
             else:
-                # place buy orders from the lowest price up to the current price
-                assert current_buy.origin_price < order.origin_price
+                # place buy orders from the current price down to the lowest price
+                assert current_buy.origin_price > order.origin_price
                 if buy_increase_towards_center:
-                    assert current_buy.origin_quantity * current_buy.origin_price < \
+                    assert current_buy.origin_quantity * current_buy.origin_price > \
                            order.origin_quantity * order.origin_price
                 else:
-                    assert current_buy.origin_quantity * current_buy.origin_price > \
+                    assert current_buy.origin_quantity * current_buy.origin_price < \
                            order.origin_quantity * order.origin_price
                 current_buy = order
 
@@ -1379,7 +1628,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
             if current_sell is None:
                 current_sell = order
             else:
-                assert current_sell.origin_price > order.origin_price
+                assert current_sell.origin_price < order.origin_price
                 current_sell = order
 
     assert trading_api.get_portfolio_currency(exchange_manager, "ETH") >= 0
@@ -1388,7 +1637,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
 
 def _get_multi_symbol_staggered_config():
     return {
-        "required_strategies": ["StaggeredOrdersStrategiesEvaluator"],
+        "required_strategies": [],
         "pair_settings": [
             {
                 "pair": "BTC/USD",

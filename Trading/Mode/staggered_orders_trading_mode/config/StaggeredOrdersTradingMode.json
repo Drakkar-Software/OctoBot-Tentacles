@@ -11,6 +11,7 @@
     "allow_instant_fill": true,
     "operational_depth": 100,
     "mirror_order_delay": 0,
+    "reinvest_profits": false,
     "use_existing_orders_only": false
     },
   {
@@ -23,6 +24,7 @@
     "allow_instant_fill": true,
     "operational_depth": 50,
     "mirror_order_delay": 0,
+    "reinvest_profits": false,
     "use_existing_orders_only": false
   },
   {
@@ -35,6 +37,7 @@
     "allow_instant_fill": true,
     "operational_depth": 50,
     "mirror_order_delay": 0,
+    "reinvest_profits": false,
     "use_existing_orders_only": false
   }
   ]

@@ -211,6 +211,10 @@ def get_tentacle_from_string(name, media_url, with_info=True):
     return None, None, None
 
 
+def get_tentacle_user_commands(klass):
+    return klass.get_user_commands()
+
+
 def get_tentacle_config(klass):
     return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 

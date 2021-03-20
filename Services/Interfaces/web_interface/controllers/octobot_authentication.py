@@ -23,7 +23,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_login
 import tentacles.Services.Interfaces.web_interface.security as security
 
-logger = bot_logging.get_logger("WebInterface")
+logger = bot_logging.get_logger("ServerInstance Controller")
 
 
 @web_interface.server_instance.route('/login', methods=['GET', 'POST'])
