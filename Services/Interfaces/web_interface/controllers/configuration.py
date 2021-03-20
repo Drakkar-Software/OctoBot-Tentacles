@@ -231,6 +231,7 @@ def config_tentacle():
                                                                                        models.REQUIREMENTS_KEY]) > 1 else None
             evaluator_startup_config = models.get_evaluators_tentacles_startup_activation() \
                 if evaluator_config or strategy_config else None
+            tentacle_commands = models.get_tentacle_user_commands(tentacle_class)
             return flask.render_template('config_tentacle.html',
                                          name=tentacle_name,
                                          tentacle_type=tentacle_type,
@@ -241,7 +242,8 @@ def config_tentacle():
                                          evaluator_config=evaluator_config,
                                          activated_trading_mode=models.get_config_activated_trading_mode(),
                                          data_files=models.get_data_files_with_description(),
-                                         missing_tentacles=missing_tentacles
+                                         missing_tentacles=missing_tentacles,
+                                         user_commands=tentacle_commands
                                          )
         else:
             return flask.render_template('config_tentacle.html')

@@ -1,0 +1,107 @@
+{
+  "type": "object",
+  "title": "GridTradingMode",
+  "properties": {
+    "pair_settings": {
+        "type": "array",
+        "title": "Configuration for each traded pairs",
+        "uniqueItems": true,
+        "minItems": 1,
+        "items": {
+            "type": "object",
+            "title": "Pair configuration",
+            "properties": {
+              "pair": {
+                "type": "string",
+                "options": {
+                  "inputAttributes": {
+                    "placeholder":  "BTC/USDT"
+                  }
+                },
+                "title": "Name of the traded pair.",
+                "minLength": 3,
+                "pattern": "[a-zA-Z]{2,}\\/[a-zA-Z]{2,}"
+              },
+              "flat_spread": {
+                "type": "number",
+                "title": "Spread: price difference between the closest buy and sell orders in the quote currency (USDT for BTC/USDT).",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "flat_increment": {
+                "type": "number",
+                "title": "Increment: price difference between two orders of the same side in the base currency (USDT for BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to Spread-Increment.",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "buy_orders_count": {
+                "type": "number",
+                "title": "Buy orders count: number of initial buy orders to create. Make sure to have enough funds to create that many orders.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "sell_orders_count": {
+                "type": "number",
+                "title": "Sell orders count: Number of initial sell orders to create. Make sure to have enough funds to create that many orders.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "buy_funds": {
+                "type": "number",
+                "title": "[Optional] Total buy funds: total funds to use for buy orders creation (in base currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "sell_funds": {
+                "type": "number",
+                "title": "[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "starting_price": {
+                "type": "number",
+                "title": "[Optional] Starting price: price price to compute initial orders from. Set 0 to use current exchange price during initial grid orders creation.",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "buy_volume_per_order": {
+                "type": "number",
+                "title": "[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all available base funds in portfolio (or total buy funds if set) to create orders with constant total order cost (price * volume).",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "sell_volume_per_order": {
+                "type": "number",
+                "title": "[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all available quote funds in portfolio (or total sell funds if set) to create orders with constant total order cost (price * volume).",
+                "minimum": 0,
+                "exclusiveMinimum": false
+              },
+              "mirror_order_delay": {
+                  "title": "[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order is filled. This can generate extra profits on quick market moves.",
+                  "type": "number",
+                  "minimum": 0,
+                  "default": 0
+              },
+              "reinvest_profits": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
+                "default": false
+              },
+              "use_fixed_volume_for_mirror_orders": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for mirror orders. WARNING: incompatible with profits reinvesting.",
+                "default": false
+              },
+              "use_existing_orders_only": {
+                "type": "boolean",
+                "format": "checkbox",
+                "title": "Use existing orders only: when checked, new orders will only be created upon pre-existing orders fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
+                "default": false
+              }
+            }
+        }
+    }
+  }
+}

@@ -27,7 +27,7 @@
             {% for file, description in data_files.items() | sort(reverse=True)%}
                 <tr class="selectable_datafile">
                     <td>{{", ".join(description.symbols)}}</td>
-                    <td>{{description.date}}</td>
+                    <td data-order="{{description.timestamp}}">{{description.date}}</td>
                     <td>{{description.exchange}}</td>
                     <td>{{", ".join(description.time_frames)}}</td>
                     <td>{{file}}</td>

@@ -1,5 +1,11 @@
 name: OctoBot-Tentacles-CI
-on: push
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
 
 jobs:
   tests:
@@ -8,16 +14,8 @@ jobs:
     strategy:
       matrix:
         os: [ macos-latest, windows-latest, ubuntu-latest ]
-        arch: [ x64, x86 ]
+        arch: [ x64 ]
         type: [sources, cython]
-        exclude:
-          - os: macos-latest # currently not supported
-            arch: x86
-          - os: ubuntu-latest # currently not supported
-            arch: x86
-          - os: windows-latest # don't test 'sources' twice on windows
-            arch: x86
-            type: sources
 
     steps:
     - uses: actions/checkout@v2
@@ -94,7 +92,7 @@ jobs:
         pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles
 
     - name: Publish coverage
-      if: matrix.type == 'sources'
+      if: matrix.type == 'sources' && github.event_name == 'push'
       run: coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
@@ -103,6 +101,7 @@ jobs:
     needs: tests
     name: ubuntu-latest - Python 3.8 - upload tentacles
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v2
       - name: Set Environment Variables
@@ -131,21 +130,23 @@ jobs:
           cp -r Backtesting Evaluator Services Trading new_tentacles
 
       - name: Publish tag tentacles
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        if: startsWith(github.ref, 'refs/tags')
         run: |
           sed -i "s/VERSION_PLACEHOLDER/${GITHUB_REF#refs/*/}/g" metadata.yaml
           cd OctoBot
           python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.NEXUS_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish latest tentacles
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags') && github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/dev' && startsWith(github.ref, 'refs/tags') != true
         run: |
           sed -i "s/VERSION_PLACEHOLDER/latest/g" metadata.yaml
           cd OctoBot
           python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish cleaned branch tentacles
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags')
+        if: startsWith(github.ref, 'refs/tags') != true
+        env:
+          NEXUS_URL: ${{ secrets.NEXUS_DEV_URL }}
         run: |
           branch="${GITHUB_REF##*/}"
           sed -i "s/VERSION_PLACEHOLDER/$branch/g" metadata.yaml

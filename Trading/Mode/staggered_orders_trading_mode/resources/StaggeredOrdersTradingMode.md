@@ -1,4 +1,5 @@
-Places a large amount of buy and sell orders at fixed intervals, covering the order book from
+StaggeredOrdersTrading is an advanced version of the GridTradingMode. 
+It places a large amount of buy and sell orders at fixed intervals, covering the order book from
 very low prices to very high prices in a grid like fashion.  
 The range (defined by lower & upper bounds) is supposed to cover all conceivable prices for as
 long as the user intends to run the strategy, and this for each traded pair.

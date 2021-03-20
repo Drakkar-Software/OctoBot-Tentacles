@@ -135,9 +135,15 @@ function orders_request_failure_callback(updated_data, update_url, dom_root_elem
 }
 
 function reload_orders(){
+    const previous_search = ordersDataTable.search();
+    const previous_order = ordersDataTable.order();
     $("#openOrderTable").load(location.href + " #openOrderTable",function(){
         ordersDataTable = $('#open_orders_datatable').DataTable({
-            "paging":   false,
+            "paging": false,
+            "search": {
+                "search": previous_search
+            },
+            "order": previous_order,
         });
         add_cancel_individual_orders_button();
         const cancelIcon = $("#cancel_all_icon");
