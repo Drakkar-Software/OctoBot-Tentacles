@@ -144,7 +144,7 @@ jobs:
           python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish cleaned branch tentacles
-        if: startsWith(github.ref, 'refs/tags') != true
+        if: startsWith(github.ref, 'refs/tags') != true && github.ref != 'refs/heads/master'
         env:
           NEXUS_URL: ${{ secrets.NEXUS_DEV_URL }}
         run: |
