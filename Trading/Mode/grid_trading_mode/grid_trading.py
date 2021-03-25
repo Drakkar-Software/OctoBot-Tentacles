@@ -164,7 +164,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.trading_mode.load_config()
         self._load_symbol_trading_config()
         self.read_config()
-        await self._ensure_staggered_orders(ignore_mirror_orders_only=True, ignore_available_funds=True)
+        if self.symbol_trading_config:
+            await self._ensure_staggered_orders(ignore_mirror_orders_only=True, ignore_available_funds=True)
+        else:
+            self.logger.error(f"No configuration for {self.symbol}")
 
     async def _generate_staggered_orders(self, current_price, ignore_available_funds):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
