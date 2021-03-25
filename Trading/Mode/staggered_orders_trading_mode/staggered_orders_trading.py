@@ -378,7 +378,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 self.scheduled_health_check = asyncio.get_event_loop().call_soon(self._schedule_order_refresh)
 
     async def trigger_staggered_orders_creation(self):
-        await self._ensure_staggered_orders(ignore_mirror_orders_only=True)
+        if self.symbol_trading_config:
+            await self._ensure_staggered_orders(ignore_mirror_orders_only=True)
+        else:
+            self.logger.error(f"No configuration for {self.symbol}")
 
     def start_mirroring_pause(self, delay):
         if self.allowed_mirror_orders.is_set():
