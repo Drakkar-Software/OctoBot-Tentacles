@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+{% set active_page = "help" %}
+
+{% macro tutorial_article(title, image, details) -%}
+<div class="my-2">
+    <h4>
+        {{ title | safe }}
+    </h4>
+    <div class="text-center">
+        <img src="{{url_for('static', filename=image)}}" class="img-fluid" alt="tutorial illustration">
+    </div>
+    <p class="pt-2 text-center">
+        {{ details | safe }}
+    </p>
+</div>
+{%- endmacro %}
+
+{% block body %}
+<br>
+<div class="card w-75 mx-auto">
+    <div class="card-header">
+        <h2>Tutorial</h2>
+    </div>
+    <div class="card-body pt-1 tutorial-step" data-step-id="1">
+        {{ tutorial_article(
+            "Your Dashboard",
+            "img/tutorial/dashboard.png",
+            "When accessing your OctoBot, you will find the dashboard view. It's an overview of your OctoBot's
+                recent activity displaying its profitability, traded assets prices and recent trades."
+        ) }}
+        {{ tutorial_article(
+            "<i class=\"fab fa-octopus-deploy\"></i> Pro tip: Customize your dashboard",
+            "img/tutorial/watchedMarkets.png",
+            "Add the assets to display on your dashboard from the <span class=\"font-weight-bold\">Trading</span> tab."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="2">
+        {{ tutorial_article(
+            "OctoBot's current state",
+            "img/tutorial/trading.png",
+            "In the <span class=\"font-weight-bold\">Trading</span> tab, you will find the current state of the
+                activated trading mode: here long on ETH/BTC.<br/>
+                You will also see the currently open orders that can have been created by OctoBot or just found on exchange.
+                Only orders from activated traded pairs are displayed."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="3">
+        {{ tutorial_article(
+            "Your portfolio",
+            "img/tutorial/portfolio.png",
+            "Your portfolio is displayed in the <span class=\"font-weight-bold\">Portfolio</span> tab. It's a sum of
+                the portfolios for each exchange your OctoBot is trading on."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="4">
+        {{ tutorial_article(
+            "Profiles",
+            "img/tutorial/profile_details.png",
+            "OctoBot's trading configuration is saved in profiles, you can have as many profiles as you want."
+        ) }}
+        {{ tutorial_article(
+            "Trading configuration",
+            "img/tutorial/trading_config.png",
+            "You can configure your OctoBot to trade in many different ways by selecting trading modes."
+        ) }}
+        {{ tutorial_article(
+            "<i class=\"fab fa-octopus-deploy\"></i> Pro tip: In depth configuration",
+            "img/tutorial/daily_config.png",
+            "Trading modes (like almost everything in OctoBot) has a built-in documentation and can be configured."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="5">
+        {{ tutorial_article(
+            "Traded assets",
+            "img/tutorial/assets.png",
+            "Select the assets you want to trade for the active profile."
+        ) }}
+        {{ tutorial_article(
+            "Exchanges",
+            "img/tutorial/add_exchanges.png",
+            "Add exchanges accounts from the <span class=\"font-weight-bold\">Accounts</span> tab. Accounts details are
+                not required for the trading simulator."
+        ) }}
+        {{ tutorial_article(
+            "<i class=\"fab fa-octopus-deploy\"></i> Pro tip: Only use the exchanges that are relevant for the current strategy",
+            "img/tutorial/exchanges.png",
+            "Select the exchanges to use for the active profile."
+        ) }}
+        {{ tutorial_article(
+            "<i class=\"fab fa-octopus-deploy\"></i> Pro tip: Use the trading simulator before real money",
+            "img/tutorial/simulator.png",
+            "Test the current profile with simulated money and once you are comfortable with the setup, use your real funds."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="6">
+        {{ tutorial_article(
+            "Backtesting",
+            "img/tutorial/backtesting.png",
+            "Test your current profile on past data in the <span class=\"font-weight-bold\">Backtesting</span> tab."
+        ) }}
+        {{ tutorial_article(
+            "Backtesting data",
+            "img/tutorial/data_collector.png",
+            "Get backtesting data from your exchanges from the <span class=\"font-weight-bold\">Get historical data</span> button in the <span class=\"font-weight-bold\">Backtesting</span> tab."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="7">
+        {{ tutorial_article(
+            "OctoBot community",
+            "img/tutorial/community.png",
+            "Get insights on the current community trends in the <span class=\"font-weight-bold\">Community</span> tab."
+        ) }}
+        {{ tutorial_article(
+            "Connect with the OctoBot community",
+            "img/tutorial/community_img.png",
+            "Join the OctoBot community
+                <a href=\"https://t.me/joinchat/F9cyfxV97ZOaXQ47H5dRWw\" target=\"_blank\" rel=\"noopener noreferrer\"><i class=\"fab fa-telegram\"></i>
+                Telegram</a> and
+                <a href=\"https://discordapp.com/invite/vHkcb8W\" target=\"_blank\" rel=\"noopener noreferrer\"><i class=\"fab fa-discord\"></i> Discord</span></a>
+                channels to get in touch with other OctoBot users."
+        ) }}
+    </div>
+    <div class="card-body pt-1 tutorial-step d-none" data-step-id="8">
+        {{ tutorial_article(
+            "That's all for the tutorial",
+            "img/tutorial/help.png",
+            "You are now ready to use OctoBot!<br/>
+                Don't hesitate to click on the help buttons:
+                <a class=\"blue-text\" target=\"_blank\"><i class=\"fa fa-question\"></i></a> to get details on
+                associated elements and have a look at  the <span class=\"font-weight-bold\">Help</span>
+                tab later on. There you will find additional helping resources and a link to this tutorial.
+                <div class=\"text-center\">
+                    <a class=\"btn btn-primary waves-effect\" href=\"" + url_for('home') + "\">Go to your OctoBot</a>
+                </div>"
+        ) }}
+    </div>
+    <div class="card-footer">
+        <div class="w-75 mx-auto d-sm-block d-md-none pb-2">
+            <div class='progress'>
+                <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%;'></div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between flex-wrap">
+            <div class="">
+                <button id="previous-step" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div class="row w-75 my-auto d-none d-md-flex">
+                <div class="offset-md-1 col-md-2">
+                    Progress:
+                </div>
+                <div class='progress col-md-8 my-auto px-0'>
+                    <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%;'></div>
+                </div>
+            </div>
+            <div class="">
+                <button id="next-step" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}
