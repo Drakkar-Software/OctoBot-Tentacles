@@ -16,16 +16,16 @@
 
 import flask
 
-import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@web_interface.server_instance.route("/tentacles")
+@advanced_controllers.advanced.route("/tentacles")
 @login.login_required_when_activated
 def tentacles():
-    return flask.render_template("tentacles.html",
+    return flask.render_template("advanced_tentacles.html",
                                  tentacles=models.get_tentacles())
 
 
@@ -88,8 +88,8 @@ def _handle_tentacles_pages_post(update_type):
         return _handle_module_operation(update_type)
 
 
-@web_interface.server_instance.route("/tentacle_packages")
-@web_interface.server_instance.route('/tentacle_packages', methods=['GET', 'POST'])
+@advanced_controllers.advanced.route("/tentacle_packages")
+@advanced_controllers.advanced.route('/tentacle_packages', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def tentacle_packages():
     if flask.request.method == 'POST':
@@ -97,5 +97,5 @@ def tentacle_packages():
         return _handle_tentacles_pages_post(update_type)
 
     else:
-        return flask.render_template("tentacle_packages.html",
+        return flask.render_template("advanced_tentacle_packages.html",
                                      get_tentacles_packages=models.get_tentacles_packages)

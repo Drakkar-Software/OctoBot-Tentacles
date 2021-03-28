@@ -28,10 +28,14 @@ from tentacles.Services.Interfaces.web_interface.advanced_controllers import con
 from tentacles.Services.Interfaces.web_interface.advanced_controllers import home
 from tentacles.Services.Interfaces.web_interface.advanced_controllers import matrix
 from tentacles.Services.Interfaces.web_interface.advanced_controllers import strategy_optimizer
-
+from tentacles.Services.Interfaces.web_interface.advanced_controllers import tentacles
 
 from tentacles.Services.Interfaces.web_interface.advanced_controllers.configuration import (
     evaluator_config,
+)
+
+from tentacles.Services.Interfaces.web_interface.advanced_controllers.tentacles import (
+    tentacle_packages,
 )
 
 
@@ -40,6 +44,8 @@ __all__ = [
     "home",
     "matrix",
     "strategy_optimizer",
+    "tentacles",
+    "tentacle_packages",
 ]
 
 

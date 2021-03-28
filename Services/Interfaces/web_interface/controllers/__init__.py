@@ -27,7 +27,6 @@ from tentacles.Services.Interfaces.web_interface.controllers import home
 from tentacles.Services.Interfaces.web_interface.controllers import interface_settings
 from tentacles.Services.Interfaces.web_interface.controllers import logs
 from tentacles.Services.Interfaces.web_interface.controllers import medias
-from tentacles.Services.Interfaces.web_interface.controllers import tentacles
 from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
 
@@ -73,9 +72,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.medias import (
     tentacle_media,
     exchange_logo,
 )
-from tentacles.Services.Interfaces.web_interface.controllers.tentacles import (
-    tentacle_packages,
-)
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
     symbol_market_status,
@@ -114,8 +110,6 @@ __all__ = [
     "export_logs",
     "tentacle_media",
     "exchange_logo",
-    "tentacles",
-    "tentacle_packages",
     "terms",
     "portfolio",
     "symbol_market_status",
