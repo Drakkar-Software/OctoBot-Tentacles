@@ -237,4 +237,5 @@ $(document).ready(function() {
     get_announcements();
     init_dashboard_websocket();
     init_graphs();
+    showModalIfAny($("#tutorialModal"));
 });
