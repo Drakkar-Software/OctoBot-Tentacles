@@ -1,5 +1,5 @@
-{% extends "layout.html" %}
-{% set active_page = "tentacles" %}
+{% extends "advanced_layout.html" %}
+{% set active_page = "advanced.tentacles" %}
 <script src="{{ url_for('static', filename='js/components/tentacles.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% block body %}
 <br>
@@ -7,7 +7,7 @@
     <div class="card-header">
         <h2>
             <span class="float-left">
-                <a href="{{ url_for('tentacles') }}">
+                <a href="{{ url_for('advanced.tentacles') }}">
                     <i class="fas fa-arrow-left"></i>
                 </a>
             </span>
@@ -42,7 +42,7 @@
         </table>
         <br>
         <h2>Additional tentacles packages registration</h2>
-        <div class="config-root" update-url="{{ url_for('tentacle_packages', update_type='add_package') }}">
+        <div class="config-root" update-url="{{ url_for('advanced.tentacle_packages', update_type='add_package') }}">
           <div class='progress' id='register_and_install_package_progess_bar' style='display: none;'>
               <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%;'></div>
           </div>
@@ -63,9 +63,9 @@
             <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%;'></div>
         </div>
         <div class="btn-group btn-group mx-auto" role="group">
-            <button type="button" class="btn btn-success card-link waves-effect" id="install_tentacles_packages" update-url="{{ url_for('tentacle_packages', update_type='install_packages') }}">Re-install registered tentacles packages</button>
-            <button type="button" class="btn btn-primary card-link waves-effect" id="update_tentacles_packages" update-url="{{ url_for('tentacle_packages', update_type='update_packages') }}">Update installed packages</button>
-            <button type="button" class="btn btn-danger card-link waves-effect" id="reset_tentacles_packages" update-url="{{ url_for('tentacle_packages', update_type='reset_packages') }}">Remove installed packages</button>
+            <button type="button" class="btn btn-success card-link waves-effect" id="install_tentacles_packages" update-url="{{ url_for('advanced.tentacle_packages', update_type='install_packages') }}">Re-install registered tentacles packages</button>
+            <button type="button" class="btn btn-primary card-link waves-effect" id="update_tentacles_packages" update-url="{{ url_for('advanced.tentacle_packages', update_type='update_packages') }}">Update installed packages</button>
+            <button type="button" class="btn btn-danger card-link waves-effect" id="reset_tentacles_packages" update-url="{{ url_for('advanced.tentacle_packages', update_type='reset_packages') }}">Remove installed packages</button>
         </div>
   </div>
 </div>
