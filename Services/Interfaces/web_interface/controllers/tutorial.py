@@ -13,28 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
-import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@web_interface.server_instance.route("/")
-@web_interface.server_instance.route("/home")
+@web_interface.server_instance.route("/tutorial")
 @login.login_required_when_activated
-def home():
-    first_display = False
-    if flask.request.args:
-        accepted = flask.request.args.get("accept_terms") == "True"
-        models.accept_terms(accepted)
-        first_display = True
-    if models.accepted_terms():
-        in_backtesting = models.get_in_backtesting_mode()
-        return flask.render_template('index.html',
-                                     watched_symbols=models.get_watched_symbols(),
-                                     backtesting_mode=in_backtesting,
-                                     display_tutorial_link=first_display)
-    else:
-        return flask.redirect("/terms")
+def tutorial():
+    return flask.render_template('tutorial.html')
