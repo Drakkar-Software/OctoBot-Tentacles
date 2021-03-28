@@ -177,7 +177,6 @@ function unlock_ui(){
 
 function update_status(status){
     const icon_status = $("#navbar-bot-status");
-    const icon_reboot = $("#navbar-bot-reboot");
 
     // create alert if required
     if (status && icon_status.hasClass("fa-times-circle")){
@@ -195,13 +194,6 @@ function update_status(status){
         icon_status.removeClass("fa-check");
         icon_status.addClass("fa-times-circle icon-black");
         icon_status.attr("title","OctoBot offline");
-    }
-
-    // update reboot status
-    if (status){
-        icon_reboot.removeClass("fa-spin");
-    }else{
-        icon_reboot.addClass("fa-spin");
     }
 }
 
