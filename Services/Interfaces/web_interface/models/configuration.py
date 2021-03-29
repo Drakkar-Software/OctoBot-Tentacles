@@ -15,7 +15,8 @@
 #  License along with this library.
 import os.path as path
 import ccxt
-import requests
+import requests.adapters
+import requests.packages.urllib3.util.retry
 
 import octobot_evaluators.evaluators as evaluators
 import octobot_services.api as services_api
@@ -542,17 +543,26 @@ def _is_legit_currency(currency):
 def get_all_symbols_dict():
     global all_symbols_dict
     if not all_symbols_dict:
+        request_response = None
         try:
+            # inspired from https://github.com/man-c/pycoingecko
+            session = requests.Session()
+            retries = requests.packages.urllib3.util.retry.Retry(total=5, backoff_factor=0.5,
+                                                                 status_forcelist=[502, 503, 504])
+            session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
+            request_response = session.get(constants.CURRENCIES_LIST_URL)
             all_symbols_dict = {
                 currency_data[NAME_KEY]: {
                     SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
                     ID_KEY: currency_data[ID_KEY]
                 }
-                for currency_data in requests.get(constants.CURRENCIES_LIST_URL).json()
+                for currency_data in request_response.json()
                 if _is_legit_currency(currency_data[NAME_KEY])
             }
         except Exception as e:
             _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
+            _get_logger().debug(f"coingecko.com response code: {request_response.status_code}, body: "
+                                f"{request_response.text}")
             return {}
     return all_symbols_dict
 
