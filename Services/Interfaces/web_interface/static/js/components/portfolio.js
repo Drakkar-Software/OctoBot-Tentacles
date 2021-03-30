@@ -19,6 +19,9 @@
 function createPortfolioChart(element_id, title, animate){
     const data = {};
     const element = $("#"+element_id);
+    const max_medium_screen_legend_items = 20;
+    const max_mobile_legend_items = 6;
+    let at_least_one_value = false;
     let displayLegend = true;
     let graphHeight = element.attr("data-md-height");
     if(isMobileDisplay()){
@@ -30,15 +33,24 @@ function createPortfolioChart(element_id, title, animate){
         const total_value = $(this).find(".total-value").text();
         if($.isNumeric(total_value)){
             data[$(this).find(".symbol").text()] = Number(total_value);
+            if(Number(total_value) > 0 ){
+                at_least_one_value = true;
+            }
         }
     });
     const dataLength = Object.keys(data).length;
-    if(dataLength > 0 && element.length > 0){
-        if(isMobileDisplay() && dataLength > 6){
+    // display graph only if at least one value is available
+    if(at_least_one_value && dataLength > 0 && element.length > 0){
+        if(isMobileDisplay() && dataLength > max_mobile_legend_items){
             // legend is hiding the chart on smaller displays if too many elements are present
+            displayLegend = false;
+        }else if(dataLength > max_medium_screen_legend_items){
+            // legend is hiding the chart on if too many elements are present
             displayLegend = false;
         }
         create_doughnut_chart(element[0], data, title, 'white', animate, displayLegend);
+    }else{
+        element.addClass(hidden_class);
     }
 }
 
