@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en">
+    {% set active_page = active_page|default('home') -%}
     <head>
-        <title>OctoBot</title>
+        <title>{{ active_page | replace("_", " ") | capitalize }} - OctoBot</title>
 
         <!-- Required meta tags -->
         <meta charset="utf-8">
@@ -66,7 +67,6 @@
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
-        {% set active_page = active_page|default('home') -%}
         {% set show_nab_bar = show_nab_bar|default(True) -%}
 
         {% if show_nab_bar %}
@@ -109,8 +109,8 @@
                         <li class="nav-item mx-1 px-0 {% if 'help' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('octobot_help') }}">Help</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 {% if 'commands' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('commands') }}" aria-label="Commands">About</a>
+                        <li class="nav-item mx-1 px-0 {% if 'about' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('about') }}">About</a>
                         </li>
                         <li class="nav-item mx-1 px-0 {% if 'logs' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('logs') }}" aria-label="Logs"><i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="Event logs">
