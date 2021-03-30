@@ -63,8 +63,13 @@ def context_processor_register():
                 commons_constants.CONFIG_ENABLED_OPTION, True)
         ]
 
-    def get_enabled_trader(profile):
+    def is_real_trading(profile):
         if trading_util.is_trader_enabled(profile.config):
+            return True
+        return False
+
+    def get_enabled_trader(profile):
+        if is_real_trading(profile):
             return "Real trading"
         if trading_util.is_trader_simulator_enabled(profile.config):
             return "Simulated trading"
@@ -91,4 +96,5 @@ def context_processor_register():
         get_enabled_trader=get_enabled_trader,
         get_filtered_list=get_filtered_list,
         get_current_profile=models.get_current_profile,
+        is_real_trading=is_real_trading,
     )
