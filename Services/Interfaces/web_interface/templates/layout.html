@@ -1,3 +1,4 @@
+{% import 'macros/trading_state.html' as m_trading_state %}
 <!doctype html>
 <html lang="en">
     <head>
@@ -65,6 +66,7 @@
         <script src="{{ url_for('static', filename='js/common/bot_connection.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/components/navbar.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
         {% set active_page = active_page|default('home') -%}
         {% set show_nab_bar = show_nab_bar|default(True) -%}
@@ -101,9 +103,8 @@
                 <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
                     <ul class="navbar-nav ml-auto">
                         <li class="nav-item mx-1 px-0">
-                            <a class="nav-link" href="" aria-label="TradingSwitch">
-                                <span class="d-none d-xl-inline"><i>{{ get_enabled_trader(get_current_profile()) }}</i> </span>
-                                <i class="fa {% if 'Real' in get_enabled_trader(get_current_profile()) %}fa-coins{% else %}fa-robot{% endif %}" data-toggle="tooltip" data-placement="top" title="{{ get_enabled_trader(get_current_profile()) }}"></i>
+                            <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
+                                {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                             </a>
                         </li>
                         <li class="nav-item mx-1 px-0 {% if 'backtesting' == active_page %} active{% endif %}">
@@ -149,6 +150,46 @@
         <!-- Artificial padding  -->
 
         {% include "footer.html" %}
+
+        <div class="modal fade" id="tradingSwitchModal" tabindex="-1" role="dialog" aria-labelledby="tradingSwitchModalTitle" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="tradingSwitchModalTitle">Currently using : {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                  <p>
+                    {% if is_real_trading(get_current_profile()) %}
+                        By switching to simulated trading, OctoBot will only use its simulation mode on real market conditions.
+                        It will no longer create trade with your exchange account, it will use a simulated portfolio managed by OctoBot.
+
+                        <div class="my-4 text-center">
+                            <a class="btn btn-primary waves-effect" href="#">Switch to simulated trading</a>
+                        </div>
+                    {% else %}
+                        <h5>
+                            <span class="badge badge-danger">
+                                By switching to real trading, OctoBot will use your <b>real</b> funds
+                            </span>
+                        </h5>
+                        <div class="my-4 text-center">
+                            <a class="btn btn-primary waves-effect" href="">Stay</a>
+                            <a class="btn btn-danger waves-effect" href="#">Switch to real trading</a>
+                        </div>
+                    {% endif %}
+                    <h5>
+                        <span class="badge badge-warning">
+                            This button will also restart OctoBot
+                        </span>
+                    </h5>
+                  </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {% block additional_scripts %}
         {% endblock additional_scripts %}
