@@ -100,6 +100,12 @@
                 </div>
                 <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
                     <ul class="navbar-nav ml-auto">
+                        <li class="nav-item mx-1 px-0">
+                            <a class="nav-link" href="" aria-label="TradingSwitch">
+                                <span class="d-none d-xl-inline"><i>{{ get_enabled_trader(get_current_profile()) }}</i> </span>
+                                <i class="fa {% if 'Real' in get_enabled_trader(get_current_profile()) %}fa-coins{% else %}fa-robot{% endif %}" data-toggle="tooltip" data-placement="top" title="{{ get_enabled_trader(get_current_profile()) }}"></i>
+                            </a>
+                        </li>
                         <li class="nav-item mx-1 px-0 {% if 'backtesting' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>
