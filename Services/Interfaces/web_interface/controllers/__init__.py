@@ -47,6 +47,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.backtesting import 
 from tentacles.Services.Interfaces.web_interface.controllers.logs import (
     export_logs,
 )
+from tentacles.Services.Interfaces.web_interface.controllers.commands import (
+    about,
+)
 from tentacles.Services.Interfaces.web_interface.controllers.configuration import (
     config,
     profile,
@@ -94,6 +97,7 @@ __all__ = [
     "backtesting",
     "data_collector",
     "commands",
+    "about",
     "community",
     "profile",
     "profiles_management",

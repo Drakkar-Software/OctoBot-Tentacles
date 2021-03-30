@@ -24,7 +24,15 @@ import tentacles.Services.Interfaces.web_interface.models as models
 logger = bot_logging.get_logger("ServerInstance Controller")
 
 
-@web_interface.server_instance.route("/commands")
+@web_interface.server_instance.route("/about")
+@login.login_required_when_activated
+def about(cmd=None):
+    return flask.render_template('about.html',
+                                 cmd=cmd,
+                                 metrics_enabled=models.get_metrics_enabled(),
+                                 disclaimer=disclaimer.DISCLAIMER)
+
+
 @web_interface.server_instance.route('/commands/<cmd>', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def commands(cmd=None):
@@ -36,7 +44,5 @@ def commands(cmd=None):
         models.stop_bot()
         return flask.jsonify("Success")
 
-    return flask.render_template('commands.html',
-                                 cmd=cmd,
-                                 metrics_enabled=models.get_metrics_enabled(),
-                                 disclaimer=disclaimer.DISCLAIMER)
+    else:
+        raise RuntimeError("Unknown command")
