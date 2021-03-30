@@ -64,7 +64,7 @@
                         Profile configuration
                     </span>
                 </span>
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" id="panelStrategies-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab="default" id="panelStrategies-tab" data-toggle="pill"
                    href="#panelStrategies" role="tab" aria-controls="panelStrategies" aria-selected="true">
                     <i class="fab fa-octopus-deploy"></i><span class="d-none d-md-block pl-3">Strategies</span>
                 </a>
@@ -109,7 +109,7 @@
             {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_activated_tentacles[profile_id], strategy_config, evaluator_config,
                                                get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
             {% endfor %}
-            <div class="tab-pane fade config-root show active" id="panelStrategies" role="tabpanel"
+            <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
                 {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
                 <div class="card">
