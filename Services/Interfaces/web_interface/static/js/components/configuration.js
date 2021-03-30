@@ -39,6 +39,21 @@ function handle_nested_sidenav(){
     });
 }
 
+function select_first_tab(){
+    let activatedTab = false;
+    const anchor = $(location).attr('hash');
+    if (anchor){
+        const tab = $(`${anchor}-tab`);
+        if (typeof tab !== "undefined") {
+            activate_tab(tab);
+            activatedTab = true;
+        }
+    }
+    if (!activatedTab){
+        activate_tab($("[data-tab='default']"));
+    }
+}
+
 function get_tabs_config(){
     return $(document).find("." + config_root_class + " ." + config_container_class);
 }
@@ -609,13 +624,6 @@ function updated_validated_updated_global_config(updated_data){
     deleted_global_config_elements = [];
 }
 
-function check_url_required_tab(){
-    const hash = window.location.hash;
-    if(hash){
-        hash && $('ul.nav a[href="' + hash + '"]').tab('show');
-    }
-}
-
 let validated_updated_global_config = {};
 let deleted_global_config_elements = [];
 
@@ -623,12 +631,12 @@ const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");
 
 $(document).ready(function() {
-    check_url_required_tab();
+
+    handle_nested_sidenav();
+    select_first_tab();
 
     setup_editable();
     handle_editable();
-
-    handle_nested_sidenav();
 
     handle_reset_buttons();
     handle_save_buttons();
