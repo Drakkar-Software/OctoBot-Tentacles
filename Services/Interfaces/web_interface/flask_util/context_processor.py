@@ -90,4 +90,5 @@ def context_processor_register():
         get_profile_exchanges=get_profile_exchanges,
         get_enabled_trader=get_enabled_trader,
         get_filtered_list=get_filtered_list,
+        get_current_profile=models.get_current_profile,
     )
