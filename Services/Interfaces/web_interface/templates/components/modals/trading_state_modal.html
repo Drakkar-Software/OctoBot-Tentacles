@@ -4,7 +4,7 @@
       <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="tradingSwitchModalTitle">Currently using : {{ m_trading_state.display_trading_state(is_real_trading, enabled_trader) }}</h5>
+            <h5 class="modal-title" id="tradingSwitchModalTitle">Currently using : {{ m_trading_state.display_trading_state(is_real_trading, enabled_trader, False) }}</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -16,7 +16,7 @@
                     It will no longer create trade with your exchange account, it will use a simulated portfolio managed by OctoBot.
 
                     <div class="my-4 text-center">
-                        <a class="btn btn-primary waves-effect" href="#">Switch to simulated trading</a>
+                        <a class="btn btn-primary waves-effect trading-mode-switch-button" href="#" update-url="/config" href="/" config-type="global_config" config-key="trader-simulator_enabled" current-value="True">Switch to simulated trading</a>
                     </div>
                 {% else %}
                     <h5>
@@ -26,7 +26,7 @@
                     </h5>
                     <div class="my-4 text-center">
                         <a class="btn btn-primary waves-effect" href="">Stay</a>
-                        <a class="btn btn-danger waves-effect" href="#">Switch to real trading</a>
+                        <a class="btn btn-danger waves-effect trading-mode-switch-button" update-url="/config" href="/" config-type="global_config" config-key="trader_enabled" current-value="True">Switch to real trading</a>
                     </div>
                 {% endif %}
                 <h5>
