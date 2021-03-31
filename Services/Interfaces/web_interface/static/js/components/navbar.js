@@ -42,12 +42,30 @@ function trigger_trader_state(element) {
     updated_config["restart_after_save"] = true;
 
     // send update
-    send_and_interpret_bot_update(updated_config, update_url, null);
+    send_and_interpret_bot_update(updated_config, update_url, null, post_package_action_success_callback, post_package_action_error_callback);
+}
+
+function post_package_action_success_callback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", "Trader switched" , "");
+    hideTradingStateModal()
+}
+
+function post_package_action_error_callback(updated_data, update_url, dom_root_element, result, status, error){
+    create_alert("error", "Error when switching trader : "+result.responseText, "");
+    hideTradingStateModal()
+}
+
+function displayTradingStateModal() {
+    showModalIfAny($("#tradingSwitchModal"))
+}
+
+function hideTradingStateModal() {
+    hideModalIfAny($("#tradingSwitchModal"))
 }
 
 $(document).ready(function() {
     $("#switchTradingState").click(function(){
-        showModalIfAny($("#tradingSwitchModal"))
+        displayTradingStateModal()
     });
     $(".trading-mode-switch-button").click(function(){
         trigger_trader_state($(this))
