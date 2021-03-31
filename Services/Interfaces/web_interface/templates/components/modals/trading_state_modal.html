@@ -4,38 +4,29 @@
       <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="tradingSwitchModalTitle">Currently using : {{ m_trading_state.display_trading_state(is_real_trading, enabled_trader, False) }}</h5>
+            <h5 class="modal-title" id="tradingSwitchModalTitle">Currently using : {{ m_trading_state.display_trading_state(is_real_trading, enabled_trader, False, True) }}</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body">
-              <p>
                 {% if is_real_trading %}
-                    By switching to simulated trading, OctoBot will only use its simulation mode on real market conditions.
-                    It will no longer create trade with your exchange account, it will use a simulated portfolio managed by OctoBot.
-
-                    <div class="my-4 text-center">
-                        <a class="btn btn-primary waves-effect trading-mode-switch-button" href="#" update-url="/config" href="/" config-type="global_config" config-key="trader-simulator_enabled" current-value="True">Switch to simulated trading</a>
-                    </div>
+                    <p>By switching to simulated trading, OctoBot will only use its simulation mode on real market conditions.</p>
+                    <p>It will no longer create trade with your exchange account, it will use a simulated portfolio managed by OctoBot.</p>
                 {% else %}
-                    <h5>
-                        <span class="badge badge-danger">
-                            By switching to real trading, OctoBot will use your <b>real</b> funds
-                        </span>
-                    </h5>
-                    <div class="my-4 text-center">
-                        <a class="btn btn-primary waves-effect" href="">Stay</a>
-                        <a class="btn btn-danger waves-effect trading-mode-switch-button" update-url="/config" href="/" config-type="global_config" config-key="trader_enabled" current-value="True">Switch to real trading</a>
-                    </div>
+                    <p>By switching to real trading, OctoBot will use your <b>real</b> funds</p>
                 {% endif %}
-                <h5>
-                    <span class="badge badge-warning">
-                        This button will also restart OctoBot
-                    </span>
-                </h5>
-              </p>
+                <div class="alert alert-warning w-100" role="alert">
+                    <strong>Warning!</strong> The switch button will also restart OctoBot
+                </div>
           </div>
+        <div class="modal-footer text-center">
+            <a class="my-2 btn btn-outline-primary waves-effect" href="" data-dismiss="modal" aria-label="Close">Stay</a>
+            {% if is_real_trading %}
+                <a class="my-2 btn btn-primary waves-effect trading-mode-switch-button" href="#" update-url="/config" href="/" config-type="global_config" config-key="trader-simulator_enabled" current-value="True">Switch to simulated trading</a>
+            {% else %}
+                <a class="my-2 btn btn-danger waves-effect trading-mode-switch-button" href="#" update-url="/config" config-type="global_config" config-key="trader_enabled" current-value="True">Switch to real trading</a>
+            {% endif %}
         </div>
       </div>
     </div>
