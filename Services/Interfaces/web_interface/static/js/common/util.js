@@ -196,6 +196,12 @@ function showModalIfAny(element){
     }
 }
 
+function hideModalIfAny(element){
+    if(element){
+        element.modal("hide");
+    }
+}
+
 // Inspired from https://davidwalsh.name/javascript-debounce-function
 // Function, that, as long as it continues to be invoked, will not
 // be triggered. The function will be called after it stops being called for
