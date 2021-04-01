@@ -134,6 +134,20 @@ function get_announcements(){
     })
 }
 
+function get_version_upgrade(){
+    const upgradeVersionAlertDiv = $("#upgradeVersion");
+    $.get({
+        url: upgradeVersionAlertDiv.attr(update_url_attr),
+        dataType: "json",
+        success: function(msg, status){
+            if(msg){
+                upgradeVersionAlertDiv.text(msg);
+                upgradeVersionAlertDiv.parent().parent().removeClass(disabled_item_class);
+            }
+        }
+    })
+}
+
 function handle_graph_update() {
     socket.on('candle_graph_update_data', function (data) {
         update_graph(data);
@@ -235,6 +249,7 @@ let socket = undefined;
 
 $(document).ready(function() {
     get_announcements();
+    get_version_upgrade();
     init_dashboard_websocket();
     init_graphs();
     showModalIfAny($("#tutorialModal"));

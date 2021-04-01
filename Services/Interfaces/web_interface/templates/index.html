@@ -2,6 +2,9 @@
 {% set active_page = "home" %}
 {% block body %}
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
+    <div class="d-none alert alert-success text-center mt-2" role="alert">
+        <h5><i class="far fa-bell"></i> Good news ! OctoBot version <span update-url="{{ url_for('api.upgrade_version') }}" id="upgradeVersion"></span> is available. <a href="">Upgrade now <i class="fas fa-cloud-download-alt"></i></a></h5>
+    </div>
     <span id="exchange-specific-data">
         <div class="card mt-2 mt-md-4">
             <div class="card-header"><h2>
