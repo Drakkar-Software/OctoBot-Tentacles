@@ -13,18 +13,27 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import json
 
-import tentacles.Services.Interfaces.web_interface.api as api
-import octobot_services.constants as service_constants
+import octobot.api as octobot_api
 import octobot_commons.external_resources_manager as external_resources_manager
+import octobot_services.constants as service_constants
 import octobot_services.interfaces as interfaces
+import tentacles.Services.Interfaces.web_interface.api as api
 
 
 @api.api.route("/version")
 def version():
     return json.dumps(f"{interfaces.AbstractInterface.project_name} {interfaces.AbstractInterface.project_version}")
+
+
+@api.api.route("/upgrade_version")
+def upgrade_version():
+    async def fetch_upgrade_version():
+        updater = octobot_api.updater.get_updater(interfaces.get_bot_api())
+        return await updater.get_latest_version() if await updater.should_be_updated() else None
+
+    return json.dumps(interfaces.run_in_bot_async_executor(fetch_upgrade_version()))
 
 
 @api.api.route("/user_feedback")

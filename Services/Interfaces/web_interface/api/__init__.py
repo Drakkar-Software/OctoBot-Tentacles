@@ -25,6 +25,7 @@ from tentacles.Services.Interfaces.web_interface.api import user_commands
 
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
     version,
+    upgrade_version,
     user_feedback,
     announcements,
 )
@@ -40,6 +41,7 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
 
 __all__ = [
     "version",
+    "upgrade_version",
     "user_feedback",
     "announcements",
     "orders",
