@@ -32,3 +32,7 @@ def restart_bot():
 
 def stop_bot():
     interfaces_util.get_bot_api().stop_bot()
+
+
+def update_bot():
+    interfaces_util.get_bot_api().update_bot()

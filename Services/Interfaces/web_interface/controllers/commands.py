@@ -44,5 +44,9 @@ def commands(cmd=None):
         models.stop_bot()
         return flask.jsonify("Success")
 
+    elif cmd == "update":
+        models.update_bot()
+        return flask.jsonify("Success")
+
     else:
         raise RuntimeError("Unknown command")
