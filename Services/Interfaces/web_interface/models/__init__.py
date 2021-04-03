@@ -42,6 +42,7 @@ from tentacles.Services.Interfaces.web_interface.models.commands import (
     schedule_delayed_command,
     restart_bot,
     stop_bot,
+    update_bot,
 )
 from tentacles.Services.Interfaces.web_interface.models.community import (
     get_community_metrics_to_display,
@@ -155,6 +156,7 @@ __all__ = [
     "schedule_delayed_command",
     "restart_bot",
     "stop_bot",
+    "update_bot",
     "get_community_metrics_to_display",
     "can_get_community_metrics",
     "get_evaluators_tentacles_startup_activation",
@@ -235,5 +237,3 @@ __all__ = [
     "get_exchange_holdings_per_symbol",
     "get_symbols_values",
 ]
-
-
