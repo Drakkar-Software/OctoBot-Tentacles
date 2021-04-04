@@ -13,4 +13,4 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from .bitmax_exchange import *
+from .ascendex_exchange import *
