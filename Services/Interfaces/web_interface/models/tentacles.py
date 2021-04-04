@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot.constants as octobot_constants
+import octobot.configuration_manager as configuration_manager
 import octobot_commons.logging as bot_logging
 import octobot_services.interfaces.util as interfaces_util
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -84,7 +85,7 @@ def reset_packages():
 def update_modules(modules):
     success = True
     for url in [
-        octobot_constants.DEFAULT_TENTACLES_URL,
+        configuration_manager.get_default_tentacles_url(),
         # tentacles_manager_api.get_compiled_tentacles_url(
         #     octobot_constants.DEFAULT_COMPILED_TENTACLES_URL,
         #     octobot_constants.TENTACLES_REQUIRED_VERSION
