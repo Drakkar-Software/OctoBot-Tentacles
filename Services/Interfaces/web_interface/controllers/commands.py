@@ -45,8 +45,8 @@ def commands(cmd=None):
         return flask.jsonify("Success")
 
     elif cmd == "update":
-        models.update_bot()
-        return flask.jsonify("Success")
+        models.schedule_delayed_command(models.update_bot())
+        return flask.jsonify("Update started")
 
     else:
         raise RuntimeError("Unknown command")
