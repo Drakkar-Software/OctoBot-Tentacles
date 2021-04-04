@@ -25,7 +25,7 @@ import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 
 
-class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.FutureExchange):
+class AscendEx(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.FutureExchange):
     DESCRIPTION = ""
 
     BUY_STR = "Buy"
@@ -39,7 +39,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
 
     @classmethod
     def get_name(cls):
-        return 'bitmax'
+        return 'ascendex'
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
@@ -54,7 +54,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         try:
-            # on BitMax, precision is a decimal instead of a number of digits
+            # on AscendEx, precision is a decimal instead of a number of digits
             market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
             if with_fixer:
                 market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
@@ -74,7 +74,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
             raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
-        # On BitMax, account recent trades is available under fetch_closed_orders
+        # On AscendEx, account recent trades is available under fetch_closed_orders
         return await self.connector.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
 
     async def get_symbol_prices(self,
@@ -83,7 +83,7 @@ class Bitmax(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.Fut
                                 limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
         if limit is None:
-            # force default limit on Bitmax since it's not use by default in fetch_ohlcv
+            # force default limit on AscendEx since it's not use by default in fetch_ohlcv
             options = self.connector.client.safe_value(self.connector.client.options, 'fetchOHLCV', {})
             limit = self.connector.client.safe_integer(options, 'limit', 500)
         return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
