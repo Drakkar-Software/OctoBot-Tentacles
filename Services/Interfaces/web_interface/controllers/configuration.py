@@ -16,6 +16,7 @@
 import flask
 import werkzeug
 import os
+from datetime import datetime
 
 import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
@@ -107,7 +108,8 @@ def profiles_management(action):
         profile_id = flask.request.args.get("profile_id")
         temp_file = os.path.abspath("profile")
         file_path = models.export_profile(profile_id, temp_file)
-        return flask_util.send_and_remove_file(file_path, "profile.zip")
+        name = models.get_profile_name(profile_id)
+        return flask_util.send_and_remove_file(file_path, f"{name}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.zip")
 
 
 @web_interface.server_instance.route('/accounts')
