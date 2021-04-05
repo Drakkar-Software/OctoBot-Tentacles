@@ -18,6 +18,7 @@ import copy
 import os.path
 import asyncio
 import mock
+import decimal
 
 import async_channel.util as channel_util
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -89,11 +90,11 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
 
     mode, producer = await _init_trading_mode(config, exchange_manager, symbol)
 
-    producer.lowest_buy = 1
-    producer.highest_sell = 10000
+    producer.lowest_buy = decimal.Decimal(1)
+    producer.highest_sell = decimal.Decimal(10000)
     producer.operational_depth = 50
-    producer.spread = 0.06
-    producer.increment = 0.04
+    producer.spread = decimal.Decimal("0.06")
+    producer.increment = decimal.Decimal("0.04")
 
     return producer, mode.consumers[0], exchange_manager
 
@@ -132,23 +133,23 @@ async def _get_tools_multi_symbol():
     eth_usdt_mode, eth_usdt_producer = await _init_trading_mode(config, exchange_manager, "ETH/USDT")
     nano_usdt_mode, nano_usdt_producer = await _init_trading_mode(config, exchange_manager, "NANO/USDT")
 
-    btcusd_producer.lowest_buy = 1
-    btcusd_producer.highest_sell = 10000
+    btcusd_producer.lowest_buy = decimal.Decimal(1)
+    btcusd_producer.highest_sell = decimal.Decimal(10000)
     btcusd_producer.operational_depth = 50
-    btcusd_producer.spread = 0.06
-    btcusd_producer.increment = 0.04
+    btcusd_producer.spread = decimal.Decimal("0.06")
+    btcusd_producer.increment = decimal.Decimal("0.04")
 
-    eth_usdt_producer.lowest_buy = 20
-    eth_usdt_producer.highest_sell = 5000
+    eth_usdt_producer.lowest_buy = decimal.Decimal(20)
+    eth_usdt_producer.highest_sell = decimal.Decimal(5000)
     eth_usdt_producer.operational_depth = 30
-    eth_usdt_producer.spread = 0.07
-    eth_usdt_producer.increment = 0.03
+    eth_usdt_producer.spread = decimal.Decimal("0.07")
+    eth_usdt_producer.increment = decimal.Decimal("0.03")
 
-    nano_usdt_producer.lowest_buy = 20
-    nano_usdt_producer.highest_sell = 5000
+    nano_usdt_producer.lowest_buy = decimal.Decimal(20)
+    nano_usdt_producer.highest_sell = decimal.Decimal(5000)
     nano_usdt_producer.operational_depth = 30
-    nano_usdt_producer.spread = 0.07
-    nano_usdt_producer.increment = 0.03
+    nano_usdt_producer.spread = decimal.Decimal("0.07")
+    nano_usdt_producer.increment = decimal.Decimal("0.03")
 
     return btcusd_producer, eth_usdt_producer, nano_usdt_producer, exchange_manager
 
@@ -231,6 +232,8 @@ async def test_multi_symbol():
         original_orders = copy.copy(orders)
         to_fill_order = original_orders[-2]
         await _fill_order(to_fill_order, exchange_manager, producer=eth_usdt_producer)
+        # filled order and created a new one
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, len(original_orders)))
         trading_api.force_set_mark_price(exchange_manager, eth_usdt_producer.symbol, 190)
         await nano_usdt_producer._ensure_staggered_orders()
         # did nothing
@@ -329,8 +332,8 @@ async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
         symbol = "BTC/USD"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer.sell_funds = 0.001
-        producer.buy_funds = 100
+        producer.sell_funds = decimal.Decimal("0.001")
+        producer.buy_funds = decimal.Decimal(100)
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -360,8 +363,8 @@ async def test_ensure_staggered_orders_with_unavailable_funds():
         symbol = "BTC/USD"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer._set_initially_available_funds("BTC", 1)
-        producer._set_initially_available_funds("USD", 400)
+        producer._set_initially_available_funds("BTC", decimal.Decimal(1))
+        producer._set_initially_available_funds("USD", decimal.Decimal(400))
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -395,7 +398,7 @@ async def test_get_maximum_traded_funds():
         # part 1: no available funds set
         # no allowed_funds set
         # can trade total_available_funds
-        assert producer._get_maximum_traded_funds(0, 10, "BTC", True, False) == 10
+        assert producer._get_maximum_traded_funds(0, 10, "BTC", True, False) == 10 == decimal.Decimal(10)
         # allowed_funds set
         # can trade allowed_funds
         assert producer._get_maximum_traded_funds(5, 10, "BTC", False, False) == 5
@@ -404,7 +407,7 @@ async def test_get_maximum_traded_funds():
         assert producer._get_maximum_traded_funds(15, 10, "BTC", True, False) == 10
 
         # part 2: available funds set is set
-        producer._set_initially_available_funds("BTC", 8)
+        producer._set_initially_available_funds("BTC", decimal.Decimal(8))
         # no allowed_funds set
         # can trade available funds only
         assert producer._get_maximum_traded_funds(0, 10, "BTC", False, False) == 8
@@ -537,11 +540,11 @@ async def test_create_orders_from_different_markets():
                                                                                    symbol=producer.symbol,
                                                                                    timeout=1)
         producer.symbol_market = symbol_market
-        producer.current_price = price
+        producer.current_price = decimal.Decimal(str(price))
         producer._refresh_symbol_data(symbol_market)
-        producer.min_max_order_details[producer.min_cost] = 0.01
-        producer.min_max_order_details[producer.min_quantity] = 1.0
-        producer.min_max_order_details[producer.max_quantity] = 90000000.0
+        producer.min_max_order_details[producer.min_cost] = decimal.Decimal(str(0.01))
+        producer.min_max_order_details[producer.min_quantity] = decimal.Decimal(str(1.0))
+        producer.min_max_order_details[producer.max_quantity] = decimal.Decimal(str(90000000.0))
         producer.min_max_order_details[producer.max_cost] = None
         producer.min_max_order_details[producer.max_price] = None
         producer.min_max_order_details[producer.min_price] = None
@@ -552,10 +555,10 @@ async def test_create_orders_from_different_markets():
         expected_buy_count = 46
         expected_sell_count = 78
 
-        producer.lowest_buy = lowest_buy
-        producer.highest_sell = highest_sell
-        producer.increment = 0.01
-        producer.spread = 0.01
+        producer.lowest_buy = decimal.Decimal(str(lowest_buy))
+        producer.highest_sell = decimal.Decimal(str(highest_sell))
+        producer.increment = decimal.Decimal(str(0.01))
+        producer.spread = decimal.Decimal(str(0.01))
         producer.operational_depth = 10
         producer.final_eval = price
         producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
@@ -589,9 +592,9 @@ async def test_create_orders_from_different_very_close_refresh():
         producer.symbol_market = symbol_market
         producer.current_price = price
         producer._refresh_symbol_data(symbol_market)
-        producer.min_max_order_details[producer.min_cost] = 0.01
-        producer.min_max_order_details[producer.min_quantity] = 1.0
-        producer.min_max_order_details[producer.max_quantity] = 90000000.0
+        producer.min_max_order_details[producer.min_cost] = decimal.Decimal(str(0.01))
+        producer.min_max_order_details[producer.min_quantity] = decimal.Decimal(str(1.0))
+        producer.min_max_order_details[producer.max_quantity] = decimal.Decimal(str(90000000.0))
         producer.min_max_order_details[producer.max_cost] = None
         producer.min_max_order_details[producer.max_price] = None
         producer.min_max_order_details[producer.min_price] = None
@@ -602,10 +605,10 @@ async def test_create_orders_from_different_very_close_refresh():
         expected_buy_count = 2
         expected_sell_count = 2
 
-        producer.lowest_buy = lowest_buy
-        producer.highest_sell = highest_sell
-        producer.increment = 0.02
-        producer.spread = 0.02
+        producer.lowest_buy = decimal.Decimal(str(lowest_buy))
+        producer.highest_sell = decimal.Decimal(str(highest_sell))
+        producer.increment = decimal.Decimal(str(0.02))
+        producer.spread = decimal.Decimal(str(0.02))
         producer.operational_depth = 10
         producer.final_eval = price
         producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
@@ -648,9 +651,9 @@ async def test_create_orders_from_different_markets_not_enough_market_to_create_
         producer.symbol_market = symbol_market
         producer.current_price = price
         producer._refresh_symbol_data(symbol_market)
-        producer.min_max_order_details[producer.min_cost] = 1.0
-        producer.min_max_order_details[producer.min_quantity] = 1.0
-        producer.min_max_order_details[producer.max_quantity] = 90000000.0
+        producer.min_max_order_details[producer.min_cost] = decimal.Decimal(str(1.0))
+        producer.min_max_order_details[producer.min_quantity] = decimal.Decimal(str(1.0))
+        producer.min_max_order_details[producer.max_quantity] = decimal.Decimal(str(90000000.0))
         producer.min_max_order_details[producer.max_cost] = None
         producer.min_max_order_details[producer.max_price] = None
         producer.min_max_order_details[producer.min_price] = None
@@ -661,10 +664,10 @@ async def test_create_orders_from_different_markets_not_enough_market_to_create_
         expected_buy_count = 0
         expected_sell_count = 0
 
-        producer.lowest_buy = lowest_buy
-        producer.highest_sell = highest_sell
-        producer.increment = 0.01
-        producer.spread = 0.01
+        producer.lowest_buy = decimal.Decimal(str(lowest_buy))
+        producer.highest_sell = decimal.Decimal(str(highest_sell))
+        producer.increment = decimal.Decimal(str(0.01))
+        producer.spread = decimal.Decimal(str(0.01))
         producer.operational_depth = 10
         producer.final_eval = price
         producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
@@ -731,7 +734,8 @@ async def test_price_initially_out_of_range_1():
     try:
         producer, _, exchange_manager = await _get_tools("BTC/USD", btc_holdings=100000000)
         # new evaluation: price in range
-        price = 0.1
+        # ~300k sell orders, 0 buy orders
+        price = 0.8
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
@@ -867,15 +871,19 @@ async def test_compute_minimum_funds_1():
     try:
         # first start: setup orders
         producer, _, exchange_manager = await _get_tools("BTC/USD")
-        buy_min_funds = producer._get_min_funds(25, 0.001, staggered_orders_trading.StrategyModes.MOUNTAIN, 100)
-        sell_min_funds = producer._get_min_funds(2475.25, 0.00001, staggered_orders_trading.StrategyModes.MOUNTAIN, 100)
-        assert buy_min_funds == 0.05
-        assert sell_min_funds == 0.04950500000000001
+        buy_min_funds = producer._get_min_funds(decimal.Decimal(str(25)), decimal.Decimal(str(0.001)),
+                                                staggered_orders_trading.StrategyModes.MOUNTAIN,
+                                                decimal.Decimal(100))
+        sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475.25)), decimal.Decimal(str(0.00001)),
+                                                 staggered_orders_trading.StrategyModes.MOUNTAIN,
+                                                 decimal.Decimal(100))
+        assert buy_min_funds == decimal.Decimal(str(0.05))
+        assert sell_min_funds == decimal.Decimal(str(0.049505))
         portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = buy_min_funds
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = buy_min_funds
-        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = sell_min_funds
-        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = sell_min_funds
+        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = float(buy_min_funds)
+        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = float(buy_min_funds)
+        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = float(sell_min_funds)
+        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = float(sell_min_funds)
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -896,15 +904,19 @@ async def test_compute_minimum_funds_2():
                                                                                    symbol=producer.symbol,
                                                                                    timeout=1)
         producer._refresh_symbol_data(symbol_market)
-        buy_min_funds = producer._get_min_funds(25, 0.001, staggered_orders_trading.StrategyModes.MOUNTAIN, 100)
-        sell_min_funds = producer._get_min_funds(2475, 0.00001, staggered_orders_trading.StrategyModes.MOUNTAIN, 100)
-        assert buy_min_funds == 0.05
-        assert sell_min_funds == 0.0495
+        buy_min_funds = producer._get_min_funds(decimal.Decimal(str(25)), decimal.Decimal(str(0.001)),
+                                                staggered_orders_trading.StrategyModes.MOUNTAIN,
+                                                decimal.Decimal(str(100)))
+        sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475)), decimal.Decimal(str(0.00001)),
+                                                 staggered_orders_trading.StrategyModes.MOUNTAIN,
+                                                 decimal.Decimal(str(100)))
+        assert buy_min_funds == decimal.Decimal(str(0.05))
+        assert sell_min_funds == decimal.Decimal(str(0.0495))
         portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = buy_min_funds * 0.99999
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = buy_min_funds * 0.99999
-        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = sell_min_funds * 0.99999
-        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = sell_min_funds * 0.99999
+        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = float(buy_min_funds) * 0.99999
+        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = float(buy_min_funds) * 0.99999
+        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = float(sell_min_funds) * 0.99999
+        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = float(sell_min_funds) * 0.99999
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -961,7 +973,7 @@ async def test_start_without_enough_funds_to_sell():
         newly_created_sell_order = orders[-1]
         assert newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
         assert newly_created_sell_order.origin_price == to_fill_order.origin_price + \
-               (producer.flat_spread - producer.flat_increment)
+               float(producer.flat_spread - producer.flat_increment)
 
         await _fill_order(second_to_fill_order, exchange_manager, producer=producer)
         await asyncio.create_task(_wait_for_orders_creation(2))
@@ -969,9 +981,9 @@ async def test_start_without_enough_funds_to_sell():
         second_newly_created_sell_order = orders[-1]
         assert second_newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
         assert second_newly_created_sell_order.origin_price == second_to_fill_order.origin_price + \
-               (producer.flat_spread - producer.flat_increment)
+               float(producer.flat_spread - producer.flat_increment)
         assert abs(second_newly_created_sell_order.origin_price - newly_created_sell_order.origin_price) == \
-               producer.flat_increment
+               float(producer.flat_increment)
     finally:
         await _stop(exchange_manager)
 
@@ -1020,8 +1032,8 @@ async def test_order_fill_callback():
 
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
-        price_increment = producer.flat_increment
-        price_spread = producer.flat_spread
+        price_increment = float(producer.flat_increment)
+        price_spread = float(producer.flat_spread)
 
         open_orders = trading_api.get_open_orders(exchange_manager)
         assert len(open_orders) == producer.operational_depth
@@ -1040,7 +1052,7 @@ async def test_order_fill_callback():
         assert newly_created_sell_order.origin_price == trading_personal_data.trunc_with_n_decimal_digits(price, 8)
         assert newly_created_sell_order.origin_quantity == \
                trading_personal_data.trunc_with_n_decimal_digits(
-                   to_fill_order.filled_quantity * (1 - producer.max_fees),
+                   to_fill_order.filled_quantity * (1 - float(producer.max_fees)),
                    8)
         assert newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
         assert trading_api.get_portfolio_currency(exchange_manager, "BTC",
@@ -1065,7 +1077,7 @@ async def test_order_fill_callback():
         assert newly_created_buy_order.origin_price == trading_personal_data.trunc_with_n_decimal_digits(price, 8)
         assert newly_created_buy_order.origin_quantity == \
                trading_personal_data.trunc_with_n_decimal_digits(
-                   to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - producer.max_fees),
+                   to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - float(producer.max_fees)),
                    8)
         assert newly_created_buy_order.side == trading_enums.TradeOrderSide.BUY
         assert trading_api.get_portfolio_currency(exchange_manager, "USD",
@@ -1090,7 +1102,7 @@ async def test_order_fill_callback():
         assert newly_created_sell_order.origin_price == trading_personal_data.trunc_with_n_decimal_digits(price, 8)
         assert newly_created_sell_order.origin_quantity == \
                trading_personal_data.trunc_with_n_decimal_digits(
-                   to_fill_order.filled_quantity * (1 - producer.max_fees),
+                   to_fill_order.filled_quantity * (1 - float(producer.max_fees)),
                    8)
         assert newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
         assert trading_api.get_portfolio_currency(exchange_manager, "BTC",
@@ -1112,7 +1124,7 @@ async def test_order_fill_callback():
         assert newly_created_buy_order.origin_price == trading_personal_data.trunc_with_n_decimal_digits(price, 8)
         assert newly_created_buy_order.origin_quantity == \
                trading_personal_data.trunc_with_n_decimal_digits(
-                   to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - producer.max_fees),
+                   to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - float(producer.max_fees)),
                    8)
         assert newly_created_buy_order.side == trading_enums.TradeOrderSide.BUY
         assert trading_api.get_portfolio_currency(exchange_manager, "USD",
@@ -1203,24 +1215,24 @@ async def test_create_order():
         # SELL
 
         # enough quantity in portfolio
-        price = 100
-        quantity = 1
+        price = decimal.Decimal(100)
+        quantity = decimal.Decimal(1)
         side = trading_enums.TradeOrderSide.SELL
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
 
         # not enough quantity in portfolio
-        price = 100
-        quantity = 10
+        price = decimal.Decimal(100)
+        quantity = decimal.Decimal(10)
         side = trading_enums.TradeOrderSide.SELL
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = await consumer.create_order(to_create_order, price, symbol_market)
         assert created_order == []
 
         # just enough quantity in portfolio
-        price = 100
-        quantity = 9
+        price = decimal.Decimal(100)
+        quantity = decimal.Decimal(9)
         side = trading_enums.TradeOrderSide.SELL
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
@@ -1228,8 +1240,8 @@ async def test_create_order():
         assert trading_api.get_portfolio_currency(exchange_manager, "BTC") == 0
 
         # not enough quantity anymore
-        price = 100
-        quantity = 0.0001
+        price = decimal.Decimal(100)
+        quantity = decimal.Decimal("0.0001")
         side = trading_enums.TradeOrderSide.SELL
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
@@ -1239,8 +1251,8 @@ async def test_create_order():
         # BUY
 
         # enough quantity in portfolio
-        price = 100
-        quantity = 1
+        price = decimal.Decimal(100)
+        quantity = decimal.Decimal(1)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
@@ -1249,8 +1261,8 @@ async def test_create_order():
         assert created_order is not None
 
         # not enough quantity in portfolio
-        price = 585
-        quantity = 2
+        price = decimal.Decimal(585)
+        quantity = decimal.Decimal(2)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
@@ -1258,8 +1270,8 @@ async def test_create_order():
         assert created_orders == []
 
         # enough quantity in portfolio
-        price = 40
-        quantity = 2
+        price = decimal.Decimal(40)
+        quantity = decimal.Decimal(2)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
@@ -1267,8 +1279,8 @@ async def test_create_order():
         assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 820
 
         # enough quantity in portfolio
-        price = 205
-        quantity = 4
+        price = decimal.Decimal(205)
+        quantity = decimal.Decimal(4)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
@@ -1277,8 +1289,8 @@ async def test_create_order():
         assert created_order is not None
 
         # not enough quantity in portfolio anymore
-        price = 205
-        quantity = 1
+        price = decimal.Decimal(205)
+        quantity = decimal.Decimal(1)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
@@ -1299,8 +1311,8 @@ async def test_create_new_orders():
         producer._refresh_symbol_data(symbol_market)
 
         # valid input
-        price = 205
-        quantity = 4
+        price = decimal.Decimal(205)
+        quantity = decimal.Decimal(4)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         data = {
@@ -1405,9 +1417,9 @@ async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowes
         symbol = "BTC/USD"
         producer, _, exchange_manager = await _get_tools(symbol, btc_holdings=btc_holdings)
         if lowest_buy is not None:
-            producer.lowest_buy = lowest_buy
+            producer.lowest_buy = decimal.Decimal(str(lowest_buy))
         if highest_sell is not None:
-            producer.highest_sell = highest_sell
+            producer.highest_sell = decimal.Decimal(str(highest_sell))
         producer.mode = mode
         trading_api.force_set_mark_price(exchange_manager, symbol, price)
         _, _, _, _, symbol_market = await trading_personal_data.get_pre_order_data(exchange_manager,
@@ -1434,7 +1446,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
                                  expected_sell_count, price, symbol_market):
     async with exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
         producer._refresh_symbol_data(symbol_market)
-        buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
+        buy_orders, sell_orders = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False)
         assert len(buy_orders) == expected_buy_count
         assert len(sell_orders) == expected_sell_count
 
@@ -1523,34 +1535,35 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
 
     order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "USD",
                                                                         portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+    decimal_current_price = decimal.Decimal(str(producer.current_price))
     _, average_order_quantity = \
-        producer._get_order_count_and_average_quantity(producer.current_price,
+        producer._get_order_count_and_average_quantity(decimal_current_price,
                                                        False,
                                                        producer.lowest_buy,
-                                                       producer.current_price,
-                                                       order_limiting_currency_amount,
+                                                       decimal_current_price,
+                                                       decimal.Decimal(str(order_limiting_currency_amount)),
                                                        "USD",
                                                        strategy_mode)
     if orders:
         if buy_increase_towards_center:
-            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+            assert round(multiplier * average_order_quantity * decimal_current_price) - 1 \
                    <= round(first_buy.origin_quantity * first_buy.origin_price -
                             current_buy.origin_quantity * current_buy.origin_price) \
-                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
+                   <= round(multiplier * average_order_quantity * decimal_current_price) + 1
         else:
-            assert round(multiplier * average_order_quantity * producer.current_price) - 1 \
+            assert round(multiplier * average_order_quantity * decimal_current_price) - 1 \
                    <= round(current_buy.origin_quantity * current_buy.origin_price -
                             first_buy.origin_quantity * first_buy.origin_price) \
-                   <= round(multiplier * average_order_quantity * producer.current_price) + 1
+                   <= round(multiplier * average_order_quantity * decimal_current_price) + 1
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC",
                                                                             portfolio_type=commons_constants.PORTFOLIO_TOTAL)
         _, average_order_quantity = \
-            producer._get_order_count_and_average_quantity(producer.current_price,
+            producer._get_order_count_and_average_quantity(decimal_current_price,
                                                            True,
-                                                           producer.current_price,
+                                                           decimal_current_price,
                                                            producer.highest_sell,
-                                                           order_limiting_currency_amount,
+                                                           decimal.Decimal(str(order_limiting_currency_amount)),
                                                            "BTC",
                                                            strategy_mode)
 
@@ -1563,17 +1576,17 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                     average_order_quantity * (1 + multiplier / 2),
                     8)
                 assert abs(first_sell.origin_quantity - expected_quantity) < \
-                       multiplier * producer.increment / (2 * producer.current_price)
+                       multiplier * producer.increment / (2 * decimal_current_price)
             elif not sell_flat_towards_center:
                 expected_quantity = trading_personal_data.trunc_with_n_decimal_digits(
                     average_order_quantity * (1 - multiplier / 2),
                     8)
                 assert abs(first_sell.origin_quantity - expected_quantity) < \
-                       multiplier * producer.increment / (2 * producer.current_price)
+                       multiplier * producer.increment / (2 * decimal_current_price)
 
 
 async def _light_check_orders(producer, exchange_manager, expected_buy_count, expected_sell_count, price):
-    buy_orders, sell_orders = await producer._generate_staggered_orders(price, False)
+    buy_orders, sell_orders = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False)
     assert len(buy_orders) == expected_buy_count
     assert len(sell_orders) == expected_sell_count
 

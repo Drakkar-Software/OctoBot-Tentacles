@@ -18,6 +18,7 @@ import enum
 import dataclasses
 import math
 import asyncio
+import decimal
 
 import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
@@ -46,34 +47,36 @@ DECREASING = "decreasing_towards_current_price"
 STABLE = "stable_towards_current_price"
 MULTIPLIER = "multiplier"
 
+ONE_PERCENT_DECIMAL = decimal.Decimal("1.01")
+
 StrategyModeMultipliersDetails = {
     StrategyModes.FLAT: {
-        MULTIPLIER: 0,
+        MULTIPLIER: decimal.Decimal(0),
         trading_enums.TradeOrderSide.BUY: STABLE,
         trading_enums.TradeOrderSide.SELL: STABLE
     },
     StrategyModes.NEUTRAL: {
-        MULTIPLIER: 0.3,
+        MULTIPLIER: decimal.Decimal("0.3"),
         trading_enums.TradeOrderSide.BUY: INCREASING,
         trading_enums.TradeOrderSide.SELL: INCREASING
     },
     StrategyModes.MOUNTAIN: {
-        MULTIPLIER: 1,
+        MULTIPLIER: decimal.Decimal(1),
         trading_enums.TradeOrderSide.BUY: INCREASING,
         trading_enums.TradeOrderSide.SELL: INCREASING
     },
     StrategyModes.VALLEY: {
-        MULTIPLIER: 1,
+        MULTIPLIER: decimal.Decimal(1),
         trading_enums.TradeOrderSide.BUY: DECREASING,
         trading_enums.TradeOrderSide.SELL: DECREASING
     },
     StrategyModes.BUY_SLOPE: {
-        MULTIPLIER: 1,
+        MULTIPLIER: decimal.Decimal(1),
         trading_enums.TradeOrderSide.BUY: DECREASING,
         trading_enums.TradeOrderSide.SELL: INCREASING
     },
     StrategyModes.SELL_SLOPE: {
-        MULTIPLIER: 1,
+        MULTIPLIER: decimal.Decimal(1),
         trading_enums.TradeOrderSide.BUY: INCREASING,
         trading_enums.TradeOrderSide.SELL: DECREASING
     }
@@ -83,8 +86,8 @@ StrategyModeMultipliersDetails = {
 @dataclasses.dataclass
 class OrderData:
     side: trading_enums.TradeOrderSide = None
-    quantity: float = 0
-    price: float = 0
+    quantity: decimal.Decimal = decimal.Decimal(0)
+    price: decimal.Decimal = decimal.Decimal(0)
     symbol: str = 0
     is_virtual: bool = True
 
@@ -199,23 +202,26 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
         created_order = None
         currency, market = symbol_util.split_symbol(order_data.symbol)
         try:
-            for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+            for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     order_data.quantity,
                     order_data.price,
                     symbol_market):
+                # last stage: use python native float representation to fill orders
+                float_quantity = float(order_quantity)
+                float_price = float(order_price)
                 selling = order_data.side == trading_enums.TradeOrderSide.SELL
                 if selling:
-                    if trading_api.get_portfolio_currency(self.exchange_manager, currency) < order_quantity:
+                    if trading_api.get_portfolio_currency(self.exchange_manager, currency) < float_quantity:
                         return []
-                elif trading_api.get_portfolio_currency(self.exchange_manager, market) < order_quantity * order_price:
+                elif trading_api.get_portfolio_currency(self.exchange_manager, market) < float_quantity * float_price:
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT
                 current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
                                                                             order_type=order_type,
                                                                             symbol=order_data.symbol,
-                                                                            current_price=current_price,
-                                                                            quantity=order_quantity,
-                                                                            price=order_price)
+                                                                            current_price=float(current_price),
+                                                                            quantity=float_quantity,
+                                                                            price=float_price)
                 created_order = await self.exchange_manager.trader.create_order(current_order)
         except trading_errors.MissingFunds as e:
             raise e
@@ -257,13 +263,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.symbol_market = None
         self.min_max_order_details = {}
         fees = trading_api.get_fees(exchange_manager, self.symbol)
-        self.max_fees = max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
-                            fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value])
+        self.max_fees = decimal.Decimal(str(max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
+                                                fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value]
+                                                )))
         self.flat_increment = None
         self.flat_spread = None
         self.current_price = None
         self.scheduled_health_check = None
-        self.sell_volume_per_order = self.buy_volume_per_order = self.starting_price = 0
+        self.sell_volume_per_order = self.buy_volume_per_order = self.starting_price = decimal.Decimal(0)
         self.mirror_orders_tasks = []
 
         self.healthy = False
@@ -319,18 +326,20 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.error(f"Invalid {self.ORDERS_DESC} orders strategy mode: {mode} for {self.symbol}"
                               f"supported modes are {[m.value for m in StrategyModes]}")
             raise e
-        self.spread = self.symbol_trading_config[self.trading_mode.CONFIG_SPREAD] / 100
-        self.increment = self.symbol_trading_config[self.trading_mode.CONFIG_INCREMENT_PERCENT] / 100
+        self.spread = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_SPREAD] / 100))
+        self.increment = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_INCREMENT_PERCENT] / 100))
         self.operational_depth = self.symbol_trading_config[self.trading_mode.CONFIG_OPERATIONAL_DEPTH]
-        self.lowest_buy = self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]
-        self.highest_sell = self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]
+        self.lowest_buy = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_LOWER_BOUND]))
+        self.highest_sell = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_UPPER_BOUND]))
         self.use_existing_orders_only = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_USE_EXISTING_ORDERS_ONLY,
             self.use_existing_orders_only)
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
-        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS, self.buy_funds)
-        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS, self.sell_funds)
+        self.buy_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS,
+                                                                            self.buy_funds)))
+        self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
+                                                                             self.sell_funds)))
         self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
                                                                self.reinvest_profits)
 
@@ -406,7 +415,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         await self.create_state(self._get_new_state_price(), ignore_mirror_orders_only, ignore_available_funds)
 
     def _get_new_state_price(self):
-        return self.current_price if self.starting_price == 0 else self.starting_price
+        return decimal.Decimal(str(self.current_price if self.starting_price == 0 else self.starting_price))
 
     async def create_state(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         if current_price is not None:
@@ -425,11 +434,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"self.flat_increment is unset.")
             return
         if self.flat_spread is None:
-            self.flat_spread = trading_personal_data.adapt_price(self.symbol_market,
-                                                                 self.spread * self.flat_increment / self.increment)
+            self.flat_spread = trading_personal_data.decimal_adapt_price(
+                self.symbol_market, self.spread * self.flat_increment / self.increment)
         price_increment = self.flat_spread - self.flat_increment
-        filled_price = filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
-        filled_volume = filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
+        filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
         price = filled_price + price_increment if now_selling else filled_price - price_increment
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
         new_order = OrderData(new_side, volume, price, self.symbol)
@@ -445,9 +454,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume):
         # use target volumes if set
-        if self.sell_volume_per_order != 0 and now_selling:
+        if self.sell_volume_per_order != decimal.Decimal(0) and now_selling:
             return self.sell_volume_per_order
-        if self.buy_volume_per_order != 0 and not now_selling:
+        if self.buy_volume_per_order != decimal.Decimal(0) and not now_selling:
             return self.buy_volume_per_order
         # otherwise: compute mirror volume
         new_order_quantity = filled_volume
@@ -538,14 +547,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _set_increment_and_spread(self, current_price, candidate_flat_increment=None):
         if self.flat_increment is None and candidate_flat_increment is not None:
-            self.flat_increment = candidate_flat_increment
+            self.flat_increment = decimal.Decimal(str(candidate_flat_increment))
         elif self.flat_increment is None:
-            self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, current_price * self.increment)
+            self.flat_increment = trading_personal_data.decimal_adapt_price(self.symbol_market,
+                                                                            current_price * self.increment)
         if self.flat_spread is None and self.flat_increment is not None:
-            self.flat_spread = trading_personal_data.adapt_price(self.symbol_market,
-                                                                 self.spread * self.flat_increment / self.increment)
+            self.flat_spread = trading_personal_data.decimal_adapt_price(self.symbol_market,
+                                                                         self.spread * self.flat_increment / self.increment)
 
-        self.flat_increment = trading_personal_data.adapt_price(self.symbol_market, self.flat_increment)
+        self.flat_increment = trading_personal_data.decimal_adapt_price(self.symbol_market, self.flat_increment)
 
     def _get_interfering_orders_pairs(self, orders):
         # Not a problem if allowed funds are set
@@ -589,8 +599,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         currency, market = symbol_util.split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
 
-        order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager,
-                                                                            order_limiting_currency)
+        order_limiting_currency_amount = decimal.Decimal(str(trading_api.get_portfolio_currency(
+            self.exchange_manager, order_limiting_currency)))
         if state == self.NEW:
             # create staggered orders
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
@@ -601,7 +611,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             if funds_to_use == 0:
                 return []
             starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
-            self.flat_spread = trading_personal_data.adapt_price(self.symbol_market, current_price * self.spread)
+            self.flat_spread = trading_personal_data.decimal_adapt_price(self.symbol_market,
+                                                                         current_price * self.spread)
             self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
                                     funds_to_use, order_limiting_currency, starting_bound, side,
                                     True, self.mode, order_limiting_currency_amount)
@@ -624,11 +635,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                             else:
                                 previous_o = o
                         if previous_o.side == following_o.side:
+                            decimal_missing_order_price = decimal.Decimal(str(missing_order_price))
                             # missing order between similar orders
                             quantity = min(data_util.mean([previous_o.origin_quantity, following_o.origin_quantity]),
-                                           max_quant_per_order / missing_order_price)
-                            orders.append(OrderData(missing_order_side, quantity,
-                                                    missing_order_price, self.symbol, False))
+                                           max_quant_per_order / decimal_missing_order_price)
+                            orders.append(OrderData(missing_order_side, decimal.Decimal(str(quantity)),
+                                                    decimal_missing_order_price, self.symbol, False))
                             self.logger.debug(f"Creating missing orders not around spread: {orders[-1]} "
                                               f"for {self.symbol}")
                         else:
@@ -640,9 +652,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     increment_window = self.flat_increment / 2
                     order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager,
                                                                                                   order_limiting_currency)
-                    portfolio_total = trading_api.get_portfolio_currency(self.exchange_manager,
-                                                                         order_limiting_currency,
-                                                                         portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+                    portfolio_total = decimal.Decimal(str(
+                        trading_api.get_portfolio_currency(self.exchange_manager,
+                                                           order_limiting_currency,
+                                                           portfolio_type=commons_constants.PORTFOLIO_TOTAL)))
                     order_limiting_currency_amount = portfolio_total
                     if order_limiting_currency_available_amount:
                         orders_count, average_order_quantity = \
@@ -662,15 +675,16 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                 limiting_currency_quantity = quantity if selling else quantity / price
                                 if price is not None and limiting_amount_from_this_order > 0 and \
                                         price - increment_window <= missing_order_price <= price + increment_window:
-
+                                    decimal_order_limiting_currency_available_amount = \
+                                        decimal.Decimal(str(order_limiting_currency_available_amount))
                                     if limiting_currency_quantity > limiting_amount_from_this_order or \
-                                            limiting_currency_quantity > order_limiting_currency_available_amount:
+                                            limiting_currency_quantity > decimal_order_limiting_currency_available_amount:
                                         limiting_currency_quantity = min(limiting_amount_from_this_order,
-                                                                         order_limiting_currency_available_amount)
+                                                                         decimal_order_limiting_currency_available_amount)
                                     found_order = True
                                     if limiting_currency_quantity is not None:
-                                        orders.append(OrderData(side, limiting_currency_quantity, price,
-                                                                self.symbol, False))
+                                        orders.append(OrderData(side, decimal.Decimal(str(limiting_currency_quantity)),
+                                                                decimal.Decimal(str(price)), self.symbol, False))
                                         self.logger.debug(f"Creating missing order around spread {orders[-1]} "
                                                           f"for {self.symbol}")
                                 price = price - self.flat_increment if selling else price + self.flat_increment
@@ -735,6 +749,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 self._set_initially_available_funds(order_limiting_currency, total_available_funds)
 
     def _bootstrap_parameters(self, sorted_orders, recently_closed_trades):
+        # no decimal.Decimal computation here
         mode = None
         spread = None
         increment = None
@@ -780,7 +795,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                         f"is None.")
                                     return None, self.ERROR, None
                                 else:
-                                    inferred_spread = self.flat_spread or self.spread * increment / self.increment
+                                    inferred_spread = float(self.flat_spread) or \
+                                                      float(self.spread) * increment / float(self.increment)
                                     missing_orders_count = (delta_spread - inferred_spread) / increment
                                     if missing_orders_count > 1 * 1.2:
                                         # missing orders around spread point: symmetrical orders were not created when
@@ -825,7 +841,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                  f"is out of range.")
                                 return None, self.ERROR, None
                     if increment is None:
-                        increment = self.flat_increment or order.origin_price - previous_order.origin_price
+                        increment = float(self.flat_increment) or order.origin_price - previous_order.origin_price
                         if increment <= 0:
                             self.logger.warning(f"Error when analyzing orders for {self.symbol}: increment <= 0.")
                             return None, self.ERROR, None
@@ -881,7 +897,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if self.flat_increment is None:
             return len(recently_closed_trades)
         else:
-            inc = self.flat_spread * 1.5
+            inc = float(self.flat_spread * decimal.Decimal("1.5"))
             for trade in recently_closed_trades:
                 if trade.origin_price - inc <= price <= trade.origin_price + inc:
                     return True
@@ -948,8 +964,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)
 
     def _use_variable_orders_volume(self, side):
-        return (self.sell_volume_per_order == 0 and side is trading_enums.TradeOrderSide.SELL) \
-               or self.buy_volume_per_order == 0
+        return (self.sell_volume_per_order == decimal.Decimal(0) and side is trading_enums.TradeOrderSide.SELL) \
+               or self.buy_volume_per_order == decimal.Decimal(0)
 
     def _get_orders_count_from_fixed_volume(self, selling, current_price, holdings, orders_count):
         volume_in_currency = self.sell_volume_per_order if selling else current_price * self.buy_volume_per_order
@@ -967,7 +983,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                self.min_max_order_details[self.min_cost] / current_price)
             if min_order_quantity < min_quantity:
                 # 1.01 to account for order creation rounding
-                if holdings_in_quote < average_order_quantity * 1.01:
+                if holdings_in_quote < average_order_quantity * ONE_PERCENT_DECIMAL:
                     return 0, 0
                 elif self.limit_orders_count_if_necessary:
                     self.logger.warning(f"Not enough funds to create every {self.symbol} {self.ORDERS_DESC} "
@@ -1021,13 +1037,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 multiplier_price_ratio = 0
             if price <= 0:
                 return None
-            quantity_with_delta = (min_quantity + (delta * multiplier_price_ratio))
+            quantity_with_delta = (min_quantity +
+                                   (decimal.Decimal(str(delta)) * decimal.Decimal(str(multiplier_price_ratio))))
             # when self.quote_volume_per_order is set, keep the same volume everywhere
-            quantity = quantity_with_delta * (starting_bound / price if self._use_variable_orders_volume(side) else 1)
+            quantity = quantity_with_delta * (starting_bound / price if self._use_variable_orders_volume(side)
+                                              else decimal.Decimal(1))
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1 and self._use_variable_orders_volume(side):
-            quantity = quantity * 0.999
+            quantity = quantity * decimal.Decimal("0.999")
 
         if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:
             return None
@@ -1053,7 +1071,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     def _get_average_quantity_from_exchange_minimal_requirements(exchange_min, mode):
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
         # add 1% to prevent rounding issues
-        return exchange_min / (1 - mode_multiplier / 2) * 1.01
+        return exchange_min / (1 - mode_multiplier / 2) * ONE_PERCENT_DECIMAL
 
     @staticmethod
     def _get_min_max_quantity(average_order_quantity, mode):
@@ -1086,14 +1104,20 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                               volume)
 
     def _refresh_symbol_data(self, symbol_market):
-        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = trading_personal_data.get_min_max_amounts(
-            symbol_market)
-        self.min_max_order_details[self.min_quantity] = min_quantity
-        self.min_max_order_details[self.max_quantity] = max_quantity
-        self.min_max_order_details[self.min_cost] = min_cost
-        self.min_max_order_details[self.max_cost] = max_cost
-        self.min_max_order_details[self.min_price] = min_price
-        self.min_max_order_details[self.max_price] = max_price
+        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
+            trading_personal_data.get_min_max_amounts(symbol_market)
+        self.min_max_order_details[self.min_quantity] = None if min_quantity is None \
+            else decimal.Decimal(str(min_quantity))
+        self.min_max_order_details[self.max_quantity] = None if max_quantity is None \
+            else decimal.Decimal(str(max_quantity))
+        self.min_max_order_details[self.min_cost] = None if min_cost is None \
+            else decimal.Decimal(str(min_cost))
+        self.min_max_order_details[self.max_cost] = None if max_cost is None \
+            else decimal.Decimal(str(max_cost))
+        self.min_max_order_details[self.min_price] = None if min_price is None \
+            else decimal.Decimal(str(min_price))
+        self.min_max_order_details[self.max_price] = None if max_price is None \
+            else decimal.Decimal(str(max_price))
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):

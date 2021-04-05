@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import dataclasses
+import decimal
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
@@ -27,10 +28,10 @@ import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass
 class AllowedPriceRange:
-    lower_bound: float = 0
-    higher_bound: float = 0
+    lower_bound: decimal.Decimal = decimal.Decimal(0)
+    higher_bound: decimal.Decimal = decimal.Decimal(0)
 
 
 class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
@@ -126,18 +127,22 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
     def read_config(self):
         self.mode = staggered_orders_trading.StrategyModes.FLAT
-        self.flat_spread = self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_SPREAD]
-        self.flat_increment = self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]
+        # init decimals from str to remove native float rounding
+        self.flat_spread = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_SPREAD]))
+        self.flat_increment = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]))
+        # decimal.Decimal operations are supporting int values, no need to convert these into decimal.Decimal
         self.buy_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_BUY_ORDERS_COUNT]
         self.sell_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_SELL_ORDERS_COUNT]
-        self.buy_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS, self.buy_funds)
-        self.sell_funds = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS, self.sell_funds)
-        self.starting_price = self.symbol_trading_config.get(self.trading_mode.CONFIG_STARTING_PRICE,
-                                                             self.starting_price)
-        self.sell_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_VOLUME_PER_ORDER,
-                                                                    self.sell_volume_per_order)
-        self.buy_volume_per_order = self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_VOLUME_PER_ORDER,
-                                                                   self.buy_volume_per_order)
+        self.buy_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS,
+                                                                            self.buy_funds)))
+        self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
+                                                                             self.sell_funds)))
+        self.starting_price = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_STARTING_PRICE,
+                                                                                 self.starting_price)))
+        self.sell_volume_per_order = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_VOLUME_PER_ORDER,
+                                                                                        self.sell_volume_per_order)))
+        self.buy_volume_per_order = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_VOLUME_PER_ORDER,
+                                                                                       self.buy_volume_per_order)))
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
         self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
@@ -220,8 +225,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         currency, market = symbol_util.split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
 
-        order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager,
-                                                                            order_limiting_currency)
+        order_limiting_currency_amount = decimal.Decimal(str(
+            trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency)))
         if state == self.NEW:
             # create grid orders
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
