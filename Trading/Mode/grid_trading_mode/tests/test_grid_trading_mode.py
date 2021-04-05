@@ -16,6 +16,7 @@
 import pytest
 import os.path
 import asyncio
+import decimal
 
 import async_channel.util as channel_util
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -87,8 +88,8 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
 
     mode, producer = await _init_trading_mode(config, exchange_manager, symbol)
 
-    producer.flat_spread = 10
-    producer.flat_increment = 5
+    producer.flat_spread = decimal.Decimal(10)
+    producer.flat_increment = decimal.Decimal(5)
     producer.buy_orders_count = 25
     producer.sell_orders_count = 25
 
@@ -120,8 +121,8 @@ async def test_init_allowed_price_ranges():
         producer, _, exchange_manager = await _get_tools(symbol)
         producer.sell_price_range = grid_trading.AllowedPriceRange()
         producer.buy_price_range = grid_trading.AllowedPriceRange()
-        producer.flat_spread = 12
-        producer.flat_increment = 5
+        producer.flat_spread = decimal.Decimal(12)
+        producer.flat_increment = decimal.Decimal(5)
         producer.sell_orders_count = 20
         producer.buy_orders_count = 5
         producer._init_allowed_price_ranges(100)
@@ -140,8 +141,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer.sell_funds = 0.00006  # 5 orders
-        producer.buy_funds = 0.5  # 12 orders
+        producer.sell_funds = decimal.Decimal("0.00006")  # 5 orders
+        producer.buy_funds = decimal.Decimal("0.5")  # 12 orders
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -152,8 +153,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         used_btc = 10 - btc_available_funds
         used_usd = 1000 - usd_available_funds
 
-        assert used_usd >= producer.buy_funds * 0.99
-        assert used_btc >= producer.sell_funds * 0.99
+        assert used_usd >= producer.buy_funds * decimal.Decimal(0.99)
+        assert used_btc >= producer.sell_funds * decimal.Decimal(0.99)
 
         # btc_available_funds for reduced because orders are not created
         assert 10 - 0.001 <= btc_available_funds < 10
@@ -191,8 +192,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer.buy_funds = 0.07  # 1 order
-        producer.sell_funds = 0.000025  # 2 orders
+        producer.buy_funds = decimal.Decimal("0.07")  # 1 order
+        producer.sell_funds = decimal.Decimal("0.000025")  # 2 orders
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -203,8 +204,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
         used_btc = 10 - btc_available_funds
         used_usd = 1000 - usd_available_funds
 
-        assert used_usd >= producer.buy_funds * 0.99
-        assert used_btc >= producer.sell_funds * 0.99
+        assert used_usd >= producer.buy_funds * decimal.Decimal(0.99)
+        assert used_btc >= producer.sell_funds * decimal.Decimal(0.99)
 
         # btc_available_funds for reduced because orders are not created
         assert 10 - 0.001 <= btc_available_funds < 10
@@ -242,8 +243,8 @@ async def test_create_orders_with_fixed_volume_per_order():
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
 
-        producer.buy_volume_per_order = 0.1
-        producer.sell_volume_per_order = 0.3
+        producer.buy_volume_per_order = decimal.Decimal("0.1")
+        producer.sell_volume_per_order = decimal.Decimal("0.3")
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -261,8 +262,8 @@ async def test_create_orders_with_fixed_volume_per_order():
         assert created_sell_orders[0].origin_price == 4005
         assert created_sell_orders[1].origin_price == 4010
         assert created_sell_orders[0] is created_orders[0]
-        assert all(o.origin_quantity == producer.buy_volume_per_order for o in created_buy_orders)
-        assert all(o.origin_quantity == producer.sell_volume_per_order for o in created_sell_orders)
+        assert all(o.origin_quantity == float(producer.buy_volume_per_order) for o in created_buy_orders)
+        assert all(o.origin_quantity == float(producer.sell_volume_per_order) for o in created_sell_orders)
     finally:
         await _stop(exchange_manager)
 
