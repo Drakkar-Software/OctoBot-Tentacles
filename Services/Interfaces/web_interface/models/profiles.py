@@ -96,3 +96,7 @@ def export_profile(profile_id, export_path) -> str:
 def import_profile(profile_path, name):
     profiles.import_profile(profile_path, name=name)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
+
+
+def get_profile_name(profile_id) -> str:
+    return interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id].name
