@@ -30,6 +30,7 @@ jobs:
       env:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
+        DISABLE_SENTRY: True
       run: |
         git clone -q $OCTOBOT_GH_REPO -b ${GITHUB_REF##*/} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
         cd OctoBot
@@ -47,6 +48,7 @@ jobs:
       env:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
+        DISABLE_SENTRY: True
       run: |
         If ($env:GITHUB_REF -notcontains "refs/tags/") {
           $env:TENTACLES_URL_TAG = "latest"
@@ -81,11 +83,14 @@ jobs:
       if: matrix.type == 'cython'
       env:
         CYTHON_IGNORE: True
+        DISABLE_SENTRY: True
       run: |
         cd OctoBot
         pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles
 
     - name: Pytests
+      env:
+        DISABLE_SENTRY: True
       if: matrix.type != 'cython'
       run: |
         cd OctoBot
