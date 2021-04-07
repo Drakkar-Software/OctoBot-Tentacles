@@ -59,3 +59,60 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
+
+class CHOPVolatilityEvaluator(evaluators.TAEvaluator):
+    CHOP_PERIOD = 14
+    CHOP_THRESHOLD = 45
+    RSI_UP_THRESHOLD = 70
+    RSI_DOWN_THRESHOLD = 45
+    RSI_PERIOD = 14
+
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.period = self.CHOP_PERIOD
+        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        close_candle_data = trading_api.get_symbol_close_candles(
+            self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame)
+        high_candle_data = trading_api.get_symbol_high_candles(
+            self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame)
+        low_candle_data = trading_api.get_symbol_low_candles(
+            self.get_exchange_symbol_data(exchange, exchange_id, symbol), time_frame)
+        await self.evaluate(cryptocurrency, symbol, time_frame,
+                            candle_data=(close_candle_data, high_candle_data, low_candle_data),
+                            candle=candle)
+
+    def _get_chop_index(self, atr_values, close_candle_data, high_candle_data, low_candle_data):
+        chop_values = []
+        for i in range(len(close_candle_data)):
+            if i > self.period * 2:
+                nmrt = np.log10(np.sum(atr_values[i - self.period:i]) /
+                                (max(high_candle_data[i - self.period:i]) - min(low_candle_data[i - self.period:i])))
+                dnmnt = np.log10(self.period)
+                chop_values.append(round(100 * nmrt / dnmnt))
+        return chop_values
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
+        try:
+            close_candle_data, high_candle_data, low_candle_data = candle_data
+            if len(close_candle_data) >= self.period * 2:
+                atr_values = tulipy.atr(high_candle_data, low_candle_data, close_candle_data, self.period)
+                chop_values = self._get_chop_index(atr_values, close_candle_data, high_candle_data, low_candle_data)
+                if chop_values:
+                    rsi_values = tulipy.rsi(close_candle_data, period=self.RSI_PERIOD)
+                    last_chop_value = chop_values[-1]
+                    last_rsi_value = rsi_values[-1]
+                    if last_chop_value < self.CHOP_THRESHOLD:
+                        if last_rsi_value > self.RSI_UP_THRESHOLD:
+                            self.eval_note = 1
+                        elif last_rsi_value < self.RSI_DOWN_THRESHOLD:
+                            self.eval_note = -1
+        except tulipy.lib.InvalidOptionError as e:
+            self.logger.debug(f"Error when computing Chop: {e}")
+            self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                time_frame=time_frame))
+
