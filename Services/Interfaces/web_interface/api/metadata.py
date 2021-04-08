@@ -30,7 +30,7 @@ def version():
 @api.api.route("/upgrade_version")
 def upgrade_version():
     async def fetch_upgrade_version():
-        updater = octobot_api.updater.get_updater()
+        updater = octobot_api.get_updater()
         return await updater.get_latest_version() if await updater.should_be_updated() else None
 
     return json.dumps(interfaces.run_in_bot_async_executor(fetch_upgrade_version()))
