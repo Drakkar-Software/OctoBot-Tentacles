@@ -44,7 +44,7 @@ class WebHookService(services.AbstractService):
 
     def __init__(self):
         super().__init__()
-        self.ngrok_public_url = ""
+        self.ngrok_tunnel = None
         self.webhook_public_url = ""
 
         self.service_feed_webhooks = {}
@@ -177,8 +177,8 @@ class WebHookService(services.AbstractService):
         try:
             self._prepare_webhook_server()
             self._load_webhook_routes()
-            self.ngrok_public_url = self.connect(self.webhook_port, protocol="http")
-            self.webhook_public_url = f"{self.ngrok_public_url}/webhook"
+            self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
+            self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
             if self.webhook_server:
                 self.connected = True
                 self.webhook_server.serve_forever()
