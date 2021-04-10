@@ -112,11 +112,13 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
         self.channels_config = self.tentacle_config.get(self.CONFIG_CHANNELS_KEY, {})
 
     async def _feed_callback(self, data):
-        is_from_channel = data[services_constants.CONFIG_IS_CHANNEL_MESSAGE]
+        if not data:
+            return
+        is_from_channel = data.get(services_constants.CONFIG_IS_CHANNEL_MESSAGE, False)
         if is_from_channel:
-            sender = data[services_constants.CONFIG_MESSAGE_SENDER]
+            sender = data.get(services_constants.CONFIG_MESSAGE_SENDER, "")
             if sender in self.channels_config.keys():
-                message = data[services_constants.CONFIG_MESSAGE_CONTENT]
+                message = data.get(services_constants.CONFIG_MESSAGE_CONTENT, "")
                 channel_data = self.channels_config[sender]
                 signal = self._get_signal_message(channel_data[self.SIGNAL_PATTERN_KEY], message)
                 if signal is not None:

@@ -1,1 +1,1 @@
-from .signal import TelegramSignalEvaluator, PumpAndDumpSignalEvaluator
+from .signal import TelegramSignalEvaluator, TelegramChannelSignalEvaluator
