@@ -2,10 +2,14 @@ name: OctoBot-Tentacles-CI
 on:
   push:
     branches:
-      - '*'
+      - "master"
+      - "dev"
     tags:
-      - '*'
+      - "*"
   pull_request:
+    branches:
+      - "!master"   # excludes master
+      - "!dev"      # excludes dev
 
 jobs:
   tests:
