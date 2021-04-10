@@ -20,6 +20,7 @@ import octobot_commons.symbol_util as symbol_util
 import octobot_services.constants as services_constants
 import octobot_evaluators.evaluators as evaluators
 import tentacles.Services.Services_feeds as Services_feeds
+import octobot_tentacles_manager.api.configurator as tentacles_manager_api
 
 
 class TelegramSignalEvaluator(evaluators.SocialEvaluator):
@@ -101,22 +102,22 @@ class TelegramSignalEvaluator(evaluators.SocialEvaluator):
 class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
     SERVICE_FEED_CLASS = Services_feeds.TelegramApiServiceFeed
 
+    CONFIG_CHANNELS_KEY = "channels"
     SIGNAL_PATTERN_KEY = "signal_pattern"
     SIGNAL_MARKET_KEY = "signal_market"
 
-    SUPPORTED_TELEGRAM_CHANNEL = {
-        "WallStreetBets Events 🛸": {
-            SIGNAL_PATTERN_KEY: r"The coin we have picked to pump today is :  #(.*)",
-            SIGNAL_MARKET_KEY: "BTC"}
-    }
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.tentacle_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
+        self.channels_config = self.tentacle_config.get(self.CONFIG_CHANNELS_KEY, {})
 
     async def _feed_callback(self, data):
         is_from_channel = data[services_constants.CONFIG_IS_CHANNEL_MESSAGE]
         if is_from_channel:
             sender = data[services_constants.CONFIG_MESSAGE_SENDER]
-            if sender in self.SUPPORTED_TELEGRAM_CHANNEL.keys():
+            if sender in self.channels_config.keys():
                 message = data[services_constants.CONFIG_MESSAGE_CONTENT]
-                channel_data = self.SUPPORTED_TELEGRAM_CHANNEL[sender]
+                channel_data = self.channels_config[sender]
                 signal = self._get_signal_message(channel_data[self.SIGNAL_PATTERN_KEY], message)
                 if signal is not None:
                     self.eval_note = -1

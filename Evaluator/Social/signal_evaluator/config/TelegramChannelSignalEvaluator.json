@@ -1,0 +1,8 @@
+{
+  "channels": {
+    "WallStreetBets Events 🛸": {
+      "signal_pattern": "The coin we have picked to pump today is :  #(.*)",
+      "signal_market": "BTC"
+    }
+  }
+}
