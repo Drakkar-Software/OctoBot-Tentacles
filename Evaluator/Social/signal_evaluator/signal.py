@@ -13,7 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import re
+
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbol_util as symbol_util
 import octobot_services.constants as services_constants
 import octobot_evaluators.evaluators as evaluators
 import tentacles.Services.Services_feeds as Services_feeds
@@ -93,3 +96,43 @@ class TelegramSignalEvaluator(evaluators.SocialEvaluator):
                 symbols += currency_symbols
         # by default no time frame registration for social evaluators
         return currencies, symbols, to_handle_time_frames
+
+
+class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
+    SERVICE_FEED_CLASS = Services_feeds.TelegramApiServiceFeed
+
+    SIGNAL_PATTERN_KEY = "signal_pattern"
+    SIGNAL_MARKET_KEY = "signal_market"
+
+    SUPPORTED_TELEGRAM_CHANNEL = {
+        "WallStreetBets Events 🛸": {
+            SIGNAL_PATTERN_KEY: r"The coin we have picked to pump today is :  #(.*)",
+            SIGNAL_MARKET_KEY: "BTC"}
+    }
+
+    async def _feed_callback(self, data):
+        is_from_channel = data[services_constants.CONFIG_IS_CHANNEL_MESSAGE]
+        if is_from_channel:
+            sender = data[services_constants.CONFIG_MESSAGE_SENDER]
+            if sender in self.SUPPORTED_TELEGRAM_CHANNEL.keys():
+                message = data[services_constants.CONFIG_MESSAGE_CONTENT]
+                channel_data = self.SUPPORTED_TELEGRAM_CHANNEL[sender]
+                signal = self._get_signal_message(channel_data[self.SIGNAL_PATTERN_KEY], message)
+                if signal is not None:
+                    self.eval_note = -1
+                    await self.evaluation_completed(signal,
+                                                    symbol_util.merge_currencies(signal,
+                                                                                 channel_data[self.SIGNAL_MARKET_KEY]),
+                                                    eval_time=self.get_current_exchange_time())
+            else:
+                self.logger.debug(f"Ignored message : from an unsupported channel ({sender})")
+        else:
+            self.logger.debug("Ignored message : not a channel message")
+
+    def _get_signal_message(self, expected_pattern, message):
+        try:
+            match = re.search(expected_pattern, message)
+            return match.group(1)
+        except AttributeError:
+            self.logger.debug(f"Ignored message : not matching channel pattern ({message})")
+        return None
