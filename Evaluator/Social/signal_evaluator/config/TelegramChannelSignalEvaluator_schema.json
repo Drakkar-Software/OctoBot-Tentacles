@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "title": "TelegramSignalEvaluator",
+  "additionalProperties" : {
+        "type" : "object",
+        "required" : [
+            "signal_pattern",
+            "signal_market"
+        ],
+        "properties" : {
+            "signal_pattern" : {
+                "type" : "string"
+            },
+            "signal_market" : {
+                "type" : "string"
+            }
+        }
+    }
+}
