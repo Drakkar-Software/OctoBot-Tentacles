@@ -32,7 +32,7 @@ class TelegramApiService(services.AbstractService):
     def __init__(self):
         super().__init__()
         self.telegram_client: telethon.TelegramClient = None
-        self.me = None
+        self.user_account = None
         self.connected = False
 
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
@@ -59,8 +59,8 @@ class TelegramApiService(services.AbstractService):
         return [services_constants.CONFIG_API, services_constants.CONFIG_API_HASH]
 
     def get_read_only_info(self):
-        return {f"Connected as {self.me.username}": f"https://telegram.me/{self.me.username}"} \
-            if self.connected and self.me else {}
+        return {f"Connected as {self.user_account.username}": f"https://telegram.me/{self.user_account.username}"} \
+            if self.connected and self.user_account else {}
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -89,7 +89,7 @@ class TelegramApiService(services.AbstractService):
                     self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM_API]
                     [services_constants.CONFIG_TELEGRAM_PHONE]
                 )
-                self.me = await self.telegram_client.get_me()
+                self.user_account = await self.telegram_client.get_me()
                 self.connected = True
             except Exception as e:
                 self.logger.error(f"Failed to connect to Telegram Api : {e}")
@@ -126,13 +126,13 @@ class TelegramApiService(services.AbstractService):
             self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM_API]) \
                and self.get_is_enabled(self.config)
 
-    async def send_message(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
+    async def send_message_as_user(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
         kwargs = {}
         if markdown:
             kwargs[services_constants.MESSAGE_PARSE_MODE] = telegram.parsemode.ParseMode.MARKDOWN
         try:
             if content:
-                return await self.telegram_client.send_message(entity=self.me.username,
+                return await self.telegram_client.send_message(entity=self.user_account.username,
                                                                message=content,
                                                                reply_to=reply_to_message_id, **kwargs)
         except Exception as e:
@@ -141,7 +141,7 @@ class TelegramApiService(services.AbstractService):
 
     def get_successful_startup_message(self):
         try:
-            return f"Successfully connected to {self.me.username} account.", True
+            return f"Successfully connected to {self.user_account.username} account.", True
         except Exception as e:
             self.logger.error(f"Error when connecting to Telegram API ({e}): invalid telegram configuration.")
             return "", False
