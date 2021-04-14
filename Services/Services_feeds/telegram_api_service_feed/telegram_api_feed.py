@@ -13,8 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import asyncio
-
 import telethon
 
 import octobot_services.channel as services_channel
@@ -47,13 +45,18 @@ class TelegramApiServiceFeed(service_feeds.AbstractServiceFeed):
         try:
             display_name = self.get_display_name(await event.get_sender())
             if self.feed_config[services_constants.CONFIG_TELEGRAM_ALL_CHANNEL]:
+                media_output_path = None
+                if event.message.media is not None:
+                    media_output_path = await self.services[0].download_media_from_message(message=event.message,
+                                                                                           source=display_name)
                 await self.feed_send_coroutine(
                     {
                         services_constants.CONFIG_MESSAGE_SENDER: display_name,
                         services_constants.CONFIG_MESSAGE_CONTENT: event.text,
                         services_constants.CONFIG_IS_GROUP_MESSAGE: event.is_group,
                         services_constants.CONFIG_IS_CHANNEL_MESSAGE: event.is_channel,
-                        services_constants.CONFIG_IS_PRIVATE_MESSAGE: event.is_private
+                        services_constants.CONFIG_IS_PRIVATE_MESSAGE: event.is_private,
+                        services_constants.CONFIG_MEDIA_PATH: media_output_path,
                     }
                 )
             else:
