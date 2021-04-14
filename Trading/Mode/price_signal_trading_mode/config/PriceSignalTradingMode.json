@@ -1,0 +1,12 @@
+{
+    "default_config": [
+        "SimpleStrategyEvaluator"
+    ],
+    "required_strategies": [
+        "SimpleStrategyEvaluator",
+        "ArtsEvaluator"
+    ],
+    "required_strategies_min_count": 1,
+    "sell_with_maximum_size_orders": false,
+    "buy_with_maximum_size_orders": false
+}
