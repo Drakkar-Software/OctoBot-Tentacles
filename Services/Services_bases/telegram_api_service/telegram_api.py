@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import logging
+import os
 
 import octobot_commons.constants as common_constants
 import octobot_commons.logging as bot_logging
@@ -23,18 +24,22 @@ import telethon
 import octobot.constants as constants
 import octobot_services.constants as services_constants
 import octobot_services.services as services
+import octobot_tentacles_manager.api as tentacles_manager_api
 
 
 class TelegramApiService(services.AbstractService):
     LOGGERS = ["TelegramApiService.client.updates", "TelegramApiService.extensions.messagepacker",
-               "TelegramApiService.network.mtprotosender", "telethon.crypto.aes", "telethon.crypto.aesctr"]
+               "TelegramApiService.network.mtprotosender", "TelegramApiService.client.downloads",
+               "telethon.crypto.aes", "telethon.crypto.aesctr"]
+
+    DOWNLOADS_FOLDER = "Downloads"
 
     def __init__(self):
         super().__init__()
         self.telegram_client: telethon.TelegramClient = None
         self.user_account = None
         self.connected = False
-
+        self.tentacle_resources_path = tentacles_manager_api.get_tentacle_resources_path(self.__class__)
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
 
     def get_fields_description(self):
@@ -138,6 +143,13 @@ class TelegramApiService(services.AbstractService):
         except Exception as e:
             self.logger.error(f"Failed to send message : {e}")
         return None
+
+    async def download_media_from_message(self, message, source=""):
+        downloads_folder = os.path.join(self.tentacle_resources_path, self.DOWNLOADS_FOLDER, source)
+        if not os.path.exists(downloads_folder):
+            os.makedirs(downloads_folder)
+        await self.telegram_client.download_media(message=message, file=downloads_folder)
+        return downloads_folder
 
     def get_successful_startup_message(self):
         try:
