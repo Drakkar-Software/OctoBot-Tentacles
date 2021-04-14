@@ -379,6 +379,10 @@ a:hover.badge {
     color: #4B515D;
 }
 
+.interface-screen {
+    filter: brightness(80%);
+}
+
 .editable-input,
 .editable-submit,
 .editable-cancel {
