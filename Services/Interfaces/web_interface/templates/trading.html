@@ -50,7 +50,7 @@
         <div class="card-body">
             <br>
             <div class="card-deck">
-                {% for pair, status in pairs_with_status.items() %}
+                {% for pair, status in pairs_with_status.items() | sort(attribute='0') %}
                     {{ m_cards.pair_status_card(pair, status, watched_symbols) }}
                 {% endfor %}
 
