@@ -101,7 +101,8 @@ class GoogleServiceFeed(service_feeds.AbstractServiceFeed):
                 try:
                     await self._push_update_and_wait()
                 except simplifiedpytrends.exceptions.ResponseError as e:
-                    self.logger.exception(e, True, f"Error when fetching Google trends feed: {e}")
+                    self.logger.exception(e, True, f"Error when fetching Google trends feed: {e} "
+                                                   f"(response text: {await e.response.text()})")
                     self.should_stop = True
                 except Exception as e:
                     self.logger.exception(e, True, f"Error when receiving Google feed: ({e})")
