@@ -245,7 +245,8 @@ def config_tentacle():
                                          activated_trading_mode=models.get_config_activated_trading_mode(),
                                          data_files=models.get_data_files_with_description(),
                                          missing_tentacles=missing_tentacles,
-                                         user_commands=tentacle_commands
+                                         user_commands=tentacle_commands,
+                                         current_profile=models.get_current_profile()
                                          )
         else:
             return flask.render_template('config_tentacle.html')
