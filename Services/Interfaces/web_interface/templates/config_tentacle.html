@@ -96,7 +96,8 @@
     </div>
     {% endif %}
     <br>
-    {% if (tentacle_type == "trading mode" and tentacle_desc['requirements']|length > 1) or tentacle_desc['requirements'] == ["*"] %}
+    {% if not current_profile.read_only and
+        ((tentacle_type == "trading mode" and tentacle_desc['requirements']|length > 1) or tentacle_desc['requirements'] == ["*"]) %}
             {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
         <div class="card" id="super-container">
             <div class="card-header">
