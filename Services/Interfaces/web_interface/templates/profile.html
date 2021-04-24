@@ -170,37 +170,14 @@
                         <div class="card-header">
                             <h2>
                                 Profile strategy configuration
+                                <a href={{ url_for('profile') }} class="badge badge-dark waves-effect align-top">read only</a>
                                 <a class="float-right blue-text" target="_blank" rel="noopener"
                                    href="{{OCTOBOT_WEBSITE_URL}}/guides/#trading_modes">
                                     <i class="fa fa-question"></i>
                                 </a>
                             </h2>
                         </div>
-                        <div class="card-body">
-                            <span class="m-2"> The profile strategy configuration is composed by : </span>
-                            <div class="row">
-                              <div class="col">
-                                <div class="card mb-4 border-primary">
-                                    <div class="card-header">
-                                        <h4>Trading modes</h4>
-                                    </div>
-                                    <div class="card-body">
-                                    Trading modes use the strategy(ies) evaluations to create, update or cancel orders. Using the strategies signals, they are responsible for the way to translate a signal into an order.
-                                    </div>
-                                </div>
-                              </div>
-                                <div class="col">
-                                    <div class="card mb-4 border-warning">
-                                        <div class="card-header">
-                                            <h4>Strategies</h4>
-                                        </div>
-                                        <div class="card-body">
-                                         Strategies aggregate technical, social and real time analysis provided by evaluators to create an input signal for trading modes.<br>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <hr>
+                        <div class="card-body mt-0 pt-2 mb-0 pb-0">
                             {% for trading_mode_name, info in trading_modes %}
                                 {% if info['activation'] %}
                                     <div class="card mb-4 border-primary">
@@ -208,12 +185,20 @@
                                             <h4>
                                                 {{ trading_mode_name }}
                                                 <a href="{{ url_for('config_tentacle', name=(trading_mode_name)) }}"
-                                                   class="btn btn-primary waves-effect" role="button">Configure</a>
+                                                   class="align-top" role="button"><i class="fa fa-cog"></i></a>
                                             </h4>
                                         </div>
 
-                                        <div class="card-body">
-                                            {{ m_tentacles.tentacle_horizontal_description(info, tentacle_type=="strategy") }}
+                                        <div class="card-body pb-0">
+                                            <div class="row">
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                <div class="col">
+                                                    <div class="alert alert-info" role="alert">
+                                                        <h4 class="alert-heading">Trading modes</h4>
+                                                        Trading modes are responsible for creating, updating or cancelling orders. They can use strategy(ies) to receive signals and create orders accordingly.
+                                                    </div>
+                                                  </div>
+                                            </div>
                                         </div>
                                     </div>
                                 {% endif %}
@@ -226,12 +211,20 @@
                                             <h4>
                                                 {{ evaluator_name }}
                                                 <a href="{{ url_for('config_tentacle', name=(evaluator_name)) }}"
-                                                   class="btn btn-primary waves-effect" role="button">Configure</a>
+                                                   class="align-top" role="button"><i class="fa fa-cog"></i></a>
                                             </h4>
                                         </div>
 
-                                        <div class="card-body">
-                                            {{ m_tentacles.tentacle_horizontal_description(info, tentacle_type=="strategy") }}
+                                        <div class="card-body pb-0">
+                                            <div class="row">
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                <div class="col">
+                                                    <div class="alert alert-info" role="alert">
+                                                        <h4 class="alert-heading">Strategies</h4>
+                                                        Strategies create input signals for trading modes using technical, social and real time analysis provided by configured evaluators.<br>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 {% endif %}
