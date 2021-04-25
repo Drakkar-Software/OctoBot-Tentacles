@@ -5,7 +5,6 @@
     "amount_to_buy_in_reference_market": {
         "title": "The amount of dollars (or unit of reference market) to buy on each transaction.",
         "type": "number",
-        "multipleOf": 1.0,
         "minimum": 1
     },
     "minutes_before_next_buy": {

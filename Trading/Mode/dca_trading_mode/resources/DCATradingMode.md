@@ -2,4 +2,4 @@ Dollar cost averaging (DCA) is a trading mode that can help you lower the amount
 
 **When using default configuration**, DCA Trading mode will buy 50$ (or unit of reference market) each week.
 
-DCA Trading mode creates buying limit order at pair current price - 0.5%. 
+DCA Trading mode creates buying limit order at pair current price - 0.1%. 
