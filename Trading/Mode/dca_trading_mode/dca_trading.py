@@ -27,7 +27,7 @@ import octobot_trading.personal_data as trading_personal_data
 
 class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     AMOUNT_TO_BUY_IN_REF_MARKET = "amount_to_buy_in_reference_market"
-    ORDER_PRICE_DISTANCE = 0.005
+    ORDER_PRICE_DISTANCE = 0.001
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -76,7 +76,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         can_create_order_result = await super().can_create_order(symbol, state)
         if not can_create_order_result:
             currency, market = symbol_util.split_symbol(symbol)
-            self.logger.error(f"Can't create order : not enough balance. Please deposit more {market}.")
+            self.logger.error(f"Can't create order : not enough balance. Please get more {market}.")
         return can_create_order_result
 
 
@@ -92,6 +92,8 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     async def stop(self):
         if self.trading_mode is not None:
             self.trading_mode.consumers[0].flush()
+        if self.task is not None:
+            self.task.cancel()
         await super().stop()
 
     async def trigger_dca_for_symbol(self, cryptocurrency, symbol):
@@ -104,7 +106,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         # send_notification
         if not self.exchange_manager.is_backtesting:
-            await self._send_alert_notification(None)
+            await self._send_alert_notification(symbol)
 
     async def dca_task(self):
         while not self.should_stop:
@@ -126,7 +128,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         try:
             import octobot_services.api as services_api
             import octobot_services.enums as services_enum
-            title = f"OCTOBOT DCA ALERT : #{symbol}"
+            title = f"DCA trigger for : #{symbol}"
             alert = "BUYING event"
             await services_api.send_notification(services_api.create_notification(alert, title=title,
                                                                                   markdown_text=alert,
