@@ -111,13 +111,13 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     async def dca_task(self):
         while not self.should_stop:
             try:
-                await asyncio.sleep(self.minutes_before_next_buy)
                 self.logger.info("DCA task triggered")
 
                 for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(self.exchange_manager.config).items():
                     for pair in pairs:
                         await self.trigger_dca_for_symbol(cryptocurrency=cryptocurrency, symbol=pair)
-                
+
+                await asyncio.sleep(self.minutes_before_next_buy)
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
