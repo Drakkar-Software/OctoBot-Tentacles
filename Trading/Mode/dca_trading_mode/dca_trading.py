@@ -68,7 +68,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             raise
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: "
-                              f"{current_order.get_string_info() if current_order else None}")
+                              f"{current_order if current_order else None}")
             self.logger.exception(e, False)
             return []
 
