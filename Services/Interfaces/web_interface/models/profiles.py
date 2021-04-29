@@ -26,7 +26,7 @@ def get_current_profile():
 def duplicate_and_select_profile(profile_id):
     config = interfaces_util.get_edited_config(dict_only=False)
     to_duplicate = config.profile_by_id[profile_id]
-    new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name} (copy)",
+    new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name}_(copy)",
                                                              description=to_duplicate.description)
     config.load_profiles()
     _select_and_save(config, new_profile.profile_id)
