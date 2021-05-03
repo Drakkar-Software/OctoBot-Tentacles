@@ -192,5 +192,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             try:
                 self.logger.debug("Stopping web interface")
                 self.websocket_instance.stop()
+                self.logger.debug("Stopped web interface")
             except Exception as e:
-                self.logger.exception(f"Fail to stop web interface : {e}", False)
+                self.logger.exception(f"Error when stopping web interface : {e}", False)

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+import threading
 import telegram.ext
 import telegram.constants
 import telegram.utils.helpers
@@ -132,7 +133,12 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
         # TODO add confirmation
         if TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update, "_I'm leaving this world..._")
-            interfaces_bots.AbstractBotInterface.set_command_stop()
+            # start interfaces_bots.AbstractBotInterface.set_command_stop in a new thread to finish the current
+            # python-telegram-bot update loop (python-telegram-bot updater can't stop within a loop, therefore
+            # to be able to stop the telegram interface, this command has to return before the telegram bot can
+            # can be stopped, otherwise telegram#stop ends up deadlocking)
+            threading.Thread(target=interfaces_bots.AbstractBotInterface.set_command_stop,
+                             name="Stop bot from telegram command").start()
 
     @staticmethod
     def command_version(update, _):
