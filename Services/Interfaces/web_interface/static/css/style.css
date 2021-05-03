@@ -211,6 +211,13 @@ a.profile-overview-values {
     flex-basis: 45% !important;
 }
 
+.community-card {
+    //TODO
+    align-items: stretch;
+    align-self: stretch;
+
+}
+
 .medium-size {
     max-width: 18rem;
     min-width: 12rem;
