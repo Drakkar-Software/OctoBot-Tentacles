@@ -24,9 +24,15 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route("/community")
 @login.login_required_when_activated
 def community():
+    return flask.render_template('community.html')
+
+
+@web_interface.server_instance.route("/community_metrics")
+@login.login_required_when_activated
+def community_metrics():
     can_get_metrics = models.can_get_community_metrics()
     community_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
-    return flask.render_template('community.html',
+    return flask.render_template('community_metrics.html',
                                  can_get_metrics=can_get_metrics,
                                  community_metrics=community_metrics
                                  )

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% set active_page = "community" %}
+
+{% import "components/tentacles_packages/tentacles_package_card.html" as tentacles_package_card %}
+
+{% block body %}
+<br>
+<div class="card text-center">
+    <div class="card-header">
+        <h2>
+            OctoBot community Tentacles
+        </h2>
+    </div>
+    <div class="card-body">
+        <h4>
+            Logged as {{current_logged_in_email}}
+            <a class="btn btn-sm btn-outline-warning waves-effect mt-4 float-right"
+               href="{{ url_for('community_logout') }}">Logout</a>
+        </h4>
+        <div class="row">
+            {% for tentacles_package in tentacles_packages * 5 %}
+            <div class="col-12 col-md-6">
+                {{ tentacles_package_card.tentacles_package_card(tentacles_package, default_tentacles_package_image) }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+<script>
+    const communityURL = {{community_url}};
+</script>
+<script src="{{ url_for('static', filename='js/components/community_tentacles.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

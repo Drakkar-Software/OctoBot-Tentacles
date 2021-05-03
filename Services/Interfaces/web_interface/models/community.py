@@ -24,3 +24,8 @@ def get_community_metrics_to_display():
 
 def can_get_community_metrics():
     return octobot_community.can_read_metrics(interfaces_util.get_edited_config(dict_only=False))
+
+
+def get_account_tentacles_packages(authenticator):
+    packages = authenticator.get_packages()
+    return [octobot_community.CommunityTentaclesPackage.from_community_dict(data) for data in packages]

@@ -42,6 +42,7 @@ def community_login():
                 authenticator.login(form.email.data, form.password.data)
                 logged_in_email = form.email.data
                 flask.flash(f"Authenticated as {form.email.data}", "success")
+                return flask.redirect('community_tentacles')
             except community.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
