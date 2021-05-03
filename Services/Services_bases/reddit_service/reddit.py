@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import praw
+import asyncpraw
 
 import octobot_services.constants as services_constants
 import octobot_services.services as services
@@ -63,19 +63,23 @@ class RedditService(services.AbstractService):
     async def prepare(self):
         if not self.reddit_api:
             self.reddit_api = \
-                praw.Reddit(client_id=
-                            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][
-                                self.CLIENT_ID],
-                            client_secret=
-                            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][
-                                self.CLIENT_SECRET],
-                            password=
-                            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][
-                                self.PASSWORD],
-                            user_agent='bot',
-                            username=
-                            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][
-                                self.USERNAME])
+                asyncpraw.Reddit(client_id=
+                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                     services_constants.CONFIG_REDDIT][
+                                     self.CLIENT_ID],
+                                 client_secret=
+                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                     services_constants.CONFIG_REDDIT][
+                                     self.CLIENT_SECRET],
+                                 password=
+                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                     services_constants.CONFIG_REDDIT][
+                                     self.PASSWORD],
+                                 user_agent='bot',
+                                 username=
+                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                     services_constants.CONFIG_REDDIT][
+                                     self.USERNAME])
 
     def get_type(self):
         return services_constants.CONFIG_REDDIT
