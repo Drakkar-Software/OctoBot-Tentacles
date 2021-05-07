@@ -106,11 +106,13 @@
                 </div>
                 <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
                     <ul class="navbar-nav ml-auto">
+                        {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
                         <li class="nav-item mx-1 px-0 my-auto">
                             <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
                                 {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                             </a>
                         </li>
+                        {% endif %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>

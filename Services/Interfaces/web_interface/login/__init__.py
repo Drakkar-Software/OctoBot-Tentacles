@@ -29,6 +29,7 @@ from tentacles.Services.Interfaces.web_interface.login.web_login_manager import 
     is_banned,
     reset_attempts,
     is_login_required,
+    is_authenticated,
     GENERIC_USER,
 )
 
@@ -41,6 +42,7 @@ __all__ = [
     "is_banned",
     "reset_attempts",
     "is_login_required",
+    "is_authenticated",
     "GENERIC_USER",
 ]
 

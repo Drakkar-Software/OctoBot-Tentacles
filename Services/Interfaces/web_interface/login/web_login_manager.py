@@ -46,6 +46,10 @@ class WebLoginManager(flask_login.LoginManager):
             return GENERIC_USER
 
 
+def is_authenticated():
+    return flask_login.current_user.is_authenticated
+
+
 def is_login_required():
     return _IS_LOGIN_REQUIRED
 

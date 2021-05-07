@@ -19,6 +19,7 @@ import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.login as web_interface_login
 import octobot_trading.util as trading_util
 
 
@@ -97,4 +98,6 @@ def context_processor_register():
         get_filtered_list=get_filtered_list,
         get_current_profile=models.get_current_profile,
         is_real_trading=is_real_trading,
+        is_login_required=web_interface_login.is_login_required,
+        is_authenticated=web_interface_login.is_authenticated,
     )
