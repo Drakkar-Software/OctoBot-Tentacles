@@ -69,13 +69,13 @@
         <nav class="navbar navbar-expand-md navbar-dark bg-dark py-0 py-md-2">
             <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item mx-1 px-0 {% if 'advanced.home' == active_page %} active{% endif %}">
+                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.home' == active_page %} active{% endif %}">
                         <a class="nav-link" href="{{ url_for('advanced.home') }}">Home</a>
                     </li>
-                    <li class="nav-item mx-1 px-0 {% if 'advanced.matrix' == active_page %} active{% endif %}">
+                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.matrix' == active_page %} active{% endif %}">
                         <a class="nav-link" href="{{ url_for('advanced.matrix') }}">Evaluation matrix</a>
                     </li>
-                    <li class="nav-item mx-1 px-0 {% if 'advanced.evaluator_config' == active_page %} active{% endif %}">
+                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.evaluator_config' == active_page %} active{% endif %}">
                         <a class="nav-link" href="{{ url_for('advanced.evaluator_config') }}">Evaluator configuration</a>
                     </li>
                 </ul>
@@ -90,13 +90,13 @@
             </div>
             <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
                 <ul class="navbar-nav ml-auto">
-                    <li class="nav-item mx-1 px-0 {% if 'advanced.strategy_optimizer' == active_page %} active{% endif %}">
+                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.strategy_optimizer' == active_page %} active{% endif %}">
                         <a class="nav-link" href="{{ url_for('advanced.strategy_optimizer') }}">Strategy optimizer</a>
                     </li>
-                    <li class="nav-item mx-1 px-0 {% if 'advanced.tentacles' == active_page %} active{% endif %}">
+                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.tentacles' == active_page %} active{% endif %}">
                         <a class="nav-link" href="{{ url_for('advanced.tentacles') }}">Tentacles</a>
                     </li>
-                    <li class="nav-item mx-1 px-0">
+                    <li class="nav-item mx-1 px-0 my-auto">
                         <a class="btn btn-sm btn-outline-default waves-effect" href="{{ url_for('home') }}"><i class="fa fa-home"></i> Back to OctoBot</a>
                     </li>
                 </ul>
