@@ -109,50 +109,130 @@
             {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_activated_tentacles[profile_id], strategy_config, evaluator_config,
                                                get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
             {% endfor %}
+
             <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
                 {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Trading modes
-                            <a class="float-right blue-text" target="_blank" rel="noopener"
-                               href="{{OCTOBOT_WEBSITE_URL}}/guides/#trading_modes">
-                                <i class="fa fa-question"></i>
-                            </a>
-                        </h2>
+
+                {% set trading_modes = strategy_config["trading-modes"].items() %}
+                {% set strategies = strategy_config["strategies"].items() %}
+
+                {% if not current_profile.read_only %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                Trading modes
+                                <a class="float-right blue-text" target="_blank" rel="noopener"
+                                   href="{{OCTOBOT_WEBSITE_URL}}/guides/#trading_modes">
+                                    <i class="fa fa-question"></i>
+                                </a>
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="row config-container" id="trading-modes-config-root">
+                                {% for trading_mode_name, info in trading_modes %}
+                                    {{ m_config_evaluator_card.config_evaluator_card(trading_startup_config, trading_mode_name,
+                                    info, "trading_config", include_modal=False) }}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="quote px-2 font-weight-bold" id="selected-trading-mode-summary"></div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row config-container" id="trading-modes-config-root">
-                            {% for trading_mode_name, info in strategy_config["trading-modes"].items() %}
-                            {{ m_config_evaluator_card.config_evaluator_card(trading_startup_config, trading_mode_name,
-                            info, "trading_config", include_modal=False) }}
+                    <br>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                Compatible evaluation strategies
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-none row mx-3" id="no-strategy-info">
+                                <h4>This trading mode doesn't need any strategy.</h4>
+                            </div>
+                            <div class="d-none row config-container" id="evaluator-config-root">
+                                {% for evaluator_name, info in strategies %}
+                                    {{ m_config_evaluator_card.config_evaluator_card(evaluator_startup_config, evaluator_name,
+                                    info, "evaluator_config", strategy=True, include_modal=False) }}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <p class="mb-0">Strategy customization on <a class="btn btn-outline-white btn-md waves-effect"
+                                                                         href="{{ url_for('advanced.evaluator_config') }}">OctoBot
+                                advanced configuration interface</a></p>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                Profile strategy configuration
+                                <a href={{ url_for('profile') }} class="badge badge-dark waves-effect align-top">read only</a>
+                                <a class="float-right blue-text" target="_blank" rel="noopener"
+                                   href="{{OCTOBOT_WEBSITE_URL}}/guides/#trading_modes">
+                                    <i class="fa fa-question"></i>
+                                </a>
+                            </h2>
+                        </div>
+                        <div class="card-body mt-0 pt-2 mb-0 pb-0">
+                            {% for trading_mode_name, info in trading_modes %}
+                                {% if info['activation'] %}
+                                    <div class="card mb-4 border-primary">
+                                        <div class="card-header">
+                                            <h4>
+                                                {{ trading_mode_name }}
+                                                <a href="{{ url_for('config_tentacle', name=(trading_mode_name)) }}"
+                                                   class="align-top" role="button"><i class="fa fa-cog"></i></a>
+                                            </h4>
+                                        </div>
+
+                                        <div class="card-body pb-0">
+                                            <div class="row">
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                <div class="col">
+                                                    <div class="alert alert-info" role="alert">
+                                                        <h4 class="alert-heading">Trading modes</h4>
+                                                        Trading modes are responsible for creating, updating or cancelling orders. They can use strategy(ies) to receive signals and create orders accordingly.
+                                                    </div>
+                                                  </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% for evaluator_name, info in strategies %}
+                                {% if info['activation'] %}
+                                    <div class="card mb-4 border-warning">
+                                        <div class="card-header">
+                                            <h4>
+                                                {{ evaluator_name }}
+                                                <a href="{{ url_for('config_tentacle', name=(evaluator_name)) }}"
+                                                   class="align-top" role="button"><i class="fa fa-cog"></i></a>
+                                            </h4>
+                                        </div>
+
+                                        <div class="card-body pb-0">
+                                            <div class="row">
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                <div class="col">
+                                                    <div class="alert alert-info" role="alert">
+                                                        <h4 class="alert-heading">Strategies</h4>
+                                                        Strategies create input signals for trading modes using technical, social and real time analysis provided by configured evaluators.<br>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             {% endfor %}
                         </div>
+                        <div class="card-footer"></div>
                     </div>
-                    <div class="card-footer">
-                        <div class="quote px-2 font-weight-bold" id="selected-trading-mode-summary"></div>
-                    </div>
-                </div>
-                <br>
-                <div class="card">
-                    <div class="card-header"><h2>Compatible evaluation strategies</h2></div>
-                    <div class="card-body">
-                        <div class="d-none row mx-3" id="no-strategy-info">
-                            <h4>This trading mode doesn't need any strategy.</h4>
-                        </div>
-                        <div class="d-none row config-container" id="evaluator-config-root">
-                            {% for evaluator_name, info in strategy_config["strategies"].items() %}
-                            {{ m_config_evaluator_card.config_evaluator_card(evaluator_startup_config, evaluator_name,
-                            info, "evaluator_config", strategy=True, include_modal=False) }}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <p class="mb-0">Strategy customization on <a class="btn btn-outline-white btn-md waves-effect"
-                                                                     href="{{ url_for('advanced.evaluator_config') }}">OctoBot
-                            advanced configuration interface</a></p>
-                    </div>
-                </div>
+                {% endif %}
             </div>
             <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel"
                  aria-labelledby="panelCurrency-tab">

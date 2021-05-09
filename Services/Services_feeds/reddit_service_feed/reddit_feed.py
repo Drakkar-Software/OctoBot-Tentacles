@@ -13,9 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import threading
+import asyncio
 import time
-import prawcore.exceptions
+import asyncprawcore.exceptions
 
 import octobot_commons.constants as commons_constants
 import octobot_services.channel as services_channel
@@ -28,7 +28,7 @@ class RedditServiceFeedChannel(services_channel.AbstractServiceFeedChannel):
     pass
 
 
-class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
+class RedditServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = RedditServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.RedditService]
 
@@ -36,15 +36,11 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
 
     def __init__(self, config, main_async_loop, bot_id):
         service_feeds.AbstractServiceFeed.__init__(self, config, main_async_loop, bot_id)
-        threading.Thread.__init__(self, name=self.get_name())
         self.subreddits = None
         self.counter = 0
         self.connect_attempts = 0
         self.credentials_ok = False
-
-    async def _inner_start(self) -> bool:
-        threading.Thread.start(self)
-        return True
+        self.listener_task = None
 
     # merge new config into existing config
     def update_feed_config(self, config):
@@ -94,9 +90,9 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
         return 5
 
     async def _start_listener(self):
-        subreddit = self.services[0].get_endpoint().subreddit(self.subreddits)
+        subreddit = await self.services[0].get_endpoint().subreddit(self.subreddits)
         start_time = time.time()
-        for entry in subreddit.stream.submissions():
+        async for entry in subreddit.stream.submissions():
             self.credentials_ok = True
             self.connect_attempts = 0
             self.counter += 1
@@ -104,7 +100,7 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
             # the older the entry is, the les weight it gets
             entry_age_when_feed_started_in_sec = start_time - entry.created_utc
             entry_weight = self._get_entry_weight(entry_age_when_feed_started_in_sec)
-            self._notify_consumers(
+            await self._async_notify_consumers(
                 {
                     services_constants.FEED_METADATA: entry.subreddit.display_name.lower(),
                     services_constants.CONFIG_REDDIT_ENTRY: entry,
@@ -112,29 +108,29 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
                 }
             )
 
-    async def _start_service_feed(self):
+    async def _start_listener_task(self):
         while not self.should_stop and self.connect_attempts < self.MAX_CONNECTION_ATTEMPTS:
             try:
                 await self._start_listener()
-            except prawcore.exceptions.RequestException:
+            except asyncprawcore.exceptions.RequestException:
                 # probably a connexion loss, try again
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
-            except prawcore.exceptions.InvalidToken as e:
+            except asyncprawcore.exceptions.InvalidToken as e:
                 # expired, try again
                 self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}'")
                 self.logger.info(f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds.")
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
-            except prawcore.exceptions.ServerError as e:
+            except asyncprawcore.exceptions.ServerError as e:
                 # server error, try again
                 self.logger.exception(e, True, "Error when receiving Reddit feed: '{e}'")
                 self.logger.info(f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds.")
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
-            except prawcore.exceptions.OAuthException as e:
+            except asyncprawcore.exceptions.OAuthException as e:
                 self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}' this may mean that reddit "
                                                f"login info in config.json are wrong")
                 self.keep_running = False
                 self.should_stop = True
-            except prawcore.exceptions.ResponseException as e:
+            except asyncprawcore.exceptions.ResponseException as e:
                 message_complement = "this may mean that reddit login info in config.json are invalid." \
                     if not self.credentials_ok else \
                     f"Try to continue after {self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC} seconds."
@@ -151,3 +147,13 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
                 self.keep_running = False
                 self.should_stop = True
         return False
+
+    async def _start_service_feed(self):
+        self.listener_task = asyncio.create_task(self._start_listener_task())
+        return True
+
+    async def stop(self):
+        await super().stop()
+        if self.listener_task is not None:
+            self.listener_task.cancel()
+            self.listener_task = None

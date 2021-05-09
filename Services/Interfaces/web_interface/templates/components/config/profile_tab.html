@@ -179,7 +179,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -215,6 +214,11 @@
                 </button>
                 {% endif %}
             </div>
+        </div>
+        <div class="card-footer">
+            {% if profile.read_only %}
+                <p><i class="fa fa-info"></i> This profile is ready only, press duplicate to create a copy to be able to edit it.</p>
+            {% endif %}
         </div>
     </div>
     <div class="float-right">

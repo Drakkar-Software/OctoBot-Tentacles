@@ -75,7 +75,7 @@ function handle_file_selection(){
     });
 }
 
-const dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
+const dataFilesTable = $('#dataFilesTable').DataTable({"order": [], "destroy": true});
 const syncDataOnlyDiv = $("#synchronized-data-only-div");
 const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
 

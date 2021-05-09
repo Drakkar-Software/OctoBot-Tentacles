@@ -54,5 +54,6 @@ def evaluator_config():
             'advanced_evaluator_config.html',
             evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
             evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),
-            missing_tentacles=missing_tentacles
+            missing_tentacles=missing_tentacles,
+            current_profile=models.get_current_profile()
         )
