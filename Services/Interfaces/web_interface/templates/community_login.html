@@ -1,10 +1,13 @@
 {% extends "layout.html" %}
 {% set active_page = "community" %}
 
+{% import "components/community/bots_stats.html" as bots_stats %}
 {% from "macros/forms.html" import render_field %}
 
 {% block body %}
 <br>
+{{ bots_stats.bots_stats_card(current_bots_stats) }}
+
 <div class="login_box mx-auto mt-1 mt-xl-5">
     <div class="card text-center">
         <div class="card-header">

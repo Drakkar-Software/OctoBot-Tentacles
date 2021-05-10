@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
 
@@ -29,3 +28,7 @@ def can_get_community_metrics():
 def get_account_tentacles_packages(authenticator):
     packages = authenticator.get_packages()
     return [octobot_community.CommunityTentaclesPackage.from_community_dict(data) for data in packages]
+
+
+def get_current_octobots_stats():
+    return interfaces_util.run_in_bot_async_executor(octobot_community.get_current_octobots_stats())

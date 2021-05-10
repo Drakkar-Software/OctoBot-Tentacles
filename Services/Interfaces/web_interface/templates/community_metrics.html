@@ -57,9 +57,9 @@
     </div>
     <br>
     <div class="card-deck">
-        {{ top_table_card(community_metrics['top_pairs'], "Pair", "Top community traded pairs") }}
-        {{ top_table_card(community_metrics['top_strategies'], "Tentacle", "Top community tentacles") }}
         {{ top_table_card(community_metrics['top_exchanges'], "Exchange", "Top community exchanges") }}
+        {{ top_table_card(community_metrics['top_strategies'], "Tentacle", "Top community tentacles") }}
+        {{ top_table_card(community_metrics['top_pairs'], "Pair", "Top community traded pairs") }}
     </div>
 {% else %}
     <div class="card">

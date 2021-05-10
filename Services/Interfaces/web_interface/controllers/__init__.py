@@ -16,7 +16,6 @@
 
 from tentacles.Services.Interfaces.web_interface.controllers import octobot_authentication
 from tentacles.Services.Interfaces.web_interface.controllers import community_authentication
-from tentacles.Services.Interfaces.web_interface.controllers import community_tentacles
 from tentacles.Services.Interfaces.web_interface.controllers import backtesting
 from tentacles.Services.Interfaces.web_interface.controllers import commands
 from tentacles.Services.Interfaces.web_interface.controllers import community
@@ -44,9 +43,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.community_authentic
 )
 from tentacles.Services.Interfaces.web_interface.controllers.community import (
     community_metrics,
-)
-from tentacles.Services.Interfaces.web_interface.controllers.community_tentacles import (
-    community_tentacles,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.backtesting import (
     data_collector,
@@ -105,7 +101,6 @@ __all__ = [
     "commands",
     "about",
     "community",
-    "community_tentacles",
     "community_metrics",
     "profile",
     "profiles_management",
