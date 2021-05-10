@@ -34,8 +34,13 @@ def _handle_package_operation(update_type):
         request_data = flask.request.get_json()
         success = False
         if request_data:
-            path_or_url, action = next(iter(request_data.items()))
-            path_or_url = path_or_url.strip()
+            url_key = "url"
+            if url_key in request_data:
+                path_or_url = request_data[url_key]
+                action = "register_and_install"
+            else:
+                path_or_url, action = next(iter(request_data.items()))
+                path_or_url = request_data.strip()
             if action == "register_and_install":
                 installation_result = models.install_packages(path_or_url)
                 if installation_result:

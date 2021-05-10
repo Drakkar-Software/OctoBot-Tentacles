@@ -16,9 +16,58 @@
  * License along with this library.
  */
 
+function disablePackagesOperations(should_lock=true){
+    const disabled_attr = 'disabled';
+    $("#synchronize-tentacles").prop(disabled_attr, should_lock);
+    $(".install-package-button").prop(disabled_attr, should_lock);
+}
 
-$(document).ready(function() {
+function syncPackages(source){
+    const update_url = source.attr(update_url_attr);
+    disablePackagesOperations();
+    send_and_interpret_bot_update({}, update_url, source, packagesOperationSuccessCallback, packagesOperationErrorCallback)
+}
+
+function reloadTable(){
     $('.table').each(function () {
         $(this).DataTable();
+    });
+    registerPackagesEvents();
+}
+
+function registerPackagesEvents(){
+    $(".install-package-button").click(function (){
+        const element = $(this);
+        const update_url = element.attr(update_url_attr);
+        const data = {
+            "url": element.data("package-url")
+        }
+        disablePackagesOperations();
+        send_and_interpret_bot_update(data, update_url, element, packagesOperationSuccessCallback, packagesOperationErrorCallback)
+    })
+}
+
+function reloadOwnedPackages(){
+    $("#owned-tentacles").load(location.href + " #owned-tentacles", function(){
+        reloadTable();
+    });
+}
+
+function packagesOperationSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    disablePackagesOperations(false);
+    reloadOwnedPackages();
+    create_alert("success", "Packages operation success", msg);
+}
+
+function packagesOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
+    disablePackagesOperations(false);
+    reloadOwnedPackages();
+    create_alert("error", "Error when managing packages: "+result.responseText, "");
+}
+
+$(document).ready(function() {
+    reloadTable();
+    $("#synchronize-tentacles").click(function(){
+        syncPackages($(this));
     });
 });
