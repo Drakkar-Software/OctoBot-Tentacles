@@ -11,6 +11,13 @@
         </h1>
     </div>
     <div class="card-body" id="paramSettings" update-url="{{ url_for('advanced.strategy_optimizer', update_type='run_params') }}">
+        <div class="alert alert-info" role="alert">
+            <p class="mb-0">
+                For now the strategy optimizer can only be used with the daily trading mode as is helps to
+                identify better evaluators configurations and this trading mode is the only one supporting
+                custom evaluators setups.
+            </p>
+        </div>
         <div class="input-group">
           <div class="input-group-prepend mb-3">
             <label class="input-group-text" for="tradingModeSelect">
