@@ -40,7 +40,8 @@ function registerPackagesEvents(){
         const element = $(this);
         const update_url = element.attr(update_url_attr);
         const data = {
-            "url": element.data("package-url")
+            "url": element.data("package-url"),
+            "version": element.data("package-latest-compatible-version")
         }
         disablePackagesOperations();
         send_and_interpret_bot_update(data, update_url, element, packagesOperationSuccessCallback, packagesOperationErrorCallback)

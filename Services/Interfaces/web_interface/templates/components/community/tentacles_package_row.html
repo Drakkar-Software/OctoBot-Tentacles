@@ -39,7 +39,8 @@
                 <button update-url="{{ url_for('advanced.tentacle_packages', update_type='add_package') }}"
                         role="button" class="btn btn-link px-1 m-1 install-package-button"
                         data-toggle="tooltip" data-placement="top" title="Install on this OctoBot"
-                        data-package-url="{{tentacles_package.download_url}}">
+                        data-package-url="{{tentacles_package.download_url}}"
+                        data-package-latest-compatible-version="{{tentacles_package.get_latest_compatible_version()}}">
                     <i class="fa fa-download px-2 text-light tentacle_package_action"></i>
                 </button>
                 {% endif %}
