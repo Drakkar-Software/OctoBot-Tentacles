@@ -33,9 +33,15 @@ def call_tentacle_manager(coro, *args, **kwargs):
     return interfaces_util.run_in_bot_main_loop(coro(*args, **kwargs)) == 0
 
 
-def install_packages(path_or_url=None):
+def _add_version_to_tentacles_package_path(path_or_url, version):
+    return f"{path_or_url}/{version.replace('.', tentacles_manager_constants.ARTIFACT_VERSION_DOT_REPLACEMENT)}"
+
+
+def install_packages(path_or_url=None, version=None, authenticator=None):
     message = "Tentacles installed"
     success = True
+    if path_or_url and version:
+        path_or_url = _add_version_to_tentacles_package_path(path_or_url, version)
     for package_url in [path_or_url] if path_or_url else \
             tentacles_manager_api.get_registered_tentacle_packages(
                 interfaces_util.get_bot_api().get_edited_tentacles_config()).values():
@@ -44,7 +50,8 @@ def install_packages(path_or_url=None):
                                          package_url,
                                          setup_config=interfaces_util.get_bot_api().get_edited_tentacles_config(),
                                          aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session(),
-                                         bot_install_dir=octobot_constants.OCTOBOT_FOLDER
+                                         bot_install_dir=octobot_constants.OCTOBOT_FOLDER,
+                                         authenticator=authenticator
                                          ):
                 success = False
         else:
@@ -56,7 +63,7 @@ def install_packages(path_or_url=None):
     return False
 
 
-def update_packages():
+def update_packages(authenticator=None):
     message = "Tentacles updated"
     success = True
     for package_url in tentacles_manager_api.get_registered_tentacle_packages(
@@ -64,7 +71,8 @@ def update_packages():
         if package_url != tentacles_manager_constants.UNKNOWN_TENTACLES_PACKAGE_LOCATION:
             if not call_tentacle_manager(tentacles_manager_api.update_all_tentacles,
                                          package_url,
-                                         aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session()):
+                                         aiohttp_session=interfaces_util.get_bot_api().get_aiohttp_session(),
+                                         authenticator=authenticator):
                 success = False
         else:
             message = "Tentacles updated however it is impossible to update tentacles with unknown package origin"
