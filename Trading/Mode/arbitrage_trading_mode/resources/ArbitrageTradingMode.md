@@ -24,3 +24,7 @@ By default **every exchange** in your OctoBot configuration is used for arbitrag
 arbitrage opportunities and use the others as price indicators**.
 
 Exchanges that are used for **price reference only require no api keys** as no trade is performed on these exchanges.
+
+<div class="text-center">
+    <img src="https://raw.githubusercontent.com/Drakkar-Software/OctoBot/assets/arbitrage.png" width="100%" height="100%">
+</div>
