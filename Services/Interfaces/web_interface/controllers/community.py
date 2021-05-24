@@ -16,8 +16,8 @@
 
 import flask
 
-import octobot.community
 import octobot.constants as constants
+import octobot_commons.authentication as authentication
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -32,7 +32,7 @@ def community():
     use_preview = not authenticator.can_authenticate()
     try:
         logged_in_email = authenticator.get_logged_in_email()
-    except (octobot.community.AuthenticationRequired, octobot.community.UnavailableError):
+    except (authentication.AuthenticationRequired, authentication.UnavailableError):
         pass
     except Exception as e:
         flask.flash(f"Error when contacting the community server: {e}", "error")
@@ -54,8 +54,8 @@ def community():
 @login.login_required_when_activated
 def community_metrics():
     can_get_metrics = models.can_get_community_metrics()
-    community_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
+    display_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
     return flask.render_template('community_metrics.html',
                                  can_get_metrics=can_get_metrics,
-                                 community_metrics=community_metrics
+                                 community_metrics=display_metrics
                                  )
