@@ -18,7 +18,7 @@ import flask_wtf
 import wtforms.fields.html5
 
 import octobot.constants as constants
-import octobot.community as community
+import octobot_commons.authentication as authentication
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -32,7 +32,7 @@ def community_login():
     logged_in_email = form = None
     try:
         logged_in_email = authenticator.get_logged_in_email()
-    except community.AuthenticationRequired:
+    except authentication.AuthenticationRequired:
         pass
     except Exception as e:
         flask.flash(f"Error when contacting the community server: {e}", "error")
@@ -44,7 +44,7 @@ def community_login():
                 logged_in_email = form.email.data
                 flask.flash(f"Authenticated as {form.email.data}", "success")
                 return flask.redirect('community')
-            except community.FailedAuthentication:
+            except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
                 flask.flash(f"Error during authentication: {e}", "error")
