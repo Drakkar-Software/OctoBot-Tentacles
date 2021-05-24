@@ -1,95 +1,18 @@
 {% extends "layout.html" %}
 {% set active_page = "community" %}
 
-{% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
+{% import "components/community/tentacles_packages.html" as tentacles_packages_display %}
 {% import "components/community/bots_stats.html" as bots_stats %}
 
 {% block body %}
 <br>
 {{ bots_stats.bots_stats_card(current_bots_stats) }}
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between flex-wrap">
-        <div>
-            <h2>Your community tentacles packages
-            </h2>
-        </div>
-        <div>
-            <button type="button" class="btn btn-primary card-link waves-effect ml-4"
-                    id="synchronize-tentacles"
-                    update-url="{{ url_for('advanced.tentacle_packages', update_type='install_packages') }}">
-                <i class="fas fa-cloud-download-alt"></i> Synchronize
-            </button>
-        </div>
-        <div>
-            <span class="float-right">
-                <span class="float-right">
-                    <a class="blue-text btn btn-outline-primary" target="_blank" rel="noopener"
-                       href="{{community_url}}">
-                        <i class="fas fa-search"></i> Browse packages
-                    </a>
-                </span>
-            </span>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-dark row py-0">
-            <div class="col-8 my-auto">
-                <h5 class="p-0 my-0">
-                    Logged in as {{current_logged_in_email}}
-                </h5>
-            </div>
-            <div class="col-4 text-right">
-                <a class="align-right btn btn-sm btn-outline-primary card-link waves-effect"
-                   href="{{ url_for('community_logout') }}">
-                    logout
-                </a>
-            </div>
-        </div>
-        <div id="owned-tentacles">
-            {% if tentacles_packages %}
-            <table class="table table-striped table-hover table-responsive-md">
-                <caption>
-                    Add more tentacles packages by activating them on the
-                    <a class="external-link" target="_blank" rel="noopener"
-                           href="{{community_url}}">OctoBot community website</a>.
-                </caption>
-                <thead>
-                    <tr class="text-center">
-                        <th scope="col">Package</th>
-                        <th scope="col">Description</th>
-                        <th scope="col">State</th>
-                        <th scope="col">More</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for tentacles_package in tentacles_packages * 5 %}
-                    {{ tentacles_package_row.tentacles_package_row(tentacles_package, default_tentacles_package_image) }}
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="card">
-                <div class="card-header">
-                    <h4>
-                        No activated tentacles package found on your OctoBot community account.
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <p>
-                        Find community tentacles packages on the
-                        <a class="external-link" target="_blank" rel="noopener"
-                           href="{{community_url}}">OctoBot community website</a>.
-                    </p>
-                    <p>
-                        Each activated tentacles package will be displayed here for you to add on your OctoBot.
-                    </p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
+{% if use_preview %}
+    {{ tentacles_packages_display.tentacles_packages("example@mail.com", preview_tentacles_packages, "#", default_tentacles_package_image, use_preview) }}
+{% else %}
+    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, tentacles_packages, community_url, default_tentacles_package_image, use_preview) }}
+{% endif %}}
 
 <br>
 {% endblock %}

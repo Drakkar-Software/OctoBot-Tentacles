@@ -229,6 +229,10 @@ a.profile-overview-values {
     font-size: 1.5rem;
 }
 
+.blurred {
+    filter: blur(0.1rem);
+}
+
 .card,
 .table-card {
     flex-basis: 45% !important;
