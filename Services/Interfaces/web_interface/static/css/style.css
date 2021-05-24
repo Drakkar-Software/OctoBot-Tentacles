@@ -234,15 +234,8 @@ a.profile-overview-values {
 }
 
 .card,
-.table-card {
-    flex-basis: 45% !important;
-}
-
-.community-card {
-    //TODO
-    align-items: stretch;
-    align-self: stretch;
-
+.block-card {
+    flex-basis: 50% !important;
 }
 
 .bg-darker {
