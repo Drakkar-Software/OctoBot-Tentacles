@@ -30,7 +30,7 @@
                            data-onblur="submit"
                            data-highlight=true
                            data-emptytext="my profile"
-                           class="editable profile-name-editor">{{ profile.name }}</span>
+                           class="{{'editable profile-name-editor' if not profile.read_only}}">{{ profile.name }}</span>
                         profile:
                     </h4>
                     <p>
@@ -44,17 +44,19 @@
                                data-highlight=true
                                data-emptytext="my description"
                                data-inputclass="w-100"
-                               class="editable profile-description-editor">{{ profile.description }}</span>
+                               class="{{'editable profile-description-editor' if not profile.read_only}}">{{ profile.description }}</span>
                         </span>
                     </p>
                 </div>
                 <div>
+                    {% if not profile.read_only %}
                     <button id="save-profile-{{profile.profile_id}}"
                             data-url="{{url_for('profiles_management', action='update')}}"
                             class="btn btn-success rounded-circle waves-effect px-3 save-profile"
                             role="button" data-toggle="tooltip" title="Save" disabled>
                         <i class="fas fa-save" aria-hidden="true"></i>
                     </button>
+                    {% endif %}
                 </div>
             </div>
             <div>
