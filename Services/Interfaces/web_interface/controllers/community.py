@@ -29,19 +29,22 @@ import tentacles.Services.Interfaces.web_interface.models as models
 def community():
     authenticator = interfaces_util.get_bot_api().get_community_auth()
     logged_in_email = None
+    use_preview = not authenticator.can_authenticate()
     try:
         logged_in_email = authenticator.get_logged_in_email()
-    except octobot.community.AuthenticationRequired:
+    except (octobot.community.AuthenticationRequired, octobot.community.UnavailableError):
         pass
     except Exception as e:
         flask.flash(f"Error when contacting the community server: {e}", "error")
-    if logged_in_email is None:
+    if logged_in_email is None and not use_preview:
         return flask.redirect('community_login')
-    # TODO
-    default_image = f"{constants.OCTOBOT_COMMUNITY_URL}/assets/meganav/promo_banner_left-first-category-1e19fc784f709ed0ebbd047064cf872195c2d33da29996b7c7cf469f858a8a71.jpg"
+    tentacles_packages = models.get_account_tentacles_packages(authenticator) if logged_in_email else []
+    default_image = flask.url_for('static', filename="img/community/tentacles_packages_previews/octobot.png")
     return flask.render_template('community.html',
+                                 use_preview=use_preview,
+                                 preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
                                  current_logged_in_email=logged_in_email,
-                                 tentacles_packages=models.get_account_tentacles_packages(authenticator),
+                                 tentacles_packages=tentacles_packages,
                                  current_bots_stats=models.get_current_octobots_stats(),
                                  community_url=constants.OCTOBOT_COMMUNITY_URL,
                                  default_tentacles_package_image=default_image)

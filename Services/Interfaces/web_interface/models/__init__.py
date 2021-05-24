@@ -48,6 +48,7 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     get_community_metrics_to_display,
     can_get_community_metrics,
     get_account_tentacles_packages,
+    get_preview_tentacles_packages,
     get_current_octobots_stats,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
@@ -163,6 +164,7 @@ __all__ = [
     "get_community_metrics_to_display",
     "can_get_community_metrics",
     "get_account_tentacles_packages",
+    "get_preview_tentacles_packages",
     "get_current_octobots_stats",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",

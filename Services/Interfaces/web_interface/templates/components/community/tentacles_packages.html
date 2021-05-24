@@ -1,0 +1,100 @@
+{% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
+
+{% macro tentacles_packages(current_logged_in_email, tentacles_packages, community_url, default_image, is_preview) -%}
+<div class="card">
+    <div class="card-header d-flex justify-content-between flex-wrap">
+        <div>
+            <h2>
+                Your community tentacles packages
+                <span class="badge badge-danger">Coming soon</span>
+            </h2>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary card-link waves-effect ml-4"
+                    {{"disabled" if is_preview}}
+                    id="synchronize-tentacles"
+                    update-url="{{ url_for('advanced.tentacle_packages', update_type='install_packages') }}">
+                <i class="fas fa-cloud-download-alt"></i> Synchronize
+            </button>
+        </div>
+        <div>
+            <span class="float-right">
+                <span class="float-right">
+                    <a class="blue-text btn btn-outline-primary {{'disabled' if is_preview}}"
+                       target="_blank" rel="noopener"
+                       href="{{community_url if not use_preview else '#'}}">
+                        <i class="fas fa-search"></i> Browse packages
+                    </a>
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if not is_preview %}
+        <div class="alert alert-dark row py-0">
+            <div class="col-8 my-auto">
+                <h5 class="p-0 my-0">
+                    Logged in as {{current_logged_in_email}}
+                </h5>
+            </div>
+            <div class="col-4 text-right">
+                <a class="align-right btn btn-sm btn-outline-primary card-link waves-effect {{'disabled' if is_preview}}"
+                   href="{{ url_for('community_logout') if not is_preview}}">
+                    logout
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        <div id="owned-tentacles">
+            {% if tentacles_packages %}
+            <table class="table table-striped table-responsive-md {{'blurred' if is_preview else 'table-hover'}} ">
+                <caption>
+                    Add more tentacles packages by activating them on the
+                    <a class="external-link" target="_blank" rel="noopener"
+                           href="{{community_url if not is_preview}}">OctoBot community website</a>.
+                </caption>
+                <thead>
+                    <tr class="text-center">
+                        <th scope="col">Package</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">State</th>
+                        <th scope="col">More</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for tentacles_package in tentacles_packages %}
+                    {{ tentacles_package_row.tentacles_package_row(tentacles_package, default_image, is_preview) }}
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h4>
+                        No activated tentacles package found on your OctoBot community account.
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Find community tentacles packages on the
+                        <a class="external-link" target="_blank" rel="noopener"
+                           href="{{community_url if not is_preview}}">OctoBot community website</a>.
+                    </p>
+                    <p>
+                        Each activated tentacles package will be displayed here for you to add on your OctoBot.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% if is_preview %}
+    <div class="card-footer">
+        <div class="alert alert-dark">
+            Note: these packages are only examples, they might not represent real community tentacles packages. When
+            the OctoBot community website will be online, you will be able to add community packages to your OctoBot.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{%- endmacro %}
