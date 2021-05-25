@@ -183,6 +183,15 @@ a.profile-overview-values {
     color: inherit;
 }
 
+.card a.nav-link.primary-tab-selector,
+.card a.nav-link.primary-tab-selector:hover {
+    color: white !important;
+}
+
+a.nav-link.primary-tab-selector.active {
+    background-color: #C62828;
+}
+
 .btn.btn-sm.rounded-circle {
     padding-left: 0.64rem;
     padding-right: 0.64rem;

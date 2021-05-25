@@ -25,7 +25,7 @@ function disablePackagesOperations(should_lock=true){
 function syncPackages(source){
     const update_url = source.attr(update_url_attr);
     disablePackagesOperations();
-    send_and_interpret_bot_update({}, update_url, source, packagesOperationSuccessCallback, packagesOperationErrorCallback)
+    send_and_interpret_bot_update({}, update_url, source, packagesOperationSuccessCallback, packagesOperationErrorCallback);
 }
 
 function reloadTable(){
@@ -42,10 +42,10 @@ function registerPackagesEvents(){
         const data = {
             "url": element.data("package-url"),
             "version": element.data("package-latest-compatible-version")
-        }
+        };
         disablePackagesOperations();
-        send_and_interpret_bot_update(data, update_url, element, packagesOperationSuccessCallback, packagesOperationErrorCallback)
-    })
+        send_and_interpret_bot_update(data, update_url, element, packagesOperationSuccessCallback, packagesOperationErrorCallback);
+    });
 }
 
 function reloadOwnedPackages(){
@@ -57,7 +57,7 @@ function reloadOwnedPackages(){
 function packagesOperationSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     disablePackagesOperations(false);
     reloadOwnedPackages();
-    create_alert("success", "Packages operation success", msg);
+    create_alert("success", "Packages operation succeed", msg);
 }
 
 function packagesOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
