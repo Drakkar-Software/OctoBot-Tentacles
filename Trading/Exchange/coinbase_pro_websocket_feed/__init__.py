@@ -1,1 +1,1 @@
-from .coinbase_pro_websocket_feed import CoinbaseProCryptofeedWebsocketConnector
+from .coinbase_pro_websocket import CoinbaseProCryptofeedWebsocketConnector

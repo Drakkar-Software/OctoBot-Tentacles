@@ -1,1 +1,1 @@
-from .binanceus_websocket_feed import BinanceUSWebsocketFeedConnector
+from .binanceus_websocket import BinanceUSWebsocketFeedConnector
