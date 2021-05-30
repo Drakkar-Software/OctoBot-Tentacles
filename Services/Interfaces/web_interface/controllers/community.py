@@ -16,6 +16,9 @@
 
 import flask
 
+import octobot.constants as constants
+import octobot_commons.authentication as authentication
+import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -24,9 +27,35 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route("/community")
 @login.login_required_when_activated
 def community():
-    can_get_metrics = models.can_get_community_metrics()
-    community_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
+    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    logged_in_email = None
+    use_preview = not authenticator.can_authenticate()
+    try:
+        logged_in_email = authenticator.get_logged_in_email()
+    except (authentication.AuthenticationRequired, authentication.UnavailableError):
+        pass
+    except Exception as e:
+        flask.flash(f"Error when contacting the community server: {e}", "error")
+    if logged_in_email is None and not use_preview:
+        return flask.redirect('community_login')
+    tentacles_packages = models.get_account_tentacles_packages(authenticator) if logged_in_email else []
+    default_image = flask.url_for('static', filename="img/community/tentacles_packages_previews/octobot.png")
     return flask.render_template('community.html',
+                                 use_preview=use_preview,
+                                 preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
+                                 current_logged_in_email=logged_in_email,
+                                 tentacles_packages=tentacles_packages,
+                                 current_bots_stats=models.get_current_octobots_stats(),
+                                 community_url=constants.OCTOBOT_COMMUNITY_URL,
+                                 default_tentacles_package_image=default_image)
+
+
+@web_interface.server_instance.route("/community_metrics")
+@login.login_required_when_activated
+def community_metrics():
+    can_get_metrics = models.can_get_community_metrics()
+    display_metrics = models.get_community_metrics_to_display() if can_get_metrics else None
+    return flask.render_template('community_metrics.html',
                                  can_get_metrics=can_get_metrics,
-                                 community_metrics=community_metrics
+                                 community_metrics=display_metrics
                                  )

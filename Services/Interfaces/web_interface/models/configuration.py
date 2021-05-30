@@ -118,7 +118,9 @@ def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
                                 f"This is probably an issue with the {name} tentacle matadata.json file, please "
                                 f"make sure this file is accurate and is referring {name} in the 'tentacles' list.")
         return ""
-
+    except TypeError:
+        # can happen when tentacles metadata.json are invalid
+        return ""
 
 def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set):
     import tentacles.Trading.Mode as modes
@@ -166,6 +168,10 @@ def _add_to_missing_tentacles_if_missing(tentacle_name: str, missing_tentacles: 
     try:
         tentacles_manager_api.get_tentacle_version(tentacle_name)
     except KeyError:
+        missing_tentacles.add(tentacle_name)
+    except AttributeError:
+        _get_logger().error(f"Missing tentacles data for {tentacle_name}. This is likely due to an error in the "
+                            f"associated metadata.json file.")
         missing_tentacles.add(tentacle_name)
 
 
@@ -241,13 +247,16 @@ def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_acti
                                              root_element, media_url, missing_tentacles: set):
     for tentacle_class_name, activated in tentacles_activation[root_element].items():
         startup_val = startup_tentacles_activation[root_element][tentacle_class_name]
-        tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
-                                                        missing_tentacles)
-        if group in activation_by_group:
-            activation_by_group[group].append(tentacle)
-        else:
-            activation_by_group[group] = [tentacle]
-
+        try:
+            tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
+                                                            missing_tentacles)
+            if group in activation_by_group:
+                activation_by_group[group].append(tentacle)
+            else:
+                activation_by_group[group] = [tentacle]
+        except AttributeError:
+            # can happen when tentacles metadata.json are invalid
+            pass
 
 def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
     tentacles_activation = tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())

@@ -183,6 +183,15 @@ a.profile-overview-values {
     color: inherit;
 }
 
+.card a.nav-link.primary-tab-selector,
+.card a.nav-link.primary-tab-selector:hover {
+    color: white !important;
+}
+
+a.nav-link.primary-tab-selector.active {
+    background-color: #C62828;
+}
+
 .btn.btn-sm.rounded-circle {
     padding-left: 0.64rem;
     padding-right: 0.64rem;
@@ -206,9 +215,40 @@ a.profile-overview-values {
     flex-basis: inherit !important;
 }
 
+.community-bot-stats-label {
+  font-weight: bold;
+  font-size: large;
+}
+
+.community-bot-stats {
+  font-size: large;
+  background-color: #C62828;
+}
+
+.package_row_image {
+    max-height: 4rem;
+}
+
+.table td.centered {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.tentacle_package_action {
+    font-size: 1.5rem;
+}
+
+.blurred {
+    filter: blur(0.1rem);
+}
+
 .card,
-.table-card {
-    flex-basis: 45% !important;
+.block-card {
+    flex-basis: 50% !important;
+}
+
+.bg-darker {
+    background-color: #121212;
 }
 
 .medium-size {

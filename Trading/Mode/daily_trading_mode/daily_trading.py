@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import decimal
 
 import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
@@ -238,6 +239,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         else:
             return 1
 
+    def _check_and_adapt_order_details_if_necessary(self, quantity, price, symbol_market):
+        return trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+            decimal.Decimal(f"{quantity}"), decimal.Decimal(f"{price}"), symbol_market)
+
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
         timeout = kwargs.pop("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
@@ -252,15 +257,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity = self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
                 quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
-                for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
-                        quantity, price,
-                        symbol_market):
+
+                for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
+                                                                                                    price,
+                                                                                                    symbol_market):
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.SELL_MARKET,
                                                                                 symbol=symbol,
-                                                                                current_price=order_price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                current_price=float(order_price),
+                                                                                quantity=float(order_quantity),
+                                                                                price=float(order_price))
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
 
@@ -270,16 +276,15 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                     current_symbol_holding)
                 limit_price = trading_personal_data.adapt_price(symbol_market,
                                                                 price * self._get_limit_price_from_risk(final_note))
-                for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
-                        quantity,
-                        limit_price,
-                        symbol_market):
+                for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
+                                                                                                    limit_price,
+                                                                                                    symbol_market):
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.SELL_LIMIT,
                                                                                 symbol=symbol,
                                                                                 current_price=price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                quantity=float(order_quantity),
+                                                                                price=float(order_price))
                     updated_limit = await self.trader.create_order(current_order)
                     created_orders.append(updated_limit)
 
@@ -290,7 +295,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                     order_type=trading_enums.TraderOrderType.STOP_LOSS,
                                                                                     symbol=symbol,
                                                                                     current_price=price,
-                                                                                    quantity=order_quantity,
+                                                                                    quantity=float(order_quantity),
                                                                                     price=stop_price,
                                                                                     linked_to=updated_limit)
                         await self.trader.create_order(current_order)
@@ -304,31 +309,32 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity = quantity * await self._get_quantity_ratio(quote)
                 limit_price = trading_personal_data.adapt_price(symbol_market,
                                                                 price * self._get_limit_price_from_risk(final_note))
-                for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
-                        quantity,
-                        limit_price,
-                        symbol_market):
+
+                for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
+                                                                                                    limit_price,
+                                                                                                    symbol_market):
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.BUY_LIMIT,
                                                                                 symbol=symbol,
                                                                                 current_price=price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                quantity=float(order_quantity),
+                                                                                price=float(order_price))
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
                 quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
                 quantity = quantity * await self._get_quantity_ratio(quote)
-                for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
-                        quantity, price,
-                        symbol_market):
+
+                for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
+                                                                                                    price,
+                                                                                                    symbol_market):
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.BUY_MARKET,
                                                                                 symbol=symbol,
-                                                                                current_price=order_price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                current_price=float(order_price),
+                                                                                quantity=float(order_quantity),
+                                                                                price=float(order_price))
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
             if created_orders:

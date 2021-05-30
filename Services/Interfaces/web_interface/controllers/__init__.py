@@ -41,6 +41,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.community_authentic
     community_login,
     community_logout,
 )
+from tentacles.Services.Interfaces.web_interface.controllers.community import (
+    community_metrics,
+)
 from tentacles.Services.Interfaces.web_interface.controllers.backtesting import (
     data_collector,
 )
@@ -86,7 +89,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.tutorial import (
 )
 
 
-
 __all__ = [
     "CommunityLoginForm",
     "community_login",
@@ -99,6 +101,7 @@ __all__ = [
     "commands",
     "about",
     "community",
+    "community_metrics",
     "profile",
     "profiles_management",
     "config",

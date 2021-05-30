@@ -451,7 +451,7 @@ async def test_split_create_new_orders():
         assert adapted_order.trader == trader
         assert adapted_order.fee is None
         assert adapted_order.filled_price == 0
-        assert adapted_order.origin_quantity == 64625635.97358092
+        assert adapted_order.origin_quantity == 64625635.97358093
         assert adapted_order.filled_quantity == adapted_order.origin_quantity
         assert adapted_order.simulated is True
         assert adapted_order.linked_to is None
@@ -515,7 +515,7 @@ async def test_split_create_new_orders():
         assert adapted_order.trader == trader
         assert adapted_order.fee is None
         assert adapted_order.filled_price == 0
-        assert adapted_order.origin_quantity == 396851564266.65326
+        assert adapted_order.origin_quantity == 396851564266.6533
         assert adapted_order.filled_quantity == adapted_order.origin_quantity
         assert adapted_order.simulated is True
         assert adapted_order.linked_to is None

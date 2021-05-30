@@ -43,7 +43,7 @@
                         </span>
                     </a>
                     <ul class="collapse nav" id="profilesSubmenu">
-                        {% for profile_id, profile in profiles.items() %}
+                        {% for profile_id, profile in profiles.items() | sort(attribute='1.name') %}
                         <li class="w-100">
                             <a class="nav-link pl-2 pl-sm-4 waves-effect d-flex {{ 'font-weight-bold' if profile_id == current_profile.profile_id }}" id="profile-{{profile_id}}-tab"
                                data-toggle="pill"
@@ -170,7 +170,7 @@
                         <div class="card-header">
                             <h2>
                                 Profile strategy configuration
-                                <a href={{ url_for('profile') }} class="badge badge-dark waves-effect align-top">read only</a>
+                                <span href="" class="badge badge-dark waves-effect align-top" data-role="current-profile-selector">read only</span>
                                 <a class="float-right blue-text" target="_blank" rel="noopener"
                                    href="{{OCTOBOT_WEBSITE_URL}}/guides/#trading_modes">
                                     <i class="fa fa-question"></i>

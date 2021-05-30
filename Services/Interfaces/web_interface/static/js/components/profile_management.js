@@ -92,12 +92,19 @@ function handleProfileExporter(){
     trigger_file_downloader_on_click($(".export-profile-button"));
 }
 
+function selectCurrentProfile(profileNameDisplay){
+    $("#profilesSubmenu").collapse("show");
+    const profileId = profileNameDisplay.attr("data-profile-id");
+    activate_tab($(`#profile-${profileId}-tab`));
+}
+
 function handleProfileSelector(){
     const profileNameDisplay = $("a[data-role=current-profile-selector]");
     profileNameDisplay.click(function (){
-        $("#profilesSubmenu").collapse("show");
-        const profileId = profileNameDisplay.attr("data-profile-id");
-        activate_tab($(`#profile-${profileId}-tab`));
+        selectCurrentProfile(profileNameDisplay);
+    });
+    $("[data-role=current-profile-selector]").click(function (){
+        selectCurrentProfile(profileNameDisplay);
     });
 }
 

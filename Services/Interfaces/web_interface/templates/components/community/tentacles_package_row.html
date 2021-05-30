@@ -1,0 +1,58 @@
+{% macro tentacles_package_row(tentacles_package, default_image, is_preview) -%}
+<tr>
+    <td scope="row">
+        <div class="row">
+            <div class="col-4 pr-1">
+                <img class="img-fluid package_row_image"
+                     src="{{tentacles_package.images[0] if tentacles_package.images else default_image}}"
+                     alt="Tentacles package illustration">
+            </div>
+            <div class="col-8 text-left my-auto pl-0 font-weight-bold">
+                {{tentacles_package.name | replace("_", " ") | capitalize}}
+            </div>
+        </div>
+    </td>
+    <td class="centered">
+        {{ tentacles_package.description }}
+    </td>
+    <td class="centered">
+        <h5 class="my-0">
+            {% if tentacles_package.uninstalled %}
+            <span class="badge badge-danger">
+                Not installed
+            </span>
+            {% elif tentacles_package.activated %}
+            <span class="badge badge-primary">
+                Active
+            </span>
+            {% else %}
+            <span class="badge badge-warning">
+                Inactive
+            </span>
+            {% endif %}
+        </h5>
+    </td>
+    <td>
+        <div class="d-flex justify-content-around flex-wrap">
+            <div>
+                {% if tentacles_package.uninstalled %}
+                <button update-url="{{ url_for('advanced.tentacle_packages', update_type='add_package') }}"
+                        role="button" class="btn btn-link px-1 m-1 install-package-button {{'disabled' if is_preview}}"
+                        data-toggle="tooltip" data-placement="top" title="Install on this OctoBot"
+                        data-package-url="{{tentacles_package.download_url if not is_preview}}"
+                        data-package-latest-compatible-version="{{tentacles_package.get_latest_compatible_version() if not is_preview}}">
+                    <i class="fa fa-download px-2 text-light tentacle_package_action"></i>
+                </button>
+                {% endif %}
+            </div>
+            <div>
+                <a href="{{tentacles_package.url if not is_preview}}" target="_blank" rel="noopener"
+                   role="button" class="btn btn-link px-1 m-1 {{'disabled' if is_preview}}"
+                   data-toggle="tooltip" data-placement="top" title="More details">
+                    <i class="fa fa-user-cog text-light tentacle_package_action"></i>
+                </a>
+            </div>
+        </div>
+    </td>
+</tr>
+{%- endmacro %}
