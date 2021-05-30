@@ -22,7 +22,7 @@ class BinanceCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: Feeds.UNSUPPORTED.value,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,
+        Feeds.KLINE: cryptofeed_constants.CANDLES,
         Feeds.TICKER: Feeds.UNSUPPORTED.value,
         Feeds.CANDLE: cryptofeed_constants.CANDLES,
         Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
