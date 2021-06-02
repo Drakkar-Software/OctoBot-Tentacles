@@ -43,7 +43,7 @@ def _handle_package_operation(update_type):
                 action = "register_and_install"
             else:
                 path_or_url, action = next(iter(request_data.items()))
-                path_or_url = request_data.strip()
+                path_or_url = path_or_url.strip()
             if action == "register_and_install":
                 installation_result = models.install_packages(
                     path_or_url,
