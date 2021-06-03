@@ -39,7 +39,7 @@
                        data-toggle="collapse"
                        href="#profilesSubmenu" role="tab" aria-expanded="false">
                         <span class="d-flex">
-                            <i class="fas fa-user"></i><span class="d-none d-md-block pl-3">Profiles</span>
+                            <i class="fas fa-users"></i><span class="d-none d-md-block pl-3">Profiles</span>
                         </span>
                     </a>
                     <ul class="collapse nav" id="profilesSubmenu">
@@ -49,7 +49,7 @@
                                data-toggle="pill"
                                href="#panelProfile{{profile_id}}" role="tab" aria-controls="panelProfile{{profile_id}}"
                                aria-selected="false">
-                                <i class="fas fa-id-card"></i>
+                                <i class="fas {{'fa-user-lock' if profile.read_only else 'fa-user '}}"></i>
                                 <span class="d-none d-md-block pl-3" data-role="profile-name" data-profile-id="{{profile_id}}">{{profile.name}}</span>
                                 {% if profile_id == current_profile.profile_id %}
                                 <i class="fas fa-check ml-1 ml-md-2"></i>
