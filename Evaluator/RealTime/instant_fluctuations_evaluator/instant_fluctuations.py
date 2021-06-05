@@ -65,10 +65,14 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
             self.average_volumes[segment] = np.mean(volume_data)
             self.average_prices[segment] = np.mean(price_data)
 
-        self.last_volume = volume_data[-1]
-        self.last_price = close_data[-1]
-        await self._trigger_evaluation(cryptocurrency, symbol,
-                                       evaluators_util.get_eval_time(full_candle=candle, time_frame=time_frame))
+        try:
+            self.last_volume = volume_data[-1]
+            self.last_price = close_data[-1]
+            await self._trigger_evaluation(cryptocurrency, symbol,
+                                           evaluators_util.get_eval_time(full_candle=candle, time_frame=time_frame))
+        except IndexError:
+            # candles data history is probably not yet available
+            self.logger.debug(f"Impossible to evaluate, no historical data for {symbol} on {time_frame}")
 
     async def kline_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, kline):
