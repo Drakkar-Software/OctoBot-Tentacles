@@ -67,7 +67,8 @@ function check_config(){
     if(errors.length)
         return false
     else
-        return true
+    const errors = configEditor.validate();
+    return !errors.length;
 
 }
 
@@ -79,7 +80,7 @@ function handleConfigDisplay(){
             if(check_config())
                 updateTentacleConfig(configEditor.getValue());
             else
-                alert("Invalid data form.")
+                create_alert("error", "Error when saving configuration", "Invalid configuration data.");
         });
     }else{
         $("#noConfigMessage").show();
