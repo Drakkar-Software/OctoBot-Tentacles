@@ -15,6 +15,7 @@
 #  License along with this library.
 import os
 import asyncio
+import ccxt
 
 import octobot_commons.logging as bot_logging
 import octobot.api as octobot_api
@@ -22,10 +23,22 @@ import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
 import octobot_services.interfaces.util as interfaces_util
+import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 
+
 LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
+
+
+def get_full_history_exchange_list():
+    full_exchange_list = list(set(ccxt.exchanges))
+    return [exchange for exchange in trading_constants.FULL_HISTORY_EXCHANGES if exchange in full_exchange_list]
+
+
+def get_other_history_exchange_list():
+    full_exchange_list = list(set(ccxt.exchanges))
+    return [exchange for exchange in full_exchange_list if exchange not in trading_constants.FULL_HISTORY_EXCHANGES]
 
 
 async def _get_description(data_file, files_with_description):
@@ -115,13 +128,15 @@ def get_delete_data_file(file_name):
         return deleted, f"Can't delete {file_name} ({error})"
 
 
-def collect_data_file(exchange, symbol):
+def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None):
     success = False
     try:
         result = interfaces_util.run_in_bot_async_executor(
             backtesting_api.collect_exchange_historical_data(exchange,
                                                              interfaces_util.get_bot_api().get_edited_tentacles_config(),
-                                                             [symbol]))
+                                                             [symbol], 
+                                                             start_timestamp=start_timestamp, 
+                                                             end_timestamp=end_timestamp))
         success = True
     except Exception as e:
         result = f"data collector error: {e}"

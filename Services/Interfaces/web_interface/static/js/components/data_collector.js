@@ -69,6 +69,8 @@ function start_collector(){
     const request = {};
     request["exchange"] = $('#exchangeSelect').val();
     request["symbol"] = $('#symbolSelect').val();
+    request["startTimestamp"] = is_full_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : float("NaN");
+    request["endTimestamp"] = is_full_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : float("NaN");
     const update_url = $("#collect_data").attr(update_url_attr);
     send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback)
 }
@@ -106,16 +108,24 @@ function update_symbol_list(url, exchange){
     });
 }
 
+function is_full_history_exchanges(){
+    const full_history_exchanges = $('#exchangeSelect > optgroup')[0].children;
+    const selected_exchange = $('#exchangeSelect').find(":selected")[0];
+    return $.inArray(selected_exchange, full_history_exchanges) !== -1
+}
+
 let dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
 
 $(document).ready(function() {
     handle_data_files_buttons();
+    is_full_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     $('#importFileButton').attr('disabled', true);
     dataFilesTable.on("draw.dt", function(){
         handle_data_files_buttons();
     });
     $('#exchangeSelect').on('change', function() {
-        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val())
+        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        is_full_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
         start_collector();
