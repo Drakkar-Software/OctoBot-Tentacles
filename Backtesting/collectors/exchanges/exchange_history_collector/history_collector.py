@@ -34,11 +34,15 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
     def __init__(self, config, exchange_name, tentacles_setup_config, symbols, time_frames,
                  use_all_available_timeframes=False,
-                 data_format=backtesting_enums.DataFormats.REGULAR_COLLECTOR_DATA):
+                 data_format=backtesting_enums.DataFormats.REGULAR_COLLECTOR_DATA,
+                 start_timestamp=None,
+                 end_timestamp=None):
         super().__init__(config, exchange_name, tentacles_setup_config, symbols, time_frames,
                          use_all_available_timeframes, data_format=data_format)
         self.exchange = None
         self.exchange_manager = None
+        self.start_timestamp = start_timestamp
+        self.end_timestamp = end_timestamp
 
     async def start(self):
         should_stop_database = True
@@ -106,12 +110,31 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
-        candles = await self.exchange.get_symbol_prices(symbol, time_frame)
+
+        if self.start_timestamp is not None or self.end_timestamp is not None:
+            since = self.start_timestamp
+            if self.start_timestamp is None or self.start_timestamp < await self.get_first_candle_timestamp(symbol, time_frame):
+                since=0
+            candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
+            while since < candles[-1][0] if not self.end_timestamp \
+                    else (candles[-1][0] < self.end_timestamp):
+                since = candles[-1][0]
+                candles += await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
+            if self.end_timestamp is not None:
+                while candles[-1][0] > self.end_timestamp:
+                    candles.pop(-1)
+        else:
+            candles = await self.exchange.get_symbol_prices(symbol, time_frame)
+
         self.exchange.uniformize_candles_if_necessary(candles)
         await self.save_ohlcv(exchange=exchange,
                               cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
                               symbol=symbol, time_frame=time_frame, candle=candles,
                               timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
+
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
+
+    async def get_first_candle_timestamp(self, symbol, time_frame):
+        return (await self.exchange.get_symbol_prices(symbol, time_frame, since=0))[-1][0]

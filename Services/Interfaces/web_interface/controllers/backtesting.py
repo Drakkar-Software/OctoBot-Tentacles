@@ -73,7 +73,7 @@ def data_collector():
             success, reply = models.get_delete_data_file(file)
         elif action_type == "start_collector":
             details = flask.request.get_json()
-            success, reply = models.collect_data_file(details["exchange"], details["symbol"])
+            success, reply = models.collect_data_file(details["exchange"], details["symbol"], details["startTimestamp"], details["endTimestamp"])
         elif action_type == "import_data_file":
             if flask.request.files:
                 file = flask.request.files['file']
@@ -87,7 +87,8 @@ def data_collector():
             # here return template to force page reload because of file upload via input form
             return flask.render_template('data_collector.html',
                                          data_files=models.get_data_files_with_description(),
-                                         ccxt_exchanges=sorted(models.get_full_exchange_list()),
+                                         other_ccxt_exchanges=sorted(models.get_other_history_exchange_list()),
+                                         full_history_ccxt_exchanges=models.get_full_history_exchange_list(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
                                          alert=alert)
@@ -112,7 +113,8 @@ def data_collector():
         current_exchange = models.get_current_exchange()
         return flask.render_template('data_collector.html',
                                      data_files=models.get_data_files_with_description(),
-                                     ccxt_exchanges=sorted(models.get_full_exchange_list()),
+                                     other_ccxt_exchanges=sorted(models.get_other_history_exchange_list()),
+                                     full_history_ccxt_exchanges=models.get_full_history_exchange_list(),
                                      current_exchange=models.get_current_exchange(),
                                      full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
                                      origin_page=origin_page,
