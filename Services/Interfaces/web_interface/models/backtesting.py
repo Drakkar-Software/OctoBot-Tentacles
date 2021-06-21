@@ -31,9 +31,9 @@ import tentacles.Services.Interfaces.web_interface as web_interface_root
 LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
 
 
-def get_full_history_exchange_list():
+def get_full_candle_history_exchange_list():
     full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in trading_constants.FULL_HISTORY_EXCHANGES if exchange in full_exchange_list]
+    return [exchange for exchange in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES if exchange in full_exchange_list]
 
 
 def get_other_history_exchange_list():

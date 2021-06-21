@@ -88,7 +88,7 @@ def data_collector():
             return flask.render_template('data_collector.html',
                                          data_files=models.get_data_files_with_description(),
                                          other_ccxt_exchanges=sorted(models.get_other_history_exchange_list()),
-                                         full_history_ccxt_exchanges=models.get_full_history_exchange_list(),
+                                         full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
                                          alert=alert)
@@ -114,7 +114,7 @@ def data_collector():
         return flask.render_template('data_collector.html',
                                      data_files=models.get_data_files_with_description(),
                                      other_ccxt_exchanges=sorted(models.get_other_history_exchange_list()),
-                                     full_history_ccxt_exchanges=models.get_full_history_exchange_list(),
+                                     full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
                                      current_exchange=models.get_current_exchange(),
                                      full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
                                      origin_page=origin_page,
