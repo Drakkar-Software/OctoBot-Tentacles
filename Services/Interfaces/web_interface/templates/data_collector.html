@@ -52,7 +52,7 @@
                 <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25"
                     id="exchangeSelect">
                     <optgroup label="Full History">
-                        {% for exchange in full_history_ccxt_exchanges %}
+                        {% for exchange in full_candle_history_ccxt_exchanges %}
                         <option value={{exchange}} {% if exchange==current_exchange %} selected="selected" {% endif %}>
                             {{exchange}}
                         </option>
