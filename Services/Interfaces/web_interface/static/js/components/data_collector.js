@@ -101,6 +101,7 @@ function update_symbol_list(url, exchange){
           symbolSelect.append($("<option></option>")
              .attr("value", value).text(value));
         });
+        symbolSelect[0].selectedIndex = -1;
         symbolSelect.selectpicker('refresh');
     });
 }
