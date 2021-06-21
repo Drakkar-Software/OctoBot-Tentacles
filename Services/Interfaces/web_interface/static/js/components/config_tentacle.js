@@ -62,14 +62,8 @@ function handle_tentacle_config_update_error_callback(updated_data, update_url, 
 }
 
 function check_config(){
-    var errors = configEditor.validate();
-
-    if(errors.length)
-        return false
-    else
     const errors = configEditor.validate();
     return !errors.length;
-
 }
 
 function handleConfigDisplay(){
