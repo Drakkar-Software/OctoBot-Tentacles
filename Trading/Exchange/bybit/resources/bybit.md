@@ -1,1 +1,1 @@
-Bybit is a basic SpotExchange adaptation for Bybit exchange.
+Bybit is a FutureExchange and basic SpotExchange adaptation for Bybit exchange.
