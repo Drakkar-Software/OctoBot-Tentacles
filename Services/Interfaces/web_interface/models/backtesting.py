@@ -16,6 +16,7 @@
 import os
 import asyncio
 import ccxt
+import threading
 
 import octobot_commons.logging as bot_logging
 import octobot.api as octobot_api
@@ -23,6 +24,7 @@ import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
 import octobot_services.interfaces.util as interfaces_util
+import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
@@ -38,7 +40,7 @@ def get_full_candle_history_exchange_list():
 
 def get_other_history_exchange_list():
     full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in full_exchange_list if exchange not in trading_constants.FULL_HISTORY_EXCHANGES]
+    return [exchange for exchange in full_exchange_list if exchange not in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES]
 
 
 async def _get_description(data_file, files_with_description):
@@ -128,7 +130,10 @@ def get_delete_data_file(file_name):
         return deleted, f"Can't delete {file_name} ({error})"
 
 
-def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None):
+def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None, in_background=False):
+    if in_background:
+        _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp)
+        return True, f"Historical data collection started."
     success = False
     try:
         result = interfaces_util.run_in_bot_async_executor(
@@ -140,11 +145,31 @@ def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None
         success = True
     except Exception as e:
         result = f"data collector error: {e}"
-
     if success:
         return success, f"{result} saved"
     else:
         return success, f"Can't collect data for {symbol} on {exchange} ({result})"
+
+
+async def _collect_and_notify(exchange, symbol, start_timestamp, end_timestamp):
+    success = False
+    try:
+        result = await backtesting_api.collect_exchange_historical_data(
+            exchange,
+            interfaces_util.get_bot_api().get_edited_tentacles_config(),
+            [symbol],
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp)
+        success = True
+    except Exception as e:
+        result = f"data collector error: {e}"
+    notification_level = services_enums.NotificationLevel.SUCCESS if success else services_enums.NotificationLevel.DANGER
+    await web_interface_root.add_notification(notification_level, f"Data collection for {symbol} on {exchange}", result)
+
+
+def _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp):
+    coro = _collect_and_notify(exchange, symbol, start_timestamp, end_timestamp)
+    threading.Thread(target=asyncio.run, args=(coro, ), name=f"DataCollector{symbol}").start()
 
 
 async def _convert_into_octobot_data_file_if_necessary(output_file):
