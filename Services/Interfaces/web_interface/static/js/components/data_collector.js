@@ -128,7 +128,12 @@ $(document).ready(function() {
         is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
-        start_collector();
+        if(is_full_candle_history_exchanges() && $("#startDate").val() == "" && $("#endDate").val() != ""){
+            create_alert("error", "You should specify a start date.", "");
+        }
+        else{
+            start_collector();
+        }
     });
     $('#inputFile').on('change',function(){
         handle_file_selection();
