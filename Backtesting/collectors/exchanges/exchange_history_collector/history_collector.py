@@ -117,7 +117,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 since=0
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
             while since < candles[-1][0] if not self.end_timestamp \
-                    else (candles[-1][0] < self.end_timestamp):
+                    else (candles[-1][0] < self.end_timestamp - (time_frame_sec *1000)):
                 since = candles[-1][0]
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
             if self.end_timestamp is not None:

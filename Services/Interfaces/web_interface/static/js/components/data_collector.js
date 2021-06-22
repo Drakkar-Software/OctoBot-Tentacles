@@ -133,4 +133,15 @@ $(document).ready(function() {
     $('#inputFile').on('change',function(){
         handle_file_selection();
     });
+    $("#endDate").on('change', function(){
+        const startDate = new Date(this.value);
+        startDate.setDate(startDate.getDate() - 1);
+        $("#startDate")[0].max = startDate.toISOString().split("T")[0];
+    });
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - 1);
+    $("#endDate")[0].max = endDate.toISOString().split("T")[0];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 2);
+    $("#startDate")[0].max = startDate.toISOString().split("T")[0];
 });
