@@ -69,8 +69,8 @@ function start_collector(){
     const request = {};
     request["exchange"] = $('#exchangeSelect').val();
     request["symbol"] = $('#symbolSelect').val();
-    request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : float("NaN");
-    request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : float("NaN");
+    request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : null;
+    request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : null;
     const update_url = $("#collect_data").attr(update_url_attr);
     send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback)
 }
