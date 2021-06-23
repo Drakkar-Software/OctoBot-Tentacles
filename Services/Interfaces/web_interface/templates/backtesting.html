@@ -22,6 +22,8 @@
                     <th scope="col">#</th>
                     <th scope="col">Symbol(s)</th>
                     <th scope="col">Date of recording</th>
+                    <th scope="col">Start date</th>
+                    <th scope="col">End date</th>
                     <th scope="col">Exchange</th>
                     <th scope="col">Time frame(s)</th>
                     <th scope="col">File</th>
@@ -36,6 +38,8 @@
                         </div></td>
                         <td>{{", ".join(description.symbols)}}</td>
                         <td data-order="{{description.timestamp}}">{{description.date}}</td>
+                        <td data-order="{{description.start_timestamp}}">{{description.start_date}}</td>
+                        <td data-order="{{description.end_timestamp}}">{{description.end_date}}</td>
                         <td>{{description.exchange}}</td>
                         <td>{{", ".join(description.time_frames)}}</td>
                         <td>{{file}}</td>
