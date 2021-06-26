@@ -108,6 +108,23 @@ function update_symbol_list(url, exchange){
     });
 }
 
+function check_date_input(){
+    const startDate = new Date($("#startDate").val());
+    const enddate = new Date($("#endDate").val());
+    const startDateMax = new Date( $("#startDate")[0].max);
+    const endDateMin = new Date( $("#endDate")[0].min);
+    if(isNaN(startDate) && isNaN(enddate)){
+        return true;
+    }else if (!isNaN(enddate) && isNaN(startDate)){
+        create_alert("error", "You should specify a start date.", "");
+        return false;
+    }else if((!isNaN(startDate) && startDate > startDateMax) || (!isNaN(enddate) && enddate < endDateMin)){
+        create_alert("error", "Invalid date range.", "");
+        return false;
+    }else{
+        return true;
+    }
+}
 function is_full_candle_history_exchanges(){
     const full_history_exchanges = $('#exchangeSelect > optgroup')[0].children;
     const selected_exchange = $('#exchangeSelect').find(":selected")[0];
@@ -128,10 +145,7 @@ $(document).ready(function() {
         is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
-        if(is_full_candle_history_exchanges() && $("#startDate").val() == "" && $("#endDate").val() != ""){
-            create_alert("error", "You should specify a start date.", "");
-        }
-        else{
+        if(check_date_input()){
             start_collector();
         }
     });
@@ -139,14 +153,31 @@ $(document).ready(function() {
         handle_file_selection();
     });
     $("#endDate").on('change', function(){
-        const startDate = new Date(this.value);
-        startDate.setDate(startDate.getDate() - 1);
-        $("#startDate")[0].max = startDate.toISOString().split("T")[0];
+        let endDate = new Date(this.value);
+        if(!isNaN(endDate)){
+            const endDateMax = new Date();
+            endDateMax.setDate(endDateMax.getDate() - 1);
+            endDate.setDate(endDate.getDate() - 1);
+            if(endDate > endDateMax){
+                this.value = endDateMax.toISOString().split("T")[0];
+                endDate = endDateMax;
+            }
+            $("#startDate")[0].max = endDate.toISOString().split("T")[0];
+        }
     });
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() - 1);
-    $("#endDate")[0].max = endDate.toISOString().split("T")[0];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 2);
-    $("#startDate")[0].max = startDate.toISOString().split("T")[0];
+    $("#startDate").on('change', function(){
+        const startDate = new Date(this.value);
+        if(!isNaN(startDate)){
+            const startDateMax = new Date();
+            startDateMax.setDate(startDateMax.getDate() - 2);
+            startDate.setDate(startDate.getDate() + 1);
+            $("#endDate")[0].min = startDate.toISOString().split("T")[0];
+        }
+    });
+    const endDateMax = new Date();
+    endDateMax.setDate(endDateMax.getDate() - 1);
+    $("#endDate")[0].max = endDateMax.toISOString().split("T")[0];
+    const startDateMax = new Date();
+    startDateMax.setDate(startDateMax.getDate() - 2);
+    $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
 });
