@@ -38,11 +38,10 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                  start_timestamp=None,
                  end_timestamp=None):
         super().__init__(config, exchange_name, tentacles_setup_config, symbols, time_frames,
-                         use_all_available_timeframes, data_format=data_format)
+                         use_all_available_timeframes, data_format=data_format,\
+                         start_timestamp=start_timestamp, end_timestamp=end_timestamp)
         self.exchange = None
         self.exchange_manager = None
-        self.start_timestamp = start_timestamp
-        self.end_timestamp = end_timestamp
 
     async def start(self):
         should_stop_database = True
