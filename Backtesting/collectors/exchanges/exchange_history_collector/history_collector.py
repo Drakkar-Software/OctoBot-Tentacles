@@ -110,10 +110,11 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
 
-        if self.start_timestamp is not None or self.end_timestamp is not None:
-            since = self.start_timestamp
-            if self.start_timestamp is None or self.start_timestamp < await self.get_first_candle_timestamp(symbol, time_frame):
-                since=0
+        if self.start_timestamp is not None:
+            first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
+            since=0
+            if self.start_timestamp < first_candle_timestamp:
+                since = first_candle_timestamp
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
             while since < candles[-1][0] if not self.end_timestamp \
                     else (candles[-1][0] < self.end_timestamp - (time_frame_sec *1000)):
