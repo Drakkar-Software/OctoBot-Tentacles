@@ -21,6 +21,7 @@ import octobot_backtesting.enums as backtesting_enums
 import octobot_backtesting.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
+import octobot_commons.time_frame_manager as time_frame_manager
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
 try:
@@ -58,6 +59,13 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             self.exchange = self.exchange_manager.exchange
             self._load_timeframes_if_necessary()
+
+            if self.start_timestamp is not None:
+                lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,\
+                                            time_frame_manager.find_min_time_frame(self.time_frames)) 
+                                            for symbol in self.symbols])
+                if lowest_timestamp > self.start_timestamp:
+                    self.start_timestamp = lowest_timestamp
 
             # create description
             await self._create_description()
@@ -137,4 +145,4 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         pass
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol, time_frame, since=0))[-1][0]
+        return (await self.exchange.get_symbol_prices(symbol, time_frame, since=0))[0][0]
