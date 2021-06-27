@@ -569,9 +569,10 @@ def get_all_symbols_dict():
                 if _is_legit_currency(currency_data[NAME_KEY])
             }
         except Exception as e:
+            details = f"code: {request_response.status_code}, body: {request_response.text}" \
+                if request_response else {request_response}
             _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
-            _get_logger().debug(f"coingecko.com response code: {request_response.status_code}, body: "
-                                f"{request_response.text}")
+            _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_symbols_dict
 
