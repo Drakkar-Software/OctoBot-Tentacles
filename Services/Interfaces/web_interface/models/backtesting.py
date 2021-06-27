@@ -30,8 +30,14 @@ LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
 
 async def _get_description(data_file, files_with_description):
     description = await backtesting_api.get_file_description(data_file)
-    if description is not None:
+    if _is_usable_description(description):
         files_with_description[data_file] = description
+
+
+def _is_usable_description(description):
+    return description is not None \
+           and description[backtesting_enums.DataFormatKeys.SYMBOLS.value] is not None \
+           and description[backtesting_enums.DataFormatKeys.TIME_FRAMES.value] is not None
 
 
 async def _retrieve_data_files_with_description(files):
