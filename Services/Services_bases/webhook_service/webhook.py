@@ -23,6 +23,7 @@ import pyngrok.ngrok as ngrok
 import pyngrok.exception
 
 import octobot_commons.logging as bot_logging
+import octobot_commons.configuration as configuration
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
@@ -30,22 +31,32 @@ import octobot.constants as constants
 
 class WebHookService(services.AbstractService):
     CONNECTION_TIMEOUT = 3
+    CONFIG_NGROK = "ngrok"
+    CONFIG_WEBHOOK_SERVER_IP = "webhook-bind-ip"
+    CONFIG_WEBHOOK_SERVER_PORT = "webhook-bind-port"
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
         return {
-            services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet."
+            WebHookService.CONFIG_NGROK: "Use Ngrok",
+            services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
+            WebHookService.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP",
+            WebHookService.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port"
         }
 
     def get_default_value(self):
         return {
-            services_constants.CONFIG_NGROK_TOKEN: ""
+            WebHookService.CONFIG_NGROK: True,
+            services_constants.CONFIG_NGROK_TOKEN: "",
+            WebHookService.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
+            WebHookService.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
         }
 
     def __init__(self):
         super().__init__()
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
+        self.ngrok = True
 
         self.service_feed_webhooks = {}
         self.service_feed_auth_callbacks = {}
@@ -68,14 +79,20 @@ class WebHookService(services.AbstractService):
     def get_is_enabled(config):
         return True
 
+    def check_required_config(self, config):
+        try:
+            return False if config[WebHookService.CONFIG_NGROK] \
+                and configuration.has_invalid_default_config_value(config[services_constants.CONFIG_NGROK_TOKEN]) else True
+        except KeyError:
+            return False
+
+
     def has_required_configuration(self):
-        return services_constants.CONFIG_CATEGORY_SERVICES in self.config \
-               and services_constants.CONFIG_WEBHOOK in self.config[services_constants.CONFIG_CATEGORY_SERVICES] \
-               and self.check_required_config(
-            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK])
+        return self.check_required_config(self.config[services_constants.CONFIG_CATEGORY_SERVICES]
+                                                                [services_constants.CONFIG_WEBHOOK])
 
     def get_required_config(self):
-        return [services_constants.CONFIG_NGROK_TOKEN]
+        return [WebHookService.CONFIG_NGROK, services_constants.CONFIG_NGROK_TOKEN]
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -155,20 +172,23 @@ class WebHookService(services.AbstractService):
 
     async def prepare(self) -> None:
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
-        ngrok.set_auth_token(
-            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
-                services_constants.CONFIG_NGROK_TOKEN])
+        self.ngrok = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK]\
+                                                                                    [WebHookService.CONFIG_NGROK]
+        if self.ngrok:
+            ngrok.set_auth_token(
+                self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
+                    services_constants.CONFIG_NGROK_TOKEN])
         try:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                                          [services_constants.CONFIG_WEBHOOK][services_constants.CONFIG_WEB_IP])
+                                          [services_constants.CONFIG_WEBHOOK][WebHookService.CONFIG_WEBHOOK_SERVER_IP])
         except KeyError:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           services_constants.DEFAULT_WEBHOOK_SERVER_IP)
         try:
             self.webhook_port = int(
                 os.getenv(services_constants.ENV_WEBHOOK_PORT, self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                [services_constants.CONFIG_WEBHOOK][services_constants.CONFIG_WEB_PORT]))
+                [services_constants.CONFIG_WEBHOOK][WebHookService.CONFIG_WEBHOOK_SERVER_PORT]))
         except KeyError:
             self.webhook_port = int(
                 os.getenv(services_constants.ENV_WEBHOOK_PORT, services_constants.DEFAULT_WEBHOOK_SERVER_PORT))
@@ -177,8 +197,9 @@ class WebHookService(services.AbstractService):
         try:
             self._prepare_webhook_server()
             self._load_webhook_routes()
-            self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
-            self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
+            if self.ngrok:
+                self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
+                self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
             if self.webhook_server:
                 self.connected = True
                 self.webhook_server.serve_forever()
