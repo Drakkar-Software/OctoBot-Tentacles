@@ -197,6 +197,7 @@ class WebHookService(services.AbstractService):
         try:
             self._prepare_webhook_server()
             self._load_webhook_routes()
+            self.webhook_public_url = f"//{self.webhook_host}:{self.webhook_port}/webhook"
             if self.ngrok:
                 self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
                 self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
