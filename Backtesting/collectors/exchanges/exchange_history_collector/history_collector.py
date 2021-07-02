@@ -145,4 +145,4 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         pass
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol, time_frame, since=0))[0][0]
+        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0][0]
