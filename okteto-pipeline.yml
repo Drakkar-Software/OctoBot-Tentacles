@@ -1,0 +1,6 @@
+icon: https://raw.githubusercontent.com/Drakkar-Software/OctoBot/assets/octopus.png
+deploy:
+  - git clone https://github.com/Drakkar-Software/OctoBot -b dev
+  - okteto build --build-arg TENTACLES_URL_TAG=${OKTETO_GIT_BRANCH} -t okteto.dev/octobot:dev OctoBot
+devs:
+  - okteto.yml
