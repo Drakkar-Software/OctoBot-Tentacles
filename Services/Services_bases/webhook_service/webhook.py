@@ -31,24 +31,22 @@ import octobot.constants as constants
 
 class WebHookService(services.AbstractService):
     CONNECTION_TIMEOUT = 3
-    CONFIG_WEBHOOK_SERVER_IP = "webhook-bind-ip"
-    CONFIG_WEBHOOK_SERVER_PORT = "webhook-bind-port"
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
         return {
             services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
-            WebHookService.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP",
-            WebHookService.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port"
+            services_constants.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP",
+            services_constants.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port"
         }
 
     def get_default_value(self):
         return {
             services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
-            WebHookService.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
-            WebHookService.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
+            services_constants.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
+            services_constants.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
         }
 
     def __init__(self):
@@ -180,14 +178,14 @@ class WebHookService(services.AbstractService):
         try:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                                          [services_constants.CONFIG_WEBHOOK][WebHookService.CONFIG_WEBHOOK_SERVER_IP])
+                                          [services_constants.CONFIG_WEBHOOK][services_constants.CONFIG_WEBHOOK_SERVER_IP])
         except KeyError:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           services_constants.DEFAULT_WEBHOOK_SERVER_IP)
         try:
             self.webhook_port = int(
                 os.getenv(services_constants.ENV_WEBHOOK_PORT, self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                [services_constants.CONFIG_WEBHOOK][WebHookService.CONFIG_WEBHOOK_SERVER_PORT]))
+                [services_constants.CONFIG_WEBHOOK][services_constants.CONFIG_WEBHOOK_SERVER_PORT]))
         except KeyError:
             self.webhook_port = int(
                 os.getenv(services_constants.ENV_WEBHOOK_PORT, services_constants.DEFAULT_WEBHOOK_SERVER_PORT))
