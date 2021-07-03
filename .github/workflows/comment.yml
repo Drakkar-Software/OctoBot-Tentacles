@@ -1,0 +1,17 @@
+name: OctoBot-Tentacles-Comment-PR
+on:
+  pull_request:
+
+jobs:
+  okteto_button_comment_pr:
+    runs-on: ubuntu-latest
+    name: Okteto deploy button comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@master
+        with:
+          message: "[![Deploy PR on Okteto](https://okteto.com/develop-okteto.svg)](https://cloud.okteto.com/deploy?repository=https://github.com/Drakkar-Software/OctoBot-Tentacles&branch=${GITHUB_REF##*/})"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
