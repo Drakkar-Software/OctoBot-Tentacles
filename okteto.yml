@@ -1,0 +1,4 @@
+name: OctoBot
+image: okteto.dev/octobot:dev
+persistentVolume:
+  enabled: false
