@@ -1,6 +1,7 @@
 name: OctoBot-Tentacles-Comment-PR
 on:
   pull_request:
+    types: [ opened ]
 
 jobs:
   okteto_button_comment_pr:
