@@ -22,6 +22,7 @@ import octobot_backtesting.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.enums as common_enums
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
 try:
@@ -121,16 +122,22 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
         if self.start_timestamp is not None:
             first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
-            since=0
+            since=self.start_timestamp
+
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
+
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
-            while since < candles[-1][0] if not self.end_timestamp \
-                    else (candles[-1][0] < self.end_timestamp - (time_frame_sec *1000)):
-                since = candles[-1][0]
+            last_candle_timestamp=candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+
+            while since < last_candle_timestamp if not self.end_timestamp \
+                    else (last_candle_timestamp < self.end_timestamp - (time_frame_sec *1000)):
+                since = last_candle_timestamp
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame, since=(since + (time_frame_sec *1000)))
+                last_candle_timestamp=candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+
             if self.end_timestamp is not None:
-                while candles[-1][0] > self.end_timestamp:
+                while candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
                     candles.pop(-1)
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
@@ -146,4 +153,4 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         pass
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0][0]
+        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0][common_enums.PriceIndexes.IND_PRICE_TIME.value]
