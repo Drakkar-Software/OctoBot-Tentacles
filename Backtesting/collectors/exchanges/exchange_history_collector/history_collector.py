@@ -68,6 +68,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                                             for symbol in self.symbols])
                 if lowest_timestamp > self.start_timestamp:
                     self.start_timestamp = lowest_timestamp
+                if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time()*1000)):
+                    raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
             # create description
             await self._create_description()
