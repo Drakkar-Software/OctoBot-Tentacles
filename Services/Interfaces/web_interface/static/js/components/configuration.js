@@ -121,6 +121,13 @@ function handle_add_buttons(){
             }
         }
 
+        // exchanges
+        let has_websockets = false;
+        const ws_attr = select_input.find("[data-tokens='"+select_value+"']").attr("data-ws");
+        if(isDefined(ws_attr)){
+            has_websockets = ws_attr === "True";
+        }
+
         const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
         let target_template = $("#" + button_id + "-template-default");
 
@@ -137,6 +144,9 @@ function handle_add_buttons(){
             template_default = template_default.replace(new RegExp("card-img-top currency-image default","g"), "card-img-top currency-image");
             if(isDefined(currency_id)){
                 template_default = template_default.replace(new RegExp(`data-currency-id="${config_default_value.toLowerCase()}"`), `data-currency-id="${currency_id}"`);
+            }
+            if(has_websockets){
+                template_default = template_default.replace(new RegExp("data-role=\"websocket-mark\" class=\"d-none "), "data-role=\"websocket-mark\" class=\"");
             }
             deck.append(template_default).hide().fadeIn();
 

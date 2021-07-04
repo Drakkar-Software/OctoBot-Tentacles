@@ -620,6 +620,16 @@ def get_other_exchange_list(remove_config_exchanges=False):
             exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
 
 
+def get_exchanges_details(exchanges_config):
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
+    return {
+        exchange_name: {
+            "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config)
+        }
+        for exchange_name in exchanges_config
+    }
+
+
 def get_current_exchange():
     g_config = interfaces_util.get_global_config()
     exchanges = g_config[commons_constants.CONFIG_EXCHANGES]
