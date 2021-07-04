@@ -15,6 +15,7 @@
 #  License along with this library.
 import logging
 import os
+import time
 
 import octobot_backtesting.collectors as collector
 import octobot_backtesting.enums as backtesting_enums
@@ -126,6 +127,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
+
+            if ((self.end_timestamp if self.end_timestamp else time.time()*1000) - since) < (time_frame_sec *1000):
+                return
 
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
             last_candle_timestamp=candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
