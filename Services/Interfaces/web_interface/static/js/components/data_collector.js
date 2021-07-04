@@ -128,7 +128,7 @@ function check_date_input(){
 function is_full_candle_history_exchanges(){
     const full_history_exchanges = $('#exchangeSelect > optgroup')[0].children;
     const selected_exchange = $('#exchangeSelect').find(":selected")[0];
-    return $.inArray(selected_exchange, full_history_exchanges) !== -1
+    return $.inArray(selected_exchange, full_history_exchanges) !== -1;
 }
 
 let dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
