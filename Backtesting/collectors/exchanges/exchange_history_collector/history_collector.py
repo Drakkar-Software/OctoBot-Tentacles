@@ -88,8 +88,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             await self.database.stop()
             should_stop_database = False
             # Do not keep errored data file
-            if os.path.isfile(self.file_path):
-                os.remove(self.file_path)
+            if os.path.isfile(self.temp_file_path):
+                os.remove(self.temp_file_path)
             raise errors.DataCollectorError(err)
         finally:
             await self.stop(should_stop_database=should_stop_database)
