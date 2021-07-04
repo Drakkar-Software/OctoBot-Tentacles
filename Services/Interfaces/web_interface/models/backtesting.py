@@ -23,6 +23,7 @@ import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
+import octobot_backtesting.enums as backtesting_enums
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants

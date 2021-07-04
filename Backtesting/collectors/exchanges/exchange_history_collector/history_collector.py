@@ -64,7 +64,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             if self.start_timestamp is not None:
                 lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,\
-                                            time_frame_manager.find_min_time_frame(self.time_frames))
+                                            time_frame_manager.find_min_time_frame(self.time_frames)) 
                                             for symbol in self.symbols])
                 if lowest_timestamp > self.start_timestamp:
                     self.start_timestamp = lowest_timestamp
@@ -81,8 +81,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 await self.get_order_book_history(self.exchange_name, symbol)
                 await self.get_recent_trades_history(self.exchange_name, symbol)
 
-                for time_frame in self.time_frames:
-                    self.logger.info(f"Collecting history on {time_frame}...")
+                for index, time_frame in enumerate(self.time_frames):
+                    self.logger.info(
+                        f"[{index}/{len(self.time_frames)}] Collecting {symbol} history on {time_frame}...")
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
                     await self.get_kline_history(self.exchange_name, symbol, time_frame)
         except Exception as err:
@@ -125,7 +126,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
         if self.start_timestamp is not None:
             first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
-            since=self.start_timestamp
+            since = self.start_timestamp
 
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
@@ -134,13 +135,17 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 return
 
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
-            last_candle_timestamp=candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+            last_candle_timestamp = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
 
+            total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
+            start_fetch_time = last_candle_timestamp
             while since < last_candle_timestamp if not self.end_timestamp \
                     else (last_candle_timestamp < self.end_timestamp - (time_frame_sec *1000)):
                 since = last_candle_timestamp
+                progress = (since-start_fetch_time) / total_interval
+                self.logger.info(f"[{round(progress *100)}%] historical data fetched for {symbol} {time_frame}")
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame, since=(since + (time_frame_sec *1000)))
-                last_candle_timestamp=candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+                last_candle_timestamp = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
 
             if self.end_timestamp is not None:
                 while candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
