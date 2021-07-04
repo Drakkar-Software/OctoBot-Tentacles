@@ -45,13 +45,14 @@ def profile():
 
     missing_tentacles = set()
     profiles = models.get_profiles()
+    config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
 
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
                                  profiles_activated_tentacles=models.get_profiles_activated_tentacles(profiles),
 
-                                 config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+                                 config_exchanges=config_exchanges,
                                  config_trading=display_config[commons_constants.CONFIG_TRADING],
                                  config_trader=display_config[commons_constants.CONFIG_TRADER],
                                  config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
@@ -74,7 +75,9 @@ def profile():
                                  in_backtesting=backtesting_api.is_backtesting_enabled(display_config),
 
                                  config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
-                                                                                                         missing_tentacles)
+                                                                                                         missing_tentacles),
+
+                                 exchanges_details=models.get_exchanges_details(config_exchanges)
                                  )
 
 
@@ -121,12 +124,14 @@ def accounts():
     service_list = models.get_services_list()
     notifiers_list = models.get_notifiers_list()
 
+    config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
     return flask.render_template('accounts.html',
                                  ccxt_tested_exchanges=models.get_tested_exchange_list(),
                                  ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
                                  ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
+                                 exchanges_details=models.get_exchanges_details(config_exchanges),
 
-                                 config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+                                 config_exchanges=config_exchanges,
                                  config_notifications=display_config[
                                      services_constants.CONFIG_CATEGORY_NOTIFICATION],
                                  config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
