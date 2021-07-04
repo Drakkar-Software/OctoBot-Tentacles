@@ -131,7 +131,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
 
-            if ((self.end_timestamp if self.end_timestamp else time.time()*1000) - since) < (time_frame_sec *1000):
+            if ((self.end_timestamp or time.time()*1000) - since) < (time_frame_sec *1000):
                 return
 
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
