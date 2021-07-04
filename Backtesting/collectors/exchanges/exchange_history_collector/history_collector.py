@@ -103,6 +103,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         await self.exchange_manager.stop()
         if should_stop_database:
             await self.database.stop()
+            self.finalize_database()
         self.exchange_manager = None
 
     async def get_ticker_history(self, exchange, symbol):
