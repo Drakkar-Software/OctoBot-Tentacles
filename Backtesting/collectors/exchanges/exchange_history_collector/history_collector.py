@@ -64,7 +64,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             if self.start_timestamp is not None:
                 lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,\
-                                            time_frame_manager.find_min_time_frame(self.time_frames)) 
+                                            time_frame_manager.find_min_time_frame(self.time_frames))
                                             for symbol in self.symbols])
                 if lowest_timestamp > self.start_timestamp:
                     self.start_timestamp = lowest_timestamp

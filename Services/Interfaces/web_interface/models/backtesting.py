@@ -139,8 +139,8 @@ def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None
         result = interfaces_util.run_in_bot_async_executor(
             backtesting_api.collect_exchange_historical_data(exchange,
                                                              interfaces_util.get_bot_api().get_edited_tentacles_config(),
-                                                             [symbol], 
-                                                             start_timestamp=start_timestamp, 
+                                                             [symbol],
+                                                             start_timestamp=start_timestamp,
                                                              end_timestamp=end_timestamp))
         success = True
     except Exception as e:
