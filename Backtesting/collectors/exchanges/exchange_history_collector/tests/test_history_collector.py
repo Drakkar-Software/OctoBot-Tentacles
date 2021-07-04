@@ -115,7 +115,7 @@ async def test_collect_valid_date_range():
         assert not os.path.isfile(collector.temp_file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
-            assert len(ohlcv) > 16833
+            assert len(ohlcv) == 16833
             h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="1h")
             assert len(h_ohlcv) == 168
             eth_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="ETH/BTC")
@@ -123,7 +123,7 @@ async def test_collect_valid_date_range():
             min_timestamp = (await database.select_min(enums.ExchangeDataTables.OHLCV, ["timestamp"],time_frame="1m"))[0][0]*1000
             assert min_timestamp <= 1549065720000
             max_timestamp = (await database.select_max(enums.ExchangeDataTables.OHLCV, ["timestamp"]))[0][0]*1000
-            assert max_timestamp <= 1549843200
+            assert max_timestamp <= 1549843200000
 
 async def test_collect_invalid_date_range():
     exchange_name = "binance"
