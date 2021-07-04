@@ -29,10 +29,12 @@ pytestmark = pytest.mark.asyncio
 
 
 @contextlib.asynccontextmanager
-async def data_collector(exchange_name, tentacles_setup_config, symbols, time_frames, use_all_available_timeframes):
+async def data_collector(exchange_name, tentacles_setup_config, symbols, time_frames, use_all_available_timeframes, start_timestamp=None, end_timestamp=None):
     collector_instance = collector_exchanges.ExchangeHistoryDataCollector(
         {}, exchange_name, tentacles_setup_config, symbols, time_frames,
-        use_all_available_timeframes=use_all_available_timeframes
+        use_all_available_timeframes=use_all_available_timeframes,
+        start_timestamp=start_timestamp,
+        end_timestamp=end_timestamp
     )
     try:
         await collector_instance.initialize()
