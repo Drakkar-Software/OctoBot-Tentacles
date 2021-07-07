@@ -21,9 +21,9 @@ from octobot_trading.enums import WebsocketFeeds as Feeds
 class BinanceCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: Feeds.UNSUPPORTED.value,
+        Feeds.TRADES: cryptofeed_constants.TRADES,
         Feeds.KLINE: cryptofeed_constants.CANDLES,
-        Feeds.TICKER: Feeds.UNSUPPORTED.value,
+        Feeds.TICKER: cryptofeed_constants.TICKER,
         Feeds.CANDLE: cryptofeed_constants.CANDLES,
         Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
         Feeds.BOOK_DELTA: Feeds.UNSUPPORTED.value,
