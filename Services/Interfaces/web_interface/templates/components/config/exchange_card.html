@@ -2,11 +2,29 @@
 {% macro config_exchange_card(config, exchange, exchanges_details, keys_value="*********", enabled=True,
                               sandboxed=False, add_class='', config_values=None, full_config=True) -%}
     <!-- Card -->
-    <div class="card mb-4 {{add_class}} config-card">
+    <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
         <div class="card-header row">
             <div class="col-sm-7 col-lg-5">
-                <h4 class="text-capitalize">{{exchange}}</h4>
+                <h4 class="text-capitalize">
+                    {{exchange}}
+                    <span data-role="supporting-exchange" class="mx-md-4 d-none">
+                        <i class="fas fa-star" data-toggle="tooltip" data-placement="top" title="Partner exchange:
+                        Support the OctoBot project by trading on this exchange."></i>
+                    </span>
+                    <span data-role="account-warning" class="text-danger mx-md-4 d-none">
+                        <i class="fas fa-exclamation-triangle" data-toggle="tooltip" data-placement="top" title="Login successful
+                        however OctoBot works with exchanges remain free, please create a new unrefereed exchange account to
+                        support the project."></i>
+                    </span>
+                    <span data-role="valid-account" class="mx-md-4 d-none">
+                        <i class="fas fa-check" data-toggle="tooltip" data-placement="top" title="Login successful"></i>
+                    </span>
+                    <span data-role="supporting-account" class="mx-md-4 d-none">
+                        <i class="fas fa-trophy" data-toggle="tooltip" data-placement="top" title="Login successful.
+                        Thanks for being awesome and supporting the OctoBot project."></i>
+                    </span>
+                </h4>
             </div>
             <div class="col-sm-5 col-lg-5">
                 <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
@@ -28,6 +46,9 @@
 
         <!--Card content-->
         <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
+            <div data-role="account-warning-details" class="alert alert-danger d-none">
+                OctoBot works with exchanges remain free, please create a new exchange account to support the project.
+            </div>
             <div class="d-flex">
                 {% if full_config %}
                     <div class="flex-grow-1">
@@ -65,7 +86,7 @@
                            data-toggle="tooltip" data-placement="top"
                            title="An API password is required by some exchanges, leave as is otherwise.">
                         </i> : <a href="#"
-                                  id="exchange_api-secret"
+                                  id="exchange_api-password"
                                   config-key="exchanges_{{exchange}}_api-password"
                                   config-type="global_config"
                                   config-value="{{config_values if config_values else keys_value}}"
