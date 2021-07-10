@@ -32,7 +32,7 @@ jobs:
         OCTOBOT_DEFAULT_BRANCH: dev
         DISABLE_SENTRY: True
       run: |
-        TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo "$GITHUB_REF" || echo "$GITHUB_HEAD_REF")
+        TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
         git clone -q $OCTOBOT_GH_REPO -b ${TARGET_BRANCH} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
         cd OctoBot
         git status
@@ -51,7 +51,7 @@ jobs:
         OCTOBOT_DEFAULT_BRANCH: dev
         DISABLE_SENTRY: True
       run: |
-        $env:TARGET_BRANCH = If (Test-Path env:GITHUB_HEAD_REF) {$env:GITHUB_HEAD_REF} Else {$env:GITHUB_REF}
+        $env:TARGET_BRANCH = @({$env:GITHUB_HEAD_REF}, {$env:GITHUB_REF})[(Test-Path env:GITHUB_HEAD_REF)]
         If ($env:TARGET_BRANCH -notcontains "refs/tags/") {
           $env:TENTACLES_URL_TAG = "latest"
         }
@@ -117,7 +117,7 @@ jobs:
           echo "NEXUS_USERNAME=${{ secrets.NEXUS_USERNAME }}" >> $GITHUB_ENV
           echo "NEXUS_PASSWORD=${{ secrets.NEXUS_PASSWORD }}" >> $GITHUB_ENV
           echo "NEXUS_URL=${{ secrets.NEXUS_URL }}" >> $GITHUB_ENV
-          TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo "$GITHUB_REF" || echo "$GITHUB_HEAD_REF")
+          TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
           echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
 
       - name: Set up Python 3.8
