@@ -23,7 +23,6 @@ import octobot_backtesting.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.time_frame_manager as time_frame_manager
-import octobot_commons.enums as common_enums
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
 try:
@@ -41,7 +40,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                  start_timestamp=None,
                  end_timestamp=None):
         super().__init__(config, exchange_name, tentacles_setup_config, symbols, time_frames,
-                         use_all_available_timeframes, data_format=data_format,\
+                         use_all_available_timeframes, data_format=data_format,
                          start_timestamp=start_timestamp, end_timestamp=end_timestamp)
         self.exchange = None
         self.exchange_manager = None
@@ -63,9 +62,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             self._load_timeframes_if_necessary()
 
             if self.start_timestamp is not None:
-                lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,\
-                                            time_frame_manager.find_min_time_frame(self.time_frames)) 
-                                            for symbol in self.symbols])
+                lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,
+                                        time_frame_manager.find_min_time_frame(self.time_frames))
+                                        for symbol in self.symbols])
                 if lowest_timestamp > self.start_timestamp:
                     self.start_timestamp = lowest_timestamp
                 if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time()*1000)):
@@ -131,24 +130,25 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
 
-            if ((self.end_timestamp or time.time()*1000) - since) < (time_frame_sec *1000):
+            if ((self.end_timestamp or time.time()*1000) - since) < (time_frame_sec * 1000):
                 return
 
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
-            last_candle_timestamp = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+            last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
 
             total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
             start_fetch_time = last_candle_timestamp
             while since < last_candle_timestamp if not self.end_timestamp \
-                    else (last_candle_timestamp < self.end_timestamp - (time_frame_sec *1000)):
+                    else (last_candle_timestamp < self.end_timestamp - (time_frame_sec * 1000)):
                 since = last_candle_timestamp
                 progress = (since-start_fetch_time) / total_interval
                 self.logger.info(f"[{round(progress *100)}%] historical data fetched for {symbol} {time_frame}")
-                candles += await self.exchange.get_symbol_prices(symbol, time_frame, since=(since + (time_frame_sec *1000)))
-                last_candle_timestamp = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+                candles += await self.exchange.get_symbol_prices(symbol, time_frame,
+                                                                 since=(since + (time_frame_sec * 1000)))
+                last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
 
             if self.end_timestamp is not None:
-                while candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
+                while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
                     candles.pop(-1)
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
@@ -159,9 +159,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                               symbol=symbol, time_frame=time_frame, candle=candles,
                               timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
-
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0][common_enums.PriceIndexes.IND_PRICE_TIME.value]
+        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0][commons_enums.PriceIndexes.IND_PRICE_TIME.value]

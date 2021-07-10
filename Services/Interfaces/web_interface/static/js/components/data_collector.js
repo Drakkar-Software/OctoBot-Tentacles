@@ -72,7 +72,7 @@ function start_collector(){
     request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : null;
     request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : null;
     const update_url = $("#collect_data").attr(update_url_attr);
-    send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback)
+    send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback);
 }
 
 function collector_success_callback(updated_data, update_url, dom_root_element, msg, status){
