@@ -42,6 +42,8 @@ async def data_collector(exchange_name, tentacles_setup_config, symbols, time_fr
     finally:
         if collector_instance.file_path and os.path.isfile(collector_instance.file_path):
             os.remove(collector_instance.file_path)
+        if collector_instance.temp_file_path and os.path.isfile(collector_instance.temp_file_path):
+            os.remove(collector_instance.temp_file_path)
 
 
 @contextlib.asynccontextmanager
