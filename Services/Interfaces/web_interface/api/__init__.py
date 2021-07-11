@@ -18,11 +18,15 @@ import flask
 
 api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
 
+from tentacles.Services.Interfaces.web_interface.api import exchanges
 from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
 from tentacles.Services.Interfaces.web_interface.api import user_commands
 
 
+from tentacles.Services.Interfaces.web_interface.api.exchanges import (
+    is_compatible_account,
+)
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
     version,
     upgrade_version,
@@ -40,6 +44,7 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
 
 
 __all__ = [
+    "is_compatible_account",
     "version",
     "upgrade_version",
     "user_feedback",

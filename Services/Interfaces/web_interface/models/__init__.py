@@ -30,6 +30,8 @@ from tentacles.Services.Interfaces.web_interface.models import trading
 
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
+    get_full_candle_history_exchange_list,
+    get_other_history_exchange_list,
     get_data_files_with_description,
     start_backtesting_using_specific_files,
     get_backtesting_status,
@@ -82,6 +84,8 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_tested_exchange_list,
     get_simulated_exchange_list,
     get_other_exchange_list,
+    get_exchanges_details,
+    is_compatible_account,
     get_current_exchange,
     REQUIREMENTS_KEY,
     SYMBOL_KEY,
@@ -196,6 +200,8 @@ __all__ = [
     "get_tested_exchange_list",
     "get_simulated_exchange_list",
     "get_other_exchange_list",
+    "get_exchanges_details",
+    "is_compatible_account",
     "get_current_exchange",
     "parse_get_symbol",
     "get_value_from_dict_or_string",
@@ -244,4 +250,6 @@ __all__ = [
     "ID_KEY",
     "get_exchange_holdings_per_symbol",
     "get_symbols_values",
+    "get_full_candle_history_exchange_list",
+    "get_other_history_exchange_list",
 ]

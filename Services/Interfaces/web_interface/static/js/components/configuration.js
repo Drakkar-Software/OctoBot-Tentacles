@@ -121,6 +121,13 @@ function handle_add_buttons(){
             }
         }
 
+        // exchanges
+        let has_websockets = false;
+        const ws_attr = select_input.find("[data-tokens='"+select_value+"']").attr("data-ws");
+        if(isDefined(ws_attr)){
+            has_websockets = ws_attr === "True";
+        }
+
         const editable_selector = "select[editable_config_id=\"multi-select-element-" + select_value + "\"]:first";
         let target_template = $("#" + button_id + "-template-default");
 
@@ -137,6 +144,10 @@ function handle_add_buttons(){
             template_default = template_default.replace(new RegExp("card-img-top currency-image default","g"), "card-img-top currency-image");
             if(isDefined(currency_id)){
                 template_default = template_default.replace(new RegExp(`data-currency-id="${config_default_value.toLowerCase()}"`), `data-currency-id="${currency_id}"`);
+            }
+            if(has_websockets){
+                // all exchanges cards
+                template_default = template_default.replace(new RegExp("data-role=\"websocket-mark\" class=\"d-none "), "data-role=\"websocket-mark\" class=\"");
             }
             deck.append(template_default).hide().fadeIn();
 
@@ -205,6 +216,7 @@ function register_edit_events(){
         add_event_if_not_already_added($(this), 'save', card_edit_handler);
         add_event_if_not_already_added($(this), 'change', card_edit_handler);
     });
+    register_exchanges_checks(false);
 }
 
 function card_edit_handler(e, params){
@@ -624,6 +636,104 @@ function updated_validated_updated_global_config(updated_data){
     deleted_global_config_elements = [];
 }
 
+
+function update_exchanges_details(exchangeCard, exchangeData){
+    const warnIcon = $(exchangeCard.find("[data-role=account-warning]"));
+    const unloggedSupportingIcon = $(exchangeCard.find("[data-role=supporting-exchange]"));
+    const validIcon = $(exchangeCard.find("[data-role=valid-account]"));
+    const warnDetails = $(exchangeCard.find("[data-role=account-warning-details]"));
+    const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
+    if(exchangeData["supporting"]){
+        if(exchangeData["compatible"]){
+            warnIcon.addClass(hidden_class);
+            warnDetails.addClass(hidden_class);
+            validIcon.addClass(hidden_class);
+            unloggedSupportingIcon.addClass(hidden_class);
+            supportingIcon.removeClass(hidden_class);
+        }else{
+            if(exchangeData["configured"]) {
+                warnIcon.addClass(hidden_class);
+                supportingIcon.addClass(hidden_class);
+                unloggedSupportingIcon.addClass(hidden_class);
+                warnDetails.removeClass(hidden_class);
+                warnDetails.text(exchangeData["error_message"]);
+                if (exchangeData["error_message"].includes("create a new")) {
+                    warnIcon.removeClass(hidden_class);
+                }else{
+                    unloggedSupportingIcon.removeClass(hidden_class);
+                }
+            } else {
+                supportingIcon.addClass(hidden_class);
+                warnIcon.addClass(hidden_class);
+                warnDetails.addClass(hidden_class);
+                validIcon.addClass(hidden_class);
+                unloggedSupportingIcon.removeClass(hidden_class);
+            }
+        }
+    }else {
+        warnIcon.addClass(hidden_class);
+        supportingIcon.addClass(hidden_class);
+        if(exchangeData["compatible"]){
+            warnDetails.addClass(hidden_class);
+            validIcon.removeClass(hidden_class);
+        }else if(exchangeData["error_message"]){
+            validIcon.addClass(hidden_class);
+            warnDetails.removeClass(hidden_class);
+            warnDetails.text(exchangeData["error_message"]);
+        }
+    }
+}
+
+
+function check_account(exchangeCard, source, newValue){
+    const exchange = exchangeCard.find(".card-body").attr("name");
+    if(exchange !== config_default_value){
+        let apiKey = "Empty";
+        let apiSecret = apiKey;
+        let apiPassword = apiKey;
+        if(source !== exchangeCard){
+            apiKey = source.attr("id") === "exchange_api-key" ? newValue : exchangeCard.find("#exchange_api-key").editable('getValue', true).trim();
+            apiSecret = source.attr("id") === "exchange_api-secret" ? newValue : exchangeCard.find("#exchange_api-secret").editable('getValue', true).trim();
+            apiPassword = source.attr("id") === "exchange_api-password" ? newValue : exchangeCard.find("#exchange_api-password").editable('getValue', true).trim();
+        }
+        $.post({
+            url: $("#exchange-container").attr(update_url_attr),
+            data: JSON.stringify({
+                "exchange": exchange,
+                "apiKey": apiKey,
+                "apiSecret": apiSecret,
+                "apiPassword": apiPassword,
+            }),
+            contentType: 'application/json',
+            dataType: "json",
+            success: function(data, status){
+                update_exchanges_details(exchangeCard, data)
+            },
+            error: function(result, status, error){
+                window.console&&console.error(`Impossible to check the exchange account compatibility: ${result.responseText}. More details in logs.`);
+            }
+        })
+    }
+}
+
+function exchange_account_check(e, params){
+    const element = $(e.target);
+    check_account(element.parents("div[data-role=exchange]"), element, params.newValue);
+}
+
+function register_exchanges_checks(check_existing_accounts){
+    $("div[data-role=exchange]").each(function (){
+        const card = $(this);
+        const inputs = card.find("a[data-type=text]");
+        if(inputs.length){
+            add_event_if_not_already_added(inputs, 'save', exchange_account_check);
+        }
+        if(check_existing_accounts){
+            check_account(card, card, "");
+        }
+    });
+}
+
 let validated_updated_global_config = {};
 let deleted_global_config_elements = [];
 
@@ -631,7 +741,6 @@ const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");
 
 $(document).ready(function() {
-
     handle_nested_sidenav();
     select_first_tab();
 
@@ -653,4 +762,6 @@ $(document).ready(function() {
     register_exit_confirm_function(something_is_unsaved);
 
     check_evaluator_configuration();
+
+    register_exchanges_checks(true);
 });

@@ -69,8 +69,10 @@ function start_collector(){
     const request = {};
     request["exchange"] = $('#exchangeSelect').val();
     request["symbol"] = $('#symbolSelect').val();
+    request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : null;
+    request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : null;
     const update_url = $("#collect_data").attr(update_url_attr);
-    send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback)
+    send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback);
 }
 
 function collector_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -101,25 +103,81 @@ function update_symbol_list(url, exchange){
           symbolSelect.append($("<option></option>")
              .attr("value", value).text(value));
         });
+        symbolSelect[0].selectedIndex = -1;
         symbolSelect.selectpicker('refresh');
     });
+}
+
+function check_date_input(){
+    const startDate = new Date($("#startDate").val());
+    const enddate = new Date($("#endDate").val());
+    const startDateMax = new Date( $("#startDate")[0].max);
+    const endDateMin = new Date( $("#endDate")[0].min);
+    if(isNaN(startDate) && isNaN(enddate)){
+        return true;
+    }else if (!isNaN(enddate) && isNaN(startDate)){
+        create_alert("error", "You should specify a start date.", "");
+        return false;
+    }else if((!isNaN(startDate) && startDate > startDateMax) || (!isNaN(enddate) && enddate < endDateMin)){
+        create_alert("error", "Invalid date range.", "");
+        return false;
+    }else{
+        return true;
+    }
+}
+function is_full_candle_history_exchanges(){
+    const full_history_exchanges = $('#exchangeSelect > optgroup')[0].children;
+    const selected_exchange = $('#exchangeSelect').find(":selected")[0];
+    return $.inArray(selected_exchange, full_history_exchanges) !== -1;
 }
 
 let dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
 
 $(document).ready(function() {
     handle_data_files_buttons();
+    is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     $('#importFileButton').attr('disabled', true);
     dataFilesTable.on("draw.dt", function(){
         handle_data_files_buttons();
     });
     $('#exchangeSelect').on('change', function() {
-        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val())
+        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
-        start_collector();
+        if(check_date_input()){
+            start_collector();
+        }
     });
     $('#inputFile').on('change',function(){
         handle_file_selection();
     });
+    $("#endDate").on('change', function(){
+        let endDate = new Date(this.value);
+        if(!isNaN(endDate)){
+            const endDateMax = new Date();
+            endDateMax.setDate(endDateMax.getDate() - 1);
+            endDate.setDate(endDate.getDate() - 1);
+            if(endDate > endDateMax){
+                this.value = endDateMax.toISOString().split("T")[0];
+                endDate = endDateMax;
+            }
+            $("#startDate")[0].max = endDate.toISOString().split("T")[0];
+        }
+    });
+    $("#startDate").on('change', function(){
+        const startDate = new Date(this.value);
+        if(!isNaN(startDate)){
+            const startDateMax = new Date();
+            startDateMax.setDate(startDateMax.getDate() - 2);
+            startDate.setDate(startDate.getDate() + 1);
+            $("#endDate")[0].min = startDate.toISOString().split("T")[0];
+        }
+    });
+    const endDateMax = new Date();
+    endDateMax.setDate(endDateMax.getDate() - 1);
+    $("#endDate")[0].max = endDateMax.toISOString().split("T")[0];
+    const startDateMax = new Date();
+    startDateMax.setDate(startDateMax.getDate() - 2);
+    $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
 });

@@ -60,17 +60,20 @@
                         <select id="AddExchangeSelect" class="selectpicker" data-live-search="true">
                             <optgroup label="OctoBot fully tested">
                                {% for exchange in ccxt_tested_exchanges %}
-                                    <option data-tokens="{{ exchange }}">{{ exchange }}</option>
+                                    {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
+                                    <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False'}}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
                             <optgroup label="OctoBot tested with simulated trading">
                                {% for exchange in ccxt_simulated_tested_exchanges %}
-                                    <option data-tokens="{{ exchange }}">{{ exchange }}</option>
+                                    {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
+                                    <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False' }}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
                             <optgroup label="OctoBot untested">
                                {% for exchange in ccxt_other_exchanges %}
-                                    <option data-tokens="{{ exchange }}">{{ exchange }}</option>
+                                    {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
+                                    <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False' }}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
                         </select>
@@ -79,10 +82,11 @@
                 </div>
                 <br>
                 <!-- Card deck -->
-                <div class="card-deck config-container">
+                <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.is_compatible_account') }}">
                     {% for exchange in config_exchanges %}
                         {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                                                                        exchange,
+                                                                       exchanges_details[exchange],
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
                                                                        sandboxed=config_exchanges[exchange].get('sandboxed', False),
                                                                        full_config=True)}}
@@ -145,6 +149,7 @@
     <div id="AddExchange-template-default">
         {{ m_config_exchange_card.config_exchange_card( config=config_exchanges,
                                                         exchange=config_default_value,
+                                                        exchanges_details=exchanges_details,
                                                         add_class=added_class,
                                                         keys_value="NO KEY",
                                                         config_values="no value",

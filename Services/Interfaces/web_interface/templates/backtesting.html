@@ -22,6 +22,7 @@
                     <th scope="col">#</th>
                     <th scope="col">Symbol(s)</th>
                     <th scope="col">Date of recording</th>
+                    <th scope="col">Candles</th>
                     <th scope="col">Exchange</th>
                     <th scope="col">Time frame(s)</th>
                     <th scope="col">File</th>
@@ -35,7 +36,13 @@
                             <label class="custom-control-label"></label>
                         </div></td>
                         <td>{{", ".join(description.symbols)}}</td>
-                        <td data-order="{{description.timestamp}}">{{description.date}}</td>
+                        {% if description.start_timestamp %}
+                            <td data-order="{{description.timestamp}}">{{description.start_date}}<br>to<br>{{description.end_date}}</td>
+                            <td>Full</td>
+                        {% else %}
+                            <td data-order="{{description.timestamp}}">{{description.date}}</td>
+                            <td>{{description.candles_length}}</td>
+                        {% endif %}
                         <td>{{description.exchange}}</td>
                         <td>{{", ".join(description.time_frames)}}</td>
                         <td>{{file}}</td>

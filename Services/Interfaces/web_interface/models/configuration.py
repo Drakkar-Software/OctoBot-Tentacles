@@ -15,6 +15,7 @@
 #  License along with this library.
 import os.path as path
 import ccxt
+import copy
 import requests.adapters
 import requests.packages.urllib3.util.retry
 
@@ -569,9 +570,10 @@ def get_all_symbols_dict():
                 if _is_legit_currency(currency_data[NAME_KEY])
             }
         except Exception as e:
+            details = f"code: {request_response.status_code}, body: {request_response.text}" \
+                if request_response else {request_response}
             _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
-            _get_logger().debug(f"coingecko.com response code: {request_response.status_code}, body: "
-                                f"{request_response.text}")
+            _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_symbols_dict
 
@@ -617,6 +619,60 @@ def get_other_exchange_list(remove_config_exchanges=False):
     return [exchange for exchange in full_list
             if
             exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
+
+
+def get_exchanges_details(exchanges_config) -> dict:
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
+    return {
+        exchange_name: {
+            "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config)
+        }
+        for exchange_name in exchanges_config
+    }
+
+
+def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dict:
+    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES][exchange_name])
+    if _is_real_exchange_value(api_key):
+        to_check_config[commons_constants.CONFIG_EXCHANGE_KEY] = configuration.encrypt(api_key).decode()
+    if _is_real_exchange_value(api_sec):
+        to_check_config[commons_constants.CONFIG_EXCHANGE_SECRET] = configuration.encrypt(api_sec).decode()
+    if _is_real_exchange_value(api_pass):
+        to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
+    is_compatible = False
+    is_sponsoring = trading_api.is_sponsoring(exchange_name)
+    is_configured = False
+    error = None
+    if _is_possible_exchange_config(to_check_config):
+        is_configured = True
+        is_compatible, error = interfaces_util.run_in_bot_async_executor(
+            trading_api.is_compatible_account(
+                exchange_name,
+                to_check_config,
+                interfaces_util.get_edited_tentacles_config()
+            )
+        )
+    return {
+        "exchange": exchange_name,
+        "compatible": is_compatible,
+        "configured": is_configured,
+        "supporting": is_sponsoring,
+        "error_message": error
+    }
+
+
+def _is_possible_exchange_config(exchange_config):
+    for key, value in exchange_config.items():
+        if key in commons_constants.CONFIG_EXCHANGE_ENCRYPTED_VALUES and not _is_real_exchange_value(value):
+            return False
+    return True
+
+
+def _is_real_exchange_value(value):
+    placeholder_key = "******"
+    if placeholder_key in value:
+        return False
+    return value not in commons_constants.DEFAULT_CONFIG_VALUES
 
 
 def get_current_exchange():

@@ -29,8 +29,6 @@ class Binance(exchanges.SpotCCXTExchange):
 
     BINANCE_MARK_PRICE = "markPrice"
 
-    CCXT_CLIENT_LOGIN_OPTIONS = {'defaultMarket': 'future'}
-
     @classmethod
     def get_name(cls):
         return 'binance'

@@ -27,7 +27,7 @@ function get_selected_files(){
     ).eq(0);
     if(selectedRows){
         selectedRows.each(function( index ) {
-            selected_files.push(dataFilesTable.row( index ).data()[5]);
+            selected_files.push(dataFilesTable.row( index ).data()[6]);
         });
     }
     return selected_files;

@@ -61,12 +61,20 @@ function handle_tentacle_config_update_error_callback(updated_data, update_url, 
     create_alert("error", "Error when updating config", msg.responseText);
 }
 
+function check_config(){
+    const errors = configEditor.validate();
+    return !errors.length;
+}
+
 function handleConfigDisplay(){
 
     if(canEditConfig()){
         $("#saveConfigFooter").show();
         $("#saveConfig").click(function() {
-            updateTentacleConfig(configEditor.getValue());
+            if(check_config())
+                updateTentacleConfig(configEditor.getValue());
+            else
+                create_alert("error", "Error when saving configuration", "Invalid configuration data.");
         });
     }else{
         $("#noConfigMessage").show();

@@ -17,6 +17,7 @@
             <tr>
                 <th scope="col">Symbol(s)</th>
                 <th scope="col">Date of recording</th>
+                <th scope="col">Candles</th>
                 <th scope="col">Exchange</th>
                 <th scope="col">Time frame(s)</th>
                 <th scope="col">File</th>
@@ -27,7 +28,13 @@
             {% for file, description in data_files.items() | sort(reverse=True)%}
                 <tr class="selectable_datafile">
                     <td>{{", ".join(description.symbols)}}</td>
-                    <td data-order="{{description.timestamp}}">{{description.date}}</td>
+                    {% if description.start_timestamp %}
+                        <td data-order="{{description.timestamp}}">{{description.start_date}}<br>to<br>{{description.end_date}}</td>
+                        <td>Full</td>
+                    {% else %}
+                        <td data-order="{{description.timestamp}}">{{description.date}}</td>
+                        <td>{{description.candles_length}}</td>
+                    {% endif %}
                     <td>{{description.exchange}}</td>
                     <td>{{", ".join(description.time_frames)}}</td>
                     <td>{{file}}</td>
@@ -47,32 +54,52 @@
     <div class="card-header"><h2>Download exchange data</h2></div>
     <div class="card-body">
         <div class="row">
-          <div class="col">
-           Exchange :
-           <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25" id="exchangeSelect">
-             {% for exchange in ccxt_exchanges %}
-             <option value={{exchange}}
-                {% if exchange == current_exchange %}
-                    selected="selected"
-                {% endif %}>
-               {{exchange}}
-             </option>
-             {% endfor %}
-           </select>
-          </div>
-          <div class="col">
-              Symbol :
-              <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25" id="symbolSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}">
-                 {% for symbol in full_symbol_list %}
-                 <option value={{symbol}}>
-                   {{symbol}}
-                 </option>
-                 {% endfor %}
-              </select>
-          </div>
-          <div class="col">
-            <button id="collect_data" type="button" class="btn btn-primary waves-effect" update-url="{{ url_for('data_collector', action_type='start_collector') }}">Collect new data</button>
-          </div>
+            <div class="col">
+                Exchange :
+                <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25"
+                    id="exchangeSelect">
+                    <optgroup label="Full History">
+                        {% for exchange in full_candle_history_ccxt_exchanges %}
+                        <option value={{exchange}} {% if exchange==current_exchange %} selected="selected" {% endif %}>
+                            {{exchange}}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Other">
+                        {% for exchange in other_ccxt_exchanges %}
+                        <option value={{exchange}} {% if exchange==current_exchange %} selected="selected" {% endif %}>
+                            {{exchange}}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col">
+                Symbol :
+                <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25"
+                    id="symbolSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}">
+                    {% for symbol in full_symbol_list %}
+                    <option value={{symbol}}>
+                        {{symbol}}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col">
+                <button id="collect_data" type="button" class="btn btn-primary waves-effect"
+                    update-url="{{ url_for('data_collector', action_type='start_collector') }}">Collect new
+                    data</button>
+            </div>
+        </div>
+        <div class="row row-padding" id="collector_date_range">
+            <div class="col-md-4">
+                Start Date :
+                <input type="date" class="datepicker" id="startDate">
+            </div>
+            <div class="col-md-4">
+                End Date :
+                <input type="date" class="datepicker" id="endDate">
+            </div>
         </div>
     </div>
     <div class='progress' id='collector_operation' style='display: none;'>

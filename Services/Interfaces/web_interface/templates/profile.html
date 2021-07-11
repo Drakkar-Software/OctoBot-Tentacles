@@ -299,10 +299,11 @@
                     </div>
                     <div class="card-body deck-container">
                         <!-- Card deck -->
-                        <div class="card-deck config-container">
+                        <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.is_compatible_account') }}">
                             {% for exchange in config_exchanges %}
                             {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                             exchange,
+                            exchanges_details[exchange],
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
                             full_config=False) }}
