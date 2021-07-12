@@ -84,10 +84,12 @@ class WebHookService(services.AbstractService):
         except KeyError:
             return False
 
-
     def has_required_configuration(self):
-        return self.check_required_config(self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                                                                [services_constants.CONFIG_WEBHOOK])
+        try:
+            return self.check_required_config(self.config[services_constants.CONFIG_CATEGORY_SERVICES]
+                                              [services_constants.CONFIG_WEBHOOK])
+        except KeyError:
+            return False
 
     def get_required_config(self):
         return [commons_constants.CONFIG_ENABLED_OPTION, services_constants.CONFIG_NGROK_TOKEN]
