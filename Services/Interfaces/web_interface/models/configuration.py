@@ -632,7 +632,7 @@ def get_exchanges_details(exchanges_config) -> dict:
 
 
 def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dict:
-    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES][exchange_name])
+    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(exchange_name, {}))
     if _is_real_exchange_value(api_key):
         to_check_config[commons_constants.CONFIG_EXCHANGE_KEY] = configuration.encrypt(api_key).decode()
     if _is_real_exchange_value(api_sec):
@@ -662,10 +662,12 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
 
 
 def _is_possible_exchange_config(exchange_config):
+    valid_count = 0
     for key, value in exchange_config.items():
-        if key in commons_constants.CONFIG_EXCHANGE_ENCRYPTED_VALUES and not _is_real_exchange_value(value):
-            return False
-    return True
+        if key in commons_constants.CONFIG_EXCHANGE_ENCRYPTED_VALUES and _is_real_exchange_value(value):
+            valid_count += 1
+    # require at least 2 data to consider a configuration possible
+    return valid_count >= 2
 
 
 def _is_real_exchange_value(value):
