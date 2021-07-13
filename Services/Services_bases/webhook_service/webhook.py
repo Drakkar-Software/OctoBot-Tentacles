@@ -79,8 +79,17 @@ class WebHookService(services.AbstractService):
 
     def check_required_config(self, config):
         try:
-            return False if config[commons_constants.CONFIG_ENABLED_OPTION] \
-                and configuration.has_invalid_default_config_value(config[services_constants.CONFIG_NGROK_TOKEN]) else True
+            token = config.get(services_constants.CONFIG_NGROK_TOKEN)
+            enabled = config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+            if enabled:
+                return token and not configuration.has_invalid_default_config_value(token)
+            return not (
+                configuration.has_invalid_default_config_value(
+                    config.get(services_constants.CONFIG_WEBHOOK_SERVER_PORT)
+                ) or configuration.has_invalid_default_config_value(
+                    config.get(services_constants.CONFIG_WEBHOOK_SERVER_IP)
+                )
+            )
         except KeyError:
             return False
 
@@ -172,8 +181,8 @@ class WebHookService(services.AbstractService):
 
     async def prepare(self) -> None:
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
-        self.ngrok_enabled = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK]\
-                                                                                     [commons_constants.CONFIG_ENABLED_OPTION]
+        self.ngrok_enabled = self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+            services_constants.CONFIG_WEBHOOK].get(commons_constants.CONFIG_ENABLED_OPTION, True)
         if self.ngrok_enabled:
             ngrok.set_auth_token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
@@ -197,7 +206,7 @@ class WebHookService(services.AbstractService):
         try:
             self._prepare_webhook_server()
             self._load_webhook_routes()
-            self.webhook_public_url = f"//{self.webhook_host}:{self.webhook_port}/webhook"
+            self.webhook_public_url = f"http://{self.webhook_host}:{self.webhook_port}/webhook"
             if self.ngrok_enabled:
                 self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
                 self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
