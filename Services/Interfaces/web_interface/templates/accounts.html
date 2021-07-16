@@ -89,7 +89,8 @@
                                                                        exchanges_details[exchange],
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
                                                                        sandboxed=config_exchanges[exchange].get('sandboxed', False),
-                                                                       full_config=True)}}
+                                                                       full_config=True,
+                                                                       docs_url=OCTOBOT_DOCS_URL)}}
                     {% endfor %}
                 </div>
             </div>
@@ -153,7 +154,8 @@
                                                         add_class=added_class,
                                                         keys_value="NO KEY",
                                                         config_values="no value",
-                                                        full_config=True) }}
+                                                        full_config=True,
+                                                        docs_url=OCTOBOT_DOCS_URL) }}
     </div>
 
     <!-- Services -->

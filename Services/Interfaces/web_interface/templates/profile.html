@@ -306,7 +306,8 @@
                             exchanges_details[exchange],
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
-                            full_config=False) }}
+                            full_config=False,
+                            docs_url=OCTOBOT_DOCS_URL) }}
                             {% endfor %}
                         </div>
                     </div>
