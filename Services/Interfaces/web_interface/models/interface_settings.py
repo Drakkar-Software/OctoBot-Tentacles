@@ -24,6 +24,7 @@ def add_watched_symbol(symbol):
     if symbol not in watched_symbols:
         watched_symbols.append(symbol)
         return _save_edition()
+    return True
 
 
 def remove_watched_symbol(symbol):
