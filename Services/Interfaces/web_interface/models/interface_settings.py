@@ -21,7 +21,8 @@ import tentacles.Services.Interfaces.web_interface.models as models
 
 def add_watched_symbol(symbol):
     watched_symbols = models.get_watched_symbols()
-    watched_symbols.append(symbol)
+    if symbol not in watched_symbols:
+        watched_symbols.append(symbol)
     return _save_edition()
 
 
