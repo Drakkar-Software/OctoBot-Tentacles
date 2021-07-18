@@ -29,9 +29,11 @@ def add_watched_symbol(symbol):
 
 def remove_watched_symbol(symbol):
     watched_symbols = models.get_watched_symbols()
-    if symbol in watched_symbols:
+    try:
         watched_symbols.remove(symbol)
         return _save_edition()
+    except ValueError:
+        return True
 
 
 def _save_edition():
