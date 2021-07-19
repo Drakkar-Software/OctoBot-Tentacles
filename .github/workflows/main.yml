@@ -109,7 +109,6 @@ jobs:
     needs: tests
     name: ubuntu-latest - Python 3.8 - upload tentacles
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v2
       - name: Set Environment Variables
