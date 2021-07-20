@@ -35,7 +35,7 @@ def context_processor_register():
         return ', '.join(f'{exchange.capitalize()}: {holding[holding_type]}'
                          for exchange, holding in holdings['exchanges'].items())
 
-    def filter_currency_pairs(currency, symbol_list, full_symbol_list):
+    def filter_currency_pairs(currency, symbol_list, full_symbol_list, config_symbols):
         currency_key = currency
         symbol = full_symbol_list.get(currency_key, None)
         if symbol is None:
@@ -44,8 +44,10 @@ def context_processor_register():
             symbol = full_symbol_list.get(currency_key, None)
         if symbol is None:
             return symbol_list
-        return [s for s in symbol_list
-                if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
+        filtered_symbol = [s for s in symbol_list
+                    if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
+        return (filtered_symbol + [s for s in config_symbols[currency]["pairs"]
+                                                    if s in symbol_list and s not in filtered_symbol])
 
     def get_profile_traded_pairs_by_currency(profile):
         return {
