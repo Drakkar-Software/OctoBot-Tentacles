@@ -647,7 +647,7 @@ function update_exchanges_details(exchangeCard, exchangeData){
     const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
     partnersDocs.addClass(hidden_class);
     if(exchangeData["supporting"]){
-        if(exchangeData["compatible"]){
+        if(exchangeData["supporter_account"] || exchangeData["compatible"]){
             warnIcon.addClass(hidden_class);
             warnDetailsWrapper.addClass(hidden_class);
             validIcon.addClass(hidden_class);
