@@ -251,6 +251,10 @@ a.nav-link.primary-tab-selector.active {
     background-color: #121212;
 }
 
+.text-danger-darker {
+    color: #C62828;
+}
+
 .medium-size {
     max-width: 18rem;
     min-width: 12rem;
