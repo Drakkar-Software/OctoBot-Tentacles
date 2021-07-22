@@ -48,7 +48,6 @@ def community():
                                  is_donor=bool(authenticator.supports.donations),
                                  tentacles_packages=tentacles_packages,
                                  current_bots_stats=models.get_current_octobots_stats(),
-                                 community_url=constants.OCTOBOT_COMMUNITY_URL,
                                  default_tentacles_package_image=default_image)
 
 

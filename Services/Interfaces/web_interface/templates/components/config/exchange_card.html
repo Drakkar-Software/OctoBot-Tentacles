@@ -1,6 +1,7 @@
  {% import 'components/config/editable_config.html' as m_editable_config %}
 {% macro config_exchange_card(config, exchange, exchanges_details, keys_value="*********", enabled=True,
-                              sandboxed=False, add_class='', config_values=None, full_config=True, docs_url="") -%}
+                              sandboxed=False, add_class='', config_values=None, full_config=True,
+                              docs_url="", community_url="") -%}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
@@ -15,7 +16,7 @@
                     <span data-role="account-warning" class="text-danger mx-md-4 d-none">
                         <i class="fas fa-exclamation-triangle" data-toggle="tooltip" data-placement="top" title="Login successful
                         however OctoBot works with exchanges to remain free, please create a new unrefereed exchange account to
-                        support the project."></i>
+                        support the project. If you prefer, you can donate to the project instead of creating a new account."></i>
                     </span>
                     <span data-role="valid-account" class="mx-md-4 d-none">
                         <i class="fas fa-check" data-toggle="tooltip" data-placement="top" title="Login successful"></i>
@@ -54,6 +55,13 @@
                     More info on partner exchanges on
                     <a target="_blank" rel="noopener"
                     href="{{docs_url}}/pages/Exchanges.html#partner-exchanges-support-octobot">OctoBot docs</a>.
+                </span>
+                <span data-role="supporter-account">
+                    If you prefer not to create a new account, you can instead donate to the project and register your donation
+                    <a target="_blank" rel="noopener"
+                    href="{{community_url}}donations/new">on the community website</a>. Donation amounts are up to you and
+                    will enable websockets on your OctoBot after
+                    <a target="_blank" rel="noopener" href="{{url_for('community')}}">logging in with your community account</a>.
                 </span>
             </div>
             <div class="d-flex">

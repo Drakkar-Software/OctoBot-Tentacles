@@ -1,6 +1,6 @@
 {% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
 
-{% macro tentacles_packages(current_logged_in_email, role, is_donor, tentacles_packages, community_url, default_image, is_preview) -%}
+{% macro tentacles_packages(current_logged_in_email, role, is_donor, tentacles_packages, community_url, default_image, is_preview, show_account) -%}
 <div class="card">
     <div class="card-header d-flex justify-content-between flex-wrap">
         <div>
@@ -30,29 +30,35 @@
         </div>
     </div>
     <div class="card-body">
-        {% if not is_preview %}
+        {% if show_account %}
         <div class="alert alert-dark row py-0">
             <div class="col-8 my-auto">
                 <h5 class="p-0 my-0">
                     Logged in as {{current_logged_in_email}}
                     <span class="ml-2 ml-md-4 text-danger-darker">
                         {% if 'tester' in role %}
-                            <i class="fas fa-1_5x fa-tools" data-toggle="tooltip" title="OctoBot tester"></i>
+                            <i class="fas fa-tools" data-toggle="tooltip" title="OctoBot tester"></i>
                         {% elif 'contributor' in role %}
-                            <i class="fas fa-1_5x fa-laptop-code" data-toggle="tooltip" title="OctoBot contributor"></i>
+                            <i class="fas fa-laptop-code" data-toggle="tooltip" title="OctoBot contributor"></i>
                         {% elif 'sponsor' in role %}
-                            <i class="fas fa-1_5x fa-star" data-toggle="tooltip" title="OctoBot sponsor"></i>
+                            <i class="fas fa-star" data-toggle="tooltip" title="OctoBot sponsor"></i>
                         {% endif %}
                         {% if is_donor %}
-                            <i class="fas fa-1_5x fa-trophy" data-toggle="tooltip"
+                            <i class="fas fa-trophy" data-toggle="tooltip"
                                title="OctoBot donor: On behalf of the OctoBot team, thank you for being awesome and your donating to the project."></i>
                         {% endif %}
+
+                        <a href="{{ community_url }}donations/new" id=register-donation class="btn btn-sm rounded-circle btn-primary waves-effect"
+                           target="_blank" rel="noopener"
+                           data-toggle="tooltip" title="Register a donation.">
+                            <i class="fas fa-1_5x fa-plus"></i>
+                        </a>
                     </span>
                 </h5>
             </div>
             <div class="col-4 text-right">
-                <a class="align-right btn btn-sm btn-outline-primary card-link waves-effect {{'disabled' if is_preview}}"
-                   href="{{ url_for('community_logout') if not is_preview}}">
+                <a class="align-right btn btn-sm btn-outline-primary card-link waves-effect"
+                   href="{{ url_for('community_logout')}}">
                     logout
                 </a>
             </div>
@@ -104,8 +110,9 @@
     {% if is_preview %}
     <div class="card-footer">
         <div class="alert alert-dark">
-            Note: these packages are only examples, they might not represent real community tentacles packages. When
-            the OctoBot community website will be online, you will be able to add community packages to your OctoBot.
+            Note: these packages are only examples, they do not represent real community tentacles packages. When
+            tentacles packages sharing will be available on the OctoBot community website,
+            you will be able to add community packages to your OctoBot.
         </div>
     </div>
     {% endif %}
