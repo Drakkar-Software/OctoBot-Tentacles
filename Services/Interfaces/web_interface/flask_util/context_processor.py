@@ -90,6 +90,7 @@ def context_processor_register():
         OCTOBOT_WEBSITE_URL=constants.OCTOBOT_WEBSITE_URL,
         OCTOBOT_DOCS_URL=constants.OCTOBOT_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
+        OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         filter_currency_pairs=filter_currency_pairs,

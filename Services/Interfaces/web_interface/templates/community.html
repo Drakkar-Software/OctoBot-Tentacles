@@ -9,9 +9,11 @@
 {{ bots_stats.bots_stats_card(current_bots_stats) }}
 
 {% if use_preview %}
-    {{ tentacles_packages_display.tentacles_packages("example@mail.com", role, is_donor, preview_tentacles_packages, "#", default_tentacles_package_image, use_preview) }}
+    {{ tentacles_packages_display.tentacles_packages("example@mail.com", role, is_donor, preview_tentacles_packages, "#",
+                                                     default_tentacles_package_image, True, False) }}
 {% else %}
-    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, role, is_donor, tentacles_packages, community_url, default_tentacles_package_image, use_preview) }}
+    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, role, is_donor, preview_tentacles_packages, OCTOBOT_COMMUNITY_URL,
+                                                     default_tentacles_package_image, True, True) }}
 {% endif %}}
 
 <br>
