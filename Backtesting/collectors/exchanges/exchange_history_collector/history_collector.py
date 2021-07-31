@@ -156,8 +156,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 self.logger.info(f"[{round(progress *100)}%] historical data fetched for {symbol} {time_frame}")
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame,
                                                                  since=(since + (time_frame_sec * 1000)))
-                last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-
                 if candles:
                     last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
 
