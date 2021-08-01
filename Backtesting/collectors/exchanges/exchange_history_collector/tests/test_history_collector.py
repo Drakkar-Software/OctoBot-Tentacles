@@ -100,7 +100,7 @@ async def test_collect_valid_date_range():
     exchange_name = "binance"
     tentacles_setup_config = test_utils_config.load_test_tentacles_config()
     symbols = ["ETH/BTC"]
-    async with data_collector(exchange_name, tentacles_setup_config, symbols, None, True, 1549065660000, 1549670520000) as collector:
+    async with data_collector(exchange_name, tentacles_setup_config, symbols, None, True, 1549065600000, 1549411200000) as collector:
         assert collector.time_frames == []
         assert collector.symbols == symbols
         assert collector.exchange_name == exchange_name
@@ -117,15 +117,15 @@ async def test_collect_valid_date_range():
         assert not os.path.isfile(collector.temp_file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
-            assert len(ohlcv) == 16833
+            assert len(ohlcv) == 9629
             h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="1h")
-            assert len(h_ohlcv) == 168
+            assert len(h_ohlcv) == 97
             eth_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="ETH/BTC")
             assert len(eth_btc_ohlcv) == len(ohlcv)
             min_timestamp = (await database.select_min(enums.ExchangeDataTables.OHLCV, ["timestamp"],time_frame="1m"))[0][0]*1000
-            assert min_timestamp <= 1549065720000
+            assert min_timestamp <= 1549065660000
             max_timestamp = (await database.select_max(enums.ExchangeDataTables.OHLCV, ["timestamp"]))[0][0]*1000
-            assert max_timestamp <= 1549843200000
+            assert max_timestamp <= 1549497600000
 
 async def test_collect_invalid_date_range():
     exchange_name = "binance"
@@ -147,3 +147,36 @@ async def test_collect_invalid_date_range():
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.file_path)
         assert not os.path.isfile(collector.temp_file_path)
+
+async def test_collect_long_range():
+    exchange_name = "binance"
+    tentacles_setup_config = test_utils_config.load_test_tentacles_config()
+    symbols = ["1INCH/BTC"]
+    async with data_collector(exchange_name, tentacles_setup_config, symbols, None, True, 1622246400000, 1623888000000) as collector:
+        assert collector.time_frames == []
+        assert collector.symbols == symbols
+        assert collector.exchange_name == exchange_name
+        assert collector.tentacles_setup_config == tentacles_setup_config
+        assert collector.start_timestamp is not None
+        assert collector.end_timestamp is not None
+        await collector.start()
+        assert collector.time_frames != []
+        assert collector.exchange_manager is None
+        assert isinstance(collector.exchange, tentacles_exchanges.Binance)
+        assert collector.file_path is not None
+        assert collector.temp_file_path is not None
+        assert os.path.isfile(collector.file_path)
+        assert not os.path.isfile(collector.temp_file_path)
+        async with collector_database(collector) as database:
+            ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
+            assert len(ohlcv) == 45698
+            h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="4h")
+            assert len(h_ohlcv) == 115
+            w_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="1w")
+            assert len(w_ohlcv) == 3
+            inch_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="1INCH/BTC")
+            assert len(inch_btc_ohlcv) == len(ohlcv)
+            min_timestamp = (await database.select_min(enums.ExchangeDataTables.OHLCV, ["timestamp"],time_frame="1m"))[0][0] * 1000
+            assert min_timestamp <= 1622246460000
+            max_timestamp = (await database.select_max(enums.ExchangeDataTables.OHLCV, ["timestamp"]))[0][0] * 1000
+            assert max_timestamp <= 1624233600000
