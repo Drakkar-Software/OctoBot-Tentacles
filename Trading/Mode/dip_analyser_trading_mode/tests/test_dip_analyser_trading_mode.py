@@ -265,6 +265,7 @@ async def test_create_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
+    # rounding because orders to create volumes are X.33333
     assert sell_quantity * decimal.Decimal("0.9999") <= total_sell_quantity <= sell_quantity
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
@@ -294,7 +295,7 @@ async def test_create_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders if o.origin_price > 150)
-    assert sell_quantity * decimal.Decimal("0.9999") <= total_sell_quantity <= sell_quantity
+    assert total_sell_quantity == sell_quantity
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / consumer.trading_mode.sell_orders_per_buy
@@ -341,6 +342,7 @@ async def test_create_too_large_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
+    # rounding because orders to create volumes are with truncated decimals
     assert sell_quantity * decimal.Decimal("0.9999") <= total_sell_quantity <= sell_quantity
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
@@ -374,7 +376,7 @@ async def test_create_too_small_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-    assert float(sell_quantity * decimal.Decimal("0.9999")) <= total_sell_quantity <= float(sell_quantity)
+    assert total_sell_quantity == float(sell_quantity)
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     assert open_orders[0].origin_price == float(max_price)
@@ -393,9 +395,7 @@ async def test_create_too_small_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     second_total_sell_quantity = sum(o.origin_quantity for o in open_orders if o.origin_price >= 0.0107)
-    assert sell_quantity * decimal.Decimal("0.9999") \
-           <= decimal.Decimal(f"{second_total_sell_quantity}") \
-           <= sell_quantity
+    assert decimal.Decimal(f"{second_total_sell_quantity}") == sell_quantity
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / 2
@@ -450,6 +450,33 @@ async def test_order_fill_callback(tools):
     await producer._create_bottom_order(2, volume_weight, price_weight)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
+
+
+async def test_order_fill_callback_without_fees(tools):
+    producer, consumer, trader = tools
+
+    producer.ignore_exchange_fees = True
+
+    volume_weight = 1
+    price_weight = 1
+    await producer._create_bottom_order(1, volume_weight, price_weight)
+    # create as task to allow creator's queue to get processed
+    await asyncio.create_task(_check_open_orders_count(trader, 1))
+
+    open_orders = trading_api.get_open_orders(trader.exchange_manager)
+    to_fill_order = open_orders[0]
+    await _fill_order(to_fill_order, trader, consumer=consumer)
+    # create as task to allow creator's queue to get processed
+    for _ in range(consumer.trading_mode.sell_orders_per_buy):
+        await asyncio_tools.wait_asyncio_next_cycle()
+    await asyncio.create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
+
+    assert to_fill_order.status == trading_enums.OrderStatus.FILLED
+    open_orders = trading_api.get_open_orders(trader.exchange_manager)
+    assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
+    assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
+    total_sell_quantity = sum(o.origin_quantity for o in open_orders)
+    assert total_sell_quantity == to_fill_order.origin_quantity
 
 
 async def test_order_fill_callback_not_in_db(tools):
@@ -523,13 +550,15 @@ async def _get_tools(symbol="BTC/USDT"):
         config,
         exchange_ids=[exchange_manager.id],
         matrix_id=None,
-        data_files=[os.path.join(test_config.TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+        data_files=[os.path.join(test_config.TEST_CONFIG_FOLDER,
+                                 "AbstractExchangeHistoryCollector_1586017993.616272.data")])
     exchange_manager.exchange = exchanges.ExchangeSimulator(exchange_manager.config,
                                                   exchange_manager,
                                                   backtesting)
     await exchange_manager.exchange.initialize()
     for exchange_channel_class_type in [exchanges_channel.ExchangeChannel, exchanges_channel.TimeFrameExchangeChannel]:
-        await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan, exchange_manager=exchange_manager)
+        await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
+                                                         exchange_manager=exchange_manager)
 
     trader = exchanges.TraderSimulator(config, exchange_manager)
     await trader.initialize()
