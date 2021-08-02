@@ -67,10 +67,10 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         )
         return [mode_consumer, order_consumer]
 
-    async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           is_new, is_from_bot):
-        if order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
+    async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
+                                           symbol, order, is_new, is_from_bot):
+        if order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] \
+                == trading_enums.OrderStatus.FILLED.value and is_from_bot:
             await self.producers[0].order_filled_callback(order)
 
     @classmethod
@@ -155,12 +155,14 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity,
                     limit_price,
                     symbol_market):
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=trading_enums.TraderOrderType.BUY_LIMIT,
-                                                                            symbol=symbol,
-                                                                            current_price=float(price),
-                                                                            quantity=float(order_quantity),
-                                                                            price=float(order_price))
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                    symbol=symbol,
+                    current_price=float(price),
+                    quantity=float(order_quantity),
+                    price=float(order_price)
+                )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
                 self._register_buy_order(created_order.order_id, price_weight)
@@ -186,12 +188,14 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             to_create_orders = self._generate_sell_orders(sell_orders_count, sell_max_quantity, sell_weight,
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=trading_enums.TraderOrderType.SELL_LIMIT,
-                                                                            symbol=symbol,
-                                                                            current_price=float(sell_base),
-                                                                            quantity=float(order_quantity),
-                                                                            price=float(order_price))
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type=trading_enums.TraderOrderType.SELL_LIMIT,
+                    symbol=symbol,
+                    current_price=float(sell_base),
+                    quantity=float(order_quantity),
+                    price=float(order_price)
+                )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
             if created_orders:
@@ -274,8 +278,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return volume_with_price
 
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
-        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = trading_personal_data.get_min_max_amounts(
-            symbol_market)
+        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
+            trading_personal_data.get_min_max_amounts(symbol_market)
         min_quantity = decimal.Decimal(f"{min_quantity}")
         max_quantity = decimal.Decimal(f"{max_quantity}")
         min_cost = decimal.Decimal(f"{min_cost}")
@@ -340,6 +344,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
+    IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -349,6 +354,8 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         self.last_buy_candle = None
         self.base, _ = symbol_util.split_symbol(self.trading_mode.symbol)
+
+        self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 
     async def stop(self):
         if self.trading_mode is not None:
@@ -382,10 +389,11 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             await self._create_bottom_order(self.final_eval["current_candle_time"], volume_weight, price_weight)
 
     async def order_filled_callback(self, filled_order):
-        if filled_order[
-            trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value:
+        if filled_order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
+                == trading_enums.TradeOrderSide.BUY.value:
             self.state = trading_enums.EvaluatorStates.SHORT
-            paid_fees = decimal.Decimal(f"{trading_personal_data.total_fees_from_order_dict(filled_order, self.base)}")
+            paid_fees = 0 if self.ignore_exchange_fees else \
+                decimal.Decimal(f"{trading_personal_data.total_fees_from_order_dict(filled_order, self.base)}")
             sell_quantity = \
                 decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]}") - paid_fees
             price = decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}")
