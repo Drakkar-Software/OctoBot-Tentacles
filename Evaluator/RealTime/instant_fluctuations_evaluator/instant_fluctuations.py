@@ -85,7 +85,7 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
         if self.something_is_happening and self.eval_note != commons_constants.START_PENDING_EVAL_NOTE:
             if abs(self.last_notification_eval - self.eval_note) >= self.MIN_TRIGGERING_DELTA:
                 self.last_notification_eval = self.eval_note
-                await self.evaluation_completed(cryptocurrency, symbol, self.time_frame,
+                await self.evaluation_completed(cryptocurrency, symbol, self.available_time_frame,
                                                 eval_time=time)
             self.something_is_happening = False
         else:
@@ -139,11 +139,11 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
                                              exchange_id).new_consumer(
                 callback=self.ohlcv_callback, symbol=self.symbol,
-                time_frame=self.time_frame, priority_level=self.priority_level)
+                time_frame=self.available_time_frame, priority_level=self.priority_level)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.KLINE_CHANNEL.value,
                                              exchange_id).new_consumer(
                 callback=self.kline_callback, symbol=self.symbol,
-                time_frame=self.time_frame, priority_level=self.priority_level)
+                time_frame=self.available_time_frame, priority_level=self.priority_level)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
@@ -213,7 +213,7 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
             else:
                 self.eval_note = 0
 
-        await self.evaluation_completed(cryptocurrency, symbol, self.time_frame,
+        await self.evaluation_completed(cryptocurrency, symbol, self.available_time_frame,
                                         eval_time=time)
 
     async def start(self, bot_id: str) -> bool:
@@ -227,10 +227,10 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
             exchange_id = trading_api.get_exchange_id_from_matrix_id(self.exchange_name, self.matrix_id)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
                                              exchange_id).new_consumer(
-                callback=self.ohlcv_callback, time_frame=self.time_frame, priority_level=self.priority_level)
+                callback=self.ohlcv_callback, time_frame=self.available_time_frame, priority_level=self.priority_level)
             await exchange_channels.get_chan(channels_name.OctoBotTradingChannelsName.KLINE_CHANNEL.value,
                                              exchange_id).new_consumer(
-                callback=self.kline_callback, time_frame=self.time_frame, priority_level=self.priority_level)
+                callback=self.kline_callback, time_frame=self.available_time_frame, priority_level=self.priority_level)
             return True
         except ImportError:
             self.logger.error("Can't connect to trading channels")
