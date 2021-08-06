@@ -89,6 +89,8 @@ def context_processor_register():
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
         OCTOBOT_WEBSITE_URL=constants.OCTOBOT_WEBSITE_URL,
         OCTOBOT_DOCS_URL=constants.OCTOBOT_DOCS_URL,
+        DEVELOPER_DOCS_URL=constants.DEVELOPER_DOCS_URL,
+        EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
         OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
         get_tentacle_config_file_content=get_tentacle_config_file_content,

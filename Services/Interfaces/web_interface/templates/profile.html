@@ -307,7 +307,7 @@
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
                             full_config=False,
-                            docs_url=OCTOBOT_DOCS_URL,
+                            exchange_docs_url=EXCHANGES_DOCS_URL,
                             community_url=OCTOBOT_COMMUNITY_URL) }}
                             {% endfor %}
                         </div>
@@ -328,12 +328,12 @@
                         <!-- Card deck -->
                         <div class="card-deck config-container">
                     <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
+                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/configuration/profile-configuration#trading") }}
                     </span>
                             {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader",
-                            link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
+                            link=OCTOBOT_DOCS_URL+"/usage/simulator#real-trader") }}
                             {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator",
-                            "Trader simulator", link=OCTOBOT_DOCS_URL+"/pages/Simulator.html") }}
+                            "Trader simulator", link=OCTOBOT_DOCS_URL+"/usage/simulator") }}
                         </div>
                     </div>
                 </div>

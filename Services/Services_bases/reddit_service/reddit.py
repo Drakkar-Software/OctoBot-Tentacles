@@ -52,7 +52,7 @@ class RedditService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/pages/Reddit-interface.html"
+        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/reddit-interface"
 
     @staticmethod
     def is_setup_correctly(config):
