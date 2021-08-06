@@ -62,7 +62,7 @@ class TwitterService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/pages/Twitter-interface.html"
+        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/twitter-interface"
 
     @staticmethod
     def is_setup_correctly(config):
