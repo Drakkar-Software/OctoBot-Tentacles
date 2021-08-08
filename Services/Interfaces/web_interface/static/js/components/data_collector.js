@@ -183,7 +183,8 @@ $(document).ready(function() {
 
     $("#symbolSelect").select2({
         closeOnSelect: false,
-        placeholder: "Symbol"
+        placeholder: "Symbol",
+        maximumSelectionLength: 5
     });
 
 });
