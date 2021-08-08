@@ -659,6 +659,7 @@ function update_exchanges_details(exchangeCard, exchangeData){
         if(exchangeData["compatible"]){
             warnIcon.addClass(hidden_class);
             warnDetailsWrapper.addClass(hidden_class);
+            supportingIcon.removeClass(hidden_class);
             validIcon.removeClass(hidden_class);
             unloggedSupportingIcon.addClass(hidden_class);
         }else{
@@ -680,6 +681,7 @@ function update_exchanges_details(exchangeCard, exchangeData){
                         warnDetails.text(exchangeData["error_message"]);
                         warnIcon.removeClass(hidden_class);
                     }else{
+                        validIcon.addClass(hidden_class);
                         warnDetails.text(exchangeData["error_message"]);
                         unloggedSupportingIcon.removeClass(hidden_class);
                         supporterAccountWarn.addClass(hidden_class);
