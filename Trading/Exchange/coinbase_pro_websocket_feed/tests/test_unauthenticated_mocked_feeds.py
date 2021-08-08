@@ -20,7 +20,6 @@ import octobot_commons.channels_name as channels_name
 import octobot_commons.enums as commons_enums
 import octobot_commons.tests as commons_tests
 import octobot_trading.exchanges as exchanges
-import octobot_trading.util.test_tools.exchanges_test_tools as exchanges_test_tools
 import octobot_trading.util.test_tools.websocket_test_tools as websocket_test_tools
 from ...coinbase_pro_websocket_feed import CoinbaseProCryptofeedWebsocketConnector
 
@@ -30,19 +29,17 @@ pytestmark = pytest.mark.asyncio
 
 async def test_start_spot_websocket():
     config = commons_tests.load_test_config()
-    exchange_manager_instance = await exchanges_test_tools.create_test_exchange_manager(
-        config=config, exchange_name=CoinbaseProCryptofeedWebsocketConnector.get_name())
-
-    await websocket_test_tools.test_unauthenticated_push_to_channel_coverage_websocket(
-        websocket_exchange_class=exchanges.CryptofeedWebSocketExchange,
-        websocket_connector_class=CoinbaseProCryptofeedWebsocketConnector,
-        exchange_manager=exchange_manager_instance,
-        config=config,
-        symbols=["BTC/USD", "ETH/USD"],
-        time_frames=[commons_enums.TimeFrames.ONE_HOUR],
-        expected_pushed_channels={
-            channels_name.OctoBotTradingChannelsName.RECENT_TRADES_CHANNEL.value
-        },
-        time_before_assert=20
-    )
-    await exchanges_test_tools.stop_test_exchange_manager(exchange_manager_instance)
+    async with websocket_test_tools.ws_exchange_manager(config, CoinbaseProCryptofeedWebsocketConnector.get_name()) \
+            as exchange_manager_instance:
+        await websocket_test_tools.test_unauthenticated_push_to_channel_coverage_websocket(
+            websocket_exchange_class=exchanges.CryptofeedWebSocketExchange,
+            websocket_connector_class=CoinbaseProCryptofeedWebsocketConnector,
+            exchange_manager=exchange_manager_instance,
+            config=config,
+            symbols=["BTC/USD", "ETH/USD"],
+            time_frames=[commons_enums.TimeFrames.ONE_HOUR],
+            expected_pushed_channels={
+                channels_name.OctoBotTradingChannelsName.RECENT_TRADES_CHANNEL.value
+            },
+            time_before_assert=20
+        )
