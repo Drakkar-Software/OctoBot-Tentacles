@@ -44,7 +44,8 @@ async def test_start_spot_websocket():
                      commons_enums.TimeFrames.FOUR_HOURS],
         expected_pushed_channels={
             channels_name.OctoBotTradingChannelsName.KLINE_CHANNEL.value,
-            channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value
+            channels_name.OctoBotTradingChannelsName.OHLCV_CHANNEL.value,
+            channels_name.OctoBotTradingChannelsName.TICKER_CHANNEL.value,
         },
         time_before_assert=75
     )
