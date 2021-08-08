@@ -647,16 +647,13 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
     error = None
     if _is_possible_exchange_config(to_check_config):
         is_configured = True
-        if is_supporter:
-            is_compatible = True
-        else:
-            is_compatible, error = interfaces_util.run_in_bot_async_executor(
-                trading_api.is_compatible_account(
-                    exchange_name,
-                    to_check_config,
-                    interfaces_util.get_edited_tentacles_config()
-                )
+        is_compatible, error = interfaces_util.run_in_bot_async_executor(
+            trading_api.is_compatible_account(
+                exchange_name,
+                to_check_config,
+                interfaces_util.get_edited_tentacles_config()
             )
+        )
     return {
         "exchange": exchange_name,
         "compatible": is_compatible,
