@@ -180,4 +180,10 @@ $(document).ready(function() {
     const startDateMax = new Date();
     startDateMax.setDate(startDateMax.getDate() - 2);
     $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
+
+    $("#symbolSelect").select2({
+        closeOnSelect: false,
+        placeholder: "Symbol"
+    });
+
 });
