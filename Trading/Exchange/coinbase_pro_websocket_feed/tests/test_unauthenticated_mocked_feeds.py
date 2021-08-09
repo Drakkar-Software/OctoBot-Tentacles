@@ -39,7 +39,7 @@ async def test_start_spot_websocket():
             symbols=["BTC/USD", "ETH/USD"],
             time_frames=[commons_enums.TimeFrames.ONE_HOUR],
             expected_pushed_channels={
-                channels_name.OctoBotTradingChannelsName.RECENT_TRADES_CHANNEL.value
+                channels_name.OctoBotTradingChannelsName.MARK_PRICE_CHANNEL.value
             },
             time_before_assert=20
         )
