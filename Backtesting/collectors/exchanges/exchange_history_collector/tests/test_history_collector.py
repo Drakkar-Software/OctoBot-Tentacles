@@ -16,6 +16,7 @@
 import pytest
 import os
 import contextlib
+import json
 
 import octobot_backtesting.data as backtesting_data
 import octobot_backtesting.enums as enums
@@ -180,3 +181,34 @@ async def test_collect_long_range():
             assert min_timestamp <= 1622246460000
             max_timestamp = (await database.select_max(enums.ExchangeDataTables.OHLCV, ["timestamp"]))[0][0] * 1000
             assert max_timestamp <= 1624233600000
+
+async def test_collect_multi_pair():
+    exchange_name = "binance"
+    tentacles_setup_config = test_utils_config.load_test_tentacles_config()
+    symbols = ["ETH/BTC", "BTC/USDT", "1INCH/BTC"]
+    async with data_collector(exchange_name, tentacles_setup_config, symbols, None, True) as collector:
+        assert collector.time_frames == []
+        assert collector.symbols == symbols
+        assert collector.exchange_name == exchange_name
+        assert collector.tentacles_setup_config == tentacles_setup_config
+        await collector.start()
+        assert collector.time_frames != []
+        assert collector.exchange_manager is None
+        assert isinstance(collector.exchange, tentacles_exchanges.Binance)
+        assert collector.file_path is not None
+        assert collector.temp_file_path is not None
+        assert not os.path.isfile(collector.temp_file_path)
+        assert os.path.isfile(collector.file_path)
+        async with collector_database(collector) as database:
+            ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
+            assert len(ohlcv) == 19306
+            h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="4h")
+            assert len(h_ohlcv) == 1500
+            symbols_description = json.loads((await database.select(enums.DataTables.DESCRIPTION))[0][3])
+            assert all(symbol in symbols_description for symbol in symbols)
+            eth_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="ETH/BTC")
+            assert len(eth_btc_ohlcv) == 6760
+            inch_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="1INCH/BTC")
+            assert len(inch_btc_ohlcv) == 5803
+            btc_usdt_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="BTC/USDT")
+            assert len(btc_usdt_ohlcv) == 6743
