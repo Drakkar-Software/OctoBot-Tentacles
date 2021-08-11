@@ -23,7 +23,7 @@ class KucoinCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector)
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
         Feeds.KLINE: Feeds.UNSUPPORTED.value,
-        Feeds.TICKER: Feeds.UNSUPPORTED.value,
+        Feeds.TICKER: cryptofeed_constants.TICKER,
         Feeds.CANDLE: Feeds.UNSUPPORTED.value,
         Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
         Feeds.BOOK_DELTA: Feeds.UNSUPPORTED.value,
