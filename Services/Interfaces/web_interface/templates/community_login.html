@@ -29,7 +29,7 @@
                 <h5>Logged in as {{ current_logged_in_email }}</h5>
                 <a class="btn btn-sm btn-outline-warning waves-effect mt-4" href="{{ url_for('community_logout') }}">Logout</a>
             {% else %}
-                <h5>Login and access your OctoBot community features.</h5>
+                <h5>Login and access your OctoBot community account.</h5>
                 <form method=post>
                     <div class="my-4">
                         {{ form.csrf_token }}
@@ -50,7 +50,7 @@
         </div>
         {% if not current_logged_in_email %}
             <div class="card-footer">
-                New to the OctoBot community ? <a href="{{community_url}}" target="_blank" rel="noopener noreferrer" class="text-white font-weight-bold">You can join it here.</a>
+                New to the OctoBot community ? <a href="{{OCTOBOT_COMMUNITY_URL}}signup" target="_blank" rel="noopener noreferrer" class="text-white font-weight-bold">You can join it here.</a>
             </div>
         {% endif %}
     </div>

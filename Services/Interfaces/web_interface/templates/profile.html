@@ -278,7 +278,7 @@
                         <div class="card-deck config-container" update-url="{{ url_for('config') }}">
                             {% for crypto_currency in config_symbols %}
                             {{ m_config_currency_card.config_currency_card(config_symbols, crypto_currency,
-                            filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list), full_symbol_list,
+                            filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list, config_symbols), full_symbol_list,
                             symbol=config_symbols[crypto_currency]['pairs'][0].split('/')[0].lower() if
                             config_symbols[crypto_currency]['pairs'])}}
                             {% endfor %}
@@ -306,7 +306,9 @@
                             exchanges_details[exchange],
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
-                            full_config=False) }}
+                            full_config=False,
+                            exchange_docs_url=EXCHANGES_DOCS_URL,
+                            community_url=OCTOBOT_COMMUNITY_URL) }}
                             {% endfor %}
                         </div>
                     </div>
@@ -326,12 +328,12 @@
                         <!-- Card deck -->
                         <div class="card-deck config-container">
                     <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
+                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/configuration/profile-configuration#trading") }}
                     </span>
                             {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader",
-                            link=OCTOBOT_DOCS_URL+"/pages/Trader.html") }}
+                            link=OCTOBOT_DOCS_URL+"/usage/simulator#real-trader") }}
                             {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator",
-                            "Trader simulator", link=OCTOBOT_DOCS_URL+"/pages/Simulator.html") }}
+                            "Trader simulator", link=OCTOBOT_DOCS_URL+"/usage/simulator") }}
                         </div>
                     </div>
                 </div>

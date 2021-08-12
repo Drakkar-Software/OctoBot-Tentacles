@@ -138,6 +138,17 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
             start_fetch_time = last_candle_timestamp
+
+            if self.end_timestamp is not None:
+                while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
+                    candles.pop(-1)
+            self.exchange.uniformize_candles_if_necessary(candles)
+            await self.save_ohlcv(exchange=exchange,
+                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                          symbol=symbol, time_frame=time_frame, candle=candles,
+                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            candles.clear()
+
             while since < last_candle_timestamp if not self.end_timestamp \
                     else (last_candle_timestamp < self.end_timestamp - (time_frame_sec * 1000)):
                 since = last_candle_timestamp
@@ -145,19 +156,27 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 self.logger.info(f"[{round(progress *100)}%] historical data fetched for {symbol} {time_frame}")
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame,
                                                                  since=(since + (time_frame_sec * 1000)))
-                last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                if candles:
+                    last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
 
-            if self.end_timestamp is not None:
-                while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
-                    candles.pop(-1)
+                    if self.end_timestamp is not None:
+                        while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
+                            candles.pop(-1)
+                    self.exchange.uniformize_candles_if_necessary(candles)
+                    await self.save_ohlcv(exchange=exchange,
+                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                    candles.clear()
+
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
 
-        self.exchange.uniformize_candles_if_necessary(candles)
-        await self.save_ohlcv(exchange=exchange,
-                              cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                              symbol=symbol, time_frame=time_frame, candle=candles,
-                              timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            self.exchange.uniformize_candles_if_necessary(candles)
+            await self.save_ohlcv(exchange=exchange,
+                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass

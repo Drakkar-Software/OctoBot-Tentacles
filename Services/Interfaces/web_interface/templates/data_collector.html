@@ -76,8 +76,9 @@
             </div>
             <div class="col">
                 Symbol :
-                <select class="selectpicker" data-live-search="true" data-width="auto" data-window-padding="25"
-                    id="symbolSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}">
+                <select class="selectpicker" data-live-search="true" data-width="30%" data-window-padding="25"
+                    id="symbolSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}"
+                    multiple>
                     {% for symbol in full_symbol_list %}
                     <option value={{symbol}}>
                         {{symbol}}

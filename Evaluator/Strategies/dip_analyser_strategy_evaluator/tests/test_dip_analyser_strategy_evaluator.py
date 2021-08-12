@@ -52,7 +52,7 @@ class DipAnalyserStrategiesEvaluatorTest(abstract_strategy_test.AbstractStrategy
     async def test_slow_downtrend(self):
         # market: -49.25407390406244
         # market: -47.50593824228029
-        await self.run_test_slow_downtrend(-25.195, -33.975, None, None, skip_extended=True)
+        await self.run_test_slow_downtrend(-25.195, -34.453, None, None, skip_extended=True)
 
     async def test_sharp_downtrend(self):
         # market: -34.67997135795625

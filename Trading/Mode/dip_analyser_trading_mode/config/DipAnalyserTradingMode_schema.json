@@ -2,6 +2,12 @@
   "type": "object",
   "title": "DipAnalyserTradingMode",
   "properties": {
+    "ignore_exchange_fees": {
+        "title": "Ignore exchange fees when creating sell orders. When enabled, 100% of the bought assets will be sold, otherwise a small part will be kept to cover exchange fees.",
+        "type": "boolean",
+        "format": "checkbox",
+        "default": false
+    },
     "sell_orders_count": {
         "title": "Number of sell orders to create after each buy.",
         "type": "number",

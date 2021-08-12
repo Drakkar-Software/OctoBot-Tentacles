@@ -641,44 +641,70 @@ function update_exchanges_details(exchangeCard, exchangeData){
     const warnIcon = $(exchangeCard.find("[data-role=account-warning]"));
     const unloggedSupportingIcon = $(exchangeCard.find("[data-role=supporting-exchange]"));
     const validIcon = $(exchangeCard.find("[data-role=valid-account]"));
+    const warnDetailsWrapper = $(exchangeCard.find("[data-role=account-warning-details-wrapper]"));
     const warnDetails = $(exchangeCard.find("[data-role=account-warning-details]"));
+    const partnersDocs = $(exchangeCard.find("[data-role=account-partners-docs]"));
     const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
+    const supporterAccountWarn = $(exchangeCard.find("[data-role=supporter-account]"))
+    partnersDocs.addClass(hidden_class);
     if(exchangeData["supporting"]){
+        supporterAccountWarn.removeClass(hidden_class);
+        if (exchangeData["supporter_account"]){
+            warnIcon.addClass(hidden_class);
+            warnDetailsWrapper.addClass(hidden_class);
+            supportingIcon.removeClass(hidden_class);
+            validIcon.addClass(hidden_class);
+            supporterAccountWarn.addClass(hidden_class)
+        }
         if(exchangeData["compatible"]){
             warnIcon.addClass(hidden_class);
-            warnDetails.addClass(hidden_class);
-            validIcon.addClass(hidden_class);
-            unloggedSupportingIcon.addClass(hidden_class);
+            warnDetailsWrapper.addClass(hidden_class);
             supportingIcon.removeClass(hidden_class);
+            validIcon.removeClass(hidden_class);
+            unloggedSupportingIcon.addClass(hidden_class);
         }else{
             if(exchangeData["configured"]) {
-                warnIcon.addClass(hidden_class);
-                supportingIcon.addClass(hidden_class);
-                unloggedSupportingIcon.addClass(hidden_class);
-                warnDetails.removeClass(hidden_class);
-                warnDetails.text(exchangeData["error_message"]);
-                if (exchangeData["error_message"].includes("create a new")) {
-                    warnIcon.removeClass(hidden_class);
+                if(exchangeData["supporter_account"]) {
+                    // supporter account have websocket access
+                    warnIcon.addClass(hidden_class);
+                    if (!exchangeData["error_message"].includes("create a new")) {
+                        warnDetailsWrapper.removeClass(hidden_class);
+                        warnDetails.text(exchangeData["error_message"]);
+                    }
                 }else{
-                    unloggedSupportingIcon.removeClass(hidden_class);
+                    warnIcon.addClass(hidden_class);
+                    supportingIcon.addClass(hidden_class);
+                    unloggedSupportingIcon.addClass(hidden_class);
+                    warnDetailsWrapper.removeClass(hidden_class);
+                    if (exchangeData["error_message"].includes("create a new")) {
+                        partnersDocs.removeClass(hidden_class);
+                        warnDetails.text(exchangeData["error_message"]);
+                        warnIcon.removeClass(hidden_class);
+                    }else{
+                        validIcon.addClass(hidden_class);
+                        warnDetails.text(exchangeData["error_message"]);
+                        unloggedSupportingIcon.removeClass(hidden_class);
+                        supporterAccountWarn.addClass(hidden_class);
+                    }
                 }
             } else {
                 supportingIcon.addClass(hidden_class);
                 warnIcon.addClass(hidden_class);
-                warnDetails.addClass(hidden_class);
+                warnDetailsWrapper.addClass(hidden_class);
                 validIcon.addClass(hidden_class);
                 unloggedSupportingIcon.removeClass(hidden_class);
             }
         }
     }else {
+        supporterAccountWarn.addClass(hidden_class);
         warnIcon.addClass(hidden_class);
         supportingIcon.addClass(hidden_class);
         if(exchangeData["compatible"]){
-            warnDetails.addClass(hidden_class);
+            warnDetailsWrapper.addClass(hidden_class);
             validIcon.removeClass(hidden_class);
         }else if(exchangeData["error_message"]){
             validIcon.addClass(hidden_class);
-            warnDetails.removeClass(hidden_class);
+            warnDetailsWrapper.removeClass(hidden_class);
             warnDetails.text(exchangeData["error_message"]);
         }
     }

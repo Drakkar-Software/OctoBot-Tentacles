@@ -51,10 +51,16 @@ jobs:
         OCTOBOT_DEFAULT_BRANCH: dev
         DISABLE_SENTRY: True
       run: |
-        $env:TARGET_BRANCH = @({$env:GITHUB_HEAD_REF}, {$env:GITHUB_REF})[(Test-Path env:GITHUB_HEAD_REF)]
+        $env:TARGET_BRANCH = $env:GITHUB_REF
+        If ((Test-Path env:GITHUB_HEAD_REF) -and -not ([string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF))) {
+          echo "using GITHUB_HEAD_REF"
+          $env:TARGET_BRANCH = $env:GITHUB_HEAD_REF
+        }
+        echo "TARGET_BRANCH=$env:TARGET_BRANCH"
         If ($env:TARGET_BRANCH -notcontains "refs/tags/") {
           $env:TENTACLES_URL_TAG = "latest"
         }
+        echo "cleaned TARGET_BRANCH=$env:TARGET_BRANCH"
         git clone -q $env:OCTOBOT_GH_REPO -b $env:TARGET_BRANCH.Replace('refs/heads/','')
         if ($LastExitCode -ne 0) {
           git clone -q $env:OCTOBOT_GH_REPO -b $env:OCTOBOT_DEFAULT_BRANCH
@@ -109,7 +115,6 @@ jobs:
     needs: tests
     name: ubuntu-latest - Python 3.8 - upload tentacles
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v2
       - name: Set Environment Variables

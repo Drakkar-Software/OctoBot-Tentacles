@@ -44,9 +44,10 @@ def community():
                                  use_preview=use_preview,
                                  preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
                                  current_logged_in_email=logged_in_email,
+                                 role=authenticator.supports.support_role,
+                                 is_donor=bool(authenticator.supports.donations),
                                  tentacles_packages=tentacles_packages,
                                  current_bots_stats=models.get_current_octobots_stats(),
-                                 community_url=constants.OCTOBOT_COMMUNITY_URL,
                                  default_tentacles_package_image=default_image)
 
 

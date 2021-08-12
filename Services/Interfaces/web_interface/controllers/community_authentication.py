@@ -51,8 +51,7 @@ def community_login():
     return flask.render_template('community_login.html',
                                  form=form,
                                  current_logged_in_email=logged_in_email,
-                                 current_bots_stats=models.get_current_octobots_stats(),
-                                 community_url=constants.OCTOBOT_COMMUNITY_URL)
+                                 current_bots_stats=models.get_current_octobots_stats())
 
 
 @web_interface.server_instance.route("/community_logout")

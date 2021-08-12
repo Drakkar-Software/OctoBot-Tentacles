@@ -120,7 +120,7 @@ async def _check_page_no_login_redirect(url, session):
         text = await resp.text()
         assert "We are sorry, but an unexpected error occurred" not in text
         assert "We are sorry, but this doesn't exist" not in text
-        if not (url.endswith("login") or url.endswith("logout")):
+        if not (url.endswith("login") or url.endswith("logout") or url.endswith("/community")):
             assert "input type=submit value=Login" not in text
             assert not resp.real_url.name == "login"
         assert resp.status == 200

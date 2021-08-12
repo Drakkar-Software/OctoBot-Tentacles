@@ -642,6 +642,8 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
     is_compatible = False
     is_sponsoring = trading_api.is_sponsoring(exchange_name)
     is_configured = False
+    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    is_supporter = authenticator.supports.is_supporting()
     error = None
     if _is_possible_exchange_config(to_check_config):
         is_configured = True
@@ -655,6 +657,7 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
     return {
         "exchange": exchange_name,
         "compatible": is_compatible,
+        "supporter_account": is_supporter,
         "configured": is_configured,
         "supporting": is_sponsoring,
         "error_message": error

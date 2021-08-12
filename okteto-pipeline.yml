@@ -1,0 +1,9 @@
+icon: https://raw.githubusercontent.com/Drakkar-Software/OctoBot/assets/octopus.png
+deploy:
+  - git clone https://github.com/Drakkar-Software/OctoBot -b dev OctoBot
+  - echo "" >> .env
+  - echo "TENTACLES_REPOSITORY=dev-tentacles" >> .env
+  - echo "TENTACLES_URL_TAG=${OKTETO_GIT_BRANCH##*/}" >> .env
+  - echo "DOCKER_IMAGE=okteto.dev/octobot:latest" >> .env
+  - cd OctoBot && okteto build -t okteto.dev/octobot:latest --file Dockerfile .
+  - okteto stack deploy --wait --file okteto-stack.yaml

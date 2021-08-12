@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import octobot_commons.constants as commons_constants
 import async_channel.constants as channel_constants
 import octobot_commons.evaluators_util as evaluators_util
@@ -65,10 +67,10 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         )
         return [mode_consumer, order_consumer]
 
-    async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           is_new, is_from_bot):
-        if order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
+    async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
+                                           symbol, order, is_new, is_from_bot):
+        if order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] \
+                == trading_enums.OrderStatus.FILLED.value and is_from_bot:
             await self.producers[0].order_filled_callback(order)
 
     @classmethod
@@ -77,16 +79,16 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
 
 class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
-    LIMIT_PRICE_MULTIPLIER = 0.995
-    SOFT_MAX_CURRENCY_RATIO = 0.33
+    LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.995")
+    SOFT_MAX_CURRENCY_RATIO = decimal.Decimal("0.33")
     # consider a high ratio not to take too much risk and not to prevent order creation either
-    DEFAULT_HOLDING_RATIO = 0.35
-    DEFAULT_FULL_VOLUME = 0.5
-    DEFAULT_SELL_TARGET = 1
+    DEFAULT_HOLDING_RATIO = decimal.Decimal("0.35")
+    DEFAULT_FULL_VOLUME = decimal.Decimal("0.5")
+    DEFAULT_SELL_TARGET = decimal.Decimal("1")
 
-    RISK_VOLUME_MULTIPLIER = 0.2
+    RISK_VOLUME_MULTIPLIER = decimal.Decimal("0.2")
 
-    DELTA_RATIO = 0.8
+    DELTA_RATIO = decimal.Decimal("0.8")
 
     ORDER_ID_KEY = "order_id"
     VOLUME_KEY = "volume"
@@ -108,13 +110,19 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         super().__init__(trading_mode)
         self.sell_targets_by_order_id = {}
 
-        self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]
-        self.PRICE_WEIGH_TO_PRICE_PERCENT[2] = self.trading_mode.trading_config[self.MEDIUM_PRICE_WEIGHT]
-        self.PRICE_WEIGH_TO_PRICE_PERCENT[3] = self.trading_mode.trading_config[self.HEAVY_PRICE_WEIGHT]
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[2] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.MEDIUM_PRICE_WEIGHT]}")
+        self.PRICE_WEIGH_TO_PRICE_PERCENT[3] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.HEAVY_PRICE_WEIGHT]}")
 
-        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[1] = self.trading_mode.trading_config[self.LIGHT_VOLUME_WEIGHT]
-        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[2] = self.trading_mode.trading_config[self.MEDIUM_VOLUME_WEIGHT]
-        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[3] = self.trading_mode.trading_config[self.HEAVY_VOLUME_WEIGHT]
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[1] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_VOLUME_WEIGHT]}")
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[2] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.MEDIUM_VOLUME_WEIGHT]}")
+        self.VOLUME_WEIGH_TO_VOLUME_PERCENT[3] = \
+            decimal.Decimal(f"{self.trading_mode.trading_config[self.HEAVY_VOLUME_WEIGHT]}")
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         timeout = kwargs.get("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
@@ -124,7 +132,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             price_weight = data.get(self.PRICE_WEIGHT_KEY, 1)
             return await self.create_buy_order(symbol, timeout, volume_weight, price_weight)
         elif state == trading_enums.EvaluatorStates.SHORT.value:
-            quantity = data.get(self.VOLUME_KEY, 1)
+            quantity = data.get(self.VOLUME_KEY, decimal.Decimal("1"))
             sell_weight = self._get_sell_target_for_registered_order(data[self.ORDER_ID_KEY])
             sell_base = data[self.BUY_PRICE_KEY]
             return await self.create_sell_orders(symbol, timeout, self.trading_mode.sell_orders_per_buy,
@@ -136,21 +144,25 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
+            price = decimal.Decimal(f"{price}")
 
             base, _ = symbol_util.split_symbol(symbol)
             created_orders = []
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
-            limit_price = trading_personal_data.adapt_price(symbol_market, self.get_limit_price(price))
-            for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+            quantity = await self._get_buy_quantity_from_weight(volume_weight, decimal.Decimal(f"{market_quantity}"),
+                                                                base)
+            limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
+            for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     limit_price,
                     symbol_market):
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=trading_enums.TraderOrderType.BUY_LIMIT,
-                                                                            symbol=symbol,
-                                                                            current_price=price,
-                                                                            quantity=order_quantity,
-                                                                            price=order_price)
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                    symbol=symbol,
+                    current_price=float(price),
+                    quantity=float(order_quantity),
+                    price=float(order_price)
+                )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
                 self._register_buy_order(created_order.order_id, price_weight)
@@ -172,16 +184,18 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             created_orders = []
-            sell_max_quantity = min(current_symbol_holding, quantity)
+            sell_max_quantity = decimal.Decimal(min(decimal.Decimal(f"{current_symbol_holding}"), quantity))
             to_create_orders = self._generate_sell_orders(sell_orders_count, sell_max_quantity, sell_weight,
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=trading_enums.TraderOrderType.SELL_LIMIT,
-                                                                            symbol=symbol,
-                                                                            current_price=sell_base,
-                                                                            quantity=order_quantity,
-                                                                            price=order_price)
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type=trading_enums.TraderOrderType.SELL_LIMIT,
+                    symbol=symbol,
+                    current_price=float(sell_base),
+                    quantity=float(order_quantity),
+                    price=float(order_price)
+                )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
             if created_orders:
@@ -205,8 +219,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_buy_quantity_from_weight(self, volume_weight, market_quantity, currency):
         weighted_volume = self.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight]
         # high risk is making larger orders, low risk is making smaller ones
-        risk_multiplier = 1 + ((self.exchange_manager.trader.risk - 0.5) * self.RISK_VOLUME_MULTIPLIER)
-        weighted_volume = min(weighted_volume * risk_multiplier, 1)
+        risk_multiplier = 1 + (decimal.Decimal(self.exchange_manager.trader.risk - 0.5) * self.RISK_VOLUME_MULTIPLIER)
+        weighted_volume = min(weighted_volume * risk_multiplier, decimal.Decimal(1))
         traded_assets_count = self.get_number_of_traded_assets()
         if traded_assets_count == 1:
             return market_quantity * self.DEFAULT_FULL_VOLUME * weighted_volume
@@ -218,13 +232,14 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # if currency (base) is not ref market => need to check holdings ratio not to spend all ref market
                 # into one currency (at least 3 traded assets are available here)
                 try:
-                    currency_ratio = await self.get_holdings_ratio(currency)
+                    currency_ratio = decimal.Decimal(await self.get_holdings_ratio(currency))
                 except KeyError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)
                     currency_ratio = self.DEFAULT_HOLDING_RATIO
             # linear function of % holding in this currency: volume_ratio is in [0, SOFT_MAX_CURRENCY_RATIO*0.8]
-            volume_ratio = self.SOFT_MAX_CURRENCY_RATIO * (1 - min(currency_ratio * self.DELTA_RATIO, 1))
+            volume_ratio = self.SOFT_MAX_CURRENCY_RATIO * \
+                (1 - min(currency_ratio * self.DELTA_RATIO, decimal.Decimal(1)))
             return market_quantity * volume_ratio * weighted_volume
 
     def _get_sell_target_for_registered_order(self, order_id):
@@ -254,7 +269,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             for i in range(adapted_sell_orders_count):
                 order_price = sell_base + (increment * (i + 1))
-                for adapted_quantity, adapted_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+                for adapted_quantity, adapted_price \
+                        in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                         order_volume,
                         order_price,
                         symbol_market):
@@ -262,8 +278,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return volume_with_price
 
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
-        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = trading_personal_data.get_min_max_amounts(
-            symbol_market)
+        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
+            trading_personal_data.get_min_max_amounts(symbol_market)
+        min_quantity = decimal.Decimal(f"{min_quantity}")
+        max_quantity = decimal.Decimal(f"{max_quantity}")
+        min_cost = decimal.Decimal(f"{min_cost}")
+        max_cost = decimal.Decimal(f"{max_cost}")
+        min_price = decimal.Decimal(f"{min_price}")
+        max_price = decimal.Decimal(f"{max_price}")
+
         orders_count = sell_orders_count
 
         limit_check = DipAnalyserTradingModeConsumer._ensure_orders_size(
@@ -321,6 +344,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
+    IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -330,6 +354,8 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         self.last_buy_candle = None
         self.base, _ = symbol_util.split_symbol(self.trading_mode.symbol)
+
+        self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 
     async def stop(self):
         if self.trading_mode is not None:
@@ -363,15 +389,17 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             await self._create_bottom_order(self.final_eval["current_candle_time"], volume_weight, price_weight)
 
     async def order_filled_callback(self, filled_order):
-        if filled_order[
-            trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value:
+        if filled_order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
+                == trading_enums.TradeOrderSide.BUY.value:
             self.state = trading_enums.EvaluatorStates.SHORT
-            paid_fees = trading_personal_data.total_fees_from_order_dict(filled_order, self.base)
-            sell_quantity = filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value] - paid_fees
+            paid_fees = 0 if self.ignore_exchange_fees else \
+                decimal.Decimal(f"{trading_personal_data.total_fees_from_order_dict(filled_order, self.base)}")
+            sell_quantity = \
+                decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]}") - paid_fees
+            price = decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}")
             await self._create_sell_order_if_enabled(filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value],
                                                      sell_quantity,
-                                                     filled_order[
-                                                         trading_enums.ExchangeConstantsOrderColumns.PRICE.value])
+                                                     price)
 
     async def _create_sell_order_if_enabled(self, order_id, sell_quantity, buy_price):
         if self.exchange_manager.trader.is_enabled:

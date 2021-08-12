@@ -31,6 +31,10 @@ class BinanceCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector
         Feeds.OPEN_INTEREST: Feeds.UNSUPPORTED.value,
     }
 
+    EXCHANGE_CONSTRUCTOR_KWARGS = {
+        "candle_closed_only": False,
+    }
+
     @classmethod
     def get_name(cls):
         return 'binance'

@@ -24,6 +24,7 @@ import octobot_trading.exchanges as exchanges
 
 
 class Okex(exchanges.SpotCCXTExchange):
+    MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
     DESCRIPTION = ""
 
     @classmethod
@@ -33,6 +34,21 @@ class Okex(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
+
+    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return await super().get_open_orders(symbol=symbol,
+                                             since=since,
+                                             limit=self._fix_limit(limit),
+                                             **kwargs)
+
+    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return await super().get_closed_orders(symbol=symbol,
+                                               since=since,
+                                               limit=self._fix_limit(limit),
+                                               **kwargs)
+
+    def _fix_limit(self, limit: int) -> int:
+        return min(self.MAX_PAGINATION_LIMIT, limit)
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         try:
