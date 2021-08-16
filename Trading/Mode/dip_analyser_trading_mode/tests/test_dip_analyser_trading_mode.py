@@ -479,6 +479,36 @@ async def test_order_fill_callback_without_fees(tools):
     assert total_sell_quantity == to_fill_order.origin_quantity
 
 
+async def test_order_fill_callback_without_fees_adapted_rounding(tools):
+    producer, consumer, trader = tools
+
+    producer.ignore_exchange_fees = True
+
+    volume_weight = 1
+    price_weight = 1
+    await producer._create_bottom_order(1, volume_weight, price_weight)
+    # create as task to allow creator's queue to get processed
+    await asyncio.create_task(_check_open_orders_count(trader, 1))
+
+    open_orders = trading_api.get_open_orders(trader.exchange_manager)
+    to_fill_order = open_orders[0]
+    to_fill_order.origin_quantity = 0.000167
+    to_fill_order.origin_price = 200
+
+    await _fill_order(to_fill_order, trader, consumer=consumer)
+    # create as task to allow creator's queue to get processed
+    for _ in range(consumer.trading_mode.sell_orders_per_buy):
+        await asyncio_tools.wait_asyncio_next_cycle()
+    await asyncio.create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
+
+    assert to_fill_order.status == trading_enums.OrderStatus.FILLED
+    open_orders = trading_api.get_open_orders(trader.exchange_manager)
+    assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
+    assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
+    total_sell_quantity = sum(o.origin_quantity for o in open_orders)
+    assert total_sell_quantity == to_fill_order.origin_quantity
+
+
 async def test_order_fill_callback_not_in_db(tools):
     producer, consumer, trader = tools
 

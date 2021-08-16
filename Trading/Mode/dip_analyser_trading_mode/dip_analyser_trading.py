@@ -266,7 +266,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self._check_limits(sell_base, sell_max, quantity, sell_orders_count, symbol_market)
         if adapted_sell_orders_count:
             order_volume = quantity / adapted_sell_orders_count
-
+            total_volume = 0
             for i in range(adapted_sell_orders_count):
                 order_price = sell_base + (increment * (i + 1))
                 for adapted_quantity, adapted_price \
@@ -274,7 +274,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         order_volume,
                         order_price,
                         symbol_market):
+                    total_volume += adapted_quantity
                     volume_with_price.append((adapted_quantity, adapted_price))
+            if total_volume < quantity:
+                # ensure the whole target quantity is used
+                full_quantity = volume_with_price[-1][0] + quantity - total_volume
+                volume_with_price[-1] = (full_quantity, volume_with_price[-1][1])
         return volume_with_price
 
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
