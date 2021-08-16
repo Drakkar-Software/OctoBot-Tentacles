@@ -56,7 +56,7 @@ class DipAnalyserStrategiesEvaluatorTest(abstract_strategy_test.AbstractStrategy
 
     async def test_sharp_downtrend(self):
         # market: -34.67997135795625
-        await self.run_test_sharp_downtrend(-22.231, None, skip_extended=True)
+        await self.run_test_sharp_downtrend(-23.552, None, skip_extended=True)
 
     async def test_flat_markets(self):
         # market: -38.07647740440325
@@ -71,7 +71,7 @@ class DipAnalyserStrategiesEvaluatorTest(abstract_strategy_test.AbstractStrategy
     async def test_sharp_uptrend(self):
         # market: -17.047906776003458
         # market: -18.25837965302341
-        await self.run_test_sharp_uptrend(2.64, 10.578)
+        await self.run_test_sharp_uptrend(2.64, 8.803)
 
     async def test_up_then_down(self):
         await self.run_test_up_then_down(None, skip_extended=True)
