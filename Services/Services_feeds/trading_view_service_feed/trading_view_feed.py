@@ -39,7 +39,8 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
         if self.services[1].requires_token:
             split_result = data.split("TOKEN=")
             if len(split_result) > 1:
-                return self.services[1].token == split_result[-1]
+                token = split_result[1].strip().split("\n")[0]
+                return self.services[1].token == token
             return False
         # no token expected
         return True
