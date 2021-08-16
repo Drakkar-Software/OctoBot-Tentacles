@@ -66,6 +66,8 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
 
 
 class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
+    PRICE_KEY = "PRICE"
+    VOLUME_KEY = "VOLUME"
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -244,6 +246,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             decimal.Decimal(f"{quantity}"), decimal.Decimal(f"{price}"), symbol_market)
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
+        data = kwargs.get("data", {})
+        user_price = float(data.get(self.PRICE_KEY, 0))
+        user_volume = float(data.get(self.VOLUME_KEY, 0))
         current_order = None
         timeout = kwargs.pop("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
         try:
@@ -254,7 +259,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             created_orders = []
 
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
-                quantity = self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
+                quantity = user_volume \
+                           or self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
                 quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
 
@@ -271,11 +277,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
-                quantity = await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
+                quantity = user_volume or \
+                           await self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
                 quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
                 limit_price = trading_personal_data.adapt_price(symbol_market,
-                                                                price * self._get_limit_price_from_risk(final_note))
+                                                                user_price or
+                                                                (price * self._get_limit_price_from_risk(final_note)))
                 for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
                                                                                                     limit_price,
                                                                                                     symbol_market):
@@ -305,10 +313,14 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             # TODO : stop loss
             elif state == trading_enums.EvaluatorStates.LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
-                quantity = quantity * await self._get_quantity_ratio(quote)
+                if user_volume == 0:
+                    quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote)
+                    quantity = quantity * await self._get_quantity_ratio(quote)
+                else:
+                    quantity = user_volume
                 limit_price = trading_personal_data.adapt_price(symbol_market,
-                                                                price * self._get_limit_price_from_risk(final_note))
+                                                                user_price or
+                                                                (price * self._get_limit_price_from_risk(final_note)))
 
                 for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
                                                                                                     limit_price,
@@ -323,9 +335,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
-                quantity = quantity * await self._get_quantity_ratio(quote)
-
+                if user_volume == 0:
+                    quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote)
+                    quantity = quantity * await self._get_quantity_ratio(quote)
+                else:
+                    quantity = user_volume
                 for order_quantity, order_price in self._check_and_adapt_order_details_if_necessary(quantity,
                                                                                                     price,
                                                                                                     symbol_market):
