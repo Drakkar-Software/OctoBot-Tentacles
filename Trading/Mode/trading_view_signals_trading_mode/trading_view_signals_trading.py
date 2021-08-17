@@ -78,7 +78,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         parsed_data = {}
         for line in data['metadata'].split("\n"):
             values = line.split("=")
-            parsed_data[values[0]] = values[1]
+            parsed_data[values[0].strip()] = values[1].strip()
 
         if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                 parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
