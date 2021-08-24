@@ -20,7 +20,7 @@
                 },
                 "title": "Name of the traded pair.",
                 "minLength": 3,
-                "pattern": "[a-zA-Z]{2,}\\/[a-zA-Z]{2,}"
+                "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"
               },
               "flat_spread": {
                 "type": "number",
