@@ -29,6 +29,15 @@ class Binance(exchanges.SpotCCXTExchange):
 
     BINANCE_MARK_PRICE = "markPrice"
 
+    BINANCE_CCXT_OPTIONS = {
+        "timeDifference": 0,  # the difference between system clock and Binance clock
+        "adjustForTimeDifference": False,  # controls the adjustment logic upon instantiation
+    }
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.connector.add_options(self.BINANCE_CCXT_OPTIONS)
+
     @classmethod
     def get_name(cls):
         return 'binance'
