@@ -27,6 +27,15 @@ class Okex(exchanges.SpotCCXTExchange):
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
     DESCRIPTION = ""
 
+    # FROM https://www.okex.com/docs-v5/en/#overview-demo-trading-services
+    SANDBOX_MODE_HEADERS = {"x-simulated-trading": "1"}
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+
+        if self.exchange_manager.is_sandboxed:
+            self.connector.add_headers(self.SANDBOX_MODE_HEADERS)
+
     @classmethod
     def get_name(cls):
         return 'okex'
@@ -34,6 +43,10 @@ class Okex(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
+
+    @classmethod
+    def is_supporting_sandbox(cls) -> bool:
+        return False
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,
