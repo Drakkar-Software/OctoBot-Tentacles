@@ -47,6 +47,20 @@ class Okex(exchanges.SpotCCXTExchange):
                                                limit=self._fix_limit(limit),
                                                **kwargs)
 
+    async def _create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
+        """
+        Add price to default connector call for market orders https://github.com/ccxt/ccxt/issues/9523
+        """
+        return await self.connector.client.create_market_order(symbol=symbol, side='buy', amount=quantity,
+                                                               price=price, params=params)
+
+    async def _create_market_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
+        """
+        Add price to default connector call for market orders https://github.com/ccxt/ccxt/issues/9523
+        """
+        return await self.connector.client.create_market_order(symbol=symbol, side='sell', amount=quantity,
+                                                               price=price, params=params)
+
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit)
 
