@@ -1,0 +1,60 @@
+name: OctoBot-Tentacles-Cron
+on:
+  schedule:
+    - cron: '0 5 * * *' # every day at 5am
+
+jobs:
+  cron-tests:
+    name: ubuntu-latestx64 - Python 3.8 - cython - tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.x'
+          architecture: 'x64'
+
+      - name: Install OctoBot on Unix
+        env:
+          OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
+          OCTOBOT_DEFAULT_BRANCH: dev
+        run: |
+          TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
+          git clone -q $OCTOBOT_GH_REPO -b ${TARGET_BRANCH} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
+          cd OctoBot
+          git status
+          pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
+          cd ..
+          mkdir new_tentacles
+          cp -r Backtesting Evaluator Services Trading profiles new_tentacles
+          cd OctoBot
+          python start.py tentacles -d "../new_tentacles" -p "../../any_platform.zip"
+          python start.py tentacles --install --location "../any_platform.zip" --all
+
+      - name: Compile project
+        run: |
+          cd OctoBot
+          python setup.py build_ext --inplace
+          python setup.py install
+
+      - name: Pytests
+        env:
+          CYTHON_IGNORE: True
+        run: |
+          cd OctoBot
+          pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles/Trading/Exchange
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs:
+      - cron-tests
+    if: ${{ failure() }}
+
+    steps:
+      - name: Notify discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          status: Failure
+          webhook: ${{ secrets.DISCORD_GITHUB_WEBHOOK }}
