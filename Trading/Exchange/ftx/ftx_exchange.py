@@ -25,6 +25,15 @@ import octobot_trading.enums as trading_enums
 
 class FTX(exchanges.SpotCCXTExchange):
     DESCRIPTION = ""
+    FTX_SUB_ACCOUNT_HEADER_KEY = "FTX-SUBACCOUNT"
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        sub_account_id = exchange_manager.get_exchange_sub_account_id(exchange_manager.exchange_name)
+        if sub_account_id is not None:
+            self.connector.add_headers({
+                self.FTX_SUB_ACCOUNT_HEADER_KEY: sub_account_id
+            })
 
     @classmethod
     def get_name(cls):
