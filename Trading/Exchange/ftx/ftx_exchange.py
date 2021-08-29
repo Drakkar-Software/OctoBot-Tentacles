@@ -77,3 +77,15 @@ class FTX(exchanges.SpotCCXTExchange):
             return ticker
         except ccxt.BaseError as e:
             raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+
+    async def get_sub_account_list(self):
+        sub_account_list = (await self.connector.client.privateGetSubaccounts()).get("result", [])
+        if not sub_account_list:
+            return []
+        return [
+            {
+                trading_enums.SubAccountColumns.ID.value: sub_account.get("nickname", ""),
+                trading_enums.SubAccountColumns.NAME.value: sub_account.get("nickname", "")
+            }
+            for sub_account in sub_account_list
+        ]
