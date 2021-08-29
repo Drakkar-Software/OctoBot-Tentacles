@@ -102,3 +102,16 @@ class Okex(exchanges.SpotCCXTExchange):
 
     def _get_digits_count(self, value):
         return round(abs(math.log(value, 10)))
+
+    async def get_sub_account_list(self):
+        sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])
+        if not sub_account_list:
+            return []
+        return [
+            {
+                trading_enums.SubAccountColumns.ID.value: sub_account.get("subAcct", ""),
+                trading_enums.SubAccountColumns.NAME.value: sub_account.get("label", "")
+            }
+            for sub_account in sub_account_list
+            if sub_account.get("enable", False)
+        ]
