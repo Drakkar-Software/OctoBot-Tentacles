@@ -76,6 +76,8 @@ def data_collector():
             success, reply = models.collect_data_file(details["exchange"], details["symbol"],
                                                       details["startTimestamp"], details["endTimestamp"],
                                                       bool(details["startTimestamp"]))
+            if success:
+                web_interface.send_data_collector_status()
         elif action_type == "import_data_file":
             if flask.request.files:
                 file = flask.request.files['file']
