@@ -73,16 +73,20 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             # create description
             await self._create_description()
 
+            self.total_time_frame = len(self.time_frames) * len(self.symbols)
+            self.in_progress = True
+
             self.logger.info(f"Start collecting history on {self.exchange_name}")
-            for symbol in self.symbols:
+            for symbol_index, symbol in enumerate(self.symbols):
                 self.logger.info(f"Collecting history for {symbol}...")
                 await self.get_ticker_history(self.exchange_name, symbol)
                 await self.get_order_book_history(self.exchange_name, symbol)
                 await self.get_recent_trades_history(self.exchange_name, symbol)
 
-                for index, time_frame in enumerate(self.time_frames):
+                for time_frame_index, time_frame in enumerate(self.time_frames):
+                    self.current_time_frame_index = (symbol_index * len(self.time_frames)) + time_frame_index + 1
                     self.logger.info(
-                        f"[{index}/{len(self.time_frames)}] Collecting {symbol} history on {time_frame}...")
+                        f"[{time_frame_index}/{len(self.time_frames)}] Collecting {symbol} history on {time_frame}...")
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
                     await self.get_kline_history(self.exchange_name, symbol, time_frame)
         except Exception as err:
@@ -109,6 +113,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             await self.database.stop()
             self.finalize_database()
         self.exchange_manager = None
+        self.in_progress = False
+        self.finished = True
 
     async def get_ticker_history(self, exchange, symbol):
         pass
@@ -152,8 +158,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             while since < last_candle_timestamp if not self.end_timestamp \
                     else (last_candle_timestamp < self.end_timestamp - (time_frame_sec * 1000)):
                 since = last_candle_timestamp
-                progress = (since-start_fetch_time) / total_interval
-                self.logger.info(f"[{round(progress *100)}%] historical data fetched for {symbol} {time_frame}")
+                self.current_time_frame_percent = round((since-start_fetch_time) / total_interval * 100)
+                self.logger.info(f"[{self.current_time_frame_percent}%] historical data fetched for {symbol} {time_frame}")
                 candles += await self.exchange.get_symbol_prices(symbol, time_frame,
                                                                  since=(since + (time_frame_sec * 1000)))
                 if candles:

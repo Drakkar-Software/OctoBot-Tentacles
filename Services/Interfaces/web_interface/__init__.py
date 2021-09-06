@@ -44,6 +44,7 @@ def register_notifier(notification_key, notifier):
 
 GENERAL_NOTIFICATION_KEY = "general_notifications"
 BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
+DATA_COLLECTOR_NOTIFICATION_KEY = "data_collector_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
 # Override system configuration content types
@@ -126,6 +127,8 @@ def send_general_notifications(**kwargs):
 def send_backtesting_status(**kwargs):
     _send_notification(BACKTESTING_NOTIFICATION_KEY, **kwargs)
 
+def send_data_collector_status(**kwargs):
+    _send_notification(DATA_COLLECTOR_NOTIFICATION_KEY, **kwargs)
 
 def send_new_trade(dict_new_trade, is_simulated):
     if is_simulated:

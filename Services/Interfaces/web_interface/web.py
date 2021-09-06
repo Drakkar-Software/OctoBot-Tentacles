@@ -41,7 +41,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     tools = {
         constants.BOT_TOOLS_BACKTESTING: None,
         constants.BOT_TOOLS_BACKTESTING_SOURCE: None,
-        constants.BOT_TOOLS_STRATEGY_OPTIMIZER: None
+        constants.BOT_TOOLS_STRATEGY_OPTIMIZER: None,
+        constants.BOT_TOOLS_DATA_COLLECTOR: None
     }
 
     def __init__(self, config):

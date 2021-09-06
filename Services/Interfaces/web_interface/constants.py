@@ -41,3 +41,6 @@ BOT_TOOLS_BACKTESTING_SOURCE = "backtesting_source"
 
 # strategy optimizer
 BOT_TOOLS_STRATEGY_OPTIMIZER = "strategy_optimizer"
+
+# data collector
+BOT_TOOLS_DATA_COLLECTOR = "data_collector"
