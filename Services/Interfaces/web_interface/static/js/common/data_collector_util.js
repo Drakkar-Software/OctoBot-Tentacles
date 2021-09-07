@@ -43,9 +43,9 @@ function init_data_collector_status_websocket(){
 
 function _handle_data_collector_status(data_collector_status_data, socket){
     const data_collector_status = data_collector_status_data["status"];
-    const current_progress = data_collector_status_data["progress"]["current_time_frame_percent"];
-    const total_progress = Math.round((data_collector_status_data["progress"]["current_time_frame_index"] 
-                                    / data_collector_status_data["progress"]["total_time_frame"]) * 100);
+    const current_progress = data_collector_status_data["progress"]["current_step_percent"];
+    const total_progress = Math.round((data_collector_status_data["progress"]["current_step"] 
+                                    / data_collector_status_data["progress"]["total_step"]) * 100);
 
     if(data_collector_status === "collecting" || data_collector_status === "starting"){
         lock_collector_ui(true);
