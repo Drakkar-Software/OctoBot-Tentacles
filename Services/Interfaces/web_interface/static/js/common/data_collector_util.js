@@ -45,7 +45,7 @@ function _handle_data_collector_status(data_collector_status_data, socket){
     const data_collector_status = data_collector_status_data["status"];
     const current_progress = data_collector_status_data["progress"]["current_step_percent"];
     const total_progress = Math.round((data_collector_status_data["progress"]["current_step"] 
-                                    / data_collector_status_data["progress"]["total_step"]) * 100);
+                                    / data_collector_status_data["progress"]["total_steps"]) * 100);
 
     if(data_collector_status === "collecting" || data_collector_status === "starting"){
         lock_collector_ui(true);

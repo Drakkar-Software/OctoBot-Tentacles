@@ -132,14 +132,14 @@ def get_delete_data_file(file_name):
 
 
 def get_data_collector_status():
-    progress = {"current_step": 0, "total_step": 0, "current_step_percent": 0}
+    progress = {"current_step": 0, "total_steps": 0, "current_step_percent": 0}
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
         data_collector = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]
         if backtesting_api.is_data_collector_in_progress(data_collector):
-            current_step, total_step, current_step_percent = \
+            current_step, total_steps, current_step_percent = \
                 backtesting_api.get_data_collector_progress(data_collector)
             progress["current_step"] = current_step
-            progress["total_step"] = total_step
+            progress["total_steps"] = total_steps
             progress["current_step_percent"] = current_step_percent
             return "collecting", progress
         if backtesting_api.is_data_collector_finished(data_collector):

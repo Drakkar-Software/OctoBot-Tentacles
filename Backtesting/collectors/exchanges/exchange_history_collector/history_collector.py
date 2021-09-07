@@ -73,7 +73,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             # create description
             await self._create_description()
 
-            self.total_step = len(self.time_frames) * len(self.symbols)
+            self.total_steps = len(self.time_frames) * len(self.symbols)
             self.in_progress = True
 
             self.logger.info(f"Start collecting history on {self.exchange_name}")
@@ -84,7 +84,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 await self.get_recent_trades_history(self.exchange_name, symbol)
 
                 for time_frame_index, time_frame in enumerate(self.time_frames):
-                    self.current_step = (symbol_index * len(self.time_frames)) + time_frame_index + 1
+                    self.current_step_index = (symbol_index * len(self.time_frames)) + time_frame_index + 1
                     self.logger.info(
                         f"[{time_frame_index}/{len(self.time_frames)}] Collecting {symbol} history on {time_frame}...")
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
