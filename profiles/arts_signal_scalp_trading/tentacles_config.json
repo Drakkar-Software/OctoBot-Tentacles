@@ -1,0 +1,11 @@
+{
+    "tentacle_activation": {
+        "Evaluator": {
+            "SimpleStrategyEvaluator": true,
+            "TelegramChannelSignalEvaluator": true
+        },
+        "Trading": {
+            "DailyTradingMode": true
+        }
+    }
+}

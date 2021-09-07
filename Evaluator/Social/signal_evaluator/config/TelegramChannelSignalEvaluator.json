@@ -1,8 +1,11 @@
 {
-  "channels": {
-    "WallStreetBets Events 🛸": {
-      "signal_pattern": "The coin we have picked to pump today is :  #(.*)",
-      "signal_market": "BTC"
+  "telegram-channels": {
+    "Test-Channel": {
+      "signal_patterns": {
+        "MARKET_BUY": "Side: (BUY)$",
+        "MARKET_SELL": "Side: (SELL)$"
+      },
+      "signal_pair": "Pair: (.*)$"
     }
   }
 }
