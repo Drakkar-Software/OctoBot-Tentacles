@@ -262,8 +262,8 @@ async def test_create_orders_with_fixed_volume_per_order():
         assert created_sell_orders[0].origin_price == 4005
         assert created_sell_orders[1].origin_price == 4010
         assert created_sell_orders[0] is created_orders[0]
-        assert all(o.origin_quantity == float(producer.buy_volume_per_order) for o in created_buy_orders)
-        assert all(o.origin_quantity == float(producer.sell_volume_per_order) for o in created_sell_orders)
+        assert all(o.origin_quantity == producer.buy_volume_per_order for o in created_buy_orders)
+        assert all(o.origin_quantity == producer.sell_volume_per_order for o in created_sell_orders)
     finally:
         await _stop(exchange_manager)
 

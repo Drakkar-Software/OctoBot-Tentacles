@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import async_channel.constants as channel_constants
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
@@ -54,18 +56,18 @@ class SignalTradingModeConsumer(daily_trading_mode.DailyTradingModeConsumer):
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
 
-        self.STOP_LOSS_ORDER_MAX_PERCENT = 0.99
-        self.STOP_LOSS_ORDER_MIN_PERCENT = 0.95
+        self.STOP_LOSS_ORDER_MAX_PERCENT = decimal.Decimal(str(0.99))
+        self.STOP_LOSS_ORDER_MIN_PERCENT = decimal.Decimal(str(0.95))
 
-        self.QUANTITY_MIN_PERCENT = 0.1
-        self.QUANTITY_MAX_PERCENT = 0.9
+        self.QUANTITY_MIN_PERCENT = decimal.Decimal(str(0.1))
+        self.QUANTITY_MAX_PERCENT = decimal.Decimal(str(0.9))
 
-        self.QUANTITY_MARKET_MIN_PERCENT = 0.5
-        self.QUANTITY_MARKET_MAX_PERCENT = 1
-        self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
+        self.QUANTITY_MARKET_MIN_PERCENT = decimal.Decimal(str(0.5))
+        self.QUANTITY_MARKET_MAX_PERCENT = trading_constants.ONE
+        self.QUANTITY_BUY_MARKET_ATTENUATION = decimal.Decimal(str(0.2))
 
-        self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
-        self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.99
+        self.BUY_LIMIT_ORDER_MAX_PERCENT = decimal.Decimal(str(0.995))
+        self.BUY_LIMIT_ORDER_MIN_PERCENT = decimal.Decimal(str(0.99))
 
 
 class SignalTradingModeProducer(daily_trading_mode.DailyTradingModeProducer):
@@ -73,8 +75,8 @@ class SignalTradingModeProducer(daily_trading_mode.DailyTradingModeProducer):
         super().__init__(channel, config, trading_mode, exchange_manager)
 
         # If final_eval not is < X_THRESHOLD --> state = X
-        self.VERY_LONG_THRESHOLD = -0.88
-        self.LONG_THRESHOLD = -0.4
-        self.NEUTRAL_THRESHOLD = 0.4
-        self.SHORT_THRESHOLD = 0.88
-        self.RISK_THRESHOLD = 0.15
+        self.VERY_LONG_THRESHOLD = decimal.Decimal(str(-0.88))
+        self.LONG_THRESHOLD = decimal.Decimal(str(-0.4))
+        self.NEUTRAL_THRESHOLD = decimal.Decimal(str(0.4))
+        self.SHORT_THRESHOLD = decimal.Decimal(str(0.88))
+        self.RISK_THRESHOLD = decimal.Decimal(str(0.15))

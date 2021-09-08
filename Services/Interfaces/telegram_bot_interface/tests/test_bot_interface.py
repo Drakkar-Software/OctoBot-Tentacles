@@ -70,10 +70,13 @@ async def test_all_commands():
         assert len(bot_interface.get_command_trades_history()) > 50
         assert len(bot_interface.get_command_open_orders()) > 50
         assert len(bot_interface.get_command_fees()) > 50
+        assert "Decimal" not in bot_interface.get_command_fees()
         assert "Nothing to sell" in bot_interface.get_command_sell_all_currencies()
         assert "Nothing to sell for BTC" in bot_interface.get_command_sell_all("BTC")
         assert len(bot_interface.get_command_portfolio()) > 50
+        assert "Decimal" not in bot_interface.get_command_portfolio()
         assert len(bot_interface.get_command_profitability()) > 50
+        assert "Decimal" not in bot_interface.get_command_profitability()
         assert "I'm alive since" in bot_interface.get_command_ping()
         assert all(elem in bot_interface.get_command_version()
                    for elem in

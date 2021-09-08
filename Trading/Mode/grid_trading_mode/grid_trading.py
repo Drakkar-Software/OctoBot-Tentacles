@@ -30,8 +30,8 @@ import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_tra
 
 @dataclasses.dataclass
 class AllowedPriceRange:
-    lower_bound: decimal.Decimal = decimal.Decimal(0)
-    higher_bound: decimal.Decimal = decimal.Decimal(0)
+    lower_bound: decimal.Decimal = trading_constants.ZERO
+    higher_bound: decimal.Decimal = trading_constants.ZERO
 
 
 class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import decimal
 
 import octobot.constants as octobot_constants
 import async_channel.constants as channel_constants
@@ -110,8 +111,10 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.PORTFOLIO_PERCENT_PER_TRADE = trading_mode.trading_config["portfolio_percent_per_trade"] / 100
-        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = trading_mode.trading_config["stop_loss_delta_percent"] / 100
+        self.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(
+            trading_mode.trading_config["portfolio_percent_per_trade"] / 100))
+        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(
+            trading_mode.trading_config["stop_loss_delta_percent"] / 100))
         self.open_arbitrages = []
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
@@ -135,9 +138,9 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
             else trading_enums.TraderOrderType.SELL_LIMIT
         quantity = self._get_quantity_from_holdings(current_symbol_holding, market_quantity, arbitrage_container.state)
         if order_type is trading_enums.TraderOrderType.SELL_LIMIT:
-            quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
-                                                                                current_symbol_holding)
-        for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+            quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
+                                                                                        current_symbol_holding)
+        for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                 quantity,
                 arbitrage_container.own_exchange_price,
                 symbol_market):
@@ -162,9 +165,9 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                            timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
         now_selling = arbitrage_container.state is trading_enums.EvaluatorStates.LONG
         if now_selling:
-            quantity = trading_personal_data.add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
+            quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                 current_symbol_holding)
-        for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+        for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                 quantity,
                 arbitrage_container.target_price,
                 symbol_market):
@@ -202,22 +205,24 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def _get_stop_loss_price(self, symbol_market, starting_price, now_selling):
         if now_selling:
-            return trading_personal_data.adapt_price(symbol_market,
-                                                     starting_price * (1 - self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
-        return trading_personal_data.adapt_price(symbol_market,
-                                                 starting_price * (1 + self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
+            return trading_personal_data.decimal_adapt_price(symbol_market,
+                                                     starting_price * (trading_constants.ONE
+                                                                       - self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
+        return trading_personal_data.decimal_adapt_price(symbol_market,
+                                                 starting_price * (trading_constants.ONE
+                                                                   + self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
 
 
 class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
-        self.own_exchange_mark_price = None
+        self.own_exchange_mark_price: decimal.Decimal = None
         self.other_exchanges_mark_prices = {}
-        self.sup_triggering_price_delta_ratio = \
-            1 + self.trading_mode.trading_config["minimal_price_delta_percent"] / 100
-        self.inf_triggering_price_delta_ratio = \
-            1 - self.trading_mode.trading_config["minimal_price_delta_percent"] / 100
+        self.sup_triggering_price_delta_ratio: decimal.Decimal = \
+            1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
+        self.inf_triggering_price_delta_ratio: decimal.Decimal = \
+            1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
         self.state = trading_enums.EvaluatorStates.NEUTRAL
         self.final_eval = ""
         self.quote, self.base = symbol_util.split_symbol(self.trading_mode.symbol)
@@ -266,8 +271,8 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
                     arbitrage_success = filled_order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] != \
                                         trading_enums.TradeOrderType.STOP_LOSS.value
                     if arbitrage.state is trading_enums.EvaluatorStates.LONG:
-                        filled_quantity = filled_quantity * filled_order[
-                            trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                        filled_quantity = decimal.Decimal(str(filled_quantity * filled_order[
+                            trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
                     self._log_results(arbitrage, arbitrage_success, filled_quantity)
                     self._close_arbitrage(arbitrage)
                 else:
@@ -299,7 +304,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         :param mark_price: updated mark price
         :return: None
         """
-        self.own_exchange_mark_price = mark_price
+        self.own_exchange_mark_price = decimal.Decimal(str(mark_price))
         try:
             if self.other_exchanges_mark_prices:
                 await self._analyse_arbitrage_opportunities()
@@ -318,7 +323,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         :param mark_price: updated mark price
         :return: None
         """
-        self.other_exchanges_mark_prices[exchange] = mark_price
+        self.other_exchanges_mark_prices[exchange] = decimal.Decimal(str(mark_price))
         try:
             if self.own_exchange_mark_price is not None:
                 await self._analyse_arbitrage_opportunities()
@@ -326,7 +331,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             self.logger.exception(e, True, f"Error when handling mark_price_callback for {self.exchange_name}: {e}")
 
     async def _analyse_arbitrage_opportunities(self):
-        other_exchanges_average_price = data_util.mean(self.other_exchanges_mark_prices.values())
+        other_exchanges_average_price = decimal.Decimal(str(data_util.mean(self.other_exchanges_mark_prices.values())))
         state = None
         if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
             # min long = high price > own_price / (1 - 2fees)
@@ -363,7 +368,9 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
                                                  state=arbitrage_container.state,
                                                  data=data)
 
-    async def _trigger_arbitrage_secondary_order(self, arbitrage, filled_order, filled_quantity_before_fees):
+    async def _trigger_arbitrage_secondary_order(self, arbitrage: arbitrage_container_import.ArbitrageContainer,
+                                                 filled_order: dict,
+                                                 filled_quantity_before_fees: decimal.Decimal):
         arbitrage.passed_initial_order = True
         now_buying = arbitrage.state is trading_enums.EvaluatorStates.SHORT
         # a SHORT arbitrage is an initial SELL followed by a BUY order.
@@ -372,7 +379,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         # - Sell (at a higher price) when the arbitrage is a LONG
         paid_fees_in_quote = trading_personal_data.total_fees_from_order_dict(filled_order, self.quote)
         secondary_quantity = filled_quantity_before_fees - paid_fees_in_quote
-        filled_price = filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+        filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
         if now_buying:
             arbitrage.initial_before_fee_filled_quantity = filled_quantity_before_fees
         else:
@@ -382,9 +389,6 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             fees_in_base = trading_personal_data.total_fees_from_order_dict(filled_order, self.base)
             secondary_base_amount = filled_price * secondary_quantity - fees_in_base
             secondary_quantity = secondary_base_amount / arbitrage.target_price
-            # reduce quantity a bit to avoid python rounding issues,
-            # remaining amount will be handled as dusts if necessary
-            secondary_quantity = secondary_quantity * 0.99999
         await self._create_arbitrage_secondary_order(arbitrage, secondary_quantity)
 
     async def _create_arbitrage_secondary_order(self, arbitrage_container, secondary_quantity):
@@ -443,10 +447,10 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     def _log_arbitrage_opportunity_details(self, other_exchanges_average_price, state):
         price_difference = other_exchanges_average_price / self.own_exchange_mark_price
-        difference_percent = pretty_printer.round_with_decimal_count(price_difference * 100 - 100, 5)
+        difference_percent = pretty_printer.round_with_decimal_count(float(price_difference) * 100 - 100, 5)
         self.logger.debug(f"Arbitrage opportunity on {self.exchange_manager.exchange_name} {state.name} for "
                           f"{self.trading_mode.symbol} "
-                          f"({self.own_exchange_mark_price} vs {other_exchanges_average_price} on average "
+                          f"({str(self.own_exchange_mark_price)} vs {other_exchanges_average_price} on average "
                           f"based on {len(self.other_exchanges_mark_prices)} registered exchange(s): "
                           f"{'+' if price_difference > 1 else ''}{difference_percent}%).")
 
@@ -454,7 +458,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.logger.info(f"Closed {arbitrage.state.name} arbitrage on {self.exchange_manager.exchange_name} ["
                          f"{'success' if success else 'stop loss triggered'}] with {self.trading_mode.symbol}: "
                          f"profit before {'final' if arbitrage.state is trading_enums.EvaluatorStates.SHORT else 'all'} "
-                         f"fees: {filled_quantity - arbitrage.initial_before_fee_filled_quantity} "
+                         f"fees: {str(filled_quantity - arbitrage.initial_before_fee_filled_quantity)} "
                          f"{self.quote if arbitrage.state is trading_enums.EvaluatorStates.SHORT else self.base}")
 
     def _close_arbitrage(self, arbitrage):
@@ -467,7 +471,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     def _register_state(self, new_state, price_difference):
         self.state = new_state
-        self.final_eval = f"{'+' if price_difference > 0 else ''}{price_difference:.10f}"
+        self.final_eval = f"{'+' if float(price_difference) > 0 else ''}{str(price_difference)}"
         self.logger.info(f"New state on {self.exchange_manager.exchange_name} for {self.trading_mode.symbol}: "
                          f"{new_state}, price difference: {self.final_eval}")
 
