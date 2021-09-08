@@ -6,7 +6,7 @@
         <td>{{ order.origin_quantity }}</td>
         <td>{{ order.exchange_manager.exchange.name if order.exchange_manager else '' }}</td>
         <td>{{ timestamp }}</td>
-        <td class="text-right">{{ order.origin_price * order.origin_quantity | round(8) }}  {{ order.market }}</td>
+        <td class="text-right">{{ order.origin_price * order.origin_quantity }}  {{ order.market }}</td>
         <td scope="row">
             {% if sim_or_real == 'Simulated' %}
                 {{ sim_or_real }}

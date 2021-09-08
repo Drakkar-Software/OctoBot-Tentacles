@@ -67,9 +67,11 @@ def format_trades(dict_trade_history):
             if trade_time > trading_constants.MINIMUM_VAL_TRADE_TIME:
                 trades[trade_time_key].append(
                     timestamp_util.convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
-                trades[trade_price_key].append(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value])
+                trades[trade_price_key].append(
+                    float(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
                 trades[trade_description_key].append(
-                    f"{trade_type.name.replace('_', ' ')}: {dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]}")
+                    f"{trade_type.name.replace('_', ' ')}: "
+                    f"{dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]}")
                 trades[trade_order_side_key].append(trade_side.value)
 
     return trades

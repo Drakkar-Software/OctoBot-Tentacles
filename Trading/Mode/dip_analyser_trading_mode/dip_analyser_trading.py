@@ -144,12 +144,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
-            price = decimal.Decimal(f"{price}")
+            price = price
 
             base, _ = symbol_util.split_symbol(symbol)
             created_orders = []
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, decimal.Decimal(f"{market_quantity}"),
-                                                                base)
+            quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -159,9 +158,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.BUY_LIMIT,
                     symbol=symbol,
-                    current_price=float(price),
-                    quantity=float(order_quantity),
-                    price=float(order_price)
+                    current_price=price,
+                    quantity=order_quantity,
+                    price=order_price
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
@@ -192,9 +191,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.SELL_LIMIT,
                     symbol=symbol,
-                    current_price=float(sell_base),
-                    quantity=float(order_quantity),
-                    price=float(order_price)
+                    current_price=sell_base,
+                    quantity=order_quantity,
+                    price=order_price
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
@@ -219,27 +218,27 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_buy_quantity_from_weight(self, volume_weight, market_quantity, currency):
         weighted_volume = self.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight]
         # high risk is making larger orders, low risk is making smaller ones
-        risk_multiplier = 1 + (decimal.Decimal(self.exchange_manager.trader.risk - 0.5) * self.RISK_VOLUME_MULTIPLIER)
-        weighted_volume = min(weighted_volume * risk_multiplier, decimal.Decimal(1))
+        risk_multiplier = 1 + ((self.exchange_manager.trader.risk - decimal.Decimal("0.5")) * self.RISK_VOLUME_MULTIPLIER)
+        weighted_volume = min(weighted_volume * risk_multiplier, trading_constants.ONE)
         traded_assets_count = self.get_number_of_traded_assets()
         if traded_assets_count == 1:
             return market_quantity * self.DEFAULT_FULL_VOLUME * weighted_volume
         elif traded_assets_count == 2:
             return market_quantity * self.SOFT_MAX_CURRENCY_RATIO * weighted_volume
         else:
-            currency_ratio = 0
+            currency_ratio = trading_constants.ZERO
             if currency != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
                 # if currency (base) is not ref market => need to check holdings ratio not to spend all ref market
                 # into one currency (at least 3 traded assets are available here)
                 try:
-                    currency_ratio = decimal.Decimal(await self.get_holdings_ratio(currency))
+                    currency_ratio = await self.get_holdings_ratio(currency)
                 except KeyError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)
                     currency_ratio = self.DEFAULT_HOLDING_RATIO
             # linear function of % holding in this currency: volume_ratio is in [0, SOFT_MAX_CURRENCY_RATIO*0.8]
             volume_ratio = self.SOFT_MAX_CURRENCY_RATIO * \
-                (1 - min(currency_ratio * self.DELTA_RATIO, decimal.Decimal(1)))
+                (1 - min(currency_ratio * self.DELTA_RATIO, trading_constants.ONE))
             return market_quantity * volume_ratio * weighted_volume
 
     def _get_sell_target_for_registered_order(self, order_id):

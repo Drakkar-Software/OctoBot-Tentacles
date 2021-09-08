@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
 import octobot_commons.symbol_util as symbol_util
@@ -96,19 +98,19 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 class TradingViewSignalsModeConsumer(daily_trading_mode.DailyTradingModeConsumer):
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.QUANTITY_MIN_PERCENT = 0.1
-        self.QUANTITY_MAX_PERCENT = 0.9
+        self.QUANTITY_MIN_PERCENT = decimal.Decimal(str(0.1))
+        self.QUANTITY_MAX_PERCENT = decimal.Decimal(str(0.9))
 
-        self.QUANTITY_MARKET_MIN_PERCENT = 0.5
-        self.QUANTITY_MARKET_MAX_PERCENT = 1
-        self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
+        self.QUANTITY_MARKET_MIN_PERCENT = decimal.Decimal(str(0.5))
+        self.QUANTITY_MARKET_MAX_PERCENT = trading_constants.ONE
+        self.QUANTITY_BUY_MARKET_ATTENUATION = decimal.Decimal(str(0.2))
 
-        self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
-        self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.99
+        self.BUY_LIMIT_ORDER_MAX_PERCENT = decimal.Decimal(str(0.995))
+        self.BUY_LIMIT_ORDER_MIN_PERCENT = decimal.Decimal(str(0.99))
 
         self.USE_CLOSE_TO_CURRENT_PRICE = True
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = trading_mode.trading_config.get("close_to_current_price_difference",
-                                                                                    0.02)
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = decimal.Decimal(str(trading_mode.trading_config.get("close_to_current_price_difference",
+                                                                                    0.02)))
         self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
         self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
         self.USE_STOP_ORDERS = False
@@ -153,8 +155,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                               f"full data= {parsed_data}")
             state = trading_enums.EvaluatorStates.NEUTRAL
         order_data = {
-            TradingViewSignalsModeConsumer.PRICE_KEY: parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0),
-            TradingViewSignalsModeConsumer.VOLUME_KEY: parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0),
+            TradingViewSignalsModeConsumer.PRICE_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
         }
         return state, order_data
 

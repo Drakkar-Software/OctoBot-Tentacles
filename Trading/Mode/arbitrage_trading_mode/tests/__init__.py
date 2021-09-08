@@ -15,16 +15,20 @@
 #  License along with this library.
 import contextlib
 import os.path
+import decimal
+import mock
 
 import octobot_backtesting.api as backtesting_api
 import async_channel.util as channel_util
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.constants as commons_constants
+import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
 import tentacles.Trading.Mode as modes
 import tests.test_utils.config as test_utils_config
+from tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_trading import ArbitrageModeProducer
 
 
 @contextlib.asynccontextmanager
@@ -60,16 +64,21 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
 
         mode = modes.ArbitrageTradingMode(config, exchange_manager)
         mode.symbol = None if mode.get_is_symbol_wildcard() else symbol
-        await mode.initialize()
-        # add mode to exchange manager so that it can be stopped and freed from memory
-        exchange_manager.trading_modes.append(mode)
+        # avoid error with producer init and exchanges keys
+        with mock.patch.object(ArbitrageModeProducer, "start", new=mock.AsyncMock()) as start_mock:
+            await mode.initialize()
+            # add mode to exchange manager so that it can be stopped and freed from memory
+            exchange_manager.trading_modes.append(mode)
 
-        # set BTC/USDT price at 1000 USDT
-        trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
-        # force triggering_price_delta_ratio equivalent to a 0.2% setting in minimal_price_delta_percent
-        delta_percent = 2
-        mode.producers[0].inf_triggering_price_delta_ratio = 1 - delta_percent / 100
-        mode.producers[0].sup_triggering_price_delta_ratio = 1 + delta_percent / 100
+            # set BTC/USDT price at 1000 USDT
+            trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
+            # force triggering_price_delta_ratio equivalent to a 0.2% setting in minimal_price_delta_percent
+            delta_percent = 2
+            mode.producers[0].inf_triggering_price_delta_ratio = decimal.Decimal(str(1 - delta_percent / 100))
+            mode.producers[0].sup_triggering_price_delta_ratio = decimal.Decimal(str(1 + delta_percent / 100))
+            # let trading modes start
+            await asyncio_tools.wait_asyncio_next_cycle()
+            start_mock.assert_called_once()
         yield mode.producers[0], mode.consumers[0], exchange_manager
     finally:
         if exchange_manager is not None:

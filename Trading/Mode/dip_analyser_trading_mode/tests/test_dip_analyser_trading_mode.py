@@ -30,6 +30,7 @@ import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_commons.constants as commons_constants
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -108,12 +109,12 @@ async def test_create_bottom_order(tools):
     expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
         consumer.SOFT_MAX_CURRENCY_RATIO
-    assert order.origin_quantity == float(expected_quantity)
+    assert order.origin_quantity == expected_quantity
 
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
-    assert order.origin_price == float(expected_price)
+    assert order.origin_price == expected_price
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-    assert portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > 0
+    assert portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > trading_constants.ZERO
     assert order.order_id in consumer.sell_targets_by_order_id
 
 
@@ -122,15 +123,15 @@ async def test_create_too_large_bottom_order(tools):
 
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     portfolio.portfolio["USDT"] = {
-        commons_constants.PORTFOLIO_TOTAL: 200000000000000,
-        commons_constants.PORTFOLIO_AVAILABLE: 200000000000000
+        commons_constants.PORTFOLIO_TOTAL: decimal.Decimal("200000000000000"),
+        commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal("200000000000000")
     }
     await producer._create_bottom_order(1, 1, 1)
     # create as task to allow creator's queue to get processed
     for _ in range(37):
         await asyncio_tools.wait_asyncio_next_cycle()
     await asyncio.create_task(_check_open_orders_count(trader, 37))
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > 0
+    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > trading_constants.ZERO
 
 
 async def test_create_too_small_bottom_order(tools):
@@ -138,13 +139,13 @@ async def test_create_too_small_bottom_order(tools):
 
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     portfolio.portfolio["USDT"] = {
-        commons_constants.PORTFOLIO_TOTAL: 0.01,
-        commons_constants.PORTFOLIO_AVAILABLE: 0.01
+        commons_constants.PORTFOLIO_TOTAL: decimal.Decimal("0.01"),
+        commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal("0.01")
     }
     await producer._create_bottom_order(1, 1, 1)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, 0))
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == 0.01
+    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == decimal.Decimal("0.01")
 
 
 async def test_create_bottom_order_replace_current(tools):
@@ -166,11 +167,11 @@ async def test_create_bottom_order_replace_current(tools):
     assert first_order.status == trading_enums.OrderStatus.OPEN
     expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
-    assert first_order.origin_quantity == float(expected_quantity)
+    assert first_order.origin_quantity == expected_quantity
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
-    assert first_order.origin_price == float(expected_price)
+    assert first_order.origin_price == expected_price
     available_after_order = portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]
-    assert available_after_order > 0
+    assert available_after_order > trading_constants.ZERO
     assert first_order.order_id in consumer.sell_targets_by_order_id
 
     # second order, same weight
@@ -183,8 +184,8 @@ async def test_create_bottom_order_replace_current(tools):
     assert first_order.status == trading_enums.OrderStatus.CANCELED
     assert second_order.status == trading_enums.OrderStatus.OPEN
     assert second_order is not first_order
-    assert second_order.origin_quantity == float(first_order.origin_quantity)
-    assert second_order.origin_price == float(first_order.origin_price)
+    assert second_order.origin_quantity == first_order.origin_quantity
+    assert second_order.origin_price == first_order.origin_price
     assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == available_after_order
     # order still in sell_targets_by_order_id: cancelling orders doesn't remove them for this
     assert first_order.order_id in consumer.sell_targets_by_order_id
@@ -204,7 +205,7 @@ async def test_create_bottom_order_replace_current(tools):
     expected_quantity = market_quantity * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
     assert third_order.origin_quantity != first_order.origin_quantity
-    assert third_order.origin_quantity == float(expected_quantity)
+    assert third_order.origin_quantity == expected_quantity
     assert third_order.origin_price == first_order.origin_price
     available_after_third_order = portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]
     assert available_after_third_order < available_after_order
@@ -235,10 +236,10 @@ async def test_create_bottom_order_replace_current(tools):
     assert fifth_order is not third_order and fifth_order is not second_order and fifth_order is not first_order
     expected_quantity = new_market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * consumer.SOFT_MAX_CURRENCY_RATIO
-    assert fifth_order.origin_quantity != float(first_order.origin_quantity)
-    assert fifth_order.origin_quantity != float(third_order.origin_quantity)
-    assert fifth_order.origin_quantity == float(expected_quantity)
-    assert fifth_order.origin_price == float(first_order.origin_price)
+    assert fifth_order.origin_quantity != first_order.origin_quantity
+    assert fifth_order.origin_quantity != third_order.origin_quantity
+    assert fifth_order.origin_quantity == trading_personal_data.decimal_trunc_with_n_decimal_digits(expected_quantity, 8)
+    assert fifth_order.origin_price == first_order.origin_price
     assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] < available_after_third_order
     assert first_order.order_id in consumer.sell_targets_by_order_id
     assert second_order.order_id in consumer.sell_targets_by_order_id
@@ -270,12 +271,12 @@ async def test_create_sell_orders(tools):
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / consumer.trading_mode.sell_orders_per_buy
-    assert open_orders[0].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8))
-    assert open_orders[1].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 2 * increment, 8))
-    assert open_orders[2].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 3 * increment, 8))
+    assert open_orders[0].origin_price == \
+           trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8)
+    assert open_orders[1].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 2 * increment, 8)
+    assert open_orders[2].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 3 * increment, 8)
 
     # now fill a sell order
     await _fill_order(open_orders[0], trader, trigger_update_callback=False, consumer=consumer)
@@ -299,12 +300,12 @@ async def test_create_sell_orders(tools):
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / consumer.trading_mode.sell_orders_per_buy
-    assert open_orders[2 + 0].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8))
-    assert open_orders[2 + 1].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 2 * increment, 8))
-    assert open_orders[2 + 2].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 3 * increment, 8))
+    assert open_orders[2 + 0].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8)
+    assert open_orders[2 + 1].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 2 * increment, 8)
+    assert open_orders[2 + 2].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + 3 * increment, 8)
 
     # now fill a sell order
     await _fill_order(open_orders[-1], trader, trigger_update_callback=False, consumer=consumer)
@@ -321,8 +322,8 @@ async def test_create_too_large_sell_orders(tools):
     buy_price = decimal.Decimal("10000000")
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     portfolio.portfolio["BTC"] = {
-        commons_constants.PORTFOLIO_TOTAL: float(sell_quantity),
-        commons_constants.PORTFOLIO_AVAILABLE: float(sell_quantity)
+        commons_constants.PORTFOLIO_TOTAL: sell_quantity,
+        commons_constants.PORTFOLIO_AVAILABLE: sell_quantity
     }
     order_id = "a"
     consumer.sell_targets_by_order_id[order_id] = sell_target
@@ -347,9 +348,9 @@ async def test_create_too_large_sell_orders(tools):
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / 17
-    assert open_orders[0].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8))
-    assert open_orders[-1].origin_price == float(max_price)
+    assert open_orders[0].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(buy_price + increment, 8)
+    assert open_orders[-1].origin_price == max_price
 
 
 async def test_create_too_small_sell_orders(tools):
@@ -376,10 +377,10 @@ async def test_create_too_small_sell_orders(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-    assert total_sell_quantity == float(sell_quantity)
+    assert total_sell_quantity == sell_quantity
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
-    assert open_orders[0].origin_price == float(max_price)
+    assert open_orders[0].origin_price == max_price
 
     # case 3: create less than 3 orders: 2 orders
     sell_quantity = decimal.Decimal("0.2")
@@ -399,8 +400,8 @@ async def test_create_too_small_sell_orders(tools):
 
     max_price = buy_price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[sell_target]
     increment = (max_price - buy_price) / 2
-    assert open_orders[1].origin_price == float(buy_price + increment)
-    assert open_orders[2].origin_price == float(max_price)
+    assert open_orders[1].origin_price == buy_price + increment
+    assert open_orders[2].origin_price == max_price
 
 
 async def test_order_fill_callback(tools):
@@ -429,17 +430,17 @@ async def test_order_fill_callback(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-    assert to_fill_order.origin_quantity * 0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
+    assert to_fill_order.origin_quantity * decimal.Decimal("0.95") <= total_sell_quantity <= to_fill_order.origin_quantity
 
     price = decimal.Decimal(f"{to_fill_order.filled_price}")
     max_price = price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[1]
     increment = (max_price - price) / consumer.trading_mode.sell_orders_per_buy
-    assert open_orders[0].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + increment, 8))
-    assert open_orders[1].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 2 * increment, 8))
-    assert open_orders[2].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 3 * increment, 8))
+    assert open_orders[0].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + increment, 8)
+    assert open_orders[1].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 2 * increment, 8)
+    assert open_orders[2].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 3 * increment, 8)
 
     # now fill a sell order
     await _fill_order(open_orders[0], trader, consumer=consumer)
@@ -492,8 +493,8 @@ async def test_order_fill_callback_without_fees_adapted_rounding(tools):
 
     open_orders = trading_api.get_open_orders(trader.exchange_manager)
     to_fill_order = open_orders[0]
-    to_fill_order.origin_quantity = 0.000167
-    to_fill_order.origin_price = 200
+    to_fill_order.origin_quantity = decimal.Decimal("0.000167")
+    to_fill_order.origin_price = decimal.Decimal("200")
 
     await _fill_order(to_fill_order, trader, consumer=consumer)
     # create as task to allow creator's queue to get processed
@@ -537,17 +538,17 @@ async def test_order_fill_callback_not_in_db(tools):
     assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
     assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
     total_sell_quantity = sum(o.origin_quantity for o in open_orders)
-    assert to_fill_order.origin_quantity * 0.95 <= total_sell_quantity <= to_fill_order.origin_quantity
+    assert to_fill_order.origin_quantity * decimal.Decimal("0.95") <= total_sell_quantity <= to_fill_order.origin_quantity
 
     price = decimal.Decimal(to_fill_order.filled_price)
     max_price = price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[consumer.DEFAULT_SELL_TARGET]
     increment = (max_price - price) / consumer.trading_mode.sell_orders_per_buy
-    assert open_orders[0].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + increment, 8))
-    assert open_orders[1].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 2 * increment, 8))
-    assert open_orders[2].origin_price == float(
-        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 3 * increment, 8))
+    assert open_orders[0].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + increment, 8)
+    assert open_orders[1].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 2 * increment, 8)
+    assert open_orders[2].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 3 * increment, 8)
 
 
 async def _check_open_orders_count(trader, count):
