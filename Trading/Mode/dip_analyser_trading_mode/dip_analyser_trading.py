@@ -284,12 +284,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
         min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
             trading_personal_data.get_min_max_amounts(symbol_market)
-        min_quantity = decimal.Decimal(f"{min_quantity}")
-        max_quantity = decimal.Decimal(f"{max_quantity}")
-        min_cost = decimal.Decimal(f"{min_cost}")
-        max_cost = decimal.Decimal(f"{max_cost}")
-        min_price = decimal.Decimal(f"{min_price}")
-        max_price = decimal.Decimal(f"{max_price}")
+        min_quantity = None if min_quantity is None else decimal.Decimal(f"{min_quantity}")
+        max_quantity = None if max_quantity is None else decimal.Decimal(f"{max_quantity}")
+        min_cost = None if min_cost is None else decimal.Decimal(f"{min_cost}")
+        max_cost = None if max_cost is None else decimal.Decimal(f"{max_cost}")
+        min_price = None if min_price is None else decimal.Decimal(f"{min_price}")
+        max_price = None if max_price is None else decimal.Decimal(f"{max_price}")
 
         orders_count = sell_orders_count
 
@@ -336,15 +336,17 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     @staticmethod
     def orders_too_small(min_quantity, min_cost, min_price, sell_price, sell_vol):
-        return (min_price and sell_price < min_price) or \
-               (min_quantity and sell_vol < min_quantity) or \
-               (min_cost and sell_price * sell_vol < min_cost)
+        return (min_price is not None and sell_price < min_price) or \
+               (min_quantity is not None and sell_vol < min_quantity) or \
+               (min_cost is not None and sell_price * sell_vol < min_cost) or \
+               (min_price is None and min_quantity is None and min_cost is None)
 
     @staticmethod
     def orders_too_large(max_quantity, max_cost, max_price, sell_price, sell_vol):
         return (max_price and sell_price > max_price) or \
                (max_quantity and sell_vol > max_quantity) or \
-               (max_cost and sell_price * sell_vol > max_cost)
+               (max_cost and sell_price * sell_vol > max_cost) or \
+               (max_price is None and max_quantity is None and max_cost is None)
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
