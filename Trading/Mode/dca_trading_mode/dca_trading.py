@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import decimal
 
 import octobot_commons.symbol_util as symbol_util
 
@@ -27,11 +28,12 @@ import octobot_trading.personal_data as trading_personal_data
 
 class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     AMOUNT_TO_BUY_IN_REF_MARKET = "amount_to_buy_in_reference_market"
-    ORDER_PRICE_DISTANCE = 0.001
+    ORDER_PRICE_DISTANCE = decimal.Decimal(str(0.001))
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.order_quantity_of_ref_market = self.trading_mode.trading_config.get(self.AMOUNT_TO_BUY_IN_REF_MARKET, 1)
+        self.order_quantity_of_ref_market = decimal.Decimal(str(
+            self.trading_mode.trading_config.get(self.AMOUNT_TO_BUY_IN_REF_MARKET, 1)))
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
@@ -47,8 +49,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             created_orders = []
             quantity = self.order_quantity_of_ref_market / price
-            limit_price = trading_personal_data.adapt_price(symbol_market, price * (1 - self.ORDER_PRICE_DISTANCE))
-            for order_quantity, order_price in trading_personal_data.check_and_adapt_order_details_if_necessary(
+            limit_price = trading_personal_data.decimal_adapt_price(symbol_market, price * (trading_constants.ONE -
+                                                                                            self.ORDER_PRICE_DISTANCE))
+            for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     limit_price,
                     symbol_market):
@@ -122,7 +125,12 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.error(f"An error happened during DCA task : {e}")
 
     async def start(self) -> None:
-        self.task = await asyncio.create_task(self.dca_task())
+        self.task = await asyncio.create_task(self.delayed_start())
+
+    async def delayed_start(self):
+        # wait for portfolio to be fetched
+        await asyncio.sleep(3)
+        await self.dca_task()
 
     async def _send_alert_notification(self, symbol):
         try:

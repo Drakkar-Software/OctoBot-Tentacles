@@ -16,7 +16,6 @@
 import re
 
 import octobot_commons.constants as commons_constants
-import octobot_commons.symbol_util as symbol_util
 import octobot_services.constants as services_constants
 import octobot_evaluators.evaluators as evaluators
 import tentacles.Services.Services_feeds as Services_feeds
@@ -102,14 +101,15 @@ class TelegramSignalEvaluator(evaluators.SocialEvaluator):
 class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
     SERVICE_FEED_CLASS = Services_feeds.TelegramApiServiceFeed
 
-    CONFIG_CHANNELS_KEY = "channels"
     SIGNAL_PATTERN_KEY = "signal_pattern"
-    SIGNAL_MARKET_KEY = "signal_market"
+    SIGNAL_PATTERN_MARKET_BUY_KEY = "MARKET_BUY"
+    SIGNAL_PATTERN_MARKET_SELL_KEY = "MARKET_SELL"
+    SIGNAL_PAIR_KEY = "signal_pair"
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
         self.tentacle_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.channels_config = self.tentacle_config.get(self.CONFIG_CHANNELS_KEY, {})
+        self.channels_config = self.tentacle_config.get(services_constants.CONFIG_TELEGRAM_CHANNEL, {})
 
     async def _feed_callback(self, data):
         if not data:
@@ -118,15 +118,21 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
         if is_from_channel:
             sender = data.get(services_constants.CONFIG_MESSAGE_SENDER, "")
             if sender in self.channels_config.keys():
-                message = data.get(services_constants.CONFIG_MESSAGE_CONTENT, "")
-                channel_data = self.channels_config[sender]
-                signal = self._get_signal_message(channel_data[self.SIGNAL_PATTERN_KEY], message)
-                if signal is not None:
-                    self.eval_note = -1
-                    await self.evaluation_completed(signal,
-                                                    symbol_util.merge_currencies(signal,
-                                                                                 channel_data[self.SIGNAL_MARKET_KEY]),
-                                                    eval_time=self.get_current_exchange_time())
+                try:
+                    message = data.get(services_constants.CONFIG_MESSAGE_CONTENT, "")
+                    channel_data = self.channels_config[sender]
+                    is_buy_market_signal = self._get_signal_message(
+                        channel_data[self.SIGNAL_PATTERN_KEY][self.SIGNAL_PATTERN_MARKET_BUY_KEY], message)
+                    is_sell_market_signal = self._get_signal_message(
+                        channel_data[self.SIGNAL_PATTERN_KEY][self.SIGNAL_PATTERN_MARKET_SELL_KEY], message)
+                    pair = self._get_signal_message(channel_data[self.SIGNAL_PAIR_KEY], message)
+                    if (is_buy_market_signal or is_sell_market_signal) and pair is not None:
+                        self.eval_note = -1 if is_buy_market_signal else 1
+                        await self.evaluation_completed(symbol=pair.strip(), eval_time=self.get_current_exchange_time())
+                    else:
+                        self.logger.warning(f"Unable to parse message from {sender} : {message}")
+                except KeyError:
+                    self.logger.warning(f"Unable to parse message from {sender}")
             else:
                 self.logger.debug(f"Ignored message : from an unsupported channel ({sender})")
         else:

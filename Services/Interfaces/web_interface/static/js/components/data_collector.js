@@ -45,15 +45,6 @@ function delete_error_callback(updated_data, update_url, dom_root_element, resul
     create_alert("error", result.responseText, "");
 }
 
-function lock_collector_ui(lock=true){
-    if(lock){
-        $("#collector_operation").show();
-    }else{
-        $("#collector_operation").hide();
-    }
-    $('#collect_data').prop('disabled', lock);
-}
-
 function reload_table(){
     $("#collector_data").load(location.href.split("?")[0] + " #collector_data",function(){
         dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
@@ -77,7 +68,6 @@ function start_collector(){
 
 function collector_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", msg, "");
-    lock_collector_ui(false);
     reload_table();
 }
 
@@ -187,4 +177,5 @@ $(document).ready(function() {
         maximumSelectionLength: 5
     });
 
+    init_data_collector_status_websocket();
 });

@@ -13,12 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
 import pytest
 
 import tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test as abstract_strategy_test
 import tentacles.Evaluator.Strategies as Strategies
 import tentacles.Trading.Mode as Mode
-
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -40,40 +40,42 @@ class MoveSignalsStrategyEvaluatorTest(abstract_strategy_test.AbstractStrategyTe
 
     async def test_default_run(self):
         # market: -12.052505966587105
-        await self.run_test_default_run(-2.592)
+        await self.run_test_default_run(decimal.Decimal(str(-2.592)))
 
     async def test_slow_downtrend(self):
         # market: -12.052505966587105
         # market: -15.195702225633141
         # market: -29.12366137549725
         # market: -32.110091743119256
-        await self.run_test_slow_downtrend(-2.592, -2.347, -17.393, -15.761)
+        await self.run_test_slow_downtrend(decimal.Decimal(str(-2.592)), decimal.Decimal(str(-2.347)),
+                                           decimal.Decimal(str(-17.393)), decimal.Decimal(str(-15.761)))
 
     async def test_sharp_downtrend(self):
         # market: -26.07183938094741
         # market: -32.1654501216545
-        await self.run_test_sharp_downtrend(-8.538, -10.3)
+        await self.run_test_sharp_downtrend(decimal.Decimal(str(-8.538)), decimal.Decimal(str(-10.3)))
 
     async def test_flat_markets(self):
         # market: -10.560669456066947
         # market: -3.401191658391241
         # market: -5.7854560064282765
         # market: -8.067940552016978
-        await self.run_test_flat_markets(0.953, 1.097, -8.126, -7.038)
+        await self.run_test_flat_markets(decimal.Decimal(str(0.953)), decimal.Decimal(str(1.097)),
+                                         decimal.Decimal(str(-8.126)), decimal.Decimal(str(-7.038)))
 
     async def test_slow_uptrend(self):
         # market: 17.203948364436457
         # market: 16.19613670133728
-        await self.run_test_slow_uptrend(9.014, 5.114)
+        await self.run_test_slow_uptrend(decimal.Decimal(str(9.014)), decimal.Decimal(str(5.114)))
 
     async def test_sharp_uptrend(self):
         # market: 30.881852230166828
         # market: 12.28597871355852
-        await self.run_test_sharp_uptrend(6.868, 6.843)
+        await self.run_test_sharp_uptrend(decimal.Decimal(str(6.868)), decimal.Decimal(str(6.843)))
 
     async def test_up_then_down(self):
         # market: -6.040105108015155
-        await self.run_test_up_then_down(-6.691)
+        await self.run_test_up_then_down(decimal.Decimal(str(-6.691)))
 
 
 async def test_default_run(strategy_tester):

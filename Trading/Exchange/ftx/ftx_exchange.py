@@ -25,6 +25,15 @@ import octobot_trading.enums as trading_enums
 
 class FTX(exchanges.SpotCCXTExchange):
     DESCRIPTION = ""
+    FTX_SUB_ACCOUNT_HEADER_KEY = "FTX-SUBACCOUNT"
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        sub_account_id = exchange_manager.get_exchange_sub_account_id(exchange_manager.exchange_name)
+        if sub_account_id is not None:
+            self.connector.add_headers({
+                self.FTX_SUB_ACCOUNT_HEADER_KEY: sub_account_id
+            })
 
     @classmethod
     def get_name(cls):
@@ -68,3 +77,15 @@ class FTX(exchanges.SpotCCXTExchange):
             return ticker
         except ccxt.BaseError as e:
             raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+
+    async def get_sub_account_list(self):
+        sub_account_list = (await self.connector.client.privateGetSubaccounts()).get("result", [])
+        if not sub_account_list:
+            return []
+        return [
+            {
+                trading_enums.SubAccountColumns.ID.value: sub_account.get("nickname", ""),
+                trading_enums.SubAccountColumns.NAME.value: sub_account.get("nickname", "")
+            }
+            for sub_account in sub_account_list
+        ]

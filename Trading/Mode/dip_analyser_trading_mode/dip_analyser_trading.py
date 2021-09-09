@@ -144,12 +144,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
-            price = decimal.Decimal(f"{price}")
+            price = price
 
             base, _ = symbol_util.split_symbol(symbol)
             created_orders = []
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, decimal.Decimal(f"{market_quantity}"),
-                                                                base)
+            quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -159,9 +158,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.BUY_LIMIT,
                     symbol=symbol,
-                    current_price=float(price),
-                    quantity=float(order_quantity),
-                    price=float(order_price)
+                    current_price=price,
+                    quantity=order_quantity,
+                    price=order_price
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
@@ -192,9 +191,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.SELL_LIMIT,
                     symbol=symbol,
-                    current_price=float(sell_base),
-                    quantity=float(order_quantity),
-                    price=float(order_price)
+                    current_price=sell_base,
+                    quantity=order_quantity,
+                    price=order_price
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
@@ -219,27 +218,27 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_buy_quantity_from_weight(self, volume_weight, market_quantity, currency):
         weighted_volume = self.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight]
         # high risk is making larger orders, low risk is making smaller ones
-        risk_multiplier = 1 + (decimal.Decimal(self.exchange_manager.trader.risk - 0.5) * self.RISK_VOLUME_MULTIPLIER)
-        weighted_volume = min(weighted_volume * risk_multiplier, decimal.Decimal(1))
+        risk_multiplier = 1 + ((self.exchange_manager.trader.risk - decimal.Decimal("0.5")) * self.RISK_VOLUME_MULTIPLIER)
+        weighted_volume = min(weighted_volume * risk_multiplier, trading_constants.ONE)
         traded_assets_count = self.get_number_of_traded_assets()
         if traded_assets_count == 1:
             return market_quantity * self.DEFAULT_FULL_VOLUME * weighted_volume
         elif traded_assets_count == 2:
             return market_quantity * self.SOFT_MAX_CURRENCY_RATIO * weighted_volume
         else:
-            currency_ratio = 0
+            currency_ratio = trading_constants.ZERO
             if currency != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
                 # if currency (base) is not ref market => need to check holdings ratio not to spend all ref market
                 # into one currency (at least 3 traded assets are available here)
                 try:
-                    currency_ratio = decimal.Decimal(await self.get_holdings_ratio(currency))
+                    currency_ratio = await self.get_holdings_ratio(currency)
                 except KeyError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)
                     currency_ratio = self.DEFAULT_HOLDING_RATIO
             # linear function of % holding in this currency: volume_ratio is in [0, SOFT_MAX_CURRENCY_RATIO*0.8]
             volume_ratio = self.SOFT_MAX_CURRENCY_RATIO * \
-                (1 - min(currency_ratio * self.DELTA_RATIO, decimal.Decimal(1)))
+                (1 - min(currency_ratio * self.DELTA_RATIO, trading_constants.ONE))
             return market_quantity * volume_ratio * weighted_volume
 
     def _get_sell_target_for_registered_order(self, order_id):
@@ -266,7 +265,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self._check_limits(sell_base, sell_max, quantity, sell_orders_count, symbol_market)
         if adapted_sell_orders_count:
             order_volume = quantity / adapted_sell_orders_count
-
+            total_volume = 0
             for i in range(adapted_sell_orders_count):
                 order_price = sell_base + (increment * (i + 1))
                 for adapted_quantity, adapted_price \
@@ -274,18 +273,23 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         order_volume,
                         order_price,
                         symbol_market):
+                    total_volume += adapted_quantity
                     volume_with_price.append((adapted_quantity, adapted_price))
+            if total_volume < quantity:
+                # ensure the whole target quantity is used
+                full_quantity = volume_with_price[-1][0] + quantity - total_volume
+                volume_with_price[-1] = (full_quantity, volume_with_price[-1][1])
         return volume_with_price
 
     def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
         min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
             trading_personal_data.get_min_max_amounts(symbol_market)
-        min_quantity = decimal.Decimal(f"{min_quantity}")
-        max_quantity = decimal.Decimal(f"{max_quantity}")
-        min_cost = decimal.Decimal(f"{min_cost}")
-        max_cost = decimal.Decimal(f"{max_cost}")
-        min_price = decimal.Decimal(f"{min_price}")
-        max_price = decimal.Decimal(f"{max_price}")
+        min_quantity = None if min_quantity is None else decimal.Decimal(f"{min_quantity}")
+        max_quantity = None if max_quantity is None else decimal.Decimal(f"{max_quantity}")
+        min_cost = None if min_cost is None else decimal.Decimal(f"{min_cost}")
+        max_cost = None if max_cost is None else decimal.Decimal(f"{max_cost}")
+        min_price = None if min_price is None else decimal.Decimal(f"{min_price}")
+        max_price = None if max_price is None else decimal.Decimal(f"{max_price}")
 
         orders_count = sell_orders_count
 
@@ -332,15 +336,17 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     @staticmethod
     def orders_too_small(min_quantity, min_cost, min_price, sell_price, sell_vol):
-        return (min_price and sell_price < min_price) or \
-               (min_quantity and sell_vol < min_quantity) or \
-               (min_cost and sell_price * sell_vol < min_cost)
+        return (min_price is not None and sell_price < min_price) or \
+               (min_quantity is not None and sell_vol < min_quantity) or \
+               (min_cost is not None and sell_price * sell_vol < min_cost) or \
+               (min_price is None and min_quantity is None and min_cost is None)
 
     @staticmethod
     def orders_too_large(max_quantity, max_cost, max_price, sell_price, sell_vol):
         return (max_price and sell_price > max_price) or \
                (max_quantity and sell_vol > max_quantity) or \
-               (max_cost and sell_price * sell_vol > max_cost)
+               (max_cost and sell_price * sell_vol > max_cost) or \
+               (max_price is None and max_quantity is None and max_cost is None)
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):

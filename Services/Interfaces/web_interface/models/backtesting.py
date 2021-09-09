@@ -30,7 +30,6 @@ import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 
-
 LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
 
 
@@ -41,7 +40,8 @@ def get_full_candle_history_exchange_list():
 
 def get_other_history_exchange_list():
     full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in full_exchange_list if exchange not in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES]
+    return [exchange for exchange in full_exchange_list if
+            exchange not in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES]
 
 
 async def _get_description(data_file, files_with_description):
@@ -131,46 +131,57 @@ def get_delete_data_file(file_name):
         return deleted, f"Can't delete {file_name} ({error})"
 
 
-def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None, in_background=False):
-    if in_background:
-        _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp)
+def get_data_collector_status():
+    progress = {"current_step": 0, "total_steps": 0, "current_step_percent": 0}
+    if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
+        data_collector = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]
+        if backtesting_api.is_data_collector_in_progress(data_collector):
+            current_step, total_steps, current_step_percent = \
+                backtesting_api.get_data_collector_progress(data_collector)
+            progress["current_step"] = current_step
+            progress["total_steps"] = total_steps
+            progress["current_step_percent"] = current_step_percent
+            return "collecting", progress
+        if backtesting_api.is_data_collector_finished(data_collector):
+            return "finished", progress
+        return "starting", progress
+    return "not started", progress
+
+
+def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None):
+    success = False
+    if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is None or \
+            backtesting_api.is_data_collector_finished(
+                web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]):
+        interfaces_util.run_in_bot_main_loop(
+            _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp))
         return True, f"Historical data collection started."
-    success = False
-    try:
-        result = interfaces_util.run_in_bot_async_executor(
-            backtesting_api.collect_exchange_historical_data(exchange,
-                                                             interfaces_util.get_bot_api().get_edited_tentacles_config(),
-                                                             symbol if isinstance(symbol, list) else [symbol],
-                                                             start_timestamp=start_timestamp,
-                                                             end_timestamp=end_timestamp))
-        success = True
-    except Exception as e:
-        result = f"data collector error: {e}"
-    if success:
-        return success, f"{result} saved"
     else:
-        return success, f"Can't collect data for {symbol} on {exchange} ({result})"
+        return success, f"Can't collect data for {symbol} on {exchange} (Historical data collector is already running)"
 
 
-async def _collect_and_notify(exchange, symbol, start_timestamp, end_timestamp):
+async def _start_collect_and_notify(data_collector_instance):
     success = False
+    message = "finished"
     try:
-        result = await backtesting_api.collect_exchange_historical_data(
-            exchange,
-            interfaces_util.get_bot_api().get_edited_tentacles_config(),
-            symbol if isinstance(symbol, list) else [symbol],
-            start_timestamp=start_timestamp,
-            end_timestamp=end_timestamp)
+        await backtesting_api.initialize_and_run_data_collector(data_collector_instance)
         success = True
     except Exception as e:
-        result = f"data collector error: {e}"
+        message = f"error: {e}"
     notification_level = services_enums.NotificationLevel.SUCCESS if success else services_enums.NotificationLevel.DANGER
-    await web_interface_root.add_notification(notification_level, f"Data collection for {symbol} on {exchange}", result)
+    await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
-def _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp):
-    coro = _collect_and_notify(exchange, symbol, start_timestamp, end_timestamp)
-    threading.Thread(target=asyncio.run, args=(coro, ), name=f"DataCollector{symbol}").start()
+async def _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp):
+    data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
+        exchange,
+        interfaces_util.get_bot_api().get_edited_tentacles_config(),
+        symbol if isinstance(symbol, list) else [symbol],
+        start_timestamp=start_timestamp,
+        end_timestamp=end_timestamp)
+    web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
+    coro = _start_collect_and_notify(data_collector_instance)
+    threading.Thread(target=asyncio.run, args=(coro,), name=f"DataCollector{symbol}").start()
 
 
 async def _convert_into_octobot_data_file_if_necessary(output_file):

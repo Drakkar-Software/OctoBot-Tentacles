@@ -38,12 +38,18 @@ def _create_evaluator_with_supported_channel_signals():
     evaluator.logger = logging.get_logger(evaluator.get_name())
     evaluator.channels_config = {
         "TEST-CHAN-1": {
-            "signal_pattern": "Signal coin is : (.*)",
-            "signal_market": "BTC"
+            "signal_pattern": {
+                "MARKET_BUY": "Side: (BUY)",
+                "MARKET_SELL": "Side: (SELL)"
+            },
+            "signal_pair": "Pair: (.*)"
         },
         "TEST-CHAN-2": {
-            "signal_pattern": "You should buy (.*)",
-            "signal_market": "USD"
+            "signal_pattern": {
+                "MARKET_BUY": ".* : (-1)$",
+                "MARKET_SELL": ".* : (1)$"
+            },
+            "signal_pair": "(.*):"
         }
     }
     evaluator.eval_note = commons_constants.START_PENDING_EVAL_NOTE
@@ -92,7 +98,12 @@ async def test_incorrect_signal_chan1_without_coin():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-1",
-        services_constants.CONFIG_MESSAGE_CONTENT: "Signal coin is",
+        services_constants.CONFIG_MESSAGE_CONTENT: """
+        Order Id: 1631033831358699
+        Pair: 
+        Side:
+        Price: 12.909
+        """,
     })
 
 
@@ -101,7 +112,12 @@ async def test_incorrect_signal_chan1_without_separator():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-1",
-        services_constants.CONFIG_MESSAGE_CONTENT: "Signal coin is XLM",
+        services_constants.CONFIG_MESSAGE_CONTENT: """
+        Order Id: 1631033831358699
+        Pair QTUMUSDT
+        Side: BUY
+        Price: 12.909
+        """,
     })
 
 
@@ -110,7 +126,12 @@ async def test_correct_signal_chan1_with_not_channel_message():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: False,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-1",
-        services_constants.CONFIG_MESSAGE_CONTENT: "Signal coin is : XLM",
+        services_constants.CONFIG_MESSAGE_CONTENT: """
+        Order Id: 1631033831358699
+        Pair: QTUMUSDT
+        Side: BUY
+        Price: 12.909
+        """,
     })
 
 
@@ -119,7 +140,12 @@ async def test_correct_signal_chan1_with_chan2():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-2",
-        services_constants.CONFIG_MESSAGE_CONTENT: "Signal coin is : XLM",
+        services_constants.CONFIG_MESSAGE_CONTENT: """
+        Order Id: 1631033831358699
+        Pair: QTUMUSDT
+        Side: BUY
+        Price: 12.909
+        """,
     })
 
 
@@ -128,7 +154,12 @@ async def test_correct_signal_chan1():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-1",
-        services_constants.CONFIG_MESSAGE_CONTENT: "Signal coin is : XLM",
+        services_constants.CONFIG_MESSAGE_CONTENT: """
+        Order Id: 1631033831358699
+        Pair: QTUMUSDT
+        Side: BUY
+        Price: 12.909
+        """,
     }, note=-1)
 
 
@@ -137,7 +168,7 @@ async def test_correct_signal_chan2_but_with_chan1():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-1",
-        services_constants.CONFIG_MESSAGE_CONTENT: "You should buy DOT",
+        services_constants.CONFIG_MESSAGE_CONTENT: "BTC/USDT : 1",
     })
 
 
@@ -146,5 +177,5 @@ async def test_correct_signal_chan2():
     await _trigger_callback_with_data_and_assert_note(evaluator, data={
         services_constants.CONFIG_IS_CHANNEL_MESSAGE: True,
         services_constants.CONFIG_MESSAGE_SENDER: "TEST-CHAN-2",
-        services_constants.CONFIG_MESSAGE_CONTENT: "You should buy DOT",
+        services_constants.CONFIG_MESSAGE_CONTENT: "BTC/USDT : -1",
     }, note=-1)

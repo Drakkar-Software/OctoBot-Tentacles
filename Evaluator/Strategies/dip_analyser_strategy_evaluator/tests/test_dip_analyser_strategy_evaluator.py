@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import pytest
+import decimal
 
 import tests.functional_tests.strategy_evaluators_tests.abstract_strategy_test as abstract_strategy_test
 import tentacles.Evaluator.Strategies as Strategies
@@ -47,31 +48,31 @@ class DipAnalyserStrategiesEvaluatorTest(abstract_strategy_test.AbstractStrategy
 
     async def test_default_run(self):
         # market: -49.25407390406244
-        await self.run_test_default_run(-25.195)
+        await self.run_test_default_run(decimal.Decimal(str(-25.195)))
 
     async def test_slow_downtrend(self):
         # market: -49.25407390406244
         # market: -47.50593824228029
-        await self.run_test_slow_downtrend(-25.195, -34.453, None, None, skip_extended=True)
+        await self.run_test_slow_downtrend(decimal.Decimal(str(-25.195)), decimal.Decimal(str(-33.975)), None, None, skip_extended=True)
 
     async def test_sharp_downtrend(self):
         # market: -34.67997135795625
-        await self.run_test_sharp_downtrend(-22.231, None, skip_extended=True)
+        await self.run_test_sharp_downtrend(decimal.Decimal(str(-22.231)), None, skip_extended=True)
 
     async def test_flat_markets(self):
         # market: -38.07647740440325
         # market: -53.87077652637819
-        await self.run_test_flat_markets(-21.13, -32.759, None, None, skip_extended=True)
+        await self.run_test_flat_markets(decimal.Decimal(str(-21.130)), decimal.Decimal(str(-32.759)), None, None, skip_extended=True)
 
     async def test_slow_uptrend(self):
         # market: 11.32644122514472
         # market: -36.64596273291926
-        await self.run_test_slow_uptrend(11.326, -14.477)
+        await self.run_test_slow_uptrend(decimal.Decimal(str(11.326)), decimal.Decimal(str(-14.477)))
 
     async def test_sharp_uptrend(self):
         # market: -17.047906776003458
         # market: -18.25837965302341
-        await self.run_test_sharp_uptrend(2.64, 10.578)
+        await self.run_test_sharp_uptrend(decimal.Decimal(str(2.640)), decimal.Decimal(str(10.578)))
 
     async def test_up_then_down(self):
         await self.run_test_up_then_down(None, skip_extended=True)

@@ -1,0 +1,11 @@
+{
+  "telegram-channels": {
+    "BTC_FAST_SCALP": {
+      "signal_pattern": {
+        "MARKET_BUY": ".* : (1)",
+        "MARKET_SELL": ".* : (-1)"
+      },
+      "signal_pair": "(.*) :"
+    }
+  }
+}

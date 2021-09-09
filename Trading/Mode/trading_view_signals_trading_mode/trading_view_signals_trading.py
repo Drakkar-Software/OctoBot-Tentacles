@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
 import octobot_commons.symbol_util as symbol_util
@@ -30,8 +32,13 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
-    SELL_SIGNAL = "SELL"
+    PRICE_KEY = "PRICE"
+    VOLUME_KEY = "VOLUME"
+    ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     BUY_SIGNAL = "BUY"
+    SELL_SIGNAL = "SELL"
+    MARKET_SIGNAL = "MARKET"
+    LIMIT_SIGNAL = "LIMIT"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -73,7 +80,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         parsed_data = {}
         for line in data['metadata'].split("\n"):
             values = line.split("=")
-            parsed_data[values[0]] = values[1]
+            parsed_data[values[0].strip()] = values[1].strip()
 
         if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                 parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
@@ -91,20 +98,21 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 class TradingViewSignalsModeConsumer(daily_trading_mode.DailyTradingModeConsumer):
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.QUANTITY_MIN_PERCENT = 0.1
-        self.QUANTITY_MAX_PERCENT = 0.9
+        self.QUANTITY_MIN_PERCENT = decimal.Decimal(str(0.1))
+        self.QUANTITY_MAX_PERCENT = decimal.Decimal(str(0.9))
 
-        self.QUANTITY_MARKET_MIN_PERCENT = 0.5
-        self.QUANTITY_MARKET_MAX_PERCENT = 1
-        self.QUANTITY_BUY_MARKET_ATTENUATION = 0.2
+        self.QUANTITY_MARKET_MIN_PERCENT = decimal.Decimal(str(0.5))
+        self.QUANTITY_MARKET_MAX_PERCENT = trading_constants.ONE
+        self.QUANTITY_BUY_MARKET_ATTENUATION = decimal.Decimal(str(0.2))
 
-        self.BUY_LIMIT_ORDER_MAX_PERCENT = 0.995
-        self.BUY_LIMIT_ORDER_MIN_PERCENT = 0.99
+        self.BUY_LIMIT_ORDER_MAX_PERCENT = decimal.Decimal(str(0.995))
+        self.BUY_LIMIT_ORDER_MIN_PERCENT = decimal.Decimal(str(0.99))
 
         self.USE_CLOSE_TO_CURRENT_PRICE = True
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = trading_mode.trading_config.get("close_to_current_price_difference",
-                                                                                    0.02)
-        self.USE_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = decimal.Decimal(str(trading_mode.trading_config.get("close_to_current_price_difference",
+                                                                                    0.02)))
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
         self.USE_STOP_ORDERS = False
 
 
@@ -123,17 +131,58 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         # Ignore matrix calls
         pass
 
-    async def signal_callback(self, parsed_data):
-        if parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY] == TradingViewSignalsTradingMode.SELL_SIGNAL:
-            state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS else trading_enums.EvaluatorStates.SHORT
-        elif parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY] == TradingViewSignalsTradingMode.BUY_SIGNAL:
-            state = trading_enums.EvaluatorStates.VERY_LONG if self.trading_mode.USE_MARKET_ORDERS else trading_enums.EvaluatorStates.LONG
+    def _parse_order_details(self, parsed_data):
+        side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]
+        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None)
+        if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
+            if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
+                state = trading_enums.EvaluatorStates.VERY_SHORT
+            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+                state = trading_enums.EvaluatorStates.SHORT
+            else:
+                state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
+                    else trading_enums.EvaluatorStates.SHORT
+        elif side == TradingViewSignalsTradingMode.BUY_SIGNAL:
+            if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
+                state = trading_enums.EvaluatorStates.VERY_LONG
+            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+                state = trading_enums.EvaluatorStates.LONG
+            else:
+                state = trading_enums.EvaluatorStates.VERY_LONG if self.trading_mode.USE_MARKET_ORDERS \
+                    else trading_enums.EvaluatorStates.LONG
         else:
             self.logger.error(f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, "
                               f"full data= {parsed_data}")
             state = trading_enums.EvaluatorStates.NEUTRAL
+        order_data = {
+            TradingViewSignalsModeConsumer.PRICE_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
+        }
+        return state, order_data
+
+    async def signal_callback(self, parsed_data):
+        state, order_data = self._parse_order_details(parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
-        # Force temporary neutral state to allow multiple buy or sell signals
-        self.state = trading_enums.EvaluatorStates.NEUTRAL
         # Use daily trading mode state system
-        await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state)
+        await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state, order_data)
+
+    async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
+        self.state = new_state
+        self.logger.info(f"[{symbol}] new state: {self.state.name}")
+
+        # if new state is not neutral --> cancel orders and create new else keep orders
+        if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
+            # cancel open orders
+            await self.cancel_symbol_open_orders(symbol)
+
+            # call orders creation from consumers
+            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                 symbol=symbol,
+                                                 time_frame=None,
+                                                 final_note=self.final_eval,
+                                                 state=self.state,
+                                                 data=order_data)
+
+            # send_notification
+            if not self.exchange_manager.is_backtesting:
+                await self._send_alert_notification(symbol, new_state)

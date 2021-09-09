@@ -30,7 +30,6 @@ jobs:
       env:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
-        DISABLE_SENTRY: True
       run: |
         TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
         git clone -q $OCTOBOT_GH_REPO -b ${TARGET_BRANCH} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
@@ -49,7 +48,6 @@ jobs:
       env:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
-        DISABLE_SENTRY: True
       run: |
         $env:TARGET_BRANCH = $env:GITHUB_REF
         If ((Test-Path env:GITHUB_HEAD_REF) -and -not ([string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF))) {
@@ -92,18 +90,20 @@ jobs:
       if: matrix.type == 'cython'
       env:
         CYTHON_IGNORE: True
-        DISABLE_SENTRY: True
+        BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+        BINANCE_API_SECRET: ${{ secrets.BINANCE_API_SECRET }}
       run: |
         cd OctoBot
-        pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles
+        pytest --cov=. --cov-config=.coveragerc --durations=0 -rw --ignore=tentacles/Trading/Exchange tentacles
 
     - name: Pytests
       env:
-        DISABLE_SENTRY: True
+        BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+        BINANCE_API_SECRET: ${{ secrets.BINANCE_API_SECRET }}
       if: matrix.type != 'cython'
       run: |
         cd OctoBot
-        pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles
+        pytest --cov=. --cov-config=.coveragerc --durations=0 -rw --ignore=tentacles/Trading/Exchange tentacles
 
     - name: Publish coverage
       if: matrix.type == 'sources' && github.event_name == 'push'

@@ -1,19 +1,35 @@
 {
   "type": "object",
-  "title": "TelegramSignalEvaluator",
-  "additionalProperties" : {
-        "type" : "object",
-        "required" : [
-            "signal_pattern",
-            "signal_market"
+  "title": "TelegramChannelSignalEvaluator",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "signal_pattern",
+      "signal_market"
+    ],
+    "properties": {
+      "signal_pattern": {
+        "type": "object",
+        "title": "Signal pattern regex",
+        "required": [
+          "MARKET_BUY",
+          "MARKET_SELL"
         ],
-        "properties" : {
-            "signal_pattern" : {
-                "type" : "string"
-            },
-            "signal_market" : {
-                "type" : "string"
-            }
+        "properties": {
+          "MARKET_BUY": {
+            "type": "string",
+            "title": "Market buy signal regex"
+          },
+          "MARKET_SELL": {
+            "type": "string",
+            "title": "Market sell signal regex"
+          }
         }
+      },
+      "signal_pair": {
+        "type": "string",
+        "title": "Signal pair parsing regex"
+      }
     }
+  }
 }

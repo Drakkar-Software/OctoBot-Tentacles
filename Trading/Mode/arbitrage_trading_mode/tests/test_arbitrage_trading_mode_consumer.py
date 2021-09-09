@@ -15,17 +15,21 @@
 #  License along with this library.
 import pytest
 import mock
+import decimal
 
+import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_trading as arbitrage_trading_mode
 import tentacles.Trading.Mode.arbitrage_trading_mode.tests as arbitrage_trading_mode_tests
+import octobot_tentacles_manager.api as tentacles_manager_api
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
 async def test_init():
+    tentacles_manager_api.reload_tentacle_info()
     async with arbitrage_trading_mode_tests.exchange("binance") as arbitrage_trading_mode_tests.exchange_tuple:
         binance_producer, binance_consumer, _ = arbitrage_trading_mode_tests.exchange_tuple
 
@@ -34,8 +38,8 @@ async def test_init():
         assert len(binance_producer.trading_mode.producers) == 1
 
         # consumer
-        assert binance_consumer.PORTFOLIO_PERCENT_PER_TRADE != 0
-        assert binance_consumer.STOP_LOSS_DELTA_FROM_OWN_PRICE != 0
+        assert binance_consumer.PORTFOLIO_PERCENT_PER_TRADE > trading_constants.ZERO
+        assert binance_consumer.STOP_LOSS_DELTA_FROM_OWN_PRICE > trading_constants.ZERO
         assert binance_consumer.open_arbitrages == []
 
 
@@ -78,9 +82,9 @@ async def test_create_new_orders():
 async def test_create_initial_arbitrage_order():
     async with arbitrage_trading_mode_tests.exchange("binance") as arbitrage_trading_mode_tests.exchange_tuple:
         _, binance_consumer, _ = arbitrage_trading_mode_tests.exchange_tuple
-        price = 10
+        price = decimal.Decimal(10)
         # long
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, 15, trading_enums.EvaluatorStates.LONG)
+        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.LONG)
         orders = await binance_consumer._create_initial_arbitrage_order(arbitrage)
         assert orders
         order = orders[0]
@@ -92,7 +96,7 @@ async def test_create_initial_arbitrage_order():
         assert arbitrage in binance_consumer.open_arbitrages
 
         # short
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, 15, trading_enums.EvaluatorStates.SHORT)
+        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.SHORT)
         orders = await binance_consumer._create_initial_arbitrage_order(arbitrage)
         assert orders
         order = orders[0]
@@ -107,11 +111,11 @@ async def test_create_initial_arbitrage_order():
 async def test_create_secondary_arbitrage_order():
     async with arbitrage_trading_mode_tests.exchange("binance") as arbitrage_trading_mode_tests.exchange_tuple:
         _, binance_consumer, _ = arbitrage_trading_mode_tests.exchange_tuple
-        price = 10
+        price = decimal.Decimal(10)
 
         # long
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, 15, trading_enums.EvaluatorStates.LONG)
-        quantity = 5
+        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.LONG)
+        quantity = decimal.Decimal(5)
         orders = await binance_consumer._create_secondary_arbitrage_order(arbitrage, quantity)
         assert orders
 
@@ -132,8 +136,8 @@ async def test_create_secondary_arbitrage_order():
         assert stop_order.origin_quantity == quantity
 
         # short
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, 15, trading_enums.EvaluatorStates.SHORT)
-        quantity = 5
+        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.SHORT)
+        quantity = decimal.Decimal(5)
         orders = await binance_consumer._create_secondary_arbitrage_order(arbitrage, quantity)
         assert orders
 
@@ -157,16 +161,16 @@ async def test_create_secondary_arbitrage_order():
 async def test_get_quantity_from_holdings():
     async with arbitrage_trading_mode_tests.exchange("binance") as arbitrage_trading_mode_tests.exchange_tuple:
         _, binance_consumer, _ = arbitrage_trading_mode_tests.exchange_tuple
-        binance_consumer.PORTFOLIO_PERCENT_PER_TRADE = 0.5
-        assert binance_consumer._get_quantity_from_holdings(10, 100, trading_enums.EvaluatorStates.SHORT) == 5
-        assert binance_consumer._get_quantity_from_holdings(10, 100, trading_enums.EvaluatorStates.LONG) == 50
+        binance_consumer.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(0.5))
+        assert binance_consumer._get_quantity_from_holdings(decimal.Decimal(str(10)), decimal.Decimal(str(100)), trading_enums.EvaluatorStates.SHORT) == decimal.Decimal(str(5))
+        assert binance_consumer._get_quantity_from_holdings(decimal.Decimal(str(10)), decimal.Decimal(str(100)), trading_enums.EvaluatorStates.LONG) == decimal.Decimal(str(50))
 
 
 async def test_get_stop_loss_price():
     async with arbitrage_trading_mode_tests.exchange("binance") as arbitrage_trading_mode_tests.exchange_tuple:
         _, binance_consumer, arbitrage_trading_mode_tests.exchange_manager = arbitrage_trading_mode_tests.exchange_tuple
-        binance_consumer.STOP_LOSS_DELTA_FROM_OWN_PRICE = 0.01
+        binance_consumer.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(0.01))
         symbol_market = arbitrage_trading_mode_tests.exchange_manager.exchange.get_market_status("BTC/USDT",
                                                                                                  with_fixer=False)
-        assert binance_consumer._get_stop_loss_price(symbol_market, 100, True) == 99
-        assert binance_consumer._get_stop_loss_price(symbol_market, 100, False) == 101
+        assert binance_consumer._get_stop_loss_price(symbol_market, decimal.Decimal(str(100)), True) == decimal.Decimal(str(99))
+        assert binance_consumer._get_stop_loss_price(symbol_market, decimal.Decimal(str(100)), False) == decimal.Decimal(str(101))
