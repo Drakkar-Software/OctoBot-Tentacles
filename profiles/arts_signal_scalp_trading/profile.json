@@ -4,7 +4,7 @@
             "Bitcoin": {
                 "enabled": true,
                 "pairs": [
-                    "BTC/USDT"
+                    "BTC/USD"
                 ]
             }
         },
