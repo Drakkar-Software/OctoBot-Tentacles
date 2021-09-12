@@ -69,7 +69,7 @@ class TelegramApiService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_WEBSITE_URL}/guides/#telegram-api"
+        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/telegram-interface/telegram-api"
 
     @staticmethod
     def is_setup_correctly(config):
