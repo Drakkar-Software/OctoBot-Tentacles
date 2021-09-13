@@ -173,8 +173,7 @@ $(document).ready(function() {
 
     $("#symbolSelect").select2({
         closeOnSelect: false,
-        placeholder: "Symbol",
-        maximumSelectionLength: 5
+        placeholder: "Symbol"
     });
 
     init_data_collector_status_websocket();

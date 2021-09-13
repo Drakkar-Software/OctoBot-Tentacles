@@ -336,17 +336,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     @staticmethod
     def orders_too_small(min_quantity, min_cost, min_price, sell_price, sell_vol):
-        return (min_price is not None and sell_price < min_price) or \
-               (min_quantity is not None and sell_vol < min_quantity) or \
-               (min_cost is not None and sell_price * sell_vol < min_cost) or \
-               (min_price is None and min_quantity is None and min_cost is None)
+        return (min_price and sell_price < min_price) or \
+               (min_quantity and sell_vol < min_quantity) or \
+               (min_cost and sell_price * sell_vol < min_cost)
 
     @staticmethod
     def orders_too_large(max_quantity, max_cost, max_price, sell_price, sell_vol):
         return (max_price and sell_price > max_price) or \
                (max_quantity and sell_vol > max_quantity) or \
-               (max_cost and sell_price * sell_vol > max_cost) or \
-               (max_price is None and max_quantity is None and max_cost is None)
+               (max_cost and sell_price * sell_vol > max_cost)
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
