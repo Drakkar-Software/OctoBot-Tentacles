@@ -22,6 +22,7 @@ import telegram.utils.helpers
 import octobot_services.constants as services_constants
 import octobot_services.interfaces.bots as interfaces_bots
 import tentacles.Services.Services_bases as Services_bases
+import octobot_services.interfaces.util as interfaces_util
 
 
 # Telegram bot interface
@@ -77,6 +78,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             telegram.ext.CommandHandler("restart", self.command_restart),
             telegram.ext.CommandHandler("help", self.command_help),
             telegram.ext.CommandHandler(["pause", "resume"], self.command_pause_resume),
+            telegram.ext.CommandHandler("telegram_2fa_code", self.set_telegram_api_2fa_code),
             telegram.ext.MessageHandler(telegram.ext.Filters.command, self.command_unknown)
         ]
 
@@ -109,6 +111,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             message += "/set\_risk: `Changes my current risk setting into your command's parameter.`" + interfaces_bots.EOL
             message += "/refresh\_portfolio or /rpf : `Forces OctoBot's real trader portfolio refresh using exchange " \
                        "data. Should normally not be necessary.`" + interfaces_bots.EOL
+            message += "/telegram\_2fa\_code : `Set the telegramApi 2fa code(substract 1 to it before).`" + interfaces_bots.EOL
             message += "/pause or /resume: `Pauses or resumes me.`" + interfaces_bots.EOL
             message += "/restart: `Restarts me.`" + interfaces_bots.EOL
             message += "/stop: `Stops me.`" + interfaces_bots.EOL
@@ -117,6 +120,19 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             update.message.reply_markdown(message)
         elif TelegramBotInterface._is_authorized_chat(update):
             update.message.reply_text(interfaces_bots.UNAUTHORIZED_USER_MESSAGE)
+
+    @staticmethod
+    def set_telegram_api_2fa_code(update, _):
+        if TelegramBotInterface._is_valid_user(update):
+            result = False
+            param = TelegramBotInterface.get_command_param("/telegram_2fa_code", update)
+            telegram_api = Services_bases.TelegramApiService.get_instance_if_exists()
+            if telegram_api is None:
+                self.logger.error("TelegramApiService is not running, can't set auth_code")
+            else:
+                result = interfaces_util.run_in_bot_main_loop(telegram_api.set_telegram_2fa_code(str(int(param) + 1)))
+            TelegramBotInterface._send_message(update, "Done. Please restart me to apply."
+                                                        if result else "Error, see my logs for more details")
 
     @staticmethod
     def get_command_param(command_name, update):
