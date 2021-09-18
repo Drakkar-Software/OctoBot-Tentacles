@@ -1,1 +1,1 @@
-from .trend import DoubleMovingAverageTrendEvaluator, EMADivergenceTrendEvaluator
+from .trend import DoubleMovingAverageTrendEvaluator, EMADivergenceTrendEvaluator, DeathAndGoldenCrossEvaluator
