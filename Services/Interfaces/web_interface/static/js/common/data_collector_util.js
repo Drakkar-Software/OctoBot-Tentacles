@@ -30,7 +30,7 @@ function _refresh_status(socket){
 }
 
 function update_progress(current_progress, total_progress){
-    $("#current_progess_bar_anim").css('width', current_progress+'%').attr("aria-valuenow", current_progress);
+    $("#current_progess_bar_anim").css('width', (current_progress === 0 ? 100 : current_progress)+'%').attr("aria-valuenow", current_progress);
     $("#total_progess_bar_anim").css('width', total_progress+'%').attr("aria-valuenow", total_progress);
 }
 
