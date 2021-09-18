@@ -20,6 +20,7 @@ import pytest
 import octobot_commons.tests as commons_tests
 import octobot_commons.constants as commons_constants
 import octobot_trading.util.test_tools.spot_rest_exchange_test_tools as spot_rest_exchange_test_tools
+import octobot_commons.configuration as configuration
 from ...binance import Binance
 
 # All test coroutines will be treated as marked.
@@ -29,8 +30,10 @@ pytestmark = pytest.mark.asyncio
 async def test_spot_rest():
     config = commons_tests.load_test_config()
     config[commons_constants.CONFIG_EXCHANGES][Binance.get_name()] = {
-        commons_constants.CONFIG_EXCHANGE_KEY: os.getenv(f"{Binance.get_name()}_API_KEY".upper()),
-        commons_constants.CONFIG_EXCHANGE_SECRET: os.getenv(f"{Binance.get_name()}_API_SECRET".upper())
+        commons_constants.CONFIG_EXCHANGE_KEY: configuration.encrypt(
+            os.getenv(f"{Binance.get_name()}_API_KEY".upper())).decode(),
+        commons_constants.CONFIG_EXCHANGE_SECRET: configuration.encrypt(
+            os.getenv(f"{Binance.get_name()}_API_SECRET".upper())).decode()
     }
     config[commons_constants.CONFIG_TRADER][commons_constants.CONFIG_ENABLED_OPTION] = True
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_ENABLED_OPTION] = False
