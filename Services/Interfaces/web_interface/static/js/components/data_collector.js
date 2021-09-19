@@ -59,7 +59,8 @@ function start_collector(){
     lock_collector_ui();
     const request = {};
     request["exchange"] = $('#exchangeSelect').val();
-    request["symbol"] = $('#symbolSelect').val();
+    request["symbols"] = $('#symbolsSelect').val();
+    request["time_frames"] = $('#timeframesSelect').val().length ? $('#timeframesSelect').val() : null;
     request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : null;
     request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : null;
     const update_url = $("#collect_data").attr(update_url_attr);
@@ -171,9 +172,14 @@ $(document).ready(function() {
     startDateMax.setDate(startDateMax.getDate() - 2);
     $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
 
-    $("#symbolSelect").select2({
+    $("#symbolsSelect").select2({
         closeOnSelect: false,
         placeholder: "Symbol"
+    });
+
+    $("#timeframesSelect").select2({
+        closeOnSelect: false,
+        placeholder: "All Timeframes"
     });
 
     init_data_collector_status_websocket();

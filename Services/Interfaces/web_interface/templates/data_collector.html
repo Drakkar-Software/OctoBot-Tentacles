@@ -77,7 +77,7 @@
             <div class="col">
                 Symbol :
                 <select class="selectpicker" data-live-search="true" data-width="30%" data-window-padding="25"
-                    id="symbolSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}"
+                    id="symbolsSelect" update-url="{{ url_for('data_collector', action_type='symbol_list') }}"
                     multiple>
                     {% for symbol in full_symbol_list %}
                     <option value={{symbol}}>
@@ -87,9 +87,16 @@
                 </select>
             </div>
             <div class="col">
-                <button id="collect_data" type="button" class="btn btn-primary waves-effect"
-                    update-url="{{ url_for('data_collector', action_type='start_collector') }}">Collect new
-                    data</button>
+                Time Frame :
+                <select class="selectpicker" data-live-search="true" data-width="30%" data-window-padding="25"
+                    id="timeframesSelect" update-url="{{ url_for('data_collector', action_type='available_timeframes_list') }}"
+                    multiple>
+                    {% for timeframe in available_timeframes_list %}
+                    <option value={{timeframe}}>
+                        {{timeframe}}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
         <div class="row row-padding" id="collector_date_range">
@@ -102,6 +109,12 @@
                 <input type="date" class="datepicker" id="endDate">
             </div>
         </div>
+        <div class="row">
+            <div class="col offset-md-9">
+                <button id="collect_data" type="button" class="btn btn-primary waves-effect"
+                    update-url="{{ url_for('data_collector', action_type='start_collector') }}">Collect new
+                    data</button>
+            </div>
     </div>
     <div id="collector_operation" style='display: none;'>
     <div class='progress'>
@@ -109,7 +122,7 @@
     </div>
     <div class='progress'>
         <div id='total_progess_bar_anim' class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%;'></div>
-      </div>
+    </div>
 </div>
 </div>
 
