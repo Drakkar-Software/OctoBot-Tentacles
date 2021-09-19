@@ -16,6 +16,7 @@
 import copy
 import math
 import typing
+import decimal
 
 import ccxt
 
@@ -103,8 +104,9 @@ class AscendEx(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.F
     def _get_digits_count(self, value):
         return round(abs(math.log(value, 10)))
 
-    async def _create_specific_order(self, order_type, symbol, quantity, price=None):
-        created_order = await super()._create_specific_order(order_type, symbol, quantity, price)
+    async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
+                                     params=None) -> dict:
+        created_order = await super()._create_specific_order(order_type, symbol, quantity, price=price, params=params)
         return self._add_missing_order_details(created_order, order_type, quantity, price)
 
     def _add_missing_order_details(self, order, order_type, quantity, price):
