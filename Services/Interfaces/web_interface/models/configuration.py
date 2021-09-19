@@ -32,6 +32,7 @@ import octobot_evaluators.constants as evaluators_constants
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
+import octobot_commons.enums as commons_enums
 import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_backtesting.api as backtesting_api
@@ -536,6 +537,18 @@ def get_symbol_list(exchanges):
                     _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
 
     return list(set(result))
+
+
+def get_timeframes_list(exchanges):
+    timeframes_list = []
+    allowed_timeframes = set(tf.value for tf in commons_enums.TimeFrames)
+    for exchange in exchanges:
+        if exchange not in exchange_symbol_fetch_blacklist:
+            timeframes_list += interfaces_util.run_in_bot_async_executor(
+                    trading_api.get_exchange_available_time_frames(exchange))
+    return [commons_enums.TimeFrames(time_frame)
+                for time_frame in list(set(timeframes_list))
+                if time_frame in allowed_timeframes]
 
 
 def format_config_symbols(config):

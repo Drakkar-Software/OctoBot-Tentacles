@@ -17,6 +17,7 @@
 import flask
 import werkzeug
 
+import octobot_commons.time_frame_manager as time_frame_manager
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -73,7 +74,7 @@ def data_collector():
             success, reply = models.get_delete_data_file(file)
         elif action_type == "start_collector":
             details = flask.request.get_json()
-            success, reply = models.collect_data_file(details["exchange"], details["symbol"],
+            success, reply = models.collect_data_file(details["exchange"], details["symbols"], details["time_frames"],
                                                       details["startTimestamp"], details["endTimestamp"])
             if success:
                 web_interface.send_data_collector_status()
@@ -94,6 +95,7 @@ def data_collector():
                                          full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
+                                         available_timeframes_list=[timeframe.value for timeframe in time_frame_manager.sort_time_frames(models.get_timeframes_list([current_exchange]))],
                                          alert=alert)
         if success:
             return util.get_rest_reply(flask.jsonify(reply))
@@ -120,5 +122,6 @@ def data_collector():
                                      full_candle_history_ccxt_exchanges=models.get_full_candle_history_exchange_list(),
                                      current_exchange=models.get_current_exchange(),
                                      full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
+                                     available_timeframes_list=[timeframe.value for timeframe in time_frame_manager.sort_time_frames(models.get_timeframes_list([current_exchange]))],
                                      origin_page=origin_page,
                                      alert={})

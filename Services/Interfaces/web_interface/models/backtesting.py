@@ -18,7 +18,9 @@ import asyncio
 import ccxt
 import threading
 
+import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
+import octobot_commons.time_frame_manager as time_frame_manager
 import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -148,16 +150,20 @@ def get_data_collector_status():
     return "not started", progress
 
 
-def collect_data_file(exchange, symbol, start_timestamp=None, end_timestamp=None):
+def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):
     success = False
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is None or \
             backtesting_api.is_data_collector_finished(
                 web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]):
+        if time_frames is not None:
+            time_frames = time_frames if isinstance(time_frames, list) else [time_frames]
+            if not any(isinstance(time_frame, commons_enums.TimeFrames) for time_frame in time_frames):
+                time_frames = time_frame_manager.parse_time_frames(time_frames)
         interfaces_util.run_in_bot_main_loop(
-            _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp))
+            _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp))
         return True, f"Historical data collection started."
     else:
-        return success, f"Can't collect data for {symbol} on {exchange} (Historical data collector is already running)"
+        return success, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
 
 
 async def _start_collect_and_notify(data_collector_instance):
@@ -172,16 +178,17 @@ async def _start_collect_and_notify(data_collector_instance):
     await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
-async def _background_collect_exchange_historical_data(exchange, symbol, start_timestamp, end_timestamp):
+async def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
-        symbol if isinstance(symbol, list) else [symbol],
+        symbols if isinstance(symbols, list) else [symbols],
+        time_frames=time_frames,
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp)
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
     coro = _start_collect_and_notify(data_collector_instance)
-    threading.Thread(target=asyncio.run, args=(coro,), name=f"DataCollector{symbol}").start()
+    threading.Thread(target=asyncio.run, args=(coro,), name=f"DataCollector{symbols}").start()
 
 
 async def _convert_into_octobot_data_file_if_necessary(output_file):
