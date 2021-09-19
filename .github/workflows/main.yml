@@ -115,9 +115,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set Environment Variables
         run: |
-          echo "NEXUS_USERNAME=${{ secrets.NEXUS_USERNAME }}" >> $GITHUB_ENV
-          echo "NEXUS_PASSWORD=${{ secrets.NEXUS_PASSWORD }}" >> $GITHUB_ENV
-          echo "NEXUS_URL=${{ secrets.NEXUS_URL }}" >> $GITHUB_ENV
+          echo "S3_API_KEY=${{ secrets.S3_API_KEY }}" >> $GITHUB_ENV
+          echo "S3_API_SECRET_KEY=${{ secrets.S3_API_SECRET_KEY }}" >> $GITHUB_ENV
+          echo "S3_REGION_NAME=${{ secrets.S3_REGION_NAME }}" >> $GITHUB_ENV
+          echo "S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}" >> $GITHUB_ENV
           TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
           echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
 
@@ -142,29 +143,33 @@ jobs:
 
       - name: Publish tag tentacles
         if: startsWith(github.ref, 'refs/tags')
+        env:
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
         run: |
           sed -i "s/VERSION_PLACEHOLDER/${TARGET_BRANCH#refs/*/}/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.NEXUS_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.TENTACLES_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish latest tentacles
         if: github.ref == 'refs/heads/dev' && startsWith(github.ref, 'refs/tags') != true
+        env:
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
         run: |
           sed -i "s/VERSION_PLACEHOLDER/latest/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
       - name: Publish cleaned branch tentacles
         if: startsWith(github.ref, 'refs/tags') != true && github.ref != 'refs/heads/master'
         env:
-          NEXUS_URL: ${{ secrets.NEXUS_DEV_URL }}
+          S3_BUCKET_NAME: ${{ secrets.S3_DEV_BUCKET_NAME }}
         run: |
           branch="${TARGET_BRANCH##*/}"
           sed -i "s/VERSION_PLACEHOLDER/$branch/g" metadata.yaml
           sed -i "s/base/$branch/g" metadata.yaml
           sed -i "s/officials/dev/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.NEXUS_DEV_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
 
   notify:
     name: Notify
