@@ -102,6 +102,7 @@ jobs:
 
     - name: Publish coverage
       if: matrix.type == 'sources' && github.event_name == 'push'
+      continue-on-error: true
       run: coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
