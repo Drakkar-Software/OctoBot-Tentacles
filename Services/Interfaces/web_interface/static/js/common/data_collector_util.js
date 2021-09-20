@@ -23,6 +23,7 @@ function lock_collector_ui(lock=true){
         $("#collector_operation").hide();
     }
     $('#collect_data').prop('disabled', lock);
+    $('#stop_collect_data').prop('disabled', !lock);
 }
 
 function _refresh_status(socket){

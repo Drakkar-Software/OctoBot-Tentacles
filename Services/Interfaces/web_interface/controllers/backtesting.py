@@ -18,6 +18,7 @@ import flask
 import werkzeug
 
 import octobot_commons.time_frame_manager as time_frame_manager
+
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -78,6 +79,8 @@ def data_collector():
                                                       details["startTimestamp"], details["endTimestamp"])
             if success:
                 web_interface.send_data_collector_status()
+        elif action_type == "stop_collector":
+            success, reply = models.stop_data_collector()
         elif action_type == "import_data_file":
             if flask.request.files:
                 file = flask.request.files['file']

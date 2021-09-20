@@ -38,6 +38,7 @@ from tentacles.Services.Interfaces.web_interface.models.backtesting import (
     get_backtesting_report,
     get_delete_data_file,
     get_data_collector_status,
+    stop_data_collector,
     collect_data_file,
     save_data_file,
 )
@@ -162,6 +163,7 @@ __all__ = [
     "get_backtesting_report",
     "get_delete_data_file",
     "get_data_collector_status",
+    "stop_data_collector",
     "collect_data_file",
     "save_data_file",
     "schedule_delayed_command",

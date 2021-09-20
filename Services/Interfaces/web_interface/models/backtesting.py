@@ -149,6 +149,14 @@ def get_data_collector_status():
         return "starting", progress
     return "not started", progress
 
+def stop_data_collector():
+    success = False
+    message = "Failed to stop data collector"
+    if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
+        success = interfaces_util.run_in_bot_main_loop(backtesting_api.stop_data_collector(web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]))
+        message = "data collector successfully stopped"
+        web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+    return success, message
 
 def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):
     success = False
