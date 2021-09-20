@@ -115,6 +115,11 @@
                     update-url="{{ url_for('data_collector', action_type='start_collector') }}">Collect new
                     data</button>
             </div>
+            <div class="col">
+                <button id="stop_collect_data" type="button" class="btn btn-danger waves-effect"
+                    update-url="{{ url_for('data_collector', action_type='stop_collector') }}">Stop</button>
+            </div>
+        </div>
     </div>
     <div id="collector_operation" style='display: none;'>
     <div class='progress'>
