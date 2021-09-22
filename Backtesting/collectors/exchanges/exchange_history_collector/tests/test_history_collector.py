@@ -17,6 +17,7 @@ import pytest
 import os
 import contextlib
 import json
+import asyncio
 
 import octobot_backtesting.data as backtesting_data
 import octobot_backtesting.enums as enums
@@ -177,3 +178,24 @@ async def test_collect_multi_pair():
             assert len(inch_btc_ohlcv) > 5803
             btc_usdt_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="BTC/USDT")
             assert len(btc_usdt_ohlcv) > 6743
+
+@pytest.mark.asyncio
+async def test_stop_collect():
+    tentacles_setup_config = test_utils_config.load_test_tentacles_config()
+    symbols = ["AAVE/USDT"]
+    async with data_collector(BINANCE, tentacles_setup_config, symbols, None, True, 1549065660000,
+                              1632090006000) as collector:
+        async def stop_soon():
+            await asyncio.sleep(5)
+            await collector.stop(should_stop_database=False)
+
+        await asyncio.gather(collector.start(), stop_soon())
+        assert collector.time_frames != []
+        assert collector.symbols == symbols
+        assert collector.exchange_name == BINANCE
+        assert collector.tentacles_setup_config == tentacles_setup_config
+        assert collector.finished
+        assert collector.exchange_manager is None
+        assert not os.path.isfile(collector.temp_file_path)
+        assert not os.path.isfile(collector.file_path)
+
