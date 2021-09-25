@@ -93,6 +93,7 @@ def context_processor_register():
         EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
         OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
+        IS_DEMO=constants.IS_DEMO,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         filter_currency_pairs=filter_currency_pairs,
