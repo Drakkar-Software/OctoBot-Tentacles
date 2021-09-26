@@ -6,7 +6,9 @@
         <td>{{ order.origin_quantity }}</td>
         <td>{{ order.exchange_manager.exchange.name if order.exchange_manager else '' }}</td>
         <td>{{ timestamp }}</td>
-        <td class="text-right">{{ order.origin_price * order.origin_quantity }}  {{ order.market }}</td>
+        <td class="text-right" data-order="{{ order.origin_price * order.origin_quantity }}">
+            {{ order.origin_price * order.origin_quantity }} {{ order.market }}
+        </td>
         <td scope="row">
             {% if sim_or_real == 'Simulated' %}
                 {{ sim_or_real }}
@@ -27,8 +29,8 @@
         <td>{{ trade.executed_price }}</td>
         <td>{{ trade.executed_quantity }}</td>
         <td>{{ trade.exchange_manager.exchange.name if trade.exchange_manager else ''}}</td>
-        <td class="text-right">{{ trade.total_cost }} {{ trade.market }}</td>
-        <td class="text-right">{{ trade.fee['cost'] }} {{ trade.fee['currency'] }}</td>
+        <td class="text-right" data-order="{{ trade.total_cost }}">{{ trade.total_cost }} {{ trade.market }}</td>
+        <td class="text-right" data-order="{{ trade.fee['cost'] }}">{{ trade.fee['cost'] }} {{ trade.fee['currency'] }}</td>
         <td class="text-right">{{ timestamp }}</td>
         <td class="text-right">{{ trade.trade_id }}</td>
         <td>{{ sim_or_real }}</td>
