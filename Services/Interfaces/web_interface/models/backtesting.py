@@ -32,8 +32,6 @@ import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 
-LOGGER = bot_logging.get_logger("DataCollectorWebInterfaceModel")
-
 
 def get_full_candle_history_exchange_list():
     full_exchange_list = list(set(ccxt.exchanges))
@@ -99,7 +97,7 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             return True, "Backtesting started"
     except Exception as e:
-        LOGGER.exception(e, False)
+        bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, False)
         return False, f"Error when starting backtesting: {e}"
 
 
@@ -149,17 +147,22 @@ def get_data_collector_status():
         return "starting", progress
     return "not started", progress
 
+
 def stop_data_collector():
     success = False
     message = "Failed to stop data collector"
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
         success = interfaces_util.run_in_bot_main_loop(backtesting_api.stop_data_collector(web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]))
-        message = "data collector successfully stopped"
+        message = "Data collector stopped"
         web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     return success, message
 
+
 def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):
-    success = False
+    if not exchange:
+        return False, "Please select an exchange."
+    if not symbols:
+        return False, "Please select a trading pair."
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is None or \
             backtesting_api.is_data_collector_finished(
                 web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]):
@@ -171,7 +174,7 @@ def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None,
             _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp))
         return True, f"Historical data collection started."
     else:
-        return success, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
+        return False, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
 
 
 async def _start_collect_and_notify(data_collector_instance):
@@ -217,7 +220,7 @@ async def _convert_into_octobot_data_file_if_necessary(output_file):
             return message
     except Exception as e:
         message = f"Error when handling backtesting data file: {e}"
-        LOGGER.exception(e, True, message)
+        bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, True, message)
         return message
 
 
@@ -226,9 +229,9 @@ def save_data_file(name, file):
         output_file = f"{backtesting_constants.BACKTESTING_FILE_PATH}/{name}"
         file.save(output_file)
         message = interfaces_util.run_in_bot_async_executor(_convert_into_octobot_data_file_if_necessary(output_file))
-        LOGGER.info(message)
+        bot_logging.get_logger("DataCollectorWebInterfaceModel").info(message)
         return True, message
     except Exception as e:
         message = f"Error when saving file: {e}. File can't be saved."
-        LOGGER.error(message)
+        bot_logging.get_logger("DataCollectorWebInterfaceModel").error(message)
         return False, message
