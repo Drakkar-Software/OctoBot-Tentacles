@@ -102,7 +102,7 @@ async def test_collect_invalid_data():
         assert not os.path.isfile(collector.temp_file_path)
 
 
-async def _test_collect_valid_date_range():
+async def test_collect_valid_date_range():
     tentacles_setup_config = test_utils_config.load_test_tentacles_config()
     symbols = ["ETH/BTC"]
     async with data_collector(BINANCE, tentacles_setup_config, symbols, None, True, 1549065660000, 1549670520000) as collector:
@@ -130,7 +130,7 @@ async def _test_collect_valid_date_range():
             assert max_timestamp <= 1549843200000
 
 
-async def _test_collect_invalid_date_range():
+async def test_collect_invalid_date_range():
     tentacles_setup_config = test_utils_config.load_test_tentacles_config()
     symbols = ["ETH/BTC"]
     async with data_collector(BINANCE, tentacles_setup_config, symbols, None, True, 1609459200, 1577836800) \
@@ -179,7 +179,7 @@ async def test_collect_multi_pair():
             btc_usdt_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="BTC/USDT")
             assert len(btc_usdt_ohlcv) > 6743
 
-@pytest.mark.asyncio
+
 async def test_stop_collect():
     tentacles_setup_config = test_utils_config.load_test_tentacles_config()
     symbols = ["AAVE/USDT"]
@@ -198,4 +198,3 @@ async def test_stop_collect():
         assert collector.exchange_manager is None
         assert not os.path.isfile(collector.temp_file_path)
         assert not os.path.isfile(collector.file_path)
-

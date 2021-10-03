@@ -131,6 +131,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         pass
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
+        self.current_step_percent = 0
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
 
@@ -154,9 +155,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             self.exchange.uniformize_candles_if_necessary(candles)
             await self.save_ohlcv(exchange=exchange,
-                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                          symbol=symbol, time_frame=time_frame, candle=candles,
-                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
             candles.clear()
 
             while since < last_candle_timestamp if not self.end_timestamp \
@@ -173,9 +174,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                             candles.pop(-1)
                     self.exchange.uniformize_candles_if_necessary(candles)
                     await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                  symbol=symbol, time_frame=time_frame, candle=candles,
-                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                          symbol=symbol, time_frame=time_frame, candle=candles,
+                                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
                     candles.clear()
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
@@ -184,7 +185,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                                   cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
                                   symbol=symbol, time_frame=time_frame, candle=candles,
                                   timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
-
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
