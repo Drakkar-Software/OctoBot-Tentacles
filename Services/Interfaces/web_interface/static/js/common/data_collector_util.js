@@ -19,6 +19,8 @@
 function lock_collector_ui(lock=true){
     if(lock){
         $("#collector_operation").show();
+        // reset progress bar
+        $("#total_progess_bar_anim").css('width', 0+'%').attr("aria-valuenow", 0);
     }else{
         $("#collector_operation").hide();
     }
@@ -31,18 +33,23 @@ function _refresh_status(socket){
 }
 
 function update_progress(current_progress, total_progress){
+    if(current_progress === 0){
+        $("#progress_bar_anim-container").hide();
+    }else{
+        $("#progress_bar_anim-container").show();
+    }
     $("#current_progess_bar_anim").css('width', (current_progress === 0 ? 100 : current_progress)+'%').attr("aria-valuenow", current_progress);
     $("#total_progess_bar_anim").css('width', total_progress+'%').attr("aria-valuenow", total_progress);
 }
 
-function init_data_collector_status_websocket(){
+function init_data_collector_status_websocket(collectCompleteCallback){
     const socket = get_websocket("/data_collector");
     socket.on('data_collector_status', function(data_collector_status_data) {
-        _handle_data_collector_status(data_collector_status_data, socket);
+        _handle_data_collector_status(data_collector_status_data, socket, collectCompleteCallback);
     });
 }
 
-function _handle_data_collector_status(data_collector_status_data, socket){
+function _handle_data_collector_status(data_collector_status_data, socket, collectCompleteCallback){
     const data_collector_status = data_collector_status_data["status"];
     const current_progress = data_collector_status_data["progress"]["current_step_percent"];
     const total_progress = Math.round((data_collector_status_data["progress"]["current_step"] 
@@ -56,5 +63,8 @@ function _handle_data_collector_status(data_collector_status_data, socket){
     }
     else{
         lock_collector_ui(false);
+        if(data_collector_status === "finished"){
+            collectCompleteCallback();
+        }
     }
 }

@@ -67,6 +67,11 @@ function start_collector(){
     send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback);
 }
 
+function stop_collector(){
+    const update_url = $("#stop_collect_data").attr(update_url_attr);
+    send_and_interpret_bot_update({}, update_url, $(this), collector_success_callback, collector_error_callback);
+}
+
 function collector_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", msg, "");
     reload_table();
@@ -88,13 +93,12 @@ function display_alert(success, message){
 function update_symbol_list(url, exchange){
     const data = {exchange: exchange};
     $.get(url, data, function(data, status){
-        const symbolSelect = $("#symbolSelect");
+        const symbolSelect = $("#symbolsSelect");
         symbolSelect.empty(); // remove old options
+        const symbolSelectBox = symbolSelect[0];
         $.each(data, function(key,value) {
-          symbolSelect.append($("<option></option>")
-             .attr("value", value).text(value));
+            symbolSelectBox.add(new Option(value,value));
         });
-        symbolSelect[0].selectedIndex = -1;
         symbolSelect.selectpicker('refresh');
     });
 }
@@ -132,13 +136,16 @@ $(document).ready(function() {
         handle_data_files_buttons();
     });
     $('#exchangeSelect').on('change', function() {
-        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        update_symbol_list($('#symbolsSelect').attr(update_url_attr), $('#exchangeSelect').val());
         is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
         if(check_date_input()){
             start_collector();
         }
+    });
+    $('#stop_collect_data').click(function(){
+        stop_collector();
     });
     $('#inputFile').on('change',function(){
         handle_file_selection();
@@ -182,5 +189,5 @@ $(document).ready(function() {
         placeholder: "All Timeframes"
     });
 
-    init_data_collector_status_websocket();
+    init_data_collector_status_websocket(reload_table);
 });
