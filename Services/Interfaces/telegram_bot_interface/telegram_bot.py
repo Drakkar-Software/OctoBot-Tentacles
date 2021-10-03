@@ -127,12 +127,17 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             result = False
             param = TelegramBotInterface.get_command_param("/telegram_2fa_code", update)
             telegram_api = Services_bases.TelegramApiService.get_instance_if_exists()
-            if telegram_api is None:
-                self.logger.error("TelegramApiService is not running, can't set auth_code")
+            if not param:
+                message = "Please provide a value to the command"
+            elif telegram_api is None:
+                message = "TelegramApiService is not running, can't set auth_code"
+                TelegramBotInterface.get_logger().error(message)
             else:
-                result = interfaces_util.run_in_bot_main_loop(telegram_api.set_telegram_2fa_code(str(int(param) + 1)))
-            TelegramBotInterface._send_message(update, "Done. Please restart me to apply."
-                                                        if result else "Error, see my logs for more details")
+                result, message = \
+                    interfaces_util.run_in_bot_main_loop(telegram_api.set_telegram_2fa_code(str(int(param) + 1)))
+            TelegramBotInterface._send_message(update,
+                                               message
+                                               if result else f"Error ({message}), see my logs for more details.")
 
     @staticmethod
     def get_command_param(command_name, update):
