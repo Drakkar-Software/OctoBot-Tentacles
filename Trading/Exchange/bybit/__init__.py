@@ -1,1 +1,2 @@
-from .bybit_exchange import Bybit
+from .bybit_exchange import BybitSpotExchange
+from .bybit_future_exchange import BybitFutureExchange
