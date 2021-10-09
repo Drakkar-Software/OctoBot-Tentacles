@@ -103,6 +103,19 @@ function update_symbol_list(url, exchange){
     });
 }
 
+function update_available_timeframes_list(url, exchange){
+    const data = {exchange: exchange};
+    $.get(url, data, function(data, status){
+        const timeframeSelect = $("#timeframesSelect");
+        timeframeSelect.empty();
+        const timeframeSelectBox = timeframeSelect[0];
+        $.each(data, function(key,value) {
+            timeframeSelectBox.add(new Option(value,value));
+        });
+        timeframeSelect.selectpicker('refresh');
+    });
+}
+
 function check_date_input(){
     const startDate = new Date($("#startDate").val());
     const enddate = new Date($("#endDate").val());
@@ -137,6 +150,7 @@ $(document).ready(function() {
     });
     $('#exchangeSelect').on('change', function() {
         update_symbol_list($('#symbolsSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        update_available_timeframes_list($('#timeframesSelect').attr(update_url_attr), $('#exchangeSelect').val());
         is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
