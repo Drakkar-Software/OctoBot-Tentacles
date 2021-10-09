@@ -98,7 +98,9 @@ def data_collector():
                                          full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
-                                         available_timeframes_list=[timeframe.value for timeframe in time_frame_manager.sort_time_frames(models.get_timeframes_list([current_exchange]))],
+                                         available_timeframes_list=[timeframe.value for timeframe in
+                                                                    time_frame_manager.sort_time_frames(
+                                                                        models.get_timeframes_list([current_exchange]))],
                                          alert=alert)
         if success:
             return util.get_rest_reply(flask.jsonify(reply))
@@ -114,6 +116,11 @@ def data_collector():
                 if target == "symbol_list":
                     exchange = flask.request.args.get('exchange')
                     return flask.jsonify(sorted(models.get_symbol_list([exchange])))
+                elif target == "available_timeframes_list":
+                    exchange = flask.request.args.get('exchange')
+                    return flask.jsonify([timeframe.value for timeframe in
+                                          time_frame_manager.sort_time_frames(
+                                              models.get_timeframes_list([exchange]))])
             from_key = "from"
             if from_key in flask.request.args:
                 origin_page = flask.request.args[from_key]
@@ -125,6 +132,8 @@ def data_collector():
                                      full_candle_history_ccxt_exchanges=models.get_full_candle_history_exchange_list(),
                                      current_exchange=models.get_current_exchange(),
                                      full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
-                                     available_timeframes_list=[timeframe.value for timeframe in time_frame_manager.sort_time_frames(models.get_timeframes_list([current_exchange]))],
+                                     available_timeframes_list=[timeframe.value for timeframe in
+                                                                time_frame_manager.sort_time_frames(
+                                                                    models.get_timeframes_list([current_exchange]))],
                                      origin_page=origin_page,
                                      alert={})
