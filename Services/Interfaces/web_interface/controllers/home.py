@@ -35,6 +35,7 @@ def home():
         return flask.render_template('index.html',
                                      watched_symbols=models.get_watched_symbols(),
                                      backtesting_mode=in_backtesting,
-                                     display_tutorial_link=first_display)
+                                     display_tutorial_link=first_display,
+                                     is_logged_in_on_community=models.is_logged_in_on_community())
     else:
         return flask.redirect("/terms")

@@ -18,12 +18,20 @@ import flask
 
 api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
 
+from tentacles.Services.Interfaces.web_interface.api import account_configurations
 from tentacles.Services.Interfaces.web_interface.api import exchanges
 from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
 from tentacles.Services.Interfaces.web_interface.api import user_commands
 
 
+from tentacles.Services.Interfaces.web_interface.api.account_configurations import (
+    account_configurations,
+    new_account_configuration,
+    apply_account_configuration,
+    rename_account_configuration,
+    delete_account_configuration,
+)
 from tentacles.Services.Interfaces.web_interface.api.exchanges import (
     is_compatible_account,
 )
@@ -44,6 +52,11 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
 
 
 __all__ = [
+    "account_configurations",
+    "new_account_configuration",
+    "apply_account_configuration",
+    "rename_account_configuration",
+    "delete_account_configuration",
     "is_compatible_account",
     "version",
     "upgrade_version",

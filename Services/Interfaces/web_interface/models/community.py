@@ -54,3 +54,13 @@ def get_preview_tentacles_packages(url_for):
 
 def get_current_octobots_stats():
     return interfaces_util.run_in_bot_async_executor(octobot_community.get_current_octobots_stats())
+
+
+def is_logged_in_on_community():
+    auth = interfaces_util.get_bot_api().get_community_auth()
+    if not auth.is_logged_in():
+        try:
+            auth.ensure_token_validity()
+        except Exception:
+            return False
+    return auth.is_logged_in()

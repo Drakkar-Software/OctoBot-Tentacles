@@ -16,7 +16,6 @@
 import datetime
 import flask
 import werkzeug.http as werk_http
-import urllib.parse as url_parse
 
 
 CACHE_CONTROL_KEY = 'Cache-Control'
@@ -62,10 +61,3 @@ def _prepare_response_extra_headers(include_security_headers):
         response_extra_headers.update(response_security_headers)
 
     return response_extra_headers
-
-
-def is_safe_url(target):
-    ref_url = url_parse.urlparse(flask.request.host_url)
-    test_url = url_parse.urlparse(url_parse.urljoin(flask.request.host_url, target))
-    return test_url.scheme in ('http', 'https') and \
-        ref_url.netloc == test_url.netloc

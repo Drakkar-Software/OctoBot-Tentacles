@@ -700,3 +700,71 @@ def get_current_exchange():
         return next(iter(exchanges))
     else:
         return DEFAULT_EXCHANGE
+
+
+def _get_configuration_synchronizer():
+    return community.ConfigurationSynchronizer(interfaces_util.get_bot_api().get_community_auth())
+
+
+def _account_config_to_dict(account_configuration: community.CommunityConfiguration) -> dict:
+    return {
+        "id": account_configuration.identifier,
+        "name": account_configuration.name,
+        "created_at": account_configuration.created_at,
+        "updated_at": account_configuration.updated_at,
+    }
+
+
+def get_account_configurations() -> list:
+    return [
+        _account_config_to_dict(config)
+        for config in interfaces_util.run_in_bot_async_executor(
+            _get_configuration_synchronizer().get_account_configurations()
+        )
+    ]
+
+
+def apply_account_configuration(identifier) -> dict:
+    download_path = "temp_downloaded_config.zip"
+    account_config = community.CommunityConfiguration(identifier)
+    community_sync = _get_configuration_synchronizer()
+    interfaces_util.run_in_bot_async_executor(
+        community_sync.download_account_configurations(account_config, download_path)
+    )
+    community_sync.apply_configuration(account_config)
+    return _account_config_to_dict(account_config)
+
+
+def create_or_rename_account_configuration(name, identifier=None) -> dict:
+    # rename if identifier, create otherwise
+    archive_path = "temp_uploaded_config.zip"
+    account_config = community.CommunityConfiguration(identifier=identifier,
+                                                      name=name,
+                                                      config_archive=archive_path)
+    community_sync = _get_configuration_synchronizer()
+    community_sync.create_archive(account_config, commons_constants.USER_FOLDER)
+    return _account_config_to_dict(
+        interfaces_util.run_in_bot_async_executor(
+            community_sync.create_account_configuration(account_config)
+            if identifier is None else community_sync.update_account_configuration(account_config,
+                                                                                   upload_archive=False)
+        )
+    )
+
+
+def delete_account_configuration(identifier) -> None:
+    account_config = community.CommunityConfiguration(identifier=identifier)
+    interfaces_util.run_in_bot_async_executor(
+        _get_configuration_synchronizer().delete_account_configuration(account_config)
+    )
+
+
+def get_current_account_configuration() -> dict:
+    name, identifier = interfaces_util.get_edited_config(dict_only=False).get_community_configuration()
+    return _account_config_to_dict(
+        community.CommunityConfiguration(identifier=identifier, name=name)
+    )
+
+
+def update_current_account_configuration(name, identifier):
+    interfaces_util.get_edited_config().update_community_configuration(name, identifier)

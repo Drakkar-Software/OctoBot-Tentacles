@@ -269,3 +269,18 @@ def metrics_settings():
 def config_actions():
     # action = flask.request.args.get("action")
     return util.get_rest_reply("No specified action.", code=500)
+
+
+@web_interface.server_instance.route('/account_configurations')
+@login.login_required_when_activated
+def account_configurations():
+    configurations = []
+    try:
+        configurations = models.get_account_configurations()
+    except RuntimeError:
+        pass
+    if models.is_logged_in_on_community():
+        return flask.render_template('account_configurations.html',
+                                     configurations=configurations,
+                                     current_configuration=models.get_current_account_configuration())
+    return flask.redirect('community_login?next=account_configuration')

@@ -54,6 +54,7 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     get_account_tentacles_packages,
     get_preview_tentacles_packages,
     get_current_octobots_stats,
+    is_logged_in_on_community,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
@@ -93,6 +94,12 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     REQUIREMENTS_KEY,
     SYMBOL_KEY,
     ID_KEY,
+    get_account_configurations,
+    apply_account_configuration,
+    create_or_rename_account_configuration,
+    delete_account_configuration,
+    get_current_account_configuration,
+    update_current_account_configuration,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -175,6 +182,7 @@ __all__ = [
     "get_account_tentacles_packages",
     "get_preview_tentacles_packages",
     "get_current_octobots_stats",
+    "is_logged_in_on_community",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",
     "get_tentacle_documentation",
@@ -254,6 +262,12 @@ __all__ = [
     "REQUIREMENTS_KEY",
     "SYMBOL_KEY",
     "ID_KEY",
+    "get_account_configurations",
+    "apply_account_configuration",
+    "create_or_rename_account_configuration",
+    "delete_account_configuration",
+    "get_current_account_configuration",
+    "update_current_account_configuration",
     "get_exchange_holdings_per_symbol",
     "get_symbols_values",
     "get_full_candle_history_exchange_list",

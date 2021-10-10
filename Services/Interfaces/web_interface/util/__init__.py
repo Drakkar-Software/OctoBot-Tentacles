@@ -17,8 +17,10 @@
 from tentacles.Services.Interfaces.web_interface.util import flask_util
 from tentacles.Services.Interfaces.web_interface.util.flask_util import (
     get_rest_reply,
+    get_next_url_or_redirect,
 )
 
 __all__ = [
     "get_rest_reply",
+    "get_next_url_or_redirect",
 ]

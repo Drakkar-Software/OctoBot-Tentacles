@@ -21,7 +21,7 @@ import wtforms
 import octobot_commons.logging as bot_logging
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_login
-import tentacles.Services.Interfaces.web_interface.security as security
+import tentacles.Services.Interfaces.web_interface.util as util
 
 logger = bot_logging.get_logger("ServerInstance Controller")
 
@@ -36,7 +36,7 @@ def login():
             flask_login.login_user(web_login.GENERIC_USER, remember=form.remember_me.data)
             web_login.reset_attempts(flask.request.remote_addr)
 
-            return _get_next_url_or_home_redirect()
+            return util.get_next_url_or_redirect()
         if web_login.register_attempt(flask.request.remote_addr):
             form.password.errors.append('Invalid password')
             logger.warning(f"Invalid login attempt from : {flask.request.remote_addr}")
@@ -49,14 +49,7 @@ def login():
 @flask_login.login_required
 def logout():
     flask_login.logout_user()
-    return _get_next_url_or_home_redirect()
-
-
-def _get_next_url_or_home_redirect():
-    next_url = flask.request.args.get('next')
-    if not security.is_safe_url(next_url):
-        return flask.abort(400)
-    return flask.redirect(next_url or flask.url_for('home'))
+    return util.get_next_url_or_redirect()
 
 
 class LoginForm(flask_wtf.FlaskForm):
