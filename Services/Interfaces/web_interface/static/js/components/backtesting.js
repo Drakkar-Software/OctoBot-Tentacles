@@ -37,7 +37,16 @@ function handle_backtesting_buttons(){
     $("#startBacktesting").click(function(){
         $("#backtesting_progress_bar").show();
         lock_interface();
-        const request = get_selected_files();
+        const request = {};
+        request["files"] = get_selected_files();
+        if(check_date_range_available()){
+            if(!check_date_range()){
+                create_alert("error", "Invalid date range.", "");
+                return;
+            }
+            request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime() / 1000) : null;
+            request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime() / 1000) : null;
+        }
         const update_url = $("#startBacktesting").attr("start-url");
         const run_on_common_part_only = syncDataOnlyCheckbox.is(":checked");
         start_backtesting(request, `${update_url}&run_on_common_part_only=${run_on_common_part_only}`);
@@ -71,13 +80,67 @@ function handle_file_selection(){
         }else{
             syncDataOnlyDiv.addClass(hidden_class);
         }
+        handle_date_selection();
         lock_interface(false);
     });
+}
+
+function check_date_range(){
+    const start_date = new Date($("#startDate").val());
+    const end_date = new Date($("#endDate").val());
+    return (!isNaN(start_date) && !isNaN(end_date)) ? start_date < end_date : true;
+}
+
+function check_date_range_available() {
+    const data_file_checked = $(".selectable_datafile").has("input[type='checkbox']:checked");
+    return data_file_checked.length === data_file_checked.has("td[data-start-timestamp]").length;
+}
+
+function handle_date_selection(){
+    if(!check_date_range_available()){
+        startDate.prop("disabled", true);
+        endDate.prop("disabled", true);
+        return;
+    }
+    startDate.prop("disabled", false);
+    endDate.prop("disabled", false);
+    const data_file_checked_with_date_range = $(".selectable_datafile").has("input[type='checkbox']:checked")
+                                                .has("td[data-end-timestamp]");
+    if(data_file_checked_with_date_range.length === 0){
+        return;
+    }
+    let end_timestamps = [];
+    let start_timestamps = [];
+    data_file_checked_with_date_range.find("[data-end-timestamp").each(function(){
+        end_timestamps.push(parseInt($(this).attr("data-end-timestamp")));
+        start_timestamps.push(parseInt($(this).attr("data-start-timestamp")));
+    });
+    const start_timestamp = syncDataOnlyCheckbox.prop("checked") ?
+                                Math.max(...start_timestamps) : Math.min(...start_timestamps);
+    const end_timestamp = syncDataOnlyCheckbox.prop("checked") ?
+                                Math.min(...end_timestamps) : Math.max(...end_timestamps);
+
+    const newStartDateTime = new Date(start_timestamp * 1000);
+    const newEndDateTime = new Date(end_timestamp * 1000);
+    const newStartDate = newStartDateTime.toISOString().split("T")[0];
+    const newEndDate = newEndDateTime.toISOString().split("T")[0];
+    if((new Date(startDate[0].value)) < newStartDateTime){
+        startDate.val(newStartDate);
+    }
+    if((new Date(endDate[0].value)) > newEndDateTime){
+        endDate.val(newEndDate);
+    }
+    startDate[0].min = newStartDate;
+    startDate[0].max = newEndDate;
+    endDate[0].max = newEndDate;
+    endDate[0].min = newStartDate;
 }
 
 const dataFilesTable = $('#dataFilesTable').DataTable({"order": [], "destroy": true});
 const syncDataOnlyDiv = $("#synchronized-data-only-div");
 const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
+const startDate = $("#startDate");
+const endDate = $("#endDate");
 
 $(document).ready(function() {
     lock_interface_callbacks.push(function () {
@@ -91,4 +154,6 @@ $(document).ready(function() {
     lock_interface();
 
     init_backtesting_status_websocket();
+
+    syncDataOnlyCheckbox.on("change", handle_date_selection);
 });

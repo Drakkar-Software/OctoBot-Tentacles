@@ -67,7 +67,8 @@ def get_data_files_with_description():
     return interfaces_util.run_in_bot_async_executor(_retrieve_data_files_with_description(files))
 
 
-def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True):
+def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
+                                           start_timestamp=None, end_timestamp=None):
     try:
         tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
@@ -90,7 +91,9 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             independent_backtesting = octobot_api.create_independent_backtesting(config,
                                                                                  tentacles_setup_config,
                                                                                  files,
-                                                                                 run_on_common_part_only=run_on_common_part_only)
+                                                                                 run_on_common_part_only=run_on_common_part_only,
+                                                                                 start_timestamp=start_timestamp,
+                                                                                 end_timestamp=end_timestamp)
             interfaces_util.run_in_bot_main_loop(
                 octobot_api.initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
             tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
