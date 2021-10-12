@@ -18,7 +18,7 @@
  */
 
 function start_backtesting(request, update_url){
-    send_and_interpret_bot_update(request, update_url, null, start_success_callback, start_error_callback)
+    send_and_interpret_bot_update(request, update_url, null, start_success_callback, start_error_callback);
 }
 
 function start_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -60,19 +60,19 @@ function load_report(report, should_alert=False){
             if ("error" in data || errors_count > 0) {
                 let error_message = "Warning: error(s) during backtesting";
                 if ("error" in data){
-                     error_message += " " + data["error"] ;
+                     error_message += " " + data["error"];
                 }
                 if (errors_count > 0){
-                     error_message += " " + errors_count + " error(s)" ;
+                     error_message += " " + errors_count + " error(s)";
                 }
                 error_message += ", more details in logs.";
                 profitability = profitability + " " + error_message;
                 if (should_alert) {
                     create_alert("error", error_message, "");
                 }
-                $("#backtestingErrorsAlert").show()
+                $("#backtestingErrorsAlert").show();
             }else{
-                $("#backtestingErrorsAlert").hide()
+                $("#backtestingErrorsAlert").hide();
             }
 
             const symbol_reports = [];
@@ -141,7 +141,7 @@ function add_graphs(chart_identifiers){
 }
 
 function update_progress(progress){
-    $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress)
+    $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress);
 }
 
 function _refresh_status(socket){
@@ -151,7 +151,7 @@ function _refresh_status(socket){
 function init_backtesting_status_websocket(){
     const socket = get_websocket("/backtesting");
     socket.on('backtesting_status', function(backtesting_status_data) {
-        _handle_backtesting(backtesting_status_data, socket)
+        _handle_backtesting(backtesting_status_data, socket);
     });
 }
 
@@ -171,7 +171,7 @@ function _handle_backtesting(backtesting_status_data, socket){
             report.hide();
         }
         // re-schedule progress refresh
-        setTimeout(function () {_refresh_status(socket)}, 50)
+        setTimeout(function () {_refresh_status(socket)}, 50);
     }
     else{
         lock_interface(false);

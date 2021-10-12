@@ -34,14 +34,16 @@ def backtesting():
         success = False
         reply = "Action failed"
         if action_type == "start_backtesting":
-            files = flask.request.get_json()
+            data = flask.request.get_json()
             source = flask.request.args["source"]
             run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
-            success, reply = models.start_backtesting_using_specific_files(files,
+            success, reply = models.start_backtesting_using_specific_files(data["files"],
                                                                            source,
                                                                            reset_tentacle_config,
-                                                                           run_on_common_part_only)
+                                                                           run_on_common_part_only,
+                                                                           start_timestamp=data.get("start_timestamp", None),
+                                                                           end_timestamp=data.get("end_timestamp", None))
         if success:
             web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))
