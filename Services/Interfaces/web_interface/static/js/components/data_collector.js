@@ -59,11 +59,17 @@ function start_collector(){
     lock_collector_ui();
     const request = {};
     request["exchange"] = $('#exchangeSelect').val();
-    request["symbol"] = $('#symbolSelect').val();
+    request["symbols"] = $('#symbolsSelect').val();
+    request["time_frames"] = $('#timeframesSelect').val().length ? $('#timeframesSelect').val() : null;
     request["startTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#startDate").val()).getTime()) : null;
     request["endTimestamp"] = is_full_candle_history_exchanges() ? (new Date($("#endDate").val()).getTime()) : null;
     const update_url = $("#collect_data").attr(update_url_attr);
     send_and_interpret_bot_update(request, update_url, $(this), collector_success_callback, collector_error_callback);
+}
+
+function stop_collector(){
+    const update_url = $("#stop_collect_data").attr(update_url_attr);
+    send_and_interpret_bot_update({}, update_url, $(this), collector_success_callback, collector_error_callback);
 }
 
 function collector_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -87,14 +93,26 @@ function display_alert(success, message){
 function update_symbol_list(url, exchange){
     const data = {exchange: exchange};
     $.get(url, data, function(data, status){
-        const symbolSelect = $("#symbolSelect");
+        const symbolSelect = $("#symbolsSelect");
         symbolSelect.empty(); // remove old options
+        const symbolSelectBox = symbolSelect[0];
         $.each(data, function(key,value) {
-          symbolSelect.append($("<option></option>")
-             .attr("value", value).text(value));
+            symbolSelectBox.add(new Option(value,value));
         });
-        symbolSelect[0].selectedIndex = -1;
         symbolSelect.selectpicker('refresh');
+    });
+}
+
+function update_available_timeframes_list(url, exchange){
+    const data = {exchange: exchange};
+    $.get(url, data, function(data, status){
+        const timeframeSelect = $("#timeframesSelect");
+        timeframeSelect.empty();
+        const timeframeSelectBox = timeframeSelect[0];
+        $.each(data, function(key,value) {
+            timeframeSelectBox.add(new Option(value,value));
+        });
+        timeframeSelect.selectpicker('refresh');
     });
 }
 
@@ -131,13 +149,17 @@ $(document).ready(function() {
         handle_data_files_buttons();
     });
     $('#exchangeSelect').on('change', function() {
-        update_symbol_list($('#symbolSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        update_symbol_list($('#symbolsSelect').attr(update_url_attr), $('#exchangeSelect').val());
+        update_available_timeframes_list($('#timeframesSelect').attr(update_url_attr), $('#exchangeSelect').val());
         is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
     });
     $('#collect_data').click(function(){
         if(check_date_input()){
             start_collector();
         }
+    });
+    $('#stop_collect_data').click(function(){
+        stop_collector();
     });
     $('#inputFile').on('change',function(){
         handle_file_selection();
@@ -171,10 +193,15 @@ $(document).ready(function() {
     startDateMax.setDate(startDateMax.getDate() - 2);
     $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
 
-    $("#symbolSelect").select2({
+    $("#symbolsSelect").select2({
         closeOnSelect: false,
         placeholder: "Symbol"
     });
 
-    init_data_collector_status_websocket();
+    $("#timeframesSelect").select2({
+        closeOnSelect: false,
+        placeholder: "All Timeframes"
+    });
+
+    init_data_collector_status_websocket(reload_table);
 });

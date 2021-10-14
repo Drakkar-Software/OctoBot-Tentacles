@@ -14,28 +14,23 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
-from octobot_trading.enums import WebsocketFeeds as Feeds
+import octobot_trading.errors
 
 
-class OKExCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
-    EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
-        Feeds.OPEN_INTEREST: cryptofeed_constants.OPEN_INTEREST,
-        Feeds.FUNDING: cryptofeed_constants.FUNDING,
-        Feeds.LIQUIDATIONS: cryptofeed_constants.LIQUIDATIONS,
-    }
+class Bybit(exchanges.SpotCCXTExchange):
+    DESCRIPTION = ""
 
     @classmethod
-    def get_name(cls):
-        return 'okex'
+    def get_name(cls) -> str:
+        return 'bybit'
 
     @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.OKEX
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return cls.get_name() == exchange_candidate_name
 
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
+        #Bybit return an error if there is no limit or since parameter
+        try:
+            return await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=kwargs)
+        except Exception as e:
+            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")

@@ -46,6 +46,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         self.exchange_manager = None
 
     async def start(self):
+        self.should_stop = False
         should_stop_database = True
         try:
             self.exchange_manager = await trading_api.create_exchange_builder(self.config, self.exchange_name) \
@@ -90,14 +91,15 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
                     await self.get_kline_history(self.exchange_name, symbol, time_frame)
         except Exception as err:
-            self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
-                                             f"{', '.join(self.symbols)}: {err}")
             await self.database.stop()
             should_stop_database = False
             # Do not keep errored data file
             if os.path.isfile(self.temp_file_path):
                 os.remove(self.temp_file_path)
-            raise errors.DataCollectorError(err)
+            if not self.should_stop:
+                self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
+                                                 f"{', '.join(self.symbols)}: {err}")
+                raise errors.DataCollectorError(err)
         finally:
             await self.stop(should_stop_database=should_stop_database)
 
@@ -108,13 +110,16 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                             if time_frame in allowed_timeframes]
 
     async def stop(self, should_stop_database=True):
-        await self.exchange_manager.stop()
+        self.should_stop = True
+        if self.exchange_manager is not None:
+            await self.exchange_manager.stop()
         if should_stop_database:
             await self.database.stop()
             self.finalize_database()
         self.exchange_manager = None
         self.in_progress = False
         self.finished = True
+        return self.finished
 
     async def get_ticker_history(self, exchange, symbol):
         pass
@@ -126,13 +131,13 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         pass
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
+        self.current_step_percent = 0
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
 
         if self.start_timestamp is not None:
             first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
             since = self.start_timestamp
-
             if self.start_timestamp < first_candle_timestamp:
                 since = first_candle_timestamp
 
@@ -141,18 +146,18 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
             last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-
             total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
             start_fetch_time = last_candle_timestamp
 
             if self.end_timestamp is not None:
                 while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
                     candles.pop(-1)
+
             self.exchange.uniformize_candles_if_necessary(candles)
             await self.save_ohlcv(exchange=exchange,
-                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                          symbol=symbol, time_frame=time_frame, candle=candles,
-                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
             candles.clear()
 
             while since < last_candle_timestamp if not self.end_timestamp \
@@ -164,20 +169,17 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                                                                  since=(since + (time_frame_sec * 1000)))
                 if candles:
                     last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-
                     if self.end_timestamp is not None:
                         while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
                             candles.pop(-1)
                     self.exchange.uniformize_candles_if_necessary(candles)
                     await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                  symbol=symbol, time_frame=time_frame, candle=candles,
-                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                                          symbol=symbol, time_frame=time_frame, candle=candles,
+                                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
                     candles.clear()
-
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
-
             self.exchange.uniformize_candles_if_necessary(candles)
             await self.save_ohlcv(exchange=exchange,
                                   cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),

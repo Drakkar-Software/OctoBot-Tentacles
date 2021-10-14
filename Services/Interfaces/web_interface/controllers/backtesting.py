@@ -17,6 +17,8 @@
 import flask
 import werkzeug
 
+import octobot_commons.time_frame_manager as time_frame_manager
+
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -32,14 +34,16 @@ def backtesting():
         success = False
         reply = "Action failed"
         if action_type == "start_backtesting":
-            files = flask.request.get_json()
+            data = flask.request.get_json()
             source = flask.request.args["source"]
             run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
-            success, reply = models.start_backtesting_using_specific_files(files,
+            success, reply = models.start_backtesting_using_specific_files(data["files"],
                                                                            source,
                                                                            reset_tentacle_config,
-                                                                           run_on_common_part_only)
+                                                                           run_on_common_part_only,
+                                                                           start_timestamp=data.get("start_timestamp", None),
+                                                                           end_timestamp=data.get("end_timestamp", None))
         if success:
             web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))
@@ -73,10 +77,12 @@ def data_collector():
             success, reply = models.get_delete_data_file(file)
         elif action_type == "start_collector":
             details = flask.request.get_json()
-            success, reply = models.collect_data_file(details["exchange"], details["symbol"],
+            success, reply = models.collect_data_file(details["exchange"], details["symbols"], details["time_frames"],
                                                       details["startTimestamp"], details["endTimestamp"])
             if success:
                 web_interface.send_data_collector_status()
+        elif action_type == "stop_collector":
+            success, reply = models.stop_data_collector()
         elif action_type == "import_data_file":
             if flask.request.files:
                 file = flask.request.files['file']
@@ -94,6 +100,9 @@ def data_collector():
                                          full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
+                                         available_timeframes_list=[timeframe.value for timeframe in
+                                                                    time_frame_manager.sort_time_frames(
+                                                                        models.get_timeframes_list([current_exchange]))],
                                          alert=alert)
         if success:
             return util.get_rest_reply(flask.jsonify(reply))
@@ -109,6 +118,11 @@ def data_collector():
                 if target == "symbol_list":
                     exchange = flask.request.args.get('exchange')
                     return flask.jsonify(sorted(models.get_symbol_list([exchange])))
+                elif target == "available_timeframes_list":
+                    exchange = flask.request.args.get('exchange')
+                    return flask.jsonify([timeframe.value for timeframe in
+                                          time_frame_manager.sort_time_frames(
+                                              models.get_timeframes_list([exchange]))])
             from_key = "from"
             if from_key in flask.request.args:
                 origin_page = flask.request.args[from_key]
@@ -120,5 +134,8 @@ def data_collector():
                                      full_candle_history_ccxt_exchanges=models.get_full_candle_history_exchange_list(),
                                      current_exchange=models.get_current_exchange(),
                                      full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
+                                     available_timeframes_list=[timeframe.value for timeframe in
+                                                                time_frame_manager.sort_time_frames(
+                                                                    models.get_timeframes_list([current_exchange]))],
                                      origin_page=origin_page,
                                      alert={})

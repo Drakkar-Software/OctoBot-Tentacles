@@ -13,9 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import math
+
 import tulipy
 import numpy
-import math
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.data_util as data_util
@@ -24,6 +25,64 @@ import octobot_evaluators.util as evaluators_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
+
+
+class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
+    FAST_LENGTH = "fast_length"
+    SLOW_LENGTH = "slow_length"
+    SLOW_MA_TYPE = "slow_ma_type"
+    FAST_MA_TYPE = "fast_ma_type"
+
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, self.__class__)
+        self.fast_length = self.config.get(self.FAST_LENGTH, 50)
+        self.slow_length = self.config.get(self.SLOW_LENGTH, 200)
+        self.fast_ma_type = self.config.get(self.FAST_MA_TYPE, "SMA").lower()
+        self.slow_ma_type = self.config.get(self.SLOW_MA_TYPE, "SMA").lower()
+        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+
+        close = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
+                                                           time_frame,
+                                                           include_in_construction=inc_in_construction_data)
+        volume = trading_api.get_symbol_volume_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
+                                                            time_frame,
+                                                           include_in_construction=inc_in_construction_data)
+        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+        if len(close) > self.slow_length:
+            await self.evaluate(cryptocurrency, symbol, time_frame, candle, close, volume)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                time_frame=time_frame))
+
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle, candle_data, volume_data):
+
+        ma1 = None
+        ma2 = None
+
+        if self.fast_ma_type == "vwma":
+            ma1 = tulipy.vwma(candle_data, volume_data, self.fast_length)[-1]
+        elif self.fast_ma_type == "lsma":
+            ma1 = tulipy.linreg(candle_data, self.fast_length)[-1]
+        else:
+            ma1 = getattr(tulipy, self.fast_ma_type)(candle_data, self.fast_length)[-1]
+
+        if self.slow_ma_type == "vwma":
+            ma2 = tulipy.vwma(candle_data, volume_data, self.slow_length)[-1]
+        elif self.slow_ma_type == "lsma":
+            ma2 = tulipy.linreg(candle_data, self.slow_length)[-1]
+        else:
+            ma2 = getattr(tulipy, self.slow_ma_type)(candle_data, self.slow_length)[-1]
+
+        if ma1 > ma2:
+            self.eval_note = -1
+        elif ma1 < ma2:
+            self.eval_note = 1
+
 
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend

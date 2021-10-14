@@ -74,6 +74,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             telegram.ext.CommandHandler(["refresh_portfolio", "rpf"], self.command_portfolio_refresh),
             telegram.ext.CommandHandler(["version", "v"], self.command_version),
             telegram.ext.CommandHandler("stop", self.command_stop),
+            telegram.ext.CommandHandler("restart", self.command_restart),
             telegram.ext.CommandHandler("help", self.command_help),
             telegram.ext.CommandHandler(["pause", "resume"], self.command_pause_resume),
             telegram.ext.MessageHandler(telegram.ext.Filters.command, self.command_unknown)
@@ -109,6 +110,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             message += "/refresh\_portfolio or /rpf : `Forces OctoBot's real trader portfolio refresh using exchange " \
                        "data. Should normally not be necessary.`" + interfaces_bots.EOL
             message += "/pause or /resume: `Pauses or resumes me.`" + interfaces_bots.EOL
+            message += "/restart: `Restarts me.`" + interfaces_bots.EOL
             message += "/stop: `Stops me.`" + interfaces_bots.EOL
             message += "/version or /v: `Displays my current software version.`" + interfaces_bots.EOL
             message += "/help: `Displays this help.`"
@@ -127,6 +129,13 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                                                interfaces_bots.AbstractBotInterface.get_command_start(markdown=True))
         elif TelegramBotInterface._is_authorized_chat(update):
             TelegramBotInterface._send_message(update, interfaces_bots.UNAUTHORIZED_USER_MESSAGE)
+
+    @staticmethod
+    def command_restart(update, _):
+        if TelegramBotInterface._is_valid_user(update):
+            TelegramBotInterface._send_message(update, "I'll come back !")
+            threading.Thread(target=interfaces_bots.AbstractBotInterface.set_command_restart,
+                             name="Restart bot from telegram command").start()
 
     @staticmethod
     def command_stop(update, _):
