@@ -148,7 +148,7 @@ jobs:
         run: |
           sed -i "s/VERSION_PLACEHOLDER/${TARGET_BRANCH#refs/*/}/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.TENTACLES_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -ite -ute ${{ secrets.TENTACLES_OFFICIAL_PATH }}/tentacles -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}/
 
       - name: Publish latest tentacles
         if: github.ref == 'refs/heads/dev' && startsWith(github.ref, 'refs/tags') != true
@@ -157,7 +157,7 @@ jobs:
         run: |
           sed -i "s/VERSION_PLACEHOLDER/latest/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}/
 
       - name: Publish cleaned branch tentacles
         if: startsWith(github.ref, 'refs/tags') != true && github.ref != 'refs/heads/master'
@@ -169,7 +169,7 @@ jobs:
           sed -i "s/base/$branch/g" metadata.yaml
           sed -i "s/officials/dev/g" metadata.yaml
           cd OctoBot
-          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}
+          python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}/
 
   notify:
     name: Notify
