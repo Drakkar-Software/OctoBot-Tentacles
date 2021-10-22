@@ -50,6 +50,7 @@ DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 # Override system configuration content types
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 flask_util.init_content_types()
+server_instance.json_encoder = flask_util.Jsonifier
 
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface

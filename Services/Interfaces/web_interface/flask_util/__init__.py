@@ -36,6 +36,11 @@ from tentacles.Services.Interfaces.web_interface.flask_util.template_filters imp
     is_bool,
 )
 
+from tentacles.Services.Interfaces.web_interface.flask_util import jsonifier
+from tentacles.Services.Interfaces.web_interface.flask_util.jsonifier import (
+    Jsonifier,
+)
+
 __all__ = [
     "init_content_types",
     "context_processor_register",
@@ -43,4 +48,5 @@ __all__ = [
     "is_dict",
     "is_list",
     "is_bool",
+    "Jsonifier",
 ]
