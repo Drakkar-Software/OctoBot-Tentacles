@@ -1,0 +1,8 @@
+{
+    "default_config": [
+        "SimpleStrategyEvaluator"
+    ],
+    "required_strategies": [
+        "SimpleStrategyEvaluator"
+    ]
+}
