@@ -153,7 +153,8 @@ function handleButtons() {
     $("#startBacktesting").click(function(){
         $("#backtesting_progress_bar").show();
         lock_interface();
-        const request = get_selected_files();
+        const request = {};
+        request["files"] = get_selected_files();
         const update_url = $("#startBacktesting").attr("start-url");
         start_backtesting(request, update_url);
     });
