@@ -1,1 +1,1 @@
-from .scripted_trading import ScriptedTradingMode
+from .active_scripts.scripted_trading import ScriptedTradingMode
