@@ -25,6 +25,7 @@ from tentacles.Services.Interfaces.web_interface.models import logs
 from tentacles.Services.Interfaces.web_interface.models import medias
 from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
+from tentacles.Services.Interfaces.web_interface.models import strategy_designs
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
 
@@ -138,6 +139,9 @@ from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer impor
     get_current_run_params,
     get_optimizer_status,
 )
+from tentacles.Services.Interfaces.web_interface.models.strategy_designs import (
+    get_plotted_data,
+)
 from tentacles.Services.Interfaces.web_interface.models.tentacles import (
     get_tentacles_packages,
     call_tentacle_manager,
@@ -241,6 +245,7 @@ __all__ = [
     "get_optimizer_report",
     "get_current_run_params",
     "get_optimizer_status",
+    "get_plotted_data",
     "get_tentacles_packages",
     "call_tentacle_manager",
     "install_packages",

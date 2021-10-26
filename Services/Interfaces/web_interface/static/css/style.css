@@ -470,3 +470,7 @@ table.dataTable tfoot th {
     background: #343a40;
     font-weight: normal;
 }
+
+div.graph-view {
+    min-height: 400px;
+}
