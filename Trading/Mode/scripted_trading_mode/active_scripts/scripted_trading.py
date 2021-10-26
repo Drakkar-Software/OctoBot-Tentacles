@@ -16,12 +16,17 @@
 
 from .script import script
 from octobot_trading.modes.scripting_library import AbstractScriptedTradingMode, AbstractScriptedTradingModeProducer
+from .test_script.backtesting.test_script import backtest_test_script, PlottedElements
 
 
 class ScriptedTradingMode(AbstractScriptedTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.producer = ScriptedTradingModeProducer
+
+    @staticmethod
+    async def plot_script() -> PlottedElements:
+        return await backtest_test_script()
 
 
 class ScriptedTradingModeProducer(AbstractScriptedTradingModeProducer):

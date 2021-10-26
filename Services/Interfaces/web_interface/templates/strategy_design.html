@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% set active_page = "strategy_design" %}
+
+{% from "macros/forms.html" import render_field %}
+
+{% block body %}
+<br>
+<div class="mx-auto">
+    <div class="card text-center">
+        <div class="card-header">
+            <h2>
+                Strategy Design
+            </h2>
+        </div>
+        <div class="card-body" id="charts" data-url="{{url_for('plotted_data')}}">
+            <div id="main-chart" class="graph-view">
+                part 1: graph
+            </div>
+            <div id="sub-chart" class="graph-view">
+                part 2: indicators if any
+            </div>
+            <div id="additional-chart">
+            </div>
+        </div>
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}
