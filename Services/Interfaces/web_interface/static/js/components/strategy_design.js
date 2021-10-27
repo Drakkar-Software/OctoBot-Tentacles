@@ -1,5 +1,6 @@
 
 function updateCharts(data){
+    const chartDivs = [];
     data.data.sub_elements.forEach(function (sub_element) {
         const chartData = [];
         const divID = sub_element.name;
@@ -44,14 +45,23 @@ function updateCharts(data){
                 yaxis: yaxis,
             };
             const plotlyConfig = {
+                scrollZoom: true,
                 modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
                 responsive: true,
                 showEditInChartStudio: true,
                 displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
             };
             Plotly.newPlot(divID, chartData, layout, plotlyConfig);
+            chartDivs.push($(`#${divID}`))
+
         });
     });
+    chartDivs[0][0].on("plotly_relayout", function(eventdata) {
+        Plotly.relayout("sub-chart", eventdata);
+    });
+    // chartDivs[1][0].on("plotly_relayout", function(eventdata) {
+    //     Plotly.relayout("main-chart", eventdata);
+    // });
 }
 
 function displayCharts(){
