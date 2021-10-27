@@ -22,12 +22,32 @@
             <div id="additional-chart">
             </div>
         </div>
+        <div class="">
+            {% if True %}
+            <div class="">
+                <iframe
+                        src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode/active_scripts/test_script/backtesting/test_script.py"
+                        class="w-100 graph-view"
+                ></iframe>
+            </div>
+            {% else %}
+            <div>
+                https://microsoft.github.io/monaco-editor/
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+            <button route="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+        </div>
     </div>
 </div>
+
 
 <br>
 {% endblock %}
 
 {% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

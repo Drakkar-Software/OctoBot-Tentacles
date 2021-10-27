@@ -17,3 +17,8 @@ import octobot_services.interfaces.util as interfaces_util
 
 def get_plotted_data(trading_mode):
     return interfaces_util.run_in_bot_async_executor(trading_mode.plot_script()).to_json()
+
+
+def update_plot_script(trading_mode):
+    trading_mode.reload_plot_script()
+    return "success"
