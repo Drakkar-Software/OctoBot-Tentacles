@@ -14,22 +14,36 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+import importlib
+
 from .script import script
-from octobot_trading.modes.scripting_library import AbstractScriptedTradingMode, AbstractScriptedTradingModeProducer
-from .test_script.backtesting.test_script import backtest_test_script, PlottedElements
+import octobot_trading.modes.scripting_library as scripting_library
+import tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script as test_script
 
 
-class ScriptedTradingMode(AbstractScriptedTradingMode):
+class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):
+    PLOT_SCRIPT = None
+
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.producer = ScriptedTradingModeProducer
+        self.register_plot_script(test_script.backtest_test_script)
 
-    @staticmethod
-    async def plot_script() -> PlottedElements:
-        return await backtest_test_script()
+    @classmethod
+    async def plot_script(cls) -> scripting_library.PlottedElements:
+        return await cls.PLOT_SCRIPT()
+
+    @classmethod
+    def register_plot_script(cls, plot_script):
+        cls.PLOT_SCRIPT = plot_script
+
+    @classmethod
+    def reload_plot_script(cls):
+        importlib.reload(test_script)
+        cls.register_plot_script(test_script.backtest_test_script)
 
 
-class ScriptedTradingModeProducer(AbstractScriptedTradingModeProducer):
+class ScriptedTradingModeProducer(scripting_library.AbstractScriptedTradingModeProducer):
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.script = script

@@ -60,6 +60,8 @@ import tentacles.Services.Interfaces.web_interface.advanced_controllers as advan
 server_instance.register_blueprint(advanced_controllers.advanced)
 server_instance.register_blueprint(api.api)
 
+server_instance.config["TEMPLATES_AUTO_RELOAD"] = True
+
 # disable server logging
 loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
 for logger in loggers:
