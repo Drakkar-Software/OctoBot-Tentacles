@@ -82,6 +82,7 @@ from tentacles.Services.Interfaces.web_interface.controllers.medias import (
 from tentacles.Services.Interfaces.web_interface.controllers.strategy_designs import (
     strategy_design,
     plotted_data,
+    update_plot_script,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
@@ -129,6 +130,7 @@ __all__ = [
     "terms",
     "strategy_design",
     "plotted_data",
+    "update_plot_script",
     "portfolio",
     "symbol_market_status",
     "trading",
