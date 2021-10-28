@@ -7,7 +7,7 @@ from octobot_trading.modes.scripting_library import *
 async def backtest_test_script():
 
     pair = "BTC/USDT"
-    time_frame = "4h"
+    time_frame = "1h"
     exchange = "binance"
     exchange_ids = api.get_exchange_ids()
     exchange_manager = None
@@ -24,7 +24,7 @@ async def backtest_test_script():
     )
 
     drawing = PlottedElements()
-
+    rsi_data = ti.rsi(Close(ctx, pair, time_frame), 14)
     with drawing.part("main-chart") as part:
         part.plot(
             kind="candlestick",
@@ -40,18 +40,9 @@ async def backtest_test_script():
         part.plot(
             kind="scatter",
             x=Time(ctx, pair, time_frame),
-            y=Close(ctx, pair, time_frame),
-            title="Close")
-        part.plot(
-            kind="scatter",
-            x=Time(ctx, pair, time_frame),
-            y=Open(ctx, pair, time_frame),
-            title="Open")
-        part.plot(
-            kind="scatter",
-            x=Time(ctx, pair, time_frame),
-            y=Low(ctx, pair, time_frame),
-            title="Low")
+            y=rsi_data,
+            title="RSI")
+
 
     return drawing
 
