@@ -573,15 +573,15 @@ def get_all_symbols_dict():
             retries = requests.packages.urllib3.util.retry.Retry(total=5, backoff_factor=0.5,
                                                                  status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
-            request_response = session.get(constants.CURRENCIES_LIST_URL)
-            all_symbols_dict = {
-                currency_data[NAME_KEY]: {
-                    SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
-                    ID_KEY: currency_data[ID_KEY]
-                }
-                for currency_data in request_response.json()
-                if _is_legit_currency(currency_data[NAME_KEY])
-            }
+            # get top 500 coins (2 * 250)
+            for i in range(1, 3):
+                request_response = session.get(f"{constants.CURRENCIES_LIST_URL}{i}")
+                for currency_data in request_response.json():
+                    if _is_legit_currency(currency_data[NAME_KEY]):
+                        all_symbols_dict[currency_data[NAME_KEY]] = {
+                            SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
+                            ID_KEY: currency_data[ID_KEY]
+                        }
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
