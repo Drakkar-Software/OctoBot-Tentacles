@@ -51,13 +51,13 @@
 </style>
 
 <div class="strategy_body">
-        <div id="charts" data-url="{{url_for('plotted_data')}}">
-            <div id="main-chart">
+        <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
+            <div id="main-chart" class="">
             </div>
-            <div id="sub-chart">
+            <div id="sub-chart" class="">
             </div>
         </div>
-        <div class="toolbox">
+        <div id="toolbox" class="toolbox resizable">
            <div>
                 <ul class="nav nav-tabs">
                     <li class="active">
@@ -72,7 +72,7 @@
                     <li>
                         <div>
                             <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
-                            <button route="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+                            <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
                         </div>
                     </li>
                 </ul>

@@ -44,7 +44,7 @@ def plotted_data():
         return util.get_rest_reply(str(e), 500)
 
 
-@web_interface.server_instance.route("/update_plot_script")
+@web_interface.server_instance.route("/update_plot_script", methods=["POST"])
 @login.login_required_when_activated
 def update_plot_script():
     try:

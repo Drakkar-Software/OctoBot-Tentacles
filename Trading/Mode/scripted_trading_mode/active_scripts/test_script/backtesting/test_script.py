@@ -1,13 +1,15 @@
 from tentacles.Evaluator.TA import *
 import octobot_trading.api as api
 import octobot_commons.enums as commons_enums
+import time
 from octobot_trading.modes.scripting_library import *
 
 
 async def backtest_test_script():
 
+    reader = DBReader("scriptedTradingMode.json")
     pair = "BTC/USDT"
-    time_frame = "1h"
+    time_frame = "4h"
     exchange = "binance"
     exchange_ids = api.get_exchange_ids()
     exchange_manager = None
@@ -35,6 +37,16 @@ async def backtest_test_script():
             close=Close(ctx, pair, time_frame),
             volume=Volume(ctx, pair, time_frame),
             title="Candles")
+        order_times = []
+        order_prices = []
+        for order in reader.select("orders", reader.search().state == "closed"):
+            order_times.append(order["time"])
+            order_prices.append(order["price"])
+        part.plot(
+            kind="markers",
+            x=order_times,
+            y=order_prices,
+            title="Orders")
 
     with drawing.part("sub-chart") as part:
         part.plot(
@@ -43,13 +55,4 @@ async def backtest_test_script():
             y=rsi_data,
             title="RSI")
 
-
     return drawing
-
-
-        # backtesting_results.plot(kind='bubble3d',x=time,y=pnl,z=winrate,size=confluence_count,text='text',categories='categories',
-        #                         title='Cufflinks - Bubble 3D Chart',colorscale='set1',
-        #                         width=.5,opacity=.9)
-        #
-        # backtesting_results.plot(kind='surface',theme='solar',colorscale='brbg',title='Cufflinks - Surface Plot',
-        #                              margin=(0,0,0,0))

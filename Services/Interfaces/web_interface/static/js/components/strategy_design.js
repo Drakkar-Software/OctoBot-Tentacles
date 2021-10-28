@@ -32,15 +32,29 @@ function updateCharts(data){
             chartData.push(chartedElements);
             const xaxis = {
                 autorange: true,
+                rangeslider: {
+                    visible: false,
+                }
             };
             if(chartDetails.x_type !== null){
                 xaxis.type = chartDetails.x_type;
             }
-            const yaxis = {};
+            const yaxis = {
+                fixedrange: true,
+            };
             if(chartDetails.y_type !== null){
                 yaxis.type = chartDetails.y_type;
             }
             const layout = {
+                autosize: true,
+                // height: 500,
+                margin: {
+                    l: 50,
+                    r: 50,
+                    b: 15,
+                    t: 25,
+                    pad: 0
+                },
                 xaxis: xaxis,
                 yaxis: yaxis,
             };
@@ -79,6 +93,31 @@ function displayCharts(){
     });
 }
 
+function handleScriptButtons(){
+    $("#reload-script").click(function (){
+        const update_url = $("#reload-script").data("url")
+        send_and_interpret_bot_update({}, update_url, null, reload_request_success_callback, generic_request_failure_callback);
+
+    })
+}
+
+function reload_request_success_callback(updated_data, update_url, dom_root_element, msg, status){
+    displayCharts();
+}
+
+function handleResizables(){
+    $(".resizable").resizable();
+    $(".resizable").on("resize", function (eventData){
+        let otherDiv = "charts";
+        if(eventData.currentTarget.id === "charts"){
+            otherDiv = "toolbox";
+        }
+        document.getElementById(otherDiv).style.height = eventData.currentTarget.style.height;
+    });
+}
+
 $(document).ready(function() {
     displayCharts();
+    handleScriptButtons();
+    handleResizables();
 });
