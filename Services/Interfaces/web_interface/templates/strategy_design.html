@@ -4,47 +4,108 @@
 {% from "macros/forms.html" import render_field %}
 
 {% block body %}
-<br>
-<div class="mx-auto">
-    <div class="card text-center">
-        <div class="card-header">
-            <h2>
-                Strategy Design
-            </h2>
+
+
+<style>
+
+.strategy_body {
+    height: calc(100vh - 96px);
+    position: fixed;
+    width: 100vw;
+}
+    .container-fluid {
+    margin: 0;
+    padding: 0;
+}
+
+#charts {
+    border:1px solid black;
+
+    width: 100vw;
+    height: calc(60vh - 96px);
+}
+#main-chart {
+    height: calc(45vh - 98px) !important;
+}
+#sub-chart {
+    height: 15vh !important;
+}
+
+.toolbox {
+    border:1px solid black;
+
+    width:100vw;
+    height: 40vh;
+}
+
+
+.inside-tab-content {
+    width: 100%;
+    height: 35.8vh;
+}
+
+.hide {
+    display: none;
+}
+
+</style>
+
+<div class="strategy_body">
+        <div id="charts" data-url="{{url_for('plotted_data')}}">
+            <div id="main-chart">
+            </div>
+            <div id="sub-chart">
+            </div>
         </div>
-        <div class="card-body" id="charts" data-url="{{url_for('plotted_data')}}">
-            <div id="main-chart" class="graph-view">
-                part 1: graph
+        <div class="toolbox">
+           <div>
+                <ul class="nav nav-tabs">
+                    <li class="active">
+                        <a href="#code-editor">Code Editor</a>
+                    </li>
+                    <li>
+                        <a href="#strategy-tester">Strategy Tester</a>
+                    </li>
+                    <li>
+                        <a href="#trade-history">Trade History</a>
+                    </li>
+                    <li>
+                        <div>
+                            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+                            <button route="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+                        </div>
+                    </li>
+                </ul>
             </div>
-            <div id="sub-chart" class="graph-view">
-                part 2: indicators if any
-            </div>
-            <div id="additional-chart">
-            </div>
-        </div>
-        <div class="">
+
+            <section id="code-editor" class="tab-content active">
             {% if True %}
-            <div class="">
-                <iframe
-                        src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode/active_scripts/test_script/backtesting/test_script.py"
-                        class="w-100 graph-view"
+
+                <iframe class="inside-tab-content"
+                        src="http://localhost:8888"  <!-- todo open active script  / default root is trading profiles-->
                 ></iframe>
-            </div>
+
             {% else %}
-            <div>
+            <div class="inside-tab-content">
                 https://microsoft.github.io/monaco-editor/
             </div>
             {% endif %}
-        </div>
-        <div class="card-footer">
-            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
-            <button route="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+            </section>
+            <section id="strategy-tester" class="tab-content hide">
+                <div class="inside-tab-content">
+                    strategy tester
+                </div>
+            </section>
+            <section id="trade-history" class="tab-content hide">
+                <div class="inside-tab-content">
+                    Trade History
+                </div>
+            </section>
         </div>
     </div>
 </div>
 
 
-<br>
 {% endblock %}
 
 {% block additional_scripts %}
