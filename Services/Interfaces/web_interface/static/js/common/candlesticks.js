@@ -266,7 +266,10 @@ function create_layout(graph_title){
             autorange: true,
             domain: [0, 1],
             title: 'Date',
-            type: 'date'
+            type: 'date',
+            rangeslider: {
+                visible: false,
+            }
         },
         yaxis1: {
             domain: [0, 0.2],

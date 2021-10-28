@@ -21,4 +21,4 @@ def get_plotted_data(trading_mode):
 
 def update_plot_script(trading_mode):
     trading_mode.reload_plot_script()
-    return "success"
+    return {"success": True}
