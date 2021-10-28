@@ -16,7 +16,7 @@
 
 import importlib
 
-from .script import script
+from .test_script import *
 import octobot_trading.modes.scripting_library as scripting_library
 import tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script as test_script
 
