@@ -23,6 +23,7 @@ import flask_socketio
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
+import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -59,6 +60,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.web_login_manger = None
         self.requires_password = False
         self.password_hash = ""
+        self.dev_mode = False
         # Set services_constants.ENV_CORS_ALLOWED_ORIGINS env variable add stricter cors rules allowed origins
         # example: http://localhost:5000
         # Note: you can specify multiple origins using comma as a separator, ex: http://localhost:5000,https://a.com
@@ -105,6 +107,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
                 self.should_open_web_interface = env_value.lower() == "true"
         except KeyError:
             self.should_open_web_interface = True
+        self.dev_mode = interfaces_util.get_edited_config(dict_only=False).dev_mode_enabled()
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
@@ -146,6 +149,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         @websocket_instance.on_error_default
         def default_error_handler(e):
             self.logger.exception(e, True, f"Error with websocket: {e}")
+
         for namespace in websockets.namespaces:
             websocket_instance.on_namespace(namespace)
 
@@ -158,12 +162,15 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             time.sleep(0.05)
 
         try:
+            server_instance = web_interface_root.server_instance
+            if self.dev_mode:
+                server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
             # register session secret key
-            web_interface_root.server_instance.secret_key = self.session_secret_key
-            self._handle_login(web_interface_root.server_instance)
+            server_instance.secret_key = self.session_secret_key
+            self._handle_login(server_instance)
             self.websocket_instance = self._prepare_websocket()
 
-            security.register_responses_extra_header(web_interface_root.server_instance, True)
+            security.register_responses_extra_header(server_instance, True)
 
             if self.should_open_web_interface:
                 self._open_web_interface_on_browser()
