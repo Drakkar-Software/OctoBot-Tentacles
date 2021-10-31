@@ -1,9 +1,27 @@
+const resizeObserver = new ResizeObserver(entries => {
+    log("resize")
+    for (let entry of entries) {
+        Plotly.Plots.resize(entry.target);
+    }
+});
 
 function updateCharts(data){
     const chartDivs = [];
+    let mainLayout = undefined;
+    log(data.data.sub_elements.length)
+    if(data.data.sub_elements.length <= 1){
+        $("#main-chart").resizable("option", "disabled", true );
+    }
+    if(data.data.sub_elements.length <= 2){
+        $("#main-chart").addClass("max-width");
+    }
+    if(data.data.sub_elements.length > 2){
+        $("#main-chart").removeClass("max-width");
+    }
     data.data.sub_elements.forEach(function (sub_element) {
         const chartData = [];
         const divID = sub_element.name;
+        log("    data.data.sub_elements")
         sub_element.data.elements.forEach(function (chartDetails){
             const chartedElements = {
               x: chartDetails.x,
@@ -57,6 +75,12 @@ function updateCharts(data){
                 },
                 xaxis: xaxis,
                 yaxis: yaxis,
+                showlegend: true,
+                legend: {
+                    x: 1,
+                    xanchor: 'right',
+                    y: 1
+                },
             };
             const plotlyConfig = {
                 scrollZoom: true,
@@ -65,17 +89,37 @@ function updateCharts(data){
                 showEditInChartStudio: true,
                 displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
             };
-            Plotly.newPlot(divID, chartData, layout, plotlyConfig);
+            log("Plotly.newPlot")
+            Plotly.newPlot(divID, chartData, layout, plotlyConfig).then(function (target){
+                removeExplicitSize(target);
+                resizeObserver.observe(target);
+                if(divID !== "main-chart"){
+                    // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
+                    Plotly.relayout("sub-chart", {xaxis: {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type}});
+                }
+            })
+            if(divID === "main-chart"){
+                mainLayout = layout;
+            }
             chartDivs.push($(`#${divID}`))
 
         });
     });
-    chartDivs[0][0].on("plotly_relayout", function(eventdata) {
+    document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
         Plotly.relayout("sub-chart", eventdata);
     });
     // chartDivs[1][0].on("plotly_relayout", function(eventdata) {
     //     Plotly.relayout("main-chart", eventdata);
     // });
+}
+
+function removeExplicitSize(figure){
+  delete figure.layout.width;
+  delete figure.layout.height;
+  figure.layout.autosize = true;
+  // Turn off responsive (ie. responsive to window resize)
+  figure.config = { responsive: false };
+  return figure;
 }
 
 function displayCharts(){
@@ -93,10 +137,18 @@ function displayCharts(){
     });
 }
 
+function isLiveGraph(){
+    //TODO
+    return true;
+}
+
 function handleScriptButtons(){
     $("#reload-script").click(function (){
         const update_url = $("#reload-script").data("url")
-        send_and_interpret_bot_update({}, update_url, null, reload_request_success_callback, generic_request_failure_callback);
+        const data = {
+            live: isLiveGraph(),
+        };
+        send_and_interpret_bot_update(data, update_url, null, reload_request_success_callback, generic_request_failure_callback);
 
     })
 }
@@ -107,12 +159,15 @@ function reload_request_success_callback(updated_data, update_url, dom_root_elem
 
 function handleResizables(){
     $(".resizable").resizable();
-    $(".resizable").on("resize", function (eventData){
-        let otherDiv = "charts";
-        if(eventData.currentTarget.id === "charts"){
-            otherDiv = "toolbox";
-        }
-        document.getElementById(otherDiv).style.height = eventData.currentTarget.style.height;
+    $(".resizable").on("resize", function () {
+        current_charts_height = $("#charts").height()
+        new_toolbox_height = "calc(100vh - 96px - " + current_charts_height + "px)";
+        $("#toolbox").css("height", new_toolbox_height);
+
+
+        current_main_chart_height = $("#main-chart").height()
+        new_sub_chart_height = "calc(100% - 5px - " + current_main_chart_height + "px)"
+        $("#sub-chart").css("height", new_sub_chart_height);
     });
 }
 
