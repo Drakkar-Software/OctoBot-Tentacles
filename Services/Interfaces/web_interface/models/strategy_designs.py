@@ -13,12 +13,31 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
+import octobot_services.api as services_api
+import octobot_trading.modes.scripting_library as scripting_library
 
 
 def get_plotted_data(trading_mode):
-    return interfaces_util.run_in_bot_async_executor(trading_mode.plot_script()).to_json()
+    elements = scripting_library.PlottedElements()
+    interfaces_util.run_in_bot_async_executor(
+        elements.fill_from_database(
+            trading_mode.get_db_name(
+                interfaces_util.get_bot_api().get_bot_id()
+            )
+        )
+    )
+    return elements.to_json()
 
 
-def update_plot_script(trading_mode):
-    trading_mode.reload_plot_script()
+def update_plot_script(trading_mode, is_live):
+    interfaces_util.run_in_bot_async_executor(
+        services_api.send_user_command(
+            interfaces_util.get_bot_api().get_bot_id(),
+            trading_mode.get_name(),
+            trading_mode.USER_COMMAND_RELOAD_SCRIPT,
+            {
+                trading_mode.USER_COMMAND_RELOAD_SCRIPT_IS_LIVE: is_live
+            }
+        )
+    )
     return {"success": True}
