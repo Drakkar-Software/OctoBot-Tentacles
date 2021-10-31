@@ -13,7 +13,7 @@
     position: fixed;
     width: 100vw;
 }
-    .container-fluid {
+.container-fluid {
     margin: 0;
     padding: 0;
 }
@@ -23,12 +23,15 @@
 
     width: 100vw;
     height: calc(60vh - 96px);
+    max-height: calc(100vh - 98px - 57px);
 }
 #main-chart {
-    height: calc(45vh - 98px) !important;
+    height: 65%;
+    max-height: 100%;
 }
 #sub-chart {
-    height: 15vh !important;
+    height: calc(35% - 5px);
+    max-height: calc(100% - 15px);
 }
 
 .toolbox {
@@ -36,60 +39,77 @@
 
     width:100vw;
     height: 40vh;
+
 }
 
+nav-tabs-bar{
+    height: 59px;
+}
+
+.tab-content{
+    height: calc(100% - 56px);
+}
+
+.max-width{
+    min-width: 100%;
+}
 
 .inside-tab-content {
     width: 100%;
-    height: 35.8vh;
+    height: 100%;
 }
 
 .hide {
     display: none;
 }
+.draggable-resizer{
+margin:5px;
+background:#d1d4dc
+}
 
 </style>
 
+<!-- todo make plotly resize after height changed https://codepen.io/antoinerg/pen/KjXbEo -->
+
 <div class="strategy_body">
         <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
-            <div id="main-chart" class="">
+            <div id="main-chart" class="resizable">
+            </div>
+            <div class="draggable-resizer">
             </div>
             <div id="sub-chart" class="">
             </div>
         </div>
-        <div id="toolbox" class="toolbox resizable">
-           <div>
-                <ul class="nav nav-tabs">
-                    <li class="active">
+        <div id="toolbox" class="toolbox">
+           <div class="nav-tabs-bar">
+
+                    <button class="active btn btn-primary waves-effect"  type="button">
                         <a href="#code-editor">Code Editor</a>
-                    </li>
-                    <li>
+                    </button>
+                    <button class="btn waves-effect" type="button">
                         <a href="#strategy-tester">Strategy Tester</a>
-                    </li>
-                    <li>
+                    </button>
+                    <button class="btn waves-effect" type="button">
                         <a href="#trade-history">Trade History</a>
-                    </li>
-                    <li>
-                        <div>
-                            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
-                            <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
-                        </div>
-                    </li>
-                </ul>
+                    </button>
+
+                    <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+                    <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+
             </div>
 
             <section id="code-editor" class="tab-content active">
-            {% if True %}
+                {% if True %}
 
-                <iframe class="inside-tab-content"
-                        src="http://localhost:8888"  <!-- todo open active script  / default root is trading profiles-->
-                ></iframe>
+                    <iframe class="inside-tab-content"
+                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                    ></iframe>
 
-            {% else %}
-            <div class="inside-tab-content">
-                https://microsoft.github.io/monaco-editor/
-            </div>
-            {% endif %}
+                {% else %}
+                <div class="inside-tab-content">
+                    https://microsoft.github.io/monaco-editor/
+                </div>
+                {% endif %}
             </section>
             <section id="strategy-tester" class="tab-content hide">
                 <div class="inside-tab-content">
@@ -104,7 +124,6 @@
         </div>
     </div>
 </div>
-
 
 {% endblock %}
 

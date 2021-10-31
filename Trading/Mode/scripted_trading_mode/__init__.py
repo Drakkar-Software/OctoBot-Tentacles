@@ -1,1 +1,1 @@
-from .active_scripts.scripted_trading import ScriptedTradingMode
+from tentacles.Trading.Mode.scripted_trading_mode.scripted_trading import ScriptedTradingMode
