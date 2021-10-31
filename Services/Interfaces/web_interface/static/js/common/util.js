@@ -67,19 +67,21 @@ function replace_spaces(str, replacement=""){
 function get_selected_options(element){
     const selected_options = [];
     element.find(":selected").each(function(){
-        selected_options.push($(this).val())
+        selected_options.push($(this).val());
     });
-    return selected_options
+    return selected_options;
 }
 
 
 // utility functions
 function isDefined(thing){
-    return (typeof thing !== typeof undefined && thing !== false && thing !==null)
+    return (typeof thing !== "undefined" && thing !== false && thing !==null);
 }
 
 function log(text){
-    window.console&&console.log(text);
+    if(window.console){
+        console.log(text);
+    }
 }
 
 function get_events(elem, event_type){
@@ -158,7 +160,7 @@ function fix_config_values(config){
         }else if (val instanceof Object){
             fix_config_values(config[key]);
         }
-    })
+    });
 }
 
 function getValueChangedFromRef(newObject, refObject) {
@@ -169,17 +171,17 @@ function getValueChangedFromRef(newObject, refObject) {
     else{
         $.each(newObject, function (key, val) {
             if (val instanceof Array || val instanceof Object){
-                changes = getValueChangedFromRef(val, refObject[key])
+                changes = getValueChangedFromRef(val, refObject[key]);
             }
             else if (refObject[key] !== val){
                 if (typeof val === "number"){
-                    changes = Number(refObject[key]) !== val
+                    changes = Number(refObject[key]) !== val;
                 }else{
                     changes = true;
                 }
             }
             if (changes){
-                return false
+                return false;
             }
         });
     }
@@ -222,4 +224,10 @@ function debounce(func, wait, immediate) {
     if (callNow){
         func.apply(context, args);
     }
+}
+
+function unique(array){
+    return $.grep(array, function(el, index) {
+        return index === $.inArray(el, array);
+    });
 }
