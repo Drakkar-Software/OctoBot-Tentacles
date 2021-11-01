@@ -72,10 +72,10 @@ function handle_route_button(){
     });
 }
 
-function send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success_callback, error_callback){
+function send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success_callback, error_callback, method="POST"){
     $.ajax({
         url: update_url,
-        type: "POST",
+        type: method,
         dataType: "json",
         contentType: 'application/json',
         data: JSON.stringify(updated_data),
