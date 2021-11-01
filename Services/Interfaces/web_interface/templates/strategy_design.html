@@ -8,40 +8,13 @@
 
 <style>
 
-.strategy_body {
-    height: calc(100vh - 96px);
-    position: fixed;
-    width: 100vw;
-}
+/*Force full screen*/
 .container-fluid {
     margin: 0;
     padding: 0;
 }
 
-#charts {
-    border:1px solid black;
-
-    width: 100vw;
-    height: calc(60vh - 96px);
-    max-height: calc(100vh - 98px - 57px);
-}
-#main-chart {
-    height: 65%;
-    max-height: 100%;
-}
-#sub-chart {
-    height: calc(35% - 5px);
-    max-height: calc(100% - 15px);
-}
-
-.toolbox {
-    border:1px solid black;
-
-    width:100vw;
-    height: 40vh;
-
-}
-
+/*TODO*/
 nav-tabs-bar{
     height: 59px;
 }
@@ -50,26 +23,12 @@ nav-tabs-bar{
     height: calc(100% - 56px);
 }
 
-.max-width{
-    min-width: 100%;
-}
-
 .inside-tab-content {
     width: 100%;
     height: 100%;
 }
 
-.hide {
-    display: none;
-}
-.draggable-resizer{
-margin:5px;
-background:#d1d4dc
-}
-
 </style>
-
-<!-- todo make plotly resize after height changed https://codepen.io/antoinerg/pen/KjXbEo -->
 
 <div class="strategy_body">
         <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
@@ -80,7 +39,7 @@ background:#d1d4dc
             <div id="sub-chart" class="">
             </div>
         </div>
-        <div id="toolbox" class="toolbox">
+        <div id="toolbox" class="strategy-toolbox">
            <div class="nav-tabs-bar">
 
                     <button class="active btn btn-primary waves-effect"  type="button">
@@ -101,9 +60,9 @@ background:#d1d4dc
             <section id="code-editor" class="tab-content active">
                 {% if True %}
 
-                    <iframe class="inside-tab-content"
-                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                    ></iframe>
+<!--                    <iframe class="inside-tab-content"-->
+<!--                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  &lt;!&ndash; todo open active script  / default root is trading profiles&ndash;&gt;-->
+<!--                    ></iframe>-->
 
                 {% else %}
                 <div class="inside-tab-content">
@@ -111,12 +70,12 @@ background:#d1d4dc
                 </div>
                 {% endif %}
             </section>
-            <section id="strategy-tester" class="tab-content hide">
+            <section id="strategy-tester" class="tab-content d-none">
                 <div class="inside-tab-content">
                     strategy tester
                 </div>
             </section>
-            <section id="trade-history" class="tab-content hide">
+            <section id="trade-history" class="tab-content d-none">
                 <div class="inside-tab-content">
                     Trade History
                 </div>

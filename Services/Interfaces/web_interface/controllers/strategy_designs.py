@@ -33,9 +33,9 @@ def plotted_data():
     try:
         trading_mode = models.get_config_activated_trading_mode()
         # TODO remove
-        import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
-        trading_mode = scripted_trading_mode.ScriptedTradingMode
-        from tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script import backtest_test_script
+        # import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
+        # trading_mode = scripted_trading_mode.ScriptedTradingMode
+        # from tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script import backtest_test_script
         # trading_mode.register_live_script(backtest_test_script)
         # TODO remove
         return util.get_rest_reply(models.get_plotted_data(trading_mode), 200)
@@ -51,8 +51,8 @@ def update_plot_script():
         request_data = flask.request.get_json()
         trading_mode = models.get_config_activated_trading_mode()
         # TODO remove
-        import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
-        trading_mode = scripted_trading_mode.ScriptedTradingMode
+        # import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
+        # trading_mode = scripted_trading_mode.ScriptedTradingMode
         # TODO remove
         return util.get_rest_reply(models.update_plot_script(trading_mode, request_data["live"]), 200)
     except Exception as e:
