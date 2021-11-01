@@ -241,3 +241,26 @@ function download_data(data, filename, content_type="application/json"){
     a.click();
     document.body.removeChild(a);
 }
+
+function display_generic_modal(title, content, warning, yes_button_callback, no_button_callback){
+    let generic_modal = $("#genericModal");
+    $("#genericModalTitle").text(title);
+    $("#genericModalContent").text(content);
+    if(warning !== ""){
+        $("#genericModalWarning").removeClass(hidden_class);
+        $("#genericModalWarningMessage").text(warning);
+    }
+    $("#genericModalButtonYes").on("click", function() {
+        yes_button_callback();
+        hideModalIfAny(generic_modal);
+    });
+    $("#genericModalButtonNo").on("click", function(){
+        if(no_button_callback !== null){
+            no_button_callback();
+        }
+        hideModalIfAny(generic_modal);
+    });
+
+    showModalIfAny(generic_modal);
+    return generic_modal;
+}
