@@ -613,6 +613,36 @@ function handle_activation_configuration_editor(){
     });
 }
 
+
+function handle_import_currencies(){
+    $("#import-currencies-button").on("click", function(){
+        $("#import-currencies-input").click();
+    });
+    $("#import-currencies-input").on("change", function () {
+        var GetFile = new FileReader();
+        GetFile.onload = function(){
+            let update_url = $("#import-currencies-button").attr(update_url_attr);
+            let data = {};
+            data["action"] = "update";
+            data["currencies"] = JSON.parse(GetFile.result);
+            send_and_interpret_bot_update(data, update_url, null,
+                handle_save_buttons_success_callback, generic_request_failure_callback);
+        };
+        GetFile.readAsText(this.files[0]);
+    });
+}
+
+
+function handle_export_currencies_button(){
+    $("#export-currencies-button").on("click", function(){
+        update_url = $("#export-currencies-button").attr(update_url_attr);
+        $.get(update_url, null, function(data, status){
+            download_data(JSON.stringify(data), "currencies_export.json");
+        });
+    });
+}
+
+
 function reset_configuration_element(){
     remove_exit_confirm_function();
     location.reload();
@@ -782,6 +812,9 @@ $(document).ready(function() {
     handle_buttons();
 
     handle_activation_configuration_editor();
+
+    handle_import_currencies();
+    handle_export_currencies_button();
 
     register_edit_events();
 

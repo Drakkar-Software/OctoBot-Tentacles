@@ -231,3 +231,13 @@ function unique(array){
         return index === $.inArray(el, array);
     });
 }
+
+function download_data(data, filename, content_type="application/json"){
+    let a = window.document.createElement('a');
+    a.href = window.URL.createObjectURL(new Blob([data], {type: content_type}));
+    a.download = filename;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
