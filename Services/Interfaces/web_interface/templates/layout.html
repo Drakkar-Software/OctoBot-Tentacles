@@ -1,5 +1,6 @@
 {% import 'macros/trading_state.html' as m_trading_state %}
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
+{% import 'components/modals/generic_modal.html' as m_generic_modal %}
 <!doctype html>
 <html lang="en">
     {% set active_page = active_page|default('home') -%}
@@ -162,6 +163,7 @@
 
         <!-- Modals -->
         {{ m_trading_state_modal.create_trading_state_modal(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
+        {{ m_generic_modal.create_generic_modal() }}
 
         {% block additional_scripts %}
         {% endblock additional_scripts %}
