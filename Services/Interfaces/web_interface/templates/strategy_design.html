@@ -23,10 +23,6 @@ nav-tabs-bar{
     height: calc(100% - 56px);
 }
 
-.inside-tab-content {
-    width: 100%;
-    height: 100%;
-}
 
 </style>
 
@@ -40,46 +36,72 @@ nav-tabs-bar{
             </div>
         </div>
         <div id="toolbox" class="strategy-toolbox">
-           <div class="nav-tabs-bar">
+            <div class="card my-1">
+                <div class="card-header">
+                    <ul class="nav nav-tabs md-tabs justify-content-center" id="tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link primary-tab-selector" id="editor-tab" data-toggle="tab" href="#editor" role="tab"
+                               aria-controls="real"
+                               aria-selected="true">
+                                <h5>Code editor</h5>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link primary-tab-selector active show" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
+                               aria-controls="simulated"
+                               aria-selected="false">
+                                <h5>Backtesting results</h5>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                               aria-controls="all"
+                               aria-selected="false">
+                                <h5>Strategy Optimizer</h5>
+                            </a>
+                        </li>
+                       <div class="ml-4">
+                            <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
+                            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+                        </div>
+                    </ul>
+                    </div>
+                    <div class="tab-content my-2" id="tabcontent">
+                        <div class="tab-pane fade" id="editor" role="tabreal" aria-labelledby="active-tab">
+                            <div class="row w-100 mx-0 d-block d-md-flex">
+                                {% if True %}
 
-                    <button class="active btn btn-primary waves-effect"  type="button">
-                        <a href="#code-editor">Code Editor</a>
-                    </button>
-                    <button class="btn waves-effect" type="button">
-                        <a href="#strategy-tester">Strategy Tester</a>
-                    </button>
-                    <button class="btn waves-effect" type="button">
-                        <a href="#trade-history">Trade History</a>
-                    </button>
+                                    <iframe class="w-100 h-100"
+                                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                                    ></iframe>
 
-                    <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
-                    <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
-
+                                {% else %}
+                                <div class="inside-tab-content">
+                                    https://microsoft.github.io/monaco-editor/
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
+                            <div class="w-100 mx-0 d-block">
+                                <div>
+                                    backtesting
+                                    <select id="backtesting-run-select" class="selectpicker"
+                                            data-live-search="true" data-url="{{url_for('get_run_data')}}">
+                                    </select>
+                                </div>
+                                <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="optimizer" role="taball" aria-labelledby="optimizer-tab">
+                            <div class="row w-100 mx-0 d-block d-md-flex">
+                                strategy optimizer
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <section id="code-editor" class="tab-content active">
-                {% if True %}
-
-<!--                    <iframe class="inside-tab-content"-->
-<!--                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  &lt;!&ndash; todo open active script  / default root is trading profiles&ndash;&gt;-->
-<!--                    ></iframe>-->
-
-                {% else %}
-                <div class="inside-tab-content">
-                    https://microsoft.github.io/monaco-editor/
-                </div>
-                {% endif %}
-            </section>
-            <section id="strategy-tester" class="tab-content d-none">
-                <div class="inside-tab-content">
-                    strategy tester
-                </div>
-            </section>
-            <section id="trade-history" class="tab-content d-none">
-                <div class="inside-tab-content">
-                    Trade History
-                </div>
-            </section>
         </div>
     </div>
 </div>

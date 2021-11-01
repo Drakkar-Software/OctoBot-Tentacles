@@ -22,9 +22,16 @@ def get_plotted_data(trading_mode):
     interfaces_util.run_in_bot_async_executor(
         elements.fill_from_database(
             trading_mode.get_db_name(
-                interfaces_util.get_bot_api().get_bot_id()
+                bot_id=interfaces_util.get_bot_api().get_bot_id()
             )
         )
+    )
+    return elements.to_json()
+
+
+def get_backtesting_run_plotted_data(trading_mode, run_id):
+    elements = interfaces_util.run_in_bot_async_executor(
+        trading_mode.get_backtesting_plot(run_id)
     )
     return elements.to_json()
 
@@ -42,3 +49,17 @@ def update_plot_script(trading_mode, is_live):
         )
     )
     return {"success": True}
+
+
+async def _read_metadata(trading_mode, is_live):
+    data_file = trading_mode.get_db_name(metadata_db=True, backtesting=not is_live)
+    async with scripting_library.MetadataReader.database(data_file) as reader:
+        return await reader.read()
+
+
+def get_run_data(trading_mode, is_live):
+    return {
+        "data": interfaces_util.run_in_bot_async_executor(
+            _read_metadata(trading_mode, is_live)
+        )
+    }
