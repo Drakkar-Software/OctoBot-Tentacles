@@ -44,6 +44,18 @@ def plotted_data():
         return util.get_rest_reply(str(e), 500)
 
 
+@web_interface.server_instance.route("/backtesting_run_plotted_data", methods=["POST"])
+@login.login_required_when_activated
+def backtesting_run_plotted_data():
+    try:
+        request_data = flask.request.get_json()
+        trading_mode = models.get_config_activated_trading_mode()
+        return util.get_rest_reply(models.get_backtesting_run_plotted_data(trading_mode, request_data["id"]), 200)
+    except Exception as e:
+        commons_logging.get_logger("backtesting_run_plotted_data").exception(e)
+        return util.get_rest_reply(str(e), 500)
+
+
 @web_interface.server_instance.route("/update_plot_script", methods=["POST"])
 @login.login_required_when_activated
 def update_plot_script():
@@ -57,4 +69,15 @@ def update_plot_script():
         return util.get_rest_reply(models.update_plot_script(trading_mode, request_data["live"]), 200)
     except Exception as e:
         commons_logging.get_logger("update_plot_script").exception(e)
+        return util.get_rest_reply(str(e), 500)
+
+
+@web_interface.server_instance.route("/get_run_data")
+@login.login_required_when_activated
+def get_run_data():
+    try:
+        trading_mode = models.get_config_activated_trading_mode()
+        return util.get_rest_reply(models.get_run_data(trading_mode, False), 200)
+    except Exception as e:
+        commons_logging.get_logger("get_run_data").exception(e)
         return util.get_rest_reply(str(e), 500)

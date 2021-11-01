@@ -6,6 +6,69 @@ const resizeObserver = new ResizeObserver(entries => {
 
 let originalXAxis = {}
 
+function getPlotlyConfig(){
+    return {
+        scrollZoom: true,
+        modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
+        responsive: true,
+        showEditInChartStudio: true,
+        displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
+    };
+}
+
+function createChart(chartDetails, chartData){
+    const chartedElements = {
+      x: chartDetails.x,
+      mode: chartDetails.kind,
+      type: chartDetails.kind,
+      name: chartDetails.title,
+    }
+    Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
+        if(chartDetails[element] !== null){
+            chartedElements[element] = chartDetails[element]
+        }
+    })
+    chartData.push(chartedElements);
+    const xaxis = {
+        autorange: true,
+        rangeslider: {
+            visible: false,
+        }
+    };
+    if(chartDetails.x_type !== null){
+        xaxis.type = chartDetails.x_type;
+    }
+    const yaxis = {
+        fixedrange: true,
+    };
+    if(chartDetails.y_type !== null){
+        yaxis.type = chartDetails.y_type;
+    }
+    return {
+        autosize: true,
+        // height: 500,
+        margin: {l: 50, r: 50, b: 15, t: 25, pad: 0},
+        xaxis: xaxis,
+        yaxis: yaxis,
+        showlegend: true,
+        legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
+    };
+}
+
+function updateBacktestingChart(data, divID, replot){
+    data.data.sub_elements.forEach(function (sub_element) {
+        const chartData = [];
+        sub_element.data.elements.forEach(function (chartDetails) {
+            const layout = createChart(chartDetails, chartData);
+            if (replot) {
+                Plotly.react(divID, chartData, layout, getPlotlyConfig())
+            } else {
+                Plotly.newPlot(divID, chartData, layout, getPlotlyConfig())
+            }
+        });
+    });
+}
+
 function updateCharts(data, replot){
     let mainLayout = undefined;
     if(data.data.sub_elements.length <= 1){
@@ -21,52 +84,10 @@ function updateCharts(data, replot){
         const chartData = [];
         const divID = sub_element.name;
         sub_element.data.elements.forEach(function (chartDetails){
-            const chartedElements = {
-              x: chartDetails.x,
-              mode: chartDetails.kind,
-              type: chartDetails.kind,
-              name: chartDetails.title,
-            }
-            Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
-                if(chartDetails[element] !== null){
-                    chartedElements[element] = chartDetails[element]
-                }
-            })
-            chartData.push(chartedElements);
-            const xaxis = {
-                autorange: true,
-                rangeslider: {
-                    visible: false,
-                }
-            };
-            if(chartDetails.x_type !== null){
-                xaxis.type = chartDetails.x_type;
-            }
-            const yaxis = {
-                fixedrange: true,
-            };
-            if(chartDetails.y_type !== null){
-                yaxis.type = chartDetails.y_type;
-            }
-            const layout = {
-                autosize: true,
-                // height: 500,
-                margin: {l: 50, r: 50, b: 15, t: 25, pad: 0},
-                xaxis: xaxis,
-                yaxis: yaxis,
-                showlegend: true,
-                legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
-            };
+            const layout = createChart(chartDetails, chartData);
             if(divID === "main-chart"){
                 mainLayout = layout;
             }
-            const plotlyConfig = {
-                scrollZoom: true,
-                modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
-                responsive: true,
-                showEditInChartStudio: true,
-                displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
-            };
             function afterPlot(target){
                 removeExplicitSize(target);
                 resizeObserver.observe(target);
@@ -77,9 +98,9 @@ function updateCharts(data, replot){
                 }
             }
             if(replot){
-                Plotly.react(divID, chartData, layout, plotlyConfig).then(afterPlot)
+                Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
             }else{
-                Plotly.newPlot(divID, chartData, layout, plotlyConfig).then(afterPlot)
+                Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
             }
         });
     });
@@ -159,8 +180,42 @@ function handleResizables(){
     });
 }
 
+function updateBacktestingSelect(updated_data, update_url, dom_root_element, msg, status){
+    const select = $("#backtesting-run-select");
+    msg.data.sort()
+    msg.data.reverse().forEach(function(element){
+        const date = new Date(element.timestamp * 1000)
+        const displayedTime = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+        select.append(new Option(`${element.id} ${element.name} ${displayedTime}`, element.id));
+    })
+    triggerBacktestingSelectUpdate();
+}
+
+function asyncInit(){
+    send_and_interpret_bot_update({}, $("#backtesting-run-select").data("url"), null,
+        updateBacktestingSelect, generic_request_failure_callback, "GET");
+}
+
+function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
+    updateBacktestingChart(msg, "backtesting-chart", true);
+}
+
+function triggerBacktestingSelectUpdate(){
+     const data = {
+        id: $("#backtesting-run-select").val(),
+    }
+    send_and_interpret_bot_update(data, $("#backtesting-chart").data("url"), null,
+        updateBacktestingReport, generic_request_failure_callback);
+}
+
+function handleSelects(){
+    $("#backtesting-run-select").on("change", triggerBacktestingSelectUpdate);
+}
+
 $(document).ready(function() {
     displayCharts(false);
+    asyncInit();
     handleScriptButtons();
     handleResizables();
+    handleSelects();
 });

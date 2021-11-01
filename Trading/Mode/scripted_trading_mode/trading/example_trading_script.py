@@ -3,6 +3,47 @@ from octobot_trading.modes.scripting_library import *
 
 
 async def script(ctx: Context):
+    set_script_name(ctx, "SimpleRSI")
+    pair = ctx.traded_pair
+    time_frame = "1h"
+    await plot(
+        ctx,
+        "candles",
+        x=Time(ctx, pair, time_frame),
+        open=Open(ctx, pair, time_frame),
+        high=High(ctx, pair, time_frame),
+        low=Low(ctx, pair, time_frame),
+        close=Close(ctx, pair, time_frame),
+        volume=Volume(ctx, pair, time_frame),
+        kind="candlestick",
+        chart=trading_enums.PlotCharts.MAIN_CHART.value
+    )
+
+    # TA initial variables
+    candle_source = Close(ctx, pair, time_frame)
+    if len(candle_source) > 14:
+        rsi_data = ti.rsi(candle_source, 14)
+
+        await plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)
+
+        if rsi_data[-1] < 30:
+            await market(
+                ctx,
+                amount="60%",
+                side="buy",
+                tag="marketIn"
+            )
+        if rsi_data[-1] > 70:
+            await market(
+                ctx,
+                amount="60%",
+                side="sell",
+                tag="marketOut"
+            )
+
+    return
+
+async def other_script(ctx: Context):
     ctx.logger.info("script start")
     # init and vars
     pair = "BTC/USDT"
@@ -10,7 +51,7 @@ async def script(ctx: Context):
         return
     time_frame = "4h"
     ctx.time_frame = time_frame
-    plot(
+    await plot(
         ctx,
         "Candles",
         x=Time(ctx, pair, time_frame),
@@ -27,12 +68,12 @@ async def script(ctx: Context):
     candle_source = Close(ctx, pair, time_frame)
     rsi_data = ti.rsi(candle_source, 14)
 
-    plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)
+    await plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)
 
     # draw true and falses on ema rising
     ema_is_rising = ti.ema(candle_source, 5)[:-1] < ti.ema(candle_source, 5)[1:]
     high = High(ctx, pair, time_frame) + 10
-    plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
+    await plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
          chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
 
 
