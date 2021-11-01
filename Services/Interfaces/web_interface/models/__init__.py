@@ -93,6 +93,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     REQUIREMENTS_KEY,
     SYMBOL_KEY,
     ID_KEY,
+    update_config_currencies,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -258,4 +259,5 @@ __all__ = [
     "get_symbols_values",
     "get_full_candle_history_exchange_list",
     "get_other_history_exchange_list",
+    "update_config_currencies",
 ]

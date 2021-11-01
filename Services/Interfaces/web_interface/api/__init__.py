@@ -18,12 +18,17 @@ import flask
 
 api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
 
+from tentacles.Services.Interfaces.web_interface.api import config
 from tentacles.Services.Interfaces.web_interface.api import exchanges
 from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
 from tentacles.Services.Interfaces.web_interface.api import user_commands
 
 
+from tentacles.Services.Interfaces.web_interface.api.config import (
+    get_config_currency,
+    set_config_currency,
+)
 from tentacles.Services.Interfaces.web_interface.api.exchanges import (
     is_compatible_account,
 )
@@ -42,7 +47,6 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
     user_command,
 )
 
-
 __all__ = [
     "is_compatible_account",
     "version",
@@ -53,4 +57,6 @@ __all__ = [
     "refresh_portfolio",
     "currency_list",
     "user_command",
+    "get_config_currency",
+    "set_config_currency",
 ]

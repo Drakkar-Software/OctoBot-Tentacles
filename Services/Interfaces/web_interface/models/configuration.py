@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+
 import os.path as path
 import ccxt
 import copy
@@ -700,3 +701,24 @@ def get_current_exchange():
         return next(iter(exchanges))
     else:
         return DEFAULT_EXCHANGE
+
+
+def update_config_currencies(currencies: list, replace: bool=False):
+    """
+    Update the configured currencies list
+    :param currencies: currencies list
+    :param replace: replace the current list
+    :return: bool, str
+    """
+    success = True
+    message = "Currencies list updated"
+    try:
+        config_currencies = interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES]
+        config_currencies = currencies if replace else \
+            configuration.merge_dictionaries_by_appending_keys(config_currencies, currencies, merge_sub_array=True)
+        interfaces_util.get_edited_config(dict_only=False).save()
+    except Exception as e:
+        message = f"Error while updating currencies list: {e}"
+        success = False
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
+    return success, message
