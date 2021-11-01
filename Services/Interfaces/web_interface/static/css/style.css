@@ -471,6 +471,50 @@ table.dataTable tfoot th {
     font-weight: normal;
 }
 
+/* Strategy design*/
+
 .graph-view {
     min-height: 400px;
+}
+
+.strategy_body {
+    height: calc(100vh - 96px);
+    position: fixed;
+    width: 100vw;
+}
+
+#charts {
+    border:1px solid black;
+
+    width: 100vw;
+    height: calc(60vh - 96px);
+    max-height: calc(100vh - 98px - 57px);
+}
+
+#main-chart {
+    height: 65%;
+    max-height: 100%;
+}
+
+#sub-chart {
+    height: calc(35% - 5px);
+    max-height: calc(100% - 15px);
+}
+
+
+.strategy-toolbox {
+    border:1px solid black;
+
+    width:100vw;
+    height: 40vh;
+
+}
+
+.max-width{
+    min-width: 100%;
+}
+
+.draggable-resizer{
+    margin:5px;
+    background:#d1d4dc
 }

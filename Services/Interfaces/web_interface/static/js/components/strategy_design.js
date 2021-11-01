@@ -1,14 +1,13 @@
 const resizeObserver = new ResizeObserver(entries => {
-    log("resize")
     for (let entry of entries) {
         Plotly.Plots.resize(entry.target);
     }
 });
 
-function updateCharts(data){
-    const chartDivs = [];
+let originalXAxis = {}
+
+function updateCharts(data, replot){
     let mainLayout = undefined;
-    log(data.data.sub_elements.length)
     if(data.data.sub_elements.length <= 1){
         $("#main-chart").resizable("option", "disabled", true );
     }
@@ -21,7 +20,6 @@ function updateCharts(data){
     data.data.sub_elements.forEach(function (sub_element) {
         const chartData = [];
         const divID = sub_element.name;
-        log("    data.data.sub_elements")
         sub_element.data.elements.forEach(function (chartDetails){
             const chartedElements = {
               x: chartDetails.x,
@@ -29,24 +27,11 @@ function updateCharts(data){
               type: chartDetails.kind,
               name: chartDetails.title,
             }
-            if(chartDetails.y !== null){
-                chartedElements.y = chartDetails.y
-            }
-            if(chartDetails.open !== null){
-                chartedElements.open = chartDetails.open
-            }
-            if(chartDetails.high !== null){
-                chartedElements.high = chartDetails.high
-            }
-            if(chartDetails.low !== null){
-                chartedElements.low = chartDetails.low
-            }
-            if(chartDetails.close !== null){
-                chartedElements.close = chartDetails.close
-            }
-            if(chartDetails.volume !== null){
-                chartedElements.volume = chartDetails.volume
-            }
+            Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
+                if(chartDetails[element] !== null){
+                    chartedElements[element] = chartDetails[element]
+                }
+            })
             chartData.push(chartedElements);
             const xaxis = {
                 autorange: true,
@@ -66,22 +51,15 @@ function updateCharts(data){
             const layout = {
                 autosize: true,
                 // height: 500,
-                margin: {
-                    l: 50,
-                    r: 50,
-                    b: 15,
-                    t: 25,
-                    pad: 0
-                },
+                margin: {l: 50, r: 50, b: 15, t: 25, pad: 0},
                 xaxis: xaxis,
                 yaxis: yaxis,
                 showlegend: true,
-                legend: {
-                    x: 1,
-                    xanchor: 'right',
-                    y: 1
-                },
+                legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
             };
+            if(divID === "main-chart"){
+                mainLayout = layout;
+            }
             const plotlyConfig = {
                 scrollZoom: true,
                 modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
@@ -89,25 +67,35 @@ function updateCharts(data){
                 showEditInChartStudio: true,
                 displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
             };
-            log("Plotly.newPlot")
-            Plotly.newPlot(divID, chartData, layout, plotlyConfig).then(function (target){
+            function afterPlot(target){
                 removeExplicitSize(target);
                 resizeObserver.observe(target);
                 if(divID !== "main-chart"){
                     // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
-                    Plotly.relayout("sub-chart", {xaxis: {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type}});
+                    originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
+                    Plotly.relayout("sub-chart", {xaxis: {range: mainLayout.xaxis.range.map((x) => x), type: mainLayout.xaxis.type}});
                 }
-            })
-            if(divID === "main-chart"){
-                mainLayout = layout;
             }
-            chartDivs.push($(`#${divID}`))
-
+            if(replot){
+                Plotly.react(divID, chartData, layout, plotlyConfig).then(afterPlot)
+            }else{
+                Plotly.newPlot(divID, chartData, layout, plotlyConfig).then(afterPlot)
+            }
         });
     });
     document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
         Plotly.relayout("sub-chart", eventdata);
+        // log(eventdata)
     });
+    // TODO: fix unzoom desync (probalby due to autosize)
+    // document.getElementById("main-chart").on("plotly_doubleclick", function(eventdata) {
+    //     log(eventdata)
+    //     eventdata.stopImmediatePropagation()
+    //     log("event")
+    //     log(originalXAxis)
+    //     Plotly.relayout("sub-chart", {xaxis: {range:  mainLayout.xaxis.range.map((x) => x), type: mainLayout.xaxis.type}});
+    // });
+    // TODO: handle zoom propagation from any graph
     // chartDivs[1][0].on("plotly_relayout", function(eventdata) {
     //     Plotly.relayout("main-chart", eventdata);
     // });
@@ -122,12 +110,12 @@ function removeExplicitSize(figure){
   return figure;
 }
 
-function displayCharts(){
+function displayCharts(replot){
     $.get({
         url: $("#charts").data("url"),
         dataType: "json",
         success: function (data) {
-            updateCharts(data)
+            updateCharts(data, replot)
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
@@ -154,25 +142,25 @@ function handleScriptButtons(){
 }
 
 function reload_request_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    displayCharts();
+    displayCharts(true);
 }
 
 function handleResizables(){
     $(".resizable").resizable();
     $(".resizable").on("resize", function () {
-        current_charts_height = $("#charts").height()
-        new_toolbox_height = "calc(100vh - 96px - " + current_charts_height + "px)";
-        $("#toolbox").css("height", new_toolbox_height);
+        const currentChartsHeight = $("#charts").height()
+        const newToolboxHeight = "calc(100vh - 96px - " + currentChartsHeight + "px)";
+        $("#toolbox").css("height", newToolboxHeight);
 
 
-        current_main_chart_height = $("#main-chart").height()
-        new_sub_chart_height = "calc(100% - 5px - " + current_main_chart_height + "px)"
-        $("#sub-chart").css("height", new_sub_chart_height);
+        const currentMainChartHeight = $("#main-chart").height()
+        const newSubChartHeight = "calc(100% - 5px - " + currentMainChartHeight + "px)"
+        $("#sub-chart").css("height", newSubChartHeight);
     });
 }
 
 $(document).ready(function() {
-    displayCharts();
+    displayCharts(false);
     handleScriptButtons();
     handleResizables();
 });
