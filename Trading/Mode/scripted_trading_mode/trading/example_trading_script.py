@@ -3,6 +3,7 @@ from octobot_trading.modes.scripting_library import *
 
 
 async def script(ctx: Context):
+    ctx.logger.info("script start")
     # init and vars
     pair = "BTC/USDT"
     if ctx.traded_pair != pair:
@@ -33,7 +34,10 @@ async def script(ctx: Context):
     high = High(ctx, pair, time_frame) + 10
     plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
          chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
-    ema_is_rising = ti.ema(candle_source, 5)[-2] < ti.ema(candle_source, 5)[-1]
+
+
+
+    # ema_is_rising = ti.ema(candle_source, 5)[-2] < ti.ema(candle_source, 5)[-1]
     # plot_shape(ctx, "ema_is_rising", ema_is_rising, candle_source[-1] + 2,
     #            chart=trading_enums.PlotCharts.MAIN_CHART.value)
 
@@ -43,9 +47,10 @@ async def script(ctx: Context):
     rsi_is_oversold = rsi_data < 30
     buy_signals = rsi_is_oversold
 
-    if buy_signals is True:
+    # if buy_signals is True:
+    if True:
         # log initial buy signal to backtesting db
-        store_message(ctx, "Oversold")
+        # store_message(ctx, "Oversold")
         # writer.log("evaluations", {"value": "Oversold"})
 
 
@@ -54,18 +59,17 @@ async def script(ctx: Context):
         ema_is_rising = ti.ema(candle_source, 5)[-2] < ti.ema(candle_source, 5)[-1]
         filters = ema_is_rising
 
-        if filters is True:
+        if filters:
             # log if filter passed to backtesting db with timestamp to same row as buy signal
             # writer.log("evaluations", {"value": "Oversold"})
-            store_message(ctx, "Oversold")
+            # store_message(ctx, "Oversold")
 
             #delays
             delays = True
             if delays is True:
                 # log if and when delay passed to backtesting db with timestamp to same row as buy signal
-                store_message(ctx, "Oversold")
+                # store_message(ctx, "Oversold")
 
-                # todo simulate trades based on list and store them to backtesting db
                 # if live trading is enabled only execute life results
                 # entry execution
                 await market(
@@ -75,12 +79,12 @@ async def script(ctx: Context):
                     tag="marketIn"
                 )
 
-                await wait_for_price(
-                    ctx,
-                    offset=0,
+                # await wait_for_price(
+                #     ctx,
+                #     offset=0,
 
                 # exit execution
-                )
+                # )
                 await trailling_market(
                     ctx,
                     amount="40%",
@@ -91,30 +95,4 @@ async def script(ctx: Context):
                     slippage_limit=50,
                     postonly=True,
                 )
-
-    else:
-        ctx.logger.info("nope")
-
-
-    # todo : replace by reading orders from db
-    # order_times = []
-    # order_prices = []
-    # for order in reader.select("orders", reader.search().state == "closed"):
-    #     order_times.append(order["time"])
-    #     order_prices.append(order["price"])
-    # part.plot(
-    #     kind="markers",
-    #     x=order_times,
-    #     y=order_prices,
-    #     title="Orders")
-    # return drawing
-
-
-
-
-
-
-
-
-
-        ctx.logger.info("RSI not high enough")
+    ctx.logger.info("script done")

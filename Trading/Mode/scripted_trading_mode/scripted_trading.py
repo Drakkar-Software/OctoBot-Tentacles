@@ -17,7 +17,7 @@
 import importlib
 
 import octobot_trading.modes.scripting_library as scripting_library
-import tentacles.Trading.Mode.scripted_trading_mode.trading as live_script
+import tentacles.Trading.Mode.scripted_trading_mode.trading.example_trading_script as live_script
 import tentacles.Trading.Mode.scripted_trading_mode.backtesting as backtesting_script
 
 
@@ -32,8 +32,8 @@ class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):
     async def reload_script(self, live=True):
         if live:
             #TODO really reload, this is not working
-            new_module = importlib.reload(live_script)
-            self.register_script(new_module.script, live=live)
+            importlib.reload(live_script)
+            self.register_script(live_script.script, live=live)
             # todo cancel and restart live tasks
             await self.start_over_database()
         else:

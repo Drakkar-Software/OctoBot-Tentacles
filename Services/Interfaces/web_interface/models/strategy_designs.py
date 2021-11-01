@@ -30,14 +30,15 @@ def get_plotted_data(trading_mode):
 
 
 def update_plot_script(trading_mode, is_live):
-    interfaces_util.run_in_bot_async_executor(
+    interfaces_util.run_in_bot_main_loop(
         services_api.send_user_command(
             interfaces_util.get_bot_api().get_bot_id(),
             trading_mode.get_name(),
             trading_mode.USER_COMMAND_RELOAD_SCRIPT,
             {
                 trading_mode.USER_COMMAND_RELOAD_SCRIPT_IS_LIVE: is_live
-            }
+            },
+            wait_for_processing=True
         )
     )
     return {"success": True}
