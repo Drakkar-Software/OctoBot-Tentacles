@@ -18,9 +18,63 @@
 nav-tabs-bar{
     height: 59px;
 }
+.strategy_body {
+    background: #131722;
+}
 
-.tab-content{
-    height: calc(100% - 56px);
+.tab-content {
+    height: calc(100% - 48px); /* todo get subtracted height from footer, (doesnt work if footer gets bigger on smaller screen size  */
+    background: #131722;
+    color: #fff;
+}
+
+.toolbox-tabs {
+    background: #131722;
+    border-bottom: 1px solid #2a2e39;
+}
+
+.toolbox-buttons {
+    margin-left: 5px;
+
+}
+
+.toolbox-buttons > button {
+    margin: 0;
+
+}
+
+
+.toolbox-tabs > li {
+    border-left: 1px solid #2a2e39 !important;
+}
+
+.toolbox-tabs > li:last-of-type {
+    border-right: 1px solid #2a2e39 !important;
+}
+
+.toolbox-tabs > li > a {
+    color: #b2b5be;
+    padding: 11px 2rem;
+    border: none !important;
+}
+
+.toolbox-tabs > li > a.active {
+    color: #1e53e5 !important;
+    border: none !important;
+    background: none !important;
+}
+
+.toolbox-tabs > li > a:hover {
+    border-color: unset !important;
+    border: none !important;
+    background: #2a2e39;
+}
+
+.strategy-toolbox {
+    position: absolute;
+}
+.tab-content > div {
+    height: 100%;
 }
 
 
@@ -36,42 +90,41 @@ nav-tabs-bar{
             </div>
         </div>
         <div id="toolbox" class="strategy-toolbox">
-            <div class="card my-1">
-                <div class="card-header">
-                    <ul class="nav nav-tabs md-tabs justify-content-center" id="tabs" role="tablist">
+
+                    <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
                         <li class="nav-item">
                             <a class="nav-link primary-tab-selector" id="editor-tab" data-toggle="tab" href="#editor" role="tab"
                                aria-controls="real"
                                aria-selected="true">
-                                <h5>Code editor</h5>
+                                Code editor
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link primary-tab-selector active show" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
                                aria-controls="simulated"
                                aria-selected="false">
-                                <h5>Backtesting results</h5>
+                                Backtesting results
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
                                aria-controls="all"
                                aria-selected="false">
-                                <h5>Strategy Optimizer</h5>
+                                Strategy Optimizer
                             </a>
                         </li>
-                       <div class="ml-4">
+                       <div class="toolbox-buttons">
                             <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
                             <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
                         </div>
                     </ul>
-                    </div>
-                    <div class="tab-content my-2" id="tabcontent">
+
+                    <div class="tab-content" id="tabcontent">
                         <div class="tab-pane fade" id="editor" role="tabreal" aria-labelledby="active-tab">
-                            <div class="row w-100 mx-0 d-block d-md-flex">
+
                                 {% if True %}
 
-                                    <iframe class="w-100 h-100"
+                                    <iframe class="w-100 h-100" style="border:none"
                                             src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
                                     ></iframe>
 
@@ -80,10 +133,10 @@ nav-tabs-bar{
                                     https://microsoft.github.io/monaco-editor/
                                 </div>
                                 {% endif %}
-                            </div>
+
                         </div>
                         <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
-                            <div class="w-100 mx-0 d-block">
+
                                 <div>
                                     backtesting
                                     <select id="backtesting-run-select" class="selectpicker"
@@ -92,16 +145,14 @@ nav-tabs-bar{
                                 </div>
                                 <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
                                 </div>
-                            </div>
                         </div>
                         <div class="tab-pane fade" id="optimizer" role="taball" aria-labelledby="optimizer-tab">
-                            <div class="row w-100 mx-0 d-block d-md-flex">
                                 strategy optimizer
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+
+
         </div>
     </div>
 </div>

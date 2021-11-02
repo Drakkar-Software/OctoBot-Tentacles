@@ -47,11 +47,16 @@ function createChart(chartDetails, chartData){
     return {
         autosize: true,
         // height: 500,
-        margin: {l: 50, r: 50, b: 15, t: 25, pad: 0},
+        margin: {l: 50, r: 50, b: 15, t: 15, pad: 0},
         xaxis: xaxis,
         yaxis: yaxis,
         showlegend: true,
         legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {
+        color: "white"
+        }
     };
 }
 
