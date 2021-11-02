@@ -493,12 +493,14 @@ table.dataTable tfoot th {
 
 #main-chart {
     height: 65%;
-    max-height: 100%;
+    max-height: calc(100% - 25px);
 }
 
 #sub-chart {
     height: calc(35% - 5px);
     max-height: calc(100% - 15px);
+    position: relative;
+    background: #131722;
 }
 
 
@@ -514,7 +516,7 @@ table.dataTable tfoot th {
     min-width: 100%;
 }
 
-.draggable-resizer{
-    margin:5px;
-    background:#d1d4dc
+.draggable-resizer {
+    padding: 1px;
+    background: #2a2e39 !important;
 }
