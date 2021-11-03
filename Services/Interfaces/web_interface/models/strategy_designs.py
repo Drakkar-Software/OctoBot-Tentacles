@@ -18,7 +18,7 @@ import octobot_trading.modes.scripting_library as scripting_library
 
 
 def get_plotted_data(trading_mode):
-    elements = scripting_library.PlottedElements()
+    elements = scripting_library.DisplayedElements()
     interfaces_util.run_in_bot_async_executor(
         elements.fill_from_database(
             trading_mode.get_db_name(
@@ -51,15 +51,10 @@ def update_plot_script(trading_mode, is_live):
     return {"success": True}
 
 
-async def _read_metadata(trading_mode, is_live):
-    data_file = trading_mode.get_db_name(metadata_db=True, backtesting=not is_live)
-    async with scripting_library.MetadataReader.database(data_file) as reader:
-        return await reader.read()
-
-
 def get_run_data(trading_mode, is_live):
     return {
         "data": interfaces_util.run_in_bot_async_executor(
-            _read_metadata(trading_mode, is_live)
+            scripting_library.read_metadata(trading_mode=trading_mode,
+                                            backtesting=not is_live)
         )
     }

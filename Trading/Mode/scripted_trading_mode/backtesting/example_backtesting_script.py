@@ -6,15 +6,11 @@ from octobot_trading.modes.scripting_library import *
 
 
 async def script(ctx, run_id):
-    drawing = PlottedElements()
-    # PNL:
-    # 1. open position: consider position opening fee from PNL
-    # 2. close position: consider closed amount + closing fee into PNL
-    # what is a trade ?
-    #   when position going to 0 (from long/short) => trade is closed
+    drawing = DisplayedElements()
     async with DBReader.database(get_backtesting_db(ctx, run_id)) as reader:
         with drawing.part("backtesting_chart") as part:
             await plot_historical_portfolio_value(reader, part)
+            await plot_historical_pnl_value(reader, part, x_as_trade_count=False, own_yaxis=True)
     return drawing
 
 
@@ -84,7 +80,7 @@ async def other_script(ctx: Context):
     # plot backtesting data
     reader = DBReader("scriptedTradingMode.json")
 
-    drawing = PlottedElements()
+    drawing = DisplayedElements()
     with drawing.part("main-chart") as part:
         order_times = []
         order_prices = []
