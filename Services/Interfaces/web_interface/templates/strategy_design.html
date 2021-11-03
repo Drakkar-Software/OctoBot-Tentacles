@@ -121,7 +121,8 @@ nav-tabs-bar{
 
                     <div class="tab-content" id="tabcontent">
                         <div class="tab-pane fade" id="editor" role="tabreal" aria-labelledby="active-tab">
-
+                                <div id="trading-inputs">
+                                </div>
                                 {% if True %}
 
                                     <iframe class="w-100 h-100" style="border:none"
@@ -138,10 +139,11 @@ nav-tabs-bar{
                         <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
 
                                 <div>
-                                    backtesting
                                     <select id="backtesting-run-select" class="selectpicker"
                                             data-live-search="true" data-url="{{url_for('get_run_data')}}">
                                     </select>
+                                </div>
+                                <div id="backtesting-inputs">
                                 </div>
                                 <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
                                 </div>

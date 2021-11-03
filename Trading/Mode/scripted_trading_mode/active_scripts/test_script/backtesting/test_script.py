@@ -25,7 +25,7 @@ async def backtest_test_script():
         exchange_manager
     )
 
-    drawing = PlottedElements()
+    drawing = DisplayedElements()
     rsi_data = ti.rsi(Close(ctx, pair, time_frame), 14)
     with drawing.part("main-chart") as part:
         part.plot(
