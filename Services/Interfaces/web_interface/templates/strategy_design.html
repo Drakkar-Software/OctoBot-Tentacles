@@ -3,6 +3,7 @@
 
 {% from "macros/forms.html" import render_field %}
 
+
 {% block body %}
 
 
@@ -16,7 +17,6 @@
 
 
 
-
 /*TODO*/
 
 .strategy_body, .tab-content, .toolbox-tabs, #toolbox .dropdown-menu,  #toolbox .dropdown-menu a {
@@ -24,13 +24,15 @@
      color: #b2b5be;
 }
 
-.tab-content {
-    height: calc(100% - 46px); /* todo get subtracted height from footer, (doesnt work if footer gets bigger on smaller screen size  */
-}
+
 
 .toolbox-tabs {
     border-bottom: 1px solid #2a2e39;
-    border-top: 4px solid #2a2e39;
+    border-top: 1px solid #2a2e39;
+}
+
+.main-toolbox-tabs {
+    border-top: 4px solid #2a2e39 !important;
 }
 
 .crisp {
@@ -72,6 +74,7 @@
     border-color: unset !important;
     border: none !important;
     background: #2a2e39;
+    border-radius: unset;
 }
 
 .noBorder {
@@ -141,107 +144,211 @@ body {
     background: #2a2e39;
 }
 
+#backtesting, #strategy-settings, #optimizer {
+    overflow: scroll;
+}
+
+#backtesting-inputs .card, #backtesting .card-body, #trading-inputs .card, #trading .card-body {
+    background-color: #131722 !important;
+    border: 1px solid #2a2e39 !important;
+}
+
+@media only screen and (max-width: 600px) {
+
+    .toolbox-tabs > li {
+        border: unset !important;
+    }
+}
+
+@media only screen and (max-width: 530px) {
+    .toolbox-tabs > li:last-of-type {
+        border-right:unset !important;
+    }
+}
+
 </style>
 
 <div class="strategy_body">
-        <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
-            <div  id="main-chart" class="resizable" >
-            </div>
-            <div class="draggable-resizer">
-            </div>
-            <div id="sub-chart" class="">
-            </div>
+    <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
+        <div  id="main-chart" class="resizable" >
         </div>
-        <div id="toolbox" class="strategy-toolbox">
+        <div class="draggable-resizer">
+        </div>
+        <div id="sub-chart" class="">
+        </div>
+    </div>
+    <div id="toolbox" class="strategy-toolbox">
+        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs" id="tabs" role="tablist">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
+                aria-expanded="false">Code Editor</a>
+                <div class="dropdown-menu dropdown-default">
+                <a class="nav-link primary-tab-selector" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                aria-controls="trading-editor"
+                aria-selected="false">
+                trading script editor
+                </a>
+                <a class="nav-link primary-tab-selector" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                aria-controls="backtesting-editor"
+                aria-selected="false">
+                backtesting script editor
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link primary-tab-selector active show" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
+                   aria-controls="strategy-settings"
+                   aria-selected="true">
+                    Strategy Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link primary-tab-selector" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
+                   aria-controls="backtesting"
+                   aria-selected="false">
+                    Backtesting
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                   aria-controls="optimizer"
+                   aria-selected="false">
+                    Strategy Optimizer
+                </a>
+            </li>
+           <div class="toolbox-buttons">
+               <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
+               </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+            </div>
+        </ul>
 
-                    <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
-                            aria-expanded="false">Code Editor</a>
-                            <div class="dropdown-menu dropdown-default">
-                            <a class="nav-link primary-tab-selector" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
-                            aria-controls="real"
-                            aria-selected="true">
-                            trading script editor
-                            </a>
-                            <a class="nav-link primary-tab-selector" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
-                            aria-controls="real"
-                            aria-selected="true">
-                            backtesting script editor
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link primary-tab-selector active show" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
-                               aria-controls="simulated"
-                               aria-selected="false">
-                                Backtesting results
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
-                               aria-controls="all"
-                               aria-selected="false">
-                                Strategy Optimizer
-                            </a>
-                        </li>
-                       <div class="toolbox-buttons">
-                           <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
-                           </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
-                        </div>
-                    </ul>
+        <div class="tab-content" id="toolbox-tabcontent">
+            <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
+                    {% if True %}
+                    <iframe class="w-100 h-100 noBorder" "
+                            src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                    ></iframe>
 
-                    <div class="tab-content" id="tabcontent">
-                        <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
+                    {% else %}
+                    <div class="inside-tab-content">
+                        https://microsoft.github.io/monaco-editor/
+                    </div>
+                    {% endif %}
+            </div>
 
-                                {% if True %}
+            <div class="tab-pane fade" id="backtesting-editor" role="tabreal" aria-labelledby="backtesting-editor-tab">
 
-                                <iframe class="w-100 h-100 noBorder" "
-                                        src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                                ></iframe>
+                    {% if True %}
 
-                                {% else %}
-                                <div class="inside-tab-content">
-                                    https://microsoft.github.io/monaco-editor/
-                                </div>
-                                {% endif %}
+                    <iframe class="w-100 h-100 noBorder"
+                            src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                    ></iframe>
 
-                        </div>
-                        <div class="tab-pane fade" id="backtesting-editor" role="tabreal" aria-labelledby="backtesting-editor-tab">
+                    {% else %}
+                    <div class="inside-tab-content">
+                        https://microsoft.github.io/monaco-editor/
+                    </div>
+                    {% endif %}
+            </div>
 
-                                {% if True %}
+            <div class="tab-pane fade show active" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
+                <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector active show" id="trading-script-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="trading-script-settings" href="#trading-script-settings">Trading Script Settings</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector " id="evaluator-settings-tab" data-toggle="tab" href="#evaluator-settings" role="tab" aria-controls="evaluator-settings" aria-selected="false">Evaluator Settings</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="strategy-settings-tabcontent">
 
-                                <iframe class="w-100 h-100 noBorder"
-                                        src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                                ></iframe>
-
-                                {% else %}
-                                <div class="inside-tab-content">
-                                    https://microsoft.github.io/monaco-editor/
-                                </div>
-                                {% endif %}
-
-                        </div>
-
-
-                        <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
-
-                                <div>
-                                    <select id="backtesting-run-select" class="selectpicker"
-                                            data-live-search="true" data-url="{{url_for('get_run_data')}}">
-                                    </select>
-                                </div>
-                                <div id="backtesting-inputs">
-                                </div>
-                                <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
-                                </div>
-                        </div>
-                        <div class="tab-pane fade" id="optimizer" role="taball" aria-labelledby="optimizer-tab">
-                                strategy optimizer
-                            </div>
+                    <div class="tab-pane fade show active" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
+                        <div id="trading-inputs">
                         </div>
                     </div>
 
+                    <div class="tab-pane fade" id="evaluator-settings" role="tabreal" aria-labelledby="evaluator-settings-tab">
 
+
+                        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                            <li class="nav-item waves-effect waves-light">
+                              <a class="nav-link primary-tab-selector active show" id="evaluatorName1-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="evaluatorName1" href="#evaluatorName1">Evaluator Name 1</a>
+                            </li>
+                            <li class="nav-item waves-effect waves-light">
+                              <a class="nav-link primary-tab-selector " id="evaluatorName2-tab" data-toggle="tab" href="#evaluatorName2" role="tab" aria-controls="evaluatorName2" aria-selected="false">Evaluator name 2</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="evaluator-settings-tabcontent">
+
+                            <div class="tab-pane fade show active" id="evaluatorName1" role="tabreal" aria-labelledby="evaluatorName1-tab">
+                                evaluator 1 settings
+                            </div>
+
+                            <div class="tab-pane fade" id="evaluatorName2" role="tabreal" aria-labelledby="evaluatorName2-tab">
+                                evaluator 2 settings
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </div>
+
+
+
+
+            <div class="tab-pane fade" id="backtesting" role="tabreal" aria-labelledby="backtesting-tab">
+
+                <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector show" id="backtesting-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Backtesting Settings</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector active" id="backtesting-results-tab" data-toggle="tab" href="#backtesting-results" role="tab" aria-controls="backtesting-results" aria-selected="true">Backtesting results</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="backtesting-tabcontent">
+
+                    <div class="tab-pane fade" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
+                        <select id="backtesting-run-select" class="selectpicker"
+                                data-live-search="true" data-url="{{url_for('get_run_data')}}">
+                        </select>
+                        <div id="backtesting-inputs">
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade show active" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
+                        <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
+
+                <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector show" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Strategy Optimizer Settings</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector active" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Strategy Optimizer Results</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="optimizer-tabcontent">
+
+                    <div class="tab-pane fade" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
+
+                        <div id="strategy-optimizer-inputs">
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade show active" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
+                        <div id="strategy-optimizer-chart-or-tables">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
