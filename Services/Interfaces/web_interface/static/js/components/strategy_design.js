@@ -11,7 +11,7 @@ function getPlotlyConfig(){
         scrollZoom: true,
         modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
         responsive: true,
-        showEditInChartStudio: true,
+        showEditInChartStudio: false,
         displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
     };
 }
@@ -60,8 +60,9 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
+        dragmode: "pan",
         font: {
-        color: "white"
+        color: "#b2b5be"
         }
     };
     yaxis_list.push(yaxis)
@@ -250,12 +251,27 @@ function reload_request_success_callback(updated_data, update_url, dom_root_elem
 }
 
 function updateWindowSizes(){
-    const currentChartsHeight = $("#charts").height()
-    const newToolboxHeight = "calc(100vh - 53px - 32px - " + currentChartsHeight + "px)"; /** get height from footer and header or use a media query for smaller screens **/
+    const currentChartsHeight = $("#charts").outerHeight(true)
+    const currentMainMenuSize = $("nav.navbar.navbar-expand-md.navbar-dark").outerHeight(true)
+    const currentFooterSize = $("footer.page-footer").outerHeight(true)
+    const currentHeaderFooterSize = currentFooterSize + currentMainMenuSize;
+    const currentTotalCalcSize =  currentHeaderFooterSize + currentChartsHeight
+    const newToolboxHeight = "calc(100vh - " + currentTotalCalcSize + "px)";
     $("#toolbox").css("height", newToolboxHeight);
-    const currentMainChartHeight = $("#main-chart").height()
-    const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)"
-    $("#sub-chart").css("height", newSubChartHeight);
+
+    const newStrategyBodyHeight =  "calc(100% - " + currentHeaderFooterSize + "px)"
+    $(".strategy_body").css("height", newStrategyBodyHeight);
+
+    const currentToolbarHeight =  $(".toolbox-tabs").outerHeight(true)
+    const newChartsMaxHeight =  "calc(100% - " + currentToolbarHeight + "px)"
+    $("#charts").css("max-height", newChartsMaxHeight);
+
+    const newTabContentHeight = newChartsMaxHeight
+    $(".tab-content").css("height", newTabContentHeight)
+
+    const currentMainChartHeight = $("#main-chart").outerHeight(true)
+    const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)" /* 4px is from the slider draggable*/
+    $("#sub-chart").css("height", newSubChartHeight)
 }
 
 function handleResizables(){
@@ -263,6 +279,7 @@ function handleResizables(){
     $(".resizable").on("resize", updateWindowSizes());
     window.addEventListener('resize', function(event){updateWindowSizes()});
     $("#charts").on('resize', function(event){updateWindowSizes()});
+    updateWindowSizes();
 }
 
 function updateBacktestingSelect(updated_data, update_url, dom_root_element, msg, status){
