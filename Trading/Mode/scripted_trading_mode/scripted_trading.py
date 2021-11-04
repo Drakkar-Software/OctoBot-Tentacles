@@ -38,4 +38,5 @@ class ScriptedTradingModeProducer(scripting_library.AbstractScriptedTradingModeP
             "trades": len(trading_api.get_trade_history(self.exchange_manager)),
             "timestamp": self.trading_mode.timestamp,
             "name": self.trading_mode.script_name,
+            "user_inputs": self.trading_mode.trading_config
         }

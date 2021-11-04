@@ -191,6 +191,8 @@ body {
                     </ul>
 
                     <div class="tab-content" id="tabcontent">
+                                <div id="trading-inputs">
+                                </div>
                         <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
 
                                 {% if True %}
@@ -226,10 +228,11 @@ body {
                         <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
 
                                 <div>
-                                    backtesting
                                     <select id="backtesting-run-select" class="selectpicker"
                                             data-live-search="true" data-url="{{url_for('get_run_data')}}">
                                     </select>
+                                </div>
+                                <div id="backtesting-inputs">
                                 </div>
                                 <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
                                 </div>

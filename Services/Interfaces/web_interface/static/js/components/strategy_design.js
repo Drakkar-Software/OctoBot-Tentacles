@@ -16,7 +16,7 @@ function getPlotlyConfig(){
     };
 }
 
-function createChart(chartDetails, chartData){
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list){
     const chartedElements = {
       x: chartDetails.x,
       mode: chartDetails.kind,
@@ -28,28 +28,34 @@ function createChart(chartDetails, chartData){
             chartedElements[element] = chartDetails[element]
         }
     })
-    chartData.push(chartedElements);
     const xaxis = {
         autorange: true,
         rangeslider: {
             visible: false,
         }
     };
-    if(chartDetails.x_type !== null){
-        xaxis.type = chartDetails.x_type;
-    }
     const yaxis = {
         fixedrange: true,
     };
+    if(chartDetails.x_type !== null){
+        xaxis.type = chartDetails.x_type;
+    }
+    if(xAxis > 1){
+        xaxis.overlaying = "x"
+        chartedElements.xaxis= `x${xAxis}`
+    }
+    if(yAxis > 1){
+        yaxis.overlaying = "y"
+        yaxis.side = 'right'
+        chartedElements.yaxis= `y${yAxis}`
+    }
     if(chartDetails.y_type !== null){
         yaxis.type = chartDetails.y_type;
     }
-    return {
+    chartData.push(chartedElements);
+    const layout = {
         autosize: true,
-        // height: 500,
         margin: {l: 50, r: 50, b: 0, t: 0, pad: 0},
-        xaxis: xaxis,
-        yaxis: yaxis,
         showlegend: true,
         legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -58,13 +64,40 @@ function createChart(chartDetails, chartData){
         color: "white"
         }
     };
+    yaxis_list.push(yaxis)
+    yaxis_list.forEach(function (axis, i){
+        if(i > 0){
+            layout[`yaxis${i + 1}`] = axis;
+        }else{
+            layout.yaxis = axis
+        }
+    });
+    xaxis_list.push(xaxis)
+    xaxis_list.forEach(function (axis, i){
+        if(i > 0){
+            layout[`xaxis${i + 1}`] = axis;
+        }else{
+            layout.xaxis = axis
+        }
+    });
+    return layout
 }
 
 function updateBacktestingChart(data, divID, replot){
     data.data.sub_elements.forEach(function (sub_element) {
         const chartData = [];
+        const xaxis_list = [];
+        const yaxis_list = [];
         sub_element.data.elements.forEach(function (chartDetails) {
-            const layout = createChart(chartDetails, chartData);
+            let yAxis = 1;
+            if(chartDetails.own_yaxis){
+                yAxis += 1;
+            }
+            let xAxis = 1;
+            if(chartDetails.own_xaxis){
+                xAxis += 1;
+            }
+            const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
             if (replot) {
                 Plotly.react(divID, chartData, layout, getPlotlyConfig())
             } else {
@@ -74,7 +107,31 @@ function updateBacktestingChart(data, divID, replot){
     });
 }
 
-function updateCharts(data, replot){
+function displayInputs(elements){
+    ["backtesting", "trading"].forEach(function (tab){
+        const masterTab = $(`#${tab}-inputs`);
+        masterTab.empty();
+        elements.data.elements.forEach(function (inputDetails) {
+            const divId = inputDetails.title.replaceAll(" ", "-");
+            masterTab.append(`<div id="${tab}-${divId}"></div>`)
+            new JSONEditor(
+                document.getElementById(`${tab}-${divId}`),
+                {
+                    schema: inputDetails.schema,
+                    startval: inputDetails.value,
+                    no_additional_properties: true,
+                    prompt_before_delete: true,
+                    disable_array_reorder: true,
+                    disable_collapse: true,
+                    disable_properties: true
+                }
+            );
+        });
+    })
+}
+
+
+function updateChartsAndInputs(data, replot){
     let mainLayout = undefined;
     if(data.data.sub_elements.length <= 1){
         $("#main-chart").resizable("option", "disabled", true );
@@ -86,28 +143,49 @@ function updateCharts(data, replot){
         $("#main-chart").removeClass("max-width");
     }
     data.data.sub_elements.forEach(function (sub_element) {
-        const chartData = [];
-        const divID = sub_element.name;
-        sub_element.data.elements.forEach(function (chartDetails){
-            const layout = createChart(chartDetails, chartData);
-            if(divID === "main-chart"){
-                mainLayout = layout;
-            }
-            function afterPlot(target){
-                removeExplicitSize(target);
-                resizeObserver.observe(target);
-                if(divID !== "main-chart"){
-                    // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
-                    originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
-                    Plotly.relayout("sub-chart", {xaxis: {range: mainLayout.xaxis.range.map((x) => x), type: mainLayout.xaxis.type}});
+        if(sub_element.name == "inputs") {
+            displayInputs(sub_element)
+        }else {
+            const chartData = [];
+            const xaxis_list = [];
+            const yaxis_list = [];
+            const divID = sub_element.name;
+            sub_element.data.elements.forEach(function (chartDetails) {
+                let yAxis = 1;
+                if (chartDetails.own_yaxis) {
+                    yAxis += 1;
                 }
-            }
-            if(replot){
-                Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
-            }else{
-                Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
-            }
-        });
+                let xAxis = 1;
+                if (chartDetails.own_xaxis) {
+                    xAxis += 1;
+                }
+                const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
+                if (divID === "main-chart") {
+                    mainLayout = layout;
+                }
+
+                function afterPlot(target) {
+                    removeExplicitSize(target);
+                    resizeObserver.observe(target);
+                    if (divID !== "main-chart") {
+                        // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
+                        originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
+                        Plotly.relayout("sub-chart", {
+                            xaxis: {
+                                range: mainLayout.xaxis.range.map((x) => x),
+                                type: mainLayout.xaxis.type
+                            }
+                        });
+                    }
+                }
+
+                if (replot) {
+                    Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
+                } else {
+                    Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
+                }
+            });
+        }
     });
     document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
         Plotly.relayout("sub-chart", eventdata);
@@ -136,12 +214,12 @@ function removeExplicitSize(figure){
   return figure;
 }
 
-function displayCharts(replot){
+function displayChartsAndInputs(replot){
     $.get({
         url: $("#charts").data("url"),
         dataType: "json",
         success: function (data) {
-            updateCharts(data, replot)
+            updateChartsAndInputs(data, replot)
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
@@ -168,7 +246,7 @@ function handleScriptButtons(){
 }
 
 function reload_request_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    displayCharts(true);
+    displayChartsAndInputs(true);
 }
 
 function updateWindowSizes(){
@@ -220,7 +298,7 @@ function handleSelects(){
 }
 
 $(document).ready(function() {
-    displayCharts(false);
+    displayChartsAndInputs(false);
     asyncInit();
     handleScriptButtons();
     handleResizables();

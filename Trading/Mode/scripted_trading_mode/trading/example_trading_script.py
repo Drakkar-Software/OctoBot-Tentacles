@@ -3,7 +3,16 @@ from octobot_trading.modes.scripting_library import *
 
 
 async def script(ctx: Context):
-    set_script_name(ctx, "SimpleRSI")
+    ctx.logger.info("start script")
+    set_script_name(ctx, "SimpleRSI with 40/60")
+
+    await user_input(ctx, "rsi_length", "int", 1)
+    await user_input(ctx, "hello", "int", 1111)
+    await user_input(ctx, "use stops", "boolean", True)
+    await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
+    await user_input(ctx, "data source", "options", "",
+                     options=[f"{element['id']} {element['name']}" for element in await read_metadata(ctx)])
+
     pair = ctx.traded_pair
     time_frame = "1h"
     await plot(
@@ -26,14 +35,14 @@ async def script(ctx: Context):
 
         await plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)
 
-        if rsi_data[-1] < 30:
+        if rsi_data[-1] < 40:
             await market(
                 ctx,
                 amount="60%",
                 side="buy",
                 tag="marketIn"
             )
-        if rsi_data[-1] > 70:
+        if rsi_data[-1] > 60:
             await market(
                 ctx,
                 amount="60%",
@@ -41,6 +50,7 @@ async def script(ctx: Context):
                 tag="marketOut"
             )
 
+    ctx.logger.info("finish script")
     return
 
 async def other_script(ctx: Context):
