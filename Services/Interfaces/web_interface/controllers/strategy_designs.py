@@ -24,7 +24,12 @@ import octobot_commons.logging as commons_logging
 @web_interface.server_instance.route("/strategy_design")
 @login.login_required_when_activated
 def strategy_design():
-    return flask.render_template("strategy_design.html")
+    trading_mode = models.get_config_activated_trading_mode()
+    return flask.render_template(
+        "strategy_design.html",
+        trading_mode_name=trading_mode.get_name(),
+        tentacle_class=trading_mode
+    )
 
 
 @web_interface.server_instance.route("/plotted_data")
