@@ -21,7 +21,7 @@ def get_plotted_data(trading_mode):
     elements = scripting_library.DisplayedElements()
     interfaces_util.run_in_bot_async_executor(
         elements.fill_from_database(
-            trading_mode.get_db_name(
+                trading_mode.get_db_name(
                 bot_id=interfaces_util.get_bot_api().get_bot_id()
             )
         )

@@ -6,10 +6,8 @@ async def script(ctx: Context):
     ctx.logger.info("start script")
     set_script_name(ctx, "SimpleRSI with 40/60")
 
-    await user_input(ctx, "rsi_length", "int", 1)
-    await user_input(ctx, "hello", "int", 1111)
-    await user_input(ctx, "use stops", "boolean", True)
-    await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
+    rsi_length = await user_input(ctx, "rsi_length", "int", 11)
+    percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
     await user_input(ctx, "data source", "options", "",
                      options=[f"{element['id']} {element['name']}" for element in await read_metadata(ctx)])
 
@@ -31,21 +29,21 @@ async def script(ctx: Context):
     # TA initial variables
     candle_source = Close(ctx, pair, time_frame)
     if len(candle_source) > 14:
-        rsi_data = ti.rsi(candle_source, 14)
+        rsi_data = ti.rsi(candle_source, rsi_length)
 
         await plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)
 
         if rsi_data[-1] < 40:
             await market(
                 ctx,
-                amount="60%",
+                amount=f"{percent_volume}%",
                 side="buy",
                 tag="marketIn"
             )
         if rsi_data[-1] > 60:
             await market(
                 ctx,
-                amount="60%",
+                amount=f"{percent_volume}%",
                 side="sell",
                 tag="marketOut"
             )
