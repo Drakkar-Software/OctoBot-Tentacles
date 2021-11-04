@@ -217,6 +217,13 @@ def config_tentacle():
             success, response = models.update_tentacle_config(tentacle_name, request_data)
         elif action == "factory_reset":
             success, response = models.reset_config_to_default(tentacle_name)
+        if flask.request.args.get("reload"):
+            try:
+                trading_mode = models.get_config_activated_trading_mode()
+                models.update_plot_script(trading_mode, True)
+            except Exception as e:
+                success = False
+                response = str(e)
         if success:
             return util.get_rest_reply(flask.jsonify(response))
         else:

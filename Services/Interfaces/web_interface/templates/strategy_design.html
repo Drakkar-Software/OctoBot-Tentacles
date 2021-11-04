@@ -262,6 +262,13 @@ body {
                 <div class="tab-content" id="strategy-settings-tabcontent">
 
                     <div class="tab-pane fade show active" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
+                        <div class="text-right">
+                            <button class="btn btn-outline-success waves-effect user-input-save"
+                                    id="save-{{trading_mode_name}}"
+                                    data-tentacle="{{trading_mode_name}}"
+                                    data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
+                                    data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save</button>
+                        </div>
                         <div id="trading-inputs">
                         </div>
                     </div>
@@ -357,5 +364,6 @@ body {
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/strategy_design_components.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
