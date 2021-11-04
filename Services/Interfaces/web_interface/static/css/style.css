@@ -478,17 +478,15 @@ table.dataTable tfoot th {
 }
 
 .strategy_body {
-    height: calc(100vh - 96px);
+    height: calc(100vh - 87px);
     position: fixed;
     width: 100vw;
 }
 
 #charts {
-    border:1px solid black;
-
     width: 100vw;
-    height: calc(60vh - 96px);
-    max-height: calc(100vh - 98px - 57px);
+    height: calc(60vh - 87px);
+    max-height: calc(100vh - 53px - 32px - 47px);
 }
 
 #main-chart {
@@ -505,8 +503,6 @@ table.dataTable tfoot th {
 
 
 .strategy-toolbox {
-    border:1px solid black;
-
     width:100vw;
     height: 40vh;
 
@@ -517,6 +513,6 @@ table.dataTable tfoot th {
 }
 
 .draggable-resizer {
-    padding: 1px;
+    padding: 2px;
     background: #2a2e39 !important;
 }
