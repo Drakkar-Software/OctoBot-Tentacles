@@ -55,7 +55,7 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     chartData.push(chartedElements);
     const layout = {
         autosize: true,
-        margin: {l: 50, r: 50, b: 15, t: 15, pad: 0},
+        margin: {l: 50, r: 50, b: 0, t: 0, pad: 0},
         showlegend: true,
         legend: {x: 0.01, xanchor: 'left', y: 0.99, yanchor:"top"},
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -249,18 +249,20 @@ function reload_request_success_callback(updated_data, update_url, dom_root_elem
     displayChartsAndInputs(true);
 }
 
+function updateWindowSizes(){
+    const currentChartsHeight = $("#charts").height()
+    const newToolboxHeight = "calc(100vh - 53px - 32px - " + currentChartsHeight + "px)"; /** get height from footer and header or use a media query for smaller screens **/
+    $("#toolbox").css("height", newToolboxHeight);
+    const currentMainChartHeight = $("#main-chart").height()
+    const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)"
+    $("#sub-chart").css("height", newSubChartHeight);
+}
+
 function handleResizables(){
     $(".resizable").resizable();
-    $(".resizable").on("resize", function () {
-        const currentChartsHeight = $("#charts").height()
-        const newToolboxHeight = "calc(100vh - 96px - " + currentChartsHeight + "px)";
-        $("#toolbox").css("height", newToolboxHeight);
-
-
-        const currentMainChartHeight = $("#main-chart").height()
-        const newSubChartHeight = "calc(100% - 5px - " + currentMainChartHeight + "px)"
-        $("#sub-chart").css("height", newSubChartHeight);
-    });
+    $(".resizable").on("resize", updateWindowSizes());
+    window.addEventListener('resize', function(event){updateWindowSizes()});
+    $("#charts").on('resize', function(event){updateWindowSizes()});
 }
 
 function updateBacktestingSelect(updated_data, update_url, dom_root_element, msg, status){

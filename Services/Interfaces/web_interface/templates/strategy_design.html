@@ -14,27 +14,31 @@
     padding: 0;
 }
 
+
+
+
 /*TODO*/
-nav-tabs-bar{
-    height: 59px;
-}
-.strategy_body {
+
+.strategy_body, .tab-content, .toolbox-tabs, #toolbox .dropdown-menu,  #toolbox .dropdown-menu a {
     background: #131722;
+     color: #b2b5be;
 }
 
 .tab-content {
-    height: calc(100% - 48px); /* todo get subtracted height from footer, (doesnt work if footer gets bigger on smaller screen size  */
-    background: #131722;
-    color: #fff;
+    height: calc(100% - 46px); /* todo get subtracted height from footer, (doesnt work if footer gets bigger on smaller screen size  */
 }
 
 .toolbox-tabs {
-    background: #131722;
     border-bottom: 1px solid #2a2e39;
+    border-top: 4px solid #2a2e39;
+}
+
+.crisp {
+    stroke: #2a2e39 !important;
 }
 
 .toolbox-buttons {
-    margin-left: 5px;
+    background: #2a2e39;
 
 }
 
@@ -70,6 +74,10 @@ nav-tabs-bar{
     background: #2a2e39;
 }
 
+.noBorder {
+    border:none
+}
+
 .strategy-toolbox {
     position: absolute;
 }
@@ -77,12 +85,67 @@ nav-tabs-bar{
     height: 100%;
 }
 
+.ui-resizable-s {
+    height: 20px;
+    width: 100%;
+    bottom: -10px;
+    left: 0;
+}
+
+.toolbox-buttons .btn {
+    border-radius: 0;
+    background-color: #131722 !important;
+    font-size: 1rem;
+    text-transform: unset;
+    padding: 8px 2rem;
+}
+
+
+
+
+body {
+    /* looks better and gives more space */
+    line-height: unset;
+}
+
+
+.toolbox-buttons .btn-success {
+    color: #00c851;
+}
+
+.toolbox-buttons .btn-warning {
+    color: #fb3;
+}
+
+.toolbox-buttons .btn-success:hover {
+    background: #00c851 !important;
+    color: #fff;
+}
+
+.toolbox-buttons .btn-warning:hover {
+    background: #fb3 !important;
+    color: #fff;
+}
+
+.toolbox-btn-divider {
+    display: inline-block;
+    width: 1px;
+}
+
+#toolbox .dropdown-menu a {
+    border-radius:0;
+    border-color: #2a2e39;
+}
+
+#toolbox .dropdown-menu a:hover {
+    background: #2a2e39;
+}
 
 </style>
 
 <div class="strategy_body">
         <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
-            <div id="main-chart" class="resizable">
+            <div  id="main-chart" class="resizable" >
             </div>
             <div class="draggable-resizer">
             </div>
@@ -92,11 +155,19 @@ nav-tabs-bar{
         <div id="toolbox" class="strategy-toolbox">
 
                     <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link primary-tab-selector" id="editor-tab" data-toggle="tab" href="#editor" role="tab"
-                               aria-controls="real"
-                               aria-selected="true">
-                                Code editor
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
+                            aria-expanded="false">Code Editor</a>
+                            <div class="dropdown-menu dropdown-default">
+                            <a class="nav-link primary-tab-selector" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                            aria-controls="real"
+                            aria-selected="true">
+                            trading script editor
+                            </a>
+                            <a class="nav-link primary-tab-selector" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                            aria-controls="real"
+                            aria-selected="true">
+                            backtesting script editor
                             </a>
                         </li>
                         <li class="nav-item">
@@ -114,20 +185,19 @@ nav-tabs-bar{
                             </a>
                         </li>
                        <div class="toolbox-buttons">
-                            <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button>
-                            <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+                           <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
+                           </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
                         </div>
                     </ul>
 
                     <div class="tab-content" id="tabcontent">
-                        <div class="tab-pane fade" id="editor" role="tabreal" aria-labelledby="active-tab">
-                                <div id="trading-inputs">
-                                </div>
+                        <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
+
                                 {% if True %}
 
-                                    <iframe class="w-100 h-100" style="border:none"
-                                            src="http://localhost:8888/lab/tree/TradingBots/0.4/OctoBot/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                                    ></iframe>
+                                <iframe class="w-100 h-100 noBorder" "
+                                        src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                                ></iframe>
 
                                 {% else %}
                                 <div class="inside-tab-content">
@@ -136,6 +206,23 @@ nav-tabs-bar{
                                 {% endif %}
 
                         </div>
+                        <div class="tab-pane fade" id="backtesting-editor" role="tabreal" aria-labelledby="backtesting-editor-tab">
+
+                                {% if True %}
+
+                                <iframe class="w-100 h-100 noBorder"
+                                        src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
+                                ></iframe>
+
+                                {% else %}
+                                <div class="inside-tab-content">
+                                    https://microsoft.github.io/monaco-editor/
+                                </div>
+                                {% endif %}
+
+                        </div>
+
+
                         <div class="tab-pane fade show active" id="backtesting" role="tabsimulated" aria-labelledby="backtesting-tab">
 
                                 <div>
