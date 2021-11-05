@@ -82,6 +82,7 @@ from tentacles.Services.Interfaces.web_interface.controllers.medias import (
 from tentacles.Services.Interfaces.web_interface.controllers.strategy_designs import (
     strategy_design,
     plotted_data,
+    backtesting_main_plotted_data,
     backtesting_run_plotted_data,
     update_plot_script,
     get_run_data,
@@ -132,6 +133,7 @@ __all__ = [
     "terms",
     "strategy_design",
     "plotted_data",
+    "backtesting_main_plotted_data",
     "backtesting_run_plotted_data",
     "update_plot_script",
     "get_run_data",

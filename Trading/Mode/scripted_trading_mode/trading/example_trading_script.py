@@ -28,7 +28,7 @@ async def script(ctx: Context):
 
     # TA initial variables
     candle_source = Close(ctx, pair, time_frame)
-    if len(candle_source) > 14:
+    if len(candle_source) > rsi_length:
         rsi_data = ti.rsi(candle_source, rsi_length)
 
         await plot(ctx, "RSI", Time(ctx, pair, time_frame), rsi_data)

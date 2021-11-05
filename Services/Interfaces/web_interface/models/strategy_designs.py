@@ -17,14 +17,12 @@ import octobot_services.api as services_api
 import octobot_trading.modes.scripting_library as scripting_library
 
 
-def get_plotted_data(trading_mode):
+def get_plotted_data(trading_mode, run_id=None):
     elements = scripting_library.DisplayedElements()
+    db_name = trading_mode.get_db_name(bot_id=interfaces_util.get_bot_api().get_bot_id()) if run_id is None \
+        else trading_mode.get_db_name(backtesting=True, prefix=run_id)
     interfaces_util.run_in_bot_async_executor(
-        elements.fill_from_database(
-                trading_mode.get_db_name(
-                bot_id=interfaces_util.get_bot_api().get_bot_id()
-            )
-        )
+        elements.fill_from_database(db_name)
     )
     return elements.to_json()
 

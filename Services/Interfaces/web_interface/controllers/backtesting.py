@@ -44,6 +44,19 @@ def backtesting():
                                                                            run_on_common_part_only,
                                                                            start_timestamp=data.get("start_timestamp", None),
                                                                            end_timestamp=data.get("end_timestamp", None))
+        elif action_type == "start_backtesting_with_current_bot_data":
+            data = flask.request.get_json()
+            source = flask.request.args["source"]
+            exchange_id = data.get("exchange_id", None)
+            reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
+            success, reply = models.start_backtesting_using_current_bot_data(
+                exchange_id,
+                source,
+                reset_tentacle_config,
+                start_timestamp=data.get("start_timestamp", None),
+                end_timestamp=data.get("end_timestamp", None)
+            )
+
         if success:
             web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))
@@ -62,6 +75,17 @@ def backtesting():
             return flask.render_template('backtesting.html',
                                          activated_trading_mode=models.get_config_activated_trading_mode(),
                                          data_files=models.get_data_files_with_description())
+
+
+@web_interface.server_instance.route("/backtesting_run_id")
+@login.login_required_when_activated
+def backtesting_run_id():
+    stop_backtesting = flask.request.args.get("stop_backtesting", False)
+    if stop_backtesting:
+        models.stop_previous_backtesting()
+    trading_mode = models.get_config_activated_trading_mode()
+    run_id = models.get_latest_backtesting_run_id(trading_mode)
+    return flask.jsonify(run_id)
 
 
 @web_interface.server_instance.route("/data_collector")
