@@ -1,6 +1,10 @@
-function displayChartsAndInputs(replot){
+function displayChartsAndInputs(replot, backtestingRunId){
+    let url = $("#charts").data("live-url")
+    if(replot){
+       url = $("#charts").data("backtesting-url") + backtestingRunId
+    }
     $.get({
-        url: $("#charts").data("url"),
+        url: url,
         dataType: "json",
         success: function (data) {
             updateChartsAndInputs(data, replot, editors)
@@ -24,14 +28,30 @@ function handleScriptButtons(){
         const data = {
             live: isLiveGraph(),
         };
-        send_and_interpret_bot_update(data, update_url, null, reload_request_success_callback, generic_request_failure_callback);
-
+        send_and_interpret_bot_update(data, update_url, null, reloadRequestSuccessCallback, generic_request_failure_callback);
     })
 }
 
-function reload_request_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    displayChartsAndInputs(true);
+function postBacktestingDone(){
+    const update_url = $("#charts").data("backtesting-run-id-url")
+    send_and_interpret_bot_update({}, update_url, null, backtestingRunIdFetchedCallback, generic_request_failure_callback, "GET");
 }
+
+function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_element, msg, status){
+    const backtestingRunId = msg.id;
+    displayChartsAndInputs(true, backtestingRunId)
+    initBacktestingRunSelect()
+}
+
+function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    const reloadScript = $("#reload-script");
+    const backtestingUrl = reloadScript.data("backtesting-url")
+    const data = {
+        exchange_id: reloadScript.data("exchange-id"),
+    }
+    start_backtesting(data, backtestingUrl);
+}
+
 
 function updateWindowSizes(){
     const currentChartsHeight = $("#charts").outerHeight(true)
@@ -67,18 +87,31 @@ function handleResizables(){
 
 function updateBacktestingSelect(updated_data, update_url, dom_root_element, msg, status){
     const select = $("#backtesting-run-select");
+    select.empty();
+    // select.selectpicker("refresh");
     msg.data.sort()
+    let defaultVal = null
     msg.data.reverse().forEach(function(element){
         const date = new Date(element.timestamp * 1000)
         const displayedTime = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
-        select.append(new Option(`${element.id} ${element.name} ${displayedTime}`, element.id));
+        select.append(new Option(`${element.id} ${element.name} ${displayedTime}`, element.id,
+            defaultVal === null, defaultVal === null));
+        if(defaultVal === null){
+            defaultVal = element.id;
+        }
     })
+    select.selectpicker("refresh");
+    select.val(defaultVal).selectpicker("refresh");
     triggerBacktestingSelectUpdate();
 }
 
-function asyncInit(){
+function initBacktestingRunSelect(){
     send_and_interpret_bot_update({}, $("#backtesting-run-select").data("url"), null,
         updateBacktestingSelect, generic_request_failure_callback, "GET");
+}
+
+function asyncInit(){
+    initBacktestingRunSelect();
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
@@ -86,10 +119,11 @@ function updateBacktestingReport(updated_data, update_url, dom_root_element, msg
 }
 
 function triggerBacktestingSelectUpdate(){
-     const data = {
-        id: $("#backtesting-run-select").val(),
-    }
-    send_and_interpret_bot_update(data, $("#backtesting-chart").data("url"), null,
+    updateBacktestingAnalysisReport($("#backtesting-run-select").val())
+}
+
+function updateBacktestingAnalysisReport(run_id){
+    send_and_interpret_bot_update({id: run_id}, $("#backtesting-chart").data("url"), null,
         updateBacktestingReport, generic_request_failure_callback);
 }
 
@@ -99,13 +133,12 @@ function handleSelects(){
 
 function updateTentacleConfig(saveButton, updatedConfig){
     const update_url = saveButton.data("url");
-    log(update_url)
     send_and_interpret_bot_update(updatedConfig, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
-    displayChartsAndInputs(true);
+    reloadRequestSuccessCallback(null, null, null, null, null);
 }
 
 function handle_tentacle_config_update_error_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -130,10 +163,12 @@ function handleUserInputsActions(){
 const editors = {};
 
 $(document).ready(function() {
-    displayChartsAndInputs(false);
+    displayChartsAndInputs(false, null);
     asyncInit();
     handleScriptButtons();
     handleResizables();
     handleSelects();
     handleUserInputsActions();
+    init_backtesting_status_websocket();
+    backtesting_done_callbacks.push(postBacktestingDone)
 });

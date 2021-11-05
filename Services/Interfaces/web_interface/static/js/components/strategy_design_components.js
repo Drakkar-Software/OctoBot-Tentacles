@@ -164,7 +164,6 @@ function updateChartsAndInputs(data, replot, editors){
                 if (divID === "main-chart") {
                     mainLayout = layout;
                 }else{
-                    log("plop")
                     layout.xaxis.visible = false;
                 }
 
@@ -197,26 +196,28 @@ function updateChartsAndInputs(data, replot, editors){
             });
         }
     });
-    document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
-        relayouting.push("main-chart");
-        if(relayouting.indexOf("sub-chart") === -1){
-            Plotly.relayout("sub-chart", eventdata);
-            relayouting.push("sub-chart");
-        }else{
-            relayouting.splice(0, relayouting.length);
-        }
-    });
-    document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
-        relayouting.push("sub-chart");
-        if(relayouting.indexOf("main-chart") === -1){
-            mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
-            mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-            Plotly.relayout("main-chart", mainLayout);
+    if(!replot){
+        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
             relayouting.push("main-chart");
-        }else{
-            relayouting.splice(0, relayouting.length);
-        }
-    });
+            if(relayouting.indexOf("sub-chart") === -1){
+                Plotly.relayout("sub-chart", eventdata);
+                relayouting.push("sub-chart");
+            }else{
+                relayouting.splice(0, relayouting.length);
+            }
+        });
+        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
+            relayouting.push("sub-chart");
+            if(relayouting.indexOf("main-chart") === -1){
+                mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
+                mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
+                Plotly.relayout("main-chart", mainLayout);
+                relayouting.push("main-chart");
+            }else{
+                relayouting.splice(0, relayouting.length);
+            }
+        });
+    }
 }
 
 const relayouting = []
