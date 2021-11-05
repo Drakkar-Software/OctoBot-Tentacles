@@ -169,7 +169,11 @@ body {
 </style>
 
 <div class="strategy_body">
-    <div id="charts" data-url="{{url_for('plotted_data')}}" class="resizable">
+    <div id="charts"
+         data-live-url="{{url_for('plotted_data')}}"
+         data-backtesting-url="{{url_for('backtesting_main_plotted_data', run_id='')}}"
+         data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
+         class="resizable">
         <div  id="main-chart" class="resizable" >
         </div>
         <div class="draggable-resizer">
@@ -177,6 +181,18 @@ body {
         <div id="sub-chart" class="">
         </div>
     </div>
+
+    <span id='backtesting_progress_bar' style='display: none;'>
+        <div class="card-title">
+            <h2>Backtesting in progress</h2>
+        </div>
+
+        <div class='progress'>
+          <div id='progess_bar_anim' class='progress-bar progress-bar-striped progress-bar-animated'
+                role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%;'></div>
+        </div>
+    </span>
+
     <div id="toolbox" class="strategy-toolbox">
         <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs" id="tabs" role="tablist">
             <li class="nav-item dropdown">
@@ -216,8 +232,14 @@ body {
                 </a>
             </li>
            <div class="toolbox-buttons">
-               <button id="reload-script" data-url="{{ url_for('update_plot_script') }}" type="button" class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
-               </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+               <button id="reload-script"
+                       data-url="{{ url_for('update_plot_script') }}"
+                       data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
+                       data-exchange-id="{{ exchange_id }}"
+                       type="button"
+                       class="btn btn-success waves-effect">Reload script</button>
+               <div class="toolbox-btn-divider"></div>
+               <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
             </div>
         </ul>
 
@@ -363,6 +385,7 @@ body {
 {% endblock %}
 
 {% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/common/backtesting_util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_components.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>

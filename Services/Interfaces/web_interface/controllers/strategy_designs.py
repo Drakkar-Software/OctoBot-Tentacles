@@ -28,7 +28,8 @@ def strategy_design():
     return flask.render_template(
         "strategy_design.html",
         trading_mode_name=trading_mode.get_name(),
-        tentacle_class=trading_mode
+        tentacle_class=trading_mode,
+        exchange_id=models.get_first_exchange_id(),
     )
 
 
@@ -44,6 +45,18 @@ def plotted_data():
         # trading_mode.register_live_script(backtest_test_script)
         # TODO remove
         return util.get_rest_reply(models.get_plotted_data(trading_mode), 200)
+    except Exception as e:
+        commons_logging.get_logger("plotted_data").exception(e)
+        return util.get_rest_reply(str(e), 500)
+
+
+@web_interface.server_instance.route("/backtesting_main_plotted_data")
+@login.login_required_when_activated
+def backtesting_main_plotted_data():
+    try:
+        run_id = flask.request.args["run_id"]
+        trading_mode = models.get_config_activated_trading_mode()
+        return util.get_rest_reply(models.get_plotted_data(trading_mode, run_id), 200)
     except Exception as e:
         commons_logging.get_logger("plotted_data").exception(e)
         return util.get_rest_reply(str(e), 500)
