@@ -17,6 +17,7 @@
 import os.path as path
 import ccxt
 import copy
+import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 
@@ -701,6 +702,30 @@ def get_current_exchange():
         return next(iter(exchanges))
     else:
         return DEFAULT_EXCHANGE
+
+
+def change_reference_market_on_config_currencies(old_base_currency: str, new_base_currency: str) -> bool:
+    """
+    Change the base currency from old to new for all configured pair
+    :param old_base_currency:
+    :param new_base_currency:
+    :return: bool, str
+    """
+    success = True
+    message = "Reference market changed for each pair using the old reference market"
+    try:
+        config_currencies = format_config_symbols(interfaces_util.get_edited_config())
+        regex = rf"/{old_base_currency}$"
+        for currencies_config in config_currencies.values():
+            currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS] = \
+                list(set([re.sub(regex, f"/{new_base_currency}", pair)
+                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]]))
+        interfaces_util.get_edited_config(dict_only=False).save()
+    except Exception as e:
+        message = f"Error while changing reference market on currencies list: {e}"
+        success = False
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
+    return success, message
 
 
 def update_config_currencies(currencies: list, replace: bool=False):

@@ -209,6 +209,19 @@ function handle_special_values(currentElem){
             otherElem.trigger("change");
         }
     }
+    else if(currentElem.is(tradingReferenceMarket)){
+        display_generic_modal("Change reference market",
+            "Do you want to adapt the reference market for all your configured pairs ?",
+            "",
+            function(){
+                let url = "/api/change_reference_market_on_config_currencies";
+                let data = {};
+                data["old_base_currency"] = tradingReferenceMarket.attr(config_value_attr);
+                data["new_base_currency"] = tradingReferenceMarket.text();
+                send_and_interpret_bot_update(data, url, null, generic_request_success_callback, generic_request_failure_callback);
+            },
+            null);
+    }
 }
 
 function register_edit_events(){
@@ -795,6 +808,7 @@ let deleted_global_config_elements = [];
 
 const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");
+const tradingReferenceMarket = $("#trading_reference-market");
 
 $(document).ready(function() {
     handle_nested_sidenav();

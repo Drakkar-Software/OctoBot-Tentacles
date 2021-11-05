@@ -37,3 +37,11 @@ def set_config_currency():
                         replace=(request_data.get("action", "update") == "replace"))
     return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
 
+
+@api.api.route('/change_reference_market_on_config_currencies', methods=["POST"])
+@login.login_required_when_activated
+def change_reference_market_on_config_currencies():
+    request_data = flask.request.get_json()
+    success, reply = models.change_reference_market_on_config_currencies(request_data["old_base_currency"],
+                                                                         request_data["new_base_currency"])
+    return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
