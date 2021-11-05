@@ -28,6 +28,7 @@ from tentacles.Services.Interfaces.web_interface.api import user_commands
 from tentacles.Services.Interfaces.web_interface.api.config import (
     get_config_currency,
     set_config_currency,
+    change_reference_market_on_config_currencies,
 )
 from tentacles.Services.Interfaces.web_interface.api.exchanges import (
     is_compatible_account,
@@ -59,4 +60,5 @@ __all__ = [
     "user_command",
     "get_config_currency",
     "set_config_currency",
+    "change_reference_market_on_config_currencies",
 ]
