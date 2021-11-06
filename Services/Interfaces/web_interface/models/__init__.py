@@ -148,6 +148,9 @@ from tentacles.Services.Interfaces.web_interface.models.strategy_designs import 
     get_backtesting_run_plotted_data,
     update_plot_script,
     get_run_data,
+    save_strategy_design_optimizer_config,
+    start_strategy_design_optimizer,
+    get_strategy_design_optimizer_config,
 )
 from tentacles.Services.Interfaces.web_interface.models.tentacles import (
     get_tentacles_packages,
@@ -260,6 +263,9 @@ __all__ = [
     "get_backtesting_run_plotted_data",
     "update_plot_script",
     "get_run_data",
+    "save_strategy_design_optimizer_config",
+    "start_strategy_design_optimizer",
+    "get_strategy_design_optimizer_config",
     "get_tentacles_packages",
     "call_tentacle_manager",
     "install_packages",

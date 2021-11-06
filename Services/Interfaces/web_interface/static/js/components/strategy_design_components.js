@@ -146,6 +146,7 @@ function updateChartsAndInputs(data, replot, editors){
     data.data.sub_elements.forEach(function (sub_element) {
         if(sub_element.name == "inputs") {
             displayInputs(sub_element, replot, editors)
+            displayOptimizerSettings(sub_element, replot)
         }else {
             const chartData = [];
             const xaxis_list = [];
