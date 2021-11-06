@@ -12,9 +12,16 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot.api as octobot_api
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.api as services_api
 import octobot_trading.modes.scripting_library as scripting_library
+import octobot_tentacles_manager.api as tentacles_manager_api
+import octobot_commons.logging as bot_logging
+
+
+def _get_logger():
+    return bot_logging.get_logger("StrategyDesign")
 
 
 def get_plotted_data(trading_mode, run_id=None):
@@ -56,3 +63,25 @@ def get_run_data(trading_mode, is_live):
                                             backtesting=not is_live)
         )
     }
+
+
+def save_strategy_design_optimizer_config(trading_mode, config_update):
+    try:
+        optimizer = octobot_api.create_design_strategy_optimizer(trading_mode)
+        tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
+                                                     optimizer,
+                                                     config_update)
+        return f"Optimizer configuration updated"
+    except Exception as e:
+        _get_logger().exception(e, False)
+        return f"Error when updating tentacle config: {e}"
+
+
+def get_strategy_design_optimizer_config(trading_mode):
+    return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(),
+                                                     octobot_api.create_design_strategy_optimizer(trading_mode))
+
+
+def start_strategy_design_optimizer(trading_mode, config):
+    #todo
+    return {"success": True}

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "strategy_design" %}
 
-{% from "macros/forms.html" import render_field %}
+{% import 'macros/strategy_design_optimizer_settings.html' as m_strategy_design_optimizer_settings %}
 
 
 {% block body %}
@@ -211,7 +211,7 @@ body {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link primary-tab-selector active show" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
+                <a class="nav-link primary-tab-selector" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
                    aria-controls="strategy-settings"
                    aria-selected="true">
                     Strategy Settings
@@ -225,7 +225,7 @@ body {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                <a class="nav-link primary-tab-selector active show" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
                    aria-controls="optimizer"
                    aria-selected="false">
                     Strategy Optimizer
@@ -272,7 +272,7 @@ body {
                     {% endif %}
             </div>
 
-            <div class="tab-pane fade show active" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
+            <div class="tab-pane fade" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector active show" id="trading-script-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="trading-script-settings" href="#trading-script-settings">Trading Script Settings</a>
@@ -353,25 +353,30 @@ body {
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
+            <div class="tab-pane fade show active" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector show" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Strategy Optimizer Settings</a>
+                      <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Strategy Optimizer Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector active" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Strategy Optimizer Results</a>
+                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Strategy Optimizer Results</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="optimizer-tabcontent">
 
-                    <div class="tab-pane fade" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
+                    <div class="tab-pane fade show active" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
 
                         <div id="strategy-optimizer-inputs">
+                            <button class="btn btn-outline-success waves-effect optimizer-input-save-and-start"
+                                    id="optimizer-input-save-and-start-button"
+                                    data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
+                                    data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start</button>
+                            {{ m_strategy_design_optimizer_settings.strategy_optimizer_setting_template() }}
                         </div>
                     </div>
 
-                    <div class="tab-pane fade show active" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
+                    <div class="tab-pane fade" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
                         <div id="strategy-optimizer-chart-or-tables">
                         </div>
                     </div>
@@ -387,6 +392,7 @@ body {
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/backtesting_util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/strategy_design_optimizer.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_components.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

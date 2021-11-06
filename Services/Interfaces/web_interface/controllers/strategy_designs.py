@@ -99,3 +99,30 @@ def get_run_data():
     except Exception as e:
         commons_logging.get_logger("get_run_data").exception(e)
         return util.get_rest_reply(str(e), 500)
+
+
+@web_interface.server_instance.route("/strategy_design_config_optimizer", methods=["GET", "POST"])
+@login.login_required_when_activated
+def strategy_design_config_optimizer():
+    trading_mode = models.get_config_activated_trading_mode()
+    if flask.request.method == 'POST':
+        try:
+            request_data = flask.request.get_json()
+            return util.get_rest_reply(flask.jsonify(models.save_strategy_design_optimizer_config(trading_mode, request_data["config"])))
+        except Exception as e:
+            commons_logging.get_logger("strategy_design_config_optimizer").exception(e)
+            return util.get_rest_reply(str(e), 500)
+    else:
+        return models.get_strategy_design_optimizer_config(trading_mode)
+
+
+@web_interface.server_instance.route("/strategy_design_start_optimizer", methods=["POST"])
+@login.login_required_when_activated
+def strategy_design_start_optimizer():
+    try:
+        trading_mode = models.get_config_activated_trading_mode()
+        request_data = flask.request.get_json()
+        return util.get_rest_reply(flask.jsonify(models.start_strategy_design_optimizer(trading_mode, request_data["config"])))
+    except Exception as e:
+        commons_logging.get_logger("strategy_design_start_optimizer").exception(e)
+        return util.get_rest_reply(str(e), 500)

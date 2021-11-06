@@ -160,6 +160,33 @@ function handleUserInputsActions(){
     })
 }
 
+function handleOptimizerActions(){
+    $("#optimizer-input-save-and-start-button").click(function (){
+        const url = $(this).data("config-url");
+        const updatedConfig = {
+            config: getOptimizerSettingsValues()
+        };
+        send_and_interpret_bot_update(updatedConfig, url, null, handleOptimizerConfigUpdateSuccessCallback, handle_tentacle_config_update_error_callback);
+    })
+}
+
+function handleOptimizerConfigUpdateSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", "Optimizer configuration saved", msg);
+    startStrategyDesignOptimizer();
+}
+
+function startStrategyDesignOptimizer(){
+    const url = $("#optimizer-input-save-and-start-button").data("start-url");
+    const updatedConfig = {
+        config: getOptimizerSettingsValues()
+    };
+    send_and_interpret_bot_update(updatedConfig, url, null, startStrategyOptimizerSuccessCallback, generic_request_failure_callback);
+}
+
+function startStrategyOptimizerSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", "Optimizer started", msg);
+}
+
 const editors = {};
 
 $(document).ready(function() {
@@ -169,6 +196,7 @@ $(document).ready(function() {
     handleResizables();
     handleSelects();
     handleUserInputsActions();
+    handleOptimizerActions();
     init_backtesting_status_websocket();
     backtesting_done_callbacks.push(postBacktestingDone)
 });
