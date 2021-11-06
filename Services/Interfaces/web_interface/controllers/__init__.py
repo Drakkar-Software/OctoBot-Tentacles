@@ -86,6 +86,8 @@ from tentacles.Services.Interfaces.web_interface.controllers.strategy_designs im
     backtesting_run_plotted_data,
     update_plot_script,
     get_run_data,
+    strategy_design_config_optimizer,
+    strategy_design_start_optimizer,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
@@ -137,6 +139,8 @@ __all__ = [
     "backtesting_run_plotted_data",
     "update_plot_script",
     "get_run_data",
+    "strategy_design_config_optimizer",
+    "strategy_design_start_optimizer",
     "portfolio",
     "symbol_market_status",
     "trading",
