@@ -180,6 +180,10 @@ function handleOptimizerActions(){
         };
         send_and_interpret_bot_update(updatedConfig, url, null, handleOptimizerConfigUpdateSuccessCallback, handle_tentacle_config_update_error_callback);
     })
+    $("#optimizer-cancel-button").click(function (){
+        const url = $(this).data("url");
+        send_and_interpret_bot_update({}, url, null, generic_request_success_callback, generic_request_failure_callback);
+    })
 }
 
 function handleOptimizerConfigUpdateSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
@@ -188,9 +192,11 @@ function handleOptimizerConfigUpdateSuccessCallback(updated_data, update_url, do
 }
 
 function startStrategyDesignOptimizer(){
-    const url = $("#optimizer-input-save-and-start-button").data("start-url");
+    const startOptimizerButton  = $("#optimizer-input-save-and-start-button");
+    const url = startOptimizerButton.data("start-url");
     const updatedConfig = {
-        config: getOptimizerSettingsValues()
+        config: getOptimizerSettingsValues(),
+        exchange_id: startOptimizerButton.data("exchange-id")
     };
     send_and_interpret_bot_update(updatedConfig, url, null, startStrategyOptimizerSuccessCallback, generic_request_failure_callback);
 }
@@ -201,6 +207,35 @@ function startStrategyOptimizerSuccessCallback(updated_data, update_url, dom_roo
 
 const editors = {};
 
+function on_optimizer_state_update(data){
+    const status = data["status"];
+    const progress_bar = $("#backtesting_progress_bar");
+    if(status === "computing") {
+        $("#optimizer_progress_bar_title").removeClass(hidden_class)
+        $("#backtesting_progress_bar_title").addClass(hidden_class)
+        const overall_progress = data["overall_progress"];
+        progress_bar.show();
+        update_progress(overall_progress);
+    }else{
+        $("#optimizer_progress_bar_title").addClass(hidden_class)
+        $("#backtesting_progress_bar_title").removeClass(hidden_class)
+        progress_bar.hide();
+    }
+}
+
+function check_optimizer_state(socket){
+    socket.emit("strategy_optimizer_status");
+}
+
+function init_optimizer_status_websocket(){
+    const socket = get_websocket("/strategy_optimizer");
+    socket.on("strategy_optimizer_status", function (data) {
+        on_optimizer_state_update(data);
+    });
+    setInterval(function(){check_optimizer_state(socket);}, 500);
+    return socket;
+}
+
 $(document).ready(function() {
     displayChartsAndInputs(false, null);
     asyncInit();
@@ -210,5 +245,6 @@ $(document).ready(function() {
     handleUserInputsActions();
     handleOptimizerActions();
     init_backtesting_status_websocket();
+    init_optimizer_status_websocket();
     backtesting_done_callbacks.push(postBacktestingDone)
 });
