@@ -122,7 +122,14 @@ def strategy_design_start_optimizer():
     try:
         trading_mode = models.get_config_activated_trading_mode()
         request_data = flask.request.get_json()
-        return util.get_rest_reply(flask.jsonify(models.start_strategy_design_optimizer(trading_mode, request_data["config"])))
+        exchange_id = request_data.get("exchange_id", None)
+        config = request_data.get("config", None)
+        randomly_chose_runs = request_data.get("randomly_chose_runs", False)
+        success, message = models.start_strategy_design_optimizer(trading_mode,
+                                                                  config,
+                                                                  exchange_id,
+                                                                  randomly_chose_runs)
+        return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
     except Exception as e:
         commons_logging.get_logger("strategy_design_start_optimizer").exception(e)
         return util.get_rest_reply(str(e), 500)

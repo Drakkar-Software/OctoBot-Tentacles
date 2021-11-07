@@ -32,7 +32,12 @@ def strategy_optimizer():
         success = False
         reply = "Operation OK"
 
-        if request_data:
+        if update_type == "cancel_optimizer":
+            try:
+                success, reply = models.cancel_optimizer()
+            except Exception as e:
+                return util.get_rest_reply('{"start_optimizer": "ko: ' + str(e) + '"}', 500)
+        elif request_data:
             if update_type == "start_optimizer":
                 try:
                     strategy = request_data["strategy"][0]

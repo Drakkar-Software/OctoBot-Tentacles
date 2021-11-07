@@ -19,6 +19,7 @@ function getOptimizerSettingsValues(){
     settingsRoot.find(".optimizer-input-setting").each(function (i, jsInputSetting){
         const inputSetting = $(jsInputSetting);
         const rawSettingName = inputSetting.data("input-setting-base-name")
+        const tentacleValue = inputSetting.data("tentacle-name")
         const clearedSettingName = rawSettingName.replaceAll(" ", "_");
         let settingValue = inputSetting.val();
         if(inputSetting.data("type") === "number"){
@@ -36,6 +37,7 @@ function getOptimizerSettingsValues(){
         const enabled = $(document.getElementById(`${rawSettingName}Input-enabled-value`)).prop("checked");
         settings[clearedSettingName] = {
             value: settingValue,
+            tentacle: tentacleValue,
             enabled: enabled
         };
     })
@@ -45,19 +47,23 @@ function getOptimizerSettingsValues(){
 function _buildOptimizerSettingsForm(schemaElements, configValues){
     const settingsRoot = $("#optimizer-settings-root");
     settingsRoot.empty();
-    Object.values(schemaElements.data.elements[0].schema.properties).forEach(function (inputDetail) {
-        const valueType = _getValueType(inputDetail);
-        const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail)
-        settingsRoot.append(newInputSetting).hide().fadeIn();
-        _updateInputDetailValues(valueType, inputDetail, configValues);
-    });
+    schemaElements.data.elements.forEach(function (element){
+        Object.values(element.schema.properties).forEach(function (inputDetail) {
+            const valueType = _getValueType(inputDetail);
+            const tentacleName = element.tentacle;
+            const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail, tentacleName)
+            settingsRoot.append(newInputSetting).hide().fadeIn();
+            _updateInputDetailValues(valueType, inputDetail, configValues);
+        });
+    })
     _updateInputSettingsDisplay(settingsRoot);
 }
 
-function _getInputSettingFromTemplate(valueType, inputDetail){
+function _getInputSettingFromTemplate(valueType, inputDetail, tentacleName){
     const template = _getInputSettingTemplate(valueType);
     let inputSettings = template.html().replace(new RegExp("XYZ","g"), inputDetail.title);
     inputSettings = inputSettings.replace(new RegExp("ZYXDefaultValue","g"), inputDetail.default);
+    inputSettings = inputSettings.replace(new RegExp("TENTACLEABC","g"), tentacleName);
     return inputSettings
 }
 

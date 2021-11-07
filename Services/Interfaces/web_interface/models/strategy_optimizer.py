@@ -65,6 +65,15 @@ def get_risks_list():
     return [i / 10 for i in range(10, 0, -1)]
 
 
+def cancel_optimizer():
+    tools = web_interface_root.WebInterface.tools
+    optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
+    if optimizer is None:
+        return False, "No optimizer is running"
+    octobot_api.cancel_strategy_optimizer(optimizer)
+    return True, "Optimizer is cancelling"
+
+
 def start_optimizer(strategy, time_frames, evaluators, risks):
     try:
         tools = web_interface_root.WebInterface.tools
