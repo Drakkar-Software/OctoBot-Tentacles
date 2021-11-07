@@ -50,11 +50,11 @@
 }
 
 
-.toolbox-tabs > li {
+.toolbox-tabs > li, .toolbox-tabs > .toolbox-buttons:first-of-type {
     border-left: 1px solid #2a2e39 !important;
 }
 
-.toolbox-tabs > li:last-of-type {
+.toolbox-tabs > li:last-of-type, .toolbox-tabs > .toolbox-buttons:last-of-type {
     border-right: 1px solid #2a2e39 !important;
 }
 
@@ -144,7 +144,7 @@ body {
     background: #2a2e39;
 }
 
-#backtesting, #strategy-settings, #optimizer {
+#backtesting-settings, #list-of-trades, #performance-summary, #strategy-settings, #optimizer {
     overflow: scroll;
 }
 
@@ -153,10 +153,33 @@ body {
     border: 1px solid #2a2e39 !important;
 }
 
+#backtesting-chart {
+    height:65%;
+    width: 100%
+}
+
+#backtesting-table {
+    height:35%;
+    width: 100%
+}
+
+#strategy-optimizer-inputs *{
+    border-color: #2a2e39 !important;
+}
+
+#strategy-optimizer-inputs > .mx-4 > .row.border > div {
+    line-height: 1.5;
+    padding: 8px 2rem;
+}
+
 @media only screen and (max-width: 600px) {
 
     .toolbox-tabs > li {
         border: unset !important;
+    }
+    .toolbox-tabs > li > a {
+        padding: 3px 0.5rem;
+
     }
 }
 
@@ -199,16 +222,17 @@ body {
                 <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">Code Editor</a>
                 <div class="dropdown-menu dropdown-default">
-                <a class="nav-link primary-tab-selector" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
-                aria-controls="trading-editor"
-                aria-selected="false">
-                trading script editor
-                </a>
-                <a class="nav-link primary-tab-selector" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
-                aria-controls="backtesting-editor"
-                aria-selected="false">
-                backtesting script editor
-                </a>
+                    <a class="nav-link primary-tab-selector" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                    aria-controls="trading-editor"
+                    aria-selected="false">
+                    trading script editor
+                    </a>
+                    <a class="nav-link primary-tab-selector" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                    aria-controls="backtesting-editor"
+                    aria-selected="false">
+                    backtesting script editor
+                    </a>
+                </div>
             </li>
             <li class="nav-item">
                 <a class="nav-link primary-tab-selector" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
@@ -237,18 +261,18 @@ body {
                        data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
                        data-exchange-id="{{ exchange_id }}"
                        type="button"
-                       class="btn btn-success waves-effect">Reload script</button>
-               <div class="toolbox-btn-divider"></div>
-               <button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+                       class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
+                </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
+               <!-- div needs to be there else, whitespace will appear -->
             </div>
         </ul>
 
         <div class="tab-content" id="toolbox-tabcontent">
             <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
                     {% if True %}
-                    <iframe class="w-100 h-100 noBorder" "
-                            src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                    ></iframe>
+                    <iframe class="w-100 h-100 noBorder" src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode">
+                    <!-- todo open active script  / default root is trading profiles-->
+                    </iframe>
 
                     {% else %}
                     <div class="inside-tab-content">
@@ -261,9 +285,9 @@ body {
 
                     {% if True %}
 
-                    <iframe class="w-100 h-100 noBorder"
-                            src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode"  <!-- todo open active script  / default root is trading profiles-->
-                    ></iframe>
+                    <iframe class="w-100 h-100 noBorder" src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode">
+                    <!-- todo open active script  / default root is trading profiles-->
+                    </iframe>
 
                     {% else %}
                     <div class="inside-tab-content">
@@ -274,6 +298,13 @@ body {
 
             <div class="tab-pane fade" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success waves-effect user-input-save"
+                        id="save-{{trading_mode_name}}"
+                        data-tentacle="{{trading_mode_name}}"
+                        data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
+                        data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save and reload</button>
+                    </div>
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector active show" id="trading-script-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="trading-script-settings" href="#trading-script-settings">Trading Script Settings</a>
                     </li>
@@ -284,13 +315,6 @@ body {
                 <div class="tab-content" id="strategy-settings-tabcontent">
 
                     <div class="tab-pane fade show active" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
-                        <div class="text-right">
-                            <button class="btn btn-outline-success waves-effect user-input-save"
-                                    id="save-{{trading_mode_name}}"
-                                    data-tentacle="{{trading_mode_name}}"
-                                    data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
-                                    data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save</button>
-                        </div>
                         <div id="trading-inputs">
                         </div>
                     </div>
@@ -316,39 +340,59 @@ body {
                                 evaluator 2 settings
                             </div>
                         </div>
-
-
-
                     </div>
                 </div>
             </div>
 
 
-
-
             <div class="tab-pane fade" id="backtesting" role="tabreal" aria-labelledby="backtesting-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success waves-effect optimizer-input-save-and-start"
+                        id="backtester-input-save-and-start-button">Save and start Backtest
+                        </button>
+                    </div>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector show" id="backtesting-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Backtesting Settings</a>
+                      <a class="nav-link primary-tab-selector" id="backtesting-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Backtest Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector active" id="backtesting-results-tab" data-toggle="tab" href="#backtesting-results" role="tab" aria-controls="backtesting-results" aria-selected="true">Backtesting results</a>
+                      <a class="nav-link primary-tab-selector show active" id="backtesting-results-tab" data-toggle="tab" href="#backtesting-results" role="tab" aria-controls="backtesting-results" aria-selected="true">Backtesting Overview</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector" id="performance-summary-tab" data-toggle="tab" href="#performance-summary" role="tab" aria-controls="performance-summary" aria-selected="false">Performance Summary</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light">
+                      <a class="nav-link primary-tab-selector" id="list-of-trades-tab" data-toggle="tab" href="#list-of-trades" role="tab" aria-controls="list-of-trades" aria-selected="false">List of Trades</a>
                     </li>
                 </ul>
+
                 <div class="tab-content" id="backtesting-tabcontent">
 
                     <div class="tab-pane fade" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
-                        <select id="backtesting-run-select" class="selectpicker"
-                                data-live-search="true" data-url="{{url_for('get_run_data')}}">
-                        </select>
                         <div id="backtesting-inputs">
                         </div>
                     </div>
 
                     <div class="tab-pane fade show active" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
+                        <div id="backtesting-table" class="resizable ui-resizable js-plotly-plot">
+
+                            <select id="backtesting-run-select" class="selectpicker"
+                                    data-live-search="true" data-url="{{url_for('get_run_data')}}"> <!-- todo replace with multi select sortable table, plot for each selected-->
+                            </select>
+                        </div>
+                        <div class="draggable-resizer">
+                        </div>
                         <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
                         </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="performance-summary" role="tabreal" aria-labelledby="performance-summary-tab">
+
+                    </div>
+
+                    <div class="tab-pane fade" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
+
                     </div>
                 </div>
             </div>
@@ -356,11 +400,18 @@ body {
             <div class="tab-pane fade show active" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success waves-effect optimizer-input-save-and-start"
+                        id="optimizer-input-save-and-start-button"
+                        data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
+                        data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
+                    </div>
+
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Strategy Optimizer Settings</a>
+                      <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Optimizer Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Strategy Optimizer Results</a>
+                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Optimizer Results</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="optimizer-tabcontent">
@@ -368,10 +419,7 @@ body {
                     <div class="tab-pane fade show active" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
 
                         <div id="strategy-optimizer-inputs">
-                            <button class="btn btn-outline-success waves-effect optimizer-input-save-and-start"
-                                    id="optimizer-input-save-and-start-button"
-                                    data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
-                                    data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start</button>
+
                             {{ m_strategy_design_optimizer_settings.strategy_optimizer_setting_template() }}
                         </div>
                     </div>
