@@ -75,6 +75,16 @@ function updateWindowSizes(){
     const currentMainChartHeight = $("#main-chart").outerHeight(true)
     const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)" /* 4px is from the slider draggable*/
     $("#sub-chart").css("height", newSubChartHeight)
+
+
+    const currentBacktestingTableHeight = $("#backtesting-table").outerHeight(true)
+    if (currentBacktestingTableHeight != 0) {
+        const newBacktestingChartHeight = "calc(100% - 4px - " + currentBacktestingTableHeight + "px)" /* 4px is from the slider draggable*/
+        $("#backtesting-chart").css("height", newBacktestingChartHeight)
+    } else {
+        const newBacktestingChartHeight = "calc(65% - 4px - " + currentBacktestingTableHeight + "px)" /* 4px is from the slider draggable*/
+        $("#backtesting-chart").css("height", newBacktestingChartHeight)
+    }
 }
 
 function handleResizables(){
@@ -82,6 +92,8 @@ function handleResizables(){
     $(".resizable").on("resize", updateWindowSizes());
     window.addEventListener('resize', function(event){updateWindowSizes()});
     $("#charts").on('resize', function(event){updateWindowSizes()});
+    $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
+
     updateWindowSizes();
 }
 
