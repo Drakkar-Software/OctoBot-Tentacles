@@ -207,7 +207,8 @@ body {
 
     <span id='backtesting_progress_bar' style='display: none;'>
         <div class="card-title">
-            <h2>Backtesting in progress</h2>
+            <h2 id="optimizer_progress_bar_title">Optimizer in progress</h2>
+            <h2 id="backtesting_progress_bar_title">Backtesting in progress</h2>
         </div>
 
         <div class='progress'>
@@ -402,9 +403,13 @@ body {
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
                     <div class="toolbox-buttons">
                         <button class="btn btn-success waves-effect optimizer-input-save-and-start"
-                        id="optimizer-input-save-and-start-button"
-                        data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
-                        data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
+                                id="optimizer-input-save-and-start-button"
+                                data-exchange-id="{{ exchange_id }}"
+                                data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
+                                data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
+                        <button class="btn btn-success waves-effect"
+                                id="optimizer-cancel-button"
+                                data-url="{{ url_for('advanced.strategy_optimizer', update_type='cancel_optimizer') }}">Cancel Optimizer</button>
                     </div>
 
                     <li class="nav-item waves-effect waves-light">
