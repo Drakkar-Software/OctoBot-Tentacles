@@ -46,9 +46,14 @@
 
 .toolbox-buttons > button {
     margin: 0;
-
+}
+.main-toolbox-tabs .toolbox-buttons {
+    margin-right: 50px;
 }
 
+.main-toolbox-tabs li:first-child {
+    margin-left: 50px;
+}
 
 .toolbox-tabs > li, .toolbox-tabs > .toolbox-buttons:first-of-type {
     border-left: 1px solid #2a2e39 !important;
@@ -172,14 +177,53 @@ body {
     padding: 8px 2rem;
 }
 
+
+.strategy-toolbox .btn-outline-success {
+    border: 1px solid #00c851 !important;
+    6.8px 2rem !important
+}
+
+.strategy-toolbox .btn-outline-success:hover {
+    color:#fff !important;
+}
+
+.fullscreen-btn-group {
+    float: right;
+    right: 8px;
+    position: fixed;
+}
+
+.fullscreen-size-btn i {
+    font-size: 20px;
+    align-items: center;
+    border-radius: 4px;
+    cursor: default;
+    display: flex;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+    color: #b2b5be;
+}
+
+button.fullscreen-size-btn:hover {
+    background: #2a2e39;
+}
+
+button.fullscreen-size-btn {
+    background: none;
+    border:none;
+    margin-top: 4px;
+}
+
+.fullscreen-size-btn.is-full-screen i {
+    color: #1e53e5;
+}
+
+
 @media only screen and (max-width: 600px) {
 
     .toolbox-tabs > li {
         border: unset !important;
-    }
-    .toolbox-tabs > li > a {
-        padding: 3px 0.5rem;
-
     }
 }
 
@@ -266,6 +310,14 @@ body {
                 </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
                <!-- div needs to be there else, whitespace will appear -->
             </div>
+            <div class="fullscreen-btn-group">
+                <button class="fullscreen-size-btn minimize">
+                    <i class="far fa-window-minimize"></i>
+                </button>
+                <button class="fullscreen-size-btn fullscreen">
+                    <i class="far fa-window-maximize"></i>
+                </button>
+            </div>
         </ul>
 
         <div class="tab-content" id="toolbox-tabcontent">
@@ -299,19 +351,19 @@ body {
 
             <div class="tab-pane fade" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
-                    <div class="toolbox-buttons">
-                        <button class="btn btn-success waves-effect user-input-save"
-                        id="save-{{trading_mode_name}}"
-                        data-tentacle="{{trading_mode_name}}"
-                        data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
-                        data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save and reload</button>
-                    </div>
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector active show" id="trading-script-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="trading-script-settings" href="#trading-script-settings">Trading Script Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector " id="evaluator-settings-tab" data-toggle="tab" href="#evaluator-settings" role="tab" aria-controls="evaluator-settings" aria-selected="false">Evaluator Settings</a>
                     </li>
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success btn-outline-success waves-effect user-input-save"
+                        id="save-{{trading_mode_name}}"
+                        data-tentacle="{{trading_mode_name}}"
+                        data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
+                        data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save and reload</button>
+                    </div>
                 </ul>
                 <div class="tab-content" id="strategy-settings-tabcontent">
 
@@ -349,11 +401,6 @@ body {
             <div class="tab-pane fade" id="backtesting" role="tabreal" aria-labelledby="backtesting-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
-                    <div class="toolbox-buttons">
-                        <button class="btn btn-success waves-effect optimizer-input-save-and-start"
-                        id="backtester-input-save-and-start-button">Save and start Backtest
-                        </button>
-                    </div>
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector" id="backtesting-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Backtest Settings</a>
                     </li>
@@ -366,6 +413,11 @@ body {
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector" id="list-of-trades-tab" data-toggle="tab" href="#list-of-trades" role="tab" aria-controls="list-of-trades" aria-selected="false">List of Trades</a>
                     </li>
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start"
+                        id="backtester-input-save-and-start-button">Save and start Backtest
+                        </button>
+                    </div>
                 </ul>
 
                 <div class="tab-content" id="backtesting-tabcontent">
@@ -418,6 +470,12 @@ body {
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Optimizer Results</a>
                     </li>
+                    <div class="toolbox-buttons">
+                        <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start"
+                        id="optimizer-input-save-and-start-button"
+                        data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
+                        data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
+                    </div>
                 </ul>
                 <div class="tab-content" id="optimizer-tabcontent">
 
