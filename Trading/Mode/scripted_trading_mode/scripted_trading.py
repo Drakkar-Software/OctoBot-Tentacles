@@ -29,14 +29,4 @@ class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):
 
 
 class ScriptedTradingModeProducer(scripting_library.AbstractScriptedTradingModeProducer):
-    async def get_backtesting_metadata(self):
-        profitability, profitability_percent, _, _, _ = trading_api.get_profitability_stats(self.exchange_manager)
-        return {
-            "id": self.trading_mode.get_prefix(self.trading_mode.bot_id),
-            "p&l": float(profitability),
-            "p&l%": float(profitability_percent),
-            "trades": len(trading_api.get_trade_history(self.exchange_manager)),
-            "timestamp": self.trading_mode.timestamp,
-            "name": self.trading_mode.script_name,
-            "user_inputs": self.trading_mode.trading_config
-        }
+    pass
