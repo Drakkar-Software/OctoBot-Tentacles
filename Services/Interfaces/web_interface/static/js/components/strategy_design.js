@@ -85,7 +85,56 @@ function updateWindowSizes(){
         const newBacktestingChartHeight = "calc(65% - 4px - " + currentBacktestingTableHeight + "px)" /* 4px is from the slider draggable*/
         $("#backtesting-chart").css("height", newBacktestingChartHeight)
     }
+    handleScreenSizeButtons(currentChartsHeight);
 }
+
+function handleScreenSizeButtons(currentChartsHeight){
+    if (currentChartsHeight != 0){
+        $(".fullscreen-size-btn.fullscreen").removeClass("is-full-screen");
+        } else {
+        $(".fullscreen-size-btn.fullscreen").addClass("is-full-screen");
+    }
+
+    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
+    if (currentToolBoxHeight <= 45){
+        $(".fullscreen-size-btn.minimize").addClass("is-minimized");
+        $(".fullscreen-size-btn.minimize i").removeClass("far fa-window-minimize");
+        $(".fullscreen-size-btn.minimize i").addClass("fas fa-chevron-up");
+    } else {
+        $(".fullscreen-size-btn.minimize").removeClass("is-minimized");
+        $(".fullscreen-size-btn.minimize i").removeClass("fas fa-chevron-up");
+        $(".fullscreen-size-btn.minimize i").addClass("far fa-window-minimize");
+    }
+}
+
+function fullScreenToggle(){
+    const currentChartsHeight = $("#charts").outerHeight(true)
+    if (currentChartsHeight != 0){
+        $("#charts").css("height", "0px");
+    } else {
+        $("#charts").css("height", "55vh");
+    }
+    updateWindowSizes();
+}
+
+function minimizeScreenToggle(){
+    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
+    if (currentToolBoxHeight <= 45){
+        $("#charts").css("height", "55vh");
+    } else {
+        $("#charts").css("height", "100%");
+    }
+    updateWindowSizes();
+}
+
+function resizeOnToolBoxTabClicks(){
+    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
+    if (currentToolBoxHeight <= 45){
+        $("#charts").css("height", "35vh");
+        updateWindowSizes();
+    }
+}
+
 
 function handleResizables(){
     $(".resizable").resizable();
@@ -93,7 +142,9 @@ function handleResizables(){
     window.addEventListener('resize', function(event){updateWindowSizes()});
     $("#charts").on('resize', function(event){updateWindowSizes()});
     $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
-
+    $(".fullscreen-size-btn.fullscreen").on('click', function(event){fullScreenToggle()});
+    $(".fullscreen-size-btn.minimize").on('click', function(event){minimizeScreenToggle()});
+    $(".main-toolbox-tabs li").on('click', function(event){resizeOnToolBoxTabClicks()});
     updateWindowSizes();
 }
 
