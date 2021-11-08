@@ -16,18 +16,29 @@ function getPlotlyConfig(){
     };
 }
 
-function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list){
+function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id){
     const chartedElements = {
       x: chartDetails.x,
       mode: chartDetails.kind,
       type: chartDetails.kind,
-      name: chartDetails.title,
+      name: `${chartDetails.title} (${backtesting_id})`,
     }
     Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
         if(chartDetails[element] !== null){
             chartedElements[element] = chartDetails[element]
         }
     })
+    if(xAxis > 1){
+        chartedElements.xaxis= `x${xAxis}`
+    }
+    if(yAxis > 1){
+        chartedElements.yaxis= `y${yAxis}`
+    }
+    return chartedElements;
+}
+
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id){
+    const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id);
     const xaxis = {
         autorange: true,
         rangeslider: {
@@ -42,12 +53,10 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     }
     if(xAxis > 1){
         xaxis.overlaying = "x"
-        chartedElements.xaxis= `x${xAxis}`
     }
     if(yAxis > 1){
         yaxis.overlaying = "y"
         yaxis.side = 'right'
-        chartedElements.yaxis= `y${yAxis}`
     }
     if(chartDetails.y_type !== null){
         yaxis.type = chartDetails.y_type;
@@ -84,30 +93,57 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     return layout
 }
 
-function updateBacktestingChart(data, divID, replot){
-    data.data.sub_elements.forEach(function (sub_element) {
-        if(sub_element.type == "chart") {
-            const chartData = [];
-            const xaxis_list = [];
-            const yaxis_list = [];
-            sub_element.data.elements.forEach(function (chartDetails) {
-                let yAxis = 1;
-                if (chartDetails.own_yaxis) {
-                    yAxis += 1;
-                }
-                let xAxis = 1;
-                if (chartDetails.own_xaxis) {
-                    xAxis += 1;
-                }
-                const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
-                if (replot) {
-                    Plotly.react(divID, chartData, layout, getPlotlyConfig())
-                } else {
-                    Plotly.newPlot(divID, chartData, layout, getPlotlyConfig())
-                }
-            });
+function updateBacktestingChart(data, divID, replot, backtesting_id, added) {
+    if (added) {
+        const beforePlotData = typeof document.getElementById(divID).data === "undefined" ? 0 : document.getElementById(divID).data.length - 1
+        if (typeof chartPlotsByBacktestingId[divID] === "undefined") {
+            chartPlotsByBacktestingId[divID] = {};
         }
-    });
+        if (typeof chartPlotsByBacktestingId[divID][backtesting_id] === "undefined") {
+            chartPlotsByBacktestingId[divID][backtesting_id] = [];
+        }
+        data.data.sub_elements.forEach(function (sub_element) {
+            if (sub_element.type == "chart") {
+                const chartData = [];
+                const xaxis_list = [];
+                const yaxis_list = [];
+                sub_element.data.elements.forEach(function (chartDetails) {
+                    let yAxis = 1;
+                    if (chartDetails.own_yaxis) {
+                        yAxis += 1;
+                    }
+                    let xAxis = 1;
+                    if (chartDetails.own_xaxis) {
+                        xAxis += 1;
+                    }
+                    if (plotlyCreatedChartsIDs.indexOf(divID) !== -1) {
+                        const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id);
+                        Plotly.addTraces(divID, chartedElements);
+                    } else {
+                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id);
+                        if (replot) {
+                            Plotly.react(divID, chartData, layout, getPlotlyConfig())
+                        } else {
+                            Plotly.newPlot(divID, chartData, layout, getPlotlyConfig())
+                        }
+                    }
+                });
+            }
+        });
+        const afterPlotData = document.getElementById(divID).data.length - 1;
+        if(afterPlotData > beforePlotData){
+            for(let i=beforePlotData; i <= afterPlotData; i++){
+                chartPlotsByBacktestingId[divID][backtesting_id].push(beforePlotData);
+            }
+        }
+        plotlyCreatedChartsIDs.push(divID);
+    } else{
+        chartPlotsByBacktestingId[divID][backtesting_id].forEach(function (id){
+            Plotly.deleteTraces(divID, id);
+        })
+        chartPlotsByBacktestingId[divID][backtesting_id] = [];
+        log(chartPlotsByBacktestingId[divID][backtesting_id]);
+    }
 }
 
 function _displayInputs(elements, replot, editors){
@@ -133,17 +169,17 @@ function _displayInputs(elements, replot, editors){
     })
 }
 
-function updateDisplayedElement(data, replot, editors, backtestingPart){
+function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, added){
     data.data.sub_elements.forEach(function (sub_element) {
         if (sub_element.type === "input") {
             _displayInputs(sub_element, replot, editors);
             displayOptimizerSettings(sub_element, replot);
         }else if (sub_element.type === "table"){
-            _updateTables(sub_element, replot);
+            _updateTables(sub_element, replot, backtesting_id, added);
         }
     });
     if(backtestingPart){
-        updateBacktestingChart(data, "backtesting-chart", true)
+        updateBacktestingChart(data, "backtesting-chart", true, backtesting_id, added)
     }else{
         _updateMainCharts(data, replot);
     }
@@ -239,53 +275,125 @@ function _updateMainCharts(data, replot){
     }
 }
 
-function _updateTables(sub_element, replot){
+function _updateTables(sub_element, replot, backtesting_id, added){
     sub_element.data.elements.forEach(function (element){
-        const columns = element.columns.map((col) => {
-            return {
-                field: col.field,
-                text: col.label,
-                size: `${1 / element.columns.length * 100}%`,
-                sortable: true,
-                attr: col.attr,
-                render: col.render,
+        const tableName = element.title.replaceAll(" ", "-");
+        if(added) {
+            element.columns.push({
+                "field": "backtesting_id",
+                "label": "Backtesting id",
+            })
+            const columns = element.columns.map((col) => {
+                return {
+                    field: col.field,
+                    text: col.label,
+                    size: `${1 / element.columns.length * 100}%`,
+                    sortable: true,
+                    attr: col.attr,
+                    render: col.render,
+                }
+            });
+            let startIndex = 0;
+            if(typeof w2ui[tableName] !== "undefined"){
+                startIndex = w2ui[tableName].records.length - 1;
             }
-        });
-        const records = element.rows.map((row, index) => {
-            row.recid = index;
-            return row;
-        });
-        const searches = element.searches.map((search) => {
-            return {
-                field: search.field,
-                label: search.label,
-                type: _getTableDataType(records, search),
-                options: search.options,
+            const records = element.rows.map((row, index) => {
+                row.backtesting_id = backtesting_id;
+                row.recid = startIndex + index;
+                return row;
+            });
+            element.searches.push({
+                "field": "backtesting_id",
+                "label": "Backtesting id",
+                "type": null,
+            })
+            const searches = element.searches.map((search) => {
+                return {
+                    field: search.field,
+                    label: search.label,
+                    type: _getTableDataType(records, search),
+                    options: search.options,
+                }
+            });
+            const parentDiv = $(document.getElementById(sub_element.name));
+            const chartDivID = `${sub_element.name}-${element.title}`;
+            parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
+            _createTable(chartDivID, element.title, tableName, searches, columns, records, false, true);
+        }else{
+            if(typeof w2ui[tableName] !== "undefined"){
+                const toRemove = [];
+                w2ui[tableName].records.forEach(function (record){
+                    if(record.backtesting_id === backtesting_id){
+                        toRemove.push(record.recid)
+                    }
+                })
+                w2ui[tableName].remove(...toRemove);
             }
-        });
-        const parentDiv = $(document.getElementById(sub_element.name));
-        const chartDivID = `${sub_element.name}-${element.title}`;
-        parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
-        _createTable(chartDivID, element.title, searches, columns, records);
+        }
     });
 }
 
-function _createTable(elementID, name, searches, columns, records) {
-    $(document.getElementById(elementID)).w2grid({
-        name: name,
-        header: name,
-        show: {
-            header: true,
-            toolbar: true,
-            footer: true,
-            toolbarReload: false,
-        },
-        multiSearch: true,
-        searches: searches,
-        columns: columns,
-        records: records
+function createBacktestingMetadataTable(metadata){
+    // todo sort by timestamp
+    const keys = Object.keys(metadata[0]);
+    const columns = keys.map((key) => {
+        return {
+            field: key,
+            text: key,
+            size: `${1 / keys.length * 100}%`,
+            sortable: true,
+            render: key === "timestamp" ? "datetime" : undefined,
+        }
+    })
+    const records = metadata.map((row, index) => {
+        row.recid = index;
+        row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
+        return row;
     });
+    const searches = keys.map((key) => {
+        search = {
+            type: null,
+            field: key,
+        }
+        return {
+            field: key,
+            label: key,
+            type:  key === "timestamp" ? "datetime" : _getTableDataType(records, search),
+        }
+    });
+    const name = "Select backtestings";
+    const tableName = name.replaceAll(" ", "-");
+    return _createTable("backtesting-run-select-table", name, tableName,
+                        searches, columns, records, true, false);
 }
+
+function _createTable(elementID, name, tableName, searches, columns, records, selectable, addToTable) {
+    const tableExists = typeof w2ui[tableName] !== "undefined";
+    if(tableExists && addToTable){
+        w2ui[tableName].add(records)
+    }else{
+        if(tableExists){
+            w2ui[tableName].destroy();
+        }
+        $(document.getElementById(elementID)).w2grid({
+            name:  tableName,
+            header: name,
+            show: {
+                header: true,
+                toolbar: true,
+                footer: true,
+                toolbarReload: false,
+                selectColumn: selectable
+            },
+            multiSearch: true,
+            searches: searches,
+            columns: columns,
+            records: records
+        });
+    }
+    return tableName;
+}
+
 
 function _getTableDataType(records, search){
     if (search.type !== null){
@@ -307,6 +415,8 @@ function _getTableDataType(records, search){
 }
 
 const relayouting = []
+const chartPlotsByBacktestingId = {}
+const plotlyCreatedChartsIDs = []
 
 function removeExplicitSize(figure){
   delete figure.layout.width;

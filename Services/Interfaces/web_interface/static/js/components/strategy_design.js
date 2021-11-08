@@ -40,7 +40,7 @@ function postBacktestingDone(){
 function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_element, msg, status){
     const backtestingRunId = msg.id;
     displayChartsAndInputs(true, backtestingRunId)
-    initBacktestingRunSelect()
+    initBacktestingRunSelector()
 }
 
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
@@ -148,50 +148,42 @@ function handleResizables(){
     updateWindowSizes();
 }
 
-function updateBacktestingSelect(updated_data, update_url, dom_root_element, msg, status){
-    const select = $("#backtesting-run-select");
-    select.empty();
-    // select.selectpicker("refresh");
-    msg.data.sort()
-    let defaultVal = null
-    msg.data.reverse().forEach(function(element){
-        const date = new Date(element.timestamp * 1000)
-        const displayedTime = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
-        select.append(new Option(`${element.id} ${element.name} ${displayedTime}`, element.id,
-            defaultVal === null, defaultVal === null));
-        if(defaultVal === null){
-            defaultVal = element.id;
+function updateBacktestingSelector(updated_data, update_url, dom_root_element, msg, status){
+    backtestingTableID = createBacktestingMetadataTable(msg.data)
+    w2ui[backtestingTableID].on("select", function (event){
+        if(typeof event.recid !== "undefined"){
+            updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(event.recid).id, true);
+        }
+        if(typeof event.recids !== "undefined"){
+            event.recids.forEach(function (id){
+                updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(id).id, true);
+            })
         }
     })
-    select.selectpicker("refresh");
-    select.val(defaultVal).selectpicker("refresh");
-    triggerBacktestingSelectUpdate();
+    w2ui[backtestingTableID].on("unselect", function (event){
+        if(typeof event.recid !== "undefined"){
+            updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(event.recid).id, false);
+        }
+        if(typeof event.recids !== "undefined"){
+            event.recids.forEach(function (id){
+                updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(id).id, false);
+            })
+        }
+    })
 }
 
-function initBacktestingRunSelect(){
-    send_and_interpret_bot_update({}, $("#backtesting-run-select").data("url"), null,
-        updateBacktestingSelect, generic_request_failure_callback, "GET");
-}
-
-function asyncInit(){
-    initBacktestingRunSelect();
+function initBacktestingRunSelector(){
+    send_and_interpret_bot_update({}, $("#backtesting-run-select-table").data("url"), null,
+        updateBacktestingSelector, generic_request_failure_callback, "GET");
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
-    updateDisplayedElement(msg, true, editors, true)
+    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added)
 }
 
-function triggerBacktestingSelectUpdate(){
-    updateBacktestingAnalysisReport($("#backtesting-run-select").val())
-}
-
-function updateBacktestingAnalysisReport(run_id){
-    send_and_interpret_bot_update({id: run_id}, $("#backtesting-chart").data("url"), null,
+function updateBacktestingAnalysisReport(run_id, addReport){
+    send_and_interpret_bot_update({id: run_id, added: addReport}, $("#backtesting-chart").data("url"), null,
         updateBacktestingReport, generic_request_failure_callback);
-}
-
-function handleSelects(){
-    $("#backtesting-run-select").on("change", triggerBacktestingSelectUpdate);
 }
 
 function updateTentacleConfig(saveButton, updatedConfig){
@@ -284,7 +276,6 @@ function check_optimizer_state(){
 }
 
 function init_optimizer_status_websocket(){
-    const socket = get_websocket("/strategy_optimizer");
     optimizerSocket.on("strategy_optimizer_status", function (data) {
         on_optimizer_state_update(data);
     });
@@ -292,13 +283,13 @@ function init_optimizer_status_websocket(){
 }
 
 const optimizerSocket = get_websocket("/strategy_optimizer");
+let backtestingTableID = undefined;
 
 $(document).ready(function() {
     displayChartsAndInputs(false, null);
-    asyncInit();
+    initBacktestingRunSelector();
     handleScriptButtons();
     handleResizables();
-    handleSelects();
     handleUserInputsActions();
     handleOptimizerActions();
     init_backtesting_status_websocket();
