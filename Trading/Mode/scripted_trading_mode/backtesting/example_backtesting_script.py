@@ -11,11 +11,14 @@ async def script(ctx, run_id):
         with drawing.part("backtesting_chart") as part:
             await plot_historical_portfolio_value(reader, part)
             await plot_historical_pnl_value(reader, part, x_as_trade_count=False, own_yaxis=True)
+        with drawing.part("list-of-trades-part", "table") as part:
+            await plot_table(reader, part, "RSI")
+            await plot_table(reader, part, "candles")
+            await plot_trades(reader, part)
     return drawing
 
 
 async def other_script(ctx: Context):
-
     set_script_name(ctx, "SimpleRSI")
     pair = ctx.traded_pair
     time_frame = "1h"

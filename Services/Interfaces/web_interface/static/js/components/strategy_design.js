@@ -7,7 +7,7 @@ function displayChartsAndInputs(replot, backtestingRunId){
         url: url,
         dataType: "json",
         success: function (data) {
-            updateChartsAndInputs(data, replot, editors)
+            updateDisplayedElement(data, replot, editors, false)
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
@@ -178,7 +178,7 @@ function asyncInit(){
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
-    updateBacktestingChart(msg, "backtesting-chart", true);
+    updateDisplayedElement(msg, true, editors, true)
 }
 
 function triggerBacktestingSelectUpdate(){
@@ -254,6 +254,7 @@ function startStrategyDesignOptimizer(){
 
 function startStrategyOptimizerSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Optimizer started", msg);
+    check_optimizer_state();
 }
 
 const editors = {};
@@ -261,31 +262,36 @@ const editors = {};
 function on_optimizer_state_update(data){
     const status = data["status"];
     const progress_bar = $("#backtesting_progress_bar");
+    const cancelButton = $("#optimizer-cancel-button");
     if(status === "computing") {
         $("#optimizer_progress_bar_title").removeClass(hidden_class)
+        cancelButton.removeClass(hidden_class);
         $("#backtesting_progress_bar_title").addClass(hidden_class)
         const overall_progress = data["overall_progress"];
         progress_bar.show();
         update_progress(overall_progress);
+        setTimeout(function (){check_optimizer_state();}, 500)
     }else{
+        cancelButton.addClass(hidden_class);
         $("#optimizer_progress_bar_title").addClass(hidden_class)
         $("#backtesting_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
     }
 }
 
-function check_optimizer_state(socket){
-    socket.emit("strategy_optimizer_status");
+function check_optimizer_state(){
+    optimizerSocket.emit("strategy_optimizer_status");
 }
 
 function init_optimizer_status_websocket(){
     const socket = get_websocket("/strategy_optimizer");
-    socket.on("strategy_optimizer_status", function (data) {
+    optimizerSocket.on("strategy_optimizer_status", function (data) {
         on_optimizer_state_update(data);
     });
-    setInterval(function(){check_optimizer_state(socket);}, 500);
-    return socket;
+    check_optimizer_state();
 }
+
+const optimizerSocket = get_websocket("/strategy_optimizer");
 
 $(document).ready(function() {
     displayChartsAndInputs(false, null);

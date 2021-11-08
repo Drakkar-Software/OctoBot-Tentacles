@@ -86,29 +86,31 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
 
 function updateBacktestingChart(data, divID, replot){
     data.data.sub_elements.forEach(function (sub_element) {
-        const chartData = [];
-        const xaxis_list = [];
-        const yaxis_list = [];
-        sub_element.data.elements.forEach(function (chartDetails) {
-            let yAxis = 1;
-            if(chartDetails.own_yaxis){
-                yAxis += 1;
-            }
-            let xAxis = 1;
-            if(chartDetails.own_xaxis){
-                xAxis += 1;
-            }
-            const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
-            if (replot) {
-                Plotly.react(divID, chartData, layout, getPlotlyConfig())
-            } else {
-                Plotly.newPlot(divID, chartData, layout, getPlotlyConfig())
-            }
-        });
+        if(sub_element.type == "chart") {
+            const chartData = [];
+            const xaxis_list = [];
+            const yaxis_list = [];
+            sub_element.data.elements.forEach(function (chartDetails) {
+                let yAxis = 1;
+                if (chartDetails.own_yaxis) {
+                    yAxis += 1;
+                }
+                let xAxis = 1;
+                if (chartDetails.own_xaxis) {
+                    xAxis += 1;
+                }
+                const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
+                if (replot) {
+                    Plotly.react(divID, chartData, layout, getPlotlyConfig())
+                } else {
+                    Plotly.newPlot(divID, chartData, layout, getPlotlyConfig())
+                }
+            });
+        }
     });
 }
 
-function displayInputs(elements, replot, editors){
+function _displayInputs(elements, replot, editors){
     ["backtesting", "trading"].forEach(function (tab){
         const masterTab = $(`#${tab}-inputs`);
         masterTab.empty();
@@ -131,23 +133,39 @@ function displayInputs(elements, replot, editors){
     })
 }
 
+function updateDisplayedElement(data, replot, editors, backtestingPart){
+    data.data.sub_elements.forEach(function (sub_element) {
+        if (sub_element.type === "input") {
+            _displayInputs(sub_element, replot, editors);
+            displayOptimizerSettings(sub_element, replot);
+        }else if (sub_element.type === "table"){
+            _updateTables(sub_element, replot);
+        }
+    });
+    if(backtestingPart){
+        updateBacktestingChart(data, "backtesting-chart", true)
+    }else{
+        _updateMainCharts(data, replot);
+    }
+}
 
-function updateChartsAndInputs(data, replot, editors){
-    let mainLayout = undefined;
-    if(data.data.sub_elements.length <= 1){
+function _updateChartLayout(subElementCount){
+    if(subElementCount <= 1){
         $("#main-chart").resizable("option", "disabled", true );
     }
-    if(data.data.sub_elements.length <= 2){
+    if(subElementCount <= 2){
         $("#main-chart").addClass("max-width");
     }
-    if(data.data.sub_elements.length > 2){
+    if(subElementCount > 2){
         $("#main-chart").removeClass("max-width");
     }
+}
+
+function _updateMainCharts(data, replot){
+    let mainLayout = undefined;
+    _updateChartLayout(data.data.sub_elements.length);
     data.data.sub_elements.forEach(function (sub_element) {
-        if(sub_element.name == "inputs") {
-            displayInputs(sub_element, replot, editors)
-            displayOptimizerSettings(sub_element, replot)
-        }else {
+        if(sub_element.type == "chart") {
             const chartData = [];
             const xaxis_list = [];
             const yaxis_list = [];
@@ -218,6 +236,73 @@ function updateChartsAndInputs(data, replot, editors){
                 relayouting.splice(0, relayouting.length);
             }
         });
+    }
+}
+
+function _updateTables(sub_element, replot){
+    sub_element.data.elements.forEach(function (element){
+        const columns = element.columns.map((col) => {
+            return {
+                field: col.field,
+                text: col.label,
+                size: `${1 / element.columns.length * 100}%`,
+                sortable: true,
+                attr: col.attr,
+                render: col.render,
+            }
+        });
+        const records = element.rows.map((row, index) => {
+            row.recid = index;
+            return row;
+        });
+        const searches = element.searches.map((search) => {
+            return {
+                field: search.field,
+                label: search.label,
+                type: _getTableDataType(records, search),
+                options: search.options,
+            }
+        });
+        const parentDiv = $(document.getElementById(sub_element.name));
+        const chartDivID = `${sub_element.name}-${element.title}`;
+        parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
+        _createTable(chartDivID, element.title, searches, columns, records);
+    });
+}
+
+function _createTable(elementID, name, searches, columns, records) {
+    $(document.getElementById(elementID)).w2grid({
+        name: name,
+        header: name,
+        show: {
+            header: true,
+            toolbar: true,
+            footer: true,
+            toolbarReload: false,
+        },
+        multiSearch: true,
+        searches: searches,
+        columns: columns,
+        records: records
+    });
+}
+
+function _getTableDataType(records, search){
+    if (search.type !== null){
+        return search.type;
+    }
+    const valueType = records[0][search.field]
+    if(typeof valueType === "undefined"){
+        return undefined;
+    }
+    if(typeof valueType === "number"){
+        return "float";
+    }
+    if(typeof valueType === "string"){
+        return "text";
+    }
+    if(typeof valueType === "object"){
+        return "list";
     }
 }
 
