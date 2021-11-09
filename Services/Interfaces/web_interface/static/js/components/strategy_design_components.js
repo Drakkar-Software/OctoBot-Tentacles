@@ -111,9 +111,7 @@ function updateBacktestingChart(data, divID, replot, backtesting_id, added, back
                 }
             })
         }
-        if(isAlreadyDisplayed){
-            log(backtesting_id + " already in graphs")
-        }else{
+        if(!isAlreadyDisplayed){
             data.data.sub_elements.forEach(function (sub_element) {
                 if (sub_element.type == "chart") {
                     const chartData = [];
@@ -308,7 +306,6 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
                     }
                 })
                 if(hasThisBacktestingAlready){
-                    log(backtesting_id + " already in table")
                     return
                 }
             }
@@ -349,9 +346,11 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
                     options: search.options,
                 }
             });
-            const parentDiv = $(document.getElementById(sub_element.name));
             const chartDivID = `${sub_element.name}-${element.title}`;
-            parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
+            if(typeof w2ui[tableName] === "undefined"){
+                const parentDiv = $(document.getElementById(sub_element.name));
+                parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
+            }
             _createTable(chartDivID, element.title, tableName, searches, columns, records, false, true);
         }else{
             if(typeof w2ui[tableName] !== "undefined"){
