@@ -1,1 +1,1 @@
-from .bot_snapshot_collector import ExchangeBotSnapshotCollector
+from .bot_snapshot_with_history_collector import ExchangeBotSnapshotWithHistoryCollector

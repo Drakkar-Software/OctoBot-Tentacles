@@ -48,6 +48,8 @@ function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element
     const backtestingUrl = reloadScript.data("backtesting-url")
     const data = {
         exchange_id: reloadScript.data("exchange-id"),
+        start_timestamp: 1633095582000,    // TODO (Friday 1 October 2021 13:39:42)
+        end_timestamp: new Date().getTime(),    // TODO (today)
     }
     start_backtesting(data, backtestingUrl);
 }
