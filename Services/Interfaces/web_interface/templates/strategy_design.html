@@ -406,13 +406,13 @@ button.fullscreen-size-btn {
                       <a class="nav-link primary-tab-selector" id="backtesting-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Backtest Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector" id="backtesting-results-tab" data-toggle="tab" href="#backtesting-results" role="tab" aria-controls="backtesting-results" aria-selected="true">Backtesting Overview</a>
+                      <a class="nav-link primary-tab-selector show active" id="backtesting-results-tab" data-toggle="tab" href="#backtesting-results" role="tab" aria-controls="backtesting-results" aria-selected="true">Backtesting Overview</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
                       <a class="nav-link primary-tab-selector" id="performance-summary-tab" data-toggle="tab" href="#performance-summary" role="tab" aria-controls="performance-summary" aria-selected="false">Performance Summary</a>
                     </li>
                     <li class="nav-item waves-effect waves-light">
-                      <a class="nav-link primary-tab-selector show active" id="list-of-trades-tab" data-toggle="tab" href="#list-of-trades" role="tab" aria-controls="list-of-trades" aria-selected="false">List of Trades</a>
+                      <a class="nav-link primary-tab-selector" id="list-of-trades-tab" data-toggle="tab" href="#list-of-trades" role="tab" aria-controls="list-of-trades" aria-selected="false">List of Trades</a>
                     </li>
                     <div class="toolbox-buttons">
                         <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start"
@@ -428,12 +428,11 @@ button.fullscreen-size-btn {
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
+                    <div class="tab-pane fade show active" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
                         <div id="backtesting-table" class="resizable ui-resizable js-plotly-plot">
-
-                            <select id="backtesting-run-select" class="selectpicker"
-                                    data-live-search="true" data-url="{{url_for('get_run_data')}}"> <!-- todo replace with multi select sortable table, plot for each selected-->
-                            </select>
+                            <div id="backtesting-run-select-table"
+                                 data-url="{{url_for('get_run_data')}}"
+                                 style="width: 100%; height: 100%;"></div>
                         </div>
                         <div class="draggable-resizer">
                         </div>
@@ -445,8 +444,8 @@ button.fullscreen-size-btn {
 
                     </div>
 
-                    <div class="tab-pane fade show active" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
-                        <div id="list-of-trades-part" style="width: 100%; height: 400px;">
+                    <div class="tab-pane fade" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
+                        <div id="list-of-trades-part" style="width: 100%; height: 100%;">
 
                         </div>
                     </div>
