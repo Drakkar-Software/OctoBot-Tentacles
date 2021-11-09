@@ -88,12 +88,13 @@ def get_strategy_design_optimizer_config(trading_mode):
                                                      octobot_api.create_design_strategy_optimizer(trading_mode))
 
 
-def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_chose_runs):
+def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_chose_runs,
+                                    start_timestamp=None, end_timestamp=None):
     tools = web_interface_root.WebInterface.tools
     optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer is not None and octobot_api.is_optimizer_computing(optimizer):
         return False, "Optimizer already running"
-    data_file = backtesting_model.create_data_files_from_current_bot(exchange_id)
+    data_file = backtesting_model.get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp)
     temp_independent_backtesting = octobot_api.create_independent_backtesting(
         interfaces_util.get_global_config(), None, [])
     optimizer_config = interfaces_util.run_in_bot_async_executor(

@@ -44,8 +44,8 @@ function handle_backtesting_buttons(){
                 create_alert("error", "Invalid date range.", "");
                 return;
             }
-            request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime() / 1000) : null;
-            request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime() / 1000) : null;
+            request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime()) : null;
+            request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime()) : null;
         }
         const update_url = $("#startBacktesting").attr("start-url");
         const run_on_common_part_only = syncDataOnlyCheckbox.is(":checked");
