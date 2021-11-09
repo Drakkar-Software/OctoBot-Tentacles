@@ -115,7 +115,16 @@ function fullScreenToggle(){
         $("#charts").css("height", "55vh");
     }
     updateWindowSizes();
+    updateToolboxDisplay();
 }
+
+
+function updateToolboxDisplay(){
+    const activeTab = $("#toolbox-tabcontent").children(".tab-pane.show.active");
+    const activeSubTab = activeTab.find(".tab-pane.show.active");
+    refreshElements(`#${activeSubTab.attr("id")}`);
+}
+
 
 function minimizeScreenToggle(){
     const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
@@ -149,27 +158,17 @@ function handleResizables(){
 }
 
 function updateBacktestingSelector(updated_data, update_url, dom_root_element, msg, status){
-    backtestingTableID = createBacktestingMetadataTable(msg.data)
-    w2ui[backtestingTableID].on("select", function (event){
+    function updateSelection(event, selected){
         if(typeof event.recid !== "undefined"){
-            updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(event.recid).id, true);
+            updateBacktestingAnalysisReport(w2ui[event.target].get(event.recid).id, selected);
         }
         if(typeof event.recids !== "undefined"){
             event.recids.forEach(function (id){
-                updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(id).id, true);
+                updateBacktestingAnalysisReport(w2ui[event.target].get(id).id, selected);
             })
         }
-    })
-    w2ui[backtestingTableID].on("unselect", function (event){
-        if(typeof event.recid !== "undefined"){
-            updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(event.recid).id, false);
-        }
-        if(typeof event.recids !== "undefined"){
-            event.recids.forEach(function (id){
-                updateBacktestingAnalysisReport(w2ui[backtestingTableID].get(id).id, false);
-            })
-        }
-    })
+    }
+    backtestingTableName = createBacktestingMetadataTable(msg.data, updateSelection)
 }
 
 function initBacktestingRunSelector(){
@@ -178,7 +177,7 @@ function initBacktestingRunSelector(){
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
-    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added)
+    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added, backtestingTableName)
 }
 
 function updateBacktestingAnalysisReport(run_id, addReport){
@@ -234,6 +233,30 @@ function handleOptimizerConfigUpdateSuccessCallback(updated_data, update_url, do
     startStrategyDesignOptimizer();
 }
 
+function refreshElements(parentElementSelector){
+    const parentElement = $(parentElementSelector);
+    parentElement.find(".w2ui-grid").each(function (index, child){
+        $(child).w2grid().refresh();
+    })
+    parentElement.find(".plot-container.plotly").each(function (index, child){
+        Plotly.relayout($(child).parent().attr("id"), {autosize: true});
+    })
+}
+
+function handleTabSelectionEvents(){
+    const refreshedTabs = [
+        "backtesting-results-tab",
+        "performance-summary-tab",
+        "list-of-trades-tab",
+        "strategy-optimizer-results-tab",
+    ]
+    refreshedTabs.forEach(function (tab){
+        $(`#${tab}`).on("shown.bs.tab", function (event){
+            refreshElements($(event.target).attr("href"));
+        })
+    })
+}
+
 function startStrategyDesignOptimizer(){
     const startOptimizerButton  = $("#optimizer-input-save-and-start-button");
     const url = startOptimizerButton.data("start-url");
@@ -283,7 +306,7 @@ function init_optimizer_status_websocket(){
 }
 
 const optimizerSocket = get_websocket("/strategy_optimizer");
-let backtestingTableID = undefined;
+let backtestingTableName = undefined;
 
 $(document).ready(function() {
     displayChartsAndInputs(false, null);
@@ -292,6 +315,7 @@ $(document).ready(function() {
     handleResizables();
     handleUserInputsActions();
     handleOptimizerActions();
+    handleTabSelectionEvents();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
     backtesting_done_callbacks.push(postBacktestingDone)
