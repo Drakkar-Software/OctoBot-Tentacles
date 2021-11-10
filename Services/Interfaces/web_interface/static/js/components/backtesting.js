@@ -136,7 +136,7 @@ function handle_date_selection(){
     endDate[0].min = newStartDate;
 }
 
-const dataFilesTable = $('#dataFilesTable').DataTable({"order": [], "destroy": true});
+const dataFilesTable = $('#dataFilesTable').DataTable({"order": [[ 2, 'desc' ]], "destroy": true});
 const syncDataOnlyDiv = $("#synchronized-data-only-div");
 const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
 const startDate = $("#startDate");

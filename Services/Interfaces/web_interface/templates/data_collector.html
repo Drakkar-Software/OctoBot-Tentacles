@@ -171,7 +171,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for file, description in data_files.items() | sort(reverse=True)%}
+            {% for file, description in data_files.items() %}
                 <tr class="selectable_datafile">
                     <td>{{", ".join(description.symbols)}}</td>
                     {% if description.start_timestamp %}

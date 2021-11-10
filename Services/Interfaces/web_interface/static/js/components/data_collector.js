@@ -139,7 +139,7 @@ function is_full_candle_history_exchanges(){
     return $.inArray(selected_exchange, full_history_exchanges) !== -1;
 }
 
-let dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
+let dataFilesTable = $('#dataFilesTable').DataTable({"order": [[ 1, 'desc' ]]});
 
 $(document).ready(function() {
     handle_data_files_buttons();

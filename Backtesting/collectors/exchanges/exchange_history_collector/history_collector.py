@@ -22,6 +22,7 @@ import octobot_backtesting.enums as backtesting_enums
 import octobot_backtesting.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
+import octobot_commons.time_frame_manager as time_frame_manager
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
 try:
@@ -183,6 +184,17 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
+
+    async def check_timestamps(self):
+        if self.start_timestamp is not None:
+            lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,
+                                                                          time_frame_manager.find_min_time_frame(
+                                                                              self.time_frames))
+                                    for symbol in self.symbols])
+            if lowest_timestamp > self.start_timestamp:
+                self.start_timestamp = lowest_timestamp
+            if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
+                raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
         return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0]\
