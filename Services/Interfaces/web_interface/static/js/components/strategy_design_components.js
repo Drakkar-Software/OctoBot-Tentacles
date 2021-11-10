@@ -243,7 +243,7 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
 }
 
 function _displayInputs(elements, replot, editors){
-    ["backtesting", "trading"].forEach(function (tab){
+    ["trading"].forEach(function (tab){
         const masterTab = $(`#${tab}-inputs`);
         masterTab.empty();
         elements.data.elements.forEach(function (inputDetails) {
@@ -299,7 +299,7 @@ function _updateChartLayout(subElementCount){
 function _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName){
     sub_element.data.elements.forEach(function (element){
         const toRemove = [];
-        const tableName = element.title.replaceAll(" ", "-");
+        const tableName = element.title.replaceAll(" ", "-").replaceAll("*", "-");
         if(added) {
             // remove potentially now unselected elements
             if(typeof w2ui[tableName] !== "undefined"){
@@ -391,9 +391,11 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
         const records = metadata.map((row, index) => {
             row.recid = index;
             row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
-            if(typeof row.user_inputs === "object"){
-                row.user_inputs = JSON.stringify(row.user_inputs);
-            }
+            Object.keys(row).forEach(function (key){
+                if(typeof row[key] === "object"){
+                    row[key] = JSON.stringify(row[key]);
+                }
+            })
             return row;
         });
         const searches = keys.map((key) => {

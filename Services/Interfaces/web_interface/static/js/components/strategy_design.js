@@ -45,11 +45,12 @@ function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_elem
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     const reloadScript = $("#reload-script");
     const backtestingUrl = reloadScript.data("backtesting-url")
+    const startDate = $("#startDate");
+    const endDate = $("#endDate");
     const data = {
         exchange_id: reloadScript.data("exchange-id"),
-        // start_timestamp: 1633095582000,    // TODO (Friday 1 October 2021 13:39:42)
-        start_timestamp: 1635757030000,    // TODO (Monday 1 November 2021 08:57:10)
-        end_timestamp: new Date().getTime(),    // TODO (today)
+        start_timestamp: startDate.val().length ? (new Date(startDate.val()).getTime()) : null,
+        end_timestamp: endDate.val().length ? (new Date(endDate.val()).getTime()) : null,
     }
     start_backtesting(data, backtestingUrl);
 }
@@ -312,6 +313,20 @@ function init_optimizer_status_websocket(){
     check_optimizer_state();
 }
 
+function handleDateSelectors(){
+    const nowDate = new Date().toISOString().split("T")[0];
+    const startDatePicker = $("#startDate");
+    const endDatePicker = $("#endDate");
+    endDatePicker[0].max = nowDate;
+    startDatePicker[0].max = nowDate;
+    startDatePicker.on("change", function (){
+        $("#endDate")[0].min = $(this).val();
+    })
+    endDatePicker.on("change", function (){
+        $("#startDate")[0].max = $(this).val();
+    })
+}
+
 const optimizerSocket = get_websocket("/strategy_optimizer");
 let backtestingTableName = undefined;
 
@@ -323,6 +338,7 @@ $(document).ready(function() {
     handleUserInputsActions();
     handleOptimizerActions();
     handleTabSelectionEvents();
+    handleDateSelectors();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
     backtesting_done_callbacks.push(postBacktestingDone)

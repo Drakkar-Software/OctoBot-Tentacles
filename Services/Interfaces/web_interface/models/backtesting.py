@@ -85,7 +85,7 @@ def start_backtesting_using_current_bot_data(exchange_id, source, reset_tentacle
 def stop_previous_backtesting():
     tools = web_interface_root.WebInterface.tools
     previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
-    if not octobot_api.is_independent_backtesting_stopped(previous_independent_backtesting):
+    if previous_independent_backtesting and not octobot_api.is_independent_backtesting_stopped(previous_independent_backtesting):
         interfaces_util.run_in_bot_main_loop(
             octobot_api.stop_independent_backtesting(previous_independent_backtesting))
 
