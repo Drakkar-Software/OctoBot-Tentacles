@@ -199,7 +199,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         while start_time < end_time and not reached_max:
             candles = await self.exchange_manager.exchange.get_symbol_prices(symbol,
                                                                              time_frame,
-                                                                             since=start_time)
+                                                                             since=int(start_time))
             start_time = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
             while start_time > end_time and candles:
                 start_time = candles.pop(-1)[commons_enums.PriceIndexes.IND_PRICE_TIME.value]

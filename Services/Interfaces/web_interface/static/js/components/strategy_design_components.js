@@ -16,12 +16,12 @@ function getPlotlyConfig(){
     };
 }
 
-function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id){
+function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier){
     const chartedElements = {
       x: chartDetails.x,
       mode: chartDetails.kind,
       type: chartDetails.kind,
-      name: `${chartDetails.title} (${backtesting_id})`,
+      name: `${chartDetails.title} (${chartIdentifier})`,
       backtesting_id: backtesting_id,
     }
     Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
@@ -38,8 +38,8 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id){
     return chartedElements;
 }
 
-function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id){
-    const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id);
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
+    const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
         autorange: true,
         rangeslider: {
@@ -94,69 +94,152 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     return layout
 }
 
-function updateBacktestingChart(data, divID, replot, backtesting_id, added, backtestingTableName) {
-    const graphDiv = document.getElementById(divID);
-    const toRemoveTraces = [];
+function _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisIDs) {
+    const toRemoveTracesByDivID = {};
+    const checkedDivIDsForClear = [];
     if (added) {
-        // remove potentially now unselected elements
         const selectedBacktestingIDs = getSelectedBacktestingIDs(backtestingTableName)
-        let isAlreadyDisplayed = false;
-        if(typeof graphDiv.data !== "undefined"){
-            graphDiv.data.forEach(function (datum){
-                if(selectedBacktestingIDs.indexOf(datum.backtesting_id) === -1){
-                    toRemoveTraces.push(datum);
+        data.data.sub_elements.forEach(function (sub_element) {
+            if (sub_element.type == "chart") {
+                const divID = sub_element.name;
+                let isAlreadyDisplayed = false;
+                if(backtesting_id !== null && checkedDivIDsForClear.indexOf(divID) === -1){
+                    // remove potentially now unselected elements
+                    checkedDivIDsForClear.push(divID);
+                    toRemoveTracesByDivID[divID] = [];
+                    const graphDiv = document.getElementById(divID);
+                    if(typeof graphDiv.data !== "undefined"){
+                        graphDiv.data.forEach(function (datum){
+                            if(datum.backtesting_id !== null){
+                                if(selectedBacktestingIDs.indexOf(datum.backtesting_id) === -1){
+                                    // backtesting graphs are to be removed => not selected anymore
+                                    toRemoveTracesByDivID[divID].push(datum);
+                                }
+                                if(datum.backtesting_id == backtesting_id){
+                                    isAlreadyDisplayed = true;
+                                }
+                            }
+                        })
+                    }
                 }
-                if(datum.backtesting_id == backtesting_id){
-                    isAlreadyDisplayed = true;
+                if(isAlreadyDisplayed){
+                    // already displayed, jump to next graph
+                    return;
                 }
-            })
-        }
-        if(!isAlreadyDisplayed){
-            data.data.sub_elements.forEach(function (sub_element) {
-                if (sub_element.type == "chart") {
-                    const chartData = [];
-                    const xaxis_list = [];
-                    const yaxis_list = [];
-                    sub_element.data.elements.forEach(function (chartDetails) {
-                        let yAxis = 1;
-                        if (chartDetails.own_yaxis) {
-                            yAxis += 1;
-                        }
-                        let xAxis = 1;
-                        if (chartDetails.own_xaxis) {
-                            xAxis += 1;
-                        }
-                        if (plotlyCreatedChartsIDs.indexOf(divID) !== -1) {
-                            const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id);
-                            Plotly.addTraces(divID, chartedElements);
-                        } else {
 
-                            function afterPlot(target) {
-                                removeExplicitSize(target);
-                                resizeObserver.observe(target);
-                            }
-                            const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id);
-                            if (replot) {
-                                Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot);
-                            } else {
-                                Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot);
-                            }
+                const chartData = [];
+                const xaxis_list = [];
+                const yaxis_list = [];
+                sub_element.data.elements.forEach(function (chartDetails) {
+                    let yAxis = 1;
+                    if (chartDetails.own_yaxis) {
+                        yAxis += 1;
+                    }
+                    let xAxis = 1;
+                    if (chartDetails.own_xaxis) {
+                        xAxis += 1;
+                    }
+                    if (plotlyCreatedChartsIDs.indexOf(divID) !== -1) {
+                        const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
+                        Plotly.addTraces(divID, chartedElements);
+                    } else {
+                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier);
+                        if (hiddenXAxisIDs.indexOf(divID) !== -1) {
+                            layout.xaxis.visible = false;
                         }
-                    });
+                        if (replot) {
+                            Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot);
+                        } else {
+                            Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot);
+                        }
+                    }
+                });
+                if(plotlyCreatedChartsIDs.indexOf(divID) === -1){
+                    plotlyCreatedChartsIDs.push(divID);
+                }
+            }
+        });
+    } else{
+        data.data.sub_elements.forEach(function (sub_element) {
+            if (sub_element.type == "chart") {
+                const divID = sub_element.name;
+                if(checkedDivIDsForClear.indexOf(divID) === -1) {
+                    toRemoveTracesByDivID[divID] = [];
+                    if(typeof document.getElementById(divID).data !== "undefined"){
+                        document.getElementById(divID).data.forEach(function (data) {
+                            if (data.backtesting_id === backtesting_id) {
+                                toRemoveTracesByDivID[divID].push(data);
+                            }
+                        })
+                    }
+                    checkedDivIDsForClear.push(divID);
+                }
+            }
+        });
+    }
+    Object.keys(toRemoveTracesByDivID).forEach(function (divID){
+        toRemoveTracesByDivID[divID].forEach(function (data){
+            Plotly.deleteTraces(divID, document.getElementById(divID).data.indexOf(data));
+        });
+    })
+}
+
+function _updateBacktestingChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
+    function afterPlot(target) {
+        removeExplicitSize(target);
+        resizeObserver.observe(target);
+    }
+    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, []);
+}
+
+function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
+    _updateChartLayout(data.data.sub_elements.length);
+    function afterPlot(target) {
+        const plottedDivID = $(target).attr("id");
+        removeExplicitSize(target);
+        resizeObserver.observe(target);
+        if (plottedDivID !== "main-chart") {
+            // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
+            const mainLayout = document.getElementById("main-chart").layout;
+            originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
+            Plotly.relayout("sub-chart", {
+                xaxis: {
+                    range: mainLayout.xaxis.range.map((x) => x),
+                    type: mainLayout.xaxis.type,
+                    visible: false,
                 }
             });
-            plotlyCreatedChartsIDs.push(divID);
+        }else{
+            // TODO figure out how to disable autorange in order to unlock range change from sub chart
+            //  BUT without reseting x axis to year 2000
+            // mainLayout.xaxis.autorange = false
         }
-    } else{
-        graphDiv.data.forEach(function (data){
-            if(data.backtesting_id === backtesting_id){
-                toRemoveTraces.push(data);
-            }
-        })
     }
-    toRemoveTraces.forEach(function (data){
-        Plotly.deleteTraces(divID, graphDiv.data.indexOf(data));
-    })
+    const hiddenXAxisChartIDs = ["sub-chart"];
+    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisChartIDs);
+    if(!replot){
+        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
+            relayouting.push("main-chart");
+            if(relayouting.indexOf("sub-chart") === -1){
+                Plotly.relayout("sub-chart", eventdata);
+                relayouting.push("sub-chart");
+            }else{
+                relayouting.splice(0, relayouting.length);
+            }
+        });
+        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
+            relayouting.push("sub-chart");
+            if(relayouting.indexOf("main-chart") === -1){
+                const mainLayout = document.getElementById("main-chart").layout;
+                mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
+                mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
+                Plotly.relayout("main-chart", mainLayout);
+                relayouting.push("main-chart");
+            }else{
+                relayouting.splice(0, relayouting.length);
+            }
+        });
+    }
 }
 
 function _displayInputs(elements, replot, editors){
@@ -182,19 +265,21 @@ function _displayInputs(elements, replot, editors){
     })
 }
 
-function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, added, backtestingTableName){
+function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, added, backtestingTableName, chartIdentifier){
     data.data.sub_elements.forEach(function (sub_element) {
-        if (sub_element.type === "input") {
+        if (backtesting_id === null && sub_element.type === "input") {
+            // only update inputs on live data
             _displayInputs(sub_element, replot, editors);
             displayOptimizerSettings(sub_element, replot);
-        }else if (sub_element.type === "table"){
+        }
+        if (sub_element.type === "table"){
             _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName);
         }
     });
     if(backtestingPart){
-        updateBacktestingChart(data, "backtesting-chart", true, backtesting_id, added, backtestingTableName)
+        _updateBacktestingChart(data, true, backtesting_id, added, backtestingTableName, chartIdentifier)
     }else{
-        _updateMainCharts(data, replot);
+        _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier);
     }
 }
 
@@ -210,83 +295,6 @@ function _updateChartLayout(subElementCount){
     }
 }
 
-function _updateMainCharts(data, replot){
-    let mainLayout = undefined;
-    _updateChartLayout(data.data.sub_elements.length);
-    data.data.sub_elements.forEach(function (sub_element) {
-        if(sub_element.type == "chart") {
-            const chartData = [];
-            const xaxis_list = [];
-            const yaxis_list = [];
-            const divID = sub_element.name;
-            sub_element.data.elements.forEach(function (chartDetails) {
-                let yAxis = 1;
-                if (chartDetails.own_yaxis) {
-                    yAxis += 1;
-                }
-                let xAxis = 1;
-                if (chartDetails.own_xaxis) {
-                    xAxis += 1;
-                }
-                const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list);
-                if (divID === "main-chart") {
-                    mainLayout = layout;
-                }else{
-                    layout.xaxis.visible = false;
-                }
-
-                function afterPlot(target) {
-                    const plottedDivID = $(target).attr("id");
-                    removeExplicitSize(target);
-                    resizeObserver.observe(target);
-                    if (plottedDivID !== "main-chart") {
-                        // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
-                        originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
-                        Plotly.relayout("sub-chart", {
-                            xaxis: {
-                                range: mainLayout.xaxis.range.map((x) => x),
-                                type: mainLayout.xaxis.type,
-                                visible: false,
-                            }
-                        });
-                    }else{
-                        // TODO figure out how to disable autorange in order to unlock range change from sub chart
-                        //  BUT without reseting x axis to year 2000
-                        // mainLayout.xaxis.autorange = false
-                    }
-                }
-
-                if (replot) {
-                    Plotly.react(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
-                } else {
-                    Plotly.newPlot(divID, chartData, layout, getPlotlyConfig()).then(afterPlot)
-                }
-            });
-        }
-    });
-    if(!replot){
-        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
-            relayouting.push("main-chart");
-            if(relayouting.indexOf("sub-chart") === -1){
-                Plotly.relayout("sub-chart", eventdata);
-                relayouting.push("sub-chart");
-            }else{
-                relayouting.splice(0, relayouting.length);
-            }
-        });
-        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
-            relayouting.push("sub-chart");
-            if(relayouting.indexOf("main-chart") === -1){
-                mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
-                mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-                Plotly.relayout("main-chart", mainLayout);
-                relayouting.push("main-chart");
-            }else{
-                relayouting.splice(0, relayouting.length);
-            }
-        });
-    }
-}
 
 function _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName){
     sub_element.data.elements.forEach(function (element){
@@ -368,48 +376,55 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
 }
 
 function createBacktestingMetadataTable(metadata, sectionHandler){
-    const keys = Object.keys(metadata[0]);
-    const columns = keys.map((key) => {
-        return {
-            field: key,
-            text: key,
-            size: `${1 / keys.length * 100}%`,
-            sortable: true,
-            render: key === "timestamp" ? "datetime" : undefined,
+    if(metadata.length){
+        $("#no-backtesting-message").addClass(hidden_class);
+        const keys = Object.keys(metadata[0]);
+        const columns = keys.map((key) => {
+            return {
+                field: key,
+                text: key,
+                size: `${1 / keys.length * 100}%`,
+                sortable: true,
+                render: key === "timestamp" ? "datetime" : undefined,
+            }
+        })
+        const records = metadata.map((row, index) => {
+            row.recid = index;
+            row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
+            if(typeof row.user_inputs === "object"){
+                row.user_inputs = JSON.stringify(row.user_inputs);
+            }
+            return row;
+        });
+        const searches = keys.map((key) => {
+            search = {
+                type: null,
+                field: key,
+            }
+            return {
+                field: key,
+                label: key,
+                type:  key === "timestamp" ? "datetime" : _getTableDataType(records, search),
+            }
+        });
+        const name = "Select backtestings";
+        const tableName = name.replaceAll(" ", "-");
+        _createTable("backtesting-run-select-table", name, tableName,
+                     searches, columns, records, true, false);
+        const table = w2ui[tableName];
+        table.on("select", function (event){
+            sectionHandler(event, true);
+        })
+        table.on("unselect", function (event){
+            sectionHandler(event, false);
+        })
+        if(records.length){
+            table.sort("timestamp", "desc");
+            table.click(table.getFirst());
         }
-    })
-    const records = metadata.map((row, index) => {
-        row.recid = index;
-        row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
-        return row;
-    });
-    const searches = keys.map((key) => {
-        search = {
-            type: null,
-            field: key,
-        }
-        return {
-            field: key,
-            label: key,
-            type:  key === "timestamp" ? "datetime" : _getTableDataType(records, search),
-        }
-    });
-    const name = "Select backtestings";
-    const tableName = name.replaceAll(" ", "-");
-    _createTable("backtesting-run-select-table", name, tableName,
-                 searches, columns, records, true, false);
-    const table = w2ui[tableName];
-    table.on("select", function (event){
-        sectionHandler(event, true);
-    })
-    table.on("unselect", function (event){
-        sectionHandler(event, false);
-    })
-    if(records.length){
-        table.sort("timestamp", "desc");
-        table.click(table.getFirst());
+        return tableName;
     }
-    return tableName;
+    $("#no-backtesting-message").removeClass(hidden_class);
 }
 
 function getSelectedBacktestingIDs(tableName){
