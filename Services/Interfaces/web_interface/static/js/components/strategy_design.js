@@ -251,6 +251,8 @@ function handleTabSelectionEvents(){
         "performance-summary-tab",
         "list-of-trades-tab",
         "strategy-optimizer-results-tab",
+        "backtesting-tab",
+        "optimizer-tab",
     ]
     refreshedTabs.forEach(function (tab){
         $(`#${tab}`).on("shown.bs.tab", function (event){
