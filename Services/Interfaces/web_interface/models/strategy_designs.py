@@ -29,12 +29,12 @@ def _get_logger():
     return bot_logging.get_logger("StrategyDesign")
 
 
-def get_plotted_data(trading_mode, run_id=None, optimizer_id=None):
+def get_plotted_data(trading_mode, run_id=None, optimizer_id=None, exchange_id=None):
     elements = scripting_library.DisplayedElements()
     db_name = trading_mode.get_db_name(bot_id=interfaces_util.get_bot_api().get_bot_id()) if run_id is None \
         else trading_mode.get_db_name(backtesting=True, prefix=run_id, optimizer_id=optimizer_id)
     interfaces_util.run_in_bot_async_executor(
-        elements.fill_from_database(db_name)
+        elements.fill_from_database(db_name, exchange_id)
     )
     return elements.to_json()
 

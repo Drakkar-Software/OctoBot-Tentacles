@@ -119,7 +119,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 files,
                 run_on_common_part_only=run_on_common_part_only,
                 start_timestamp=start_timestamp / 1000 if start_timestamp else None,
-                end_timestamp=start_timestamp / 1000 if start_timestamp else None)
+                end_timestamp=end_timestamp / 1000 if end_timestamp else None)
             interfaces_util.run_in_bot_main_loop(
                 octobot_api.initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
             tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting

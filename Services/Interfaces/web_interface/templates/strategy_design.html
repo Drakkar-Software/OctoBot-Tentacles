@@ -315,7 +315,7 @@ button.fullscreen-size-btn {
 
 <div id="strategy_body" class="strategy_body">
     <div id="charts"
-         data-live-url="{{url_for('plotted_data')}}"
+         data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
          data-backtesting-url="{{url_for('backtesting_main_plotted_data', run_id='')}}"
          data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
          class="resizable">
@@ -507,6 +507,11 @@ button.fullscreen-size-btn {
 
                     <div class="tab-pane fade show active" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
                         <div id="backtesting-table" class="resizable ui-resizable js-plotly-plot">
+                            <div id="no-backtesting-message" class="d-none text-center mx-4 my-4">
+                                <h4>
+                                    No backtesting found, here you will be able to select backtestings using the {{ trading_mode_name }} for comparison.
+                                </h4>
+                            </div>
                             <div id="backtesting-run-select-table"
                                  data-url="{{url_for('get_run_data')}}"
                                  style="width: 100%; height: 100%;"></div>

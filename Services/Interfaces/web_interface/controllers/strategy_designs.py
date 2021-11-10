@@ -33,9 +33,9 @@ def strategy_design():
     )
 
 
-@web_interface.server_instance.route("/plotted_data")
+@web_interface.server_instance.route("/plotted_data<exchange_id>")
 @login.login_required_when_activated
-def plotted_data():
+def plotted_data(exchange_id):
     try:
         trading_mode = models.get_config_activated_trading_mode()
         # TODO remove
@@ -44,17 +44,16 @@ def plotted_data():
         # from tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script import backtest_test_script
         # trading_mode.register_live_script(backtest_test_script)
         # TODO remove
-        return util.get_rest_reply(models.get_plotted_data(trading_mode), 200)
+        return util.get_rest_reply(models.get_plotted_data(trading_mode, exchange_id=exchange_id), 200)
     except Exception as e:
         commons_logging.get_logger("plotted_data").exception(e)
         return util.get_rest_reply(str(e), 500)
 
 
-@web_interface.server_instance.route("/backtesting_main_plotted_data")
+@web_interface.server_instance.route("/backtesting_main_plotted_data<run_id>")
 @login.login_required_when_activated
-def backtesting_main_plotted_data():
+def backtesting_main_plotted_data(run_id):
     try:
-        run_id = flask.request.args["run_id"]
         trading_mode = models.get_config_activated_trading_mode()
         return util.get_rest_reply(models.get_plotted_data(trading_mode, run_id), 200)
     except Exception as e:
