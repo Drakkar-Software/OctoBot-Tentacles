@@ -1,4 +1,5 @@
-function displayChartsAndInputs(replot, backtestingRunId){
+function displayChartsAndInputs(replot, backtestingRunId, added){
+    const chartIdentifier = backtestingRunId ? backtestingRunId : "live";
     let url = $("#charts").data("live-url")
     if(replot){
        url = $("#charts").data("backtesting-url") + backtestingRunId
@@ -7,7 +8,7 @@ function displayChartsAndInputs(replot, backtestingRunId){
         url: url,
         dataType: "json",
         success: function (data) {
-            updateDisplayedElement(data, replot, editors, false)
+            updateDisplayedElement(data, replot, editors, false, backtestingRunId, added, backtestingTableName, chartIdentifier)
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
@@ -38,8 +39,6 @@ function postBacktestingDone(){
 }
 
 function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_element, msg, status){
-    const backtestingRunId = msg.id;
-    displayChartsAndInputs(true, backtestingRunId)
     initBacktestingRunSelector()
 }
 
@@ -48,7 +47,8 @@ function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element
     const backtestingUrl = reloadScript.data("backtesting-url")
     const data = {
         exchange_id: reloadScript.data("exchange-id"),
-        start_timestamp: 1633095582000,    // TODO (Friday 1 October 2021 13:39:42)
+        // start_timestamp: 1633095582000,    // TODO (Friday 1 October 2021 13:39:42)
+        start_timestamp: 1635757030000,    // TODO (Monday 1 November 2021 08:57:10)
         end_timestamp: new Date().getTime(),    // TODO (today)
     }
     start_backtesting(data, backtestingUrl);
@@ -179,10 +179,13 @@ function initBacktestingRunSelector(){
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
-    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added, backtestingTableName)
+    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added, backtestingTableName, updated_data.id,)
 }
 
 function updateBacktestingAnalysisReport(run_id, addReport){
+    // upper charts
+    displayChartsAndInputs(true, run_id, addReport)
+    // toolbox
     send_and_interpret_bot_update({id: run_id, added: addReport}, $("#backtesting-chart").data("url"), null,
         updateBacktestingReport, generic_request_failure_callback);
 }
@@ -313,7 +316,7 @@ const optimizerSocket = get_websocket("/strategy_optimizer");
 let backtestingTableName = undefined;
 
 $(document).ready(function() {
-    displayChartsAndInputs(false, null);
+    displayChartsAndInputs(false, null, true);
     initBacktestingRunSelector();
     handleScriptButtons();
     handleResizables();
