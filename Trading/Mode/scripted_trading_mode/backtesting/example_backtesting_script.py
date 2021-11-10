@@ -12,7 +12,7 @@ async def script(ctx, run_id):
             await plot_historical_portfolio_value(reader, part)
             await plot_historical_pnl_value(reader, part, x_as_trade_count=False, own_yaxis=True)
         with drawing.part("list-of-trades-part", "table") as part:
-            await plot_table(reader, part, "RSI")
+            await plot_table(reader, part, "RSI * 1200")
             await plot_trades(reader, part)
     return drawing
 

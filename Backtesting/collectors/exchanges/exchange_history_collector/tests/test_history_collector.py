@@ -68,7 +68,7 @@ async def test_collect_valid_data():
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.temp_file_path)
         assert os.path.isfile(collector.file_path)
-        async with backtesting_data.DataBase.database(collector.file_path) as database:
+        async with backtesting_data.new_database(collector.file_path) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
             # use > to take into account new possible candles since collect max time is not specified
             assert len(ohlcv) > 6000
@@ -106,7 +106,7 @@ async def test_collect_valid_date_range():
         assert collector.temp_file_path is not None
         assert os.path.isfile(collector.file_path)
         assert not os.path.isfile(collector.temp_file_path)
-        async with backtesting_data.DataBase.database(collector.file_path) as database:
+        async with backtesting_data.new_database(collector.file_path) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
             assert len(ohlcv) == 16833
             h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="1h")
@@ -154,7 +154,7 @@ async def test_collect_multi_pair():
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.temp_file_path)
         assert os.path.isfile(collector.file_path)
-        async with backtesting_data.DataBase.database(collector.file_path) as database:
+        async with backtesting_data.new_database(collector.file_path) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
             # use > to take into account new possible candles since collect max time is not specified
             assert len(ohlcv) > 19316

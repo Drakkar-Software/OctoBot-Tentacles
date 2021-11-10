@@ -329,8 +329,8 @@ button.fullscreen-size-btn {
 
     <span id='backtesting_progress_bar' style='display: none;'>
         <div class="card-title">
-            <h2 id="optimizer_progress_bar_title">Optimizer in progress</h2>
-            <h2 id="backtesting_progress_bar_title">Backtesting in progress</h2>
+            <h4 id="optimizer_progress_bar_title">Optimizer in progress</h4>
+            <h4 id="backtesting_progress_bar_title">Backtesting in progress</h4>
         </div>
 
         <div class='progress'>
@@ -502,6 +502,16 @@ button.fullscreen-size-btn {
 
                     <div class="tab-pane fade" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
                         <div id="backtesting-inputs">
+                            <div class="row col-12 col-md-6">
+                                <div class="my-auto mx-4">
+                                    Start Date :
+                                    <input type="date" class="datepicker" id="startDate">
+                                </div>
+                                <div class="my-auto mx-4">
+                                    End Date :
+                                    <input type="date" class="datepicker" id="endDate">
+                                </div>
+                            </div>
                         </div>
                     </div>
 

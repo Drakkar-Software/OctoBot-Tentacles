@@ -240,8 +240,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                            cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
                                            symbol=symbol,
                                            time_frame=time_frame.value)
-            else:
-                i=1
         if to_add_candles:
             await self.save_ohlcv(
                 exchange=exchange,
@@ -273,7 +271,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         multiple=True
                 )
             else:
-                database_candles = importers.ExchangeDataImporter.import_ohlcvs(
+                database_candles = importers.import_ohlcvs(
                     await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV, size=data.DataBase.DEFAULT_SIZE,
                                                exchange_name=self.exchange_name, symbol=symbol,
                                                time_frame=time_frame.value)
