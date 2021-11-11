@@ -2,66 +2,58 @@ from tentacles.Evaluator.TA import *
 from octobot_trading.modes.scripting_library import *
 
 
+def crossover(val1, val2):
+    # true if val1 just got over val2
+    return val1[-1] > val2[-1] and val1[-2] < val2[-2]
+
+
 async def script(ctx: Context):
-    ctx.logger.info("start script")
+    pass
     set_script_name(ctx, "SimpleRSI with 40/60")
-
-    rsi_length = await user_input(ctx, "rsi_length", "int", 11)
-    percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
-    use_stop_loss = await user_input(ctx, "use_stop_loss", "boolean", False)
-    # await user_input(ctx, "data source", "options", "",
-    #                  options=[f"{element['id']} {element['name']}" for element in await read_metadata(ctx)])
-    data_source = await user_input(ctx, "data source", "options", "close", options=["open", "high", "low", "close"])
-
+    #
+    # rsi_length = await user_input(ctx, "rsi_length", "int", 11)
+    # percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
+    # use_stop_loss = await user_input(ctx, "use_stop_loss", "boolean", False)
+    # data_source = await user_input(ctx, "data source", "options", "close", options=["open", "high", "low", "close"])
+    #
+    percent_volume = 30
     pair = ctx.traded_pair
     time_frame = "1h"
     await plot_candles(ctx, pair, time_frame)
-    # await plot(
-    #     ctx,
-    #     "candles",
-    #     x=Time(ctx, pair, time_frame),
-    #     open=Open(ctx, pair, time_frame),
-    #     high=High(ctx, pair, time_frame),
-    #     low=Low(ctx, pair, time_frame),
-    #     close=Close(ctx, pair, time_frame),
-    #     volume=Volume(ctx, pair, time_frame),
-    #     kind="candlestick",
-    #     chart=trading_enums.PlotCharts.MAIN_CHART.value
-    # )
+    #
+    # # TA initial variables
+    candle_source = Close(ctx, pair, time_frame, 36)
+    # if data_source == "open":
+    #     candle_source = Open(ctx, pair, time_frame)
+    # if data_source == "high":
+    #     candle_source = High(ctx, pair, time_frame)
+    # if data_source == "low":
+    #     candle_source = Low(ctx, pair, time_frame)
+    if len(candle_source) > 35:
+        sma1 = ti.sma(candle_source, 15)
+        sma2 = ti.sma(candle_source, 35)
+        await plot(ctx, "SMA 1", Time(ctx, pair, time_frame), sma1)
+        await plot(ctx, "SMA 2", Time(ctx, pair, time_frame), sma2)
 
-    # TA initial variables
-    candle_source = Close(ctx, pair, time_frame)
-    if data_source == "open":
-        candle_source = Open(ctx, pair, time_frame)
-    if data_source == "high":
-        candle_source = High(ctx, pair, time_frame)
-    if data_source == "low":
-        candle_source = Low(ctx, pair, time_frame)
-    if len(candle_source) > rsi_length:
-        rsi_data = ti.rsi(candle_source, rsi_length)
+        # await plot(ctx, "RSI * 1200", Time(ctx, pair, time_frame), rsi_data * 1200)
+        # await plot(ctx, "source price", Time(ctx, pair, time_frame), candle_source)
 
-        await plot(ctx, "RSI * 1200", Time(ctx, pair, time_frame), rsi_data * 1200)
-        await plot(ctx, "source price", Time(ctx, pair, time_frame), candle_source)
-
-        if rsi_data[-1] < 50:
+        # if rsi_data[-1] < 50:
+        if crossover(sma1, sma2):
             await market(
                 ctx,
                 amount=f"{percent_volume}%",
                 side="buy",
                 tag="marketIn"
             )
-        if rsi_data[-1] > 50:
+        # if rsi_data[-1] > 50:
+        if crossover(sma2, sma1):
             await market(
                 ctx,
                 amount=f"{percent_volume}%",
                 side="sell",
                 tag="marketOut"
             )
-    else:
-        hjfgggj=1
-
-    ctx.logger.info("finish script")
-    return
 
 async def other_script(ctx: Context):
     ctx.logger.info("script start")
