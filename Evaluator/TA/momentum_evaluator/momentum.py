@@ -28,6 +28,18 @@ import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
 
 
+class BlankMomentumEvaluator(evaluators.TAEvaluator):
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        await self.evaluate(cryptocurrency, symbol, time_frame, candle)
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle):
+        self.eval_note = 0.5
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                time_frame=time_frame))
+
+
 class RSIMomentumEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
