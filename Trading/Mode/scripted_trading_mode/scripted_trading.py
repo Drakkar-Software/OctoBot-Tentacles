@@ -14,9 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.modes.scripting_library as scripting_library
-import octobot_trading.api as trading_api
 import tentacles.Trading.Mode.scripted_trading_mode.trading.example_trading_script as live_script
-import tentacles.Trading.Mode.scripted_trading_mode.backtesting as backtesting_script
+import tentacles.Trading.Mode.scripted_trading_mode.backtesting.example_backtesting_script as backtesting_script
 
 
 class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):

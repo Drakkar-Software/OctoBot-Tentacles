@@ -43,7 +43,8 @@ def backtesting():
                                                                            reset_tentacle_config,
                                                                            run_on_common_part_only,
                                                                            start_timestamp=data.get("start_timestamp", None),
-                                                                           end_timestamp=data.get("end_timestamp", None))
+                                                                           end_timestamp=data.get("end_timestamp", None),
+                                                                           enable_logs=data.get("enable_logs", False),)
         elif action_type == "start_backtesting_with_current_bot_data":
             data = flask.request.get_json()
             source = flask.request.args["source"]
@@ -54,7 +55,8 @@ def backtesting():
                 source,
                 reset_tentacle_config,
                 start_timestamp=data.get("start_timestamp", None),
-                end_timestamp=data.get("end_timestamp", None)
+                end_timestamp=data.get("end_timestamp", None),
+                enable_logs=data.get("enable_logs", False),
             )
 
         if success:
