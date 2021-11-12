@@ -18,11 +18,11 @@ async def script(ctx: Context):
     #
     percent_volume = 30
     pair = ctx.traded_pair
-    time_frame = "1h"
-    await plot_candles(ctx, pair, time_frame)
+    ctx.time_frame = "1h"
+    await plot_candles(ctx, pair, ctx.time_frame)
     #
     # # TA initial variables
-    candle_source = Close(ctx, pair, time_frame, 36)
+    candle_source = Close(ctx, pair, ctx.time_frame, 36)
     # if data_source == "open":
     #     candle_source = Open(ctx, pair, time_frame)
     # if data_source == "high":
@@ -32,8 +32,15 @@ async def script(ctx: Context):
     if len(candle_source) > 35:
         sma1 = ti.sma(candle_source, 15)
         sma2 = ti.sma(candle_source, 35)
-        await plot(ctx, "SMA 1", Time(ctx, pair, time_frame), sma1)
-        await plot(ctx, "SMA 2", Time(ctx, pair, time_frame), sma2)
+
+        t = Time(ctx, pair, ctx.time_frame, limit=1 if ctx.writer.are_data_initialized else -1)
+        await plot(ctx, "SMA 1", t, sma1)
+        await plot(ctx, "SMA 2", t, sma2)
+
+        ema_is_rising = ti.ema(candle_source, 5)[:-1] < ti.ema(candle_source, 5)[1:]
+        high = High(ctx, pair, ctx.time_frame) + 10
+        await plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
+                   chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
 
         # await plot(ctx, "RSI * 1200", Time(ctx, pair, time_frame), rsi_data * 1200)
         # await plot(ctx, "source price", Time(ctx, pair, time_frame), candle_source)
