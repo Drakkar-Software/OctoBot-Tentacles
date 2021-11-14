@@ -11,10 +11,10 @@ async def script(ctx: Context):
     pass
     set_script_name(ctx, "SimpleRSI with 40/60")
     #
-    # rsi_length = await user_input(ctx, "rsi_length", "int", 11)
-    # percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
-    # use_stop_loss = await user_input(ctx, "use_stop_loss", "boolean", False)
-    # data_source = await user_input(ctx, "data source", "options", "close", options=["open", "high", "low", "close"])
+    rsi_length = await user_input(ctx, "rsi_length", "int", 11)
+    percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
+    use_stop_loss = await user_input(ctx, "use_stop_loss", "boolean", False)
+    data_source = await user_input(ctx, "data source", "options", "close", options=["open", "high", "low", "close"])
     #
     percent_volume = 30
     pair = ctx.traded_pair
@@ -35,12 +35,12 @@ async def script(ctx: Context):
 
         t = Time(ctx, pair, ctx.time_frame, limit=1 if ctx.writer.are_data_initialized else -1)
         await plot(ctx, "SMA 1", t, sma1)
-        await plot(ctx, "SMA 2", t, sma2)
+        # await plot(ctx, "SMA 2", t, sma2)
 
-        ema_is_rising = ti.ema(candle_source, 5)[:-1] < ti.ema(candle_source, 5)[1:]
-        high = High(ctx, pair, ctx.time_frame) + 10
-        await plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
-                   chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
+        # ema_is_rising = ti.ema(candle_source, 5)[:-1] < ti.ema(candle_source, 5)[1:]
+        # high = High(ctx, pair, ctx.time_frame) + 10
+        # await plot(ctx, "ema_is_rising", condition=ema_is_rising, y=high,
+        #            chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
 
         # await plot(ctx, "RSI * 1200", Time(ctx, pair, time_frame), rsi_data * 1200)
         # await plot(ctx, "source price", Time(ctx, pair, time_frame), candle_source)
