@@ -70,8 +70,8 @@ def _add_exchange_portfolio(portfolio, exchange, holdings_per_symbol):
     free_key = "free"
     locked_key = "locked"
     for currency, amounts in portfolio.items():
-        total_amount = amounts[commons_constants.PORTFOLIO_TOTAL]
-        free_amount = amounts[commons_constants.PORTFOLIO_AVAILABLE]
+        total_amount = amounts.total
+        free_amount = amounts.available
         if total_amount > 0:
             if currency not in holdings_per_symbol:
                 holdings_per_symbol[currency] = {
