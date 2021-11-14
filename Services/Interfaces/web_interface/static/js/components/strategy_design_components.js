@@ -218,7 +218,8 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
     const hiddenXAxisChartIDs = ["sub-chart"];
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisChartIDs);
     if(!replot){
-        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
+        return  //TODO fix zoom synch
+        $(document.getElementById("main-chart")).on("plotly_relayout", function(eventdata) {
             relayouting.push("main-chart");
             if(relayouting.indexOf("sub-chart") === -1){
                 Plotly.relayout("sub-chart", eventdata);
@@ -227,7 +228,7 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
                 relayouting.splice(0, relayouting.length);
             }
         });
-        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
+        $(document.getElementById("sub-chart")).on("plotly_relayout", function(eventdata) {
             relayouting.push("sub-chart");
             if(relayouting.indexOf("main-chart") === -1){
                 const mainLayout = document.getElementById("main-chart").layout;
