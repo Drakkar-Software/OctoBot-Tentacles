@@ -1,1 +1,1 @@
-from .example_backtesting_script import *
+from .backtesting_script import *

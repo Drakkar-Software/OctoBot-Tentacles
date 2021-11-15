@@ -1,1 +1,1 @@
-from .example_trading_script import *
+from .trading_script import *
