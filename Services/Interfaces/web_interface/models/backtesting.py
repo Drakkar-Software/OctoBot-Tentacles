@@ -97,8 +97,8 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
     try:
         tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
-        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and octobot_api.is_optimizer_in_progress(
-                tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]):
+        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and interfaces_util.run_in_bot_async_executor(
+                octobot_api.is_optimizer_in_progress(tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER])):
             return False, "Optimizer already running"
         elif previous_independent_backtesting and \
                 octobot_api.is_independent_backtesting_in_progress(previous_independent_backtesting):
