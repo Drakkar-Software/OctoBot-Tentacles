@@ -147,7 +147,7 @@ def get_optimizer_status():
     if optimizer:
         if octobot_api.is_optimizer_computing(optimizer):
             return "computing", octobot_api.get_optimizer_current_test_suite_progress(optimizer), \
-                   octobot_api.get_optimizer_overall_progress(optimizer), \
+                   interfaces_util.run_in_bot_async_executor(octobot_api.get_optimizer_overall_progress(optimizer)), \
                    octobot_api.get_optimizer_errors_description(optimizer)
         else:
             return "finished", 100, 100, octobot_api.get_optimizer_errors_description(optimizer)

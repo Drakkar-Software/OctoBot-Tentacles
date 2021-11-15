@@ -108,7 +108,7 @@ def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_
         [data_file])
     tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
     interfaces_util.run_in_bot_async_executor(
-        octobot_api.initialize_design_strategy_optimizer(optimizer)
+        octobot_api.initialize_design_strategy_optimizer(optimizer, is_computing=True)
     )
     thread = threading.Thread(target=interfaces_util.run_in_bot_async_executor,
                               args=(octobot_api.start_design_strategy_optimizer(optimizer, randomly_chose_runs), ),
