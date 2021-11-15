@@ -195,16 +195,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         ]
 
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec, start_time, end_time):
-        reached_max = False
-        while start_time < end_time and not reached_max:
-            candles = await self.exchange_manager.exchange.get_symbol_prices(symbol,
-                                                                             time_frame,
-                                                                             since=int(start_time))
-            start_time = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-            while start_time > end_time and candles:
-                start_time = candles.pop(-1)[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                reached_max = True
-            self.exchange_manager.exchange.uniformize_candles_if_necessary(candles)
+        async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
+                                                                       start_time, end_time):
             await self.save_ohlcv(
                     exchange=exchange,
                     cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
@@ -213,8 +205,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                for candle in candles],
                     multiple=True
             )
-            # avoid fetching the last element twice
-            start_time += 1
 
     def find_candle(self, candles, timestamp):
         for candle in candles:
@@ -285,7 +275,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, current_bot_candles)
             self.current_step_index += 1
-        except Exception as e:
+        except Exception:
             raise
 
     async def get_kline_history(self, exchange, symbol, time_frame):
