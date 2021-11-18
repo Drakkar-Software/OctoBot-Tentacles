@@ -20,11 +20,13 @@ import time
 import abc
 import flask
 import os.path
+from flask_caching import Cache
 
 import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as bot_logging
 
 server_instance = flask.Flask(__name__)
+cache = Cache(config={"CACHE_TYPE": "SimpleCache"})
 
 
 class Notifier:
@@ -47,8 +49,9 @@ BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
 DATA_COLLECTOR_NOTIFICATION_KEY = "data_collector_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
-# Override system configuration content types
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+
+# Override system configuration content types
 flask_util.init_content_types()
 server_instance.json_encoder = flask_util.Jsonifier
 
@@ -128,8 +131,10 @@ def send_general_notifications(**kwargs):
 def send_backtesting_status(**kwargs):
     _send_notification(BACKTESTING_NOTIFICATION_KEY, **kwargs)
 
+
 def send_data_collector_status(**kwargs):
     _send_notification(DATA_COLLECTOR_NOTIFICATION_KEY, **kwargs)
+
 
 def send_new_trade(dict_new_trade, is_simulated):
     if is_simulated:
@@ -173,4 +178,3 @@ def get_errors_count():
 
 def flush_errors_count():
     bot_logging.reset_errors_count()
-
