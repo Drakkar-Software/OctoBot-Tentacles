@@ -19,6 +19,7 @@ import socket
 import webbrowser
 import time
 import flask_socketio
+from flask_compress import Compress
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
@@ -165,6 +166,9 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             server_instance = web_interface_root.server_instance
             if self.dev_mode:
                 server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
+            else:
+                web_interface_root.cache.init_app(server_instance)
+                Compress(server_instance)
             # register session secret key
             server_instance.secret_key = self.session_secret_key
             self._handle_login(server_instance)
