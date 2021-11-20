@@ -243,18 +243,19 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
     }
 }
 
-function _displayInputs(elements, replot, editors){
-    ["trading"].forEach(function (tab){
-        const masterTab = $(`#${tab}-inputs`);
-        masterTab.empty();
-        elements.data.elements.forEach(function (inputDetails) {
+function _displayInputsForTentacle(elements, replot, editors, mainTab, tentacleType){
+    elements.data.elements.forEach(function (inputDetails) {
+        if(inputDetails.tentacle_type === tentacleType){
+            const tabIdentifier = mainTab == null ? inputDetails.tentacle : mainTab
             const divId = inputDetails.title.replaceAll(" ", "-");
-            masterTab.append(`<div id="${tab}-${divId}"></div>`)
+            const masterTab = $(`#${tabIdentifier}-inputs`);
+            masterTab.empty();
+            masterTab.append(`<div id="${tabIdentifier}-${divId}"></div>`);
             editors[inputDetails.tentacle] = new JSONEditor(
-                document.getElementById(`${tab}-${divId}`),
+                document.getElementById(`${tabIdentifier}-${divId}`),
                 {
                     schema: inputDetails.schema,
-                    startval: replot ? inputDetails.config : $(`#save-${inputDetails.tentacle}`).data("config"),
+                    startval: replot ? inputDetails.config : masterTab.data("config"),
                     no_additional_properties: true,
                     prompt_before_delete: true,
                     disable_array_reorder: true,
@@ -262,8 +263,13 @@ function _displayInputs(elements, replot, editors){
                     disable_properties: true
                 }
             );
-        });
-    })
+        }
+    });
+}
+
+function _displayInputs(elements, replot, editors){
+    _displayInputsForTentacle(elements, replot, editors, "trading", "trading_mode")
+    _displayInputsForTentacle(elements, replot, editors, null, "evaluator")
 }
 
 function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, added, backtestingTableName, chartIdentifier){

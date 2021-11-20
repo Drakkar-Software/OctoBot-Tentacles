@@ -30,6 +30,7 @@ def strategy_design():
         trading_mode_name=trading_mode.get_name(),
         tentacle_class=trading_mode,
         exchange_id=models.get_first_exchange_id(),
+        activated_evaluators=models.get_config_activated_evaluators(),
     )
 
 
@@ -77,13 +78,7 @@ def backtesting_run_plotted_data():
 @login.login_required_when_activated
 def update_plot_script():
     try:
-        request_data = flask.request.get_json()
-        trading_mode = models.get_config_activated_trading_mode()
-        # TODO remove
-        # import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
-        # trading_mode = scripted_trading_mode.ScriptedTradingMode
-        # TODO remove
-        return util.get_rest_reply(models.update_plot_script(trading_mode, request_data["live"]), 200)
+        return util.get_rest_reply(models.reload_scripts(), 200)
     except Exception as e:
         commons_logging.get_logger("update_plot_script").exception(e)
         return util.get_rest_reply(str(e), 500)

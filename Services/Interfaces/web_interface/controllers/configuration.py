@@ -220,7 +220,7 @@ def config_tentacle():
         if flask.request.args.get("reload"):
             try:
                 trading_mode = models.get_config_activated_trading_mode()
-                models.update_plot_script(trading_mode, True)
+                models.reload_scripts(trading_mode, True)
             except Exception as e:
                 success = False
                 response = str(e)
@@ -262,6 +262,33 @@ def config_tentacle():
                                          )
         else:
             return flask.render_template('config_tentacle.html')
+
+
+@web_interface.server_instance.route('/config_tentacles', methods=['POST'])
+@login.login_required_when_activated
+def config_tentacles():
+    if flask.request.method == 'POST':
+        action = flask.request.args.get("action")
+        success = True
+        response = ""
+        if action == "update":
+            request_data = flask.request.get_json()
+            responses = []
+            for tentacle, config in request_data.items():
+                update_success, update_response = models.update_tentacle_config(tentacle, config)
+                success = update_success and success
+                responses.append(update_response)
+            response = ", ".join(responses)
+        if success and flask.request.args.get("reload"):
+            try:
+                models.reload_scripts()
+            except Exception as e:
+                success = False
+                response = str(e)
+        if success:
+            return util.get_rest_reply(flask.jsonify(response))
+        else:
+            return util.get_rest_reply(response, 500)
 
 
 @web_interface.server_instance.route('/metrics_settings', methods=['POST'])
