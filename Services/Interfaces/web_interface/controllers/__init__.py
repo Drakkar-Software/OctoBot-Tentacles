@@ -60,6 +60,7 @@ from tentacles.Services.Interfaces.web_interface.controllers.configuration impor
     profiles_management,
     accounts,
     config_tentacle,
+    config_tentacles,
     metrics_settings,
     config_actions,
 )
@@ -118,6 +119,7 @@ __all__ = [
     "config",
     "accounts",
     "config_tentacle",
+    "config_tentacles",
     "metrics_settings",
     "config_actions",
     "currency_price_graph_update",

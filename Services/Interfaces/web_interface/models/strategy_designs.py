@@ -20,9 +20,11 @@ import octobot_services.api as services_api
 import octobot_trading.modes.scripting_library as scripting_library
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_commons.logging as bot_logging
+import octobot_commons.enums as commons_enums
 import tentacles.Services.Interfaces.web_interface.models.backtesting as backtesting_model
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Interfaces.web_interface.constants as constants
+import tentacles.Services.Interfaces.web_interface.models.configuration as configuration
 
 
 def _get_logger():
@@ -34,7 +36,7 @@ def get_plotted_data(trading_mode, run_id=None, optimizer_id=None, exchange_id=N
     db_name = trading_mode.get_db_name(bot_id=interfaces_util.get_bot_api().get_bot_id()) if run_id is None \
         else trading_mode.get_db_name(backtesting=True, prefix=run_id, optimizer_id=optimizer_id)
     interfaces_util.run_in_bot_async_executor(
-        elements.fill_from_database(db_name, exchange_id)
+        elements.fill_from_database(db_name, exchange_id, with_inputs=run_id is None)
     )
     return elements.to_json()
 
@@ -46,19 +48,24 @@ def get_backtesting_run_plotted_data(trading_mode, run_id):
     return elements.to_json()
 
 
-def update_plot_script(trading_mode, is_live):
-    interfaces_util.run_in_bot_main_loop(
-        services_api.send_user_command(
-            interfaces_util.get_bot_api().get_bot_id(),
-            trading_mode.get_name(),
-            trading_mode.USER_COMMAND_RELOAD_SCRIPT,
-            {
-                trading_mode.USER_COMMAND_RELOAD_SCRIPT_IS_LIVE: is_live
-            },
-            wait_for_processing=True
-        )
-    )
-    return {"success": True}
+def reload_scripts():
+    try:
+        trading_mode = configuration.get_config_activated_trading_mode()
+        evaluators = configuration.get_config_activated_evaluators()
+        for tentacle in [trading_mode] + evaluators:
+            interfaces_util.run_in_bot_main_loop(
+                services_api.send_user_command(
+                    interfaces_util.get_bot_api().get_bot_id(),
+                    tentacle.get_name(),
+                    commons_enums.UserCommands.RELOAD_SCRIPT.value,
+                    None,
+                    wait_for_processing=True
+                )
+            )
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
 
 
 def get_run_data(trading_mode, is_live, optimizer_id=None):

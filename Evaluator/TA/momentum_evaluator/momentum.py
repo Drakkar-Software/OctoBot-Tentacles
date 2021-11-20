@@ -21,7 +21,6 @@ import typing
 import octobot_commons.constants as commons_constants
 import octobot_commons.errors as commons_errors
 import octobot_commons.enums as commons_enums
-import octobot_trading.modes.scripting_library as scripting_library
 import octobot_commons.data_util as data_util
 import octobot_commons.errors as error
 import octobot_evaluators.evaluators as evaluators
@@ -38,19 +37,15 @@ class BlankMomentumEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle):
         self.eval_note = 0.5
-        # await scripting_library.plot(self.get_context(symbol, time_frame), "BlankMomentumEvaluator",
-        #                              cache_value=commons_enums.CacheDatabaseColumns.VALUE.value)
-        await scripting_library.plot(self.get_context(symbol, time_frame), "EMA20", cache_value="ema20", own_yaxis=True)
-
         #TMP
-        ctx = self.get_context(symbol, time_frame)
-        cache = ctx.get_cache()
+        import octobot_trading.modes.scripting_library as scripting_library
         eval_time = evaluators_util.get_eval_time(full_candle=candle, time_frame=time_frame)
-        # await cache.set(eval_time, candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value], "ema20")
+        ctx = self.get_context(symbol, time_frame, eval_time)
+        await scripting_library.plot(ctx, "EMA20", cache_value="ema20", own_yaxis=True)
         try:
-            await cache.get(eval_time, "ema20")
+            await ctx.get_cached_value(eval_time, "ema20")
         except commons_errors.NoCacheValue:
-            await cache.set(eval_time, candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value], "ema20")
+            await ctx.set_cached_value(eval_time, candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value], "ema20")
         #TMP
 
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,

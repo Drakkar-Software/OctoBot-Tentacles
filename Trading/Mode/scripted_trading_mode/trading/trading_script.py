@@ -71,8 +71,7 @@ async def script(ctx: Context):
             )
 
         # TMP cache tests
-        cache = ctx.get_cache()
-        await cache.set(t[-1], rsi_data[-1], "rsi")
+        await ctx.set_cached_value(rsi_data[-1], cache_key=t[-1], value_key="rsi")
         await plot(ctx, "RSI", cache_value="rsi", own_yaxis=True)
         # TMP
 

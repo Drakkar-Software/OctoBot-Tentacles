@@ -21,7 +21,9 @@ import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 
+import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
+import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -30,7 +32,6 @@ import octobot_trading.api as trading_api
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import octobot_evaluators.constants as evaluators_constants
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
@@ -56,10 +57,12 @@ STRATEGY_KEY = "strategy"
 TA_EVALUATOR_KEY = "technical evaluator"
 SOCIAL_EVALUATOR_KEY = "social evaluator"
 RT_EVALUATOR_KEY = "real time evaluator"
+SCRIPTED_EVALUATOR_KEY = "scripted evaluator"
 REQUIRED_KEY = "required"
 SOCIAL_KEY = "social"
 TA_KEY = "ta"
 RT_KEY = "real-time"
+SCRIPTED_KEY = "scripted"
 ACTIVATED_STRATEGIES = "activated_strategies"
 BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
@@ -190,6 +193,8 @@ def _get_tentacle_packages():
     yield social, evaluators.AbstractEvaluator, SOCIAL_EVALUATOR_KEY
     import tentacles.Evaluator.RealTime as rt
     yield rt, evaluators.AbstractEvaluator, RT_EVALUATOR_KEY
+    import tentacles.Evaluator.Scripted as scripted
+    yield scripted, evaluators.ScriptedEvaluator, SCRIPTED_EVALUATOR_KEY
 
 
 def _get_activation_state(name, activation_states):
@@ -283,6 +288,8 @@ def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
 def update_tentacle_config(tentacle_name, config_update):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
+        if klass is None:
+            return False, f"Can't find {tentacle_name} class"
         tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
                                                      klass,
                                                      config_update)
@@ -398,10 +405,12 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
     import tentacles.Evaluator.TA as ta
     import tentacles.Evaluator.Social as social
     import tentacles.Evaluator.RealTime as rt
+    import tentacles.Evaluator.Scripted as scripted
     detailed_config = {
         SOCIAL_KEY: {},
         TA_KEY: {},
-        RT_KEY: {}
+        RT_KEY: {},
+        SCRIPTED_KEY: {}
     }
     strategy_config = {
         STRATEGIES_KEY: {}
@@ -417,13 +426,16 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
                 is_real_time, klass = _fill_evaluator_config(evaluator_name, activated, RT_KEY,
                                                              rt, detailed_config, media_url)
                 if not is_real_time:
-                    is_strategy, klass = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
-                                                                strategies, strategy_config, media_url,
-                                                                is_strategy=True)
-                    if is_strategy:
-                        strategy_class_by_name[evaluator_name] = klass
-                    else:
-                        _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
+                    is_scripted, klass = _fill_evaluator_config(evaluator_name, activated, SCRIPTED_KEY,
+                                                                scripted, detailed_config, media_url)
+                    if not is_scripted:
+                        is_strategy, klass = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
+                                                                    strategies, strategy_config, media_url,
+                                                                    is_strategy=True)
+                        if is_strategy:
+                            strategy_class_by_name[evaluator_name] = klass
+                        else:
+                            _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
 
     _add_strategies_requirements(strategy_class_by_name, strategy_config)
     required_elements = _get_required_element(strategy_config)
@@ -438,6 +450,10 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
 
 def get_config_activated_trading_mode():
     return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+
+
+def get_config_activated_evaluators():
+    return evaluators_api.get_activated_evaluators(interfaces_util.get_bot_api().get_edited_tentacles_config())
 
 
 def update_tentacles_activation_config(new_config, deactivate_others=False):

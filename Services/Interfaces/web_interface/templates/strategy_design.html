@@ -437,16 +437,16 @@ button.fullscreen-size-btn {
                     </li>
                     <div class="toolbox-buttons">
                         <button class="btn btn-success btn-outline-success waves-effect user-input-save"
-                        id="save-{{trading_mode_name}}"
-                        data-tentacle="{{trading_mode_name}}"
-                        data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')
-                        data-url="{{ url_for('config_tentacle', name=trading_mode_name, action='update', reload='true') }}">Save and reload</button>
+                        data-url="{{ url_for('config_tentacles', action='update', reload='true') }}">Save and reload</button>
                     </div>
                 </ul>
                 <div class="tab-content" id="strategy-settings-tabcontent">
 
                     <div class="tab-pane fade show active" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
-                        <div id="trading-inputs">
+                        <div id="trading-inputs"
+                             class="user-input-config"
+                             data-tentacle="{{trading_mode_name}}"
+                             data-config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}'>
                         </div>
                     </div>
 
@@ -454,22 +454,24 @@ button.fullscreen-size-btn {
 
 
                         <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs" id="tabs" role="tablist">
+                            {% for evaluator in activated_evaluators %}
                             <li class="nav-item waves-effect waves-light">
-                              <a class="nav-link primary-tab-selector active show" id="evaluatorName1-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="evaluatorName1" href="#evaluatorName1">Evaluator Name 1</a>
+                              <a class="nav-link primary-tab-selector {{ 'active show' if loop.first }}" id="{{ evaluator.get_name() }}-tab"
+                                 data-toggle="tab" role="tab" aria-selected="{{'true' if loop.first else 'false'}}"
+                                 aria-controls="{{ evaluator.get_name() }}-inputs" href="#{{ evaluator.get_name() }}-inputs">{{ evaluator.get_name() }}</a>
                             </li>
-                            <li class="nav-item waves-effect waves-light">
-                              <a class="nav-link primary-tab-selector " id="evaluatorName2-tab" data-toggle="tab" href="#evaluatorName2" role="tab" aria-controls="evaluatorName2" aria-selected="false">Evaluator name 2</a>
-                            </li>
+                            {% endfor %}
                         </ul>
                         <div class="tab-content" id="evaluator-settings-tabcontent">
-
-                            <div class="tab-pane fade show active" id="evaluatorName1" role="tabreal" aria-labelledby="evaluatorName1-tab">
-                                evaluator 1 settings
+                            {% for evaluator in activated_evaluators %}
+                            <div class="tab-pane fade show {{ 'active' if loop.first }} user-input-config"
+                                 id="{{evaluator.get_name()}}-inputs"
+                                 role="tabreal" aria-labelledby="{{evaluator.get_name()}}-tab"
+                                 data-tentacle="{{evaluator.get_name()}}"
+                                 data-config='{{ get_tentacle_config_file_content(evaluator)|tojson }}'>
+                                No user inputs settings for {{evaluator.get_name()}}.
                             </div>
-
-                            <div class="tab-pane fade" id="evaluatorName2" role="tabreal" aria-labelledby="evaluatorName2-tab">
-                                evaluator 2 settings
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>

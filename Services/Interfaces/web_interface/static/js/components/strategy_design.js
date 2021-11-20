@@ -191,9 +191,9 @@ function updateBacktestingAnalysisReport(run_id, addReport){
         updateBacktestingReport, generic_request_failure_callback);
 }
 
-function updateTentacleConfig(saveButton, updatedConfig){
+function updateTentacleConfigurations(saveButton, tentaclesConfigByTentacle){
     const update_url = saveButton.data("url");
-    send_and_interpret_bot_update(updatedConfig, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
+    send_and_interpret_bot_update(tentaclesConfigByTentacle, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -212,11 +212,22 @@ function check_config(editor){
 
 function handleUserInputsActions(){
     $(".user-input-save").click(function () {
-        const editor = editors[$(this).data("tentacle")];
-        if (check_config(editor))
-            updateTentacleConfig($(this), editor.getValue());
-        else
-            create_alert("error", "Error when saving configuration", "Invalid configuration data.");
+        const tentaclesConfigByTentacle = {};
+        let save = true;
+        $(".user-input-config").each(function (index, element){
+            const tentacle = $(element).data("tentacle");
+            if (editors.hasOwnProperty(tentacle)){
+                if (check_config(editors[tentacle]))
+                    tentaclesConfigByTentacle[tentacle] = editors[tentacle].getValue();
+                else {
+                    save = false;
+                    create_alert("error", `Error when saving ${tentacle} configuration`, "Invalid configuration data.");
+                }
+            }
+        });
+        if (save){
+            updateTentacleConfigurations($(this), tentaclesConfigByTentacle);
+        }
     })
 }
 
