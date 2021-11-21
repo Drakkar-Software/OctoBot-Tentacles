@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_evaluators.evaluators as evaluators
-import tentacles.Evaluator.Scripted.scripted.evaluator as evaluator_script
+import tentacles.Evaluator.Scripted.scripted.evaluator.evaluator_script as evaluator_script
 
 
 class ScriptedEvaluator(evaluators.ScriptedEvaluator):

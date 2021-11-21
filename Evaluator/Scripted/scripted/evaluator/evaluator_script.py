@@ -59,11 +59,4 @@ async def script(ctx: Context):
     await plot(ctx, ema_falling_title, condition=True, cache_value=ema_falling_title,
                chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
 
-    # await plot(ctx, ema_title, t, ema_data, chart=trading_enums.PlotCharts.MAIN_CHART.value)
-    # await plot(ctx, ema_rising_title, condition=ema_is_rising, y=plot_location_low,
-    #            chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
-    # await plot(ctx, ema_falling_title, condition=ema_is_falling, y=plot_location_high,
-    #            chart=trading_enums.PlotCharts.MAIN_CHART.value, kind="markers")
-
-    # TODO: strategy trigger
     return super_complicated_value
