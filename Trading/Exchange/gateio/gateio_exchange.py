@@ -23,6 +23,7 @@ class GateIO(exchanges.SpotCCXTExchange):
     def get_name(cls):
         return 'gateio'
 
+    @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return exchange_candidate_name == cls.get_name()
 
