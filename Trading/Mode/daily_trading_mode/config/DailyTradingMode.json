@@ -7,7 +7,7 @@
         "SimpleStrategyEvaluator",
         "TechnicalAnalysisStrategyEvaluator"
     ],
-    "max_currency_percent": 33,
+    "max_currency_percent": 100,
     "required_strategies_min_count": 1,
     "sell_with_maximum_size_orders": false,
     "buy_with_maximum_size_orders": false,
