@@ -10,6 +10,7 @@
     <div class="row border d-none" id="optimizer-settings-default-values">
         {{ strategy_optimizer_setting("number") }}
         {{ strategy_optimizer_setting("options") }}
+        {{ strategy_optimizer_setting("multiple-options") }}
         {{ strategy_optimizer_setting("boolean") }}
     </div>
 </div>
@@ -25,6 +26,8 @@
             {% if value_type == "number" %}
                 {{ strategy_optimizer_number_setting_values() }}
             {% elif value_type == "options" %}
+                {{ strategy_optimizer_options_setting_values() }}
+            {% elif value_type == "multiple-options" %}
                 {{ strategy_optimizer_options_setting_values() }}
             {% elif value_type == "boolean" %}
                 {{ strategy_optimizer_boolean_setting_values() }}

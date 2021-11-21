@@ -75,6 +75,8 @@ function _getValueType(inputDetail){
     const schemaValueType = inputDetail.type;
     if(schemaValueType === "string"){
         return "options";
+    }else if(schemaValueType === "array"){
+        return "multiple-options";
     }
     return schemaValueType;
 }

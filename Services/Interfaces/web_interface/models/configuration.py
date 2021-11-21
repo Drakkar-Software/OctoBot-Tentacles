@@ -228,7 +228,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
 
 
 def get_tentacle_user_commands(klass):
-    return klass.get_user_commands()
+    return {} if klass is None else klass.get_user_commands()
 
 
 def get_tentacle_config(klass):

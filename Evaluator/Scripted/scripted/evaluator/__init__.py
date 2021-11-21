@@ -1,1 +1,1 @@
-from .script import *
+from .evaluator_script import *
