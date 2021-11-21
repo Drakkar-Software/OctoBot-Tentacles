@@ -22,7 +22,7 @@ class OKExCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
+        Feeds.TICKER: Feeds.UNSUPPORTED.value,
         Feeds.OPEN_INTEREST: cryptofeed_constants.OPEN_INTEREST,
         Feeds.FUNDING: cryptofeed_constants.FUNDING,
         Feeds.LIQUIDATIONS: cryptofeed_constants.LIQUIDATIONS,

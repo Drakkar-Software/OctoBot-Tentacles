@@ -33,6 +33,7 @@
            data-clear=false
            data-onblur="submit"
            data-highlight=true
+           id="{{config_key}}"
            placeholder="{{ placeholder_str }}"
            class="editable editable-click config-element">
         {{ password_val }}</a><br>
@@ -47,6 +48,7 @@
            data-clear=false
            data-onblur="submit"
            data-highlight=true
+           id="{{config_key}}"
            placeholder="{{ placeholder_str }}"
            class="editable editable-click config-element">
         {{ config[key] }}</a><br>
@@ -107,6 +109,7 @@
                    data-pk="1"
                    data-onblur="submit"
                    data-highlight=true
+                   id="{{config_key}}"
                 class="editable editable-click config-element">
     {{ config[key] }}</a><br>
 {%- endmacro %}
@@ -123,6 +126,7 @@
             data-type="list"
             multiple="multiple"
             style="width:100%;"
+            id="{{config_key}}"
             editable_config_id="multi-select-element-{{ identifier }}"
             >
         {% for name in suggestions %}

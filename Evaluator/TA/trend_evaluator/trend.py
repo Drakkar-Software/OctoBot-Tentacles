@@ -27,6 +27,80 @@ import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
 
 
+class SuperTrendEvaluator(evaluators.TAEvaluator):
+    FACTOR = "factor"
+    LENGTH = "length"
+    PREV_UPPER_BAND = "prev_upper_band"
+    PREV_LOWER_BAND = "prev_lower_band"
+    PREV_SUPERTREND = "prev_supertrend"
+    PREV_ATR = "prev_atr"
+
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, self.__class__)
+        self.factor = self.config.get(self.FACTOR, 3)
+        self.length = self.config.get(self.LENGTH, 10)
+        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+        self.previous_value = {}
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str,
+                             symbol: str, time_frame, candle, inc_in_construction_data):
+        exchange_symbol_data = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
+        high = trading_api.get_symbol_high_candles(exchange_symbol_data, time_frame,
+                                                   include_in_construction=inc_in_construction_data)
+        low = trading_api.get_symbol_low_candles(exchange_symbol_data, time_frame,
+                                                 include_in_construction=inc_in_construction_data)
+        close = trading_api.get_symbol_close_candles(exchange_symbol_data, time_frame,
+                                                     include_in_construction=inc_in_construction_data)
+        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+        if len(close) > self.length:
+            await self.evaluate(cryptocurrency, symbol, time_frame, candle, high, low, close)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                time_frame=time_frame))
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle, high, low, close):
+        hl2 = EvaluatorUtil.CandlesUtil.HL2(high, low)[-1]
+        atr = tulipy.atr(high, low, close, self.length)[-1]
+
+        previous_value = self.get_previous_value(symbol, time_frame)
+
+        upper_band = hl2 + self.factor * atr
+        lower_band = hl2 - self.factor * atr
+        prev_upper_band = previous_value.get(self.PREV_UPPER_BAND, 0)
+        prev_lower_band = previous_value.get(self.PREV_LOWER_BAND, 0)
+
+        lower_band = lower_band if (lower_band > prev_lower_band or close[-2] < prev_lower_band) else prev_lower_band
+        upper_band = upper_band if (upper_band < prev_upper_band or close[-2] > prev_upper_band) else prev_upper_band
+
+        prev_super_trend = previous_value.get(self.PREV_SUPERTREND, 0)
+
+        if previous_value.get(self.PREV_ATR, None) is None:
+            self.eval_note = -1
+        elif prev_super_trend == prev_upper_band:
+            self.eval_note = 1 if close[-1] > upper_band else -1
+        else:
+            self.eval_note = -1 if close[-1] < lower_band else 1
+
+        previous_value[self.PREV_ATR] = atr
+        previous_value[self.PREV_UPPER_BAND] = upper_band
+        previous_value[self.PREV_LOWER_BAND] = lower_band
+        previous_value[self.PREV_SUPERTREND] = lower_band if self.eval_note == 1 else upper_band
+        return
+
+    def get_previous_value(self, symbol, time_frame):
+        try:
+            previous_symbol_value = self.previous_value[symbol]
+        except KeyError:
+            self.previous_value[symbol] = {}
+            previous_symbol_value = self.previous_value[symbol]
+        try:
+            return previous_symbol_value[time_frame]
+        except KeyError:
+            previous_symbol_value[time_frame] = {}
+            return previous_symbol_value[time_frame]
+
+
 class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
     FAST_LENGTH = "fast_length"
     SLOW_LENGTH = "slow_length"
@@ -46,11 +120,11 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
 
         close = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
-                                                           time_frame,
-                                                           include_in_construction=inc_in_construction_data)
+                                                     time_frame,
+                                                     include_in_construction=inc_in_construction_data)
         volume = trading_api.get_symbol_volume_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
-                                                            time_frame,
-                                                           include_in_construction=inc_in_construction_data)
+                                                       time_frame,
+                                                       include_in_construction=inc_in_construction_data)
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         if len(close) > self.slow_length:
             await self.evaluate(cryptocurrency, symbol, time_frame, candle, close, volume)
@@ -58,12 +132,7 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
 
-
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle, candle_data, volume_data):
-
-        ma1 = None
-        ma2 = None
-
         if self.fast_ma_type == "vwma":
             ma1 = tulipy.vwma(candle_data, volume_data, self.fast_length)[-1]
         elif self.fast_ma_type == "lsma":
@@ -82,7 +151,6 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
             self.eval_note = -1
         elif ma1 < ma2:
             self.eval_note = 1
-
 
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend

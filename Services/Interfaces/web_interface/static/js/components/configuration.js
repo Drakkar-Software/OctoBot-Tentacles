@@ -209,6 +209,19 @@ function handle_special_values(currentElem){
             otherElem.trigger("change");
         }
     }
+    else if(currentElem.is(tradingReferenceMarket)){
+        display_generic_modal("Change reference market",
+            "Do you want to adapt the reference market for all your configured pairs ?",
+            "",
+            function(){
+                let url = "/api/change_reference_market_on_config_currencies";
+                let data = {};
+                data["old_base_currency"] = tradingReferenceMarket.attr(config_value_attr);
+                data["new_base_currency"] = tradingReferenceMarket.text();
+                send_and_interpret_bot_update(data, url, null, generic_request_success_callback, generic_request_failure_callback);
+            },
+            null);
+    }
 }
 
 function register_edit_events(){
@@ -613,6 +626,36 @@ function handle_activation_configuration_editor(){
     });
 }
 
+
+function handle_import_currencies(){
+    $("#import-currencies-button").on("click", function(){
+        $("#import-currencies-input").click();
+    });
+    $("#import-currencies-input").on("change", function () {
+        var GetFile = new FileReader();
+        GetFile.onload = function(){
+            let update_url = $("#import-currencies-button").attr(update_url_attr);
+            let data = {};
+            data["action"] = "update";
+            data["currencies"] = JSON.parse(GetFile.result);
+            send_and_interpret_bot_update(data, update_url, null,
+                handle_save_buttons_success_callback, generic_request_failure_callback);
+        };
+        GetFile.readAsText(this.files[0]);
+    });
+}
+
+
+function handle_export_currencies_button(){
+    $("#export-currencies-button").on("click", function(){
+        update_url = $("#export-currencies-button").attr(update_url_attr);
+        $.get(update_url, null, function(data, status){
+            download_data(JSON.stringify(data), "currencies_export.json");
+        });
+    });
+}
+
+
 function reset_configuration_element(){
     remove_exit_confirm_function();
     location.reload();
@@ -765,6 +808,7 @@ let deleted_global_config_elements = [];
 
 const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");
+const tradingReferenceMarket = $("#trading_reference-market");
 
 $(document).ready(function() {
     handle_nested_sidenav();
@@ -782,6 +826,9 @@ $(document).ready(function() {
     handle_buttons();
 
     handle_activation_configuration_editor();
+
+    handle_import_currencies();
+    handle_export_currencies_button();
 
     register_edit_events();
 

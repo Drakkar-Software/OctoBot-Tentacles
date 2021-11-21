@@ -20,13 +20,16 @@
                     <strong>Warning!</strong> The switch button will also restart OctoBot
                 </div>
           </div>
-        <div class="modal-footer text-center">
+          <div class="modal-footer text-center">
             <a class="my-2 btn btn-outline-primary waves-effect" href="" data-dismiss="modal" aria-label="Close">Stay</a>
-            {% if is_real_trading %}
-                <a class="my-2 btn btn-primary waves-effect trading-mode-switch-button" href="#" update-url="/config" href="/" config-type="global_config" config-key="trader-simulator_enabled" current-value="True">Switch to simulated trading</a>
-            {% else %}
-                <a class="my-2 btn btn-danger waves-effect trading-mode-switch-button" href="#" update-url="/config" config-type="global_config" config-key="trader_enabled" current-value="True">Switch to real trading</a>
-            {% endif %}
+              {% if is_real_trading %}
+                <a class="my-2 btn btn-primary waves-effect trading-mode-switch-button" href="#" update-url="/config" href="/" config-type="global_config"
+                    config-key="trader-simulator_enabled" current-value="True">Switch to simulated trading</a>
+              {% else %}
+                <a class="my-2 btn btn-danger waves-effect trading-mode-switch-button" href="#" update-url="/config" config-type="global_config" config-key="trader_enabled"
+                    current-value="True">Switch to real trading</a>
+              {% endif %}
+          </div>
         </div>
       </div>
     </div>

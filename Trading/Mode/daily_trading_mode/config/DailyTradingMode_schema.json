@@ -2,6 +2,13 @@
   "type": "object",
   "title": "DailyTradingMode",
   "properties": {
+    "max_currency_percent": {
+        "title": "Maximum currency percent: Maximum portfolio % to allocate on a given currency. Used to compute buy order volumes.",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 100
+    },
     "use_stop_orders": {
         "title": "Stop orders: Use stop loss orders.",
         "type": "boolean",

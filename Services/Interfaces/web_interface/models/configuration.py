@@ -13,9 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+
 import os.path as path
 import ccxt
 import copy
+import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 
@@ -573,15 +575,15 @@ def get_all_symbols_dict():
             retries = requests.packages.urllib3.util.retry.Retry(total=5, backoff_factor=0.5,
                                                                  status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
-            request_response = session.get(constants.CURRENCIES_LIST_URL)
-            all_symbols_dict = {
-                currency_data[NAME_KEY]: {
-                    SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
-                    ID_KEY: currency_data[ID_KEY]
-                }
-                for currency_data in request_response.json()
-                if _is_legit_currency(currency_data[NAME_KEY])
-            }
+            # get top 500 coins (2 * 250)
+            for i in range(1, 3):
+                request_response = session.get(f"{constants.CURRENCIES_LIST_URL}{i}")
+                for currency_data in request_response.json():
+                    if _is_legit_currency(currency_data[NAME_KEY]):
+                        all_symbols_dict[currency_data[NAME_KEY]] = {
+                            SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
+                            ID_KEY: currency_data[ID_KEY]
+                        }
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
@@ -700,3 +702,48 @@ def get_current_exchange():
         return next(iter(exchanges))
     else:
         return DEFAULT_EXCHANGE
+
+
+def change_reference_market_on_config_currencies(old_base_currency: str, new_base_currency: str) -> bool:
+    """
+    Change the base currency from old to new for all configured pair
+    :param old_base_currency:
+    :param new_base_currency:
+    :return: bool, str
+    """
+    success = True
+    message = "Reference market changed for each pair using the old reference market"
+    try:
+        config_currencies = format_config_symbols(interfaces_util.get_edited_config())
+        regex = rf"/{old_base_currency}$"
+        for currencies_config in config_currencies.values():
+            currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS] = \
+                list(set([re.sub(regex, f"/{new_base_currency}", pair)
+                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]]))
+        interfaces_util.get_edited_config(dict_only=False).save()
+    except Exception as e:
+        message = f"Error while changing reference market on currencies list: {e}"
+        success = False
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
+    return success, message
+
+
+def update_config_currencies(currencies: list, replace: bool=False):
+    """
+    Update the configured currencies list
+    :param currencies: currencies list
+    :param replace: replace the current list
+    :return: bool, str
+    """
+    success = True
+    message = "Currencies list updated"
+    try:
+        config_currencies = interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES]
+        config_currencies = currencies if replace else \
+            configuration.merge_dictionaries_by_appending_keys(config_currencies, currencies, merge_sub_array=True)
+        interfaces_util.get_edited_config(dict_only=False).save()
+    except Exception as e:
+        message = f"Error while updating currencies list: {e}"
+        success = False
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
+    return success, message

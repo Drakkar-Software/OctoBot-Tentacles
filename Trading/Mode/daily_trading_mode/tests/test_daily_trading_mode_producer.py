@@ -72,6 +72,7 @@ async def tools(symbol="BTC/USDT"):
         await mode.initialize()
         # add mode to exchange manager so that it can be stopped and freed from memory
         exchange_manager.trading_modes.append(mode)
+        mode.consumers[0].MAX_CURRENCY_RATIO = 1
 
         # set BTC/USDT price at 1000 USDT
         trading_api.force_set_mark_price(exchange_manager, symbol, 1000)

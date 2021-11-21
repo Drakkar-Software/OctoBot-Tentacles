@@ -1,5 +1,6 @@
 {% import 'macros/trading_state.html' as m_trading_state %}
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
+{% import 'components/modals/generic_modal.html' as m_generic_modal %}
 <!doctype html>
 <html lang="en">
     {% set active_page = active_page|default('home') -%}
@@ -39,7 +40,7 @@
 
         <!-- Editable -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.css', u=LAST_UPDATED_STATIC_FILES) }}">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" integrity="sha384-KZO2FRYNmIHerhfYMjCIUaJeGBRXP7CN24SiNSG+wdDzgwvxWbl16wMVtWiJTcMt" crossorigin="anonymous"/>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" integrity="sha384-OXVF05DQEe311p6ohU11NwlnX08FzMCsyoXzGOaL+83dKAb3qS17yZJxESl8YrJQ" crossorigin="anonymous">
 
         <!-- Own -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', u=LAST_UPDATED_STATIC_FILES) }}">
@@ -62,7 +63,7 @@
         <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.5.1/dist/jsoneditor.min.js" integrity="sha384-9C8nNDpQOW6OP1l3p4ggWPXoI3NZ5vCWQaflbPD7/nf2+SzaM1mI9c2W1R4aJbC0" crossorigin="anonymous"></script>
         <script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js" integrity="sha384-XnTxmviuqUy3cHBf+lkYWuTSDlhxCDxd9RgSo5zvzsCq93P9xNa6eENuAITCwxNh" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js" integrity="sha384-SfMwgGnc3UiUUZF50PsPetXLqH2HSl/FmkMW/Ja3N2WaJ/fHLbCHPUsXzzrM6aet"  crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js" integrity="sha384-JnbsSLBmv2/R0fUmF2XYIcAEMPHEAO51Gitn9IjL4l89uFTIgtLF1+jqIqqd9FSk" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
 
         <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/cst.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
@@ -162,6 +163,7 @@
 
         <!-- Modals -->
         {{ m_trading_state_modal.create_trading_state_modal(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
+        {{ m_generic_modal.create_generic_modal() }}
 
         {% block additional_scripts %}
         {% endblock additional_scripts %}

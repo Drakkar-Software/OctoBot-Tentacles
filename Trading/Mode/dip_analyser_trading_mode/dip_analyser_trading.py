@@ -231,7 +231,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # if currency (base) is not ref market => need to check holdings ratio not to spend all ref market
                 # into one currency (at least 3 traded assets are available here)
                 try:
-                    currency_ratio = await self.get_holdings_ratio(currency)
+                    currency_ratio = self.get_holdings_ratio(currency)
                 except KeyError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)

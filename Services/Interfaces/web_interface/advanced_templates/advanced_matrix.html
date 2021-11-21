@@ -8,8 +8,29 @@
         </h1>
     </div>
     <div class="card-body">
+        <div class="container-fluid row mx-0">
+            <div class="col-md-3 mb-3">
+                Evaluators :
+                <select class="mx-0 selectpicker" id="evaluatorsSelect" data-width="50%" data-window-padding="25" multiple>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                Timeframes :
+                <select class="mx-0 selectpicker" id="timeframesSelect" data-width="50%" data-window-padding="25" multiple>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                Symbols :
+                <select class="mx-0 selectpicker" id="symbolsSelect" data-width="50%" data-window-padding="25" multiple>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                Exchanges :
+                <select class="mx-0 selectpicker" id="exchangesSelect" data-width="50%" data-window-padding="25" multiple>
+                </select>
+            </div>
+        </div>
         <table class="table table-striped table-bordered table-sm table-hover table-responsive-lg" id="matrixDataTable">
-          <caption>Select data file(s) to use</caption>
           <thead>
             <tr>
                 <th scope="col">Evaluator</th>
@@ -53,5 +74,5 @@
 {% endblock %}
 
 {% block additional_scripts %}
-<script>$('#matrixDataTable').DataTable();</script>
+<script src="{{ url_for('static', filename='js/components/advanced_matrix.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

@@ -53,6 +53,9 @@
                 {% endfor %}
               </tbody>
             </table>
+            <div class="d-flex justify-content-end">
+                <a href="{{ url_for('data_collector') }}" class="btn btn-info waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
+            </div>
             {% if activated_trading_mode.is_backtestable() %}
                 <div class="container-fluid row mx-0">
                     <div class="row col-12 col-md-3">
@@ -100,6 +103,11 @@
                 No backtesting data files found. Once you have data files, they will be displayed here to be used in backtesting.
             </h4>
         {% endif %}
+        <div class="alert alert-info my-1" role="alert">
+            <p class="mb-0 text-center">
+                Protip: you can use OctoBot while a backtesting is running.
+            </p>
+        </div>
     </div>
 </div>
 
@@ -165,9 +173,6 @@
             <div id="graph-symbol-price-Bitcoin"></div>
         </div>
     </div>
-</div>
-<div class="card-footer text-right">
-    <a href="{{ url_for('data_collector') }}" class="btn btn-outline-info btn-lg waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
 </div>
 {% endblock %}
 

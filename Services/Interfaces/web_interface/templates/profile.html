@@ -247,24 +247,42 @@
                         {% endif %}
                         <div class="card">
                             <div class="card-body">
-                                Add a cryptocurrency to trade:
-                                <select id="AddCurrencySelect" class="selectpicker" data-live-search="true"
-                                        reference_market="{{ config_reference_market }}">
-                                    {% for currency in full_symbol_list %}
-                                    {% if currency not in config_symbols %}
-                                    <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}"
-                                            data-currency-id="{{ full_symbol_list[currency]['id'] }}"
-                                            symbol="{{ full_symbol_list[currency]['symbol'] }}"
-                                            data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{
-                                        currency }}
-                                    </option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
-                                <button type="button" id="AddCurrency"
-                                        class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2"
-                                                                                             aria-hidden="true"></i> Add
-                                </button>
+                                <div class="container-fluid row col-12">
+                                    <div class="col-md-6">
+                                        <label for="AddCurrencySelect">Add a cryptocurrency to trade:</label>
+                                        <select id="AddCurrencySelect" class="selectpicker" data-live-search="true"
+                                                reference_market="{{ config_reference_market }}">
+                                            {% for currency in full_symbol_list %}
+                                            {% if currency not in config_symbols %}
+                                            <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}"
+                                                    data-currency-id="{{ full_symbol_list[currency]['id'] }}"
+                                                    symbol="{{ full_symbol_list[currency]['symbol'] }}"
+                                                    data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{
+                                                currency }}
+                                            </option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <button type="button" id="AddCurrency"
+                                                class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2"
+                                                                                                     aria-hidden="true"></i> Add
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-end">
+                                            <button class="btn btn-outline-info btn-lg waves-effect" id="export-currencies-button"
+                                                    update-url="{{ url_for('api.get_config_currency')}}">
+                                                <i class="fa fa-cloud-download-alt"></i> Export
+                                            </button>
+                                            <input class="d-none" id="import-currencies-input" type="file" name="file" accept=".json"/>
+                                            <button class="btn btn-outline-info btn-lg waves-effect" id="import-currencies-button"
+                                                    update-url="{{ url_for('api.set_config_currency') }}">
+                                                <i class="fa fa-cloud-upload-alt"></i> Import
+                                            </button>
+                                        </div>
+
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <br>
@@ -328,7 +346,8 @@
                         <!-- Card deck -->
                         <div class="card-deck config-container">
                     <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings", link=OCTOBOT_DOCS_URL+"/configuration/profile-configuration#trading") }}
+                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings",
+                            link=OCTOBOT_DOCS_URL+"/configuration/profile-configuration#trading") }}
                     </span>
                             {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader",
                             link=OCTOBOT_DOCS_URL+"/usage/simulator#real-trader") }}

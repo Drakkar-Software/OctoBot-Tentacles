@@ -16,7 +16,8 @@
 
 
 # utility URLs
-CURRENCIES_LIST_URL = "https://api.coingecko.com/api/v3/coins/list"
+# top 250 sorted currencies (expects a page id at the end)
+CURRENCIES_LIST_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page="
 
 # config keys
 CONFIG_WATCHED_SYMBOLS = "watched_symbols"
