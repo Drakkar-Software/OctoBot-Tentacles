@@ -33,6 +33,16 @@ function handleScriptButtons(){
     })
 }
 
+function handleBacktestingButtons(){
+    $("#backtester-start-button").click(function (){
+        startBacktestingUsingSettings();
+    });
+    $("#backtester-stop-button").click(function (){
+        const url = $("#backtester-stop-button").data("stop-backtesting-url");
+        send_and_interpret_bot_update({}, url, null, generic_request_success_callback, generic_request_failure_callback);
+    });
+}
+
 function postBacktestingDone(){
     const update_url = $("#charts").data("backtesting-run-id-url")
     send_and_interpret_bot_update({}, update_url, null, backtestingRunIdFetchedCallback, generic_request_failure_callback, "GET");
@@ -43,6 +53,11 @@ function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_elem
 }
 
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    startBacktestingUsingSettings();
+}
+
+
+function startBacktestingUsingSettings(){
     const reloadScript = $("#reload-script");
     const backtestingUrl = reloadScript.data("backtesting-url")
     const startDate = $("#startDate");
@@ -345,6 +360,7 @@ $(document).ready(function() {
     displayChartsAndInputs(false, null, true);
     initBacktestingRunSelector();
     handleScriptButtons();
+    handleBacktestingButtons();
     handleResizables();
     handleUserInputsActions();
     handleOptimizerActions();

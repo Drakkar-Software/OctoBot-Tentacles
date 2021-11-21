@@ -58,7 +58,8 @@ def backtesting():
                 end_timestamp=data.get("end_timestamp", None),
                 enable_logs=data.get("enable_logs", False),
             )
-
+        elif action_type == "stop_backtesting":
+            success, reply = models.stop_previous_backtesting()
         if success:
             web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))

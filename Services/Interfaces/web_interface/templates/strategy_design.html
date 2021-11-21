@@ -494,8 +494,16 @@ button.fullscreen-size-btn {
                       <a class="nav-link primary-tab-selector" id="list-of-trades-tab" data-toggle="tab" href="#list-of-trades" role="tab" aria-controls="list-of-trades" aria-selected="false">List of Trades</a>
                     </li>
                     <div class="toolbox-buttons">
-                        <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start"
-                        id="backtester-input-save-and-start-button">Save and start Backtest
+                        <button
+                                class="btn btn-success btn-outline-success waves-effect"
+                                id="backtester-start-button">
+                            Backtest
+                        </button>
+                        <button
+                                class="btn btn-warning btn-outline-warning waves-effect d-none"
+                                id="backtester-stop-button"
+                                data-stop-backtesting-url="{{url_for('backtesting', action_type='stop_backtesting')}}">
+                            Stop backtest
                         </button>
                     </div>
                 </ul>

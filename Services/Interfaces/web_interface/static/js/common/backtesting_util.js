@@ -165,10 +165,14 @@ function _handle_backtesting(backtesting_status_data, socket){
 
     const report = $("#backtestingReport");
     const progress_bar = $("#backtesting_progress_bar");
+    const stopButton = $("#backtester-stop-button");
 
     if(backtesting_status === "computing" || backtesting_status === "starting"){
         lock_interface(true);
         progress_bar.show();
+        if(stopButton.length){
+            stopButton.removeClass(hidden_class);
+        }
         update_progress(progress);
         first_refresh_state = backtesting_status;
         if(report.is(":visible")){
@@ -180,6 +184,9 @@ function _handle_backtesting(backtesting_status_data, socket){
     else{
         lock_interface(false);
         progress_bar.hide();
+        if(stopButton.length){
+            stopButton.addClass(hidden_class);
+        }
         if(backtesting_status === "finished"){
             const should_alert = first_refresh_state !== "" && first_refresh_state !== "finished";
             if(should_alert){
