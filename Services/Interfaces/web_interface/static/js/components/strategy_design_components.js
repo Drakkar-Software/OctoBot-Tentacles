@@ -24,6 +24,11 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
       name: `${chartDetails.title} (${chartIdentifier})`,
       backtesting_id: backtesting_id,
     }
+    if (chartDetails.color !== null){
+        chartedElements.marker = {
+          color: chartDetails.color
+        }
+    }
     Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
         if(chartDetails[element] !== null){
             chartedElements[element] = chartDetails[element]
@@ -38,7 +43,7 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
     return chartedElements;
 }
 
-function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier, fixed_y){
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
         autorange: true,
@@ -47,7 +52,7 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         }
     };
     const yaxis = {
-        fixedrange: true,
+        fixedrange: fixed_y,
     };
     if(chartDetails.x_type !== null){
         xaxis.type = chartDetails.x_type;
@@ -143,7 +148,8 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
                         const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
                         Plotly.addTraces(divID, chartedElements);
                     } else {
-                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier);
+                        let fixed_y = divID !== "main-chart";
+                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier, fixed_y);
                         if (hiddenXAxisIDs.indexOf(divID) !== -1) {
                             layout.xaxis.visible = false;
                         }
@@ -185,57 +191,56 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
 }
 
 function _updateBacktestingChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
-    function afterPlot(target) {
-        removeExplicitSize(target);
-        resizeObserver.observe(target);
+    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, []);
+}
+
+function afterGraphPlot(target){
+    const plottedDivID = $(target).attr("id");
+    removeExplicitSize(target);
+    resizeObserver.observe(target);
+    if (plottedDivID !== "main-chart") {
+        const mainLayout = document.getElementById("main-chart").layout;
+        originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
+        Plotly.relayout("sub-chart", {
+            xaxis: {
+                range: mainLayout.xaxis.range.map((x) => x),
+                type: mainLayout.xaxis.type,
+                visible: false,
+            }
+        });
     }
-    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, []);
 }
 
 function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
     _updateChartLayout(data.data.sub_elements.length);
-    function afterPlot(target) {
-        const plottedDivID = $(target).attr("id");
-        removeExplicitSize(target);
-        resizeObserver.observe(target);
-        if (plottedDivID !== "main-chart") {
-            // Plotly.relayout("sub-chart", {xaxis: mainLayout.xaxis});
-            const mainLayout = document.getElementById("main-chart").layout;
-            originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
-            Plotly.relayout("sub-chart", {
-                xaxis: {
-                    range: mainLayout.xaxis.range.map((x) => x),
-                    type: mainLayout.xaxis.type,
-                    visible: false,
-                }
-            });
-        }else{
-            // TODO figure out how to disable autorange in order to unlock range change from sub chart
-            //  BUT without reseting x axis to year 2000
-            // mainLayout.xaxis.autorange = false
-        }
-    }
     const hiddenXAxisChartIDs = ["sub-chart"];
-    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisChartIDs);
+    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
     if(!replot){
-        return  //TODO fix zoom synch
-        $(document.getElementById("main-chart")).on("plotly_relayout", function(eventdata) {
-            relayouting.push("main-chart");
+        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
             if(relayouting.indexOf("sub-chart") === -1){
+                // TODO: fix y axis on subchart when zooming
+                // const sybChartLayout = document.getElementById("sub-chart").layout;
+                // sybChartLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
+                // sybChartLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
+                // Plotly.relayout("sub-chart", sybChartLayout);
+                // eventdata["yaxis.fixedrange"] = true;
                 Plotly.relayout("sub-chart", eventdata);
                 relayouting.push("sub-chart");
             }else{
                 relayouting.splice(0, relayouting.length);
             }
         });
-        $(document.getElementById("sub-chart")).on("plotly_relayout", function(eventdata) {
-            relayouting.push("sub-chart");
+        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
             if(relayouting.indexOf("main-chart") === -1){
                 const mainLayout = document.getElementById("main-chart").layout;
                 mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
                 mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-                Plotly.relayout("main-chart", mainLayout);
-                relayouting.push("main-chart");
+                if(typeof mainLayout.xaxis.range[0] !== "undefined"){
+                    Plotly.relayout("main-chart", mainLayout).then(function (){
+                        mainLayout.xaxis.autorange=false;
+                    });
+                    relayouting.push("main-chart");
+                }
             }else{
                 relayouting.splice(0, relayouting.length);
             }

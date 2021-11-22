@@ -37,8 +37,8 @@ async def script(ctx: Context):
         sma1 = ti.sma(candle_source, fast_sma_length)
         sma2 = ti.sma(candle_source, slow_sma_length)
 
-        await plot(ctx, "SMA 1", t, sma1)
-        # await plot(ctx, "SMA 2", t, sma2)
+        await plot(ctx, "SMA 1", t, sma1, color="green")
+        await plot(ctx, "SMA 2", t, sma2, color="#1F85DE")
 
         ema_is_rising = ti.ema(candle_source, 5)[:-1] < ti.ema(candle_source, 5)[1:]
 
