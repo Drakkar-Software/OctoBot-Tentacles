@@ -43,7 +43,7 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
     return chartedElements;
 }
 
-function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier, fixed_y){
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
         autorange: true,
@@ -52,7 +52,7 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         }
     };
     const yaxis = {
-        fixedrange: fixed_y,
+        fixedrange: false,
     };
     if(chartDetails.x_type !== null){
         xaxis.type = chartDetails.x_type;
@@ -148,8 +148,7 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
                         const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
                         Plotly.addTraces(divID, chartedElements);
                     } else {
-                        let fixed_y = divID !== "main-chart";
-                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier, fixed_y);
+                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier);
                         if (hiddenXAxisIDs.indexOf(divID) !== -1) {
                             layout.xaxis.visible = false;
                         }
@@ -217,32 +216,21 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
     if(!replot){
         document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
-            if(relayouting.indexOf("sub-chart") === -1){
-                // TODO: fix y axis on subchart when zooming
-                // const sybChartLayout = document.getElementById("sub-chart").layout;
-                // sybChartLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
-                // sybChartLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-                // Plotly.relayout("sub-chart", sybChartLayout);
-                // eventdata["yaxis.fixedrange"] = true;
-                Plotly.relayout("sub-chart", eventdata);
-                relayouting.push("sub-chart");
-            }else{
-                relayouting.splice(0, relayouting.length);
+            if(typeof eventdata["xaxis.range[0]"] !== "undefined"){
+                const subChartLayout = document.getElementById("sub-chart").layout;
+                subChartLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
+                subChartLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
+                Plotly.relayout("sub-chart", subChartLayout);
             }
         });
         document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
-            if(relayouting.indexOf("main-chart") === -1){
+            if(typeof eventdata["xaxis.range[0]"] !== "undefined") {
                 const mainLayout = document.getElementById("main-chart").layout;
-                mainLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
-                mainLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-                if(typeof mainLayout.xaxis.range[0] !== "undefined"){
-                    Plotly.relayout("main-chart", mainLayout).then(function (){
-                        mainLayout.xaxis.autorange=false;
-                    });
-                    relayouting.push("main-chart");
-                }
-            }else{
-                relayouting.splice(0, relayouting.length);
+                mainLayout.xaxis.range[0] = eventdata["xaxis.range[0]"]
+                mainLayout.xaxis.range[1] = eventdata["xaxis.range[1]"]
+                Plotly.relayout("main-chart", mainLayout).then(function () {
+                    mainLayout.xaxis.autorange = false;
+                });
             }
         });
     }
@@ -496,7 +484,6 @@ function _getTableDataType(records, search){
     }
 }
 
-const relayouting = []
 const plotlyCreatedChartsIDs = []
 
 function removeExplicitSize(figure){
