@@ -483,10 +483,15 @@ table.dataTable tfoot th {
     width: 100vw;
 }
 
-#charts {
+#pairs-tabcontent {
     width: 100vw;
     height: calc(60vh - 87px);
     max-height: calc(100vh - 53px - 32px - 47px);
+}
+
+#charts {
+    width: 100vw;
+    height: 100%;
 }
 
 #main-chart {

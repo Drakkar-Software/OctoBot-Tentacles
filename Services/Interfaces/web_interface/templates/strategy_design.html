@@ -19,7 +19,7 @@
 
 /*TODO*/
 
-.strategy_body, .tab-content, .toolbox-tabs, #toolbox .dropdown-menu,  #toolbox .dropdown-menu a {
+.form-control options, .strategy_body, .tab-content, .toolbox-tabs, #toolbox .dropdown-menu,  #toolbox .dropdown-menu a {
     background: #131722;
      color: #b2b5be;
 }
@@ -90,7 +90,7 @@
 .strategy-toolbox {
     position: absolute;
 }
-.tab-content > div {
+#toolbox .tab-content > div {
     height: 100%;
 }
 
@@ -164,7 +164,7 @@ body {
 
 #backtesting-table {
     height:50%;
-    width: 100%
+    width: 100%;
     max-height: 98%;
 
 }
@@ -220,6 +220,13 @@ button.fullscreen-size-btn {
     color: #1e53e5;
 }
 
+#backtesting-tabcontent {
+    height: 100%;
+}
+
+#pairs-tabcontent > .tab-pane {
+    height: 100%;
+}
 
 @media only screen and (max-width: 600px) {
 
@@ -237,7 +244,7 @@ button.fullscreen-size-btn {
 
 
 /* w2ui template  */
-#strategy_body input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
+.form-control, #strategy_body input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
     background-color: #131722 !important;
     color: #b2b5be !important;
     border-color: #2a2e39;
@@ -311,24 +318,90 @@ button.fullscreen-size-btn {
     background-color: unset !important;
 }
 
+
+/** temp navbar fix**/
+.navbar.navbar-dark.sticky-top.py-0.py-md-2 .mx-auto.order-0 {
+    display: none;
+}
+.navbar.navbar-dark.sticky-top.py-0.py-md-2 {
+    padding: 0 !important;
+}
+
+.navbar-toggler {
+    color: #fff
+}
+
+#pairs-tabs {
+    height: 42px;
+}
+
+#octobot-logo {
+  width: 30px;
+}
+
+nav.nav-tabs.md-tabs.toolbox-tabs.navbar.navbar-dark {
+    color: #1e53e5 !important;
+    background: #2a2e39 !important;
+    border: 1px solid #131722;}
 </style>
+<!-- temp navbar fix -->
+<script>
+    $(".navbar.navbar-expand-md.navbar-dark.sticky-top").removeClass("navbar-expand-md")
+
+</script>
+
+
+<nav>
+    <ul class="nav nav-tabs md-tabs  toolbox-tabs" id="pairs-tabs" role="tablist">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2" aria-expanded="true">
+                        <span><i class="fas fa-bars"></i></span>
+        </button>
+        <div id="nav-bar-left">
+
+        </div>
+        <li class="nav-item waves-effect waves-light">
+          <a class="nav-link primary-tab-selector show active" id="BTC-USDT-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="BTC-USDT" href="#BTC-USDT" aria-selected="true">BTC/USDT</a>
+        </li>
+        <li class="nav-item waves-effect waves-light">
+          <a class="nav-link primary-tab-selector" id="ETH-BTC-tab" data-toggle="tab" href="#ETH-BTC" role="tab" aria-controls="ETH-BTC" >ETH/BTC</a>
+        </li>
+        <div id="nav-bar-right">
+
+        </div>
+    </ul>
+</nav>
 
 <div id="strategy_body" class="strategy_body">
-    <div id="charts"
-         data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
-         data-backtesting-url="{{url_for('backtesting_main_plotted_data', run_id='')}}"
-         data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
-         class="resizable">
-        <div  id="main-chart" class="resizable" >
-        </div>
-        <div class="draggable-resizer">
-        </div>
-        <div id="sub-chart" class="">
-        </div>
+    <div class="tab-content resizable" id="pairs-tabcontent">
+            <div class="tab-pane fade show active" id="BTC-USDT" role="tabreal" aria-labelledby="BTC-USDT-tab">
+                <div id="charts"
+                data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
+                data-backtesting-url="{{url_for('backtesting_main_plotted_data', run_id='')}}"
+                data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
+                >
+                    <div  id="main-chart" class="resizable" >
+                    </div>
+                    <div class="draggable-resizer">
+                    </div>
+                    <div id="sub-chart" class="">
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="ETH-BTC" role="tabreal" aria-labelledby="ETH-BTC-tab">
+
+            </div>
     </div>
 
+
     <div id="toolbox" class="strategy-toolbox">
-        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs" id="tabs" role="tablist">
+        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs" id="main-toolbox-tabs" role="tablist">
+            <div class="my-auto mr-4">
+                <h4>
+                    <img id="octobot-logo" src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
+                    OctoBot
+                </h4>
+            </div>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">Code Editor</a>

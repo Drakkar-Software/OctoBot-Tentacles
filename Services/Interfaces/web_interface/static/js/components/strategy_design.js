@@ -71,9 +71,18 @@ function startBacktestingUsingSettings(){
 }
 
 
+/** todo execute when replot is done **/
+function hideSubChartWhenEmpty(){
+    if ($("#sub-chart").children().length === 0) {
+        $("#main-chart").css("height", "100%")
+        $("#main-chart").css("max-height", "100%")
+        updateWindowSizes()
+    }
+}
+
 function updateWindowSizes(){
-    const currentChartsHeight = $("#charts").outerHeight(true)
-    const currentMainMenuSize = $("nav.navbar.navbar-expand-md.navbar-dark").outerHeight(true)
+    const currentChartsHeight = $("#pairs-tabcontent").outerHeight(true)
+    const currentMainMenuSize = $("#pairs-tabs").outerHeight(true)
     const currentFooterSize = $("footer.page-footer").outerHeight(true)
     const currentHeaderFooterSize = currentFooterSize + currentMainMenuSize;
     const currentTotalCalcSize =  currentHeaderFooterSize + currentChartsHeight
@@ -83,12 +92,14 @@ function updateWindowSizes(){
     const newStrategyBodyHeight =  "calc(100% - " + currentHeaderFooterSize + "px)"
     $(".strategy_body").css("height", newStrategyBodyHeight);
 
-    const currentToolbarHeight =  $(".toolbox-tabs").outerHeight(true)
+    const currentToolbarHeight =  $(".main-toolbox-tabs").outerHeight(true)
     const newChartsMaxHeight =  "calc(100% - " + currentToolbarHeight + "px)"
-    $("#charts").css("max-height", newChartsMaxHeight);
+    $("#pairs-tabcontent").css("max-height", newChartsMaxHeight);
 
     const newTabContentHeight = newChartsMaxHeight
-    $(".tab-content").css("height", newTabContentHeight)
+    $("#toolbox-tabcontent").css("height", newTabContentHeight)
+
+
 
     const currentMainChartHeight = $("#main-chart").outerHeight(true)
     const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)" /* 4px is from the slider draggable*/
@@ -126,11 +137,11 @@ function handleScreenSizeButtons(currentChartsHeight){
 }
 
 function fullScreenToggle(){
-    const currentChartsHeight = $("#charts").outerHeight(true)
+    const currentChartsHeight = $("#pairs-tabcontent").outerHeight(true)
     if (currentChartsHeight != 0){
-        $("#charts").css("height", "0px");
+        $("#pairs-tabcontent").css("height", "0px");
     } else {
-        $("#charts").css("height", "55vh");
+        $("#timeframepairs-tabcontent").css("height", "55vh");
     }
     updateWindowSizes();
     updateToolboxDisplay();
@@ -147,9 +158,9 @@ function updateToolboxDisplay(){
 function minimizeScreenToggle(){
     const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
     if (currentToolBoxHeight <= 45){
-        $("#charts").css("height", "55vh");
+        $("#pairs-tabcontent").css("height", "55vh");
     } else {
-        $("#charts").css("height", "100%");
+        $("#pairs-tabcontent").css("height", "100%");
     }
     updateWindowSizes();
 }
@@ -157,7 +168,7 @@ function minimizeScreenToggle(){
 function resizeOnToolBoxTabClicks(){
     const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
     if (currentToolBoxHeight <= 45){
-        $("#charts").css("height", "35vh");
+        $("#pairs-tabcontent").css("height", "35vh");
         updateWindowSizes();
     }
 }
@@ -167,7 +178,7 @@ function handleResizables(){
     $(".resizable").resizable();
     $(".resizable").on("resize", updateWindowSizes());
     window.addEventListener('resize', function(event){updateWindowSizes()});
-    $("#charts").on('resize', function(event){updateWindowSizes()});
+    $("#pairs-tabcontent").on('resize', function(event){updateWindowSizes()});
     $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
     $(".fullscreen-size-btn.fullscreen").on('click', function(event){fullScreenToggle()});
     $(".fullscreen-size-btn.minimize").on('click', function(event){minimizeScreenToggle()});
