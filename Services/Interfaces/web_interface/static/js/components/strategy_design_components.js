@@ -46,12 +46,20 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
 function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
+        showspikes: true,
+        spikethickness: 1,
+        spikesnap: "data",
+        spikemode: "across",
         autorange: true,
         rangeslider: {
             visible: false,
         }
     };
     const yaxis = {
+        showspikes: true,
+        spikethickness: 1,
+        spikesnap: "data",
+        spikemode: "across",
         fixedrange: false,
     };
     if(chartDetails.x_type !== null){
@@ -78,7 +86,7 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         dragmode: "pan",
         font: {
             color: "#b2b5be"
-        }
+        },
     };
     yaxis_list.push(yaxis)
     yaxis_list.forEach(function (axis, i){
