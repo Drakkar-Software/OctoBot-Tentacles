@@ -35,10 +35,6 @@
     border-top: 4px solid #2a2e39 !important;
 }
 
-.crisp {
-    stroke: #2a2e39 !important;
-}
-
 .toolbox-buttons {
     background: #2a2e39;
 
@@ -101,17 +97,42 @@
     left: 0;
 }
 
+
+
+
+body {
+    /* looks better and gives more space */
+    line-height: unset;
+}
+
+/** Charts **/
+
+.hoverlayer line:first-child, .hoverlayer line:nth-child(3) {
+    stroke: unset;
+}
+
+/** cahrts END **/
+
+/** Toolbox **/
+/** Toolbox Tabbar **/
+
+#octobot-logo img {
+  width: 30px;
+  margin-right:4px;
+  float: left;
+}
+
+#octobot-logo h4 {
+  margin: auto;
+  float: left;
+}
+
 .toolbox-buttons .btn {
     border-radius: 0;
     background-color: #131722 !important;
     font-size: 1rem;
     text-transform: unset;
     padding: 8px 2rem;
-}
-
-body {
-    /* looks better and gives more space */
-    line-height: unset;
 }
 
 .toolbox-buttons .btn-warning, .w2ui-btn {
@@ -224,15 +245,16 @@ button.fullscreen-size-btn {
     height: 100%;
 }
 
-#pairs-tabcontent > .tab-pane {
-    height: 100%;
-}
 
-.navbar.navbar-dark, footer.page-footer {
-    background-color: #131722;
+
+.footer-copyright {
+    background-color: #131722 !important;
     border-top-color: #2a2e39 !important;
     border-top: solid 2px;
 }
+
+/** small screen fixes **/
+
 
 @media only screen and (max-width: 600px) {
 
@@ -247,10 +269,6 @@ button.fullscreen-size-btn {
     }
 }
 
-.hoverlayer line {
-    stroke-width: 1px;
-    stroke: transparent;
-}
 
 
 /* w2ui template  */
@@ -328,6 +346,7 @@ button.fullscreen-size-btn {
     background-color: unset !important;
 }
 
+/** W2ui END **/
 
 /** temp navbar fix**/
 .navbar.navbar-dark.sticky-top.py-0.py-md-2 .mx-auto.order-0 {
@@ -337,22 +356,95 @@ button.fullscreen-size-btn {
     padding: 0 !important;
 }
 
+/** navbar **/
+.navbar-toggler, .timeframe-toggler {
+    color: #b2b5be
+}
+
 .navbar-toggler {
-    color: #fff
+    border-right: 1px solid #2a2e39;
 }
 
+#nav-toolbox {
+    margin: 0;
+}
+
+#pairs-tabs::-webkit-scrollbar {
+    display: none;
+}
 #pairs-tabs {
-    height: 42px;
+    overflow-x: scroll;
+    white-space: nowrap;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    max-width: 30vw;
+    display: unset;
+    height: 41px;
 }
 
-#octobot-logo {
-  width: 30px;
+#pairs-tabs li {
+    display: inline-block;
 }
 
-nav.nav-tabs.md-tabs.toolbox-tabs.navbar.navbar-dark {
-    color: #1e53e5 !important;
-    background: #2a2e39 !important;
-    border: 1px solid #131722;}
+#pairs-tabcontent > .tab-pane {
+    height: 100%;
+}
+
+#nav-bar-left {
+    display: flex;
+    border-bottom: 1px solid #2a2e39;
+    height: 41px;
+
+}
+
+#nav-bar-left .active-timeframe a {
+    line-height: 39px;
+    padding: 10px;
+    color: #b2b5be;
+}
+.timeframe-toggler i, .add-evaluator {
+     font-size: 12px;
+}
+
+#nav-bar-left a.timeframe-toggler {
+    padding: 0 11px;
+    line-height: 39px;
+}
+
+#nav-bar-left .active-timeframe.selected a {
+    color: #1e53e5 ;
+}
+
+#nav-bar-left > li {
+    border-left: unset !important;
+
+}
+
+#nav-bar-right {
+    border-top: 0;
+    height: 41px;
+    flex-direction: row-reverse;
+    padding: 0;
+}
+
+#nav-bar-right a {
+    line-height: 40px;
+    padding: 0 7px;
+}
+
+#nav-toolbox {
+    border-bottom: 1px solid #2a2e39;
+
+}
+
+#nav-toolbox * {
+    border-bottom: 0;
+    border-top: 0;
+}
+
+/** navbar END **/
+
+
 </style>
 <!-- temp navbar fix -->
 <script>
@@ -362,55 +454,112 @@ nav.nav-tabs.md-tabs.toolbox-tabs.navbar.navbar-dark {
 
 
 <nav>
-    <ul class="nav nav-tabs md-tabs  toolbox-tabs" id="pairs-tabs" role="tablist">
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2" aria-expanded="true">
-                        <span><i class="fas fa-bars"></i></span>
-        </button>
-        <div id="nav-bar-left">
+    <ul class="nav nav-tabs md-tabs  toolbox-tabs row" id="nav-toolbox" role="tablist">
+        <ul id="nav-bar-left" class="nav nav-tabs md-tabs col-md-9 toolbox-tabs">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2" aria-expanded="true">
+                <span><i class="fas fa-bars"></i></span>
+            </button>
+            <span id="time-frame-selector">
+                <!-- repeat for each activated timeframe -->
+                {% for time_frame in time_frames %}
+                <li data-time_frame="{{time_frame}}" class="active-timeframe {{'selected' if loop.first}}" id="active-{{time_frame}}-timeframe">
+                  <a>{{time_frame}}</a>
+                </li>
+                {% endfor %}
+            </span>
 
-        </div>
-        <li class="nav-item waves-effect waves-light">
-          <a class="nav-link primary-tab-selector show active" id="BTC-USDT-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="BTC-USDT" href="#BTC-USDT" aria-selected="true">BTC/USDT</a>
-        </li>
-        <li class="nav-item waves-effect waves-light">
-          <a class="nav-link primary-tab-selector" id="ETH-BTC-tab" data-toggle="tab" href="#ETH-BTC" role="tab" aria-controls="ETH-BTC" >ETH/BTC</a>
-        </li>
-        <div id="nav-bar-right">
-
-        </div>
+            <li class="dropdown">
+                <a class="nav-link timeframe-toggler" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    <span><i class="fas fa-chevron-down"></i></span>
+                </a>
+                <div class="dropdown-menu dropdown-default">
+                    <!-- repeat for each available timeframe -->
+                    {% for time_frame in exchange_time_frames %}
+                    <a class="nav-link primary-tab-selector" id="inactive-{{time_frame}}-timeframe">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{time_frame}}
+                            </div>
+                            <div data-schematype="boolean" class="col-md-4">
+                                <div class="checkbox custom-control custom-switch">
+                                    <input type="checkbox" data-time_frame="{{time_frame}}"
+                                           id="{{time_frame}}-setting" class="custom-control-input" {{'checked' if time_frame in enabled_time_frames}}>
+                                    <label class="custom-control-label" for="{{time_frame}}-setting"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </li>
+            <ul class="nav nav-tabs md-tabs toolbox-tabs" id="pairs-tabs" role="tablist">
+                {% for symbol in symbols %}
+                <li class="nav-item waves-effect waves-light">
+                  <a class="nav-link primary-tab-selector symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
+                     role="tab" aria-selected="{{ 'true' if first else 'false' }}" aria-controls="{{symbol}}"
+                     href="#{{symbol}}"
+                     data-symbol="{{symbol}}">
+                      {{symbol}}
+                  </a>
+                </li>
+                {% endfor %}
+            </ul>
+            <li class="nav-item waves-effect waves-light" id="add-evaluators">
+              <a class="nav-link primary-tab-selector">
+                  <i class="fas fa-atom"></i>
+                  Evaluators
+                  <i class="fas fa-plus add-evaluator"></i>
+              </a>
+            </li>
+        </ul>
+        <ul id="nav-bar-right" class="nav nav-tabs md-tabs col-md-3 toolbox-tabs">
+            <li class="nav-item waves-effect waves-light">
+                <a class="nav-link waves-effect waves-light" href="/logs" aria-label="Logs">
+                    <i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="" data-original-title="Event logs">
+                        <span id="errors-count-badge" class="badge badge-warning">1</span>
+                    </i>
+                </a>
+            </li>
+            <li class="nav-item waves-effect waves-light">
+                <a class="nav-link waves-effect waves-light" href="#" id="switchTradingState" aria-label="TradingSwitch">
+                    <span class="d-none d-xl-inline">
+                        Simulated trading
+                    </span>
+                    <i class="fa fa-robot" data-toggle="tooltip" data-placement="top" title="" data-original-title="Simulated trading"></i>
+                </a>
+            </li>
+        </ul>
     </ul>
 </nav>
 
 <div id="strategy_body" class="strategy_body">
-    <div class="tab-content resizable" id="pairs-tabcontent">
-            <div class="tab-pane fade show active" id="BTC-USDT" role="tabreal" aria-labelledby="BTC-USDT-tab">
-                <div id="charts"
-                data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
-                data-backtesting-url="{{url_for('backtesting_main_plotted_data', run_id='')}}"
-                data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
-                >
-                    <div  id="main-chart" class="resizable" >
-                    </div>
-                    <div class="draggable-resizer">
-                    </div>
-                    <div id="sub-chart" class="">
-                    </div>
+    <div class="resizable" id="pairs-tabcontent">
+        <div class="" id="charts-div" role="tabreal">
+            <div id="charts"
+                 data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
+                 data-backtesting-url="{{url_for('backtesting_main_plotted_data', exchange_id=exchange_id)}}"
+                 data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
+            >
+                <div id="main-chart" class="resizable" >
+                </div>
+                <div class="draggable-resizer">
+                </div>
+                <div id="sub-chart" class="">
                 </div>
             </div>
-
-            <div class="tab-pane fade" id="ETH-BTC" role="tabreal" aria-labelledby="ETH-BTC-tab">
-
-            </div>
+        </div>
     </div>
 
 
     <div id="toolbox" class="strategy-toolbox">
         <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs" id="main-toolbox-tabs" role="tablist">
             <div class="my-auto mr-4">
+                <div class="my-auto mr-4" id="octobot-logo">
+                <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
                 <h4>
-                    <img id="octobot-logo" src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
                     OctoBot
                 </h4>
+                </div>
             </div>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
@@ -458,15 +607,15 @@ nav.nav-tabs.md-tabs.toolbox-tabs.navbar.navbar-dark {
                        class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
                 </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect">Restart Octobot</button>
                <!-- div needs to be there else, whitespace will appear -->
-            </div>
-            <div class="fullscreen-btn-group">
+           </div>
+           <div class="fullscreen-btn-group">
                 <button class="fullscreen-size-btn minimize">
                     <i class="far fa-window-minimize"></i>
                 </button>
                 <button class="fullscreen-size-btn fullscreen">
                     <i class="far fa-window-maximize"></i>
                 </button>
-            </div>
+           </div>
         </ul>
 
          <span id='backtesting_progress_bar' style='display: none;'>
