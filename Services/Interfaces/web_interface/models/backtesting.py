@@ -163,7 +163,7 @@ def get_latest_backtesting_run_id(trading_mode):
         backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         bot_id = octobot_api.get_independent_backtesting_bot_id(backtesting)
         return {
-            "id": trading_mode.get_prefix(bot_id)
+            "id": interfaces_util.run_in_bot_async_executor(trading_mode.get_backtesting_id(bot_id))
         }
     return {}
 

@@ -47,9 +47,11 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
         showspikes: true,
-        spikethickness: 1,
-        spikesnap: "data",
+        spikesnap: "cursor",
         spikemode: "across",
+        spikecolor: "#b2b5be",
+        gridcolor: "#2a2e39",
+        color: "#b2b5be",
         autorange: true,
         rangeslider: {
             visible: false,
@@ -58,8 +60,11 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     const yaxis = {
         showspikes: true,
         spikethickness: 1,
-        spikesnap: "data",
+        spikesnap: "cursor",
         spikemode: "across",
+        spikecolor: "#b2b5be",
+        gridcolor: "#2a2e39",
+        color: "#b2b5be",
         fixedrange: false,
     };
     if(chartDetails.x_type !== null){
@@ -384,7 +389,7 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
 }
 
 function createBacktestingMetadataTable(metadata, sectionHandler){
-    if(metadata.length){
+    if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
         const keys = Object.keys(metadata[0]);
         const columns = keys.map((key) => {

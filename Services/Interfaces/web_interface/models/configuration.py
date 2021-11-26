@@ -38,6 +38,7 @@ import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
 import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
+import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 
@@ -557,6 +558,10 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def get_config_time_frames() -> list:
+    return time_frame_manager.get_config_time_frame(interfaces_util.get_global_config())
+
+
 def get_timeframes_list(exchanges):
     timeframes_list = []
     allowed_timeframes = set(tf.value for tf in commons_enums.TimeFrames)
@@ -622,6 +627,13 @@ def get_exchange_logo(exchange_name):
         except KeyError:
             pass
     return exchange_logos[exchange_name]
+
+
+def get_traded_time_frames(exchange_manager):
+    return trading_api.get_exchange_available_required_time_frames(
+        trading_api.get_exchange_name(exchange_manager),
+        trading_api.get_exchange_manager_id(exchange_manager)
+    )
 
 
 def get_full_exchange_list(remove_config_exchanges=False):

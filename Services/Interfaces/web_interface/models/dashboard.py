@@ -97,8 +97,8 @@ def _get_first_exchange_identifiers():
     raise KeyError("No exchange to be found")
 
 
-def get_first_exchange_id():
-    return _get_first_exchange_identifiers()[2]
+def get_first_exchange_data():
+    return _get_first_exchange_identifiers()
 
 
 def get_watched_symbol_data(symbol):

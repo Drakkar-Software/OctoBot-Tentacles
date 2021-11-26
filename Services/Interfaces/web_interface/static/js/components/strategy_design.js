@@ -1,13 +1,19 @@
-function displayChartsAndInputs(replot, backtestingRunId, added){
+function displayChartsAndInputs(replot, backtestingRunId, added, symbol, time_frame, cleanCharts){
     const chartIdentifier = backtestingRunId ? backtestingRunId : "live";
     let url = $("#charts").data("live-url")
     if(replot){
-       url = $("#charts").data("backtesting-url") + backtestingRunId
+       url = $("#charts").data("backtesting-url") + `&run_id=${backtestingRunId}`
     }
+    url = `${url}&symbol=${symbol}&time_frame=${time_frame}`
     $.get({
         url: url,
         dataType: "json",
         success: function (data) {
+            if(cleanCharts){
+                $("#main-chart").empty();
+                $("#sub-chart").empty();
+                plotlyCreatedChartsIDs.splice(0, plotlyCreatedChartsIDs.length);
+            }
             updateDisplayedElement(data, replot, editors, false, backtestingRunId, added, backtestingTableName, chartIdentifier)
         },
         error: function(result, status) {
@@ -210,10 +216,23 @@ function updateBacktestingReport(updated_data, update_url, dom_root_element, msg
 }
 
 function updateBacktestingAnalysisReport(run_id, addReport){
+    if(addReport && displayedRunIds.indexOf(run_id) === -1){
+        displayedRunIds.push(run_id)
+    }
+    if(!addReport && displayedRunIds.indexOf(run_id) !== -1){
+        displayedRunIds.splice(displayedRunIds.indexOf(run_id), 1);
+    }
     // upper charts
-    displayChartsAndInputs(true, run_id, addReport)
+    displayChartsAndInputs(true, run_id, addReport, getSelectedSymbol(), getSelectedTimeFrame(), false)
     // toolbox
-    send_and_interpret_bot_update({id: run_id, added: addReport}, $("#backtesting-chart").data("url"), null,
+    const data = {
+        id: run_id,
+        exchange: "binance", //TODO
+        symbol: getSelectedSymbol(),
+        time_frame: getSelectedTimeFrame(),
+        added: addReport,
+    }
+    send_and_interpret_bot_update(data, $("#backtesting-chart").data("url"), null,
         updateBacktestingReport, generic_request_failure_callback);
 }
 
@@ -364,11 +383,35 @@ function handleDateSelectors(){
     })
 }
 
+function getSelectedSymbol(){
+    return $("#pairs-tabs").find(".primary-tab-selector.active").data("symbol");
+}
+
+function getSelectedTimeFrame(){
+    return $("#time-frame-selector").find(".selected").data("time_frame");
+}
+
+function updateSymbolGraphs(){
+    const selectedSymbol =getSelectedSymbol();
+    const selectedTimeFrame = getSelectedTimeFrame();
+    displayChartsAndInputs(false, null, true, selectedSymbol,selectedTimeFrame, true);
+    displayedRunIds.forEach(function (runID) {
+        displayChartsAndInputs(true, runID, true, selectedSymbol,selectedTimeFrame, false);
+    })
+}
+
+function handleSymbolSelectors(){
+    $(".symbol-selector").on("shown.bs.tab", function (){
+        updateSymbolGraphs();
+    })
+}
+
 const optimizerSocket = get_websocket("/strategy_optimizer");
+const displayedRunIds = [];
 let backtestingTableName = undefined;
 
 $(document).ready(function() {
-    displayChartsAndInputs(false, null, true);
+    // displayChartsAndInputs(false, null, true);
     initBacktestingRunSelector();
     handleScriptButtons();
     handleBacktestingButtons();
@@ -377,6 +420,8 @@ $(document).ready(function() {
     handleOptimizerActions();
     handleTabSelectionEvents();
     handleDateSelectors();
+    updateSymbolGraphs();
+    handleSymbolSelectors();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
     backtesting_done_callbacks.push(postBacktestingDone)

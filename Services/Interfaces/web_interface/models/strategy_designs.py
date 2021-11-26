@@ -18,8 +18,10 @@ import octobot.api as octobot_api
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.api as services_api
 import octobot_trading.modes.scripting_library as scripting_library
+import octobot_trading.api as trading_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_commons.logging as bot_logging
+import octobot_commons.databases as databases
 import octobot_commons.enums as commons_enums
 import tentacles.Services.Interfaces.web_interface.models.backtesting as backtesting_model
 import tentacles.Services.Interfaces.web_interface as web_interface_root
@@ -31,19 +33,23 @@ def _get_logger():
     return bot_logging.get_logger("StrategyDesign")
 
 
-def get_plotted_data(trading_mode, run_id=None, optimizer_id=None, exchange_id=None):
+def get_plotted_data(trading_mode, symbol, time_frame, run_id=None, optimizer_id=None, exchange_id=None):
     elements = scripting_library.DisplayedElements()
-    db_name = trading_mode.get_db_name(bot_id=interfaces_util.get_bot_api().get_bot_id()) if run_id is None \
-        else trading_mode.get_db_name(backtesting=True, prefix=run_id, optimizer_id=optimizer_id)
+    database_manager = databases.DatabaseManager(trading_mode,
+                                                 backtesting_id=run_id,
+                                                 optimizer_id=optimizer_id)
+    exchange_name = trading_api.get_exchange_name(trading_api.get_exchange_manager_from_exchange_id(exchange_id)) \
+        if exchange_id else None
     interfaces_util.run_in_bot_async_executor(
-        elements.fill_from_database(db_name, exchange_id, with_inputs=run_id is None)
+        elements.fill_from_database(database_manager, exchange_name, symbol, time_frame,
+                                    exchange_id, with_inputs=run_id is None)
     )
     return elements.to_json()
 
 
-def get_backtesting_run_plotted_data(trading_mode, run_id):
+def get_backtesting_run_plotted_data(trading_mode, exchange, symbol, run_id, optimizer_id=None):
     elements = interfaces_util.run_in_bot_async_executor(
-        trading_mode.get_backtesting_plot(run_id)
+        trading_mode.get_backtesting_plot(exchange, symbol, run_id, optimizer_id)
     )
     return elements.to_json()
 
@@ -68,12 +74,10 @@ def reload_scripts():
         raise
 
 
-def get_run_data(trading_mode, is_live, optimizer_id=None):
+def get_run_data(trading_mode, optimizer_id=None):
     return {
         "data": interfaces_util.run_in_bot_async_executor(
-            scripting_library.read_metadata(trading_mode=trading_mode,
-                                            backtesting=not is_live,
-                                            optimizer_id=optimizer_id)
+            scripting_library.read_metadata(trading_mode=trading_mode, optimizer_id=optimizer_id)
         )
     }
 

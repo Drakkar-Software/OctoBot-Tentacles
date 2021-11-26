@@ -18,45 +18,64 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
+import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.logging as commons_logging
+import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
+import octobot_commons.symbol_util as symbol_util
+import octobot_commons
 
 
 @web_interface.server_instance.route("/strategy_design")
 @login.login_required_when_activated
 def strategy_design():
     trading_mode = models.get_config_activated_trading_mode()
+    exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data()
+    symbols = set()
+    for values in models.format_config_symbols(interfaces_util.get_edited_config()).values():
+        symbols = symbols.union(set(values[commons_constants.CONFIG_CRYPTO_PAIRS]))
     return flask.render_template(
         "strategy_design.html",
         trading_mode_name=trading_mode.get_name(),
         tentacle_class=trading_mode,
-        exchange_id=models.get_first_exchange_id(),
+        exchange_id=exchange_id,
+        exchange_name=exchange_name,
+        symbols=sorted([symbol_util.convert_symbol(s, octobot_commons.MARKET_SEPARATOR, "|") for s in symbols]),
+        time_frames=[tf.value for tf in models.get_traded_time_frames(exchange_manager)],
+        enabled_time_frames=[tf.value for tf in models.get_config_time_frames()],
+        exchange_time_frames=[tf.value for tf in commons_enums.TimeFrames],
         activated_evaluators=models.get_config_activated_evaluators(),
     )
 
 
-@web_interface.server_instance.route("/plotted_data<exchange_id>")
+@web_interface.server_instance.route("/plotted_data")
 @login.login_required_when_activated
-def plotted_data(exchange_id):
+def plotted_data():
     try:
+        exchange_id = flask.request.args.get('exchange_id')
+        symbol = flask.request.args.get('symbol')
+        time_frame = flask.request.args.get('time_frame')
         trading_mode = models.get_config_activated_trading_mode()
-        # TODO remove
-        # import tentacles.Trading.Mode.scripted_trading_mode as scripted_trading_mode
-        # trading_mode = scripted_trading_mode.ScriptedTradingMode
-        # from tentacles.Trading.Mode.scripted_trading_mode.active_scripts.test_script.backtesting.test_script import backtest_test_script
-        # trading_mode.register_live_script(backtest_test_script)
-        # TODO remove
-        return util.get_rest_reply(models.get_plotted_data(trading_mode, exchange_id=exchange_id), 200)
+        return util.get_rest_reply(models.get_plotted_data(trading_mode, symbol_util.convert_symbol(symbol, "|"),
+                                                           time_frame, exchange_id=exchange_id), 200)
     except Exception as e:
         commons_logging.get_logger("plotted_data").exception(e)
         return util.get_rest_reply(str(e), 500)
 
 
-@web_interface.server_instance.route("/backtesting_main_plotted_data<run_id>")
+@web_interface.server_instance.route("/backtesting_main_plotted_data")
 @login.login_required_when_activated
-def backtesting_main_plotted_data(run_id):
+def backtesting_main_plotted_data():
     try:
+        exchange_id = flask.request.args.get('exchange_id')
+        symbol = flask.request.args.get('symbol')
+        time_frame = flask.request.args.get('time_frame')
+        run_id = flask.request.args.get('run_id')
         trading_mode = models.get_config_activated_trading_mode()
-        return util.get_rest_reply(models.get_plotted_data(trading_mode, run_id), 200)
+        return util.get_rest_reply(
+            models.get_plotted_data(trading_mode, symbol_util.convert_symbol(symbol, "|"),
+                                    time_frame, run_id=run_id, exchange_id=exchange_id),
+            200)
     except Exception as e:
         commons_logging.get_logger("plotted_data").exception(e)
         return util.get_rest_reply(str(e), 500)
@@ -68,7 +87,10 @@ def backtesting_run_plotted_data():
     try:
         request_data = flask.request.get_json()
         trading_mode = models.get_config_activated_trading_mode()
-        return util.get_rest_reply(models.get_backtesting_run_plotted_data(trading_mode, request_data["id"]), 200)
+        symbol = symbol_util.convert_symbol(request_data["symbol"], "|")
+        return util.get_rest_reply(models.get_backtesting_run_plotted_data(trading_mode, request_data["exchange"],
+                                                                           symbol, request_data["id"]),
+                                   200)
     except Exception as e:
         commons_logging.get_logger("backtesting_run_plotted_data").exception(e)
         return util.get_rest_reply(str(e), 500)
@@ -89,7 +111,7 @@ def update_plot_script():
 def get_run_data():
     try:
         trading_mode = models.get_config_activated_trading_mode()
-        return util.get_rest_reply(models.get_run_data(trading_mode, False), 200)
+        return util.get_rest_reply(models.get_run_data(trading_mode), 200)
     except Exception as e:
         commons_logging.get_logger("get_run_data").exception(e)
         return util.get_rest_reply(str(e), 500)
