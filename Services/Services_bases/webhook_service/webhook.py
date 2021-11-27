@@ -36,7 +36,7 @@ class WebHookService(services.AbstractService):
 
     def get_fields_description(self):
         return {
-            commons_constants.CONFIG_ENABLED_OPTION: "Use Ngrok",
+            services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP: used for webhook when ngrok is not enabled.",
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port: used for webhook when ngrok is not enabled."
@@ -44,7 +44,7 @@ class WebHookService(services.AbstractService):
 
     def get_default_value(self):
         return {
-            commons_constants.CONFIG_ENABLED_OPTION: True,
+            services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
@@ -80,7 +80,7 @@ class WebHookService(services.AbstractService):
     def check_required_config(self, config):
         try:
             token = config.get(services_constants.CONFIG_NGROK_TOKEN)
-            enabled = config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+            enabled = config.get(services_constants.CONFIG_ENABLE_NGROK, True)
             if enabled:
                 return token and not configuration.has_invalid_default_config_value(token)
             return not (
@@ -101,7 +101,7 @@ class WebHookService(services.AbstractService):
             return False
 
     def get_required_config(self):
-        return [commons_constants.CONFIG_ENABLED_OPTION, services_constants.CONFIG_NGROK_TOKEN]
+        return [services_constants.CONFIG_ENABLE_NGROK, services_constants.CONFIG_NGROK_TOKEN]
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -182,7 +182,7 @@ class WebHookService(services.AbstractService):
     async def prepare(self) -> None:
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
         self.ngrok_enabled = self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-            services_constants.CONFIG_WEBHOOK].get(commons_constants.CONFIG_ENABLED_OPTION, True)
+            services_constants.CONFIG_WEBHOOK].get(services_constants.CONFIG_ENABLE_NGROK, True)
         if self.ngrok_enabled:
             ngrok.set_auth_token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
