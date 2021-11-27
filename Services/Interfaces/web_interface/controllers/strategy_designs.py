@@ -18,9 +18,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
-import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.logging as commons_logging
-import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbol_util as symbol_util
 import octobot_commons
@@ -31,9 +29,7 @@ import octobot_commons
 def strategy_design():
     trading_mode = models.get_config_activated_trading_mode()
     exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data()
-    symbols = set()
-    for values in models.format_config_symbols(interfaces_util.get_edited_config()).values():
-        symbols = symbols.union(set(values[commons_constants.CONFIG_CRYPTO_PAIRS]))
+    symbols = models.get_enabled_trading_pairs()
     return flask.render_template(
         "strategy_design.html",
         trading_mode_name=trading_mode.get_name(),

@@ -539,6 +539,14 @@ def get_notifiers_list():
             for service in notifier.REQUIRED_SERVICES]
 
 
+def get_enabled_trading_pairs() -> set:
+    symbols = set()
+    for values in format_config_symbols(interfaces_util.get_edited_config()).values():
+        if values[commons_constants.CONFIG_ENABLED_OPTION]:
+            symbols = symbols.union(set(values[commons_constants.CONFIG_CRYPTO_PAIRS]))
+    return symbols
+
+
 def get_symbol_list(exchanges):
     result = []
     for exchange in exchanges:
