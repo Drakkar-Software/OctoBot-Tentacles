@@ -106,7 +106,6 @@ function updateWindowSizes(){
     $("#toolbox-tabcontent").css("height", newTabContentHeight)
 
 
-
     const currentMainChartHeight = $("#main-chart").outerHeight(true)
     const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)" /* 4px is from the slider draggable*/
     $("#sub-chart").css("height", newSubChartHeight)
@@ -121,6 +120,14 @@ function updateWindowSizes(){
         $("#backtesting-chart").css("height", newBacktestingChartHeight)
     }
     handleScreenSizeButtons(currentChartsHeight);
+}
+/** resize only on window change **/
+function handleBrowserWindowSizeChange (){
+    const currentBacktestingTabsHeight = $("#backtesting-tabs").outerHeight(true)
+    $("#backtesting-tabcontent").css("height", "calc(100% - " + currentBacktestingTabsHeight + "px)")
+    const currentOptimizerTabsHeight = $("#optimizer-tabs").outerHeight(true)
+    $("#optimizer-tabcontent").css("height", "calc(100% - " + currentBacktestingTabsHeight + "px)")
+    updateWindowSizes()
 }
 
 function handleScreenSizeButtons(currentChartsHeight){
@@ -183,13 +190,12 @@ function resizeOnToolBoxTabClicks(){
 function handleResizables(){
     $(".resizable").resizable();
     $(".resizable").on("resize", updateWindowSizes());
-    window.addEventListener('resize', function(event){updateWindowSizes()});
+    window.addEventListener('resize', function(event){handleBrowserWindowSizeChange ()});
     $("#pairs-tabcontent").on('resize', function(event){updateWindowSizes()});
     $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
     $(".fullscreen-size-btn.fullscreen").on('click', function(event){fullScreenToggle()});
     $(".fullscreen-size-btn.minimize").on('click', function(event){minimizeScreenToggle()});
     $(".main-toolbox-tabs li").on('click', function(event){resizeOnToolBoxTabClicks()});
-    updateWindowSizes();
 }
 
 function updateBacktestingSelector(updated_data, update_url, dom_root_element, msg, status){
@@ -416,6 +422,8 @@ $(document).ready(function() {
     handleScriptButtons();
     handleBacktestingButtons();
     handleResizables();
+    handleBrowserWindowSizeChange ()
+    updateWindowSizes()
     handleUserInputsActions();
     handleOptimizerActions();
     handleTabSelectionEvents();
