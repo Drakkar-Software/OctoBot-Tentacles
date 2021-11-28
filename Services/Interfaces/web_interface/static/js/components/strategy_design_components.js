@@ -227,8 +227,25 @@ function afterGraphPlot(target){
     }
 }
 
+function hideSubChartWhenEmpty(data){
+    let hasSubChart = false;
+    data.data.sub_elements.forEach(function (sub_element) {
+        if (sub_element.type == "chart") {
+            if(sub_element.name === "sub-chart"){
+                hasSubChart = true;
+            }
+        }
+    });
+    if(!hasSubChart){
+        $("#main-chart").css("height", "100%")
+        $("#main-chart").css("max-height", "100%")
+        updateWindowSizes()
+    }
+}
+
 function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
     _updateChartLayout(data.data.sub_elements.length);
+    hideSubChartWhenEmpty(data);
     const hiddenXAxisChartIDs = ["sub-chart"];
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
     if(!replot){

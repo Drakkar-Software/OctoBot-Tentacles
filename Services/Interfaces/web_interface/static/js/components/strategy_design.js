@@ -76,16 +76,6 @@ function startBacktestingUsingSettings(){
     start_backtesting(data, backtestingUrl);
 }
 
-
-/** todo execute when replot is done **/
-function hideSubChartWhenEmpty(){
-    if ($("#sub-chart").children().length === 0) {
-        $("#main-chart").css("height", "100%")
-        $("#main-chart").css("max-height", "100%")
-        updateWindowSizes()
-    }
-}
-
 function handleMainNavBarWidthChange(){
     const currentTimeFrameDropdownWidth = $("#config-activated-time-frame-selector").outerWidth(true)
     const currentActiveTfTabsWidth = $("#time-frame-selector").outerWidth(true)
@@ -508,7 +498,6 @@ $(document).ready(function() {
     handleSymbolSelectors();
     handleTimeFramesSelector();
     handleConfigTimeFramesSelectors();
-    handleTimeFramesTabsWidthChange();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
