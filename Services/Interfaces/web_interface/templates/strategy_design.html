@@ -537,31 +537,31 @@ button.fullscreen-size-btn {
             <span id="time-frame-selector" class="scroll_horizontal">
                 <!-- repeat for each activated timeframe -->
                 {% for time_frame in time_frames %}
-                <li data-time_frame="{{time_frame}}" class="active-timeframe {{'selected' if loop.first}} bg-hvr h-100" id="active-{{time_frame}}-timeframe">
+                <li data-time-frame="{{time_frame}}"
+                    class="active-timeframe {{'selected ' if loop.first}}bg-hvr h-100"
+                    id="active-{{time_frame}}-timeframe">
                   <a>{{time_frame}}</a>
                 </li>
                 {% endfor %}
             </span>
 
-            <li class="dropdown h-100">
-                <a class="nav-link timeframe-toggler" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+            <li class="dropdown h-100"
+                id="config-activated-time-frame-selector"
+                data-strategy-config-url="{{ url_for('config_tentacles', action='update', reload='true') }}"
+                data-strategy-tentacle="{{ activated_strategy.get_name() }}">
+                <a class="nav-link timeframe-toggler" data-toggle="dropdown" href="#" role="button"
+                   aria-haspopup="true" aria-expanded="false">
                     <span><i class="fas fa-chevron-down"></i></span>
                 </a>
                 <form class="dropdown-menu dropdown-default bg-dark">
                     <!-- repeat for each available timeframe -->
                     {% for time_frame in exchange_time_frames %}
                     <div class="nav-link primary-tab-selector bg-dark" id="inactive-{{time_frame}}-timeframe">
-                        <div class="row">
-                            <div class="col-7">
-                                {{time_frame}}
-                            </div>
-                            <div data-schematype="boolean" class="col-5">
-                                <div class="checkbox custom-control custom-switch">
-                                    <input type="checkbox" data-time_frame="{{time_frame}}"
-                                           id="{{time_frame}}-setting" class="custom-control-input" {{'checked' if time_frame in enabled_time_frames}}>
-                                    <label class="custom-control-label" for="{{time_frame}}-setting"></label>
-                                </div>
-                            </div>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" data-time-frame="{{time_frame}}" role="switch"
+                                   id="{{time_frame}}-setting" class="custom-control-input config-time-frame-selector"
+                                   {{'checked' if time_frame in enabled_time_frames}}>
+                            <label class="custom-control-label w-100 h-100 px-3" for="{{time_frame}}-setting">{{time_frame}}</label>
                         </div>
                     </div>
                     {% endfor %}

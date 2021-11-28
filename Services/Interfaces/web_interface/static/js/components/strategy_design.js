@@ -255,18 +255,61 @@ function updateBacktestingAnalysisReport(run_id, addReport){
         updateBacktestingReport, generic_request_failure_callback);
 }
 
-function updateTentacleConfigurations(saveButton, tentaclesConfigByTentacle){
-    const update_url = saveButton.data("url");
-    send_and_interpret_bot_update(tentaclesConfigByTentacle, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
+function updateTentacleConfigurations(url, tentaclesConfigByTentacle, startBacktesting){
+    send_and_interpret_bot_update(tentaclesConfigByTentacle, url, null,
+        startBacktesting ? handle_tentacle_config_update_success_start_backtesting_callback: handle_tentacle_config_update_success_callback,
+        handle_tentacle_config_update_error_callback);
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", "Configuration saved", msg);
+}
+
+function handle_tentacle_config_update_success_start_backtesting_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
     reloadRequestSuccessCallback(null, null, null, null, null);
 }
 
 function handle_tentacle_config_update_error_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("error", "Error when updating config", msg.responseText);
+}
+
+function handleTimeFramesSelector(){
+    const timeFramesSelector = $("#time-frame-selector");
+    timeFramesSelector.find(".active-timeframe").each(function () {
+        $(this).click(function (){
+            const activatedTimeFrame = $(this).data("time-frame");
+            if(activatedTimeFrame !== getSelectedTimeFrame()){
+                timeFramesSelector.find(".active-timeframe").each(function () {
+                    const tfSelect = $(this);
+                    if($(this).data("time-frame") !== activatedTimeFrame){
+                        tfSelect.removeClass("selected")
+                    }else{
+                        tfSelect.addClass("selected")
+                    }
+                });
+                updateSymbolGraphs();
+            }
+        });
+    })
+}
+
+function handleConfigTimeFramesSelectors(){
+    const configTimeFramesSelector = $("#config-activated-time-frame-selector");
+    configTimeFramesSelector.on("hide.bs.dropdown", function (){
+        const tentacle = configTimeFramesSelector.data("strategy-tentacle")
+        if(tentacle !== "None"){
+            const activatedTimeFrames = []
+            configTimeFramesSelector.find("input.config-time-frame-selector:checked:enabled").each(function (){
+                activatedTimeFrames.push($(this).data("time-frame"));
+            })
+            const tentaclesConfigByTentacle = {};
+            tentaclesConfigByTentacle[tentacle] = {
+                required_time_frames: activatedTimeFrames
+            }
+            updateTentacleConfigurations(configTimeFramesSelector.data("strategy-config-url"), tentaclesConfigByTentacle, false)
+        }
+    })
 }
 
 function check_config(editor){
@@ -290,7 +333,7 @@ function handleUserInputsActions(){
             }
         });
         if (save){
-            updateTentacleConfigurations($(this), tentaclesConfigByTentacle);
+            updateTentacleConfigurations($(this).data("url"), tentaclesConfigByTentacle, true);
         }
     })
 }
@@ -407,7 +450,7 @@ function getSelectedSymbol(){
 }
 
 function getSelectedTimeFrame(){
-    return $("#time-frame-selector").find(".selected").data("time_frame");
+    return $("#time-frame-selector").find(".selected").data("time-frame");
 }
 
 function updateSymbolGraphs(){
@@ -430,7 +473,6 @@ const displayedRunIds = [];
 let backtestingTableName = undefined;
 
 $(document).ready(function() {
-    // displayChartsAndInputs(false, null, true);
     initBacktestingRunSelector();
     handleScriptButtons();
     handleBacktestingButtons();
@@ -443,8 +485,10 @@ $(document).ready(function() {
     handleDateSelectors();
     updateSymbolGraphs();
     handleSymbolSelectors();
+    handleTimeFramesSelector();
+    handleConfigTimeFramesSelectors();
+    handleTimeFramesTabsWidthChange();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
-    handleTimeFramesTabsWidthChange();
     backtesting_done_callbacks.push(postBacktestingDone)
 });

@@ -30,6 +30,9 @@ def strategy_design():
     trading_mode = models.get_config_activated_trading_mode()
     exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data()
     symbols = models.get_enabled_trading_pairs()
+    activated_evaluators = models.get_config_activated_evaluators()
+    strategies = models.get_config_activated_strategies()
+    activated_strategy = strategies[0] if strategies else None
     return flask.render_template(
         "strategy_design.html",
         trading_mode_name=trading_mode.get_name(),
@@ -40,7 +43,8 @@ def strategy_design():
         time_frames=[tf.value for tf in models.get_traded_time_frames(exchange_manager)],
         enabled_time_frames=[tf.value for tf in models.get_config_time_frames()],
         exchange_time_frames=[tf.value for tf in commons_enums.TimeFrames],
-        activated_evaluators=models.get_config_activated_evaluators(),
+        activated_evaluators=activated_evaluators,
+        activated_strategy=activated_strategy,
     )
 
 

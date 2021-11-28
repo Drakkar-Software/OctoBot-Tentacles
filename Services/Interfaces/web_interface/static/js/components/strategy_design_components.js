@@ -214,13 +214,16 @@ function afterGraphPlot(target){
     if (plottedDivID !== "main-chart") {
         const mainLayout = document.getElementById("main-chart").layout;
         originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
-        Plotly.relayout("sub-chart", {
-            xaxis: {
-                range: mainLayout.xaxis.range.map((x) => x),
-                type: mainLayout.xaxis.type,
-                visible: false,
-            }
-        });
+        if(typeof document.getElementById("sub-chart").data !== "undefined"
+            && typeof document.getElementById("main-chart").data !== "undefined") {
+            Plotly.relayout("sub-chart", {
+                xaxis: {
+                    range: mainLayout.xaxis.range.map((x) => x),
+                    type: mainLayout.xaxis.type,
+                    visible: false,
+                }
+            });
+        }
     }
 }
 
@@ -229,24 +232,27 @@ function _updateMainCharts(data, replot, backtesting_id, added, backtestingTable
     const hiddenXAxisChartIDs = ["sub-chart"];
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
     if(!replot){
-        document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
-            if(typeof eventdata["xaxis.range[0]"] !== "undefined"){
-                const subChartLayout = document.getElementById("sub-chart").layout;
-                subChartLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
-                subChartLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
-                Plotly.relayout("sub-chart", subChartLayout);
-            }
-        });
-        document.getElementById("sub-chart").on("plotly_relayout", function(eventdata) {
-            if(typeof eventdata["xaxis.range[0]"] !== "undefined") {
-                const mainLayout = document.getElementById("main-chart").layout;
-                mainLayout.xaxis.range[0] = eventdata["xaxis.range[0]"]
-                mainLayout.xaxis.range[1] = eventdata["xaxis.range[1]"]
-                Plotly.relayout("main-chart", mainLayout).then(function () {
-                    mainLayout.xaxis.autorange = false;
-                });
-            }
-        });
+        if(typeof document.getElementById("sub-chart").data !== "undefined"
+            && typeof document.getElementById("main-chart").data !== "undefined"){
+            document.getElementById("main-chart").on("plotly_relayout", function(eventdata) {
+                if(typeof eventdata["xaxis.range[0]"] !== "undefined"){
+                    const subChartLayout = document.getElementById("sub-chart").layout;
+                    subChartLayout.xaxis.range[0]=eventdata["xaxis.range[0]"]
+                    subChartLayout.xaxis.range[1]=eventdata["xaxis.range[1]"]
+                    Plotly.relayout("sub-chart", subChartLayout);
+                }
+            });
+            document.getElementById("sub-chart").on("plotly_relayout", function (eventdata) {
+                if (typeof eventdata["xaxis.range[0]"] !== "undefined") {
+                    const mainLayout = document.getElementById("main-chart").layout;
+                    mainLayout.xaxis.range[0] = eventdata["xaxis.range[0]"]
+                    mainLayout.xaxis.range[1] = eventdata["xaxis.range[1]"]
+                    Plotly.relayout("main-chart", mainLayout).then(function () {
+                        mainLayout.xaxis.autorange = false;
+                    });
+                }
+            });
+        }
     }
 }
 

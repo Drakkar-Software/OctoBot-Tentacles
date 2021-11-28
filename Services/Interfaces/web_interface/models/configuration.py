@@ -453,6 +453,10 @@ def get_config_activated_trading_mode():
     return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
 
 
+def get_config_activated_strategies():
+    return evaluators_api.get_activated_strategies_classes(interfaces_util.get_bot_api().get_edited_tentacles_config())
+
+
 def get_config_activated_evaluators():
     return evaluators_api.get_activated_evaluators(interfaces_util.get_bot_api().get_edited_tentacles_config())
 
