@@ -18,13 +18,14 @@ async def script(ctx: Context):
     last_timestamp = ctx.trigger_cache_timestamp - time_frame_seconds
 
     ema_value, is_ema_value_missing = await ctx.get_cached_value(ema_title)
+    values = await ctx.get_cached_values(ema_title, limit=50, tentacle_name="ScriptedEvaluator")
     ema_is_rising, ema_is_rising_missing = await ctx.get_cached_value(ema_rising_title)
     ema_is_falling, ema_is_falling_missing = await ctx.get_cached_value(ema_falling_title)
     previous_ema_value, is_previous_ema_value_missing = await ctx.get_cached_value(ema_title, cache_key=last_timestamp)
     super_complicated_value, is_complicated_value_missing = await ctx.get_cached_value()
 
     if is_complicated_value_missing or is_ema_value_missing or is_previous_ema_value_missing:
-        pair = ctx.traded_pair
+        pair = ctx.symbol
         if is_ema_value_missing or is_previous_ema_value_missing:
             candle_source = None
             if data_source == "close":

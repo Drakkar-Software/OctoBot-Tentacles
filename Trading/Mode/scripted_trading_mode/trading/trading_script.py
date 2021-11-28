@@ -8,7 +8,6 @@ def crossover(val1, val2):
 
 
 async def script(ctx: Context):
-    pass
     set_script_name(ctx, "SimpleRSI with 40/60")
     #
     fast_sma_length = await user_input(ctx, "fast_sma_length", "int", 15)
@@ -20,8 +19,8 @@ async def script(ctx: Context):
     set_minimum_candles(ctx, slow_sma_length)
     #
     # percent_volume = 30
-    pair = ctx.traded_pair
-    ctx.time_frame = "1h"
+    pair = ctx.symbol
+    hl2_val = hl2(ctx)
     await plot_candles(ctx, pair, ctx.time_frame)
     #
     # # TA initial variables

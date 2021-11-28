@@ -204,6 +204,7 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
 }
 
 function _updateBacktestingChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
+    log(data)
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, []);
 }
 
@@ -420,18 +421,21 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
     if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
         const keys = Object.keys(metadata[0]);
+        const dateKeys = ["timestamp", "start_time", "end_time"]
         const columns = keys.map((key) => {
             return {
                 field: key,
                 text: key,
                 size: `${1 / keys.length * 100}%`,
                 sortable: true,
-                render: key === "timestamp" ? "datetime" : undefined,
+                render: dateKeys.indexOf(key) !== -1 ? "datetime" : undefined,
             }
         })
         const records = metadata.map((row, index) => {
             row.recid = index;
             row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
+            row.start_time = typeof row.start_time === "undefined" ? undefined : Math.round(row.start_time * 1000);
+            row.end_time = typeof row.end_time === "undefined" ? undefined : Math.round(row.end_time * 1000);
             Object.keys(row).forEach(function (key){
                 if(typeof row[key] === "object"){
                     row[key] = JSON.stringify(row[key]);
