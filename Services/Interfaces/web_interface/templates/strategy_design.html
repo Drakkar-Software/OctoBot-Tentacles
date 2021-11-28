@@ -178,13 +178,13 @@
                     Strategy Optimizer
                 </a>
             </li>
-           <div class="toolbox-buttons bg-dark-grey">
+           <div class="toolbox-buttons d-flex">
                <button id="reload-script"
                        data-url="{{ url_for('update_plot_script') }}"
                        data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
                        data-exchange-id="{{ exchange_id }}"
                        type="button"
-                       class="btn btn-success waves-effect">Reload script</button><div class="toolbox-btn-divider">
+                       class="btn btn-success waves-effect m-0">Reload script</button><div class="toolbox-btn-divider bg-dark-grey">
                 </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect brdr-r">Restart Octobot</button>
                <!-- div needs to be there else, whitespace will appear -->
            </div>
@@ -210,7 +210,7 @@
             </div>
         </span>
 
-        <div class="tab-content bg-dark" id="toolbox-tabcontent">
+        <div class="tab-content bg-dark h-100" id="toolbox-tabcontent">
             <div class="tab-pane fade" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
                     {% if True %}
                     <iframe class="w-100 h-100 noBorder" src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode/trading/trading_script.py">
@@ -248,13 +248,13 @@
                       <a class="nav-link primary-tab-selector " id="evaluator-settings-tab" data-toggle="tab" href="#evaluator-settings" role="tab" aria-controls="evaluator-settings" aria-selected="false">Evaluator Settings</a>
                     </li>
                     <div class="toolbox-buttons bg-dark-grey">
-                        <button class="btn btn-success btn-outline-success waves-effect user-input-save"
+                        <button class="btn btn-success btn-outline-success waves-effect user-input-save m-0"
                         data-url="{{ url_for('config_tentacles', action='update', reload='true') }}">Save and reload</button>
                     </div>
                 </ul>
                 <div class="tab-content bg-dark" id="strategy-settings-tabcontent">
 
-                    <div class="tab-pane fade show active" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
+                    <div class="tab-pane fade show active h-100" id="trading-script-settings" role="tabreal" aria-labelledby="trading-script-settings-tab">
                         <div id="trading-inputs"
                              class="user-input-config"
                              data-tentacle="{{trading_mode_name}}"
@@ -262,7 +262,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="evaluator-settings" role="tabreal" aria-labelledby="evaluator-settings-tab">
+                    <div class="tab-pane fade h-100" id="evaluator-settings" role="tabreal" aria-labelledby="evaluator-settings-tab">
 
 
                         <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="tabs" role="tablist">
@@ -307,12 +307,12 @@
                     </li>
                     <div class="toolbox-buttons bg-dark-grey">
                         <button
-                                class="btn btn-success btn-outline-success waves-effect"
+                                class="btn btn-success btn-outline-success waves-effect m-0"
                                 id="backtester-start-button">
                             Backtest
                         </button>
                         <button
-                                class="btn btn-warning btn-outline-warning waves-effect d-none"
+                                class="btn btn-warning btn-outline-warning waves-effect d-none m-0"
                                 id="backtester-stop-button"
                                 data-stop-backtesting-url="{{url_for('backtesting', action_type='stop_backtesting')}}">
                             Stop backtest
@@ -322,7 +322,7 @@
 
                 <div class="tab-content bg-dark h-100" id="backtesting-tabcontent">
 
-                    <div class="tab-pane fade scroll-vertically" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
+                    <div class="tab-pane fade scroll-vertically h-100" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
                         <div id="backtesting-inputs">
                             <div class="row col-12 col-md-6">
                                 <div class="my-auto mx-4">
@@ -337,7 +337,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade show active w-100" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
+                    <div class="tab-pane fade show active w-100 h-100" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
                         <div id="backtesting-table" class="resizable ui-resizable js-plotly-plot">
                             <div id="no-backtesting-message" class="d-none text-center mx-4 my-4">
                                 <h4>
@@ -354,11 +354,11 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade scroll-vertically" id="performance-summary" role="tabreal" aria-labelledby="performance-summary-tab">
+                    <div class="tab-pane fade scroll-vertically h-100" id="performance-summary" role="tabreal" aria-labelledby="performance-summary-tab">
 
                     </div>
 
-                    <div class="tab-pane fade scroll-vertically" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
+                    <div class="tab-pane fade scroll-vertically h-100" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
                         <div id="list-of-trades-part" style="width: 100%; height: 100%;">
 
                         </div>
@@ -376,19 +376,19 @@
                       <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Optimizer Results</a>
                     </li>
                     <div class="toolbox-buttons bg-dark-grey">
-                        <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start brdr-l"
+                        <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start brdr-l m-0"
                                 id="optimizer-input-save-and-start-button"
                                 data-exchange-id="{{ exchange_id }}"
                                 data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
                                 data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
-                        <button class="btn btn-warning btn-outline-warning waves-effect d-none"
+                        <button class="btn btn-warning btn-outline-warning waves-effect d-none m-0"
                                 id="optimizer-cancel-button"
                                 data-url="{{ url_for('advanced.strategy_optimizer', update_type='cancel_optimizer') }}">Cancel Optimizer</button>
                     </div>
                 </ul>
                 <div class="tab-content bg-dark" id="optimizer-tabcontent">
 
-                    <div class="tab-pane fade show active" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
+                    <div class="tab-pane fade show active h-100" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
 
                         <div id="strategy-optimizer-inputs">
 
@@ -396,7 +396,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
+                    <div class="tab-pane fade h-100" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
                         <div id="strategy-optimizer-chart-or-tables">
                         </div>
                     </div>

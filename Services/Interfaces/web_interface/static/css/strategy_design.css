@@ -1,4 +1,24 @@
 
+/*** temp fixes ***/
+/** temp fix for screensize button **/
+.main-toolbox-tabs .toolbox-buttons {
+    margin-right: 50px;
+}
+
+.main-toolbox-tabs li:first-child {
+    margin-left: 50px;
+}
+/** temp fix for screensize button END **/
+
+body {
+    /* looks better and gives more space */
+    line-height: unset;
+}
+
+/*** temp fixes END ***/
+
+
+
 /** colors **/
 :root {
     --bg: #131722;
@@ -8,6 +28,8 @@
     --fnt-hvr: #131722;
     --bg-hvr: #2a2e39;
     --fnt-actv: #1e53e5;
+    --new-warning: #fb3;
+    --new-success: #00c851;
 }
 
 
@@ -159,3 +181,113 @@
 /** dropdowns **/
 
 /** dropdowns **/
+
+/** jquery resizeable **/
+.ui-resizable-s {
+    height: 20px;
+    width: 100%;
+    bottom: -10px;
+    left: 0;
+}
+/** jquery resizeable **/
+
+/** plotting **/
+
+.hoverlayer line:first-child, .hoverlayer line:nth-child(3) {
+    stroke: unset;
+}
+
+#backtesting-chart {
+    height:50%;
+}
+
+#backtesting-table {
+    height:50%;
+    max-height: 98%;
+}
+
+/** cahrts END **/
+
+/**** Toolbox ****/
+/*** Toolbox Tabbar ***/
+
+/** octobot logo **/
+#octobot-logo img {
+  width: 30px;
+  margin-right:4px;
+  float: left;
+}
+
+#octobot-logo h4 {
+  margin: auto;
+  float: left;
+}
+/** octobot logo **/
+
+/** toolbox buttons **/
+.toolbox-buttons .btn-warning, .w2ui-btn {
+    color: var(--new-warning);
+}
+
+.toolbox-buttons .btn-warning:hover, .toolbox-buttons .btn .btn-warning .btn-outline-warning:hover, .w2ui-btn:hover {
+    background: var(--new-warning) !important;
+    color: #fff !important;
+}
+
+.toolbox-buttons .btn-success, .w2ui-btn-blue {
+    color:var(--new-success);
+}
+
+.toolbox-buttons .btn-success:hover, .w2ui-btn-blue:hover {
+    background: var(--new-success) !important;
+    color: #fff;
+}
+
+.toolbox-btn-divider {
+    display: inline-block;
+    width: 1px;
+}
+
+.strategy-toolbox .btn-outline-success {
+    border: 1px solid var(--new-success) !important;
+    6.8px 2rem !important /* todo remove redundancy */
+}
+
+.strategy-toolbox .btn-outline-success:hover {
+    color:#fff !important;
+}
+
+/** toolbox resize buttons todo fix small screen issues **/
+.fullscreen-btn-group {
+    float: right;
+    right: 8px;
+    position: fixed;
+}
+
+.fullscreen-size-btn i {
+    font-size: 20px;
+    align-items: center;
+    border-radius: 4px;
+    cursor: default;
+    display: flex;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+    color: #b2b5be;
+}
+
+button.fullscreen-size-btn:hover {
+    background: var(--bg-hvr);
+}
+
+button.fullscreen-size-btn {
+    background: none;
+    border:none;
+    margin-top: 4px;
+}
+
+.fullscreen-size-btn.is-full-screen i {
+    color: var(--fnt-actv);
+}
+
+/** toolbox resize buttons END **/
