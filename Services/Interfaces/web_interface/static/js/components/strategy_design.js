@@ -86,16 +86,37 @@ function hideSubChartWhenEmpty(){
     }
 }
 
-function handleTimeFramesTabsWidthChange(){
-    const currentActiveTfTabsWidth = $("#time-frame-selector").outerHeight(true)
-    $("#pairs-tabs").css("max-width", "calc(100% - 42px - " + currentActiveTfTabsWidth + "px)")
+function handleMainNavBarWidthChange(){
+    const currentTimeFrameDropdownWidth = $("#config-activated-time-frame-selector").outerWidth(true)
+    const currentActiveTfTabsWidth = $("#time-frame-selector").outerWidth(true)
+    $("#pairs-tabs").css("max-width", "calc(100% - " + currentTimeFrameDropdownWidth + "px - " + currentActiveTfTabsWidth + "px)")
+
+    const currentMainDropDownWidth = $(".main-dropdown-menu").outerWidth(true)
+    const currentNavBarRightWidth = $("#nav-bar-right").outerWidth(true)
+    const newNavBarLeftWidth = "calc(100% - " + currentNavBarRightWidth + "px)"
+    $("#nav-bar-left").css("max-width", newNavBarLeftWidth)
+    $("#nav-bar-left").css("min-width", newNavBarLeftWidth)
+
 }
 
-/** todo isnt working yet **/
-$(".scroll_horizontal").on('mousewheel', function(event){
-    this.scrollLeft -= (event.wheelDelta);
-    event.preventDefault();
-}, false);
+jQuery(function ($) {
+    $.fn.hScroll = function (amount) {
+        amount = amount || 120;
+        $(this).bind("DOMMouseScroll mousewheel", function (event) {
+            var oEvent = event.originalEvent,
+                direction = oEvent.detail ? oEvent.detail * -amount : oEvent.wheelDelta,
+                position = $(this).scrollLeft();
+            position += direction > 0 ? -amount : amount;
+            $(this).scrollLeft(position);
+            event.preventDefault();
+        })
+    };
+});
+
+$(document).ready(function() {
+    $('.scroll_horizontal').hScroll(40); // You can pass (optionally) scrolling amount
+});
+
 
 
 function updateWindowSizes(){
@@ -149,8 +170,8 @@ function handleScreenSizeButtons(currentChartsHeight){
         $(".fullscreen-size-btn.fullscreen").addClass("is-full-screen");
     }
 
-    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
-    if (currentToolBoxHeight <= 45){
+    const currentToolBoxHeight =  $("#toolbox-tabcontent").outerHeight(true)
+    if (currentToolBoxHeight === 0){
         $(".fullscreen-size-btn.minimize").addClass("is-minimized");
         $(".fullscreen-size-btn.minimize i").removeClass("far fa-window-minimize");
         $(".fullscreen-size-btn.minimize i").addClass("fas fa-chevron-up");
@@ -181,8 +202,8 @@ function updateToolboxDisplay(){
 
 
 function minimizeScreenToggle(){
-    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
-    if (currentToolBoxHeight <= 45){
+    const currentToolBoxHeight =  $("#toolbox-tabcontent").outerHeight(true)
+    if (currentToolBoxHeight === 0){
         $("#pairs-tabcontent").css("height", "55vh");
     } else {
         $("#pairs-tabcontent").css("height", "100%");
@@ -191,8 +212,8 @@ function minimizeScreenToggle(){
 }
 
 function resizeOnToolBoxTabClicks(){
-    const currentToolBoxHeight =  $(".strategy-toolbox").outerHeight(true)
-    if (currentToolBoxHeight <= 45){
+    const currentToolBoxHeight =  $("#toolbox-tabcontent").outerHeight(true)
+    if (currentToolBoxHeight === 0){
         $("#pairs-tabcontent").css("height", "35vh");
         updateWindowSizes();
     }
@@ -203,12 +224,12 @@ function handleResizables(){
     $(".resizable").on("resize", updateWindowSizes());
     window.addEventListener('resize', function(event){handleBrowserWindowSizeChange ()});
     $("#pairs-tabcontent").on('resize', function(event){updateWindowSizes()});
-    $("#time-frame-selector").on('resize', function(event){handleTimeFramesTabsWidthChange()});
-    window.addEventListener('resize', function(event){handleTimeFramesTabsWidthChange()});
+    $("#time-frame-selector").on('resize', function(event){handleMainNavBarWidthChange()});
+    window.addEventListener('resize', function(event){handleMainNavBarWidthChange()});
     $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
     $(".fullscreen-size-btn.fullscreen").on('click', function(event){fullScreenToggle()});
     $(".fullscreen-size-btn.minimize").on('click', function(event){minimizeScreenToggle()});
-    $(".main-toolbox-tabs li").on('click', function(event){resizeOnToolBoxTabClicks()});
+    $(".open-toolbox-onclick").on('click', function(event){resizeOnToolBoxTabClicks()});
 }
 
 function updateBacktestingSelector(updated_data, update_url, dom_root_element, msg, status){
@@ -490,5 +511,6 @@ $(document).ready(function() {
     handleTimeFramesTabsWidthChange();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
+    handleMainNavBarWidthChange();
     backtesting_done_callbacks.push(postBacktestingDone)
 });

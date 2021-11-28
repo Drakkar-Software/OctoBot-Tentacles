@@ -1,0 +1,75 @@
+
+/** colors **/
+:root {
+    --bg: #131722;
+    --fnt: #b2b5be;
+    --brdr: #2a2e39;
+    --brdr-actv: #1e53e5;
+    --fnt-hvr: #131722;
+    --bg-hvr: #2a2e39;
+    --fnt-actv: #1e53e5;
+}
+
+
+/** reusable **/
+.bg-dark, .form-control options, ul {
+    background: var(--bg) !important;
+    color: var(--fnt) !important;
+}
+
+.bg-dark-grey {
+    background: var(--bg-hvr);
+}
+
+.bg-hvr:hover {
+    background: var(--bg-hvr);
+}
+
+.noBorder {
+    border:none !important
+}
+
+.brdr-b {
+    border-bottom: 1px solid var(--brdr);
+}
+
+.brdr-t {
+    border-top: 1px solid var(--brdr);
+}
+
+.brdr-t-xl {
+    border-top: 4px solid var(--brdr) !important;
+}
+
+.brdr-l {
+    border-left: 1px solid var(--brdr) !important;
+}
+
+.brdr-r, .toolbox-tabs > li:last-of-type {
+    border-right: 1px solid var(--brdr) !important;
+}
+
+.card, .card-body {
+    background-color: #131722 !important;
+    border: 1px solid #2a2e39 !important;
+}
+
+.scroll_horizontal {
+    display: unset;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scroll_horizontal li {
+    display: inline-block;
+}
+
+.scroll_horizontal::-webkit-scrollbar {
+    display: none;
+}
+
+/** reusable END **/
+

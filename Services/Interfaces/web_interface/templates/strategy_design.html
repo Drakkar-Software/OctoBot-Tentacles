@@ -6,79 +6,9 @@
 
 
 {% block body %}
-
+<link rel="stylesheet" href="{{ url_for('static', filename='css/strategy_design.css', u=LAST_UPDATED_STATIC_FILES) }}">
 
 <style>
-
-/** colors **/
-:root {
-    --bg: #131722;
-    --fnt: #b2b5be;
-    --brdr: #2a2e39;
-    --brdr-actv: #1e53e5;
-    --fnt-hvr: #131722;
-    --bg-hvr: #2a2e39;
-    --fnt-actv: #1e53e5;
-}
-
-
-/** reusable **/
-.bg-dark, .form-control options, ul {
-    background: var(--bg) !important;
-    color: var(--fnt) !important;
-}
-
-.bg-dark-grey {
-    background: var(--bg-hvr);
-}
-
-.bg-hvr:hover {
-    background: var(--bg-hvr);
-}
-
-.noBorder {
-    border:none !important
-}
-
-.brdr-b {
-    border-bottom: 1px solid var(--brdr);
-}
-
-.brdr-t {
-    border-top: 1px solid var(--brdr);
-}
-
-.brdr-t-xl {
-    border-top: 4px solid var(--brdr) !important;
-}
-
-.brdr-l {
-    border-left: 1px solid var(--brdr) !important;
-}
-
-.brdr-r, .toolbox-tabs > li:last-of-type {
-    border-right: 1px solid var(--brdr) !important;
-}
-
-.card, .card-body {
-    background-color: #131722 !important;
-    border: 1px solid #2a2e39 !important;
-}
-
-.scroll_horizontal {
-    display: unset;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    white-space: nowrap;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-.scroll_horizontal li {
-    display: inline-block;
-}
-
-/** reusable END **/
 
 /*TODO*/
 
@@ -303,29 +233,11 @@ button.fullscreen-size-btn {
     background-image: unset !important;
 }
 
-.w2ui-btn {
-    border-radius: 0 !important;
-    background-color: #131722 !important;
-    font-size: 1rem !important;
-    text-transform: unset !important;
-    padding: 8px 2rem !important;
-    border-color: #fb3 !important;
-    box-shadow: unset !important;
-    color: #fb3 ! important;
-}
-
-.w2ui-btn-blue {
-    color: #00c851 !important;
-    border-color: #00c851 !important;
-}
 
 #strategy_body .w2ui-record, .w2ui-btn {
     border: 1px solid #2a2e39;
 }
-.w2ui-btn.close-btn {
-    padding: 24px 9px !important;
-    padding-top: 24px;
-}
+
 
 #strategy_body .w2ui-empty-record, #strategy_body .w2ui-empty-record:hover, #strategy_body .w2ui-grid-footer,  #strategy_body .w2ui-grid-columns, #strategy_body .w2ui-grid-columns *, #strategy_body .w2ui-grid-toolbar, #strategy_body .w2ui-grid-toolbar *, #strategy_body .w2ui-grid-header, #strategy_body .w2ui-record, #strategy_body .grid_RSI_footer {
     background-color: #131722;
@@ -333,10 +245,7 @@ button.fullscreen-size-btn {
     background-image: unset;
 }
 
-.w2ui-empty-record *, .w2ui-empty-record {
-    border: none !important;
-    box-shadow:none;
-}
+
 
 .w2ui-overlay tr:hover, #strategy_body .w2ui-grid-toolbar td:hover, #strategy_body .w2ui-grid-toolbar tr:hover, #strategy_body .w2ui-grid-toolbar table:hover, #strategy_body .w2ui-grid-toolbar tbody:hover, #strategy_body .w2ui-grid-toolbar table tbody tr:hover td, #strategy_body .w2ui-grid-toolbar table.dataTable tbody tr:hover td {
     -moz-box-shadow: none;
@@ -350,9 +259,6 @@ button.fullscreen-size-btn {
     padding: 4px;
 }
 
-.w2ui-grid-data-spacer, .w2ui-grid-data  {
-    border-bottom: unset !important;
-}
 
 #strategy_body .w2ui-selected {
     color: #1e53e5 !important;
@@ -360,14 +266,6 @@ button.fullscreen-size-btn {
     border: 1px solid #131722;
 }
 
-.w2ui-column-check {
-    background: #fff !important;
-    color: #131722 !important;
-}
-
-.w2ui-grid .w2ui-grid-body table .w2ui-col-number {
-    background-color: unset !important;
-}
 
 /** W2ui END **/
 
@@ -422,9 +320,7 @@ button.fullscreen-size-btn {
     margin: 0;
 }
 
-#pairs-tabs::-webkit-scrollbar {
-    display: none;
-}
+
 #pairs-tabs {
     min-width: 60%;
     height: 41px;
@@ -479,6 +375,8 @@ button.fullscreen-size-btn {
     height: 41px;
     flex-direction: row-reverse;
     padding: 0;
+    right: 0;
+    position: fixed;
 }
 
 #nav-bar-right a {
@@ -491,32 +389,25 @@ button.fullscreen-size-btn {
 
 }
 
+#new-nav{
+    display: flex;
+}
+
 /** navbar END **/
 
 /** mobile fixes **/
 
-@media only screen and (max-width: 1200px) {
-    #nav-bar-left {
-    min-width: calc(100vw - 227px - 44.5px);
-    max-width: calc(100vw - 227px - 44.5px);
-    }
-}
-
 /** temp fixes **/
 
-/*Force full screen*/
+/*Force full screen - remove container fluid */
 .container-fluid {
     margin: 0;
     padding: 0;
 }
 
-#new-nav{
-    display: flex;
-}
-
 </style>
 
-<nav id="new-nav" class="brdr-b">
+<nav id="new-nav" class="nav-tabs brdr-b">
     <div class="main-dropdown-menu brdr-r">
         <a role="button" aria-expanded="false" type="button" class="navbar-toggler" data-toggle="dropdown">
             <span><i class="fas fa-bars"></i></span>
@@ -532,8 +423,8 @@ button.fullscreen-size-btn {
             <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-info-circle"></i> About</a>
         </div>
     </div>
-    <ul class="nav nav-tabs md-tabs  toolbox-tabs row bg-dark noBorder w-100" id="nav-toolbox" role="tablist">
-        <ul id="nav-bar-left" class="nav nav-tabs md-tabs col-9 toolbox-tabs bg-dark noBorder">
+    <ul class="nav md-tabs  toolbox-tabs row bg-dark noBorder w-100" id="nav-toolbox" role="tablist">
+        <ul id="nav-bar-left" class="nav md-tabs col-9 toolbox-tabs bg-dark noBorder">
             <span id="time-frame-selector" class="scroll_horizontal">
                 <!-- repeat for each activated timeframe -->
                 {% for time_frame in time_frames %}
@@ -567,7 +458,7 @@ button.fullscreen-size-btn {
                     {% endfor %}
                 </form>
             </li>
-            <ul class="nav nav-tabs md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal" id="pairs-tabs" role="tablist">
+            <ul class="nav md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal" id="pairs-tabs" role="tablist">
                 {% for symbol in symbols %}
                 <li class="nav-item waves-effect waves-light brdr-l h-100">
                   <a class="nav-link primary-tab-selector h-100 symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
@@ -580,7 +471,7 @@ button.fullscreen-size-btn {
                 {% endfor %}
             </ul>
         </ul>
-        <ul id="nav-bar-right" class="nav nav-tabs md-tabs toolbox-tabs bg-dark brdr-l noBorder">
+        <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l noBorder">
 
             <li class="nav-item waves-effect waves-light brdr-l">
                 <a class="nav-link waves-effect waves-light" href="{{ url_for('logs') }}" aria-label="Logs">
@@ -599,7 +490,7 @@ button.fullscreen-size-btn {
             <li class="nav-item waves-effect waves-light brdr-r h-100" id="add-evaluators">
               <a class="nav-link primary-tab-selector">
                   <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark">
-                      <i class="fas fa-atom"></i> Evaluators <i class="fas fa-plus add-evaluator"></i>
+                      <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators</span><i class="fas fa-plus add-evaluator"></i>
                   </a>
               </a>
             </li>
@@ -640,12 +531,12 @@ button.fullscreen-size-btn {
                 <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">Code Editor</a>
                 <div class="dropdown-menu dropdown-default bg-dark">
-                    <a class="nav-link primary-tab-selector bg-dark" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                    <a class="nav-link primary-tab-selector bg-dark open-toolbox-onclick" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
                     aria-controls="trading-editor"
                     aria-selected="false">
                     trading script editor
                     </a>
-                    <a class="nav-link primary-tab-selector bg-dark" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                    <a class="nav-link primary-tab-selector bg-dark open-toolbox-onclick" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
                     aria-controls="backtesting-editor"
                     aria-selected="false">
                     backtesting script editor
@@ -653,21 +544,21 @@ button.fullscreen-size-btn {
                 </div>
             </li>
             <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
+                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
                    aria-controls="strategy-settings"
                    aria-selected="true">
                     Strategy Settings
                 </a>
             </li>
             <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector active show" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
+                <a class="nav-link primary-tab-selector active show open-toolbox-onclick" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
                    aria-controls="backtesting"
                    aria-selected="false">
                     Backtesting
                 </a>
             </li>
             <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
                    aria-controls="optimizer"
                    aria-selected="false">
                     Strategy Optimizer
@@ -693,7 +584,7 @@ button.fullscreen-size-btn {
            </div>
         </ul>
 
-         <span id='backtesting_progress_bar' style='display: none;'>
+        <span id='backtesting_progress_bar' style='display: none;'>
             <div class="card-title">
                 <h4 id="optimizer_progress_bar_title">Optimizer in progress</h4>
                 <h4 id="backtesting_progress_bar_title">Backtesting in progress</h4>
