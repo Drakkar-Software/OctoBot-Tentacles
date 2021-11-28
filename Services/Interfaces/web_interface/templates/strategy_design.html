@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% set active_page = "strategy_design" %}
+{% set show_nab_bar = False %}
 
 {% import 'macros/strategy_design_optimizer_settings.html' as m_strategy_design_optimizer_settings %}
 
@@ -503,11 +504,6 @@ button.fullscreen-size-btn {
 
 /** temp fixes **/
 
-/** temp navbar fix**/
-.navbar.navbar-dark.sticky-top {
-    display: none !important;
-}
-
 /*Force full screen*/
 .container-fluid {
     margin: 0;
@@ -521,21 +517,21 @@ button.fullscreen-size-btn {
 </style>
 
 <nav id="new-nav" class="brdr-b">
-    <li class="main-dropdown-menu brdr-r">
+    <div class="main-dropdown-menu brdr-r">
         <a role="button" aria-expanded="false" type="button" class="navbar-toggler" data-toggle="dropdown">
             <span><i class="fas fa-bars"></i></span>
         </a>
         <div class="dropdown-menu dropdown-default bg-dark" style="">
-            <a href="/home" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-home"></i> Home</a>
-            <a href="/trading" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-line"></i> Trading</a>
-            <a href="/portfolio" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-pie"></i> Portfolio</a>
-            <a href="/profile" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-cog"></i> Profile</a>
-            <a href="/accounts" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-link"></i> Accounts</a>
-            <a href="/community" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-rss-square"></i> Community</a>
-            <a href="/octobot_help" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-question-circle"></i> Help</a>
-            <a href="/about" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-info-circle"></i> About</a>
+            <a href="{{ url_for('home') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('trading') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-line"></i> Trading</a>
+            <a href="{{ url_for('portfolio') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-pie"></i> Portfolio</a>
+            <a href="{{ url_for('profile') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-cog"></i> Profile</a>
+            <a href="{{ url_for('accounts') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-link"></i> Accounts</a>
+            <a href="{{ url_for('community') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-rss-square"></i> Community</a>
+            <a href="{{ url_for('octobot_help') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-question-circle"></i> Help</a>
+            <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-info-circle"></i> About</a>
         </div>
-    </li>
+    </div>
     <ul class="nav nav-tabs md-tabs  toolbox-tabs row bg-dark noBorder w-100" id="nav-toolbox" role="tablist">
         <ul id="nav-bar-left" class="nav nav-tabs md-tabs col-9 toolbox-tabs bg-dark noBorder">
             <span id="time-frame-selector" class="scroll_horizontal">
@@ -587,25 +583,24 @@ button.fullscreen-size-btn {
         <ul id="nav-bar-right" class="nav nav-tabs md-tabs toolbox-tabs bg-dark brdr-l noBorder">
 
             <li class="nav-item waves-effect waves-light brdr-l">
-                <a class="nav-link waves-effect waves-light" href="/logs" aria-label="Logs">
+                <a class="nav-link waves-effect waves-light" href="{{ url_for('logs') }}" aria-label="Logs">
                     <i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="" data-original-title="Event logs">
-                        <span id="errors-count-badge" class="badge badge-warning">1</span>
+                        <span id="errors-count-badge" class="badge badge-warning"></span>
                     </i>
                 </a>
             </li>
             <li class="nav-item waves-effect waves-light brdr-l">
-                <a class="nav-link waves-effect waves-light" href="#" id="switchTradingState" aria-label="TradingSwitch">
-                    <span class="d-none d-xl-inline">
-                        Simulated trading
-                    </span>
-                    <i class="fa fa-robot" data-toggle="tooltip" data-placement="top" title="" data-original-title="Simulated trading"></i>
+                {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
+                <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
+                    {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                 </a>
+                {% endif %}
             </li>
             <li class="nav-item waves-effect waves-light brdr-r h-100" id="add-evaluators">
               <a class="nav-link primary-tab-selector">
-                  <i class="fas fa-atom"></i>
-                  Evaluators
-                  <i class="fas fa-plus add-evaluator"></i>
+                  <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark">
+                      <i class="fas fa-atom"></i> Evaluators <i class="fas fa-plus add-evaluator"></i>
+                  </a>
               </a>
             </li>
         </ul>
