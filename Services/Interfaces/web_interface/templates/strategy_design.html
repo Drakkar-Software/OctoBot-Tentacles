@@ -9,392 +9,6 @@
 
 <style>
 
-/*TODO*/
-
-.main-toolbox-tabs .toolbox-buttons {
-    margin-right: 50px;
-}
-
-.main-toolbox-tabs li:first-child {
-    margin-left: 50px;
-}
-
-.toolbox-tabs > li > a {
-    color: #b2b5be;
-    padding: 11px 2rem;
-    border: none !important;
-}
-
-.toolbox-tabs > li > a.active {
-    color: #1e53e5 !important;
-    border: none !important;
-    background: none !important;
-}
-
-.toolbox-tabs > li > a:hover {
-    border-color: unset !important;
-    border: none !important;
-    background: #2a2e39;
-    border-radius: unset;
-}
-
-
-
-.strategy-toolbox {
-    position: absolute;
-}
-#toolbox .tab-content > div {
-    height: 100%;
-}
-
-.ui-resizable-s {
-    height: 20px;
-    width: 100%;
-    bottom: -10px;
-    left: 0;
-}
-
-body {
-    /* looks better and gives more space */
-    line-height: unset;
-}
-
-
-/** Charts **/
-
-.hoverlayer line:first-child, .hoverlayer line:nth-child(3) {
-    stroke: unset;
-}
-
-/** cahrts END **/
-
-
-/** Toolbox **/
-/** Toolbox Tabbar **/
-
-#octobot-logo img {
-  width: 30px;
-  margin-right:4px;
-  float: left;
-}
-
-#octobot-logo h4 {
-  margin: auto;
-  float: left;
-}
-
-.toolbox-buttons .btn {
-    border-radius: 0;
-    background-color: #131722 !important;
-    font-size: 1rem;
-    text-transform: unset;
-    padding: 8px 2rem;
-}
-
-.toolbox-buttons .btn-warning, .w2ui-btn {
-    color: #fb3;
-}
-
-.toolbox-buttons .btn-warning:hover, .toolbox-buttons .btn .btn-warning .btn-outline-warning:hover, .w2ui-btn:hover {
-    background: #fb3 !important;
-    color: #fff !important;
-}
-
-.toolbox-buttons .btn-success, .w2ui-btn-blue {
-    color: #00c851;
-}
-
-
-
-.toolbox-buttons .btn-success:hover, .w2ui-btn-blue:hover {
-    background: #00c851 !important;
-    color: #fff;
-}
-
-.toolbox-btn-divider {
-    display: inline-block;
-    width: 1px;
-}
-
-#toolbox .dropdown-menu a {
-    border-radius:0;
-    border-color: #2a2e39;
-}
-
-#toolbox .dropdown-menu a:hover {
-    background: #2a2e39;
-}
-
-.dropdown-menu {
-    border: solid 1px var(--brdr-actv);
-    border-radius: .25rem;
-}
-
-.nav-tabs .nav-link:focus, .nav-tabs .nav-link:hover {
-    border-color: var(--brdr);
-    border-radius: 0;
-    background: var(--bg-hvr) !important;
-}
-
-#backtesting-settings, #list-of-trades, #performance-summary, #strategy-settings, #optimizer {
-    overflow-y: scroll;
-}
-
-
-#backtesting-chart {
-    height:50%;
-    width: 100%
-}
-
-#backtesting-table {
-    height:50%;
-    width: 100%;
-    max-height: 98%;
-}
-
-#strategy-optimizer-inputs *{
-    border-color: #2a2e39 !important;
-}
-
-#strategy-optimizer-inputs > .mx-4 > .row.border > div {
-    line-height: 1.5;
-    padding: 8px 2rem;
-}
-
-
-.strategy-toolbox .btn-outline-success {
-    border: 1px solid #00c851 !important;
-    6.8px 2rem !important
-}
-
-.strategy-toolbox .btn-outline-success:hover {
-    color:#fff !important;
-}
-
-/** toolbox resize buttons **/
-.fullscreen-btn-group {
-    float: right;
-    right: 8px;
-    position: fixed;
-}
-
-.fullscreen-size-btn i {
-    font-size: 20px;
-    align-items: center;
-    border-radius: 4px;
-    cursor: default;
-    display: flex;
-    height: 30px;
-    justify-content: center;
-    width: 30px;
-    color: #b2b5be;
-}
-
-button.fullscreen-size-btn:hover {
-    background: #2a2e39;
-}
-
-button.fullscreen-size-btn {
-    background: none;
-    border:none;
-    margin-top: 4px;
-}
-
-.fullscreen-size-btn.is-full-screen i {
-    color: #1e53e5;
-}
-
-/** toolbox resize buttons END **/
-
-#backtesting-tabcontent {
-    height: 100%;
-}
-
-
-
-.footer-copyright {
-    background-color: #131722 !important;
-    border-top-color: #2a2e39 !important;
-    border-top: solid 2px;
-}
-
-
-/* w2ui template  */
-
-.toolbox-buttons > button, .w2ui-btn {
-    margin: 0;
-}
-
-.form-control, input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
-    background-color: #131722 !important;
-    color: #b2b5be !important;
-    border-color: #2a2e39;
-    background-image: unset !important;
-}
-
-
-#strategy_body .w2ui-record, .w2ui-btn {
-    border: 1px solid #2a2e39;
-}
-
-
-#strategy_body .w2ui-empty-record, #strategy_body .w2ui-empty-record:hover, #strategy_body .w2ui-grid-footer,  #strategy_body .w2ui-grid-columns, #strategy_body .w2ui-grid-columns *, #strategy_body .w2ui-grid-toolbar, #strategy_body .w2ui-grid-toolbar *, #strategy_body .w2ui-grid-header, #strategy_body .w2ui-record, #strategy_body .grid_RSI_footer {
-    background-color: #131722;
-    color: #b2b5be;
-    background-image: unset;
-}
-
-
-
-.w2ui-overlay tr:hover, #strategy_body .w2ui-grid-toolbar td:hover, #strategy_body .w2ui-grid-toolbar tr:hover, #strategy_body .w2ui-grid-toolbar table:hover, #strategy_body .w2ui-grid-toolbar tbody:hover, #strategy_body .w2ui-grid-toolbar table tbody tr:hover td, #strategy_body .w2ui-grid-toolbar table.dataTable tbody tr:hover td {
-    -moz-box-shadow: none;
-    -webkit-box-shadow: none;
-    box-shadow: none;
-}
-
-#strategy_body .w2ui-grid-header {
-    font-size: 1rem;
-    height:unset;
-    padding: 4px;
-}
-
-
-#strategy_body .w2ui-selected {
-    color: #1e53e5 !important;
-    background: #2a2e39 !important;
-    border: 1px solid #131722;
-}
-
-
-/** W2ui END **/
-
-
-/** user inputs **/
-.select2-container--default .select2-selection--multiple {
-    background-color: var(--bg);
-    border: 1px solid var(--brdr);
-}
-
-.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
-    background: var(--bg-hvr) !important;
-    color: var(--fnt) !important;
-}
-
-.select2-container--default .select2-results__option--selected {
-    background-color: var(--bg-hvr) !important;
-    color: var(--fnt-actv) !important;
-}
-
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-    border: solid var(--brdr-actv) 1px;
-}
-
-.select2-dropdown, .select2-selection__choice {
-    border-color: var(--brdr-actv);
-}
-
-.form-control:focus {
-    border-color: var(--brdr-actv);
-    box-shadow: unset;
-}
-
-
-/** user inputs END **/
-
-
-/** navbar **/
-.navbar-toggler, .timeframe-toggler {
-    color: #b2b5be
-}
-
-.navbar-toggler {
-    border-radius: 0;
-    padding: 0 12px !important;
-    line-height: 41px;
-    height: 41px;
-    display: block;
-}
-
-#nav-toolbox {
-    margin: 0;
-}
-
-
-#pairs-tabs {
-    min-width: 60%;
-    height: 41px;
-}
-
-#time-frame-selector {
-    max-width: calc(40% - 31.5px);
-}
-
-
-
-#pairs-tabcontent > .tab-pane {
-    height: 100%;
-}
-
-#nav-bar-left {
-    display: flex;
-    height: 41px;
-    min-width: calc(100vw - 356px - 44.5px);
-    max-width: calc(100vw - 356px - 44.5px);
-    padding: 0;
-    margin: 0;
-}
-
-#nav-bar-left .active-timeframe a {
-    height: 41px;
-    padding: 0 10px;
-    display: block;
-    line-height: 41px;
-    color: #b2b5be;
-}
-.timeframe-toggler i, .add-evaluator {
-     font-size: 12px;
-}
-
-
-#nav-bar-left a.timeframe-toggler {
-    padding: 0 10px;
-    line-height: 41px;
-}
-
-#nav-bar-left .active-timeframe.selected a {
-    color: #1e53e5 ;
-}
-
-.nav-tabs .nav-item {
-    margin-bottom: 0;
-}
-
-#nav-bar-right {
-    border-top: 0;
-    height: 41px;
-    flex-direction: row-reverse;
-    padding: 0;
-    right: 0;
-    position: fixed;
-}
-
-#nav-bar-right a {
-    line-height: 41px;
-    padding: 0 10px;
-}
-
-#nav-toolbox {
-    border-bottom: 1px solid #2a2e39;
-
-}
-
-#new-nav{
-    display: flex;
-}
-
-/** navbar END **/
-
-/** mobile fixes **/
 
 /** temp fixes **/
 
@@ -406,44 +20,44 @@ button.fullscreen-size-btn {
 
 </style>
 
-<nav id="new-nav" class="nav-tabs brdr-b">
+<nav id="new-nav" class="nav-tabs brdr-b d-flex">
     <div class="main-dropdown-menu brdr-r">
-        <a role="button" aria-expanded="false" type="button" class="navbar-toggler" data-toggle="dropdown">
+        <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-lh nav-h d-block" data-toggle="dropdown">
             <span><i class="fas fa-bars"></i></span>
         </a>
-        <div class="dropdown-menu dropdown-default bg-dark" style="">
-            <a href="{{ url_for('home') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-home"></i> Home</a>
-            <a href="{{ url_for('trading') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-line"></i> Trading</a>
-            <a href="{{ url_for('portfolio') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-pie"></i> Portfolio</a>
-            <a href="{{ url_for('profile') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-cog"></i> Profile</a>
-            <a href="{{ url_for('accounts') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-link"></i> Accounts</a>
-            <a href="{{ url_for('community') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-rss-square"></i> Community</a>
-            <a href="{{ url_for('octobot_help') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-question-circle"></i> Help</a>
-            <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-info-circle"></i> About</a>
+        <div class="dropdown-menu dropdown-default brdr-actv bg-dark" style="">
+            <a href="{{ url_for('home') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('trading') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-line"></i> Trading</a>
+            <a href="{{ url_for('portfolio') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-pie"></i> Portfolio</a>
+            <a href="{{ url_for('profile') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-cog"></i> Profile</a>
+            <a href="{{ url_for('accounts') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-link"></i> Accounts</a>
+            <a href="{{ url_for('community') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-rss-square"></i> Community</a>
+            <a href="{{ url_for('octobot_help') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-question-circle"></i> Help</a>
+            <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
         </div>
     </div>
-    <ul class="nav md-tabs  toolbox-tabs row bg-dark noBorder w-100" id="nav-toolbox" role="tablist">
-        <ul id="nav-bar-left" class="nav md-tabs col-9 toolbox-tabs bg-dark noBorder">
+    <ul class="nav md-tabs toolbox-tabs row bg-dark m-0" id="nav-toolbox" role="tablist">
+        <ul id="nav-bar-left" class="nav md-tabs toolbox-tabs bg-dark m-0 p-0 d-flex nav-h">
             <span id="time-frame-selector" class="scroll_horizontal">
                 <!-- repeat for each activated timeframe -->
                 {% for time_frame in time_frames %}
                 <li data-time-frame="{{time_frame}}"
                     class="active-timeframe {{'selected ' if loop.first}}bg-hvr h-100"
                     id="active-{{time_frame}}-timeframe">
-                  <a>{{time_frame}}</a>
+                  <a class="nav-h nav-lh d-block">{{time_frame}}</a>
                 </li>
                 {% endfor %}
             </span>
 
-            <li class="dropdown h-100"
+            <li class="dropdown h-100 noBorder"
                 id="config-activated-time-frame-selector"
                 data-strategy-config-url="{{ url_for('config_tentacles', action='update', reload='true') }}"
                 data-strategy-tentacle="{{ activated_strategy.get_name() }}">
-                <a class="nav-link timeframe-toggler" data-toggle="dropdown" href="#" role="button"
+                <a class="nav-link timeframe-toggler nav-lh" data-toggle="dropdown" href="#" role="button"
                    aria-haspopup="true" aria-expanded="false">
                     <span><i class="fas fa-chevron-down"></i></span>
                 </a>
-                <form class="dropdown-menu dropdown-default bg-dark">
+                <form class="dropdown-menu brdr-actv dropdown-default bg-dark">
                     <!-- repeat for each available timeframe -->
                     {% for time_frame in exchange_time_frames %}
                     <div class="nav-link primary-tab-selector bg-dark" id="inactive-{{time_frame}}-timeframe">
@@ -457,7 +71,7 @@ button.fullscreen-size-btn {
                     {% endfor %}
                 </form>
             </li>
-            <ul class="nav md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal" id="pairs-tabs" role="tablist">
+            <ul class="nav md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal nav-h" id="pairs-tabs" role="tablist">
                 {% for symbol in symbols %}
                 <li class="nav-item waves-effect waves-light brdr-l h-100">
                   <a class="nav-link primary-tab-selector h-100 symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
@@ -470,27 +84,25 @@ button.fullscreen-size-btn {
                 {% endfor %}
             </ul>
         </ul>
-        <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l noBorder">
+        <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l">
 
-            <li class="nav-item waves-effect waves-light brdr-l">
-                <a class="nav-link waves-effect waves-light" href="{{ url_for('logs') }}" aria-label="Logs">
+            <li class="nav-item waves-effect waves-light brdr-l nav-h">
+                <a class="nav-link waves-effect waves-light nav-lh" href="{{ url_for('logs') }}" aria-label="Logs">
                     <i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="" data-original-title="Event logs">
                         <span id="errors-count-badge" class="badge badge-warning"></span>
                     </i>
                 </a>
             </li>
-            <li class="nav-item waves-effect waves-light brdr-l">
+            <li class="nav-item waves-effect waves-light brdr-l nav-h">
                 {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
-                <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
+                <a class="nav-link nav-lh" href="#" id="switchTradingState" aria-label="TradingSwitch">
                     {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                 </a>
                 {% endif %}
             </li>
-            <li class="nav-item waves-effect waves-light brdr-r h-100" id="add-evaluators">
-              <a class="nav-link primary-tab-selector">
-                  <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark">
-                      <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators</span><i class="fas fa-plus add-evaluator"></i>
-                  </a>
+            <li class="nav-item waves-effect waves-light brdr-r nav-h" id="add-evaluators">
+              <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark nav-lh">
+                  <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators</span><i class="fas fa-plus add-evaluator"></i>
               </a>
             </li>
         </ul>
@@ -529,13 +141,13 @@ button.fullscreen-size-btn {
             <li class="nav-item dropdown brdr-l">
                 <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">Code Editor</a>
-                <div class="dropdown-menu dropdown-default bg-dark">
-                    <a class="nav-link primary-tab-selector bg-dark open-toolbox-onclick" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                <div class="dropdown-menu brdr-actv dropdown-default bg-dark">
+                    <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
                     aria-controls="trading-editor"
                     aria-selected="false">
                     trading script editor
                     </a>
-                    <a class="nav-link primary-tab-selector bg-dark open-toolbox-onclick" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                    <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
                     aria-controls="backtesting-editor"
                     aria-selected="false">
                     backtesting script editor
@@ -624,7 +236,7 @@ button.fullscreen-size-btn {
                     {% endif %}
             </div>
 
-            <div class="tab-pane fade" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
+            <div class="tab-pane fade scroll-vertically" id="strategy-settings" role="tabreal" aria-labelledby="strategy-settings-tab">
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light brdr-l">
                       <a class="nav-link primary-tab-selector active show" id="trading-script-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="trading-script-settings" href="#trading-script-settings">Trading Script Settings</a>
@@ -705,9 +317,9 @@ button.fullscreen-size-btn {
                     </div>
                 </ul>
 
-                <div class="tab-content bg-dark" id="backtesting-tabcontent">
+                <div class="tab-content bg-dark h-100" id="backtesting-tabcontent">
 
-                    <div class="tab-pane fade" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
+                    <div class="tab-pane fade scroll-vertically" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
                         <div id="backtesting-inputs">
                             <div class="row col-12 col-md-6">
                                 <div class="my-auto mx-4">
@@ -722,7 +334,7 @@ button.fullscreen-size-btn {
                         </div>
                     </div>
 
-                    <div class="tab-pane fade show active" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
+                    <div class="tab-pane fade show active w-100" id="backtesting-results" role="tabreal" aria-labelledby="backtesting-results-tab">
                         <div id="backtesting-table" class="resizable ui-resizable js-plotly-plot">
                             <div id="no-backtesting-message" class="d-none text-center mx-4 my-4">
                                 <h4>
@@ -735,15 +347,15 @@ button.fullscreen-size-btn {
                         </div>
                         <div class="draggable-resizer">
                         </div>
-                        <div id="backtesting-chart" data-url="{{url_for('backtesting_run_plotted_data')}}">
+                        <div id="backtesting-chart" class="w-100" data-url="{{url_for('backtesting_run_plotted_data')}}">
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="performance-summary" role="tabreal" aria-labelledby="performance-summary-tab">
+                    <div class="tab-pane fade scroll-vertically" id="performance-summary" role="tabreal" aria-labelledby="performance-summary-tab">
 
                     </div>
 
-                    <div class="tab-pane fade" id="list-of-trades" role="tabreal" aria-labelledby="list-of-trades-tab">
+                    <div class="tab-pane fade" id="list-of-trades scroll-vertically" role="tabreal" aria-labelledby="list-of-trades-tab">
                         <div id="list-of-trades-part" style="width: 100%; height: 100%;">
 
                         </div>
@@ -751,7 +363,7 @@ button.fullscreen-size-btn {
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
+            <div class="tab-pane fade scroll-vertically" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="optimizer-tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light brdr-l">
@@ -800,6 +412,7 @@ button.fullscreen-size-btn {
 <script src="{{ url_for('static', filename='js/components/strategy_design_optimizer.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_components.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/todo.css', u=LAST_UPDATED_STATIC_FILES) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/strategy_design.css', u=LAST_UPDATED_STATIC_FILES) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/w2ui_template.css', u=LAST_UPDATED_STATIC_FILES) }}">
 {% endblock additional_scripts %}
