@@ -86,6 +86,18 @@ function hideSubChartWhenEmpty(){
     }
 }
 
+function handleTimeFramesTabsWidthChange(){
+    const currentActiveTfTabsWidth = $("#time-frame-selector").outerHeight(true)
+    $("#pairs-tabs").css("max-width", "calc(100% - 42px - " + currentActiveTfTabsWidth + "px)")
+}
+
+/** todo isnt working yet **/
+$(".scroll_horizontal").on('mousewheel', function(event){
+    this.scrollLeft -= (event.wheelDelta);
+    event.preventDefault();
+}, false);
+
+
 function updateWindowSizes(){
     const currentChartsHeight = $("#pairs-tabcontent").outerHeight(true)
     const currentMainMenuSize = $("#pairs-tabs").outerHeight(true)
@@ -186,12 +198,13 @@ function resizeOnToolBoxTabClicks(){
     }
 }
 
-
 function handleResizables(){
     $(".resizable").resizable();
     $(".resizable").on("resize", updateWindowSizes());
     window.addEventListener('resize', function(event){handleBrowserWindowSizeChange ()});
     $("#pairs-tabcontent").on('resize', function(event){updateWindowSizes()});
+    $("#time-frame-selector").on('resize', function(event){handleTimeFramesTabsWidthChange()});
+    window.addEventListener('resize', function(event){handleTimeFramesTabsWidthChange()});
     $("#backtesting-table").on('resize', function(event){updateWindowSizes()});
     $(".fullscreen-size-btn.fullscreen").on('click', function(event){fullScreenToggle()});
     $(".fullscreen-size-btn.minimize").on('click', function(event){minimizeScreenToggle()});
@@ -432,5 +445,6 @@ $(document).ready(function() {
     handleSymbolSelectors();
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
+    handleTimeFramesTabsWidthChange();
     backtesting_done_callbacks.push(postBacktestingDone)
 });

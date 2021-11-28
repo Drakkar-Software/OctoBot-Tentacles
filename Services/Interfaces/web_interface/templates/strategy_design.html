@@ -28,11 +28,15 @@
 }
 
 .bg-dark-grey {
-    background: var(--brdr);
+    background: var(--bg-hvr);
+}
+
+.bg-hvr:hover {
+    background: var(--bg-hvr);
 }
 
 .noBorder {
-    border:none
+    border:none !important
 }
 
 .brdr-b {
@@ -60,7 +64,18 @@
     border: 1px solid #2a2e39 !important;
 }
 
+.scroll_horizontal {
+    display: unset;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
+.scroll_horizontal li {
+    display: inline-block;
+}
 
 /** reusable END **/
 
@@ -180,6 +195,17 @@ body {
     background: #2a2e39;
 }
 
+.dropdown-menu {
+    border: solid 1px var(--brdr-actv);
+    border-radius: .25rem;
+}
+
+.nav-tabs .nav-link:focus, .nav-tabs .nav-link:hover {
+    border-color: var(--brdr);
+    border-radius: 0;
+    background: var(--bg-hvr) !important;
+}
+
 #backtesting-settings, #list-of-trades, #performance-summary, #strategy-settings, #optimizer {
     overflow-y: scroll;
 }
@@ -215,6 +241,7 @@ body {
     color:#fff !important;
 }
 
+/** toolbox resize buttons **/
 .fullscreen-btn-group {
     float: right;
     right: 8px;
@@ -247,6 +274,8 @@ button.fullscreen-size-btn {
     color: #1e53e5;
 }
 
+/** toolbox resize buttons END **/
+
 #backtesting-tabcontent {
     height: 100%;
 }
@@ -258,23 +287,6 @@ button.fullscreen-size-btn {
     border-top-color: #2a2e39 !important;
     border-top: solid 2px;
 }
-
-/** small screen fixes **/
-
-
-@media only screen and (max-width: 600px) {
-
-    .toolbox-tabs > li {
-        border: unset !important;
-    }
-}
-
-@media only screen and (max-width: 530px) {
-    .toolbox-tabs > li:last-of-type {
-        border-right:unset !important;
-    }
-}
-
 
 
 /* w2ui template  */
@@ -398,7 +410,11 @@ button.fullscreen-size-btn {
 }
 
 .navbar-toggler {
-    border-right: 1px solid #2a2e39;
+    border-radius: 0;
+    padding: 0 12px !important;
+    line-height: 41px;
+    height: 41px;
+    display: block;
 }
 
 #nav-toolbox {
@@ -409,18 +425,15 @@ button.fullscreen-size-btn {
     display: none;
 }
 #pairs-tabs {
-    overflow-x: scroll;
-    white-space: nowrap;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    max-width: 30vw;
-    display: unset;
+    min-width: 60%;
     height: 41px;
 }
 
-#pairs-tabs li {
-    display: inline-block;
+#time-frame-selector {
+    max-width: calc(40% - 31.5px);
 }
+
+
 
 #pairs-tabcontent > .tab-pane {
     height: 100%;
@@ -428,29 +441,37 @@ button.fullscreen-size-btn {
 
 #nav-bar-left {
     display: flex;
-    border-bottom: 1px solid #2a2e39;
     height: 41px;
+    min-width: calc(100vw - 356px - 44.5px);
+    max-width: calc(100vw - 356px - 44.5px);
+    padding: 0;
+    margin: 0;
 }
 
 #nav-bar-left .active-timeframe a {
-    line-height: 39px;
-    padding: 10px;
+    height: 41px;
+    padding: 0 10px;
+    display: block;
+    line-height: 41px;
     color: #b2b5be;
 }
 .timeframe-toggler i, .add-evaluator {
      font-size: 12px;
 }
 
+
 #nav-bar-left a.timeframe-toggler {
-    padding: 0 11px;
-    line-height: 39px;
+    padding: 0 10px;
+    line-height: 41px;
 }
 
 #nav-bar-left .active-timeframe.selected a {
     color: #1e53e5 ;
 }
 
-
+.nav-tabs .nav-item {
+    margin-bottom: 0;
+}
 
 #nav-bar-right {
     border-top: 0;
@@ -460,8 +481,8 @@ button.fullscreen-size-btn {
 }
 
 #nav-bar-right a {
-    line-height: 40px;
-    padding: 0 7px;
+    line-height: 41px;
+    padding: 0 10px;
 }
 
 #nav-toolbox {
@@ -469,21 +490,22 @@ button.fullscreen-size-btn {
 
 }
 
-#nav-toolbox * {
-    border-bottom: 0;
-    border-top: 0;
-}
-
 /** navbar END **/
+
+/** mobile fixes **/
+
+@media only screen and (max-width: 1200px) {
+    #nav-bar-left {
+    min-width: calc(100vw - 227px - 44.5px);
+    max-width: calc(100vw - 227px - 44.5px);
+    }
+}
 
 /** temp fixes **/
 
 /** temp navbar fix**/
-.navbar.navbar-dark.sticky-top.py-0.py-md-2 .mx-auto.order-0 {
-    display: none;
-}
-.navbar.navbar-dark.sticky-top.py-0.py-md-2 {
-    padding: 0 !important;
+.navbar.navbar-dark.sticky-top {
+    display: none !important;
 }
 
 /*Force full screen*/
@@ -491,30 +513,41 @@ button.fullscreen-size-btn {
     margin: 0;
     padding: 0;
 }
+
+#new-nav{
+    display: flex;
+}
+
 </style>
-<!-- temp navbar fix -->
-<script>
-    $(".navbar.navbar-expand-md.navbar-dark.sticky-top").removeClass("navbar-expand-md")
 
-</script>
-
-
-<nav>
-    <ul class="nav nav-tabs md-tabs  toolbox-tabs row bg-dark brdr-t brdr-b" id="nav-toolbox" role="tablist">
-        <ul id="nav-bar-left" class="nav nav-tabs md-tabs col-9 toolbox-tabs bg-dark">
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2" aria-expanded="true">
-                <span><i class="fas fa-bars"></i></span>
-            </button>
-            <span id="time-frame-selector">
+<nav id="new-nav" class="brdr-b">
+    <li class="main-dropdown-menu brdr-r">
+        <a role="button" aria-expanded="false" type="button" class="navbar-toggler" data-toggle="dropdown">
+            <span><i class="fas fa-bars"></i></span>
+        </a>
+        <div class="dropdown-menu dropdown-default bg-dark" style="">
+            <a href="/home" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-home"></i> Home</a>
+            <a href="/trading" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-line"></i> Trading</a>
+            <a href="/portfolio" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-chart-pie"></i> Portfolio</a>
+            <a href="/profile" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-cog"></i> Profile</a>
+            <a href="/accounts" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-link"></i> Accounts</a>
+            <a href="/community" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-rss-square"></i> Community</a>
+            <a href="/octobot_help" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-question-circle"></i> Help</a>
+            <a href="/about" class="nav-link primary-tab-selector bg-dark"><i class="fas fa-info-circle"></i> About</a>
+        </div>
+    </li>
+    <ul class="nav nav-tabs md-tabs  toolbox-tabs row bg-dark noBorder w-100" id="nav-toolbox" role="tablist">
+        <ul id="nav-bar-left" class="nav nav-tabs md-tabs col-9 toolbox-tabs bg-dark noBorder">
+            <span id="time-frame-selector" class="scroll_horizontal">
                 <!-- repeat for each activated timeframe -->
                 {% for time_frame in time_frames %}
-                <li data-time_frame="{{time_frame}}" class="active-timeframe {{'selected' if loop.first}}" id="active-{{time_frame}}-timeframe">
+                <li data-time_frame="{{time_frame}}" class="active-timeframe {{'selected' if loop.first}} bg-hvr h-100" id="active-{{time_frame}}-timeframe">
                   <a>{{time_frame}}</a>
                 </li>
                 {% endfor %}
             </span>
 
-            <li class="dropdown">
+            <li class="dropdown h-100">
                 <a class="nav-link timeframe-toggler" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
                     <span><i class="fas fa-chevron-down"></i></span>
                 </a>
@@ -523,10 +556,10 @@ button.fullscreen-size-btn {
                     {% for time_frame in exchange_time_frames %}
                     <div class="nav-link primary-tab-selector bg-dark" id="inactive-{{time_frame}}-timeframe">
                         <div class="row">
-                            <div class="col-md-7">
+                            <div class="col-7">
                                 {{time_frame}}
                             </div>
-                            <div data-schematype="boolean" class="col-md-5">
+                            <div data-schematype="boolean" class="col-5">
                                 <div class="checkbox custom-control custom-switch">
                                     <input type="checkbox" data-time_frame="{{time_frame}}"
                                            id="{{time_frame}}-setting" class="custom-control-input" {{'checked' if time_frame in enabled_time_frames}}>
@@ -538,10 +571,10 @@ button.fullscreen-size-btn {
                     {% endfor %}
                 </form>
             </li>
-            <ul class="nav nav-tabs md-tabs toolbox-tabs bg-dark brdr-t brdr-b" id="pairs-tabs" role="tablist">
+            <ul class="nav nav-tabs md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal" id="pairs-tabs" role="tablist">
                 {% for symbol in symbols %}
-                <li class="nav-item waves-effect waves-light brdr-l">
-                  <a class="nav-link primary-tab-selector symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
+                <li class="nav-item waves-effect waves-light brdr-l h-100">
+                  <a class="nav-link primary-tab-selector h-100 symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
                      role="tab" aria-selected="{{ 'true' if first else 'false' }}" aria-controls="{{symbol}}"
                      href="#{{symbol}}"
                      data-symbol="{{symbol}}">
@@ -550,15 +583,9 @@ button.fullscreen-size-btn {
                 </li>
                 {% endfor %}
             </ul>
-            <li class="nav-item waves-effect waves-light brdr-l" id="add-evaluators">
-              <a class="nav-link primary-tab-selector">
-                  <i class="fas fa-atom"></i>
-                  Evaluators
-                  <i class="fas fa-plus add-evaluator"></i>
-              </a>
-            </li>
         </ul>
-        <ul id="nav-bar-right" class="nav nav-tabs md-tabs col-3 toolbox-tabs bg-dark brdr-t brdr-b">
+        <ul id="nav-bar-right" class="nav nav-tabs md-tabs toolbox-tabs bg-dark brdr-l noBorder">
+
             <li class="nav-item waves-effect waves-light brdr-l">
                 <a class="nav-link waves-effect waves-light" href="/logs" aria-label="Logs">
                     <i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="" data-original-title="Event logs">
@@ -573,6 +600,13 @@ button.fullscreen-size-btn {
                     </span>
                     <i class="fa fa-robot" data-toggle="tooltip" data-placement="top" title="" data-original-title="Simulated trading"></i>
                 </a>
+            </li>
+            <li class="nav-item waves-effect waves-light brdr-r h-100" id="add-evaluators">
+              <a class="nav-link primary-tab-selector">
+                  <i class="fas fa-atom"></i>
+                  Evaluators
+                  <i class="fas fa-plus add-evaluator"></i>
+              </a>
             </li>
         </ul>
     </ul>
