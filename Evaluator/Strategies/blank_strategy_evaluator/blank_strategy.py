@@ -28,4 +28,4 @@ class BlankStrategyEvaluator(evaluators.StrategyEvaluator):
                               symbol,
                               time_frame):
         self.eval_note = eval_note
-        await self.strategy_completed(cryptocurrency, symbol)
+        await self.strategy_completed(cryptocurrency, symbol, time_frame=time_frame)

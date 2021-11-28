@@ -14,5 +14,6 @@ async def script(ctx):
         with drawing.part("list-of-trades-part", "table") as part:
             await plot_table(run_data, part, "SMA 1")
             await plot_table(run_data, part, "SMA 2")
+            await plot_table(run_data, part, "RSI", cache_value="rsi")
             await plot_trades(run_data, part)
     return drawing

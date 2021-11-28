@@ -17,6 +17,7 @@ async def script(ctx: Context):
     percent_volume = await user_input(ctx, "% volume", "float", 10.4, min_val=1, max_val=100)
     use_stop_loss = await user_input(ctx, "use_stop_loss", "boolean", False)
     # data_source = await user_input(ctx, "data source", "options", "close", options=["open", "high", "low", "close"])
+    set_minimum_candles(ctx, slow_sma_length)
     #
     # percent_volume = 30
     pair = ctx.traded_pair
