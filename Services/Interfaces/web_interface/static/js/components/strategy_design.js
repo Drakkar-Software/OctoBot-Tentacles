@@ -137,10 +137,10 @@ function updateWindowSizes(){
     const currentBacktestingTableHeight = $("#backtesting-table").outerHeight(true)
     if (currentBacktestingTableHeight != 0) {
         const newBacktestingChartHeight = "calc(100% - 4px - " + currentBacktestingTableHeight + "px)" /* 4px is from the slider draggable*/
-        $("#backtesting-chart").css("height", newBacktestingChartHeight)
+        $("#backtesting-run-overview").css("height", newBacktestingChartHeight)
     } else {
         const newBacktestingChartHeight = "calc(65% - 4px - " + currentBacktestingTableHeight + "px)" /* 4px is from the slider draggable*/
-        $("#backtesting-chart").css("height", newBacktestingChartHeight)
+        $("#backtesting-run-overview").css("height", newBacktestingChartHeight)
     }
     handleScreenSizeButtons(currentChartsHeight);
 }
@@ -262,7 +262,7 @@ function updateBacktestingAnalysisReport(run_id, addReport){
         time_frame: getSelectedTimeFrame(),
         added: addReport,
     }
-    send_and_interpret_bot_update(data, $("#backtesting-chart").data("url"), null,
+    send_and_interpret_bot_update(data, $("#backtesting-run-overview").data("url"), null,
         updateBacktestingReport, generic_request_failure_callback);
 }
 

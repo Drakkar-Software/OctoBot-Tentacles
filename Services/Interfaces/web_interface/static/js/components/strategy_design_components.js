@@ -317,6 +317,9 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
         if (sub_element.type === "table"){
             _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName);
         }
+        if (sub_element.type === "value"){
+            _updateValues(sub_element, replot, backtesting_id, added);
+        }
     });
     if(backtestingPart){
         _updateBacktestingChart(data, true, backtesting_id, added, backtestingTableName, chartIdentifier)
@@ -337,6 +340,52 @@ function _updateChartLayout(subElementCount){
     }
 }
 
+function _updateValues(sub_element, replot, backtesting_id, added){
+    const parentDiv = $(document.getElementById(sub_element.name));
+    if(!parentDiv.length){
+        return
+    }
+    const backtestingParentDivId = `${backtesting_id}-part`;
+    let backtestingRunParentDiv = parentDiv.find(`#${backtestingParentDivId}`);
+    if(backtestingRunParentDiv.length){
+        if(added){
+            backtestingRunParentDiv.empty();
+        }else{
+            backtestingRunParentDiv.remove();
+        }
+    }else if(added){
+        parentDiv.append(`<div id="${backtestingParentDivId}" class="backtesting-run-container"></div>`)
+        backtestingRunParentDiv = parentDiv.find(`#${backtestingParentDivId}`);
+    }
+    if(added){
+        _add_labelled_backtesting_values(sub_element, backtesting_id, backtestingRunParentDiv, parentDiv)
+    }
+}
+
+function _add_labelled_backtesting_values(sub_element, backtesting_id, backtestingRunParentDiv, parentDiv){
+        const backtestingValuesGridId = `${backtesting_id}-values-grid`;
+        backtestingRunParentDiv.append(
+            `<div class="backtesting-run-container-title text-center">
+                <h4>Backtesting ${backtesting_id}</h4>
+             </div>`
+        );
+        backtestingRunParentDiv.append(
+            `<div id="${backtestingValuesGridId}" class="backtesting-run-container-values container-fluid row"></div>`
+        );
+        const backtestingValuesGridDiv = parentDiv.find(`#${backtestingValuesGridId}`);
+        sub_element.data.elements.forEach(function (element){
+            if(element.html === null){
+                backtestingValuesGridDiv.append(
+                    `<div class="col-6 col-md-3 ${sub_element.data.elements.length > 4 ? 'col-xl-2' : ''} text-center">
+                        <div class="backtesting-run-container-values-label">${element.title}</div>
+                        <div class="backtesting-run-container-values-value">${element.value}</div>
+                    </div>`
+                );
+            }else{
+                backtestingValuesGridDiv.append(element.html);
+            }
+        });
+}
 
 function _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName){
     sub_element.data.elements.forEach(function (element){

@@ -291,3 +291,15 @@ button.fullscreen-size-btn {
 }
 
 /** toolbox resize buttons END **/
+
+/** backtesting overview **/
+
+.backtesting-run-container-values-label {
+    font-size: 20px;
+}
+
+.backtesting-run-container-values-value {
+    font-weight: bold;
+}
+
+/** backtesting overview END **/
