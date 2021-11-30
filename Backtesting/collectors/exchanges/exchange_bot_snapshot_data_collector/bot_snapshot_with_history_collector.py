@@ -123,7 +123,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 tasks.append(asyncio.create_task(self.get_recent_trades_history(self.exchange_name, symbol)))
 
                 for time_frame_index, time_frame in enumerate(self.time_frames):
-                    tasks.append(asyncio.create_task(self.get_ohlcv_history(self.exchange_name, symbol, time_frame)))
+                    await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
+                    #TODO fix database cursors
+                    # tasks.append(asyncio.create_task(self.get_ohlcv_history(self.exchange_name, symbol, time_frame)))
                     tasks.append(asyncio.create_task(self.get_kline_history(self.exchange_name, symbol, time_frame)))
                     if symbol_index == time_frame_index == 0:
                         # let tables get created
