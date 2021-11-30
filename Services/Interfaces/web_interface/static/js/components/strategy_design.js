@@ -88,7 +88,7 @@ function handleMainNavBarWidthChange(){
     $("#nav-bar-left").css("min-width", newNavBarLeftWidth)
 
 }
-
+/** handle horizontal mousewheel scrolling **/
 jQuery(function ($) {
     $.fn.hScroll = function (amount) {
         amount = amount || 120;

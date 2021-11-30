@@ -241,7 +241,7 @@ function hideSubChartWhenEmpty(data){
         $("#main-chart").css("height", "100%")
         $("#main-chart").css("max-height", "100%")
         updateWindowSizes()
-    }else if($("#sub-chart").outerHeight(true) === 0){
+    }else if($("#sub-chart").css("height") === "0px"){
         $("#main-chart").css("height", "65%")
         $("#main-chart").css("max-height", "calc(100% - 25px)")
         updateWindowSizes()

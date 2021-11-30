@@ -114,6 +114,25 @@ body {
     padding:0;
 }
 
+.p-fixed {
+    position:fixed;
+}
+
+.p-absolute {
+    position:absolute;
+}
+
+.soft-h-100{
+    height: 100%;
+}
+
+a:hover {
+    color: var(--fnt);
+}
+
+.nav-link {
+    border: none !important;
+}
 /** reusable END **/
 
 /** navbar **/
@@ -127,6 +146,10 @@ body {
     max-width: calc(100vw - 356px - 44.5px);
 }
 
+#nav-bar-right {
+    right: 0;
+}
+
 #time-frame-selector {
     max-width: calc(40% - 31.5px);
 }
@@ -137,64 +160,29 @@ body {
 
 /** navbar END **/
 
-/** footer **/
-
-.footer-copyright {
-    background-color: #131722 !important;
-    border-top-color: #2a2e39 !important;
-    border-top: solid 2px;
+/** body **/
+body * {
+    color: var(--fnt);
 }
 
-/** footer END **/
-
-/** user inputs **/
-.select2-container--default .select2-selection--multiple {
-    background-color: var(--bg);
-    border: 1px solid var(--brdr);
+.strategy_body {
+    height: calc(100vh - 87px);
 }
 
-.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
-    background: var(--bg-hvr) !important;
-    color: var(--fnt) !important;
-}
-
-.select2-container--default .select2-results__option--selected {
-    background-color: var(--bg-hvr) !important;
-    color: var(--fnt-actv) !important;
-}
-
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-    border: solid var(--brdr-actv) 1px;
-}
-
-.select2-dropdown, .select2-selection__choice {
-    border-color: var(--brdr-actv);
-}
-
-.form-control:focus {
-    border-color: var(--brdr-actv);
-    box-shadow: unset;
-}
-
-/** user inputs END **/
-
-/** dropdowns **/
-
-/** dropdowns **/
-
-/** jquery resizeable **/
-.ui-resizable-s {
-    height: 20px;
-    width: 100%;
-    bottom: -10px;
-    left: 0;
-}
-/** jquery resizeable **/
 
 /** plotting **/
 
 .hoverlayer line:first-child, .hoverlayer line:nth-child(3) {
     stroke: unset;
+}
+
+#main-chart {
+    height: 65%;
+    max-height: calc(100% - 25px);
+}
+
+.draggable-resizer {
+    padding: 2px;
 }
 
 #backtesting-chart {
@@ -206,10 +194,30 @@ body {
     max-height: 98%;
 }
 
+#sub-chart {
+    height: calc(35% - 5px);
+    max-height: calc(100% - 15px);
+    position: relative;
+}
+
 /** cahrts END **/
 
 /**** Toolbox ****/
+
+.strategy-toolbox {
+    height: 40vh;
+}
+
+#pairs-tabcontent {
+    height: calc(60vh - 87px);
+    max-height: calc(100vh - 53px - 32px - 47px);
+}
+
+
+
 /*** Toolbox Tabbar ***/
+
+
 
 /** octobot logo **/
 #octobot-logo img {
@@ -225,6 +233,11 @@ body {
 /** octobot logo **/
 
 /** toolbox buttons **/
+
+.nav-item > button {
+    padding: 0 2rem !important;
+}
+
 .toolbox-buttons .btn-warning, .w2ui-btn {
     color: var(--new-warning);
 }
@@ -250,7 +263,6 @@ body {
 
 .strategy-toolbox .btn-outline-success {
     border: 1px solid var(--new-success) !important;
-    6.8px 2rem !important /* todo remove redundancy */
 }
 
 .strategy-toolbox .btn-outline-success:hover {
@@ -291,6 +303,94 @@ button.fullscreen-size-btn {
 }
 
 /** toolbox resize buttons END **/
+
+
+/** body END **/
+
+/** footer **/
+
+.footer-copyright {
+    background-color: #131722 !important;
+    border-top-color: #2a2e39 !important;
+    border-top: solid 2px;
+}
+
+/** footer END **/
+
+/** user inputs **/
+
+.row.border {
+    border-color: var(--brdr) !important;
+}
+
+.select2-container--default .select2-selection--multiple {
+    background-color: var(--bg);
+    border: 1px solid var(--brdr);
+}
+
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+    background: var(--bg-hvr) !important;
+    color: var(--fnt) !important;
+}
+
+.select2-container--default .select2-results__option--selected {
+    background-color: var(--bg-hvr) !important;
+    color: var(--fnt-actv) !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border: solid var(--brdr-actv) 1px !important;
+}
+
+.select2-dropdown, .select2-selection__choice {
+    border-color: var(--brdr) !important;
+}
+
+.form-control:focus {
+    border-color: var(--brdr-actv) !important;
+    box-shadow: unset;
+}
+
+.select2-selection__choice .select2-selection__choice__remove {
+    color: var(--fnt-actv) !important;
+}
+
+.select2-selection__choice .select2-selection__choice__display {
+    color: var(--fnt-actv) !important;
+}
+
+.select2-selection__rendered .select2-selection__choice {
+    background-color: var(--bg) !important;
+}
+
+.select2-selection__choice .select2-selection__choice__remove {
+    border: none !important;
+}
+
+.select2-selection__choice .select2-selection__choice__remove span {
+    color: var(--fnt-actv) !important;
+}
+
+.select2-selection__choice__remove:hover {
+    background-color: transparent !important;
+}
+
+/** user inputs END **/
+
+/** dropdowns **/
+
+/** dropdowns **/
+
+/** jquery resizeable **/
+.ui-resizable-s {
+    height: 20px;
+    width: 100%;
+    bottom: -10px;
+    left: 0;
+}
+/** jquery resizeable **/
+
+
 
 /** backtesting overview **/
 

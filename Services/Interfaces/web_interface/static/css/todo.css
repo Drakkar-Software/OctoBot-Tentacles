@@ -1,9 +1,9 @@
 /*TODO*/
 
-.toolbox-tabs li > a {
-    color: #b2b5be;
-    padding: 11px 2rem;
+.nav-item > a {
+    padding: 0 2rem;
     border: none !important;
+    line-height: 41px;
 }
 
 .toolbox-tabs > li > a.active {
@@ -19,16 +19,12 @@
     border-radius: unset;
 }
 
-.strategy-toolbox {
-    position: absolute;
-}
 
 .toolbox-buttons .btn {
     border-radius: 0;
     background-color: #131722 !important;
     font-size: 1rem;
     text-transform: unset;
-    padding: 8px 2rem;
 }
 
 
@@ -38,38 +34,24 @@
     background: var(--bg-hvr) !important;
 }
 
-#strategy-optimizer-inputs *{
-    border-color: #2a2e39 !important;
-}
 
 #strategy-optimizer-inputs > .mx-4 > .row.border > div {
     line-height: 1.5;
     padding: 8px 2rem;
 }
 
-
-/** navbar **/
-.navbar-toggler, .timeframe-toggler {
-    color: #b2b5be
-}
-
 .navbar-toggler {
     border-radius: 0;
     padding: 0 12px !important;
-
 }
-
 
 #nav-bar-left .active-timeframe a {
-
     padding: 0 10px;
-
-    color: #b2b5be;
 }
+
 .timeframe-toggler i, .add-evaluator {
      font-size: 12px;
 }
-
 
 #nav-bar-left a.timeframe-toggler {
     padding: 0 10px;
@@ -83,16 +65,11 @@
     margin-bottom: 0;
 }
 
-#nav-bar-right {
-    border-top: 0;
-    flex-direction: row-reverse;
-    padding: 0;
-    right: 0;
-    position: fixed;
-}
 
 #nav-bar-right a {
     padding: 0 10px;
 }
 
-
+.graph-view {
+    min-height: 400px;
+}

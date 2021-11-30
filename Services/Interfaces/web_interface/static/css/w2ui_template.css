@@ -16,12 +16,12 @@
 
 .w2ui-empty-record *, .w2ui-empty-record {
     border: none !important;
-    box-shadow:none;
+    box-shadow:none !important;
 }
 
 .w2ui-btn.close-btn {
     padding: 24px 9px !important;
-    padding-top: 24px;
+    padding-top: 24px !important;
 }
 
 .w2ui-btn {
@@ -41,45 +41,45 @@
 }
 
 .w2ui-btn {
-    margin: 0;
+    margin: 0 !important;
 }
 
 .form-control, input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
     background-color: #131722 !important;
     color: #b2b5be !important;
-    border-color: #2a2e39;
+    border-color: #2a2e39 !important;
     background-image: unset !important;
 }
 
 
 .w2ui-record, .w2ui-btn {
-    border: 1px solid #2a2e39;
+    border: 1px solid #2a2e39 !important;
 }
 
 
 .w2ui-empty-record, .w2ui-empty-record:hover, .w2ui-grid-footer, .w2ui-grid-columns, .w2ui-grid-columns *, .w2ui-grid-toolbar,.w2ui-grid-toolbar *, .w2ui-grid-header, .w2ui-record, .grid_RSI_footer {
-    background-color: #131722;
-    color: #b2b5be;
-    background-image: unset;
+    background-color: #131722 !important;
+    color: #b2b5be !important;
+    background-image: unset !important;
 }
 
 
 
 .w2ui-overlay tr:hover, .w2ui-grid-toolbar td:hover, .w2ui-grid-toolbar tr:hover, .w2ui-grid-toolbar table:hover, .w2ui-grid-toolbar tbody:hover, .w2ui-grid-toolbar table tbody tr:hover td, .w2ui-grid-toolbar table.dataTable tbody tr:hover td {
-    -moz-box-shadow: none;
-    -webkit-box-shadow: none;
-    box-shadow: none;
+    -moz-box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
 }
 
 .w2ui-grid-header {
-    font-size: 1rem;
-    height:unset;
-    padding: 4px;
+    font-size: 1rem !important;
+    height:unset !important;
+    padding: 4px !important;
 }
 
 
 .w2ui-selected {
     color: #1e53e5 !important;
     background: #2a2e39 !important;
-    border: 1px solid #131722;
+    border: 1px solid #131722 !important;
 }
