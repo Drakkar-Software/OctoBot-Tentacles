@@ -110,11 +110,29 @@ $(document).ready(function() {
 // crosshair
 var cH = $('#crosshair-h'),
     cV = $('#crosshair-v');
-
+// todo remove from event listener when not on chart instead of display none
 $(document).on('mousemove',function(e){
     cH.css('top',e.pageY);
     cV.css('left',e.pageX);
 });
+
+// show hide when not in charts crosshair
+function handleCrosshairVisibility(){
+    const charts = $("#pairs-tabcontent");
+    charts.on('mouseover', function(event){showCrosshair()});
+    charts.on('mouseout', function(event){hideCrosshair()});
+    const backtestingChart = $("#backtesting-run-overview");
+    backtestingChart.on('mouseover', function(event){showCrosshair()});
+    backtestingChart.on('mouseout', function(event){hideCrosshair()});
+}
+
+function hideCrosshair(){
+   $(".hair").css("display", "none")
+}
+
+function showCrosshair(){
+   $(".hair").css("display", "block")
+}
 
 function updateWindowSizes(){
     const currentChartsHeight = $("#pairs-tabcontent").outerHeight(true)
@@ -497,6 +515,7 @@ $(document).ready(function() {
     handleResizables();
     handleBrowserWindowSizeChange ()
     updateWindowSizes()
+    handleCrosshairVisibility()
     handleUserInputsActions();
     handleOptimizerActions();
     handleTabSelectionEvents();
