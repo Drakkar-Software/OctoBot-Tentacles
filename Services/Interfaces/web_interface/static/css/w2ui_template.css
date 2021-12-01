@@ -53,13 +53,13 @@
 
 
 .w2ui-record, .w2ui-btn {
-    border: 1px solid #2a2e39 !important;
+    border: 1px solid var(--brdr) !important;
 }
 
 
-.w2ui-empty-record, .w2ui-empty-record:hover, .w2ui-grid-footer, .w2ui-grid-columns, .w2ui-grid-columns *, .w2ui-grid-toolbar,.w2ui-grid-toolbar *, .w2ui-grid-header, .w2ui-record, .grid_RSI_footer {
-    background-color: #131722 !important;
-    color: #b2b5be !important;
+#strategy_body .w2ui-head, #strategy_body .w2ui-empty-record, #strategy_body .w2ui-empty-record:hover, #strategy_body .w2ui-grid-footer, #strategy_body .w2ui-grid-columns, #strategy_body w2ui-grid-columns *, #strategy_body .w2ui-grid-toolbar,#strategy_body .w2ui-grid-toolbar *, #strategy_body .w2ui-grid-header, #strategy_body .w2ui-record, #strategy_body .grid_RSI_footer {
+    background-color: var(--bg) !important;
+    color: var(--fnt) !important;
     background-image: unset !important;
 }
 
@@ -71,15 +71,23 @@
     box-shadow: none !important;
 }
 
-.w2ui-grid-header {
+#strategy_body .w2ui-grid-header {
     font-size: 1rem !important;
-    height:unset !important;
+    height: unset !important;
     padding: 4px !important;
+    border-bottom: none !important;
 }
 
 
-.w2ui-selected {
+#strategy_body .w2ui-selected {
+    border: 1px solid #131722 !important;
+}
+
+.w2ui-grid .w2ui-grid-body {
+    background-color: var(--bg);
+}
+
+#strategy_body .w2ui-selected * {
     color: #1e53e5 !important;
     background: #2a2e39 !important;
-    border: 1px solid #131722 !important;
 }
