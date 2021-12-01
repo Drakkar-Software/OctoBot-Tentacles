@@ -123,9 +123,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 tasks.append(asyncio.create_task(self.get_recent_trades_history(self.exchange_name, symbol)))
 
                 for time_frame_index, time_frame in enumerate(self.time_frames):
-                    await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
-                    #TODO fix database cursors
-                    # tasks.append(asyncio.create_task(self.get_ohlcv_history(self.exchange_name, symbol, time_frame)))
+                    tasks.append(asyncio.create_task(self.get_ohlcv_history(self.exchange_name, symbol, time_frame)))
                     tasks.append(asyncio.create_task(self.get_kline_history(self.exchange_name, symbol, time_frame)))
                     if symbol_index == time_frame_index == 0:
                         # let tables get created
@@ -198,7 +196,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
 
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec, start_time, end_time):
         async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
-                                                                       start_time, end_time):
+                                                             start_time, end_time):
             await self.save_ohlcv(
                     exchange=exchange,
                     cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
@@ -242,7 +240,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 multiple=True
             )
 
-
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         try:
             time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
@@ -284,14 +281,13 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         pass
 
     async def adapt_timestamps(self):
-        if self.start_timestamp is not None:
-            lowest_timestamp = min([await self.get_first_candle_timestamp(symbol, tf)
-                                    for tf in self.time_frames
-                                    for symbol in self.symbols])
-            if lowest_timestamp < self.start_timestamp:
-                self.start_timestamp = lowest_timestamp
-            if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
-                raise backtesting_errors.DataCollectorError("start_timestamp is higher than end_timestamp")
+        lowest_timestamp = min([await self.get_first_candle_timestamp(symbol, tf)
+                                for tf in self.time_frames
+                                for symbol in self.symbols])
+        if self.start_timestamp is None or lowest_timestamp < self.start_timestamp:
+            self.start_timestamp = lowest_timestamp
+        if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
+            raise backtesting_errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
         symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol)

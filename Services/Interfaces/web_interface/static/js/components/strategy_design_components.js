@@ -21,14 +21,17 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
       x: chartDetails.x,
       mode: chartDetails.kind,
       type: chartDetails.kind,
+      text: chartDetails.text,
       name: `${chartDetails.title} (${chartIdentifier})`,
       backtesting_id: backtesting_id,
     }
-    if (chartDetails.color !== null){
-        chartedElements.marker = {
-          color: chartDetails.color
+    const markerAttributes = ["color", "size", "opacity", "line"];
+    chartedElements.marker = {};
+    markerAttributes.forEach(function (attribute){
+        if (chartDetails[attribute] !== null){
+            chartedElements.marker[attribute] = chartDetails[attribute];
         }
-    }
+    });
     Array("y", "open", "high", "low", "close", "volume").forEach(function (element){
         if(chartDetails[element] !== null){
             chartedElements[element] = chartDetails[element]
