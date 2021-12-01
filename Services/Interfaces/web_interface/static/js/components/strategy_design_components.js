@@ -49,11 +49,11 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
 function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
     const xaxis = {
-        showspikes: true,
-        spikethickness: 1,
-        spikesnap: "cursor",
-        spikemode: "across",
-        spikecolor: "#b2b5be",
+//        showspikes: true,
+//        spikethickness: 1,
+//        spikesnap: "cursor",
+//        spikemode: "across",
+//        spikecolor: "#b2b5be",
         gridcolor: "#2a2e39",
         color: "#b2b5be",
         autorange: true,
@@ -62,11 +62,11 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         }
     };
     const yaxis = {
-        showspikes: true,
-        spikethickness: 1,
-        spikesnap: "cursor",
-        spikemode: "across",
-        spikecolor: "#b2b5be",
+//        showspikes: true,
+//        spikethickness: 1,
+//        spikesnap: "cursor",
+//        spikemode: "across",
+//        spikecolor: "#b2b5be",
         gridcolor: "#2a2e39",
         color: "#b2b5be",
         fixedrange: false,
@@ -240,15 +240,16 @@ function hideSubChartWhenEmpty(data){
             }
         }
     });
-    if(!hasSubChart){
-        $("#main-chart").css("height", "100%")
-        $("#main-chart").css("max-height", "100%")
-        updateWindowSizes()
-    }else if($("#sub-chart").css("height") === "0px"){
-        $("#main-chart").css("height", "65%")
-        $("#main-chart").css("max-height", "calc(100% - 25px)")
-        updateWindowSizes()
-    }
+//  todo should work when its done after (re)plot
+//    if(!hasSubChart){
+//        $("#main-chart").css("height", "100%")
+//        $("#main-chart").css("max-height", "100%")
+//        updateWindowSizes()
+//    }else if($("#sub-chart").css("height") === "0px"){
+//        $("#main-chart").css("height", "65%")
+//        $("#main-chart").css("max-height", "calc(100% - 25px)")
+//        updateWindowSizes()
+//    }
 }
 
 function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {

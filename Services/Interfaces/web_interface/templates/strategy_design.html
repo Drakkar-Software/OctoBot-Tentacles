@@ -25,7 +25,7 @@
 
 </style>
 
-<nav id="new-nav" class="nav-tabs brdr-b d-flex">
+<nav id="new-nav" class="nav-tabs brdr-b d-flex bg-dark">
     <div class="main-dropdown-menu brdr-r">
         <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-lh nav-h d-block" data-toggle="dropdown">
             <span><i class="fas fa-bars"></i></span>
@@ -113,20 +113,28 @@
     </ul>
 </nav>
 
+
+
 <div id="strategy_body" class="strategy_body bg-dark w-100 p-fixed">
     <div class="resizable w-100" id="pairs-tabcontent">
         <div class="h-100" id="charts-div" role="tabreal">
+                <div id="crosshair-h" class="hair"></div>
+                <div id="crosshair-v" class="hair"></div>
             <div id="charts"
                  class="w-100 h-100"
                  data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
                  data-backtesting-url="{{url_for('backtesting_main_plotted_data', exchange_id=exchange_id)}}"
                  data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
             >
-                <div id="main-chart" class="resizable" >
+
+
+                <div id="main-chart-outer" class="resizable" >
+                    <div id="main-chart" class="h-100">
+                    </div>
                 </div>
                 <div class="draggable-resizer bg-dark-grey">
                 </div>
-                <div id="sub-chart" class="bg-dark">
+                <div id="sub-chart" class="">
                 </div>
             </div>
         </div>

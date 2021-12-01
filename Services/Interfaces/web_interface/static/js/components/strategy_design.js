@@ -107,7 +107,14 @@ $(document).ready(function() {
     $('.scroll_horizontal').hScroll(40); // You can pass (optionally) scrolling amount
 });
 
+// crosshair
+var cH = $('#crosshair-h'),
+    cV = $('#crosshair-v');
 
+$(document).on('mousemove',function(e){
+    cH.css('top',e.pageY);
+    cV.css('left',e.pageX);
+});
 
 function updateWindowSizes(){
     const currentChartsHeight = $("#pairs-tabcontent").outerHeight(true)
@@ -129,7 +136,7 @@ function updateWindowSizes(){
     $("#toolbox-tabcontent").css("height", newTabContentHeight)
 
 
-    const currentMainChartHeight = $("#main-chart").outerHeight(true)
+    const currentMainChartHeight = $("#main-chart-outer").outerHeight(true)
     const newSubChartHeight = "calc(100% - 4px - " + currentMainChartHeight + "px)" /* 4px is from the slider draggable*/
     $("#sub-chart").css("height", newSubChartHeight)
 

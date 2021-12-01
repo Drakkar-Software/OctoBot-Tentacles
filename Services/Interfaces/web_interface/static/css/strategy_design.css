@@ -176,14 +176,20 @@ body * {
     stroke: unset;
 }
 
-#main-chart {
+#main-chart-outer {
     height: 65%;
     max-height: calc(100% - 25px);
+}
+
+#main-chart-outer {
+    overflow: hidden;
 }
 
 .draggable-resizer {
     padding: 2px;
 }
+
+
 
 #backtesting-chart {
     height:50%;
@@ -198,6 +204,27 @@ body * {
     height: calc(35% - 5px);
     max-height: calc(100% - 15px);
     position: relative;
+}
+
+/** crosshair **/
+
+#crosshair-h{
+    width:100%;
+    border:dashed 1px var(--fnt);
+}
+#crosshair-v{
+    height:100%;
+    border:dashed 1px var(--fnt);
+}
+.hair{
+    position:fixed;
+    background-color:rgba(100,100,100,0.5);
+    z-index: 0;
+}
+
+#new-nav {
+    z-index: 99 !important;
+    position: sticky;
 }
 
 /** cahrts END **/
