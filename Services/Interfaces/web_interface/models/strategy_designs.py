@@ -74,10 +74,10 @@ def reload_scripts():
         raise
 
 
-def get_run_data(trading_mode, optimizer_id=None):
+def get_run_data(trading_mode, include_optimizer_runs=True):
     return {
         "data": interfaces_util.run_in_bot_async_executor(
-            scripting_library.read_metadata(trading_mode=trading_mode, optimizer_id=optimizer_id)
+            scripting_library.read_metadata(trading_mode=trading_mode, include_optimizer_runs=include_optimizer_runs)
         )
     }
 

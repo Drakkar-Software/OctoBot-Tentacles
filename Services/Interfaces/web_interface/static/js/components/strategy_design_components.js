@@ -232,7 +232,7 @@ function afterGraphPlot(target){
 }
 
 function hideSubChartWhenEmpty(data){
-    let hasSubChart = false;
+    let hasSubChart = _getEnabledCharts().length > 1;
     data.data.sub_elements.forEach(function (sub_element) {
         if (sub_element.type == "chart") {
             if(sub_element.name === "sub-chart"){
@@ -240,20 +240,19 @@ function hideSubChartWhenEmpty(data){
             }
         }
     });
-//  todo should work when its done after (re)plot
-//    if(!hasSubChart){
-//        $("#main-chart").css("height", "100%")
-//        $("#main-chart").css("max-height", "100%")
-//        updateWindowSizes()
-//    }else if($("#sub-chart").css("height") === "0px"){
-//        $("#main-chart").css("height", "65%")
-//        $("#main-chart").css("max-height", "calc(100% - 25px)")
-//        updateWindowSizes()
-//    }
+   if(!hasSubChart){
+       $("#main-chart").css("height", "100%")
+       $("#main-chart").css("max-height", "100%")
+       updateWindowSizes()
+   }else if($("#sub-chart").css("height") === "0px"){
+       $("#main-chart").css("height", "65%")
+       $("#main-chart").css("max-height", "calc(100% - 25px)")
+       updateWindowSizes()
+   }
 }
 
 function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
-    _updateChartLayout(data.data.sub_elements.length);
+    _updateChartLayout();
     hideSubChartWhenEmpty(data);
     const hiddenXAxisChartIDs = ["sub-chart"];
     _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
@@ -332,15 +331,28 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
     }
 }
 
-function _updateChartLayout(subElementCount){
+function _getEnabledCharts(){
+    const charts = ["main-chart", "sub-chart"];
+    const enabledCharts = [];
+    charts.forEach(function (chart){
+        if(typeof document.getElementById(chart).data !== "undefined"){
+            enabledCharts.push(chart)
+        }
+    })
+    return enabledCharts;
+}
+
+function _updateChartLayout(){
+    const subElementCount = _getEnabledCharts().length;
     if(subElementCount <= 1){
-        $("#main-chart").resizable("option", "disabled", true );
+        $("#main-chart-outer").resizable("option", "disabled", true );
+    }else {
+        $("#main-chart-outer").resizable("option", "disabled", false );
     }
     if(subElementCount <= 2){
-        $("#main-chart").addClass("max-width");
-    }
-    if(subElementCount > 2){
-        $("#main-chart").removeClass("max-width");
+        $("#main-chart-outer").addClass("max-width");
+    }else {
+        $("#main-chart-outer").removeClass("max-width");
     }
 }
 
