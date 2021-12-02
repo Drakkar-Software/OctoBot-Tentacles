@@ -23,6 +23,11 @@
     padding: 0;
 }
 
+/** remo bg image **/
+body::before {
+    background-image: none !important;
+}
+
 </style>
 
 <nav id="new-nav" class="nav-tabs brdr-b d-flex bg-dark">
@@ -115,7 +120,7 @@
 
 
 
-<div id="strategy_body" class="strategy_body bg-dark w-100 p-fixed">
+<div id="strategy_body" class="strategy_body bg-dark p-fixed resizable">
     <div class="resizable w-100" id="pairs-tabcontent">
         <div class="h-100" id="charts-div" role="tabreal">
                 <div id="crosshair-h" class="hair"></div>
@@ -382,7 +387,7 @@
                       <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Optimizer Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light brdr-l">
-                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-results-tab" data-toggle="tab" href="#strategy-optimizer-results" role="tab" aria-controls="strategy-optimizer-results" aria-selected="true">Optimizer Results</a>
+                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-queue-tab" data-toggle="tab" href="#strategy-optimizer-queue" role="tab" aria-controls="strategy-optimizer-queue" aria-selected="true">Optimizer Queue</a>
                     </li>
                     <div class="toolbox-buttons bg-dark-grey nav-item d-flex">
                         <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start brdr-l m-0"
@@ -405,8 +410,8 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade h-100" id="strategy-optimizer-results" role="tabreal" aria-labelledby="strategy-optimizer-results-tab">
-                        <div id="strategy-optimizer-chart-or-tables">
+                    <div class="tab-pane fade h-100" id="strategy-optimizer-queue" role="tabreal" aria-labelledby="strategy-optimizer-queue-tab">
+                        <div id="strategy-optimizer-queue-table">
                         </div>
                     </div>
                 </div>
@@ -415,6 +420,88 @@
         </div>
     </div>
 </div>
+
+<!-- Sidebar navigation -->
+<div id="slide-out" class="side-nav side wide sn-bg-1 slim">
+      <ul class="custom-scrollbar">
+        <!-- Profile Name -->
+        <li>
+          <div class="logo-wrapper sn-ad-avatar-wrapper">
+            <!-- see https://avatars.dicebear.com/styles/bottts -->
+            <a href="#"><img src="https://avatars.dicebear.com/api/bottts/:profile name.svg" class="rounded-circle"><span>Profile Name</span></a>
+          </div>
+        </li>
+        <!--/. Profile Name -->
+        <!-- Side navigation links -->
+        <li>
+          <ul class="collapsible collapsible-accordion">
+            <li>
+                <a class="collapsible-header waves-effect arrow-r active">
+                    <i class="sv-slim-icon fas fa-chevron-right"></i> Submit blog<i class="fas fa-angle-down rotate-icon"></i></a>
+              <div class="collapsible-body">
+                <ul>
+                  <li><a href="#" class="waves-effect active">
+                    <span class="sv-slim"> SL </span>
+                    <span class="sv-normal">Submit listing</span></a>
+                  </li>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> RF </span>
+                    <span class="sv-normal">Registration form</span></a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li><a class="collapsible-header waves-effect arrow-r"><i class="sv-slim-icon far fa-hand-point-right"></i> Instruction<i class="fas fa-angle-down rotate-icon"></i></a>
+              <div class="collapsible-body">
+                <ul>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> FB </span>
+                    <span class="sv-normal">For bloggers</span></a>
+                  </li>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> FA </span>
+                    <span class="sv-normal">For authors</span></a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li><a class="collapsible-header waves-effect arrow-r"><i class="sv-slim-icon fas fa-eye"></i> About<i class="fas fa-angle-down rotate-icon"></i></a>
+              <div class="collapsible-body">
+                <ul>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> I </span>
+                    <span class="sv-normal">Introduction</span></a>
+                  </li>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> MM </span>
+                    <span class="sv-normal">Monthly meetings</span></a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li><a class="collapsible-header waves-effect arrow-r"><i class="sv-slim-icon far fa-envelope"></i> Contact me<i class="fas fa-angle-down rotate-icon"></i></a>
+              <div class="collapsible-body">
+                <ul>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> F </span>
+                    <span class="sv-normal">FAQ</span></a>
+                  </li>
+                  <li><a href="#" class="waves-effect">
+                    <span class="sv-slim"> W </span>
+                    <span class="sv-normal">Write a message</span></a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li><a id="toggle" class="waves-effect"><i class="sv-slim-icon fas fa-angle-double-left"></i>Minimize menu</a>
+            </li>
+          </ul>
+        </li>
+        <!--/. Side navigation links -->
+      </ul>
+      <div class="sidenav-bg rgba-blue-strong"></div>
+    </div>
+<!--Sidebar navigation END -->
 
 {% endblock %}
 

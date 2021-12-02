@@ -167,6 +167,8 @@ body * {
 
 .strategy_body {
     height: calc(100vh - 87px);
+    width: calc(100% - 60px);
+    max-width: calc(100% - 3.75rem);
 }
 
 
@@ -181,7 +183,7 @@ body * {
     max-height: calc(100% - 25px);
 }
 
-#main-chart-outer {
+#main-chart-outer, #backtesting-run-overview, #sub-chart {
     overflow: hidden;
 }
 
@@ -220,6 +222,7 @@ body * {
     position:fixed;
     background-color:rgba(100,100,100,0.5);
     z-index: 0;
+    display: none;
 }
 
 #new-nav {

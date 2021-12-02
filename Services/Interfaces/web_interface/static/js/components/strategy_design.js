@@ -504,6 +504,28 @@ function handleSymbolSelectors(){
     })
 }
 
+// handle sidebar width change
+function updateSideBarWidth(){
+    const currentStrategyBodyWidth = $("#strategy_body").outerWidth(true)
+    const newSideBarWidth = "calc(100vw - " + currentStrategyBodyWidth + "px)";
+    $("#slide-out").css("width", newSideBarWidth);
+}
+
+function handleSidebarWidthChange(){
+    $("#strategy_body").on('resize', function(event){updateSideBarWidth()});
+}
+
+
+//$(document).ready(function() {
+//  // SideNav Button Initialization
+//  $(".button-collapse").sideNav2({
+//    slim: true
+//  });
+//  // SideNav Scrollbar Initialization
+//  var sideNavScrollbar = document.querySelector('.custom-scrollbar');
+//  var ps = new PerfectScrollbar(sideNavScrollbar);
+//})
+
 const optimizerSocket = get_websocket("/strategy_optimizer");
 const displayedRunIds = [];
 let backtestingTableName = undefined;
@@ -527,5 +549,6 @@ $(document).ready(function() {
     init_backtesting_status_websocket();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
+    handleSidebarWidthChange()
     backtesting_done_callbacks.push(postBacktestingDone)
 });
