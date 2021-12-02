@@ -63,6 +63,10 @@ body {
     border-top: 4px solid var(--brdr) !important;
 }
 
+.brdr-r-xl {
+    border-right: 4px solid var(--brdr) !important;
+}
+
 .brdr-l {
     border-left: 1px solid var(--brdr) !important;
 }
@@ -413,9 +417,9 @@ button.fullscreen-size-btn {
 
 /** jquery resizeable **/
 .ui-resizable-s {
-    height: 20px;
+    height: 25px;
     width: 100%;
-    bottom: -10px;
+    bottom: -13px;
     left: 0;
 }
 /** jquery resizeable **/

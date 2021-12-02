@@ -120,7 +120,7 @@ body::before {
 
 
 
-<div id="strategy_body" class="strategy_body bg-dark p-fixed resizable">
+<div id="strategy_body" class="strategy_body bg-dark p-fixed brdr-r-xl resizable">
     <div class="resizable w-100" id="pairs-tabcontent">
         <div class="h-100" id="charts-div" role="tabreal">
                 <div id="crosshair-h" class="hair"></div>
@@ -146,8 +146,8 @@ body::before {
     </div>
 
 
-    <div id="toolbox" class="strategy-toolbox bg-dark w-100 p-absolute">
-        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs bg-dark brdr-t-xl brdr-b" id="main-toolbox-tabs" role="tablist">
+    <div id="toolbox" class="strategy-toolbox w-100 p-absolute">
+        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs brdr-t-xl brdr-b" id="main-toolbox-tabs" role="tablist">
             <div class="my-auto mr-4" id="octobot-logo">
                 <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
                 <h4>
@@ -223,7 +223,7 @@ body::before {
             </div>
         </span>
 
-        <div class="tab-content bg-dark soft-h-100" id="toolbox-tabcontent">
+        <div class="tab-content soft-h-100" id="toolbox-tabcontent">
             <div class="tab-pane fade h-100" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">
                     {% if True %}
                     <iframe class="w-100 h-100 noBorder" src="http://localhost:8888/lab/tree/tentacles/Trading/Mode/scripted_trading_mode/trading/trading_script.py">
@@ -333,7 +333,7 @@ body::before {
                     </div>
                 </ul>
 
-                <div class="tab-content bg-dark soft-h-100" id="backtesting-tabcontent">
+                <div class="tab-content soft-h-100" id="backtesting-tabcontent">
 
                     <div class="tab-pane fade scroll-vertically h-100" id="backtesting-settings" role="tabreal" aria-labelledby="backtesting-settings-tab">
                         <div id="backtesting-inputs">
