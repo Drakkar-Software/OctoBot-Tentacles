@@ -25,7 +25,7 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
       name: `${chartDetails.title} (${chartIdentifier})`,
       backtesting_id: backtesting_id,
     }
-    const markerAttributes = ["color", "size", "opacity", "line"];
+    const markerAttributes = ["color", "size", "opacity", "line", "symbol"];
     chartedElements.marker = {};
     markerAttributes.forEach(function (attribute){
         if (chartDetails[attribute] !== null){
