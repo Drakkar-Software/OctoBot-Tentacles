@@ -172,7 +172,7 @@ body * {
 .strategy_body {
     height: calc(100vh - 87px);
     width: calc(100% - 60px);
-    max-width: calc(100% - 3.75rem);
+    /** max-width: calc(100% - 3.75rem); todo enable with sidebar**/
 }
 
 
@@ -270,6 +270,11 @@ body * {
 
 .nav-item > button {
     padding: 0 2rem !important;
+    line-height: 41px;
+}
+
+.toolbox-buttons .btn.btn-success, .toolbox-buttons .btn.btn-warning {
+    line-height: 39px;
 }
 
 .toolbox-buttons .btn-warning, .w2ui-btn {
