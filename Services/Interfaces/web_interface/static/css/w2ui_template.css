@@ -91,3 +91,7 @@
     color: #1e53e5 !important;
     background: #2a2e39 !important;
 }
+
+#strategy_body .w2ui-icon.icon-search-down.w2ui-search-down {
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAAGUExURf///ygoKAt0wnYAAAABdFJOUwBA5thmAAAALElEQVR42mJgwAIYwQCdjxCBMhEiMAZlAmiGwq3FJ4LNuVAhDD8xEAEAAgwAK/oATMTxj0kAAAAASUVORK5CYII=") !important;
+}

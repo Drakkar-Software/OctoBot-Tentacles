@@ -1,0 +1,101 @@
+    .border_dot{
+  border:1px dashed #ccc;
+}
+
+#dragable_modal {
+  position: relative;
+}
+
+#dragable_modal .modal-dialog {
+  position: fixed;
+  max-width: 100%;
+  box-shadow: 0 0 5px rgba(0,0,0,.5);
+  background: var(--white);
+  /* width:500px; */
+  margin: 0;
+  /* padding: 20px; */
+  /* overflow: hidden; */
+  /* resize: both; */
+}
+
+#dragable_modal .modal-content {
+  /* padding: 20px; */
+  height: 400px;
+  overflow: hidden;
+  resize: both;
+  width:500px;
+}
+
+
+#dragable_modal .modal-body{
+  height:relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+#dragable_modal .modal-header{
+  background: var(--dark);
+  color: var(--white);
+  border-bottom: 0px;
+  padding: 0px;
+}
+#dragable_modal .modal-header h3{
+  color: var(--white);
+  font-size: 18px;
+}
+#dragable_modal .close_btn{
+    top: -2px;
+    margin: 0px !important;
+    opacity: 1;
+    width: 30px;
+    height: 30px;
+    padding: 0px;
+    color: #fff;
+}
+
+.custom_tab_on_editor{
+  background: var(--orange);
+    padding: 0px;
+    margin: 0px;
+}
+
+.custom_tab_on_editor .nav-item{
+  margin-bottom: 0px;
+}
+.custom_tab_on_editor .nav-item .nav-link {
+  min-width: 100px;
+  text-align: center;
+  border: 0px solid transparent;
+  border-radius: 0px;
+  padding: 10px;
+  color:var(--white)
+}
+
+.custom_tab_on_editor .nav-item .nav-link:hover {
+    color: #ffffff;
+    border-width: 0px;
+    background: #ffb586;
+    border-bottom: 0px solid transparent;
+}
+
+
+.custom_tab_on_editor .nav-item.show .nav-link, .custom_tab_on_editor .nav-link.active {
+  color: #ffffff;
+  border-width: 0px;
+  background: #ffb586;
+  border-bottom: 0px solid transparent;
+  position: relative;
+}
+.dragable_touch{
+  cursor: move;
+}
+
+.custom_tab_on_editor .nav-item.show .nav-link:before, .custom_tab_on_editor .nav-link.active:before{
+    content: '';
+    border-bottom: 10px solid var(--white);
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    position: absolute;
+    bottom: 0px;
+    left:50%;
+    transform: translateX(-50%);
+}
