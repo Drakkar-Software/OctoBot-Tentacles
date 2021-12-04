@@ -197,17 +197,22 @@ function _handle_backtesting(backtesting_status_data, socket){
                 report.attr("loading", "true");
                 load_report(report, should_alert);
             }
-            backtesting_done_callbacks.forEach(function (callback){
-                callback();
-            })
+
+            if(previousBacktestingStatus === "computing") {
+                backtesting_done_callbacks.forEach(function (callback) {
+                    callback();
+                })
+            }
         }
     }
     if(first_refresh_state === ""){
         first_refresh_state = backtesting_status;
     }
+    previousBacktestingStatus = backtesting_status;
 }
 
 let first_refresh_state = "";
 
 const lock_interface_callbacks = [];
 const backtesting_done_callbacks = [];
+let previousBacktestingStatus = undefined;

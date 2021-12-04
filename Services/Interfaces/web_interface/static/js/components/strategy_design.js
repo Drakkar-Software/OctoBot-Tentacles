@@ -1,8 +1,8 @@
-function displayChartsAndInputs(replot, backtestingRunId, added, symbol, time_frame, cleanCharts){
+function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, symbol, time_frame, cleanCharts){
     const chartIdentifier = backtestingRunId ? backtestingRunId : "live";
     let url = $("#charts").data("live-url")
     if(replot){
-       url = $("#charts").data("backtesting-url") + `&run_id=${backtestingRunId}`
+       url = $("#charts").data("backtesting-url") + `&run_id=${backtestingRunId}&optimizer_id=${optimizerId}`
     }
     url = `${url}&symbol=${symbol}&time_frame=${time_frame}`
     $.get({
@@ -14,7 +14,7 @@ function displayChartsAndInputs(replot, backtestingRunId, added, symbol, time_fr
                 $("#sub-chart").empty();
                 plotlyCreatedChartsIDs.splice(0, plotlyCreatedChartsIDs.length);
             }
-            updateDisplayedElement(data, replot, editors, false, backtestingRunId, added, backtestingTableName, chartIdentifier)
+            updateDisplayedElement(data, replot, editors, false, backtestingRunId, optimizerId, added, backtestingTableName, chartIdentifier)
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
@@ -250,11 +250,13 @@ function handleResizables(){
 function updateBacktestingSelector(updated_data, update_url, dom_root_element, msg, status){
     function updateSelection(event, selected){
         if(typeof event.recid !== "undefined"){
-            updateBacktestingAnalysisReport(w2ui[event.target].get(event.recid).id, selected);
+            updateBacktestingAnalysisReport(getIdFromTableRow(w2ui[event.target], event.recid),
+                getOptimizerIdFromTableRow(event.recid), selected);
         }
         if(typeof event.recids !== "undefined"){
             event.recids.forEach(function (id){
-                updateBacktestingAnalysisReport(w2ui[event.target].get(id).id, selected);
+                updateBacktestingAnalysisReport(getIdFromTableRow(w2ui[event.target], id),
+                    getOptimizerIdFromTableRow(id), selected);
             })
         }
     }
@@ -267,21 +269,23 @@ function initBacktestingRunSelector(){
 }
 
 function updateBacktestingReport(updated_data, update_url, dom_root_element, msg, status){
-    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.added, backtestingTableName, updated_data.id,)
+    updateDisplayedElement(msg, true, editors, true, updated_data.id, updated_data.optimizer_id, updated_data.added, backtestingTableName, updated_data.id,)
 }
 
-function updateBacktestingAnalysisReport(run_id, addReport){
-    if(addReport && displayedRunIds.indexOf(run_id) === -1){
-        displayedRunIds.push(run_id)
+function updateBacktestingAnalysisReport(run_id, optimizer_id, addReport){
+    const fullId = mergeBacktestingOptimizerID(run_id, optimizer_id);
+    if(addReport && displayedRunIds.indexOf(fullId) === -1){
+        displayedRunIds.push(fullId)
     }
-    if(!addReport && displayedRunIds.indexOf(run_id) !== -1){
-        displayedRunIds.splice(displayedRunIds.indexOf(run_id), 1);
+    if(!addReport && displayedRunIds.indexOf(fullId) !== -1){
+        displayedRunIds.splice(displayedRunIds.indexOf(fullId), 1);
     }
     // upper charts
-    displayChartsAndInputs(true, run_id, addReport, getSelectedSymbol(), getSelectedTimeFrame(), false)
+    displayChartsAndInputs(true, run_id, optimizer_id, addReport, getSelectedSymbol(), getSelectedTimeFrame(), false)
     // toolbox
     const data = {
         id: run_id,
+        optimizer_id: optimizer_id,
         exchange: "binance", //TODO
         symbol: getSelectedSymbol(),
         time_frame: getSelectedTimeFrame(),
@@ -454,6 +458,10 @@ function on_optimizer_state_update(data){
         $("#backtesting_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
     }
+    if(status === "finished" && previousOptimizerStatus === "computing"){
+        postBacktestingDone();
+    }
+    previousOptimizerStatus = status;
 }
 
 function check_optimizer_state(){
@@ -492,9 +500,12 @@ function getSelectedTimeFrame(){
 function updateSymbolGraphs(){
     const selectedSymbol =getSelectedSymbol();
     const selectedTimeFrame = getSelectedTimeFrame();
-    displayChartsAndInputs(false, null, true, selectedSymbol,selectedTimeFrame, true);
-    displayedRunIds.forEach(function (runID) {
-        displayChartsAndInputs(true, runID, true, selectedSymbol,selectedTimeFrame, false);
+    displayChartsAndInputs(false, null, null, true, selectedSymbol,selectedTimeFrame, true);
+    displayedRunIds.forEach(function (fullId) {
+        const splitIds = fullId.split(ID_SEPARATOR);
+        const runID = Number(splitIds[0]);
+        const optimizerId = Number(splitIds[1]);
+        displayChartsAndInputs(true, runID, optimizerId, true, selectedSymbol,selectedTimeFrame, false);
     })
 }
 
@@ -529,6 +540,7 @@ function handleSidebarWidthChange(){
 const optimizerSocket = get_websocket("/strategy_optimizer");
 const displayedRunIds = [];
 let backtestingTableName = undefined;
+let previousOptimizerStatus = undefined;
 
 $(document).ready(function() {
     initBacktestingRunSelector();

@@ -23,6 +23,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_commons.logging as bot_logging
 import octobot_commons.databases as databases
 import octobot_commons.enums as commons_enums
+import octobot_commons.errors as commons_errors
 import tentacles.Services.Interfaces.web_interface.models.backtesting as backtesting_model
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Interfaces.web_interface.constants as constants
@@ -40,14 +41,17 @@ def get_plotted_data(trading_mode, symbol, time_frame, run_id=None, optimizer_id
                                                  optimizer_id=optimizer_id)
     exchange_name = trading_api.get_exchange_name(trading_api.get_exchange_manager_from_exchange_id(exchange_id)) \
         if exchange_id else None
-    interfaces_util.run_in_bot_async_executor(
-        elements.fill_from_database(database_manager, exchange_name, symbol, time_frame,
-                                    exchange_id, with_inputs=run_id is None)
-    )
+    try:
+        interfaces_util.run_in_bot_async_executor(
+            elements.fill_from_database(database_manager, exchange_name, symbol, time_frame,
+                                        exchange_id, with_inputs=run_id is None)
+        )
+    except commons_errors.DatabaseNotFoundError as e:
+        _get_logger().exception(e, True, f"Error when opening database: {e}")
     return elements.to_json()
 
 
-def get_backtesting_run_plotted_data(trading_mode, exchange, symbol, run_id, optimizer_id=None):
+def get_backtesting_run_plotted_data(trading_mode, exchange, symbol, run_id, optimizer_id):
     elements = interfaces_util.run_in_bot_async_executor(
         trading_mode.get_backtesting_plot(exchange, symbol, run_id, optimizer_id)
     )

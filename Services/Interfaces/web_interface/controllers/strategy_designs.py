@@ -71,10 +71,11 @@ def backtesting_main_plotted_data():
         symbol = flask.request.args.get('symbol')
         time_frame = flask.request.args.get('time_frame')
         run_id = flask.request.args.get('run_id')
+        optimizer_id = int(flask.request.args.get('optimizer_id', 0)) or None
         trading_mode = models.get_config_activated_trading_mode()
         return util.get_rest_reply(
             models.get_plotted_data(trading_mode, symbol_util.convert_symbol(symbol, "|"),
-                                    time_frame, run_id=run_id, exchange_id=exchange_id),
+                                    time_frame, run_id=run_id, optimizer_id=optimizer_id, exchange_id=exchange_id),
             200)
     except Exception as e:
         commons_logging.get_logger("plotted_data").exception(e)
@@ -88,8 +89,10 @@ def backtesting_run_plotted_data():
         request_data = flask.request.get_json()
         trading_mode = models.get_config_activated_trading_mode()
         symbol = symbol_util.convert_symbol(request_data["symbol"], "|")
+        optimizer_id = int(request_data.get('optimizer_id', 0)) or None
         return util.get_rest_reply(models.get_backtesting_run_plotted_data(trading_mode, request_data["exchange"],
-                                                                           symbol, request_data["id"]),
+                                                                           symbol, request_data["id"],
+                                                                           optimizer_id),
                                    200)
     except Exception as e:
         commons_logging.get_logger("backtesting_run_plotted_data").exception(e)

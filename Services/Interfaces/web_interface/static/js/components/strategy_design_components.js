@@ -16,7 +16,7 @@ function getPlotlyConfig(){
     };
 }
 
-function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier){
+function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, optimizer_id, chartIdentifier){
     const chartedElements = {
       x: chartDetails.x,
       mode: chartDetails.kind,
@@ -24,6 +24,7 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
       text: chartDetails.text,
       name: `${chartDetails.title} (${chartIdentifier})`,
       backtesting_id: backtesting_id,
+      optimizer_id: optimizer_id,
     }
     const markerAttributes = ["color", "size", "opacity", "line", "symbol"];
     chartedElements.marker = {};
@@ -46,8 +47,8 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartId
     return chartedElements;
 }
 
-function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier){
-    const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
+function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, optimizer_id, chartIdentifier){
+    const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, optimizer_id, chartIdentifier);
     const xaxis = {
 //        showspikes: true,
 //        spikethickness: 1,
@@ -116,11 +117,11 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
     return layout
 }
 
-function _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisIDs) {
+function _updateChart(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier, afterPlot, hiddenXAxisIDs) {
     const toRemoveTracesByDivID = {};
     const checkedDivIDsForClear = [];
     if (added) {
-        const selectedBacktestingIDs = getSelectedBacktestingIDs(backtestingTableName)
+        const selectedBacktestingIDsWithOptimizer = getSelectedBacktestingIDsWithOptimizer(backtestingTableName)
         data.data.sub_elements.forEach(function (sub_element) {
             if (sub_element.type == "chart") {
                 const divID = sub_element.name;
@@ -133,7 +134,8 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
                     if(typeof graphDiv.data !== "undefined"){
                         graphDiv.data.forEach(function (datum){
                             if(datum.backtesting_id !== null){
-                                if(selectedBacktestingIDs.indexOf(datum.backtesting_id) === -1){
+                                if(selectedBacktestingIDsWithOptimizer.indexOf(
+                                    mergeBacktestingOptimizerID(datum.backtesting_id, datum.optimizer_id)) === -1){
                                     // backtesting graphs are to be removed => not selected anymore
                                     toRemoveTracesByDivID[divID].push(datum);
                                 }
@@ -162,10 +164,10 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
                         xAxis += 1;
                     }
                     if (plotlyCreatedChartsIDs.indexOf(divID) !== -1) {
-                        const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, chartIdentifier);
+                        const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, optimizer_id, chartIdentifier);
                         Plotly.addTraces(divID, chartedElements);
                     } else {
-                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, chartIdentifier);
+                        const layout = createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, optimizer_id, chartIdentifier);
                         if (hiddenXAxisIDs.indexOf(divID) !== -1) {
                             layout.xaxis.visible = false;
                         }
@@ -206,9 +208,8 @@ function _updateChart(data, replot, backtesting_id, added, backtestingTableName,
     })
 }
 
-function _updateBacktestingChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
-    log(data)
-    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, []);
+function _updateBacktestingChart(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier) {
+    _updateChart(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, []);
 }
 
 function afterGraphPlot(target){
@@ -217,6 +218,9 @@ function afterGraphPlot(target){
     resizeObserver.observe(target);
     if (plottedDivID !== "main-chart") {
         const mainLayout = document.getElementById("main-chart").layout;
+        if(typeof mainLayout === "undefined"){
+            return;
+        }
         originalXAxis = {range: mainLayout.xaxis.range, type: mainLayout.xaxis.type};
         if(typeof document.getElementById("sub-chart").data !== "undefined"
             && typeof document.getElementById("main-chart").data !== "undefined") {
@@ -251,11 +255,11 @@ function hideSubChartWhenEmpty(data){
    }
 }
 
-function _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier) {
+function _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier) {
     _updateChartLayout();
     hideSubChartWhenEmpty(data);
     const hiddenXAxisChartIDs = ["sub-chart"];
-    _updateChart(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
+    _updateChart(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier, afterGraphPlot, hiddenXAxisChartIDs);
     if(!replot){
         if(typeof document.getElementById("sub-chart").data !== "undefined"
             && typeof document.getElementById("main-chart").data !== "undefined"){
@@ -310,7 +314,7 @@ function _displayInputs(elements, replot, editors){
     _displayInputsForTentacle(elements, replot, editors, null, "evaluator")
 }
 
-function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, added, backtestingTableName, chartIdentifier){
+function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier){
     data.data.sub_elements.forEach(function (sub_element) {
         if (backtesting_id === null && sub_element.type === "input") {
             // only update inputs on live data
@@ -318,16 +322,16 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
             displayOptimizerSettings(sub_element, replot);
         }
         if (sub_element.type === "table"){
-            _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName);
+            _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName);
         }
         if (sub_element.type === "value"){
             _updateValues(sub_element, replot, backtesting_id, added);
         }
     });
     if(backtestingPart){
-        _updateBacktestingChart(data, true, backtesting_id, added, backtestingTableName, chartIdentifier)
+        _updateBacktestingChart(data, true, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier)
     }else{
-        _updateMainCharts(data, replot, backtesting_id, added, backtestingTableName, chartIdentifier);
+        _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier);
     }
 }
 
@@ -403,7 +407,7 @@ function _add_labelled_backtesting_values(sub_element, backtesting_id, backtesti
         });
 }
 
-function _updateTables(sub_element, replot, backtesting_id, added, backtestingTableName){
+function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName){
     sub_element.data.elements.forEach(function (element){
         const toRemove = [];
         const tableName = element.title.replaceAll(" ", "-").replaceAll("*", "-");
@@ -411,9 +415,9 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
             // remove potentially now unselected elements
             if(typeof w2ui[tableName] !== "undefined"){
                 let hasThisBacktestingAlready = false;
-                const selectedBacktestingIDs = getSelectedBacktestingIDs(backtestingTableName);
+                const selectedBacktestingIDsWithOptimizer = getSelectedBacktestingIDsWithOptimizer(backtestingTableName);
                 w2ui[tableName].records.forEach(function (record){
-                    if(selectedBacktestingIDs.indexOf(record.backtesting_id) === -1){
+                    if(selectedBacktestingIDsWithOptimizer.indexOf(mergeBacktestingOptimizerID(record.backtesting_id, record.optimizer_id)) === -1){
                         toRemove.push(record.recid)
                     }
                     if(record.backtesting_id === backtesting_id){
@@ -425,10 +429,16 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
                 }
             }
             // add new elements
-            element.columns.push({
-                "field": "backtesting_id",
-                "label": "Backtesting id",
-            })
+            element.columns.push(
+                {
+                    "field": "backtesting_id",
+                    "label": "Backtesting id",
+                },
+                {
+                    "field": "optimizer_id",
+                    "label": "Optimizer id",
+                }
+            )
             const columns = element.columns.map((col) => {
                 return {
                     field: col.field,
@@ -445,6 +455,7 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
             }
             const records = element.rows.map((row, index) => {
                 row.backtesting_id = backtesting_id;
+                row.optimizer_id = optimizer_id;
                 row.recid = startIndex + index;
                 return row;
             });
@@ -482,6 +493,35 @@ function _updateTables(sub_element, replot, backtesting_id, added, backtestingTa
     });
 }
 
+function _formatMetadataRow(row, recordId, optimizerId){
+    row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
+    row.start_time = typeof row.start_time === "undefined" ? undefined : Math.round(row.start_time * 1000);
+    row.end_time = typeof row.end_time === "undefined" ? undefined : Math.round(row.end_time * 1000);
+    Object.keys(row).forEach(function (key){
+        if(typeof row[key] === "object" && key !== "children"){
+            row[key] = JSON.stringify(row[key]);
+        }
+    })
+    if(typeof row.children !== "undefined"){
+        optimizerId = row.children[0].optimizer_id
+        row.id = `${row.id} [optimizer]`
+        const subRows = [];
+        row.children.forEach(function (rowChild){
+            recordId = _formatMetadataRow(rowChild, recordId, optimizerId)
+            subRows.push(rowChild)
+        })
+        row.w2ui = {
+            children: subRows
+        }
+        delete row.children
+    }else{
+        row.id = `${row.id} [backtesting]`
+    }
+    delete row.optimizer_id
+    row.recid = mergeBacktestingOptimizerID(recordId ++, optimizerId);
+    return recordId
+}
+
 function createBacktestingMetadataTable(metadata, sectionHandler){
     if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
@@ -496,17 +536,10 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
                 render: dateKeys.indexOf(key) !== -1 ? "datetime" : undefined,
             }
         })
-        const records = metadata.map((row, index) => {
-            row.recid = index;
-            row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
-            row.start_time = typeof row.start_time === "undefined" ? undefined : Math.round(row.start_time * 1000);
-            row.end_time = typeof row.end_time === "undefined" ? undefined : Math.round(row.end_time * 1000);
-            Object.keys(row).forEach(function (key){
-                if(typeof row[key] === "object"){
-                    row[key] = JSON.stringify(row[key]);
-                }
-            })
-            return row;
+        let recordId = 0;
+        const records = metadata.map((row) => {
+            recordId = _formatMetadataRow(row, recordId, 0);
+            return row
         });
         const searches = keys.map((key) => {
             search = {
@@ -539,12 +572,25 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
     $("#no-backtesting-message").removeClass(hidden_class);
 }
 
-function getSelectedBacktestingIDs(tableName){
+function getSelectedBacktestingIDsWithOptimizer(tableName){
     const table = w2ui[tableName];
     if(typeof table !== "undefined") {
-        return table.getSelection().map((recid) => table.get(recid).id);
+        return table.getSelection().map((recid) =>
+            mergeBacktestingOptimizerID(getIdFromTableRow(table, recid), getOptimizerIdFromTableRow(recid)));
     }
     return [];
+}
+
+function mergeBacktestingOptimizerID(backtestingId, optimizerId){
+    return `${backtestingId}${ID_SEPARATOR}${optimizerId}`
+}
+
+function getIdFromTableRow(table, recid){
+    return Number(table.get(recid).id.split(" ")[0]);
+}
+
+function getOptimizerIdFromTableRow(recid){
+    return Number(recid.split(ID_SEPARATOR)[1]);
 }
 
 function _createTable(elementID, name, tableName, searches, columns, records, selectable, addToTable) {
@@ -594,7 +640,8 @@ function _getTableDataType(records, search){
     }
 }
 
-const plotlyCreatedChartsIDs = []
+const plotlyCreatedChartsIDs = [];
+const ID_SEPARATOR = "_";
 
 function removeExplicitSize(figure){
   delete figure.layout.width;
