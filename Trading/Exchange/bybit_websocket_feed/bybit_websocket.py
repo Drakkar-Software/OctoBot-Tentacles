@@ -23,8 +23,13 @@ class BybitCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
         Feeds.KLINE: cryptofeed_constants.CANDLES,
-        Feeds.TICKER: Feeds.UNSUPPORTED.value,
         Feeds.CANDLE: cryptofeed_constants.CANDLES,
+        Feeds.ORDERS: cryptofeed_constants.ORDER_INFO,
+        Feeds.FUTURES_INDEX: cryptofeed_constants.INDEX,
+        Feeds.TRADE: cryptofeed_constants.FILLS,
+        Feeds.LIQUIDATIONS: cryptofeed_constants.LIQUIDATIONS,
+        Feeds.FUNDING: cryptofeed_constants.FUNDING,
+        Feeds.OPEN_INTEREST: cryptofeed_constants.OPEN_INTEREST
     }
 
     @classmethod
