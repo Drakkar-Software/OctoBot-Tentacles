@@ -96,8 +96,8 @@ body::before {
         </ul>
         <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l p-fixed">
             <li class="nav-item waves-effect waves-light brdr-r nav-h" id="add-evaluators">
-              <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark nav-lh">
-                  <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators</span><i class="fas fa-plus add-evaluator"></i>
+              <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark nav-lh" title="enable and disable Evaluators">
+                  <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators </span><i class="fas fa-plus add-evaluator"></i>
               </a>
             </li>
             <li class="nav-item waves-effect waves-light brdr-l nav-h">
@@ -180,8 +180,15 @@ body::before {
             <li class="nav-item brdr-l">
                 <a class="nav-link primary-tab-selector active show open-toolbox-onclick" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
                    aria-controls="backtesting"
-                   aria-selected="false">
+                   aria-selected="true">
                     Backtesting
+                </a>
+            </li>
+            <li class="nav-item brdr-l d-none">
+                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="trading-tab" data-toggle="tab" href="#trading" role="tab"
+                   aria-controls="trading"
+                   aria-selected="false">
+                    Trading
                 </a>
             </li>
             <li class="nav-item brdr-l">
@@ -197,8 +204,9 @@ body::before {
                        data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
                        data-exchange-id="{{ exchange_id }}"
                        type="button"
-                       class="btn btn-success waves-effect m-0">Reload script</button><div class="toolbox-btn-divider bg-dark-grey">
-                </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect brdr-r m-0">Restart OctoBot</button>
+                       class="btn btn-success waves-effect m-0"
+                       title="apply script changes"><i class="fas fa-redo"></i></button><div class="toolbox-btn-divider bg-dark-grey">
+                </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect brdr-r m-0" title="Restart OctoBot"><i class="fas fa-power-off"></i></button>
                <!-- div needs to be there else, whitespace will appear -->
            </div>
            <div class="fullscreen-btn-group">
@@ -260,6 +268,9 @@ body::before {
                     <li class="nav-item waves-effect waves-light brdr-l">
                       <a class="nav-link primary-tab-selector " id="evaluator-settings-tab" data-toggle="tab" href="#evaluator-settings" role="tab" aria-controls="evaluator-settings" aria-selected="false">Evaluator Settings</a>
                     </li>
+                    <li class="nav-item waves-effect waves-light brdr-l">
+                      <a class="nav-link primary-tab-selector " id="advanced-trading-settings-tab" data-toggle="tab" href="#advanced-trading-settings" role="tab" aria-controls="advanced-trading-settings" aria-selected="false">Advanced Trading Script Settings</a>
+                    </li>
                     <div class="toolbox-buttons bg-dark-grey nav-item d-flex">
                         <button class="btn btn-success btn-outline-success waves-effect user-input-save m-0"
                         data-url="{{ url_for('config_tentacles', action='update', reload='true') }}">Save and reload</button>
@@ -294,9 +305,61 @@ body::before {
                                  role="tabreal" aria-labelledby="{{evaluator.get_name()}}-tab"
                                  data-tentacle="{{evaluator.get_name()}}"
                                  data-config='{{ get_tentacle_config_file_content(evaluator)|tojson }}'>
-                                No user inputs settings for {{evaluator.get_name()}}.
+                                <h2>No user inputs settings for {{evaluator.get_name()}}.</h2>  <!-- todo for what is the dot here? -->
+
+                                <!-- todo show only if cache is used -->
+                                <h2>Delete {{evaluator.get_name()}} cache for current config</h2>
+                                <p>Deletes the Cache from {{evaluator.get_name()}} for the current Version and configuration</p>
+                                <div class="toolbox-buttons bg-dark nav-item d-flex">
+                                    <button id="delete-current-{{evaluator.get_name()}}-cache" type="button" class="btn btn-warning btn-outline-warning waves-effect m-0">
+                                    Delete {{evaluator.get_name()}} cache for current Version and configuration
+                                    </button>
+                                </div>
+                                <h2>Delete {{evaluator.get_name()}} cache</h2>
+                                <p>Deletes the whole cache for {{evaluator.get_name()}}</p>
+                                <div class="toolbox-buttons bg-dark nav-item d-flex">
+                                    <button id="delete-{{evaluator.get_name()}}-cache" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                                    Delete the whole cache for {{evaluator.get_name()}}
+                                    </button>
+                                </div>
+
                             </div>
                             {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade h-100" id="advanced-trading-settings" role="tabreal" aria-labelledby="advanced-trading-settings-tab">
+                        <h2>delete current Script Cache</h2>
+                        <p>deletes plotting cache for the current script version, doesnt delete Evaluator Cache and orders</p>
+                        <div class="toolbox-buttons bg-dark nav-item d-flex">
+                            <button id="delete-script-cache" type="button" class="btn btn-warning btn-outline-warning waves-effect m-0">
+                            Delete cache from current Script
+                            </button>
+                        </div>
+
+                        <h2>delete all Cache</h2>
+                        <p>Delete all cached values and plots for evaluators and trading scripts.</p>
+                        <p>doesnt delete orders and simulated trades</p>
+                        <div class="toolbox-buttons bg-dark nav-item d-flex">
+                            <button id="delete-all-cache" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            Delete all cached values and plots for evaluators and trading scripts
+                            </button>
+                        </div>
+
+                        <h2>Delete simulated orders</h2>
+                        <p>Deletes simulated orders from current forward test</p>
+                        <div class="toolbox-buttons bg-dark nav-item d-flex">
+                            <button id="delete-simulated-orders" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            Delete simulated orders from current forward test
+                        </button>
+                        </div>
+
+                        <h2>Delete simulated trades</h2>
+                        <p>Delete simulated trades from current forward test</p>
+                        <div class="toolbox-buttons bg-dark nav-item d-flex">
+                            <button id="delete-simulated-trades" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            Delete simulated trades from current forward test
+                        </button>
                         </div>
                     </div>
                 </div>
@@ -379,6 +442,51 @@ body::before {
                     </div>
                 </div>
             </div>
+
+            <div class="tab-pane fade h-100" id="trading" role="tabreal" aria-labelledby="trading-tab">
+
+                <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="trading-tabs" role="tablist">
+                    <li class="nav-item waves-effect waves-light brdr-l d-none">
+                      <a class="nav-link primary-tab-selector" id="trading-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="backtesting-settings" href="#backtesting-settings">Trading Settings</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light brdr-l">
+                      <a class="nav-link primary-tab-selector show active"
+                         id="simulated-trading-tab"
+                         data-toggle="tab"
+                         href="#simulated-trading"
+                         role="tab" aria-controls="simulated-trading"
+                         aria-selected="true">
+                          Simulated Trading</a>
+                    </li>
+                    <li class="nav-item waves-effect waves-light brdr-l">
+                      <a class="nav-link primary-tab-selector" id="real-trading-tab"
+                         data-toggle="tab"
+                         href="#real-trading"
+                         role="tab" aria-controls="real-trading"
+                         aria-selected="false"> <!-- todo set tab to active depending on simulated or real trading-->
+                          Real Trading</a>
+                    </li>
+                   </ul>
+
+                <div class="tab-content soft-h-100" id="trading-tabcontent">
+
+                    <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="trading-settings" role="tabreal" aria-labelledby="trading-settings-tab">
+                        <div id="trader-inputs">
+
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade show active w-100 h-100" id="simulated-trading" role="tabreal" aria-labelledby="simulated-trading-tab">
+
+                    </div>
+
+                    <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="real-trading" role="tabreal" aria-labelledby="real-trading-tab">
+
+                    </div>
+
+
+                </div>
+    </div>
 
             <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
@@ -511,22 +619,21 @@ body::before {
 <!--</button>-->
 
     <!-- dragable and editable bootstrap modal modal -->
-<div class="w-100 h-100">
-    <div class="modal fade" id="dragable_modal" tabindex="-1" aria-labelledby="myModalLabel2" data-backdrop="static" data-keyboard="false" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog ui-draggable" role="document" style="top: 619px; left: 586px;">
-            <div class="modal-content">
-                <div class="modal-header w-100">
-                    <div class="row m-0 w-100">
-                        <div class="col-md-12 px-4 p-2 dragable_touch d-block ui-draggable-handle">
-                            <h3 class="m-0 d-inline">Strategy Settings</h3>
-                            <button id="move-strategy-settings-back" type="button" class="close close_btn" data-dismiss="modal" aria-label="Close" data-backdrop="static" data-keyboard="false"><i class="fa fa-times"></i></button>
-                        </div>
+    <!-- see here for more informations https://bootstrapfriendly.com/blog/how-to-make-bootstrap-modal-draggable-and-resizable/-->
+<div class="modal fade" id="dragable_modal" tabindex="-1" aria-labelledby="myModalLabel2" data-backdrop="static" data-keyboard="false" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog ui-draggable bg-dark" role="document" style="top: 619px; left: 586px;">
+        <div class="modal-content bg-dark">
+            <div class="modal-header w-100 bg-dark-grey">
+                <div class="row m-0 w-100">
+                    <div class="col-md-12 px-4 dragable_touch d-block ui-draggable-handle">
+                        <h3 class="m-0 d-inline">Strategy Settings</h3>
+                        <button id="move-strategy-settings-back" type="button" class="close close_btn" data-dismiss="modal" aria-label="Close" data-backdrop="static" data-keyboard="false"><i class="fa fa-times"></i></button>
                     </div>
                 </div>
+            </div>
 
-                <div id="strategy-modal-content" class="w-100 h-100">
+            <div id="strategy-modal-content" class="w-100 h-100">
 
-                </div>
             </div>
         </div>
     </div>

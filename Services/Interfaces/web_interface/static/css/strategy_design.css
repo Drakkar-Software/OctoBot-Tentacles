@@ -137,6 +137,11 @@ a:hover {
 .nav-link {
     border: none !important;
 }
+
+a {
+    color: var(--fnt);
+}
+
 /** reusable END **/
 
 /** navbar **/
@@ -165,9 +170,6 @@ a:hover {
 /** navbar END **/
 
 /** body **/
-body * {
-    color: var(--fnt);
-}
 
 .strategy_body {
     height: calc(100vh - 87px);

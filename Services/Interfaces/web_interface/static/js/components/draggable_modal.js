@@ -5,7 +5,7 @@ $("#move-strategy-settings").click(function() {
     // hide tab and remove active
     $("#strategy-settings-tab").removeClass("active")
     $("#strategy-settings-tab").addClass("d-none")
-    // todo click first visible tab after editor
+    // todo click first visible tab after editor - works but its tab button is not active
     $("#backtesting-tab").trigger('click');
 
 });
@@ -28,7 +28,7 @@ $('#move-strategy-settings').click(function() {
     backdrop: false,
     show: true
   });
-  // reset modal if it isn't visible
+  // todo reset modal if it isn't visible doesnt work
   if (!($('.modal.in').length)) {
     $('.modal-dialog').css({
       top: 20,
