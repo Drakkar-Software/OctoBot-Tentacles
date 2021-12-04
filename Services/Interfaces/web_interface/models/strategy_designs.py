@@ -130,3 +130,19 @@ def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_
                               name=f"{optimizer.get_name()}-WebInterface-runner")
     thread.start()
     return True, "Success"
+
+
+def get_strategy_optimizer_queue(trading_mode):
+    return {
+        "queue": interfaces_util.run_in_bot_async_executor(
+            octobot_api.get_design_strategy_optimizer_queue(trading_mode)
+        )
+     }
+
+
+def update_strategy_optimizer_queue(trading_mode, updated_queue):
+    return {
+        "queue": interfaces_util.run_in_bot_async_executor(
+            octobot_api.update_design_strategy_optimizer_queue(trading_mode, updated_queue)
+        )
+     }

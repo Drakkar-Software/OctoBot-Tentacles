@@ -412,7 +412,7 @@ function handleTabSelectionEvents(){
         "backtesting-results-tab",
         "performance-summary-tab",
         "list-of-trades-tab",
-        "strategy-optimizer-results-tab",
+        "strategy-optimizer-queue-tab",
         "backtesting-tab",
         "optimizer-tab",
     ]
@@ -473,6 +473,16 @@ function init_optimizer_status_websocket(){
         on_optimizer_state_update(data);
     });
     check_optimizer_state();
+}
+
+function init_optimizer_queue_editor(){
+    const queue_url = $("#strategy-optimizer-queue-table").data("queue-url")
+    send_and_interpret_bot_update({}, queue_url, null, optimizerQueueFetchedCallback, generic_request_failure_callback, "GET");
+
+}
+
+function optimizerQueueFetchedCallback(optimizer_queue, update_url, dom_root_element, msg, status){
+    updateOptimizerQueueEditor(msg.queue, "strategy-optimizer-queue-table");
 }
 
 function handleDateSelectors(){
@@ -559,6 +569,7 @@ $(document).ready(function() {
     handleTimeFramesSelector();
     handleConfigTimeFramesSelectors();
     init_backtesting_status_websocket();
+    init_optimizer_queue_editor();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
     handleSidebarWidthChange()

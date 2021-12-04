@@ -495,7 +495,9 @@ body::before {
                       <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="false" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Optimizer Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light brdr-l">
-                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-queue-tab" data-toggle="tab" href="#strategy-optimizer-queue" role="tab" aria-controls="strategy-optimizer-queue" aria-selected="true">Optimizer Queue</a>
+                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-queue-tab" data-toggle="tab" href="#strategy-optimizer-queue" role="tab" aria-controls="strategy-optimizer-queue" aria-selected="true">
+                          Optimizer Queue
+                      </a>
                     </li>
                     <div class="toolbox-buttons bg-dark-grey nav-item d-flex">
                         <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start brdr-l m-0"
@@ -519,7 +521,14 @@ body::before {
                     </div>
 
                     <div class="tab-pane fade h-100" id="strategy-optimizer-queue" role="tabreal" aria-labelledby="strategy-optimizer-queue-tab">
-                        <div id="strategy-optimizer-queue-table">
+                        <div id="strategy-optimizer-queue-table"
+                             class="w-100 h-100"
+                             data-queue-url="{{url_for('strategy_design_optimizer_queue')}}">
+                        </div>
+                        <div id="no-optimizer-queue-message">
+                            <h4>
+                                The strategy optimizer queue is empty.
+                            </h4>
                         </div>
                     </div>
                 </div>

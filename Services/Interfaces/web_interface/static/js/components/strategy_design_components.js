@@ -335,6 +335,10 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
     }
 }
 
+function updateOptimizerQueueEditor(optimizer_queue, container_id){
+    createOptimizerQueueTables(optimizer_queue, container_id)
+}
+
 function _getEnabledCharts(){
     const charts = ["main-chart", "sub-chart"];
     const enabledCharts = [];
@@ -477,7 +481,8 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 const parentDiv = $(document.getElementById(sub_element.name));
                 parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
             }
-            _createTable(chartDivID, element.title, tableName, searches, columns, records, false, true);
+            _createTable(chartDivID, element.title, tableName, searches, columns, records,
+                false, true, false);
         }else{
             if(typeof w2ui[tableName] !== "undefined"){
                 w2ui[tableName].records.forEach(function (record){
@@ -522,6 +527,62 @@ function _formatMetadataRow(row, recordId, optimizerId){
     return recordId
 }
 
+function createOptimizerQueueTables(optimizer_queue, container_id){
+    if(optimizer_queue.length){
+        const mainContainer = $(`#${container_id}`);
+        mainContainer.empty();
+        $("#no-optimizer-queue-message").addClass(hidden_class);
+        optimizer_queue.forEach(function (optimizerRun){
+            _createOptimizerRunQueueTable(optimizerRun, mainContainer);
+        })
+    }
+}
+
+function _createOptimizerRunQueueTable(optimizerRun, mainContainer){
+    const optimizerId = optimizerRun.id;
+    const dataFiles = optimizerRun.data_files;
+    const divID = `optimizer-queue-${optimizerId}`;
+    const queueData = {
+        id: optimizerId,
+        data_files: dataFiles,
+    }
+    const queueDiv = `<div id="${divID}" class="h-100"></div>`;
+    mainContainer.append(queueDiv);
+    $(`#${divID}`).data("queueData", queueData)
+    const keys = ["User input", "Value", "Tentacle"];
+    function formatKey(key){
+        return key.replaceAll(" ", "_").toLowerCase();
+    }
+    const columns = keys.map((key) => {
+        return {
+            field: formatKey(key),
+            text: key,
+            size: `${1 / keys.length * 100}%`,
+            sortable: true,
+        }
+    })
+    const records = []
+    let recId = 0;
+    Object.values(optimizerRun.runs).map((run) => {
+        run.forEach(function (runUserInputDetails){
+            runUserInputDetails.recid = recId++;
+            records.push(runUserInputDetails)
+        })
+    });
+    const searches = keys.map((key) => {
+        return {
+            field: formatKey(key),
+            label: key,
+            type: "text",
+        }
+    });
+    log(columns)
+    log(records)
+    const tableName = divID;
+    _createTable(divID, `Runs for optimizer ${optimizerId}`,
+        tableName, searches, columns, records, false, true, true);
+}
+
 function createBacktestingMetadataTable(metadata, sectionHandler){
     if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
@@ -555,7 +616,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
         _createTable("backtesting-run-select-table", name, tableName,
-                     searches, columns, records, true, false);
+                     searches, columns, records, true, false, false);
         const table = w2ui[tableName];
         table.on("select", function (event){
             sectionHandler(event, true);
@@ -593,7 +654,7 @@ function getOptimizerIdFromTableRow(recid){
     return Number(recid.split(ID_SEPARATOR)[1]);
 }
 
-function _createTable(elementID, name, tableName, searches, columns, records, selectable, addToTable) {
+function _createTable(elementID, name, tableName, searches, columns, records, selectable, addToTable, reorderRows) {
     const tableExists = typeof w2ui[tableName] !== "undefined";
     if(tableExists && addToTable){
         w2ui[tableName].add(records)
@@ -615,6 +676,7 @@ function _createTable(elementID, name, tableName, searches, columns, records, se
             searches: searches,
             columns: columns,
             records: records,
+            reorderRows: reorderRows,
         });
     }
     return tableName;

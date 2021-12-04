@@ -152,3 +152,22 @@ def strategy_design_start_optimizer():
     except Exception as e:
         commons_logging.get_logger("strategy_design_start_optimizer").exception(e)
         return util.get_rest_reply(str(e), 500)
+
+
+@web_interface.server_instance.route("/strategy_design_optimizer_queue", methods=["GET", "POST"])
+@login.login_required_when_activated
+def strategy_design_optimizer_queue():
+    trading_mode = models.get_config_activated_trading_mode()
+    if flask.request.method == 'POST':
+        try:
+            request_data = flask.request.get_json()
+            return util.get_rest_reply(flask.jsonify(models.update_strategy_optimizer_queue(trading_mode, request_data["queue"])))
+        except Exception as e:
+            commons_logging.get_logger("strategy_design_optimizer_queue").exception(e)
+            return util.get_rest_reply(str(e), 500)
+    else:
+        try:
+            return util.get_rest_reply(models.get_strategy_optimizer_queue(trading_mode), 200)
+        except Exception as e:
+            commons_logging.get_logger("strategy_design_optimizer_queue").exception(e)
+            return util.get_rest_reply(str(e), 500)
