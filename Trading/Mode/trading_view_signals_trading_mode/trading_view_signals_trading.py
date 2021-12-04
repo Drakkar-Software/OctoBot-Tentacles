@@ -78,13 +78,21 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
-        for line in data['metadata'].split("\n"):
+        signal_data = data.get("metadata", "")
+        for line in signal_data.split("\n"):
             values = line.split("=")
-            parsed_data[values[0].strip()] = values[1].strip()
+            try:
+                parsed_data[values[0].strip()] = values[1].strip()
+            except IndexError:
+                self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
-        if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
-            await self.producers[0].signal_callback(parsed_data)
+        try:
+            if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
+                    parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
+                await self.producers[0].signal_callback(parsed_data)
+        except KeyError as e:
+            self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
+                              f"Signal: \"{signal_data}\"")
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
