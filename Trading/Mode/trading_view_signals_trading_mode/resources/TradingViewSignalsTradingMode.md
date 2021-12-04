@@ -18,8 +18,8 @@ PRICE=42000
 
 Where:
 - `ORDER_TYPE` is the type of order (LIMIT or MARKET). Overrides the `Use market orders` parameter
-- `VOLUME` is the volume of the order in quote asset (USDT for BTC/USDT)
-- `PRICE` is the price of the limit order in base asset (BTC for BTC/USDT)
+- `VOLUME` is the volume of the order in base asset (BTC for BTC/USDT)
+- `PRICE` is the price of the limit order in quote asset (USDT for BTC/USDT)
 
 When not specified, orders volume and price are automatically computed based on the current 
 asset price and holdings.
