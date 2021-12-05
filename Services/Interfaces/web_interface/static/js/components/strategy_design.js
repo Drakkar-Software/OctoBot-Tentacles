@@ -504,17 +504,14 @@ function queueUpdateCallback(updatedQueue){
 }
 
 function optimizerQueueUpdatedCallback(optimizer_queue, update_url, dom_root_element, msg, status){
-    log(msg.queue)
     create_alert("success", "Optimizer queue updated", msg);
     updateOptimizerQueueEditor(msg.queue, "strategy-optimizer-queue-table", queueUpdateCallback);
 }
 
 function optimizerQueueUpdateFailureCallback(optimizer_queue, update_url, dom_root_element, msg, status){
-    log(msg)
     create_alert("error", "Error when updating optimizer queue", msg.responseJSON.message);
     updateOptimizerQueueEditor(msg.responseJSON.queue, "strategy-optimizer-queue-table", queueUpdateCallback);
 }
-
 
 function handleDateSelectors(){
     const nowDate = new Date().toISOString().split("T")[0];

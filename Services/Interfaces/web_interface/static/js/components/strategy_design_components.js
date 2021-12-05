@@ -554,16 +554,13 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     mainContainer.append(queueDiv);
     $(`#${divID}`).data("queueData", queueData)
     const keys = [];
-    Object.values(optimizerRun.runs[0]).forEach(function (inputDetail){
+    Object.values(Object.values(optimizerRun.runs)[0]).forEach(function (inputDetail){
         keys.push(`${inputDetail.user_input} value`);
         keys.push(`${inputDetail.user_input} tentacle`);
     });
-    function formatKey(key){
-        return key.replaceAll(" ", "_").toLowerCase();
-    }
     const columns = keys.map((key) => {
         return {
-            field: formatKey(key),
+            field: key,
             text: key,
             size: `${1 / keys.length * 100}%`,
             sortable: true,
@@ -576,14 +573,14 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             recid: recId++
         };
         run.forEach(function (runUserInputDetails){
-            row[formatKey(`${runUserInputDetails.user_input} value`)] = runUserInputDetails.value
-            row[formatKey(`${runUserInputDetails.user_input} tentacle`)] = runUserInputDetails.tentacle
+            row[`${runUserInputDetails.user_input} value`] = runUserInputDetails.value
+            row[`${runUserInputDetails.user_input} tentacle`] = runUserInputDetails.tentacle
         })
         records.push(row);
     });
     const searches = keys.map((key) => {
         return {
-            field: formatKey(key),
+            field: key,
             label: key,
             type: "text",
         }
@@ -606,11 +603,11 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     function _createRunData(record, deleted){
         const run = [];
         Object.keys(record).forEach((key) => {
-            if (key.endsWith("_value")){
-                const inputName = key.split("_value")[0];
+            if (key.endsWith(" value")){
+                const inputName = key.split(" value")[0];
                 run.push({
                     user_input: inputName,
-                    tentacle: record[`${inputName}_tentacle`],
+                    tentacle: record[`${inputName} tentacle`],
                     value: record[key],
                     deleted: deleted,
                 });
