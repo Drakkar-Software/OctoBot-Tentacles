@@ -463,11 +463,18 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 row.recid = startIndex + index;
                 return row;
             });
-            element.searches.push({
-                "field": "backtesting_id",
-                "label": "Backtesting id",
-                "type": null,
-            })
+            element.searches.push(
+                {
+                    "field": "backtesting_id",
+                    "label": "Backtesting id",
+                    "type": null,
+                },
+                {
+                    "field": "optimizer_id",
+                    "label": "Optimizer id",
+                    "type": null,
+                }
+            )
             const searches = element.searches.map((search) => {
                 return {
                     field: search.field,

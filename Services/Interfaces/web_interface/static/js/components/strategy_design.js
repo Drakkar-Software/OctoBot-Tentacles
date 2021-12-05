@@ -440,6 +440,7 @@ function startStrategyDesignOptimizer(){
 function startStrategyOptimizerSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Optimizer started", msg);
     check_optimizer_state();
+    init_optimizer_queue_editor();
 }
 
 function checkOptimizerResumability(resumeButton){
