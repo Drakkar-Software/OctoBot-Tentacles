@@ -159,7 +159,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         updated_values = {}
         if self.end_timestamp and int(self.description[backtesting_enums.DataFormatKeys.END_TIMESTAMP.value]) * 1000 < self.end_timestamp:
             updated_values["end_timestamp"] = int(self.end_timestamp/1000)
-        if self.start_timestamp and int(self.description[backtesting_enums.DataFormatKeys.START_TIMESTAMP.value]) * 1000 < self.start_timestamp:
+        if self.start_timestamp and int(self.description[backtesting_enums.DataFormatKeys.START_TIMESTAMP.value]) * 1000 > self.start_timestamp:
             updated_values["start_timestamp"] = int(self.start_timestamp/1000)
         if updated_values:
             updated_values["timestamp"] = time.time()
@@ -286,7 +286,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                 for symbol in self.symbols])
         if self.start_timestamp is None or lowest_timestamp < self.start_timestamp:
             self.start_timestamp = lowest_timestamp
-        if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
+        self.end_timestamp = self.end_timestamp or time.time() * 1000
+        if self.start_timestamp > self.end_timestamp:
             raise backtesting_errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
