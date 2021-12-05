@@ -266,6 +266,11 @@ a {
   margin: auto;
   float: left;
 }
+
+#octobot-logo {
+  display:flex;
+}
+
 /** octobot logo **/
 
 /** toolbox buttons **/

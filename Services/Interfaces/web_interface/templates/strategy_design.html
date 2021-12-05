@@ -46,6 +46,12 @@ body::before {
             <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
         </div>
     </div>
+    <div class="my-auto ml-4 mr-4" id="octobot-logo">
+        <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
+        <h4>
+        OctoBot
+        </h4>
+    </div>
     <ul class="nav md-tabs toolbox-tabs row bg-dark m-0" id="nav-toolbox" role="tablist">
         <ul id="nav-bar-left" class="nav md-tabs toolbox-tabs bg-dark m-0 p-0 d-flex nav-h">
             <span id="time-frame-selector" class="scroll_horizontal">
@@ -148,12 +154,6 @@ body::before {
 
     <div id="toolbox" class="strategy-toolbox w-100 p-absolute">
         <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs brdr-t-xl brdr-b" id="main-toolbox-tabs" role="tablist">
-            <div class="my-auto mr-4" id="octobot-logo">
-                <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
-                <h4>
-                    OctoBot
-                </h4>
-            </div>
             <li class="nav-item dropdown brdr-l">
                 <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">Code Editor</a>
@@ -477,16 +477,102 @@ body::before {
                     </div>
 
                     <div class="tab-pane fade show active w-100 h-100" id="simulated-trading" role="tabreal" aria-labelledby="simulated-trading-tab">
+                        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="simulated-trading-tabs" role="tablist">
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector show active"
+                                 id="forward-test-runs-tab"
+                                 data-toggle="tab"
+                                 href="#forward-test-runs"
+                                 role="tab" aria-controls="forward-test-runs"
+                                 aria-selected="true">
+                                  forward test runs</a>
+                            </li>
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector" id="open-simulated-orders-tab"
+                                 data-toggle="tab"
+                                 href="#open-simulated-orders"
+                                 role="tab" aria-controls="open-simulated-orders"
+                                 aria-selected="false">
+                                  open simulated orders</a>
+                            </li>
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector" id="simulated-trade-history-tab"
+                                 data-toggle="tab"
+                                 href="#simulated-trade-history"
+                                 role="tab" aria-controls="simulated-trade-history"
+                                 aria-selected="false">
+                                  simulated trade history</a>
+                            </li>
+                           </ul>
 
+                        <div class="tab-content soft-h-100" id="simulated-trading-tabcontent">
+                            <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="forward-test-runs" role="tabreal" aria-labelledby="forward-test-runs-tab">
+
+                            </div>
+
+                            <div class="tab-pane fade show active w-100 h-100" id="open-simulated-orders" role="tabreal" aria-labelledby="open-simulated-orders-tab">
+
+                            </div>
+
+                            <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="simulated-trade-history" role="tabreal" aria-labelledby="simulated-trade-history-tab">
+
+                            </div>
+                        </div>
                     </div>
 
                     <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="real-trading" role="tabreal" aria-labelledby="real-trading-tab">
 
+
+
+
+
+                        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="real-trading-tabs" role="tablist">
+
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector show active"
+                                 id="real-trading-runs-tab"
+                                 data-toggle="tab"
+                                 href="#real-trading-runs"
+                                 role="tab" aria-controls="real-trading-runs"
+                                 aria-selected="true">
+                                  real trading runs</a>
+                            </li>
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector" id="real-open-orders-tab"
+                                 data-toggle="tab"
+                                 href="#open-simulated-orders"
+                                 role="tab" aria-controls="real-open-orders"
+                                 aria-selected="false">
+                                  real open orders</a>
+                            </li>
+                            <li class="nav-item waves-effect waves-light brdr-l">
+                              <a class="nav-link primary-tab-selector" id="real-trading-history-tab"
+                                 data-toggle="tab"
+                                 href="#simulated-trade-history"
+                                 role="tab" aria-controls="simulated-trade-history"
+                                 aria-selected="false">
+                                  real trading history</a>
+                            </li>
+                           </ul>
+
+                        <div class="tab-content soft-h-100" id="real-trading-tabcontent">
+
+                            <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="real-trading-runs" role="tabreal" aria-labelledby="real-trading-runs-tab">
+
+                            </div>
+
+                            <div class="tab-pane fade show active w-100 h-100" id="real-open-orders" role="tabreal" aria-labelledby="real-open-orders-tab">
+
+                            </div>
+
+                            <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="real-trading-history" role="tabreal" aria-labelledby="real-trading-history-tab">
+
+                            </div>
+
+                        </div>
                     </div>
-
-
                 </div>
-    </div>
+            </div>
 
             <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
