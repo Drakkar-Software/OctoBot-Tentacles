@@ -161,10 +161,13 @@ def strategy_design_optimizer_queue():
     if flask.request.method == 'POST':
         try:
             request_data = flask.request.get_json()
-            return util.get_rest_reply(flask.jsonify(models.update_strategy_optimizer_queue(trading_mode, request_data["queue"])))
+            models.update_strategy_optimizer_queue(trading_mode, request_data["queue"])
+            return util.get_rest_reply(models.get_strategy_optimizer_queue(trading_mode), 200)
         except Exception as e:
             commons_logging.get_logger("strategy_design_optimizer_queue").exception(e)
-            return util.get_rest_reply(str(e), 500)
+            data = models.get_strategy_optimizer_queue(trading_mode)
+            data["message"] = str(e)
+            return util.get_rest_reply(data, 500)
     else:
         try:
             return util.get_rest_reply(models.get_strategy_optimizer_queue(trading_mode), 200)

@@ -335,8 +335,8 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
     }
 }
 
-function updateOptimizerQueueEditor(optimizer_queue, container_id){
-    createOptimizerQueueTables(optimizer_queue, container_id)
+function updateOptimizerQueueEditor(optimizerQueue, containerId, queueUpdateCallback){
+    createOptimizerQueueTables(optimizerQueue, containerId, queueUpdateCallback)
 }
 
 function _getEnabledCharts(){
@@ -482,7 +482,7 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
             }
             _createTable(chartDivID, element.title, tableName, searches, columns, records,
-                false, true, false);
+                false, true, false, false, null, null);
         }else{
             if(typeof w2ui[tableName] !== "undefined"){
                 w2ui[tableName].records.forEach(function (record){
@@ -527,29 +527,37 @@ function _formatMetadataRow(row, recordId, optimizerId){
     return recordId
 }
 
-function createOptimizerQueueTables(optimizer_queue, container_id){
-    if(optimizer_queue.length){
-        const mainContainer = $(`#${container_id}`);
-        mainContainer.empty();
-        $("#no-optimizer-queue-message").addClass(hidden_class);
-        optimizer_queue.forEach(function (optimizerRun){
-            _createOptimizerRunQueueTable(optimizerRun, mainContainer);
+function createOptimizerQueueTables(optimizerQueue, containerId, queueUpdateCallback){
+    const mainContainer = $(`#${containerId}`);
+    const noRunMessage = $("#no-optimizer-queue-message");
+    mainContainer.empty();
+    if(optimizerQueue.length){
+        noRunMessage.addClass(hidden_class);
+        optimizerQueue.forEach(function (optimizerRun){
+            _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateCallback);
         })
+    }else{
+        noRunMessage.removeClass(hidden_class);
     }
 }
 
-function _createOptimizerRunQueueTable(optimizerRun, mainContainer){
+function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateCallback){
     const optimizerId = optimizerRun.id;
     const dataFiles = optimizerRun.data_files;
     const divID = `optimizer-queue-${optimizerId}`;
     const queueData = {
         id: optimizerId,
         data_files: dataFiles,
+        deletedRows: [],
     }
-    const queueDiv = `<div id="${divID}" class="h-100"></div>`;
+    const queueDiv = `<div id="${divID}" class="h-75"></div>`;
     mainContainer.append(queueDiv);
     $(`#${divID}`).data("queueData", queueData)
-    const keys = ["User input", "Value", "Tentacle"];
+    const keys = [];
+    Object.values(optimizerRun.runs[0]).forEach(function (inputDetail){
+        keys.push(`${inputDetail.user_input} value`);
+        keys.push(`${inputDetail.user_input} tentacle`);
+    });
     function formatKey(key){
         return key.replaceAll(" ", "_").toLowerCase();
     }
@@ -564,10 +572,14 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer){
     const records = []
     let recId = 0;
     Object.values(optimizerRun.runs).map((run) => {
+        const row = {
+            recid: recId++
+        };
         run.forEach(function (runUserInputDetails){
-            runUserInputDetails.recid = recId++;
-            records.push(runUserInputDetails)
+            row[formatKey(`${runUserInputDetails.user_input} value`)] = runUserInputDetails.value
+            row[formatKey(`${runUserInputDetails.user_input} tentacle`)] = runUserInputDetails.tentacle
         })
+        records.push(row);
     });
     const searches = keys.map((key) => {
         return {
@@ -576,11 +588,53 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer){
             type: "text",
         }
     });
-    log(columns)
-    log(records)
-    const tableName = divID;
+    function _onReorderRow(event){
+        event.onComplete = _afterTableUpdate
+    }
+    function _onDelete(event){
+        event.force = true;
+        const table = w2ui[event.target];
+        const tableDiv = $(`#${table.box.id}`)
+        tableDiv.data("queueData").deletedRows = table.getSelection().map((recId) => table.get(recId));
+        event.onComplete = _afterTableUpdate;
+    }
+    const tableName = `${divID}-table`;
     _createTable(divID, `Runs for optimizer ${optimizerId}`,
-        tableName, searches, columns, records, false, true, true);
+        tableName, searches, columns, records,
+        true, false, true, true, _onReorderRow, _onDelete);
+
+    function _createRunData(record, deleted){
+        const run = [];
+        Object.keys(record).forEach((key) => {
+            if (key.endsWith("_value")){
+                const inputName = key.split("_value")[0];
+                run.push({
+                    user_input: inputName,
+                    tentacle: record[`${inputName}_tentacle`],
+                    value: record[key],
+                    deleted: deleted,
+                });
+            }
+        });
+        return run;
+    }
+    function _updateOptimizerQueue(queueInfo, records){
+        let runs = records.map((record) => _createRunData(record, false));
+        runs = runs.concat(queueInfo.deletedRows.map((record) => _createRunData(record, true)));
+        queueInfo.deletedRows = [];
+        const updatedQueue = {
+            id: queueInfo.id,
+            data_files: queueInfo.data_files,
+            runs: runs,
+        }
+        queueUpdateCallback(updatedQueue);
+    }
+    function _afterTableUpdate(event){
+        const table = w2ui[event.target];
+        const tableDiv = $(`#${table.box.id}`)
+        const queueInfo = tableDiv.data("queueData")
+        _updateOptimizerQueue(queueInfo, table.records)
+    }
 }
 
 function createBacktestingMetadataTable(metadata, sectionHandler){
@@ -616,7 +670,8 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
         _createTable("backtesting-run-select-table", name, tableName,
-                     searches, columns, records, true, false, false);
+                     searches, columns, records,
+            true, false, false, false, null, null);
         const table = w2ui[tableName];
         table.on("select", function (event){
             sectionHandler(event, true);
@@ -654,7 +709,8 @@ function getOptimizerIdFromTableRow(recid){
     return Number(recid.split(ID_SEPARATOR)[1]);
 }
 
-function _createTable(elementID, name, tableName, searches, columns, records, selectable, addToTable, reorderRows) {
+function _createTable(elementID, name, tableName, searches, columns, records,
+                      selectable, addToTable, reorderRows, deleteRows, onReorderRowCallback, onDeleteCallback) {
     const tableExists = typeof w2ui[tableName] !== "undefined";
     if(tableExists && addToTable){
         w2ui[tableName].add(records)
@@ -670,13 +726,20 @@ function _createTable(elementID, name, tableName, searches, columns, records, se
                 toolbar: true,
                 footer: true,
                 toolbarReload: false,
-                selectColumn: selectable
+                toolbarDelete: deleteRows,
+                selectColumn: selectable,
+                orderColumn: reorderRows,
             },
             multiSearch: true,
             searches: searches,
             columns: columns,
             records: records,
             reorderRows: reorderRows,
+            onDelete: onDeleteCallback,
+            onReorderRow: onReorderRowCallback,
+            onSave: function (event) {
+                w2alert('save');
+            },
         });
     }
     return tableName;
