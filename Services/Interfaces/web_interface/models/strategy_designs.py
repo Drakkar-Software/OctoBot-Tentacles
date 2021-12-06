@@ -104,12 +104,13 @@ def get_strategy_design_optimizer_config(trading_mode):
 
 
 def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_chose_runs,
-                                    start_timestamp=None, end_timestamp=None):
+                                    start_timestamp=None, end_timestamp=None, resume=False):
     tools = web_interface_root.WebInterface.tools
     optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer is not None and octobot_api.is_optimizer_computing(optimizer):
         return False, "Optimizer already running"
-    data_file = backtesting_model.get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp)
+    data_files = None if resume else \
+        [backtesting_model.get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp)]
     temp_independent_backtesting = octobot_api.create_independent_backtesting(
         interfaces_util.get_global_config(), None, [])
     optimizer_config = interfaces_util.run_in_bot_async_executor(
@@ -120,16 +121,22 @@ def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_
         optimizer_config,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         config,
-        [data_file])
+        data_files)
     tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
     interfaces_util.run_in_bot_async_executor(
-        octobot_api.initialize_design_strategy_optimizer(optimizer, is_computing=True)
+        octobot_api.initialize_design_strategy_optimizer(optimizer, is_computing=True, is_resuming=resume)
     )
+    start_func = octobot_api.resume_design_strategy_optimizer if resume else octobot_api.start_design_strategy_optimizer
     thread = threading.Thread(target=interfaces_util.run_in_bot_async_executor,
-                              args=(octobot_api.start_design_strategy_optimizer(optimizer, randomly_chose_runs), ),
+                              args=(start_func(optimizer, randomly_chose_runs), ),
                               name=f"{optimizer.get_name()}-WebInterface-runner")
     thread.start()
     return True, "Success"
+
+
+def resume_strategy_design_optimizer(trading_mode, randomly_chose_runs, start_timestamp=None, end_timestamp=None):
+    return start_strategy_design_optimizer(trading_mode, None, None, randomly_chose_runs,
+                                           start_timestamp=start_timestamp, end_timestamp=end_timestamp, resume=True)
 
 
 def get_strategy_optimizer_queue(trading_mode):

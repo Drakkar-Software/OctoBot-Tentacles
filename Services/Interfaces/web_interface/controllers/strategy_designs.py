@@ -135,19 +135,25 @@ def strategy_design_config_optimizer():
         return models.get_strategy_design_optimizer_config(trading_mode)
 
 
-@web_interface.server_instance.route("/strategy_design_start_optimizer", methods=["POST"])
+@web_interface.server_instance.route("/strategy_design_start_optimizer<action>", methods=["POST"])
 @login.login_required_when_activated
-def strategy_design_start_optimizer():
+def strategy_design_start_optimizer(action):
     try:
         trading_mode = models.get_config_activated_trading_mode()
         request_data = flask.request.get_json()
-        exchange_id = request_data.get("exchange_id", None)
-        config = request_data.get("config", None)
+        success = False
+        message = f"Unknown action: {action}"
         randomly_chose_runs = request_data.get("randomly_chose_runs", False)
-        success, message = models.start_strategy_design_optimizer(trading_mode,
-                                                                  config,
-                                                                  exchange_id,
-                                                                  randomly_chose_runs)
+        if action == "start":
+            exchange_id = request_data.get("exchange_id", None)
+            config = request_data.get("config", None)
+            success, message = models.start_strategy_design_optimizer(trading_mode,
+                                                                      config,
+                                                                      exchange_id,
+                                                                      randomly_chose_runs)
+        elif action == "resume":
+            success, message = models.resume_strategy_design_optimizer(trading_mode,
+                                                                       randomly_chose_runs)
         return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
     except Exception as e:
         commons_logging.get_logger("strategy_design_start_optimizer").exception(e)

@@ -392,8 +392,13 @@ function handleOptimizerActions(){
     })
     $("#optimizer-resume-button").click(function (){
         const url = $(this).data("url");
-        send_and_interpret_bot_update({}, url, null, generic_request_success_callback, generic_request_failure_callback);
+        send_and_interpret_bot_update({}, url, null, optimizerResumedSuccessCallback, generic_request_failure_callback);
     })
+}
+
+function optimizerResumedSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    create_alert("success", "Strategy optimizer is resuming.", msg);
+    check_optimizer_state();
 }
 
 function handleOptimizerConfigUpdateSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
@@ -443,8 +448,20 @@ function startStrategyOptimizerSuccessCallback(updated_data, update_url, dom_roo
     init_optimizer_queue_editor();
 }
 
-function checkOptimizerResumability(resumeButton){
-    // TODO show/hide resume button
+function checkOptimizerResumability(optimizerQueue){
+    const resumeButton = $("#optimizer-resume-button");
+    const startButton = $("#optimizer-input-save-and-start-button");
+    if(optimizerQueue.length){
+        if(previousOptimizerStatus === "computing"){
+            // still running
+            resumeButton.addClass(hidden_class);
+            startButton.addClass("disabled");
+        }else{
+            // not running
+            resumeButton.removeClass(hidden_class);
+            startButton.removeClass("disabled");
+        }
+    }
 }
 
 const editors = {};
@@ -454,10 +471,12 @@ function on_optimizer_state_update(data){
     const progress_bar = $("#backtesting_progress_bar");
     const cancelButton = $("#optimizer-cancel-button");
     const resumeButton = $("#optimizer-resume-button");
+    const startButton = $("#optimizer-input-save-and-start-button");
     if(status === "computing") {
         $("#optimizer_progress_bar_title").removeClass(hidden_class)
         cancelButton.removeClass(hidden_class);
         resumeButton.addClass(hidden_class);
+        startButton.addClass("disabled");
         $("#backtesting_progress_bar_title").addClass(hidden_class)
         const overall_progress = data["overall_progress"];
         progress_bar.show();
@@ -465,13 +484,14 @@ function on_optimizer_state_update(data){
         setTimeout(function (){check_optimizer_state();}, 500)
     }else{
         cancelButton.addClass(hidden_class);
-        checkOptimizerResumability(resumeButton);
+        startButton.removeClass("disabled");
         $("#optimizer_progress_bar_title").addClass(hidden_class)
         $("#backtesting_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
     }
     if(status === "finished" && previousOptimizerStatus === "computing"){
         postBacktestingDone();
+        init_optimizer_queue_editor();
     }
     previousOptimizerStatus = status;
 }
@@ -495,7 +515,7 @@ function init_optimizer_queue_editor(){
 }
 
 function optimizerQueueFetchedCallback(optimizer_queue, update_url, dom_root_element, msg, status){
-    updateOptimizerQueueEditor(msg.queue, "strategy-optimizer-queue-table", queueUpdateCallback);
+    handleOptimizerQueue(msg.queue)
 }
 
 function queueUpdateCallback(updatedQueue){
@@ -506,12 +526,17 @@ function queueUpdateCallback(updatedQueue){
 
 function optimizerQueueUpdatedCallback(optimizer_queue, update_url, dom_root_element, msg, status){
     create_alert("success", "Optimizer queue updated", msg);
-    updateOptimizerQueueEditor(msg.queue, "strategy-optimizer-queue-table", queueUpdateCallback);
+    handleOptimizerQueue(msg.queue)
 }
 
 function optimizerQueueUpdateFailureCallback(optimizer_queue, update_url, dom_root_element, msg, status){
     create_alert("error", "Error when updating optimizer queue", msg.responseJSON.message);
-    updateOptimizerQueueEditor(msg.responseJSON.queue, "strategy-optimizer-queue-table", queueUpdateCallback);
+    handleOptimizerQueue(msg.responseJSON.queue)
+}
+
+function handleOptimizerQueue(optimizerQueue){
+    checkOptimizerResumability(optimizerQueue);
+    updateOptimizerQueueEditor(optimizerQueue, "strategy-optimizer-queue-table", queueUpdateCallback);
 }
 
 function handleDateSelectors(){

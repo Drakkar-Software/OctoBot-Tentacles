@@ -590,10 +590,10 @@ body::before {
                                 id="optimizer-input-save-and-start-button"
                                 data-exchange-id="{{ exchange_id }}"
                                 data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
-                                data-start-url="{{ url_for('strategy_design_start_optimizer') }}">Save and start Optimizer</button>
-                        <button class="btn btn-warning btn-outline-warning waves-effect d-none m-0"
+                                data-start-url="{{ url_for('strategy_design_start_optimizer', action='start') }}">Save and start Optimizer</button>
+                        <button class="btn btn-success btn-outline-success waves-effect d-none m-0 px-2"
                                 id="optimizer-resume-button"
-                                data-url="{{ url_for('advanced.strategy_optimizer', update_type='resume_optimizer') }}">Resume Optimizer</button>
+                                data-url="{{ url_for('strategy_design_start_optimizer', action='resume') }}">Resume Optimizer</button>
                         <button class="btn btn-warning btn-outline-warning waves-effect d-none m-0"
                                 id="optimizer-cancel-button"
                                 data-url="{{ url_for('advanced.strategy_optimizer', update_type='cancel_optimizer') }}">Cancel Optimizer</button>
