@@ -516,7 +516,7 @@ function _formatMetadataRow(row, recordId, optimizerId){
     })
     if(typeof row.children !== "undefined"){
         optimizerId = row.children[0].optimizer_id
-        row.id = `${row.id} [optimizer]`
+        row.id = `${row.id} [optimizer ${optimizerId}]`
         const subRows = [];
         row.children.forEach(function (rowChild){
             recordId = _formatMetadataRow(rowChild, recordId, optimizerId)
@@ -541,7 +541,9 @@ function createOptimizerQueueTables(optimizerQueue, containerId, queueUpdateCall
     if(optimizerQueue.length){
         noRunMessage.addClass(hidden_class);
         optimizerQueue.forEach(function (optimizerRun){
-            _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateCallback);
+            if(Object.values(optimizerRun.runs).length){
+                _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateCallback);
+            }
         })
     }else{
         noRunMessage.removeClass(hidden_class);
