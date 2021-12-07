@@ -22,6 +22,25 @@
     </tr>
 {%- endmacro %}
 
+{% macro position_tr(position, sim_or_real='Simulated') -%}
+    {% if not position.is_idle() %}
+    <tr>
+        <td>{{ position.side.value | upper }} {{ position.symbol_contract }}</td>
+        <td>{{ position.size | round(5) }}</td>
+        <td>{{ position.value | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }}</td>
+        <td>{{ position.entry_price | round(5) }}</td>
+        <td>{{ position.liquidation_price | round(5) }}</td>
+        <td>{{ position.margin | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }}</td>
+        <td>{{ position.unrealised_pnl | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }} ({{ position.get_unrealised_pnl_percent() | round(5) }}%)</td>
+        <td>{{ position.exchange_manager.exchange.name if position.exchange_manager else '' }}</td>
+        <td>{{ sim_or_real }}</td>
+        <td class="text-center py-1">
+            <button type="button" class="btn btn-sm btn-outline-danger waves-effect"><i class="fas fa-ban"></i></button>
+        </td>
+    </tr>
+    {% endif %}
+{%- endmacro %}
+
 {% macro trades_tr(trade, type='', timestamp='', sim_or_real='Simulated') -%}
     <tr>
         <td>{{ trade.symbol }}</td>
