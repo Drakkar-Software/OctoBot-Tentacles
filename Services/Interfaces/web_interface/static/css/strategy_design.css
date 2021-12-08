@@ -142,6 +142,10 @@ a {
     color: var(--fnt);
 }
 
+textarea {
+    color: var(--fnt);
+}
+
 /** reusable END **/
 
 /** navbar **/
@@ -165,6 +169,18 @@ a {
 
 #pairs-tabs {
     min-width: 60%;
+}
+
+.nav-item > a {
+    padding: 0 2rem;
+    border: none !important;
+    line-height: 41px;
+}
+
+.main-nav-item a {
+    padding: 0 12px !important;
+    border: none !important;
+    line-height: 41px;
 }
 
 /** navbar END **/

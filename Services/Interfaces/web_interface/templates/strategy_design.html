@@ -31,8 +31,8 @@ body::before {
 </style>
 
 <nav id="new-nav" class="nav-tabs brdr-b d-flex bg-dark">
-    <div class="main-dropdown-menu brdr-r">
-        <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-lh nav-h d-block" data-toggle="dropdown">
+    <div class="main-dropdown-menu brdr-r main-nav-item">
+        <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-h d-block" data-toggle="dropdown">
             <span><i class="fas fa-bars"></i></span>
         </a>
         <div class="dropdown-menu dropdown-default brdr-actv bg-dark" style="">
@@ -54,18 +54,18 @@ body::before {
     </div>
     <ul class="nav md-tabs toolbox-tabs row bg-dark m-0" id="nav-toolbox" role="tablist">
         <ul id="nav-bar-left" class="nav md-tabs toolbox-tabs bg-dark m-0 p-0 d-flex nav-h">
-            <span id="time-frame-selector" class="scroll_horizontal">
+            <span id="time-frame-selector" class="scroll_horizontal brdr-l">
                 <!-- repeat for each activated timeframe -->
                 {% for time_frame in time_frames %}
                 <li data-time-frame="{{time_frame}}"
-                    class="active-timeframe {{'selected ' if loop.first}}bg-hvr h-100"
+                    class="active-timeframe {{'selected ' if loop.first}}bg-hvr h-100 main-nav-item"
                     id="active-{{time_frame}}-timeframe">
                   <a class="nav-h nav-lh d-block">{{time_frame}}</a>
                 </li>
                 {% endfor %}
             </span>
 
-            <li class="dropdown h-100 noBorder"
+            <li class="dropdown h-100 noBorder main-nav-item"
                 id="config-activated-time-frame-selector"
                 data-strategy-config-url="{{ url_for('config_tentacles', action='update', reload='true') }}"
                 data-strategy-tentacle="{{ activated_strategy.get_name() }}">
@@ -89,7 +89,7 @@ body::before {
             </li>
             <ul class="nav md-tabs toolbox-tabs bg-dark noBorder scroll_horizontal nav-h" id="pairs-tabs" role="tablist">
                 {% for symbol in symbols %}
-                <li class="nav-item waves-effect waves-light brdr-l h-100">
+                <li class="nav-item waves-effect waves-light h-100 main-nav-item">
                   <a class="nav-link primary-tab-selector h-100 symbol-selector show {{ 'active' if loop.first }}" id="{{symbol}}-tab" data-toggle="tab"
                      role="tab" aria-selected="{{ 'true' if first else 'false' }}" aria-controls="{{symbol}}"
                      href="#{{symbol}}"
@@ -101,20 +101,20 @@ body::before {
             </ul>
         </ul>
         <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l p-fixed">
-            <li class="nav-item waves-effect waves-light brdr-r nav-h" id="add-evaluators">
-              <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark nav-lh" title="enable and disable Evaluators">
+            <li class="main-nav-item waves-effect waves-light nav-h " id="add-evaluators">
+              <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark" title="enable and disable Evaluators">
                   <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators </span><i class="fas fa-plus add-evaluator"></i>
               </a>
             </li>
-            <li class="nav-item waves-effect waves-light brdr-l nav-h">
+            <li class="main-nav-item waves-effect waves-light brdr-l nav-h">
                 {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
-                <a class="nav-link nav-lh" href="#" id="switchTradingState" aria-label="TradingSwitch">
+                <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
                     {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                 </a>
                 {% endif %}
             </li>
-            <li class="nav-item waves-effect waves-light brdr-l nav-h">
-                <a class="nav-link waves-effect waves-light nav-lh" href="{{ url_for('logs') }}" aria-label="Logs">
+            <li class="main-nav-item waves-effect waves-light brdr-l nav-h">
+                <a class="nav-link waves-effect waves-light" href="{{ url_for('logs') }}" aria-label="Logs">
                     <i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="" data-original-title="Event logs">
                         <span id="errors-count-badge" class="badge badge-warning"></span>
                     </i>
@@ -178,9 +178,9 @@ body::before {
                 </a>
             </li>
             <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
+                <a class="nav-link primary-tab-selector open-toolbox-onclick show active" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
                    aria-controls="backtesting"
-                   aria-selected="false">
+                   aria-selected="true">
                     Backtesting
                 </a>
             </li>
@@ -192,9 +192,9 @@ body::before {
                 </a>
             </li>
             <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick show active" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
                    aria-controls="optimizer"
-                   aria-selected="true">
+                   aria-selected="false">
                     Strategy Optimizer
                 </a>
             </li>
@@ -374,7 +374,7 @@ body::before {
             </div>
 
 
-            <div class="tab-pane fade h-100" id="backtesting" role="tabreal" aria-labelledby="backtesting-tab">
+            <div class="tab-pane fade h-100 show active" id="backtesting" role="tabreal" aria-labelledby="backtesting-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="backtesting-tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light brdr-l">
@@ -582,7 +582,7 @@ body::before {
                 </div>
             </div>
 
-            <div class="tab-pane fade scroll-vertically h-100 bg-dark show active" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
+            <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="optimizer-tabs" role="tablist">
                     <li class="nav-item waves-effect waves-light brdr-l">
@@ -634,6 +634,9 @@ body::before {
         </div>
     </div>
 </div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/side_bar.css', u=LAST_UPDATED_STATIC_FILES) }}">
+
 
 <!-- Sidebar navigation -->
 <div id="slide-out" class="side-nav side wide sn-bg-1 slim d-none">
