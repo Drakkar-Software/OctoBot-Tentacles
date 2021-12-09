@@ -24,18 +24,23 @@ function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, sy
     });
 }
 
-function isLiveGraph(){
-    //TODO
-    return true;
-}
-
 function handleScriptButtons(){
     $("#reload-script").click(function (){
         const update_url = $("#reload-script").data("url")
         const data = {
-            live: isLiveGraph(),
+            live: true,
         };
         send_and_interpret_bot_update(data, update_url, null, reloadRequestSuccessCallback, generic_request_failure_callback);
+    })
+}
+
+function handleCacheButtons(){
+    ["delete-script-cache", "delete-all-cache",
+        "delete-simulated-orders", "delete-simulated-trades"].forEach(function (id){
+        $(`#${id}`).click(function (){
+            send_and_interpret_bot_update({}, $(this).data("url"), null,
+                generic_request_success_callback, generic_request_failure_callback);
+        });
     })
 }
 
@@ -609,6 +614,7 @@ let previousOptimizerStatus = undefined;
 $(document).ready(function() {
     initBacktestingRunSelector();
     handleScriptButtons();
+    handleCacheButtons();
     handleBacktestingButtons();
     handleResizables();
     handleBrowserWindowSizeChange ()

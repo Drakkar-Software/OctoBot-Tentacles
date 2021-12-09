@@ -160,6 +160,10 @@ from tentacles.Services.Interfaces.web_interface.models.strategy_designs import 
     resume_strategy_design_optimizer,
     get_strategy_optimizer_queue,
     update_strategy_optimizer_queue,
+    clear_simulated_orders_cache,
+    clear_simulated_trades_cache,
+    clear_plotted_cache,
+    clear_all_cache,
     get_strategy_design_optimizer_config,
 )
 from tentacles.Services.Interfaces.web_interface.models.tentacles import (
@@ -285,6 +289,10 @@ __all__ = [
     "resume_strategy_design_optimizer",
     "get_strategy_optimizer_queue",
     "update_strategy_optimizer_queue",
+    "clear_simulated_orders_cache",
+    "clear_simulated_trades_cache",
+    "clear_plotted_cache",
+    "clear_all_cache",
     "get_strategy_design_optimizer_config",
     "get_tentacles_packages",
     "call_tentacle_manager",

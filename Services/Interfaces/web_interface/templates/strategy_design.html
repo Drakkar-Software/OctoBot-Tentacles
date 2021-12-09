@@ -332,7 +332,9 @@ body::before {
                         <h2>delete current Script Cache</h2>
                         <p>deletes plotting cache for the current script version, doesnt delete Evaluator Cache and orders</p>
                         <div class="toolbox-buttons bg-dark nav-item d-flex">
-                            <button id="delete-script-cache" type="button" class="btn btn-warning btn-outline-warning waves-effect m-0">
+                            <button id="delete-script-cache" type="button"
+                                    class="btn btn-warning btn-outline-warning waves-effect m-0"
+                                    data-url="{{url_for('cache', action='clear_plotted_cache')}}">
                             Delete cache from current Script
                             </button>
                         </div>
@@ -341,7 +343,9 @@ body::before {
                         <p>Delete all cached values and plots for evaluators and trading scripts.</p>
                         <p>doesnt delete orders and simulated trades</p>
                         <div class="toolbox-buttons bg-dark nav-item d-flex">
-                            <button id="delete-all-cache" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            <button id="delete-all-cache" type="button"
+                                    class="btn btn-danger btn-outline-danger waves-effect m-0"
+                                    data-url="{{url_for('cache', action='clear_all_cache')}}">
                             Delete all cached values and plots for evaluators and trading scripts
                             </button>
                         </div>
@@ -349,7 +353,9 @@ body::before {
                         <h2>Delete simulated orders</h2>
                         <p>Deletes simulated orders from current forward test</p>
                         <div class="toolbox-buttons bg-dark nav-item d-flex">
-                            <button id="delete-simulated-orders" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            <button id="delete-simulated-orders" type="button"
+                                    class="btn btn-danger btn-outline-danger waves-effect m-0"
+                                    data-url="{{url_for('cache', action='clear_simulated_orders_cache')}}">
                             Delete simulated orders from current forward test
                         </button>
                         </div>
@@ -357,7 +363,9 @@ body::before {
                         <h2>Delete simulated trades</h2>
                         <p>Delete simulated trades from current forward test</p>
                         <div class="toolbox-buttons bg-dark nav-item d-flex">
-                            <button id="delete-simulated-trades" type="button" class="btn btn-danger btn-outline-danger waves-effect m-0">
+                            <button id="delete-simulated-trades" type="button"
+                                    class="btn btn-danger btn-outline-danger waves-effect m-0"
+                                    data-url="{{url_for('cache', action='clear_simulated_trades_cache')}}">
                             Delete simulated trades from current forward test
                         </button>
                         </div>
@@ -561,7 +569,7 @@ body::before {
 
                             </div>
 
-                            <div class="tab-pane fade show active w-100 h-100" id="real-open-orders" role="tabreal" aria-labelledby="real-open-orders-tab">
+                            <div class="tab-pane fade show active w-100 h-D100" id="real-open-orders" role="tabreal" aria-labelledby="real-open-orders-tab">
 
                             </div>
 

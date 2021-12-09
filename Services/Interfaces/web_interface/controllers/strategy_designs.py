@@ -180,3 +180,22 @@ def strategy_design_optimizer_queue():
         except Exception as e:
             commons_logging.get_logger("strategy_design_optimizer_queue").exception(e)
             return util.get_rest_reply(str(e), 500)
+
+
+@web_interface.server_instance.route("/cache<action>", methods=["POST"])
+@login.login_required_when_activated
+def cache(action):
+    message = f"unknown action: {action}"
+    try:
+        if action == "clear_simulated_orders_cache":
+            return util.get_rest_reply(models.clear_simulated_orders_cache(), 200)
+        if action == "clear_simulated_trades_cache":
+            return util.get_rest_reply(models.clear_simulated_trades_cache(), 200)
+        if action == "clear_plotted_cache":
+            return util.get_rest_reply(models.clear_plotted_cache(), 200)
+        elif action == "clear_all_cache":
+            return util.get_rest_reply(models.clear_all_cache(), 200)
+    except Exception as e:
+        message = f"Error when managing cache: {e}"
+        commons_logging.get_logger("strategy_design_optimizer_queue").exception(e)
+    return util.get_rest_reply(message, 500)

@@ -58,20 +58,24 @@ def get_backtesting_run_plotted_data(trading_mode, exchange, symbol, run_id, opt
     return elements.to_json()
 
 
+def _send_command_to_activated_tentacles(command, wait_for_processing=True):
+    trading_mode = configuration.get_config_activated_trading_mode()
+    evaluators = configuration.get_config_activated_evaluators()
+    for tentacle in [trading_mode] + evaluators:
+        interfaces_util.run_in_bot_main_loop(
+            services_api.send_user_command(
+                interfaces_util.get_bot_api().get_bot_id(),
+                tentacle.get_name(),
+                command,
+                None,
+                wait_for_processing=wait_for_processing
+            )
+        )
+
+
 def reload_scripts():
     try:
-        trading_mode = configuration.get_config_activated_trading_mode()
-        evaluators = configuration.get_config_activated_evaluators()
-        for tentacle in [trading_mode] + evaluators:
-            interfaces_util.run_in_bot_main_loop(
-                services_api.send_user_command(
-                    interfaces_util.get_bot_api().get_bot_id(),
-                    tentacle.get_name(),
-                    commons_enums.UserCommands.RELOAD_SCRIPT.value,
-                    None,
-                    wait_for_processing=True
-                )
-            )
+        _send_command_to_activated_tentacles(commons_enums.UserCommands.RELOAD_SCRIPT.value)
         return {"success": True}
     except Exception as e:
         _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
@@ -153,3 +157,30 @@ def update_strategy_optimizer_queue(trading_mode, updated_queue):
             octobot_api.update_design_strategy_optimizer_queue(trading_mode, updated_queue)
         )
      }
+
+
+def _send_clear_command(command, message):
+    try:
+        _send_command_to_activated_tentacles(command)
+        return {"title": message}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
+
+
+def clear_simulated_orders_cache():
+    return _send_clear_command(commons_enums.UserCommands.CLEAR_SIMULATED_ORDERS_CACHE.value,
+                               "Cleared simulated orders cache")
+
+
+def clear_simulated_trades_cache():
+    return _send_clear_command(commons_enums.UserCommands.CLEAR_SIMULATED_TRADES_CACHE.value,
+                               "Cleared simulated trades cache")
+
+
+def clear_plotted_cache():
+    return _send_clear_command(commons_enums.UserCommands.CLEAR_PLOTTING_CACHE.value, "Cleared plotting cache")
+
+
+def clear_all_cache():
+    return _send_clear_command(commons_enums.UserCommands.CLEAR_ALL_CACHE.value, "Cleared all cache")
