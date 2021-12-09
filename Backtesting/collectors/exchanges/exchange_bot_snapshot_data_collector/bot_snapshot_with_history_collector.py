@@ -180,7 +180,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         pass
 
     def get_ohlcv_snapshot(self, symbol, time_frame):
-        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol)
+        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol, allow_creation=False)
         candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
         return [
             [
@@ -291,6 +291,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             raise backtesting_errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol)
+        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol, allow_creation=False)
         candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
         return candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0] * 1000
