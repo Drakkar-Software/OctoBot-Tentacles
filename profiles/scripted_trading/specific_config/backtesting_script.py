@@ -14,11 +14,13 @@ async def script(ctx):
         with drawing.part("backtesting-details", "value") as part:
             pnl = await backtesting_data(run_data, "p&l")
             pnl_p = await backtesting_data(run_data, "p&l%")
-            all_orders = await backtesting_data(run_data, "orders")
+            all_trades = await backtesting_data(run_data, "all_trades")
             await display(part, "% P&L", pnl_p)
             await display(part, "P&L", pnl)
-            await display(part, "Orders", len(all_orders))
-            await display(part, "paid fees", sum(order["fees_amount"] for order in all_orders))
+            all_trades_len = len(all_trades) if all_trades else 0
+            await display(part, "Trades", all_trades_len)
+            trades_fees = sum(order["fees_amount"] for order in all_trades) if all_trades else 0
+            await display(part, "paid fees", trades_fees)
         with drawing.part("list-of-trades-part", "table") as part:
             await plot_table(run_data, part, "SMA 1")
             await plot_table(run_data, part, "SMA 2")
