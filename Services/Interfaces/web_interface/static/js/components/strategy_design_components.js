@@ -50,11 +50,6 @@ function _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, optimiz
 function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_list, backtesting_id, optimizer_id, chartIdentifier){
     const chartedElements = _getChartedElements(chartDetails, yAxis, xAxis, backtesting_id, optimizer_id, chartIdentifier);
     const xaxis = {
-//        showspikes: true,
-//        spikethickness: 1,
-//        spikesnap: "cursor",
-//        spikemode: "across",
-//        spikecolor: "#b2b5be",
         gridcolor: "#2a2e39",
         color: "#b2b5be",
         autorange: true,
@@ -63,11 +58,6 @@ function createChart(chartDetails, chartData, yAxis, xAxis, xaxis_list, yaxis_li
         }
     };
     const yaxis = {
-//        showspikes: true,
-//        spikethickness: 1,
-//        spikesnap: "cursor",
-//        spikemode: "across",
-//        spikecolor: "#b2b5be",
         gridcolor: "#2a2e39",
         color: "#b2b5be",
         fixedrange: false,

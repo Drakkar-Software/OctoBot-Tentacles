@@ -39,9 +39,14 @@ function handleCacheButtons(){
         "delete-simulated-orders", "delete-simulated-trades"].forEach(function (id){
         $(`#${id}`).click(function (){
             send_and_interpret_bot_update({}, $(this).data("url"), null,
-                generic_request_success_callback, generic_request_failure_callback);
+                cacheClearSuccessCallback, generic_request_failure_callback);
         });
     })
+}
+
+function cacheClearSuccessCallback(updated_data, update_url, dom_root_element, msg, status) {
+    create_alert("success", msg["title"], msg["details"]);
+    updateSymbolGraphs();
 }
 
 function handleBacktestingButtons(){
@@ -64,6 +69,7 @@ function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_elem
 }
 
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
+    updateSymbolGraphs();
     startBacktestingUsingSettings();
 }
 
@@ -93,33 +99,6 @@ function handleMainNavBarWidthChange(){
     $("#nav-bar-left").css("min-width", newNavBarLeftWidth)
 
 }
-/** handle horizontal mousewheel scrolling **/
-jQuery(function ($) {
-    $.fn.hScroll = function (amount) {
-        amount = amount || 120;
-        $(this).bind("DOMMouseScroll mousewheel", function (event) {
-            var oEvent = event.originalEvent,
-                direction = oEvent.detail ? oEvent.detail * -amount : oEvent.wheelDelta,
-                position = $(this).scrollLeft();
-            position += direction > 0 ? -amount : amount;
-            $(this).scrollLeft(position);
-            event.preventDefault();
-        })
-    };
-});
-
-$(document).ready(function() {
-    $('.scroll_horizontal').hScroll(40); // You can pass (optionally) scrolling amount
-});
-
-// crosshair
-var cH = $('#crosshair-h'),
-    cV = $('#crosshair-v');
-// todo remove from event listener when not on chart instead of display none
-$(document).on('mousemove',function(e){
-    cH.css('top',e.pageY);
-    cV.css('left',e.pageX);
-});
 
 // show hide when not in charts crosshair
 function handleCrosshairVisibility(){
@@ -595,23 +574,40 @@ function handleSidebarWidthChange(){
     $("#strategy_body").on('resize', function(event){updateSideBarWidth()});
 }
 
-
-//$(document).ready(function() {
-//  // SideNav Button Initialization
-//  $(".button-collapse").sideNav2({
-//    slim: true
-//  });
-//  // SideNav Scrollbar Initialization
-//  var sideNavScrollbar = document.querySelector('.custom-scrollbar');
-//  var ps = new PerfectScrollbar(sideNavScrollbar);
-//})
-
 const optimizerSocket = get_websocket("/strategy_optimizer");
 const displayedRunIds = [];
 let backtestingTableName = undefined;
 let previousOptimizerStatus = undefined;
 
+
+function handleHorizontalScrolling(){
+    /** handle horizontal mousewheel scrolling **/
+    $.fn.hScroll = function (amount) {
+        amount = amount || 120;
+        $(this).bind("DOMMouseScroll mousewheel", function (event) {
+            var oEvent = event.originalEvent,
+                direction = oEvent.detail ? oEvent.detail * -amount : oEvent.wheelDelta,
+                position = $(this).scrollLeft();
+            position += direction > 0 ? -amount : amount;
+            $(this).scrollLeft(position);
+            event.preventDefault();
+        })
+    };
+    $('.scroll_horizontal').hScroll(40); // You can pass (optionally) scrolling amount
+}
+
+function handleCrossHair(){
+    // todo remove from event listener when not on chart instead of display none
+    $('#crosshair-h').removeClass(hidden_class);
+    $('#crosshair-v').removeClass(hidden_class);
+    $(document).on('mousemove',function(e){
+        $('#crosshair-h').css('top',e.pageY);
+        $('#crosshair-v').css('left',e.pageX);
+    });
+}
+
 $(document).ready(function() {
+    handleCrossHair();
     initBacktestingRunSelector();
     handleScriptButtons();
     handleCacheButtons();
@@ -632,6 +628,7 @@ $(document).ready(function() {
     init_optimizer_queue_editor();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
-    handleSidebarWidthChange()
-    backtesting_done_callbacks.push(postBacktestingDone)
+    handleSidebarWidthChange();
+    backtesting_done_callbacks.push(postBacktestingDone);
+    handleHorizontalScrolling();
 });

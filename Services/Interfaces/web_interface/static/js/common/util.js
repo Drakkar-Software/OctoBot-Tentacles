@@ -115,7 +115,6 @@ function generic_request_success_callback(updated_data, update_url, dom_root_ele
     }else{
         create_alert("success", msg, "");
     }
-
 }
 
 function generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {

@@ -129,8 +129,8 @@ body::before {
 <div id="strategy_body" class="strategy_body bg-dark p-fixed w-100 "> <!-- add brdr-r-xl resizable for the sidebar and rm w-100 and d-none from sidebar-->
     <div class="resizable w-100" id="pairs-tabcontent">
         <div class="h-100" id="charts-div" role="tabreal">
-                <div id="crosshair-h" class="hair"></div>
-                <div id="crosshair-v" class="hair"></div>
+                <div id="crosshair-h" class="hair d-none"></div>
+                <div id="crosshair-v" class="hair d-none"></div>
             <div id="charts"
                  class="w-100 h-100"
                  data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
