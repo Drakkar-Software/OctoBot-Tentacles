@@ -582,8 +582,12 @@ def get_timeframes_list(exchanges):
             timeframes_list += interfaces_util.run_in_bot_async_executor(
                     trading_api.get_exchange_available_time_frames(exchange))
     return [commons_enums.TimeFrames(time_frame)
-                for time_frame in list(set(timeframes_list))
-                if time_frame in allowed_timeframes]
+            for time_frame in list(set(timeframes_list))
+            if time_frame in allowed_timeframes]
+
+
+def get_strategy_required_time_frames(strategy_class):
+    return strategy_class.get_required_time_frames({}, interfaces_util.get_edited_tentacles_config())
 
 
 def format_config_symbols(config):

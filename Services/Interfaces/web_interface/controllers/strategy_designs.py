@@ -33,6 +33,7 @@ def strategy_design():
     activated_evaluators = models.get_config_activated_evaluators()
     strategies = models.get_config_activated_strategies()
     activated_strategy = strategies[0] if strategies else None
+    enabled_time_frames = models.get_strategy_required_time_frames(activated_strategy) if activated_strategy else []
     return flask.render_template(
         "strategy_design.html",
         trading_mode_name=trading_mode.get_name(),
@@ -41,7 +42,7 @@ def strategy_design():
         exchange_name=exchange_name,
         symbols=sorted([symbol_util.convert_symbol(s, octobot_commons.MARKET_SEPARATOR, "|") for s in symbols]),
         time_frames=[tf.value for tf in models.get_traded_time_frames(exchange_manager)],
-        enabled_time_frames=[tf.value for tf in models.get_config_time_frames()],
+        enabled_time_frames=[tf.value for tf in enabled_time_frames],
         exchange_time_frames=[tf.value for tf in commons_enums.TimeFrames],
         activated_evaluators=activated_evaluators,
         activated_strategy=activated_strategy,

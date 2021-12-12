@@ -357,7 +357,7 @@ function handleUserInputsActions(){
             }
         });
         if (save){
-            updateTentacleConfigurations($(this).data("url"), tentaclesConfigByTentacle, true);
+            updateTentacleConfigurations($(this).data("url"), tentaclesConfigByTentacle, false);
         }
     })
 }

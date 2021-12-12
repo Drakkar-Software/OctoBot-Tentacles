@@ -287,7 +287,7 @@ function _displayInputsForTentacle(elements, replot, editors, mainTab, tentacleT
                 document.getElementById(`${tabIdentifier}-${divId}`),
                 {
                     schema: inputDetails.schema,
-                    startval: replot ? inputDetails.config : masterTab.data("config"),
+                    startval: inputDetails.config,
                     no_additional_properties: true,
                     prompt_before_delete: true,
                     disable_array_reorder: true,
@@ -675,13 +675,20 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
         table.on("unselect", function (event){
             sectionHandler(event, false);
         })
-        if(records.length){
-            table.sort("timestamp", "desc");
-            table.click(table.getFirst());
+        if(autoSelectFirstBacktesting()){
+            if(records.length){
+                table.sort("timestamp", "desc");
+                table.click(table.getFirst());
+            }
         }
         return tableName;
     }
     $("#no-backtesting-message").removeClass(hidden_class);
+}
+
+function autoSelectFirstBacktesting(){
+    // TODO (use js localstorage ?)
+    return false;
 }
 
 function getSelectedBacktestingIDsWithOptimizer(tableName){
