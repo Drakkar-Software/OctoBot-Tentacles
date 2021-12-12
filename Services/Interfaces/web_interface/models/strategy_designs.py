@@ -126,11 +126,11 @@ def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         config,
         data_files)
-    tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
     interfaces_util.run_in_bot_async_executor(
         octobot_api.initialize_design_strategy_optimizer(optimizer, is_computing=True, is_resuming=resume)
     )
     start_func = octobot_api.resume_design_strategy_optimizer if resume else octobot_api.start_design_strategy_optimizer
+    tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
     thread = threading.Thread(target=interfaces_util.run_in_bot_async_executor,
                               args=(start_func(optimizer, randomly_chose_runs), ),
                               name=f"{optimizer.get_name()}-WebInterface-runner")
