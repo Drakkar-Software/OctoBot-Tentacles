@@ -1,8 +1,9 @@
 function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, symbol, time_frame, cleanCharts){
     const chartIdentifier = backtestingRunId ? backtestingRunId : "live";
-    let url = $("#charts").data("live-url")
+    const chartsDiv = $("#charts");
+    let url = `${chartsDiv.data("live-url")}?exchange_id=${getExchangeId()}`;
     if(replot){
-       url = $("#charts").data("backtesting-url") + `&run_id=${backtestingRunId}&optimizer_id=${optimizerId}`
+       url = `${chartsDiv.data("backtesting-url")}?exchange_id=${getExchangeId()}&run_id=${backtestingRunId}&optimizer_id=${optimizerId}`
     }
     url = `${url}&symbol=${symbol}&time_frame=${time_frame}`
     $.get({
@@ -75,12 +76,11 @@ function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element
 
 
 function startBacktestingUsingSettings(){
-    const reloadScript = $("#reload-script");
-    const backtestingUrl = reloadScript.data("backtesting-url")
+    const backtestingUrl = $("#reload-script").data("backtesting-url")
     const startDate = $("#startDate");
     const endDate = $("#endDate");
     const data = {
-        exchange_id: reloadScript.data("exchange-id"),
+        exchange_id: getExchangeId(),
         start_timestamp: startDate.val().length ? (new Date(startDate.val()).getTime()) : null,
         end_timestamp: endDate.val().length ? (new Date(endDate.val()).getTime()) : null,
     }
@@ -417,11 +417,10 @@ function handleTabSelectionEvents(){
 }
 
 function startStrategyDesignOptimizer(){
-    const startOptimizerButton  = $("#optimizer-input-save-and-start-button");
-    const url = startOptimizerButton.data("start-url");
+    const url = $("#optimizer-input-save-and-start-button").data("start-url");
     const updatedConfig = {
         config: getOptimizerSettingsValues(),
-        exchange_id: startOptimizerButton.data("exchange-id")
+        exchange_id: getExchangeId()
     };
     send_and_interpret_bot_update(updatedConfig, url, null, startStrategyOptimizerSuccessCallback, generic_request_failure_callback);
 }
@@ -545,6 +544,35 @@ function getSelectedTimeFrame(){
     return $("#time-frame-selector").find(".selected").data("time-frame");
 }
 
+function getExchangeId(){
+    return $("#strategy_body").data("exchange-id");
+}
+
+function updateExchangeId(){
+    send_and_interpret_bot_update({}, $("#strategy_body").data("exchange-details-url"), null,
+        updateExchangeIdCallback, updateExchangeIdFailureCallback, "GET");
+}
+
+function updateExchangeIdCallback(requestData, update_url, dom_root_element, msg, status){
+    $("#strategy_body").data("exchange-id", msg.exchange_id);
+    const exchangeLogo = $("#exchange_logo");
+    exchangeLogo.attr("alt", msg.exchange_name);
+    exchangeLogo.attr("src", "");
+    const exchangeLogoBaseURL = exchangeLogo.attr("url").slice(0, exchangeLogo.attr("url").lastIndexOf("/") + 1);
+    exchangeLogo.addClass(hidden_class);
+    exchangeLogo.attr("url", `${exchangeLogoBaseURL}${msg.exchange_name}`);
+    fetch_images();
+}
+
+function updateExchangeIdFailureCallback(requestData, update_url, dom_root_element, msg, status, error){
+    if(error === "NOT FOUND"){
+        // bot might be starting, retry soon
+        setTimeout(updateExchangeId, 400)
+    }else{
+        create_alert("error", "Error when connecting to the exchange", msg.responseText);
+    }
+}
+
 function updateSymbolGraphs(){
     const selectedSymbol =getSelectedSymbol();
     const selectedTimeFrame = getSelectedTimeFrame();
@@ -631,4 +659,5 @@ $(document).ready(function() {
     handleSidebarWidthChange();
     backtesting_done_callbacks.push(postBacktestingDone);
     handleHorizontalScrolling();
+    registerReconnectedCallback(updateExchangeId);
 });

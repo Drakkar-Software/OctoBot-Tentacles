@@ -100,8 +100,19 @@ body::before {
                 {% endfor %}
             </ul>
         </ul>
-        <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark brdr-l p-fixed">
-            <li class="main-nav-item waves-effect waves-light nav-h " id="add-evaluators">
+        <ul id="nav-bar-right" class="nav md-tabs toolbox-tabs bg-dark p-fixed">
+            <li class="main-nav-item nav-h d-none d-md-inline">
+                <div class="navbar-brand mx-auto font-weight-bolder my-1">
+                    <i id="navbar-bot-status" class="fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i>
+                </div>
+            </li>
+            <li class="main-nav-item waves-effect waves-light nav-h d-none d-md-inline">
+              <a href="#" class="nav-link primary-tab-selector waves-effect bg-dark" title="Select exchange">
+                  <img class="img-fluid product-logo d-none" src="" alt="{{exchange_name}}" id="exchange_logo"
+                       url="{{url_for('exchange_logo', _external=True, name=exchange_name)}}">
+              </a>
+            </li>
+            <li class="main-nav-item waves-effect waves-light nav-h brdr-l" id="add-evaluators">
               <a href="{{ url_for('advanced.evaluator_config') }}" class="nav-link primary-tab-selector bg-dark" title="enable and disable Evaluators">
                   <i class="fas fa-atom"></i><span class="d-none d-xl-inline"> Evaluators </span><i class="fas fa-plus add-evaluator"></i>
               </a>
@@ -126,15 +137,17 @@ body::before {
 
 
 
-<div id="strategy_body" class="strategy_body bg-dark p-fixed w-100 "> <!-- add brdr-r-xl resizable for the sidebar and rm w-100 and d-none from sidebar-->
+<div id="strategy_body" class="strategy_body bg-dark p-fixed w-100"
+     data-exchange-id="{{exchange_id}}"
+     data-exchange-details-url="{{url_for('api.first_exchange_details')}}"> <!-- add brdr-r-xl resizable for the sidebar and rm w-100 and d-none from sidebar-->
     <div class="resizable w-100" id="pairs-tabcontent">
         <div class="h-100" id="charts-div" role="tabreal">
                 <div id="crosshair-h" class="hair d-none"></div>
                 <div id="crosshair-v" class="hair d-none"></div>
             <div id="charts"
                  class="w-100 h-100"
-                 data-live-url="{{url_for('plotted_data', exchange_id=exchange_id)}}"
-                 data-backtesting-url="{{url_for('backtesting_main_plotted_data', exchange_id=exchange_id)}}"
+                 data-live-url="{{url_for('plotted_data')}}"
+                 data-backtesting-url="{{url_for('backtesting_main_plotted_data')}}"
                  data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
             >
 
@@ -202,7 +215,6 @@ body::before {
                <button id="reload-script"
                        data-url="{{ url_for('update_plot_script') }}"
                        data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
-                       data-exchange-id="{{ exchange_id }}"
                        type="button"
                        class="btn btn-success waves-effect m-0"
                        title="apply script changes"><i class="fas fa-redo"></i></button><div class="toolbox-btn-divider bg-dark-grey">
@@ -596,7 +608,6 @@ body::before {
                     <div class="toolbox-buttons bg-dark-grey nav-item d-flex">
                         <button class="btn btn-success btn-outline-success waves-effect optimizer-input-save-and-start brdr-l m-0"
                                 id="optimizer-input-save-and-start-button"
-                                data-exchange-id="{{ exchange_id }}"
                                 data-config-url="{{ url_for('strategy_design_config_optimizer') }}"
                                 data-start-url="{{ url_for('strategy_design_start_optimizer', action='start') }}">Save and start Optimizer</button>
                         <button class="btn btn-success btn-outline-success waves-effect d-none m-0 px-2"
@@ -753,6 +764,7 @@ body::before {
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/backtesting_util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_optimizer.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_components.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
