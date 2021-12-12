@@ -315,7 +315,7 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
             _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName);
         }
         if (sub_element.type === "value"){
-            _updateValues(sub_element, replot, backtesting_id, added);
+            _updateBacktestingValues(sub_element, replot, backtesting_id, added);
         }
     });
     if(backtestingPart){
@@ -354,7 +354,7 @@ function _updateChartLayout(){
     }
 }
 
-function _updateValues(sub_element, replot, backtesting_id, added){
+function _updateBacktestingValues(sub_element, replot, backtesting_id, added){
     const parentDiv = $(document.getElementById(sub_element.name));
     if(!parentDiv.length){
         return
@@ -374,6 +374,10 @@ function _updateValues(sub_element, replot, backtesting_id, added){
     if(added){
         _add_labelled_backtesting_values(sub_element, backtesting_id, backtestingRunParentDiv, parentDiv)
     }
+}
+
+function _clearBacktestingValues(){
+    $(".backtesting-run-container").remove();
 }
 
 function _add_labelled_backtesting_values(sub_element, backtesting_id, backtestingRunParentDiv, parentDiv){
@@ -633,7 +637,8 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     }
 }
 
-function createBacktestingMetadataTable(metadata, sectionHandler){
+function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLatest){
+    _clearBacktestingValues();
     if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
         const keys = Object.keys(metadata[0]);
@@ -675,13 +680,13 @@ function createBacktestingMetadataTable(metadata, sectionHandler){
         table.on("unselect", function (event){
             sectionHandler(event, false);
         })
-        if(autoSelectFirstBacktesting()){
-            if(records.length){
-                table.sort("timestamp", "desc");
+        if(records.length){
+            table.sort("timestamp", "desc");
+            if(forceSelectLatest || autoSelectFirstBacktesting()){
                 table.click(table.getFirst());
             }
+            return tableName;
         }
-        return tableName;
     }
     $("#no-backtesting-message").removeClass(hidden_class);
 }

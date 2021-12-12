@@ -66,7 +66,7 @@ function postBacktestingDone(){
 }
 
 function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_element, msg, status){
-    initBacktestingRunSelector()
+    initBacktestingRunSelector(true)
 }
 
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
@@ -244,11 +244,15 @@ function updateBacktestingSelector(updated_data, update_url, dom_root_element, m
             })
         }
     }
-    backtestingTableName = createBacktestingMetadataTable(msg.data, updateSelection)
+    backtestingTableName = createBacktestingMetadataTable(msg.data, updateSelection,
+        updated_data.forceSelectLatestBacktesting)
 }
 
-function initBacktestingRunSelector(){
-    send_and_interpret_bot_update({}, $("#backtesting-run-select-table").data("url"), null,
+function initBacktestingRunSelector(forceSelectLatestBacktesting){
+    const data = {
+        forceSelectLatestBacktesting: forceSelectLatestBacktesting
+    }
+    send_and_interpret_bot_update(data, $("#backtesting-run-select-table").data("url"), null,
         updateBacktestingSelector, generic_request_failure_callback, "GET");
 }
 
@@ -636,7 +640,7 @@ function handleCrossHair(){
 
 $(document).ready(function() {
     handleCrossHair();
-    initBacktestingRunSelector();
+    initBacktestingRunSelector(false);
     handleScriptButtons();
     handleCacheButtons();
     handleBacktestingButtons();
