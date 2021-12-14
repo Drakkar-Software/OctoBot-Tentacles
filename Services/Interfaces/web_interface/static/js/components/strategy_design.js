@@ -88,15 +88,15 @@ function startBacktestingUsingSettings(){
 }
 
 function handleMainNavBarWidthChange(){
-    const currentTimeFrameDropdownWidth = $("#config-activated-time-frame-selector").outerWidth(true)
-    const currentActiveTfTabsWidth = $("#time-frame-selector").outerWidth(true)
-    $("#pairs-tabs").css("max-width", "calc(100% - " + currentTimeFrameDropdownWidth + "px - " + currentActiveTfTabsWidth + "px)")
-
     const currentMainDropDownWidth = $(".main-dropdown-menu").outerWidth(true)
     const currentNavBarRightWidth = $("#nav-bar-right").outerWidth(true)
     const newNavBarLeftWidth = "calc(100% - " + currentNavBarRightWidth + "px)"
     $("#nav-bar-left").css("max-width", newNavBarLeftWidth)
     $("#nav-bar-left").css("min-width", newNavBarLeftWidth)
+
+    const currentTimeFrameDropdownWidth = $("#config-activated-time-frame-selector").outerWidth(true)
+    const currentActiveTfTabsWidth = $("#time-frame-selector").outerWidth(true)
+    $("#pairs-tabs").css("max-width", "calc(100% - " + currentTimeFrameDropdownWidth + "px - " + currentActiveTfTabsWidth + "px)")
 
 }
 
@@ -459,6 +459,7 @@ function on_optimizer_state_update(data){
     const cancelButton = $("#optimizer-cancel-button");
     const resumeButton = $("#optimizer-resume-button");
     const startButton = $("#optimizer-input-save-and-start-button");
+    const currentToolbarHeight =  $(".main-toolbox-tabs").outerHeight(true)
     if(status === "computing") {
         $("#optimizer_progress_bar_title").removeClass(hidden_class)
         cancelButton.removeClass(hidden_class);
@@ -467,6 +468,12 @@ function on_optimizer_state_update(data){
         $("#backtesting_progress_bar_title").addClass(hidden_class)
         const overall_progress = data["overall_progress"];
         progress_bar.show();
+
+        // todo doesnt get triggered
+        const currentBacktestingProgressBar = $("#backtesting_progress_bar").outerHeight(true)
+        const newTabContentHeight = "calc(100% - " + currentBacktestingProgressBar + "px - " + currentToolbarHeight + "px)"
+        $("#toolbox-tabcontent").css("height", newTabContentHeight)
+
         update_progress(overall_progress);
         setTimeout(function (){check_optimizer_state();}, 500)
     }else{
@@ -475,6 +482,10 @@ function on_optimizer_state_update(data){
         $("#optimizer_progress_bar_title").addClass(hidden_class)
         $("#backtesting_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
+
+        // todo doesnt get triggered
+        const newTabContentHeight =  "calc(100% - " + currentToolbarHeight + "px)"
+        $("#toolbox-tabcontent").css("height", newTabContentHeight)
     }
     if(status === "finished" && previousOptimizerStatus === "computing"){
         postBacktestingDone();
@@ -645,9 +656,9 @@ $(document).ready(function() {
     handleCacheButtons();
     handleBacktestingButtons();
     handleResizables();
-    handleBrowserWindowSizeChange ()
-    updateWindowSizes()
-    handleCrosshairVisibility()
+    handleBrowserWindowSizeChange();
+    updateWindowSizes();
+    handleCrosshairVisibility();
     handleUserInputsActions();
     handleOptimizerActions();
     handleTabSelectionEvents();
@@ -665,3 +676,4 @@ $(document).ready(function() {
     handleHorizontalScrolling();
     registerReconnectedCallback(updateExchangeId);
 });
+

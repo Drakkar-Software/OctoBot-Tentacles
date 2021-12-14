@@ -31,28 +31,30 @@ body::before {
 </style>
 
 <nav id="new-nav" class="nav-tabs brdr-b d-flex bg-dark">
-    <div class="main-dropdown-menu brdr-r main-nav-item">
-        <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-h d-block" data-toggle="dropdown">
-            <span><i class="fas fa-bars"></i></span>
-        </a>
-        <div class="dropdown-menu dropdown-default brdr-actv bg-dark" style="">
-            <a href="{{ url_for('home') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-home"></i> Home</a>
-            <a href="{{ url_for('trading') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-line"></i> Trading</a>
-            <a href="{{ url_for('portfolio') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-pie"></i> Portfolio</a>
-            <a href="{{ url_for('profile') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-cog"></i> Profile</a>
-            <a href="{{ url_for('accounts') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-link"></i> Accounts</a>
-            <a href="{{ url_for('community') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-rss-square"></i> Community</a>
-            <a href="{{ url_for('octobot_help') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-question-circle"></i> Help</a>
-            <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
+    <div id="logo-and-menu" class="d-flex">
+        <div class="main-dropdown-menu brdr-r main-nav-item">
+            <a role="button" aria-expanded="false" type="button" class="navbar-toggler nav-h d-block" data-toggle="dropdown">
+                <span><i class="fas fa-bars"></i></span>
+            </a>
+            <div class="dropdown-menu dropdown-default brdr-actv bg-dark" style="">
+                <a href="/home" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-home"></i> Home</a>
+                <a href="/trading" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-line"></i> Trading</a>
+                <a href="/portfolio" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-pie"></i> Portfolio</a>
+                <a href="/profile" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-cog"></i> Profile</a>
+                <a href="/accounts" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-link"></i> Accounts</a>
+                <a href="/community" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-rss-square"></i> Community</a>
+                <a href="/octobot_help" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-question-circle"></i> Help</a>
+                <a href="/about" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
+            </div>
+        </div>
+        <div class="my-auto" id="octobot-logo">
+            <img src="/static/img/svg/octobot.svg" alt="octobot-logo">
+            <h4 class="d-none d-xl-inline">
+                OctoBot
+            </h4>
         </div>
     </div>
-    <div class="my-auto ml-4 mr-4" id="octobot-logo">
-        <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
-        <h4>
-        OctoBot
-        </h4>
-    </div>
-    <ul class="nav md-tabs toolbox-tabs row bg-dark m-0" id="nav-toolbox" role="tablist">
+    <ul class="nav md-tabs toolbox-tabs row bg-dark m-0 w-100" id="nav-toolbox" role="tablist">
         <ul id="nav-bar-left" class="nav md-tabs toolbox-tabs bg-dark m-0 p-0 d-flex nav-h">
             <span id="time-frame-selector" class="scroll_horizontal brdr-l">
                 <!-- repeat for each activated timeframe -->
@@ -166,72 +168,76 @@ body::before {
 
 
     <div id="toolbox" class="strategy-toolbox w-100 p-absolute">
-        <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs brdr-t-xl brdr-b" id="main-toolbox-tabs" role="tablist">
-            <li class="nav-item dropdown brdr-l">
-                <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
-                aria-expanded="false">Code Editor</a>
-                <div class="dropdown-menu brdr-actv dropdown-default bg-dark">
-                    <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
-                    aria-controls="trading-editor"
-                    aria-selected="false">
-                    trading script editor
+        <div class=" brdr-t-xl brdr-b d-flex">
+            <ul id="main-toolbox-tabs" role="tablist" class="nav nav-tabs md-tabs justify-content-center toolbox-tabs main-toolbox-tabs noBorder w-100">
+                <li class="nav-item dropdown brdr-l">
+                    <a class="nav-link dropdown-toggle collapsed" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
+                    aria-expanded="false">
+                        <i class="fas fa-code"></i><span class="d-none d-md-inline"> Code Editor</span>
                     </a>
-                    <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
-                    aria-controls="backtesting-editor"
-                    aria-selected="false">
-                    backtesting script editor
+                    <div class="dropdown-menu brdr-actv dropdown-default bg-dark">
+                        <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="trading-editor-tab" data-toggle="tab" href="#trading-editor" role="tab"
+                        aria-controls="trading-editor"
+                        aria-selected="false">
+                        trading script editor
+                        </a>
+                        <a class="nav-link primary-tab-selector bg-dark bg-hvr open-toolbox-onclick noBorder" id="backtesting-editor-tab" data-toggle="tab" href="#backtesting-editor" role="tab"
+                        aria-controls="backtesting-editor"
+                        aria-selected="false">
+                        backtesting script editor
+                        </a>
+                    </div>
+                </li>
+                <li class="nav-item brdr-l">
+                    <a class="nav-link primary-tab-selector open-toolbox-onclick" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
+                       aria-controls="strategy-settings"
+                       aria-selected="true">
+                        <i class="fas fa-cogs"></i><span class="d-none d-md-inline"> Strategy Settings <i id="move-strategy-settings" class="far fa-window-restore"></i></span>
                     </a>
-                </div>
-            </li>
-            <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="strategy-settings-tab" data-toggle="tab" href="#strategy-settings" role="tab"
-                   aria-controls="strategy-settings"
-                   aria-selected="true">
-                    Strategy Settings <i id="move-strategy-settings" class="far fa-window-restore"></i>
-                </a>
-            </li>
-            <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick show active" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
-                   aria-controls="backtesting"
-                   aria-selected="true">
-                    Backtesting
-                </a>
-            </li>
-            <li class="nav-item brdr-l d-none">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="trading-tab" data-toggle="tab" href="#trading" role="tab"
-                   aria-controls="trading"
-                   aria-selected="false">
-                    Trading
-                </a>
-            </li>
-            <li class="nav-item brdr-l">
-                <a class="nav-link primary-tab-selector open-toolbox-onclick" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
-                   aria-controls="optimizer"
-                   aria-selected="false">
-                    Strategy Optimizer
-                </a>
-            </li>
-           <div class="toolbox-buttons d-flex nav-item">
-               <button id="reload-script"
-                       data-url="{{ url_for('update_plot_script') }}"
-                       data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
-                       type="button"
-                       class="btn btn-success waves-effect m-0"
-                       title="apply script changes"><i class="fas fa-redo"></i></button><div class="toolbox-btn-divider bg-dark-grey">
-                </div><button route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect brdr-r m-0" title="Restart OctoBot"><i class="fas fa-power-off"></i></button>
-               <!-- div needs to be there else, whitespace will appear -->
-           </div>
-           <div class="fullscreen-btn-group">
-                <button class="fullscreen-size-btn minimize">
+                </li>
+                <li class="nav-item brdr-l">
+                    <a class="nav-link primary-tab-selector open-toolbox-onclick show active" id="backtesting-tab" data-toggle="tab" href="#backtesting" role="tab"
+                       aria-controls="backtesting"
+                       aria-selected="true">
+                        <i class="fas fa-pray"></i><span class="d-none d-md-inline"> Backtesting</span>
+                    </a>
+                </li>
+                <li class="nav-item brdr-l d-none">
+                    <a class="nav-link primary-tab-selector open-toolbox-onclick" id="trading-tab" data-toggle="tab" href="#trading" role="tab"
+                       aria-controls="trading"
+                       aria-selected="false">
+                        Trading
+                    </a>
+                </li>
+                <li class="nav-item brdr-l">
+                    <a class="nav-link primary-tab-selector open-toolbox-onclick" id="optimizer-tab" data-toggle="tab" href="#optimizer" role="tab"
+                       aria-controls="optimizer"
+                       aria-selected="false">
+                        <i class="fas fa-user-astronaut"></i><span class="d-none d-md-inline"> Strategy Optimizer</span>
+                    </a>
+                </li>
+               <div class="toolbox-buttons d-flex nav-item">
+                   <a id="reload-script"
+                           data-url="{{ url_for('update_plot_script') }}"
+                           data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
+                           type="button"
+                           class="btn btn-success waves-effect m-0"
+                           title="apply script changes"><i class="fas fa-redo"></i></a><div class="toolbox-btn-divider bg-dark-grey">
+                    </div><a route="{{ url_for('commands', cmd='restart') }}" type="button" class="btn btn-warning waves-effect brdr-r m-0" title="Restart OctoBot"><i class="fas fa-power-off"></i></a>
+                   <!-- div needs to be there else, whitespace will appear -->
+               </div>
+            </ul>
+           <div class="fullscreen-btn-group d-flex nav-h bg-dark">
+                <a class="fullscreen-size-btn minimize m-auto">
                     <i class="far fa-window-minimize"></i>
-                </button>
-                <button class="fullscreen-size-btn fullscreen">
+                </a>
+                <a class="fullscreen-size-btn fullscreen m-auto">
                     <i class="far fa-window-maximize"></i>
-                </button>
+                </a>
            </div>
-        </ul>
+        </div>
 
-        <span id='backtesting_progress_bar' style='display: none;'>
+        <div id='backtesting_progress_bar' style='display: none;' class="bg-dark">
             <div class="card-title">
                 <h4 id="optimizer_progress_bar_title">Optimizer in progress</h4>
                 <h4 id="backtesting_progress_bar_title">Backtesting in progress</h4>
@@ -241,7 +247,7 @@ body::before {
               <div id='progess_bar_anim' class='progress-bar progress-bar-striped progress-bar-animated'
                     role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%;'></div>
             </div>
-        </span>
+        </div>
 
         <div class="tab-content soft-h-100" id="toolbox-tabcontent">
             <div class="tab-pane fade h-100" id="trading-editor" role="tabreal" aria-labelledby="trading-editor-tab">

@@ -1,14 +1,5 @@
 
 /*** temp fixes ***/
-/** temp fix for screensize button **/
-.main-toolbox-tabs .toolbox-buttons {
-    margin-right: 50px;
-}
-
-.main-toolbox-tabs li:first-child {
-    margin-left: 50px;
-}
-/** temp fix for screensize button END **/
 
 body {
     /* looks better and gives more space */
@@ -150,10 +141,6 @@ textarea {
 
 /** navbar **/
 
-#nav-toolbox {
-    width: calc(100% - 44.5px) !important; /* subtracts width from main nav menu dropdown */
-}
-
 #nav-bar-left {
     min-width: calc(100vw - 356px - 44.5px);
     max-width: calc(100vw - 356px - 44.5px);
@@ -167,20 +154,20 @@ textarea {
     max-width: calc(40% - 31.5px);
 }
 
-#pairs-tabs {
-    min-width: 60%;
-}
-
 .nav-item > a {
     padding: 0 2rem;
     border: none !important;
     line-height: 41px;
 }
 
-.main-nav-item a {
+.main-nav-item a, #octobot-logo {
     padding: 0 12px !important;
     border: none !important;
     line-height: 41px;
+}
+
+#pairs-tabs {
+    max-width: calc(100% - 248.15px);
 }
 
 /** navbar END **/
@@ -301,7 +288,7 @@ textarea {
 }
 
 .toolbox-buttons .btn-warning, .w2ui-btn {
-    color: var(--new-warning);
+    color: var(--new-warning) !important;
 }
 
 .toolbox-buttons .btn-warning:hover, .toolbox-buttons .btn .btn-warning .btn-outline-warning:hover, .w2ui-btn:hover {
@@ -310,12 +297,12 @@ textarea {
 }
 
 .toolbox-buttons .btn-success, .w2ui-btn-blue {
-    color:var(--new-success);
+    color:var(--new-success) !important;
 }
 
 .toolbox-buttons .btn-success:hover, .w2ui-btn-blue:hover {
     background: var(--new-success) !important;
-    color: #fff;
+    color: #fff !important;
 }
 
 .toolbox-btn-divider {
@@ -331,11 +318,41 @@ textarea {
     color:#fff !important;
 }
 
-/** toolbox resize buttons todo fix small screen issues **/
-.fullscreen-btn-group {
-    float: right;
-    right: 8px;
-    position: fixed;
+@media screen and (max-width: 1025px) {
+    .toolbox-tabs li a, .toolbox-buttons a  {
+        padding: 0 25px;
+    }
+    .main-nav-item a {
+        padding: 0 5px !important;
+    }
+
+    #octobot-logo {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+}
+
+@media screen and (max-width: 500px) {
+    .toolbox-tabs li a, .toolbox-buttons a  {
+        padding: 0 16px;
+    }
+
+
+}
+
+@media screen and (max-width: 400px) {
+    .toolbox-tabs li a, .toolbox-buttons a  {
+        padding: 0 14px;
+    }
+}
+
+@media screen and (min-width: 1084px) {
+    .fullscreen-btn-group {
+        float: right;
+        right: 8px;
+        position: fixed;
+    }
 }
 
 .fullscreen-size-btn i {
@@ -350,14 +367,8 @@ textarea {
     color: #b2b5be;
 }
 
-button.fullscreen-size-btn:hover {
+a.fullscreen-size-btn:hover {
     background: var(--bg-hvr);
-}
-
-button.fullscreen-size-btn {
-    background: none;
-    border:none;
-    margin-top: 4px;
 }
 
 .fullscreen-size-btn.is-full-screen i {
