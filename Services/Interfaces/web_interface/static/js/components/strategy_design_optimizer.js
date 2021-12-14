@@ -24,8 +24,8 @@ function getOptimizerSettingsValues(){
         let settingValue = inputSetting.val();
         if(inputSetting.data("type") === "number"){
             const minInputSetting = inputSetting
-            const maxInputSetting = $(document.getElementById(`${rawSettingName}Input-setting-number-max`));
-            const stepInputSetting = $(document.getElementById(`${rawSettingName}Input-setting-number-step`));
+            const maxInputSetting = $(document.getElementById(`${tentacleValue}-${rawSettingName}-Input-setting-number-max`));
+            const stepInputSetting = $(document.getElementById(`${tentacleValue}-${rawSettingName}-Input-setting-number-step`));
             settingValue = {
                 min: Number(minInputSetting.val()),
                 max: Number(maxInputSetting.val()),
@@ -34,9 +34,10 @@ function getOptimizerSettingsValues(){
         }else if(inputSetting.data("type") === "boolean"){
             settingValue = inputSetting.val().map((x) => (x.toLowerCase() === "true"));
         }
-        const enabled = $(document.getElementById(`${rawSettingName}Input-enabled-value`)).prop("checked");
-        settings[clearedSettingName] = {
+        const enabled = $(document.getElementById(`${tentacleValue}-${rawSettingName}-Input-enabled-value`)).prop("checked");
+        settings[`${tentacleValue}-${clearedSettingName}`] = {
             value: settingValue,
+            user_input: clearedSettingName,
             tentacle: tentacleValue,
             enabled: enabled
         };
@@ -48,15 +49,24 @@ function _buildOptimizerSettingsForm(schemaElements, configValues){
     const settingsRoot = $("#optimizer-settings-root");
     settingsRoot.empty();
     schemaElements.data.elements.forEach(function (element){
+        const tentacleName = element.tentacle
+        const inputGroupId = _appendInputGroupFromTemplate(settingsRoot, tentacleName);
+        const inputGroupContent = $(`#${inputGroupId}`).find(".input-content");
         Object.values(element.schema.properties).forEach(function (inputDetail) {
             const valueType = _getValueType(inputDetail);
-            const tentacleName = element.tentacle;
             const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail, tentacleName)
-            settingsRoot.append(newInputSetting).hide().fadeIn();
-            _updateInputDetailValues(valueType, inputDetail, configValues);
+            inputGroupContent.append(newInputSetting);
+            _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName);
         });
     })
     _updateInputSettingsDisplay(settingsRoot);
+}
+
+function _appendInputGroupFromTemplate(settingsRoot, tentacleName){
+    const template = $("#optimizer-settings-tentacle-group-template");
+    let inputGroup = template.html().replace(new RegExp("XYZ","g"), tentacleName);
+    settingsRoot.append(inputGroup);
+    return `optimizer-settings-${tentacleName}-tentacle-group-template`;
 }
 
 function _getInputSettingFromTemplate(valueType, inputDetail, tentacleName){
@@ -81,17 +91,17 @@ function _getValueType(inputDetail){
     return schemaValueType;
 }
 
-function _updateInputDetailValues(valueType, inputDetail, configValues){
-    const rawValue = configValues[inputDetail.title.replaceAll(" ", "_")];
+function _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName){
+    const rawValue = configValues[`${tentacleName}-${inputDetail.title.replaceAll(" ", "_")}`];
     let configValue = undefined;
     let isEnabled = false;
     if(typeof rawValue !== "undefined"){
-        configValue = configValues[inputDetail.title.replaceAll(" ", "_")].value;
+        configValue = rawValue.value;
         isEnabled = rawValue.enabled;
     }
     if(valueType === "options" || valueType === "boolean"){
         let values = typeof configValue === "undefined" ? [] : configValue
-        const valuesSelect = $(document.getElementById(`${inputDetail.title}Input-setting-${valueType}`));
+        const valuesSelect = $(document.getElementById(`${tentacleName}-${inputDetail.title}-Input-setting-${valueType}`));
         if(valueType === "options"){
             inputDetail.enum.forEach(function (value){
                 const isSelected = values.indexOf(value) !== -1;
@@ -108,12 +118,12 @@ function _updateInputDetailValues(valueType, inputDetail, configValues){
     }else if(valueType === "number"){
         let values = typeof configValue === "undefined" ? {min: 0, max: 0, step: 0} : configValue;
         ["min", "max", "step"].forEach(function (suffix){
-            const element = $(document.getElementById(`${inputDetail.title}Input-setting-number-${suffix}`));
+            const element = $(document.getElementById(`${tentacleName}-${inputDetail.title}-Input-setting-number-${suffix}`));
             const value = values[suffix];
             element.val(value);
         })
     }
-    $(document.getElementById(`${inputDetail.title}Input-enabled-value`)).prop("checked", isEnabled);
+    $(document.getElementById(`${tentacleName}-${inputDetail.title}-Input-enabled-value`)).prop("checked", isEnabled);
 }
 
 function _updateInputSettingsDisplay(settingsRoot){

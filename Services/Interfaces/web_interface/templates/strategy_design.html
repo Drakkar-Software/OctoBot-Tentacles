@@ -596,11 +596,11 @@ body::before {
             <div class="tab-pane fade scroll-vertically h-100 bg-dark" id="optimizer" role="tabreal" aria-labelledby="optimizer-tab">
 
                 <ul class="nav nav-tabs md-tabs justify-content-center toolbox-tabs bg-dark brdr-t brdr-b" id="optimizer-tabs" role="tablist">
-                    <li class="nav-item waves-effect waves-light brdr-l">
+                    <li class="nav-item waves-effect waves-light brdr-l show active">
                       <a class="nav-link primary-tab-selector" id="strategy-optimizer-settings-tab" data-toggle="tab" role="tab" aria-selected="true" aria-controls="strategy-optimizer-settings" href="#strategy-optimizer-settings">Optimizer Settings</a>
                     </li>
                     <li class="nav-item waves-effect waves-light brdr-l">
-                      <a class="nav-link primary-tab-selector show active" id="strategy-optimizer-queue-tab" data-toggle="tab" href="#strategy-optimizer-queue" role="tab" aria-controls="strategy-optimizer-queue" aria-selected="false">
+                      <a class="nav-link primary-tab-selector" id="strategy-optimizer-queue-tab" data-toggle="tab" href="#strategy-optimizer-queue" role="tab" aria-controls="strategy-optimizer-queue" aria-selected="false">
                           Optimizer Queue
                       </a>
                     </li>
@@ -619,7 +619,7 @@ body::before {
                 </ul>
                 <div class="tab-content bg-dark" id="optimizer-tabcontent">
 
-                    <div class="tab-pane fade h-100" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
+                    <div class="tab-pane fade show active h-100" id="strategy-optimizer-settings" role="tabreal" aria-labelledby="strategy-optimizer-settings-tab">
 
                         <div id="strategy-optimizer-inputs">
 
@@ -627,7 +627,7 @@ body::before {
                         </div>
                     </div>
 
-                    <div class="tab-pane fade show active h-100" id="strategy-optimizer-queue" role="tabreal" aria-labelledby="strategy-optimizer-queue-tab">
+                    <div class="tab-pane fade h-100" id="strategy-optimizer-queue" role="tabreal" aria-labelledby="strategy-optimizer-queue-tab">
                         <div id="no-optimizer-queue-message">
                             <h4 class="text-center my-4">
                                 The strategy optimizer queue is empty.

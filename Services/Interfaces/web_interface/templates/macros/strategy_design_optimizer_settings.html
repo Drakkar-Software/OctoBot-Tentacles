@@ -8,10 +8,23 @@
     <div class="row border" id="optimizer-settings-root">
     </div>
     <div class="row border d-none" id="optimizer-settings-default-values">
+        {{ strategy_optimizer_setting_tentacle_group_template() }}
         {{ strategy_optimizer_setting("number") }}
         {{ strategy_optimizer_setting("options") }}
         {{ strategy_optimizer_setting("multiple-options") }}
         {{ strategy_optimizer_setting("boolean") }}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro strategy_optimizer_setting_tentacle_group_template() -%}
+<div id="optimizer-settings-tentacle-group-template">
+    <div id="optimizer-settings-XYZ-tentacle-group-template" class="w-100 border">
+        <div class="row">
+            XYZ
+        </div>
+        <div class="row input-content w-100 mx-0">
+        </div>
     </div>
 </div>
 {%- endmacro %}
@@ -38,9 +51,9 @@
               <input type="checkbox"
                      class="custom-control-input"
                      data-tentacle-name="TENTACLEABC"
-                     id="XYZInput-enabled-value">
+                     id="TENTACLEABC-XYZ-Input-enabled-value">
               <label class="custom-control-label text-capitalize"
-                     for="XYZInput-enabled-value"
+                     for="TENTACLEABC-XYZ-Input-enabled-value"
                      data-toggle="tooltip" title="Enabled">
               </label>
             </div>
@@ -52,10 +65,10 @@
     <div class="col-4">
         <div class="input-group input-group-sm">
           <div class="input-group-prepend">
-            <label class="input-group-text" for="XYZInput-setting-number-min">Min</label>
+            <label class="input-group-text" for="TENTACLEABC-XYZ-Input-setting-number-min">Min</label>
           </div>
           <input type="number" step="0.000001" value="ZYXDefaultValue"
-                 id="XYZInput-setting-number-min"
+                 id="TENTACLEABC-XYZ-Input-setting-number-min"
                  class="form-control optimizer-input-setting"
                  data-tentacle-name="TENTACLEABC"
                  data-input-setting-name="XYZ_min"
@@ -67,10 +80,10 @@
     <div class="col-4">
         <div class="input-group input-group-sm">
           <div class="input-group-prepend">
-            <label class="input-group-text" for="XYZInput-setting-number-max">Max</label>
+            <label class="input-group-text" for="TENTACLEABC-XYZ-Input-setting-number-max">Max</label>
           </div>
           <input type="number" step="0.000001" value="ZYXDefaultValue"
-                 id="XYZInput-setting-number-max"
+                 id="TENTACLEABC-XYZ-Input-setting-number-max"
                  class="form-control"
                  data-tentacle-name="TENTACLEABC"
                  data-input-setting-name="XYZ_max"
@@ -82,10 +95,10 @@
     <div class="col-4">
         <div class="input-group input-group-sm">
           <div class="input-group-prepend">
-            <label class="input-group-text" for="XYZInput-setting-number-step">Step</label>
+            <label class="input-group-text" for="TENTACLEABC-XYZ-Input-setting-number-step">Step</label>
           </div>
           <input type="number" step="0.000001" value="1" min="0.000000000000000000001"
-                 id="XYZInput-setting-number-step"
+                 id="TENTACLEABC-XYZ-Input-setting-number-step"
                  class="form-control"
                  data-tentacle-name="TENTACLEABC"
                  data-input-setting-name="XYZ_step"
@@ -98,8 +111,8 @@
 
 {% macro strategy_optimizer_options_setting_values() -%}
     <div class="col">
-       <label class="text-capitalize" for="XYZInput-setting-options"></label>
-       <select id="XYZInput-setting-options"
+       <label class="text-capitalize" for="TENTACLEABC-XYZ-Input-setting-options"></label>
+       <select id="TENTACLEABC-XYZ-Input-setting-options"
                class="optimizer-input-setting"
                data-tentacle-name="TENTACLEABC"
                data-input-setting-name="XYZ"
@@ -113,8 +126,8 @@
 
 {% macro strategy_optimizer_boolean_setting_values() -%}
     <div class="col">
-       <label class="text-capitalize" for="XYZInput-setting-boolean"></label>
-       <select id="XYZInput-setting-boolean"
+       <label class="text-capitalize" for="TENTACLEABC-XYZ-Input-setting-boolean"></label>
+       <select id="TENTACLEABC-XYZ-Input-setting-boolean"
                class="w-100 optimizer-input-setting"
                data-tentacle-name="TENTACLEABC"
                data-input-setting-name="XYZ"
