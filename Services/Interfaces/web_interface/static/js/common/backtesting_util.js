@@ -178,6 +178,9 @@ function _handle_backtesting(backtesting_status_data, socket){
         if(report.is(":visible")){
             report.hide();
         }
+        backtesting_computing_callbacks.forEach(function (callback) {
+            callback();
+        })
         // re-schedule progress refresh
         setTimeout(function () {_refresh_status(socket)}, 50);
     }
@@ -215,4 +218,5 @@ let first_refresh_state = "";
 
 const lock_interface_callbacks = [];
 const backtesting_done_callbacks = [];
+const backtesting_computing_callbacks = [];
 let previousBacktestingStatus = undefined;

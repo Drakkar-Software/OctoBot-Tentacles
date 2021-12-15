@@ -7,7 +7,6 @@
 
 {% block body %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/todo.css', u=LAST_UPDATED_STATIC_FILES) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/strategy_design.css', u=LAST_UPDATED_STATIC_FILES) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/w2ui_template.css', u=LAST_UPDATED_STATIC_FILES) }}">
 
@@ -37,18 +36,18 @@ body::before {
                 <span><i class="fas fa-bars"></i></span>
             </a>
             <div class="dropdown-menu dropdown-default brdr-actv bg-dark" style="">
-                <a href="/home" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-home"></i> Home</a>
-                <a href="/trading" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-line"></i> Trading</a>
-                <a href="/portfolio" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-pie"></i> Portfolio</a>
-                <a href="/profile" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-cog"></i> Profile</a>
-                <a href="/accounts" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-link"></i> Accounts</a>
-                <a href="/community" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-rss-square"></i> Community</a>
-                <a href="/octobot_help" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-question-circle"></i> Help</a>
-                <a href="/about" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
+                 <a href="{{ url_for('home') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-home"></i> Home</a>
+                <a href="{{ url_for('trading') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-line"></i> Trading</a>
+                <a href="{{ url_for('portfolio') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-chart-pie"></i> Portfolio</a>
+                <a href="{{ url_for('profile') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-cog"></i> Profile</a>
+                <a href="{{ url_for('accounts') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-link"></i> Accounts</a>
+                <a href="{{ url_for('community') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-rss-square"></i> Community</a>
+                <a href="{{ url_for('octobot_help') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-question-circle"></i> Help</a>
+                <a href="{{ url_for('about') }}" class="nav-link primary-tab-selector bg-dark bg-hvr"><i class="fas fa-info-circle"></i> About</a>
             </div>
         </div>
         <div class="my-auto d-flex" id="octobot-logo">
-            <img src="/static/img/svg/octobot.svg" alt="octobot-logo">
+            <img  src="{{url_for('static', filename='img/svg/octobot.svg')}}" alt="octobot-logo">
             <h4 class="d-none d-xl-inline m-auto">
                 OctoBot
             </h4>

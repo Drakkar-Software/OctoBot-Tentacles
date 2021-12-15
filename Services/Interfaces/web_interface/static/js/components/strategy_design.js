@@ -61,8 +61,15 @@ function handleBacktestingButtons(){
 }
 
 function postBacktestingDone(){
+    setToolboxHeight($(".main-toolbox-tabs").outerHeight(true));
     const update_url = $("#charts").data("backtesting-run-id-url")
     send_and_interpret_bot_update({}, update_url, null, backtestingRunIdFetchedCallback, generic_request_failure_callback, "GET");
+}
+
+function backtestingComputingCallback(){
+    const currentToolbarHeight =  $(".main-toolbox-tabs").outerHeight(true)
+    const currentBacktestingProgressBar = $("#backtesting_progress_bar").outerHeight(true)
+    setToolboxHeight(`${currentBacktestingProgressBar}px - ${currentToolbarHeight}`);
 }
 
 function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_element, msg, status){
@@ -469,10 +476,8 @@ function on_optimizer_state_update(data){
         const overall_progress = data["overall_progress"];
         progress_bar.show();
 
-        // todo doesnt get triggered
         const currentBacktestingProgressBar = $("#backtesting_progress_bar").outerHeight(true)
-        const newTabContentHeight = "calc(100% - " + currentBacktestingProgressBar + "px - " + currentToolbarHeight + "px)"
-        $("#toolbox-tabcontent").css("height", newTabContentHeight)
+        setToolboxHeight(`${currentBacktestingProgressBar}px - ${currentToolbarHeight}`);
 
         update_progress(overall_progress);
         setTimeout(function (){check_optimizer_state();}, 500)
@@ -483,15 +488,17 @@ function on_optimizer_state_update(data){
         $("#backtesting_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
 
-        // todo doesnt get triggered
-        const newTabContentHeight =  "calc(100% - " + currentToolbarHeight + "px)"
-        $("#toolbox-tabcontent").css("height", newTabContentHeight)
+        setToolboxHeight(currentToolbarHeight);
     }
     if(status === "finished" && previousOptimizerStatus === "computing"){
         postBacktestingDone();
         init_optimizer_queue_editor();
     }
     previousOptimizerStatus = status;
+}
+
+function setToolboxHeight(height){
+    $("#toolbox-tabcontent").css("height", `calc(100% - ${height}px)`)
 }
 
 function check_optimizer_state(){
@@ -673,6 +680,7 @@ $(document).ready(function() {
     handleMainNavBarWidthChange();
     handleSidebarWidthChange();
     backtesting_done_callbacks.push(postBacktestingDone);
+    backtesting_computing_callbacks.push(backtestingComputingCallback);
     handleHorizontalScrolling();
     registerReconnectedCallback(updateExchangeId);
 });
