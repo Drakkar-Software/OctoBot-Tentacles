@@ -1,15 +1,3 @@
-
-/*** temp fixes ***/
-
-body {
-    /* looks better and gives more space */
-    line-height: unset;
-}
-
-/*** temp fixes END ***/
-
-
-
 /** colors **/
 :root {
     --bg: #131722;
@@ -22,7 +10,6 @@ body {
     --new-warning: #fb3;
     --new-success: #00c851;
 }
-
 
 /** reusable **/
 .bg-dark, .form-control options, ul {
@@ -40,6 +27,10 @@ body {
 
 .noBorder {
     border:none !important
+}
+
+.border {
+    border: 1px solid var(--brdr) !important;
 }
 
 .brdr-b {
@@ -72,8 +63,8 @@ body {
 }
 
 .card, .card-body {
-    background-color: #131722 !important;
-    border: 1px solid #2a2e39 !important;
+    background-color: var(--bg) !important;
+    border: 1px solid var(--brdr) !important;
 }
 
 .scroll_horizontal {
@@ -150,13 +141,16 @@ textarea {
     right: 0;
 }
 
+#nav-bar-left .active-timeframe.selected a {
+    color: var(--fnt-actv);
+}
+
 #time-frame-selector {
     max-width: calc(40% - 31.5px);
 }
 
 .nav-item > a {
     padding: 0 2rem;
-    border: none !important;
     line-height: 41px;
 }
 
@@ -180,7 +174,6 @@ textarea {
     /** max-width: calc(100% - 3.75rem); todo enable with sidebar**/
 }
 
-
 /** plotting **/
 
 .hoverlayer line:first-child, .hoverlayer line:nth-child(3) {
@@ -199,8 +192,6 @@ textarea {
 .draggable-resizer {
     padding: 2px;
 }
-
-
 
 #backtesting-chart {
     height:50%;
@@ -252,26 +243,43 @@ textarea {
     max-height: calc(100vh - 53px - 32px - 47px);
 }
 
-
-
 /*** Toolbox Tabbar ***/
 
+.nav-tabs .nav-item {
+    margin-bottom: 0;
+}
 
+.toolbox-tabs > li > a.active {
+    color: var(--fnt-actv) !important;
+    border: none !important;
+    background: none !important;
+}
+
+.toolbox-tabs > li > a:hover {
+    border-color: unset !important;
+    border: none !important;
+    background: var(--bg-hvr);
+    border-radius: unset;
+}
+
+.toolbox-buttons .btn {
+    border-radius: 0;
+    background-color: var(--bg) !important;
+    font-size: 1rem;
+    text-transform: unset;
+}
+
+.nav-tabs .nav-link:focus, .nav-tabs .nav-link:hover {
+    border-color: var(--brdr);
+    border-radius: 0;
+    background: var(--bg-hvr) !important;
+}
 
 /** octobot logo **/
+
 #octobot-logo img {
   width: 30px;
   margin-right:4px;
-  float: left;
-}
-
-#octobot-logo h4 {
-  margin: auto;
-  float: left;
-}
-
-#octobot-logo {
-  display:flex;
 }
 
 /** octobot logo **/
@@ -364,7 +372,7 @@ textarea {
     height: 30px;
     justify-content: center;
     width: 30px;
-    color: #b2b5be;
+    color: var(--fnt);
 }
 
 a.fullscreen-size-btn:hover {
@@ -375,22 +383,29 @@ a.fullscreen-size-btn:hover {
     color: var(--fnt-actv);
 }
 
-/** toolbox resize buttons END **/
+.fullscreen-btn-group a {
+    padding: 2px 5px;
+}
 
+/** toolbox resize buttons END **/
 
 /** body END **/
 
 /** footer **/
 
 .footer-copyright {
-    background-color: #131722 !important;
-    border-top-color: #2a2e39 !important;
+    background-color: var(--bg) !important;
+    border-top-color: var(--brdr) !important;
     border-top: solid 2px;
 }
 
 /** footer END **/
 
 /** user inputs **/
+
+#strategy-optimizer-inputs > .mx-4 > .row.border > div {
+    padding: 8px 2rem;
+}
 
 .row.border {
     border-color: var(--brdr) !important;

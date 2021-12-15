@@ -1,9 +1,9 @@
 {% macro strategy_optimizer_setting_template() -%}
 <div class="mx-4">
     <div class="row border">
-        <div class="col-3">Input name</div>
-        <div class="col-6">Values</div>
-        <div class="col-3">Enabled</div>
+        <div class="col-3 p-2">Input name</div>
+        <div class="col-7 p-2">Values</div>
+        <div class="col-2 p-2">Enabled</div>
     </div>
     <div class="row border" id="optimizer-settings-root">
     </div>
@@ -32,10 +32,10 @@
 
 {% macro strategy_optimizer_setting(value_type) -%}
     <div class="row w-100 mx-0 border" id="optimizer-settings-{{value_type}}-template">
-        <div class="col-3 setting-name" id="XYZInput-name">
+        <div class="col-3 setting-name p-2" id="XYZInput-name">
             XYZ
         </div>
-        <div class="col-6 setting-values row" id="XYZInput-values">
+        <div class="col-8 setting-values row p-2" id="XYZInput-values">
             {% if value_type == "number" %}
                 {{ strategy_optimizer_number_setting_values() }}
             {% elif value_type == "options" %}
@@ -46,7 +46,7 @@
                 {{ strategy_optimizer_boolean_setting_values() }}
             {% endif %}
         </div>
-        <div class="col-3 setting-enabled" id="XYZInput-enabled">
+        <div class="col-1 setting-enabled p-2" id="XYZInput-enabled">
             <div class="custom-control custom-switch">
               <input type="checkbox"
                      class="custom-control-input"
