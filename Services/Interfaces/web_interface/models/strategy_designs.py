@@ -113,6 +113,9 @@ def start_strategy_design_optimizer(trading_mode, config, exchange_id, randomly_
     optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer is not None and octobot_api.is_optimizer_computing(optimizer):
         return False, "Optimizer already running"
+    previous_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+    if previous_backtesting and octobot_api.is_independent_backtesting_in_progress(previous_backtesting):
+        return False, "A backtesting is already running"
     data_files = None if resume else \
         [backtesting_model.get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp)]
     temp_independent_backtesting = octobot_api.create_independent_backtesting(
