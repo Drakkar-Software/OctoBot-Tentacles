@@ -482,7 +482,7 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 const parentDiv = $(document.getElementById(sub_element.name));
                 parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
             }
-            _createTable(chartDivID, element.title, tableName, searches, columns, records,
+            _createTable(chartDivID, element.title, tableName, searches, columns, records, [],
                 false, true, false, false, null, null);
         }else{
             if(typeof w2ui[tableName] !== "undefined"){
@@ -557,18 +557,32 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     mainContainer.append(queueDiv);
     $(`#${divID}`).data("queueData", queueData)
     const keys = [];
+    const tentaclesInputsCounts = {};
     Object.values(Object.values(optimizerRun.runs)[0]).forEach(function (inputDetail){
-        keys.push(`${inputDetail.user_input} value`);
-        keys.push(`${inputDetail.user_input} tentacle`);
+        keys.push({
+            text: `${inputDetail.user_input}`,
+            field: `${inputDetail.user_input}${TENTACLE_SEPARATOR}${inputDetail.tentacle}`
+        });
+        if(typeof tentaclesInputsCounts[inputDetail.tentacle] !== "undefined"){
+            tentaclesInputsCounts[inputDetail.tentacle] ++;
+        }else{
+            tentaclesInputsCounts[inputDetail.tentacle] = 1;
+        }
     });
     const columns = keys.map((key) => {
         return {
-            field: key,
-            text: key,
+            field: key.field,
+            text: key.text,
             size: `${1 / keys.length * 100}%`,
             sortable: true,
         }
-    })
+    });
+    const columnGroups = Object.keys(tentaclesInputsCounts).map(function (key){
+        return {
+            text: key,
+            span: tentaclesInputsCounts[key]
+        }
+    });
     const records = []
     let recId = 0;
     Object.values(optimizerRun.runs).map((run) => {
@@ -576,15 +590,15 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             recid: recId++
         };
         run.forEach(function (runUserInputDetails){
-            row[`${runUserInputDetails.user_input} value`] = runUserInputDetails.value
-            row[`${runUserInputDetails.user_input} tentacle`] = runUserInputDetails.tentacle
+            row[`${runUserInputDetails.user_input}${TENTACLE_SEPARATOR}${runUserInputDetails.tentacle}`] =
+                runUserInputDetails.value;
         })
         records.push(row);
     });
     const searches = keys.map((key) => {
         return {
-            field: key,
-            label: key,
+            field: key.field,
+            label: key.text,
             type: "text",
         }
     });
@@ -600,17 +614,18 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     }
     const tableName = `${divID}-table`;
     _createTable(divID, `Runs for optimizer ${optimizerId}`,
-        tableName, searches, columns, records,
+        tableName, searches, columns, records, columnGroups,
         true, false, true, true, _onReorderRow, _onDelete);
 
     function _createRunData(record, deleted){
         const run = [];
         Object.keys(record).forEach((key) => {
-            if (key.endsWith(" value")){
-                const inputName = key.split(" value")[0];
+            if (key !== "recid"){
+                const splitKey = key.split(TENTACLE_SEPARATOR);
+                const inputName = splitKey[0];
                 run.push({
                     user_input: inputName,
-                    tentacle: record[`${inputName} tentacle`],
+                    tentacle: splitKey[1],
                     value: record[key],
                     deleted: deleted,
                 });
@@ -627,6 +642,7 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             data_files: queueInfo.data_files,
             runs: runs,
         }
+        log(runs)
         queueUpdateCallback(updatedQueue);
     }
     function _afterTableUpdate(event){
@@ -671,7 +687,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
         _createTable("backtesting-run-select-table", name, tableName,
-                     searches, columns, records,
+                     searches, columns, records, [],
             true, false, false, false, null, null);
         const table = w2ui[tableName];
         table.on("select", function (event){
@@ -717,7 +733,7 @@ function getOptimizerIdFromTableRow(recid){
     return Number(recid.split(ID_SEPARATOR)[1]);
 }
 
-function _createTable(elementID, name, tableName, searches, columns, records,
+function _createTable(elementID, name, tableName, searches, columns, records, columnGroups,
                       selectable, addToTable, reorderRows, deleteRows, onReorderRowCallback, onDeleteCallback) {
     const tableExists = typeof w2ui[tableName] !== "undefined";
     if(tableExists && addToTable){
@@ -742,6 +758,7 @@ function _createTable(elementID, name, tableName, searches, columns, records,
             searches: searches,
             columns: columns,
             records: records,
+            columnGroups: columnGroups,
             reorderRows: reorderRows,
             onDelete: onDeleteCallback,
             onReorderRow: onReorderRowCallback,
@@ -775,6 +792,7 @@ function _getTableDataType(records, search){
 
 const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
+const TENTACLE_SEPARATOR = "###";
 
 function removeExplicitSize(figure){
   delete figure.layout.width;
