@@ -36,6 +36,7 @@ def backtesting():
         if action_type == "start_backtesting":
             data = flask.request.get_json()
             source = flask.request.args["source"]
+            auto_stop = flask.request.args.get("auto_stop", False)
             run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
             success, reply = models.start_backtesting_using_specific_files(data["files"],
@@ -44,10 +45,12 @@ def backtesting():
                                                                            run_on_common_part_only,
                                                                            start_timestamp=data.get("start_timestamp", None),
                                                                            end_timestamp=data.get("end_timestamp", None),
-                                                                           enable_logs=data.get("enable_logs", False),)
+                                                                           enable_logs=data.get("enable_logs", False),
+                                                                           auto_stop=auto_stop,)
         elif action_type == "start_backtesting_with_current_bot_data":
             data = flask.request.get_json()
             source = flask.request.args["source"]
+            auto_stop = flask.request.args.get("auto_stop", False)
             exchange_id = data.get("exchange_id", None)
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
             success, reply = models.start_backtesting_using_current_bot_data(
@@ -57,6 +60,7 @@ def backtesting():
                 start_timestamp=data.get("start_timestamp", None),
                 end_timestamp=data.get("end_timestamp", None),
                 enable_logs=data.get("enable_logs", False),
+                auto_stop=auto_stop,
             )
         elif action_type == "stop_backtesting":
             success, reply = models.stop_previous_backtesting()
@@ -83,9 +87,6 @@ def backtesting():
 @web_interface.server_instance.route("/backtesting_run_id")
 @login.login_required_when_activated
 def backtesting_run_id():
-    stop_backtesting = flask.request.args.get("stop_backtesting", False)
-    if stop_backtesting:
-        models.stop_previous_backtesting()
     trading_mode = models.get_config_activated_trading_mode()
     run_id = models.get_latest_backtesting_run_id(trading_mode)
     return flask.jsonify(run_id)

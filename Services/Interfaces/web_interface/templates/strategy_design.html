@@ -149,7 +149,7 @@ body::before {
                  class="w-100 h-100"
                  data-live-url="{{url_for('plotted_data')}}"
                  data-backtesting-url="{{url_for('backtesting_main_plotted_data')}}"
-                 data-backtesting-run-id-url="{{url_for('backtesting_run_id', stop_backtesting=True)}}"
+                 data-backtesting-run-id-url="{{url_for('backtesting_run_id')}}"
             >
 
 
@@ -218,7 +218,7 @@ body::before {
                <div class="toolbox-buttons d-flex nav-item">
                    <a id="reload-script"
                            data-url="{{ url_for('update_plot_script') }}"
-                           data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False) }}"
+                           data-backtesting-url="{{ url_for('backtesting', action_type='start_backtesting_with_current_bot_data', source='strategy_design', reset_tentacle_config=False, auto_stop=True) }}"
                            type="button"
                            class="btn btn-success waves-effect m-0"
                            title="apply script changes"><i class="fas fa-redo"></i></a><div class="toolbox-btn-divider bg-dark-grey">

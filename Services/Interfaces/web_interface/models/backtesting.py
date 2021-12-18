@@ -34,6 +34,9 @@ import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 
 
+STOPPING_TIMEOUT = 30
+
+
 def get_full_candle_history_exchange_list():
     full_exchange_list = list(set(ccxt.exchanges))
     return [exchange for exchange in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES if exchange in full_exchange_list]
@@ -69,18 +72,22 @@ def get_data_files_with_description():
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                                           start_timestamp=None, end_timestamp=None, enable_logs=False):
+                                           start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                           auto_stop=False):
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=run_on_common_part_only,
                               start_timestamp=start_timestamp, end_timestamp=end_timestamp,
-                              use_current_bot_data=False, enable_logs=enable_logs)
+                              use_current_bot_data=False, enable_logs=enable_logs,
+                              auto_stop=auto_stop)
 
 
 def start_backtesting_using_current_bot_data(exchange_id, source, reset_tentacle_config=False,
-                                             start_timestamp=None, end_timestamp=None, enable_logs=False):
+                                             start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                             auto_stop=False):
     return _start_backtesting(None, source, reset_tentacle_config=reset_tentacle_config, run_on_common_part_only=False,
                               start_timestamp=start_timestamp, end_timestamp=end_timestamp,
-                              use_current_bot_data=True, exchange_id=exchange_id, enable_logs=enable_logs)
+                              use_current_bot_data=True, exchange_id=exchange_id, enable_logs=enable_logs,
+                              auto_stop=auto_stop)
 
 
 def stop_previous_backtesting():
@@ -95,7 +102,7 @@ def stop_previous_backtesting():
 
 def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
                        start_timestamp=None, end_timestamp=None, use_current_bot_data=False, exchange_id=None,
-                       enable_logs=False):
+                       enable_logs=False, auto_stop=False):
     try:
         tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
@@ -124,9 +131,11 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 run_on_common_part_only=run_on_common_part_only,
                 start_timestamp=start_timestamp / 1000 if start_timestamp else None,
                 end_timestamp=end_timestamp / 1000 if end_timestamp else None,
-                enable_logs=enable_logs)
+                enable_logs=enable_logs,
+                stop_when_finished=auto_stop)
             interfaces_util.run_in_bot_main_loop(
-                octobot_api.initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
+                octobot_api.initialize_and_run_independent_backtesting(independent_backtesting),
+                blocking=False)
             tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             return True, "Backtesting started"
@@ -161,6 +170,8 @@ def get_latest_backtesting_run_id(trading_mode):
     tools = web_interface_root.WebInterface.tools
     if tools[constants.BOT_TOOLS_BACKTESTING]:
         backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        interfaces_util.run_in_bot_main_loop(octobot_api.join_independent_backtesting_stop(backtesting,
+                                                                                           STOPPING_TIMEOUT))
         bot_id = octobot_api.get_independent_backtesting_bot_id(backtesting)
         return {
             "id": interfaces_util.run_in_bot_async_executor(trading_mode.get_backtesting_id(bot_id))
