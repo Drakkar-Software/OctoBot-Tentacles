@@ -510,12 +510,12 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
 
 function _formatMetadataRow(row, recordId, optimizerId){
     row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
-    row.start_time = typeof row.start_time === "undefined" ? undefined : Math.round(row.start_time * 1000);
-    row.end_time = typeof row.end_time === "undefined" ? undefined : Math.round(row.end_time * 1000);
-    if(typeof row.user_inputs !== "undefined"){
-        Object.keys(row.user_inputs).forEach((inputTentacle) => {
-            Object.keys(row.user_inputs[inputTentacle]).forEach((userInput) => {
-                row[`${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`] = row.user_inputs[inputTentacle][userInput];
+    row["start time"] = typeof row["start time"] === "undefined" ? undefined : Math.round(row["start time"] * 1000);
+    row["end time"] = typeof row["end time"] === "undefined" ? undefined : Math.round(row["end time"] * 1000);
+    if(typeof row["user inputs"] !== "undefined"){
+        Object.keys(row["user inputs"]).forEach((inputTentacle) => {
+            Object.keys(row["user inputs"][inputTentacle]).forEach((userInput) => {
+                row[`${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`] = row["user inputs"][inputTentacle][userInput];
             })
         })
     }
@@ -525,7 +525,7 @@ function _formatMetadataRow(row, recordId, optimizerId){
         }
     })
     if(typeof row.children !== "undefined"){
-        optimizerId = row.children[0].optimizer_id
+        optimizerId = row.children[0]["optimizer id"]
         row.id = `${row.id} [optimizer ${optimizerId}]`
         const subRows = [];
         row.children.forEach(function (rowChild){
@@ -539,7 +539,6 @@ function _formatMetadataRow(row, recordId, optimizerId){
     }else{
         row.id = `${row.id} [backtesting]`
     }
-    delete row.optimizer_id
     row.recid = mergeBacktestingOptimizerID(recordId ++, optimizerId);
     return recordId
 }
@@ -674,6 +673,16 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     }
 }
 
+function _ensureBacktestingMetadataColumnsOrder(runDataColumns){
+    let idIndex = 0;
+    runDataColumns.forEach((column, index) => {
+        if(column.field === "id"){
+            idIndex = index;
+        }
+    })
+    runDataColumns.splice(0, 0, runDataColumns.splice(idIndex, 1)[0]);
+}
+
 function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLatest){
     _clearBacktestingValues();
     if(metadata !== null && metadata.length){
@@ -685,9 +694,12 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
                 text: key,
                 size: `${1 / keys.length * 100}%`,
                 sortable: true,
+                hidden: METADATA_HIDDEN_FIELDS.indexOf(key) !== -1,
                 render: TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : undefined,
             }
         })
+        // Always put the id attribute first
+        _ensureBacktestingMetadataColumnsOrder(runDataColumns);
         const columnGroups = [{text: "Run information", span: runDataColumns.length}];
         // Keep 1st column displayed to enable tree expand
         const runDataHidableColumns = runDataColumns.slice(1, runDataColumns.length);
@@ -697,10 +709,10 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         const inputPerTentacle = {};
         const userInputKeys = [];
         metadata.forEach((run_metadata) => {
-            if(typeof run_metadata.user_inputs !== "undefined"){
-                Object.keys(run_metadata.user_inputs).forEach((inputTentacle) => {
+            if(typeof run_metadata["user inputs"] !== "undefined"){
+                Object.keys(run_metadata["user inputs"]).forEach((inputTentacle) => {
                     const hasTentacle = addedTentacles.indexOf(inputTentacle) === -1;
-                    Object.keys(run_metadata.user_inputs[inputTentacle]).forEach((userInput) => {
+                    Object.keys(run_metadata["user inputs"][inputTentacle]).forEach((userInput) => {
                         const key = `${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`
                         if(userInputKeys.indexOf(key) === -1){
                             userInputKeys.push(key);
@@ -747,8 +759,8 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         // init searches before formatting rows to access user_inputs objects
         const userInputSearches = userInputKeys.map((key) => {
             const splitKey = key.split(TENTACLE_SEPARATOR);
-            const sampleValue = typeof metadata[metadata.length - 1].user_inputs[splitKey[1]] === "undefined" ? undefined :
-                metadata[metadata.length - 1].user_inputs[splitKey[1]][splitKey[0]];
+            const sampleValue = typeof metadata[metadata.length - 1]["user inputs"][splitKey[1]] === "undefined" ? undefined :
+                metadata[metadata.length - 1]["user inputs"][splitKey[1]][splitKey[0]];
             const label = splitKey[0].length > MAX_SEARCH_LABEL_SIZE ?
                 `${splitKey[0].slice(0, MAX_SEARCH_LABEL_SIZE)} ...`: splitKey[0];
             return {
@@ -771,6 +783,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
                     {type: null, field: key}, "undefined", null),
             };
         });
+        _ensureBacktestingMetadataColumnsOrder(runDataSearches);
         const searches = runDataSearches.concat(userInputSearches);
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
@@ -896,10 +909,7 @@ function _createTable(elementID, name, tableName, searches, columns, records, co
             columnGroups: columnGroups,
             reorderRows: reorderRows,
             onDelete: onDeleteCallback,
-            onReorderRow: onReorderRowCallback,
-            onSave: function (event) {
-                w2alert('save');
-            },
+            onReorderRow: onReorderRowCallback
         });
     }
     return tableName;
@@ -930,7 +940,8 @@ const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
 const TENTACLE_SEPARATOR = "###";
 const MAX_SEARCH_LABEL_SIZE = 45;
-const TIMESTAMP_DATA = ["timestamp", "start_time", "end_time"];
+const TIMESTAMP_DATA = ["timestamp", "start time", "end time"];
+const METADATA_HIDDEN_FIELDS = ["backtesting files", "user inputs"]
 
 function removeExplicitSize(figure){
   delete figure.layout.width;

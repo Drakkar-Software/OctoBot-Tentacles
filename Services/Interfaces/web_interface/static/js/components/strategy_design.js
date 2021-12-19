@@ -281,7 +281,7 @@ function updateBacktestingAnalysisReport(run_id, optimizer_id, addReport){
     const data = {
         id: run_id,
         optimizer_id: optimizer_id,
-        exchange: "binance", //TODO
+        exchange: getExchangeName(),
         symbol: getSelectedSymbol(),
         time_frame: getSelectedTimeFrame(),
         added: addReport,
@@ -570,13 +570,17 @@ function getExchangeId(){
     return $("#strategy_body").data("exchange-id");
 }
 
+function getExchangeName(){
+    return $("#strategy_body").data("exchange-name");
+}
+
 function updateExchangeId(){
     send_and_interpret_bot_update({}, $("#strategy_body").data("exchange-details-url"), null,
         updateExchangeIdCallback, updateExchangeIdFailureCallback, "GET");
 }
 
 function updateExchangeIdCallback(requestData, update_url, dom_root_element, msg, status){
-    $("#strategy_body").data("exchange-id", msg.exchange_id);
+    $("#strategy_body").data("exchange-id", msg.exchange_id).data("exchange-name", msg.exchange_name);
     const exchangeLogo = $("#exchange_logo");
     exchangeLogo.attr("alt", msg.exchange_name);
     exchangeLogo.attr("src", "");
