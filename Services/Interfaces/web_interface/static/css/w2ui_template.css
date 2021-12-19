@@ -1,6 +1,10 @@
 
 /** todo clean up **/
 
+#strategy-optimizer-queue-table .w2ui-grid-box {
+    height: 100% !important;
+}
+
 .w2ui-column-check {
     background: #fff !important;
     color: #131722 !important;
