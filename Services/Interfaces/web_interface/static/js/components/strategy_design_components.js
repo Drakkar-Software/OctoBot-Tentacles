@@ -473,7 +473,7 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 return {
                     field: search.field,
                     label: search.label,
-                    type: _getTableDataType(records, search),
+                    type: _getTableDataType(records, search, "undefined", null),
                     options: search.options,
                 }
             });
@@ -503,6 +503,13 @@ function _formatMetadataRow(row, recordId, optimizerId){
     row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
     row.start_time = typeof row.start_time === "undefined" ? undefined : Math.round(row.start_time * 1000);
     row.end_time = typeof row.end_time === "undefined" ? undefined : Math.round(row.end_time * 1000);
+    if(typeof row.user_inputs !== "undefined"){
+        Object.keys(row.user_inputs).forEach((inputTentacle) => {
+            Object.keys(row.user_inputs[inputTentacle]).forEach((userInput) => {
+                row[`${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`] = row.user_inputs[inputTentacle][userInput];
+            })
+        })
+    }
     Object.keys(row).forEach(function (key){
         if(typeof row[key] === "object" && key !== "children"){
             row[key] = JSON.stringify(row[key]);
@@ -559,8 +566,10 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     const keys = [];
     const tentaclesInputsCounts = {};
     Object.values(Object.values(optimizerRun.runs)[0]).forEach(function (inputDetail){
+        const label = inputDetail.user_input.length > MAX_SEARCH_LABEL_SIZE ? `${inputDetail.user_input.slice(0, 
+            MAX_SEARCH_LABEL_SIZE)} ...`: inputDetail.user_input;
         keys.push({
-            text: `${inputDetail.user_input}`,
+            text: `${label} (${inputDetail.tentacle})`,
             field: `${inputDetail.user_input}${TENTACLE_SEPARATOR}${inputDetail.tentacle}`
         });
         if(typeof tentaclesInputsCounts[inputDetail.tentacle] !== "undefined"){
@@ -585,21 +594,25 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
     });
     const records = []
     let recId = 0;
+    const userInputSamples = {};
     Object.values(optimizerRun.runs).map((run) => {
         const row = {
             recid: recId++
         };
         run.forEach(function (runUserInputDetails){
-            row[`${runUserInputDetails.user_input}${TENTACLE_SEPARATOR}${runUserInputDetails.tentacle}`] =
-                runUserInputDetails.value;
+            const field = `${runUserInputDetails.user_input}${TENTACLE_SEPARATOR}${runUserInputDetails.tentacle}`;
+            row[field] = runUserInputDetails.value;
+            userInputSamples[field] = runUserInputDetails.value;
         })
         records.push(row);
     });
     const searches = keys.map((key) => {
+        const sampleValue = userInputSamples[key.field];
         return {
             field: key.field,
             label: key.text,
-            type: "text",
+            type:  key === "timestamp" ? "datetime" : _getTableDataType(null,
+                {type: null, field: key}, "text", sampleValue),
         }
     });
     function _onReorderRow(event){
@@ -642,7 +655,6 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             data_files: queueInfo.data_files,
             runs: runs,
         }
-        log(runs)
         queueUpdateCallback(updatedQueue);
     }
     function _afterTableUpdate(event){
@@ -659,7 +671,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         $("#no-backtesting-message").addClass(hidden_class);
         const keys = Object.keys(metadata[0]);
         const dateKeys = ["timestamp", "start_time", "end_time"]
-        const columns = keys.map((key) => {
+        const runDataColumns = keys.map((key) => {
             return {
                 field: key,
                 text: key,
@@ -668,28 +680,109 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
                 render: dateKeys.indexOf(key) !== -1 ? "datetime" : undefined,
             }
         })
+        const columnGroups = [{text: "Run information", span: runDataColumns.length}];
+        // Keep 1st column displayed to enable tree expand
+        const runDataHidableColumns = runDataColumns.slice(1, runDataColumns.length);
+        // Build user inputs columns. They are hidden by default
+        const userInputColumns = [];
+        const addedTentacles = [];
+        const inputPerTentacle = {};
+        const userInputKeys = [];
+        metadata.forEach((run_metadata) => {
+            if(typeof run_metadata.user_inputs !== "undefined"){
+                Object.keys(run_metadata.user_inputs).forEach((inputTentacle) => {
+                    const hasTentacle = addedTentacles.indexOf(inputTentacle) === -1;
+                    Object.keys(run_metadata.user_inputs[inputTentacle]).forEach((userInput) => {
+                        const key = `${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`
+                        if(userInputKeys.indexOf(key) === -1){
+                            userInputKeys.push(key);
+                            userInputColumns.push({
+                                field: key,
+                                text: userInput,
+                                sortable: true,
+                                hidden: true
+                            });
+                            if(typeof inputPerTentacle[inputTentacle] !== "undefined"){
+                                inputPerTentacle[inputTentacle] ++;
+                            }else{
+                                inputPerTentacle[inputTentacle] = 1;
+                            }
+                        }
+                    })
+                    if(!hasTentacle) {
+                        addedTentacles.push(inputTentacle);
+                    }
+                })
+            }
+        })
+        Object.keys(inputPerTentacle).forEach((key) => {
+            columnGroups.push({
+                text: key,
+                span: inputPerTentacle[key]
+            });
+        })
+        userInputColumns.sort((a, b) => {
+            const aField = a.field.split(TENTACLE_SEPARATOR).reverse().join("");
+            const bField = b.field.split(TENTACLE_SEPARATOR).reverse().join("");
+            if(aField > bField){
+                return 1;
+            }else if(aField < bField){
+                return -1;
+            }
+            return 0;
+        });
+        const userInputKeySize = `${1 / (userInputColumns.length + runDataColumns.length - runDataHidableColumns.length) * 100}%`;
+        userInputColumns.forEach((column)=>{
+            column.size = userInputKeySize;
+        })
+        const columns = runDataColumns.concat(userInputColumns);
+        // init searches before formatting rows to access user_inputs objects
+        const searches = userInputKeys.map((key) => {
+            const splitKey = key.split(TENTACLE_SEPARATOR);
+            const sampleValue = typeof metadata[metadata.length - 1].user_inputs[splitKey[1]] === "undefined" ? undefined :
+                metadata[metadata.length - 1].user_inputs[splitKey[1]][splitKey[0]];
+            const label = splitKey[0].length > MAX_SEARCH_LABEL_SIZE ?
+                `${splitKey[0].slice(0, MAX_SEARCH_LABEL_SIZE)} ...`: splitKey[0];
+            return {
+                field: key,
+                label: `${label} (${splitKey[1]})`,
+                type:  key === "timestamp" ? "datetime" : _getTableDataType(null,
+                    {type: null, field: key}, "text", sampleValue),
+            }
+        })
         let recordId = 0;
         const records = metadata.map((row) => {
             recordId = _formatMetadataRow(row, recordId, 0);
             return row
         });
-        const searches = keys.map((key) => {
-            search = {
-                type: null,
-                field: key,
-            }
-            return {
+        keys.forEach((key) => {
+            searches.push({
                 field: key,
                 label: key,
-                type:  key === "timestamp" ? "datetime" : _getTableDataType(records, search),
-            }
+                type:  key === "timestamp" ? "datetime" : _getTableDataType(records,
+                    {type: null, field: key}, "undefined", null),
+            });
         });
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
         _createTable("backtesting-run-select-table", name, tableName,
-                     searches, columns, records, [],
+                     searches, columns, records, columnGroups,
             true, false, false, false, null, null);
         const table = w2ui[tableName];
+        function showRunInfo(){
+            table.showColumn(...runDataHidableColumns.map((column) => column.field))
+            table.hideColumn(...userInputColumns.map((column) => column.field))
+            table.toolbar.disable('show-run-info');
+            table.toolbar.enable('show-user-inputs');
+        }
+        function showUserInputInfo(){
+            table.hideColumn(...runDataHidableColumns.map((column) => column.field))
+            table.showColumn(...userInputColumns.map((column) => column.field))
+            table.toolbar.disable('show-user-inputs');
+            table.toolbar.enable('show-run-info');
+        }
+        table.toolbar.add({ type: 'button', id: 'show-run-info', text: 'Run info', img: 'icon-folder', disabled: true , onClick: showRunInfo });
+        table.toolbar.add({ type: 'button', id: 'show-user-inputs', text: 'User inputs', img: 'icon-folder', onClick: showUserInputInfo })
         table.on("select", function (event){
             sectionHandler(event, true);
         })
@@ -771,28 +864,30 @@ function _createTable(elementID, name, tableName, searches, columns, records, co
 }
 
 
-function _getTableDataType(records, search){
+function _getTableDataType(records, search, defaultValue, sampleValue){
     if (search.type !== null){
         return search.type;
     }
-    const valueType = records[0][search.field]
-    if(typeof valueType === "undefined"){
-        return undefined;
+    const _sampleValue = sampleValue === null ? records[0][search.field] : sampleValue;
+    if(typeof _sampleValue === "undefined"){
+        return defaultValue;
     }
-    if(typeof valueType === "number"){
+    if(typeof _sampleValue === "number"){
         return "float";
     }
-    if(typeof valueType === "string"){
+    if(typeof _sampleValue === "string"){
         return "text";
     }
-    if(typeof valueType === "object"){
+    if(typeof _sampleValue === "object"){
         return "list";
     }
+    return defaultValue;
 }
 
 const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
 const TENTACLE_SEPARATOR = "###";
+const MAX_SEARCH_LABEL_SIZE = 45;
 
 function removeExplicitSize(figure){
   delete figure.layout.width;
