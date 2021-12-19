@@ -115,6 +115,9 @@ function _updateChart(data, replot, backtesting_id, optimizer_id, added, backtes
         data.data.sub_elements.forEach(function (sub_element) {
             if (sub_element.type == "chart") {
                 const divID = sub_element.name;
+                if(!isAreaDisplayed(divID, backtestingTableName)){
+                    return;
+                }
                 let isAlreadyDisplayed = false;
                 if(backtesting_id !== null && checkedDivIDsForClear.indexOf(divID) === -1){
                     // remove potentially now unselected elements
@@ -177,6 +180,9 @@ function _updateChart(data, replot, backtesting_id, optimizer_id, added, backtes
         data.data.sub_elements.forEach(function (sub_element) {
             if (sub_element.type == "chart") {
                 const divID = sub_element.name;
+                if(!isAreaDisplayed(divID, backtestingTableName)){
+                    return;
+                }
                 if(checkedDivIDsForClear.indexOf(divID) === -1) {
                     toRemoveTracesByDivID[divID] = [];
                     if(typeof document.getElementById(divID).data !== "undefined"){
@@ -315,7 +321,7 @@ function updateDisplayedElement(data, replot, editors, backtestingPart, backtest
             _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName);
         }
         if (sub_element.type === "value"){
-            _updateBacktestingValues(sub_element, replot, backtesting_id, added);
+            _updateBacktestingValues(sub_element, replot, backtesting_id, added, backtestingTableName);
         }
     });
     if(backtestingPart){
@@ -356,7 +362,7 @@ function _updateChartLayout(){
 
 function _updateBacktestingValues(sub_element, replot, backtesting_id, added){
     const parentDiv = $(document.getElementById(sub_element.name));
-    if(!parentDiv.length){
+    if(!parentDiv.length || !isAreaDisplayed(sub_element.name, backtestingTableName)){
         return
     }
     const backtestingParentDivId = `${backtesting_id}-part`;
@@ -407,6 +413,9 @@ function _add_labelled_backtesting_values(sub_element, backtesting_id, backtesti
 
 function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName){
     sub_element.data.elements.forEach(function (element){
+        if(!isAreaDisplayed(sub_element.name, backtestingTableName)){
+            return;
+        }
         const toRemove = [];
         const tableName = element.title.replaceAll(" ", "-").replaceAll("*", "-");
         if(added) {
@@ -769,20 +778,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
                      searches, columns, records, columnGroups,
             true, false, false, false, null, null);
         const table = w2ui[tableName];
-        function showRunInfo(){
-            table.showColumn(...runDataHidableColumns.map((column) => column.field))
-            table.hideColumn(...userInputColumns.map((column) => column.field))
-            table.toolbar.disable('show-run-info');
-            table.toolbar.enable('show-user-inputs');
-        }
-        function showUserInputInfo(){
-            table.hideColumn(...runDataHidableColumns.map((column) => column.field))
-            table.showColumn(...userInputColumns.map((column) => column.field))
-            table.toolbar.disable('show-user-inputs');
-            table.toolbar.enable('show-run-info');
-        }
-        table.toolbar.add({ type: 'button', id: 'show-run-info', text: 'Run info', img: 'icon-folder', disabled: true , onClick: showRunInfo });
-        table.toolbar.add({ type: 'button', id: 'show-user-inputs', text: 'User inputs', img: 'icon-folder', onClick: showUserInputInfo })
+        _addBacktestingMetadataTableButtons(table, runDataHidableColumns, userInputColumns)
         table.on("select", function (event){
             sectionHandler(event, true);
         })
@@ -799,6 +795,52 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
     }
     $("#no-backtesting-message").removeClass(hidden_class);
 }
+
+function _addBacktestingMetadataTableButtons(table, runDataHidableColumns, userInputColumns){
+    // tabs
+    function showRunInfo(){
+        table.showColumn(...runDataHidableColumns.map((column) => column.field))
+        table.hideColumn(...userInputColumns.map((column) => column.field))
+        table.toolbar.disable('show-run-info');
+        table.toolbar.enable('show-user-inputs');
+    }
+    function showUserInputInfo(){
+        table.hideColumn(...runDataHidableColumns.map((column) => column.field))
+        table.showColumn(...userInputColumns.map((column) => column.field))
+        table.toolbar.disable('show-user-inputs');
+        table.toolbar.enable('show-run-info');
+    }
+    table.toolbar.add({ type: 'button', id: 'show-run-info', text: 'Run info', img: 'fa fa-bolt', disabled: true , onClick: showRunInfo });
+    table.toolbar.add({ type: 'button', id: 'show-user-inputs', text: 'User inputs', img: 'fa fa-user-cog', onClick: showUserInputInfo })
+
+    // settings
+    table.toolbar.add({ type: 'spacer' })
+    const dataAreas = ["main-chart", "sub-chart",
+        "backtesting-run-overview", "backtesting-details", "list-of-trades-part"];
+    const areasItems = dataAreas.map((area) => {
+        return {
+            id: area,
+            text: area,
+        }
+    })
+    table.toolbar.add({
+        type: 'menu-check', id: 'displayedAreasSelector', text: 'Display', icon: 'fa fa-cog',
+        selected: dataAreas,
+        onRefresh(event) {
+            event.item.count = event.item.selected.length;
+        },
+        items: areasItems
+    });
+}
+
+function isAreaDisplayed(areaId, tableName){
+    const table = w2ui[tableName];
+    if(typeof table !== "undefined") {
+        return table.toolbar.get("displayedAreasSelector").selected.indexOf(areaId) !== -1
+    }
+    return true;
+}
+
 
 function autoSelectFirstBacktesting(){
     // TODO (use js localstorage ?)
