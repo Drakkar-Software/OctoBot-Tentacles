@@ -225,8 +225,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         currency, market = symbol_util.split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
 
-        order_limiting_currency_amount = decimal.Decimal(str(
-            trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency)))
+        order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
         if state == self.NEW:
             # create grid orders
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,

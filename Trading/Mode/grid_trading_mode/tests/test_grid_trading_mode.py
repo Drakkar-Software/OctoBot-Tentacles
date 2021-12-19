@@ -176,8 +176,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         assert all(
             o.origin_price <= max_sell_price for o in created_sell_orders
         )
-        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
-        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
         assert pf_btc_available_funds >= 10 - 0.00006
         assert pf_usd_available_funds >= 1000 - 0.5
 
@@ -227,8 +227,8 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
         assert all(
             o.origin_price <= max_sell_price for o in created_sell_orders
         )
-        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
-        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
         assert pf_btc_available_funds >= 10 - 0.000025
         assert pf_usd_available_funds >= 1000 - 0.07
 

@@ -32,6 +32,7 @@ import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.constants as trading_constants
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
@@ -268,11 +269,11 @@ async def test_available_funds_management():
         assert usd_available_funds < decimal.Decimal("31")
         await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
-        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
         # ensure there at least the same (or more) actual portfolio available funds than on the producer value
         # (due to exchange rounding reducing some amounts)
         assert pf_btc_available_funds * decimal.Decimal("0.999") <= btc_available_funds <= pf_btc_available_funds
-        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert pf_usd_available_funds * decimal.Decimal("0.999") <= usd_available_funds <= pf_usd_available_funds
         assert len(orders) == btcusd_producer.operational_depth
         assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
@@ -291,9 +292,9 @@ async def test_available_funds_management():
         await asyncio.create_task(_check_open_orders_count(exchange_manager, btcusd_producer.operational_depth +
                                                            eth_usdt_producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
-        pf_eth_available_funds = trading_api.get_portfolio_currency(exchange_manager, "ETH")
+        pf_eth_available_funds = trading_api.get_portfolio_currency(exchange_manager, "ETH").available
         assert pf_eth_available_funds * decimal.Decimal("0.999") <= eth_available_funds <= pf_eth_available_funds
-        pf_usdt_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        pf_usdt_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
         assert pf_usdt_available_funds * decimal.Decimal("0.999") <= usdt_available_funds <= pf_usdt_available_funds
         assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 40
         assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 40
@@ -354,8 +355,8 @@ async def test_ensure_staggered_orders_with_target_sell_and_buy_funds():
         assert producer.current_price == 4000
         assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
-        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert pf_btc_available_funds >= 9.999
         assert pf_usd_available_funds >= 900
 
@@ -383,8 +384,8 @@ async def test_ensure_staggered_orders_with_unavailable_funds():
         assert producer.current_price == 4000
         assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC")
-        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert pf_btc_available_funds >= 9
         assert pf_usd_available_funds >= 600
 
@@ -708,7 +709,7 @@ async def test_start_with_existing_valid_orders():
         to_cancel = [open_orders[20], open_orders[18], open_orders[3]]
         for order in to_cancel:
             await exchange_manager.trader.cancel_order(order)
-        post_available = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        post_available = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(to_cancel)
 
         producer.RECENT_TRADES_ALLOWED_TIME = 0
@@ -716,8 +717,8 @@ async def test_start_with_existing_valid_orders():
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         # restored orders
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD") <= post_available
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD").available <= post_available
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available
 
 
 async def test_price_initially_out_of_range_1():
@@ -793,14 +794,14 @@ async def test_start_after_offline_filled_orders():
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
         assert len(original_orders) == producer.operational_depth
-        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD").available
 
         # offline simulation: orders get filled but not replaced => price got up to 110 and not down to 90, now is 96s
         open_orders = trading_api.get_open_orders(exchange_manager)
         offline_filled = [o for o in open_orders if 90 <= o.origin_price <= 110]
         for order in offline_filled:
             await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
-        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert pre_portfolio < post_portfolio
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
 
@@ -812,8 +813,8 @@ async def test_start_after_offline_filled_orders():
         await producer._ensure_staggered_orders()
         # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD") <= post_portfolio
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD").available <= post_portfolio
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available
 
 
 async def test_health_check_during_filled_orders():
@@ -824,14 +825,14 @@ async def test_health_check_during_filled_orders():
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD").available
 
         # offline simulation: orders get filled but not replaced => price got up to 110 and not down to 90, now is 96s
         open_orders = trading_api.get_open_orders(exchange_manager)
         offline_filled = [o for o in open_orders if 90 <= o.origin_price <= 110]
         for order in offline_filled:
             await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
-        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert pre_portfolio < post_portfolio
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
 
@@ -843,8 +844,8 @@ async def test_health_check_during_filled_orders():
         # and consumer in queue)
         await asyncio.create_task(
             _check_open_orders_count(exchange_manager, producer.operational_depth - len(offline_filled)))
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD") <= post_portfolio
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD").available <= post_portfolio
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available
 
 
 async def test_compute_minimum_funds_1():
@@ -859,11 +860,10 @@ async def test_compute_minimum_funds_1():
                                                  decimal.Decimal(100))
         assert buy_min_funds == decimal.Decimal(str(0.05))
         assert sell_min_funds == decimal.Decimal(str(0.049505))
-        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = buy_min_funds
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = buy_min_funds
-        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = sell_min_funds
-        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = sell_min_funds
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = sell_min_funds
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -890,11 +890,10 @@ async def test_compute_minimum_funds_2():
                                                  decimal.Decimal(str(100)))
         assert buy_min_funds == decimal.Decimal(str(0.05))
         assert sell_min_funds == decimal.Decimal(str(0.0495))
-        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = buy_min_funds * decimal.Decimal("0.99999")
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = buy_min_funds * decimal.Decimal("0.99999")
-        portfolio["BTC"][commons_constants.PORTFOLIO_AVAILABLE] = sell_min_funds * decimal.Decimal("0.99999")
-        portfolio["BTC"][commons_constants.PORTFOLIO_TOTAL] = sell_min_funds * decimal.Decimal("0.99999")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds * decimal.Decimal("0.99999")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds * decimal.Decimal("0.99999")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds * decimal.Decimal("0.99999")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = sell_min_funds * decimal.Decimal("0.99999")
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -904,9 +903,10 @@ async def test_compute_minimum_funds_2():
 async def test_start_without_enough_funds_to_buy():
     async with _get_tools("BTC/USD") as tools:
         producer, _, exchange_manager = tools
-        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = decimal.Decimal("0.00005")
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = decimal.Decimal("0.00005")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+            "USD").available = decimal.Decimal("0.00005")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+            "USD").total = decimal.Decimal("0.00005")
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -963,9 +963,10 @@ async def test_start_without_enough_funds_to_sell():
 async def test_start_without_enough_funds_at_all():
     async with _get_tools("BTC/USD", btc_holdings=0.00001) as tools:
         producer, _, exchange_manager = tools
-        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-        portfolio["USD"][commons_constants.PORTFOLIO_AVAILABLE] = decimal.Decimal("0.00005")
-        portfolio["USD"][commons_constants.PORTFOLIO_TOTAL] = decimal.Decimal("0.00005")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+            "USD").available = decimal.Decimal("0.00005")
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+            "USD").total = decimal.Decimal("0.00005")
         price = 100
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
@@ -993,10 +994,8 @@ async def test_order_fill_callback():
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         previous_total = _get_total_usd(exchange_manager, 100)
 
-        now_btc = trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                     portfolio_type=commons_constants.PORTFOLIO_TOTAL)
-        now_usd = trading_api.get_portfolio_currency(exchange_manager, "USD",
-                                                     portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+        now_btc = trading_api.get_portfolio_currency(exchange_manager, "BTC").total
+        now_usd = trading_api.get_portfolio_currency(exchange_manager, "USD").total
 
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
@@ -1023,10 +1022,8 @@ async def test_order_fill_callback():
                trading_personal_data.decimal_trunc_with_n_decimal_digits(
                    to_fill_order.filled_quantity * (1 - producer.max_fees),8)
         assert newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                  portfolio_type=commons_constants.PORTFOLIO_TOTAL) > now_btc
-        now_btc = trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                     portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").total > now_btc
+        now_btc = trading_api.get_portfolio_currency(exchange_manager, "BTC").total
         current_total = _get_total_usd(exchange_manager, 100)
         assert previous_total < current_total
         previous_total_buy = current_total
@@ -1047,10 +1044,8 @@ async def test_order_fill_callback():
                trading_personal_data.decimal_trunc_with_n_decimal_digits(
                    to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - producer.max_fees), 8)
         assert newly_created_buy_order.side == trading_enums.TradeOrderSide.BUY
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD",
-                                                  portfolio_type=commons_constants.PORTFOLIO_TOTAL) > now_usd
-        now_usd = trading_api.get_portfolio_currency(exchange_manager, "USD",
-                                                     portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").total > now_usd
+        now_usd = trading_api.get_portfolio_currency(exchange_manager, "USD").total
         current_total = _get_total_usd(exchange_manager, 100)
         assert previous_total < current_total
         previous_total_sell = current_total
@@ -1072,8 +1067,7 @@ async def test_order_fill_callback():
                    to_fill_order.filled_quantity * (1 - producer.max_fees),
                    8)
         assert newly_created_sell_order.side == trading_enums.TradeOrderSide.SELL
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                  portfolio_type=commons_constants.PORTFOLIO_TOTAL) > now_btc
+        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").total > now_btc
         current_total = _get_total_usd(exchange_manager, 100)
         assert previous_total_buy < current_total
 
@@ -1094,8 +1088,7 @@ async def test_order_fill_callback():
                    to_fill_order.filled_price / price * to_fill_order.filled_quantity * (1 - producer.max_fees),
                    8)
         assert newly_created_buy_order.side == trading_enums.TradeOrderSide.BUY
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD",
-                                                  portfolio_type=commons_constants.PORTFOLIO_TOTAL) > now_usd
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").total > now_usd
         current_total = _get_total_usd(exchange_manager, 100)
         assert previous_total_sell < current_total
 
@@ -1198,7 +1191,7 @@ async def test_create_order():
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC") == 0
+        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
 
         # not enough quantity anymore
         price = decimal.Decimal(100)
@@ -1206,7 +1199,7 @@ async def test_create_order():
         side = trading_enums.TradeOrderSide.SELL
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC") == 0
+        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
         assert created_orders == []
 
         # BUY
@@ -1218,7 +1211,7 @@ async def test_create_order():
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 900
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
         assert created_order is not None
 
         # not enough quantity in portfolio
@@ -1227,7 +1220,7 @@ async def test_create_order():
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 900
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
         assert created_orders == []
 
         # enough quantity in portfolio
@@ -1237,7 +1230,7 @@ async def test_create_order():
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 820
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 820
 
         # enough quantity in portfolio
         price = decimal.Decimal(205)
@@ -1246,7 +1239,7 @@ async def test_create_order():
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
         assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 0
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
         assert created_order is not None
 
         # not enough quantity in portfolio anymore
@@ -1255,7 +1248,7 @@ async def test_create_order():
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
         created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") == 0
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
         assert created_orders == []
 
 
@@ -1341,9 +1334,9 @@ async def _check_open_orders_count(exchange_manager, count):
 
 
 def _get_total_usd(exchange_manager, btc_price):
-    return trading_api.get_portfolio_currency(exchange_manager, "USD", portfolio_type=commons_constants.PORTFOLIO_TOTAL) \
+    return trading_api.get_portfolio_currency(exchange_manager, "USD", ).total \
            + trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                portfolio_type=commons_constants.PORTFOLIO_TOTAL) * btc_price
+                                                ).total * btc_price
 
 
 async def _fill_order(order, exchange_manager, trigger_update_callback=True, producer=None):
@@ -1392,8 +1385,8 @@ async def _test_mode(mode, expected_buy_count, expected_sell_count, price, lowes
             assert len(open_orders) <= producer.operational_depth
         _check_orders(open_orders, mode, producer, exchange_manager)
 
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC") >= 0
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD") >= 0
+        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available >= trading_constants.ZERO
+        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available >= trading_constants.ZERO
 
 
 async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
@@ -1413,10 +1406,10 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
         if sell_orders:
             assert any(order for order in sell_orders if order.is_virtual)
 
-        buy_holdings = trading_api.get_portfolio_currency(exchange_manager, "USD")
+        buy_holdings = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert sum(order.price * order.quantity for order in buy_orders) <= buy_holdings
 
-        sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "BTC")
+        sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
         assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
         staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
@@ -1487,8 +1480,7 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                            <= current_sell.origin_quantity * current_sell.origin_price \
                            <= first_sell.origin_quantity * first_sell.origin_price * decimal.Decimal("1.01")
 
-    order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "USD",
-                                                                        portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+    order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "USD").total
     decimal_current_price = decimal.Decimal(str(producer.current_price))
     _, average_order_quantity = \
         producer._get_order_count_and_average_quantity(decimal_current_price,
@@ -1510,8 +1502,7 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
                             first_buy.origin_quantity * first_buy.origin_price) \
                    <= round(multiplier * average_order_quantity * decimal_current_price) + 1
 
-        order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC",
-                                                                            portfolio_type=commons_constants.PORTFOLIO_TOTAL)
+        order_limiting_currency_amount = trading_api.get_portfolio_currency(exchange_manager, "BTC").total
         _, average_order_quantity = \
             producer._get_order_count_and_average_quantity(decimal_current_price,
                                                            True,
@@ -1547,10 +1538,10 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
     assert all(o.price < price for o in buy_orders)
     assert all(o.price > price for o in sell_orders)
 
-    buy_holdings = trading_api.get_portfolio_currency(exchange_manager, "ETH")
+    buy_holdings = trading_api.get_portfolio_currency(exchange_manager, "ETH").available
     assert sum(order.price * order.quantity for order in buy_orders) <= buy_holdings
 
-    sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "RDN")
+    sell_holdings = trading_api.get_portfolio_currency(exchange_manager, "RDN").available
     assert sum(order.quantity for order in sell_orders) <= sell_holdings
 
     staggered_orders = producer._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
@@ -1598,8 +1589,8 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
                 assert current_sell.origin_price < order.origin_price
                 current_sell = order
 
-    assert trading_api.get_portfolio_currency(exchange_manager, "ETH") >= 0
-    assert trading_api.get_portfolio_currency(exchange_manager, "RDN") >= 0
+    assert trading_api.get_portfolio_currency(exchange_manager, "ETH").available >= 0
+    assert trading_api.get_portfolio_currency(exchange_manager, "RDN").available >= 0
 
 
 def _get_multi_symbol_staggered_config():
