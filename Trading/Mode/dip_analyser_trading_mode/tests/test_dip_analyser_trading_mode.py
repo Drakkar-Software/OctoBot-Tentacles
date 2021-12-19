@@ -113,39 +113,34 @@ async def test_create_bottom_order(tools):
 
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
     assert order.origin_price == expected_price
-    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-    assert portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > trading_constants.ZERO
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available  > trading_constants.ZERO
+
     assert order.order_id in consumer.sell_targets_by_order_id
 
 
 async def test_create_too_large_bottom_order(tools):
     producer, consumer, trader = tools
 
-    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    portfolio.portfolio["USDT"] = {
-        commons_constants.PORTFOLIO_TOTAL: decimal.Decimal("200000000000000"),
-        commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal("200000000000000")
-    }
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal("200000000000000")
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal("200000000000000")
     await producer._create_bottom_order(1, 1, 1)
     # create as task to allow creator's queue to get processed
     for _ in range(37):
         await asyncio_tools.wait_asyncio_next_cycle()
     await asyncio.create_task(_check_open_orders_count(trader, 37))
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] > trading_constants.ZERO
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
 
 
 async def test_create_too_small_bottom_order(tools):
     producer, consumer, trader = tools
 
-    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    portfolio.portfolio["USDT"] = {
-        commons_constants.PORTFOLIO_TOTAL: decimal.Decimal("0.01"),
-        commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal("0.01")
-    }
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal("0.01")
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal("0.01")
     await producer._create_bottom_order(1, 1, 1)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, 0))
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == decimal.Decimal("0.01")
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available == decimal.Decimal("0.01")
 
 
 async def test_create_bottom_order_replace_current(tools):
@@ -170,7 +165,7 @@ async def test_create_bottom_order_replace_current(tools):
     assert first_order.origin_quantity == expected_quantity
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
     assert first_order.origin_price == expected_price
-    available_after_order = portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]
+    available_after_order = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available
     assert available_after_order > trading_constants.ZERO
     assert first_order.order_id in consumer.sell_targets_by_order_id
 
@@ -186,7 +181,7 @@ async def test_create_bottom_order_replace_current(tools):
     assert second_order is not first_order
     assert second_order.origin_quantity == first_order.origin_quantity
     assert second_order.origin_price == first_order.origin_price
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] == available_after_order
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available == available_after_order
     # order still in sell_targets_by_order_id: cancelling orders doesn't remove them for this
     assert first_order.order_id in consumer.sell_targets_by_order_id
     assert second_order.order_id in consumer.sell_targets_by_order_id
@@ -207,7 +202,7 @@ async def test_create_bottom_order_replace_current(tools):
     assert third_order.origin_quantity != first_order.origin_quantity
     assert third_order.origin_quantity == expected_quantity
     assert third_order.origin_price == first_order.origin_price
-    available_after_third_order = portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]
+    available_after_third_order = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available
     assert available_after_third_order < available_after_order
     assert second_order.order_id in consumer.sell_targets_by_order_id
     assert third_order.order_id in consumer.sell_targets_by_order_id
@@ -223,7 +218,7 @@ async def test_create_bottom_order_replace_current(tools):
 
     # fifth order: in the next candle
     volume_weight = 2
-    new_market_quantity = decimal.Decimal(f'{portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE]}') \
+    new_market_quantity = decimal.Decimal(f'{trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available}') \
         / price
     await producer._create_bottom_order(2, volume_weight, 1)
     # create as task to allow creator's queue to get processed
@@ -240,7 +235,7 @@ async def test_create_bottom_order_replace_current(tools):
     assert fifth_order.origin_quantity != third_order.origin_quantity
     assert fifth_order.origin_quantity == trading_personal_data.decimal_trunc_with_n_decimal_digits(expected_quantity, 8)
     assert fifth_order.origin_price == first_order.origin_price
-    assert portfolio.portfolio["USDT"][commons_constants.PORTFOLIO_AVAILABLE] < available_after_third_order
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available < available_after_third_order
     assert first_order.order_id in consumer.sell_targets_by_order_id
     assert second_order.order_id in consumer.sell_targets_by_order_id
 
@@ -321,10 +316,8 @@ async def test_create_too_large_sell_orders(tools):
     sell_target = 2
     buy_price = decimal.Decimal("10000000")
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    portfolio.portfolio["BTC"] = {
-        commons_constants.PORTFOLIO_TOTAL: sell_quantity,
-        commons_constants.PORTFOLIO_AVAILABLE: sell_quantity
-    }
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_quantity
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = sell_quantity
     order_id = "a"
     consumer.sell_targets_by_order_id[order_id] = sell_target
     await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
