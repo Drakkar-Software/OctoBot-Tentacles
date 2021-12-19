@@ -611,7 +611,7 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
         return {
             field: key.field,
             label: key.text,
-            type:  key === "timestamp" ? "datetime" : _getTableDataType(null,
+            type:  TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : _getTableDataType(null,
                 {type: null, field: key}, "text", sampleValue),
         }
     });
@@ -670,14 +670,13 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
     if(metadata !== null && metadata.length){
         $("#no-backtesting-message").addClass(hidden_class);
         const keys = Object.keys(metadata[0]);
-        const dateKeys = ["timestamp", "start_time", "end_time"]
         const runDataColumns = keys.map((key) => {
             return {
                 field: key,
                 text: key,
                 size: `${1 / keys.length * 100}%`,
                 sortable: true,
-                render: dateKeys.indexOf(key) !== -1 ? "datetime" : undefined,
+                render: TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : undefined,
             }
         })
         const columnGroups = [{text: "Run information", span: runDataColumns.length}];
@@ -737,7 +736,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         })
         const columns = runDataColumns.concat(userInputColumns);
         // init searches before formatting rows to access user_inputs objects
-        const searches = userInputKeys.map((key) => {
+        const userInputSearches = userInputKeys.map((key) => {
             const splitKey = key.split(TENTACLE_SEPARATOR);
             const sampleValue = typeof metadata[metadata.length - 1].user_inputs[splitKey[1]] === "undefined" ? undefined :
                 metadata[metadata.length - 1].user_inputs[splitKey[1]][splitKey[0]];
@@ -746,7 +745,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
             return {
                 field: key,
                 label: `${label} (${splitKey[1]})`,
-                type:  key === "timestamp" ? "datetime" : _getTableDataType(null,
+                type:  TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : _getTableDataType(null,
                     {type: null, field: key}, "text", sampleValue),
             }
         })
@@ -755,14 +754,15 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
             recordId = _formatMetadataRow(row, recordId, 0);
             return row
         });
-        keys.forEach((key) => {
-            searches.push({
+        const runDataSearches = keys.map((key) => {
+            return {
                 field: key,
                 label: key,
-                type:  key === "timestamp" ? "datetime" : _getTableDataType(records,
+                type: TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : _getTableDataType(records,
                     {type: null, field: key}, "undefined", null),
-            });
+            };
         });
+        const searches = runDataSearches.concat(userInputSearches);
         const name = "Select backtestings";
         const tableName = name.replaceAll(" ", "-");
         _createTable("backtesting-run-select-table", name, tableName,
@@ -888,6 +888,7 @@ const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
 const TENTACLE_SEPARATOR = "###";
 const MAX_SEARCH_LABEL_SIZE = 45;
+const TIMESTAMP_DATA = ["timestamp", "start_time", "end_time"];
 
 function removeExplicitSize(figure){
   delete figure.layout.width;
