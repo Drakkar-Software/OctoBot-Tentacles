@@ -890,7 +890,7 @@ function _createTable(elementID, name, tableName, searches, columns, records, co
         if(tableExists){
             w2ui[tableName].destroy();
         }
-        $(document.getElementById(elementID)).w2grid({
+        const table = $(document.getElementById(elementID)).w2grid({
             name:  tableName,
             header: name,
             show: {
@@ -911,8 +911,33 @@ function _createTable(elementID, name, tableName, searches, columns, records, co
             onDelete: onDeleteCallback,
             onReorderRow: onReorderRowCallback
         });
+        table.toolbar.add({ type: 'button', id: 'exportTable', text: 'Export', img: 'fas fa-file-download' , onClick: downloadRecords });
+        function downloadRecords(){
+            _downloadRecords(name, table.columns, table.records);
+        }
     }
     return tableName;
+}
+
+
+function _downloadRecords(name, columns, rows){
+    const columnFields = columns.map((col) => col.field);
+    let csv = columns.map((col) => col.text).join(",") + "\n";
+    csv += rows.map((row) => {
+        return columnFields.map((field) => {
+            const value = row[field];
+            if(typeof value === "string"){
+                return value.replaceAll(",", " ");
+            }
+            return value
+        }).join(",")
+    }).join("\n");
+    const hiddenElement = document.createElement('a');
+    hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+    hiddenElement.target = '_blank';
+    hiddenElement.download = `${name}.csv`;
+    hiddenElement.click();
+    hiddenElement.remove();
 }
 
 
