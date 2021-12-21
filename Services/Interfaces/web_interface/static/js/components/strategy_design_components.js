@@ -491,7 +491,8 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 const parentDiv = $(document.getElementById(sub_element.name));
                 parentDiv.append(`<div id="${chartDivID}" style="width: 100%; height: 400px;"></div>`);
             }
-            _createTable(chartDivID, element.title, tableName, searches, columns, records, [],
+            const tableTitle = element.title.replaceAll("_", " ");
+            _createTable(chartDivID, tableTitle, tableName, searches, columns, records, [],
                 false, true, false, false, null, null);
         }else{
             if(typeof w2ui[tableName] !== "undefined"){
