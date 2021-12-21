@@ -14,9 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_evaluators.evaluators as evaluators
+import octobot_evaluators.enums as enums
 
 
 class BlankStrategyEvaluator(evaluators.StrategyEvaluator):
+
+    def get_full_cycle_evaluator_types(self) -> tuple:
+        return enums.EvaluatorMatrixTypes.TA.value, enums.EvaluatorMatrixTypes.SCRIPTED.value
+
     async def matrix_callback(self,
                               matrix_id,
                               evaluator_name,
