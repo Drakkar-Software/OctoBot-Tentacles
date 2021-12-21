@@ -458,7 +458,7 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
             });
             let startIndex = 0;
             if(typeof w2ui[tableName] !== "undefined"){
-                startIndex = w2ui[tableName].records.length - 1;
+                startIndex = w2ui[tableName].records.length;
             }
             const records = element.rows.map((row, index) => {
                 row.backtesting_id = backtesting_id;
