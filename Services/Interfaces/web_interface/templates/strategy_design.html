@@ -237,10 +237,11 @@ body::before {
            </div>
         </div>
 
-        <div id='backtesting_progress_bar' style='display: none;' class="bg-dark">
+        <div id='main_progress_bar' style='display: none;' class="bg-dark">
             <div class="card-title">
-                <h4 id="optimizer_progress_bar_title">Optimizer in progress</h4>
-                <h4 id="backtesting_progress_bar_title">Backtesting in progress</h4>
+                <h4 id="collector_progress_bar_title" class="d-none">Collecting historical data</h4>
+                <h4 id="optimizer_progress_bar_title" class="d-none">Optimizer in progress</h4>
+                <h4 id="backtesting_progress_bar_title" class="d-none">Backtesting in progress</h4>
             </div>
 
             <div class='progress'>
@@ -769,6 +770,7 @@ body::before {
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/backtesting_util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/common/data_collector_util.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/commands.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/strategy_design_optimizer.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>

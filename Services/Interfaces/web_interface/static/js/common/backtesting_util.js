@@ -28,7 +28,7 @@ function start_success_callback(updated_data, update_url, dom_root_element, msg,
 
 function start_error_callback(updated_data, update_url, dom_root_element, result, status, error){
     create_alert("error", result.responseText, "");
-    $("#backtesting_progress_bar").hide();
+    $(`#${backtestingMainProgressBar}`).hide();
     lock_interface(false);
 }
 
@@ -144,27 +144,27 @@ function add_graphs(chart_identifiers){
     })
 }
 
-function update_progress(progress){
+function updateBacktestingProgress(progress){
     $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress);
 }
 
-function _refresh_status(socket){
-    socket.emit('backtesting_status');
+function refreshBacktestingStatus(){
+    backtestingSocket.emit('backtesting_status');
 }
 
 function init_backtesting_status_websocket(){
-    const socket = get_websocket("/backtesting");
-    socket.on('backtesting_status', function(backtesting_status_data) {
-        _handle_backtesting(backtesting_status_data, socket);
+    backtestingSocket = get_websocket("/backtesting");
+    backtestingSocket.on('backtesting_status', function(backtesting_status_data) {
+        _handle_backtesting(backtesting_status_data);
     });
 }
 
-function _handle_backtesting(backtesting_status_data, socket){
+function _handle_backtesting(backtesting_status_data){
     const backtesting_status = backtesting_status_data["status"];
     const progress = backtesting_status_data["progress"];
 
     const report = $("#backtestingReport");
-    const progress_bar = $("#backtesting_progress_bar");
+    const progress_bar = $(`#${backtestingMainProgressBar}`);
     const stopButton = $("#backtester-stop-button");
 
     if(backtesting_status === "computing" || backtesting_status === "starting"){
@@ -173,16 +173,14 @@ function _handle_backtesting(backtesting_status_data, socket){
         if(stopButton.length){
             stopButton.removeClass(hidden_class);
         }
-        update_progress(progress);
+        updateBacktestingProgress(progress);
         first_refresh_state = backtesting_status;
         if(report.is(":visible")){
             report.hide();
         }
-        backtesting_computing_callbacks.forEach(function (callback) {
-            callback();
-        })
+        backtesting_computing_callbacks.forEach((callback) => callback());
         // re-schedule progress refresh
-        setTimeout(function () {_refresh_status(socket)}, 50);
+        setTimeout(function () {refreshBacktestingStatus()}, 50);
     }
     else{
         lock_interface(false);
@@ -202,9 +200,7 @@ function _handle_backtesting(backtesting_status_data, socket){
             }
 
             if(previousBacktestingStatus === "computing") {
-                backtesting_done_callbacks.forEach(function (callback) {
-                    callback();
-                })
+                backtesting_done_callbacks.forEach((callback) => callback());
             }
         }
     }
@@ -216,7 +212,9 @@ function _handle_backtesting(backtesting_status_data, socket){
 
 let first_refresh_state = "";
 
+let backtestingSocket = undefined;
 const lock_interface_callbacks = [];
 const backtesting_done_callbacks = [];
 const backtesting_computing_callbacks = [];
 let previousBacktestingStatus = undefined;
+let backtestingMainProgressBar = "backtesting_progress_bar";

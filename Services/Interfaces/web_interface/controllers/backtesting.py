@@ -65,7 +65,10 @@ def backtesting():
         elif action_type == "stop_backtesting":
             success, reply = models.stop_previous_backtesting()
         if success:
-            web_interface.send_backtesting_status()
+            if action_type == "start_backtesting_with_current_bot_data":
+                web_interface.send_data_collector_status()
+            else:
+                web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))
         else:
             return util.get_rest_reply(reply, 500)

@@ -100,6 +100,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def start(self):
         self.should_stop = False
         should_stop_database = True
+        self.current_step_percent = 0
+        self.total_steps = 1
         try:
             self.exchange_manager = trading_api.get_exchange_manager_from_exchange_id(self.exchange_id)
 
@@ -111,7 +113,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             else:
                 await self._update_description()
 
-            self.total_steps = len(self.time_frames) * len(self.symbols)
             self.in_progress = True
 
             self.logger.info(f"Start collecting history on {self.exchange_name}")
@@ -195,6 +196,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         ]
 
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec, start_time, end_time):
+        self.current_step_percent = 0
         async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
                                                              start_time, end_time):
             await self.save_ohlcv(
@@ -205,6 +207,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                for candle in candles],
                     multiple=True
             )
+            self.current_step_percent = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
+                                        ((end_time - start_time) / 1000) * 100
 
     def find_candle(self, candles, timestamp):
         for candle in candles:
@@ -273,7 +277,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                                         self.start_timestamp, first_candle_data_time)
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, current_bot_candles)
-            self.current_step_index += 1
+                self.current_step_percent = 100
         except Exception:
             raise
 

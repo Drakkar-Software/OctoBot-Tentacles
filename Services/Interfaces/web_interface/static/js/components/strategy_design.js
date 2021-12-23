@@ -60,15 +60,32 @@ function handleBacktestingButtons(){
     });
 }
 
-function postBacktestingDone(){
+function postCollectorDoneCallback(){
+    $("#collector_progress_bar_title").addClass(hidden_class)
+    setToolboxHeight($(".main-toolbox-tabs").outerHeight(true));
+}
+
+function collectorCollectingCallback(){
+    $("#collector_progress_bar_title").removeClass(hidden_class)
+    _reduceToolboxTabHeightWhenProgressBar();
+}
+
+function postBacktestingDoneCallback(){
+    $("#backtesting_progress_bar_title").addClass(hidden_class)
     setToolboxHeight($(".main-toolbox-tabs").outerHeight(true));
     const update_url = $("#charts").data("backtesting-run-id-url")
     send_and_interpret_bot_update({}, update_url, null, backtestingRunIdFetchedCallback, generic_request_failure_callback, "GET");
 }
 
 function backtestingComputingCallback(){
+    $("#backtesting_progress_bar_title").removeClass(hidden_class)
+    $("#collector_progress_bar_title").addClass(hidden_class)
+    _reduceToolboxTabHeightWhenProgressBar();
+}
+
+function _reduceToolboxTabHeightWhenProgressBar(){
     const currentToolbarHeight =  $(".main-toolbox-tabs").outerHeight(true)
-    const currentBacktestingProgressBar = $("#backtesting_progress_bar").outerHeight(true)
+    const currentBacktestingProgressBar = $("#main_progress_bar").outerHeight(true)
     setToolboxHeight(`${currentBacktestingProgressBar}px - ${currentToolbarHeight}`);
 }
 
@@ -462,7 +479,7 @@ const editors = {};
 
 function on_optimizer_state_update(data){
     const status = data["status"];
-    const progress_bar = $("#backtesting_progress_bar");
+    const progress_bar = $("#main_progress_bar");
     const cancelButton = $("#optimizer-cancel-button");
     const resumeButton = $("#optimizer-resume-button");
     const startButton = $("#optimizer-input-save-and-start-button");
@@ -472,26 +489,26 @@ function on_optimizer_state_update(data){
         cancelButton.removeClass(hidden_class);
         resumeButton.addClass(hidden_class);
         startButton.addClass("disabled");
-        $("#backtesting_progress_bar_title").addClass(hidden_class)
+        $("#main_progress_bar_title").addClass(hidden_class)
         const overall_progress = data["overall_progress"];
         progress_bar.show();
 
-        const currentBacktestingProgressBar = $("#backtesting_progress_bar").outerHeight(true)
+        const currentBacktestingProgressBar = $("#main_progress_bar").outerHeight(true)
         setToolboxHeight(`${currentBacktestingProgressBar}px - ${currentToolbarHeight}`);
 
-        update_progress(overall_progress);
+        updateOptimizerProgress(overall_progress);
         setTimeout(function (){check_optimizer_state();}, 500)
     }else{
         cancelButton.addClass(hidden_class);
         startButton.removeClass("disabled");
         $("#optimizer_progress_bar_title").addClass(hidden_class)
-        $("#backtesting_progress_bar_title").removeClass(hidden_class)
+        $("#main_progress_bar_title").removeClass(hidden_class)
         progress_bar.hide();
 
         setToolboxHeight(currentToolbarHeight);
     }
     if(status === "finished" && previousOptimizerStatus === "computing"){
-        postBacktestingDone();
+        postBacktestingDoneCallback();
         init_optimizer_queue_editor();
     }
     previousOptimizerStatus = status;
@@ -660,6 +677,18 @@ function handleCrossHair(){
     });
 }
 
+function registerBacktestingAndCollectorsElements(){
+    backtestingMainProgressBar = "main_progress_bar";
+    backtesting_done_callbacks.push(postBacktestingDoneCallback);
+    backtesting_computing_callbacks.push(backtestingComputingCallback);
+    collectorMainProgressBar = "main_progress_bar";
+    DataCollectorDoneCallbacks.push(postCollectorDoneCallback);
+    DataCollectorDoneCallbacks.push(refreshBacktestingStatus);
+    DataCollectorCollectingCallbacks.push(collectorCollectingCallback);
+    init_backtesting_status_websocket();
+    init_data_collector_status_websocket();
+}
+
 $(document).ready(function() {
     handleCrossHair();
     initBacktestingRunSelector(false);
@@ -678,13 +707,11 @@ $(document).ready(function() {
     handleSymbolSelectors();
     handleTimeFramesSelector();
     handleConfigTimeFramesSelectors();
-    init_backtesting_status_websocket();
     init_optimizer_queue_editor();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
     handleSidebarWidthChange();
-    backtesting_done_callbacks.push(postBacktestingDone);
-    backtesting_computing_callbacks.push(backtestingComputingCallback);
+    registerBacktestingAndCollectorsElements()
     handleHorizontalScrolling();
     registerReconnectedCallback(updateExchangeId);
 });

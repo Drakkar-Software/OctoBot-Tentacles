@@ -203,5 +203,6 @@ $(document).ready(function() {
         placeholder: "All Timeframes"
     });
 
-    init_data_collector_status_websocket(reload_table);
+    DataCollectorDoneCallbacks.push(reload_table);
+    init_data_collector_status_websocket();
 });
