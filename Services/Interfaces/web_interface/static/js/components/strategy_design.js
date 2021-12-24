@@ -682,6 +682,7 @@ function registerBacktestingAndCollectorsElements(){
     backtesting_done_callbacks.push(postBacktestingDoneCallback);
     backtesting_computing_callbacks.push(backtestingComputingCallback);
     collectorMainProgressBar = "main_progress_bar";
+    collectorHideProgressBarWhenFinished = false;
     DataCollectorDoneCallbacks.push(postCollectorDoneCallback);
     DataCollectorDoneCallbacks.push(refreshBacktestingStatus);
     DataCollectorCollectingCallbacks.push(collectorCollectingCallback);

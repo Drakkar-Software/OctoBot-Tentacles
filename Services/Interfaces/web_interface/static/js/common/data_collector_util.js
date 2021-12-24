@@ -21,7 +21,7 @@ function lock_collector_ui(lock=true){
         $(`#${collectorMainProgressBar}`).show();
         // reset progress bar
         $("#total_progess_bar_anim").css('width', 0+'%').attr("aria-valuenow", 0);
-    }else{
+    }else if(collectorHideProgressBarWhenFinished){
         $(`#${collectorMainProgressBar}`).hide();
     }
     $('#collect_data').prop('disabled', lock);
@@ -55,8 +55,6 @@ function _handle_data_collector_status(data_collector_status_data, socket){
     const current_progress = data_collector_status_data["progress"]["current_step_percent"];
     const total_progress = Math.round((data_collector_status_data["progress"]["current_step"] 
                                     / data_collector_status_data["progress"]["total_steps"]) * 100);
-    log(current_progress)
-    log(total_progress)
 
     if(data_collector_status === "collecting" || data_collector_status === "starting"){
         lock_collector_ui(true);
@@ -75,4 +73,5 @@ function _handle_data_collector_status(data_collector_status_data, socket){
 const DataCollectorDoneCallbacks = [];
 const DataCollectorCollectingCallbacks = [];
 let collectorBacktestingStatus = undefined;
+let collectorHideProgressBarWhenFinished = true;
 let collectorMainProgressBar = "collector_operation";
