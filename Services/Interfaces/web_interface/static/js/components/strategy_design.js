@@ -496,7 +496,7 @@ function on_optimizer_state_update(data){
         const currentBacktestingProgressBar = $("#main_progress_bar").outerHeight(true)
         setToolboxHeight(`${currentBacktestingProgressBar}px - ${currentToolbarHeight}`);
 
-        updateOptimizerProgress(overall_progress);
+        updateBacktestingProgress(overall_progress);
         setTimeout(function (){check_optimizer_state();}, 500)
     }else{
         cancelButton.addClass(hidden_class);

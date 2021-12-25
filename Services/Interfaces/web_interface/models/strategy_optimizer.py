@@ -71,7 +71,7 @@ def cancel_optimizer():
     if optimizer is None:
         return False, "No optimizer is running"
     octobot_api.cancel_strategy_optimizer(optimizer)
-    return True, "Optimizer is cancelling"
+    return True, "Optimizer is being cancelled"
 
 
 def start_optimizer(strategy, time_frames, evaluators, risks):
