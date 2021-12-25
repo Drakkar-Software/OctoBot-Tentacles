@@ -101,7 +101,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         self.should_stop = False
         should_stop_database = True
         self.current_step_percent = 0
-        self.total_steps = 1
+        self.total_steps = len(self.time_frames) * len(self.symbols)
         try:
             self.exchange_manager = trading_api.get_exchange_manager_from_exchange_id(self.exchange_id)
 
@@ -196,7 +196,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         ]
 
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec, start_time, end_time):
-        self.current_step_percent = 0
+        last_progress = 0
         async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
                                                              start_time, end_time):
             await self.save_ohlcv(
@@ -207,8 +207,12 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                for candle in candles],
                     multiple=True
             )
-            self.current_step_percent = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
+            progress = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
                                         ((end_time - start_time) / 1000) * 100
+            progress_over_all_steps = progress / self.total_steps
+            self.current_step_percent += progress_over_all_steps - last_progress
+            last_progress = progress_over_all_steps
+        return last_progress
 
     def find_candle(self, candles, timestamp):
         for candle in candles:
@@ -246,6 +250,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         try:
+            last_progress = 0
             time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
             # use current data from current bot
             bot_first_data_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
@@ -253,8 +258,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             if self.is_creating_database:
                 if self.start_timestamp and self.start_timestamp < bot_first_data_timestamp:
                     # fetch missing data
-                    await self.collect_historical_ohlcv(exchange, symbol, time_frame, time_frame_sec,
-                                                        self.start_timestamp, bot_first_data_timestamp)
+                    last_progress = await self.collect_historical_ohlcv(
+                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, bot_first_data_timestamp)
                 await self.save_ohlcv(
                         exchange=exchange,
                         cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
@@ -273,11 +278,11 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                              for candle in database_candles) * 1000
                 if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
                     # fetch missing data
-                    await self.collect_historical_ohlcv(exchange, symbol, time_frame, time_frame_sec,
-                                                        self.start_timestamp, first_candle_data_time)
+                    last_progress = await self.collect_historical_ohlcv(
+                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time)
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, current_bot_candles)
-                self.current_step_percent = 100
+            self.current_step_percent += 100 / self.total_steps - last_progress
         except Exception:
             raise
 

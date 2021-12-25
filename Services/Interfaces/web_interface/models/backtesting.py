@@ -126,6 +126,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
             if use_current_bot_data:
                 tools[constants.BOT_TOOLS_DATA_COLLECTOR] = \
                     _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+                tools[constants.BOT_TOOLS_BACKTESTING] = None
             else:
                 tools[constants.BOT_TOOLS_BACKTESTING] = octobot_api.create_independent_backtesting(
                     config,
@@ -136,6 +137,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                     end_timestamp=end_timestamp / 1000 if end_timestamp else None,
                     enable_logs=enable_logs,
                     stop_when_finished=auto_stop)
+                tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
             interfaces_util.run_in_bot_main_loop(
                 _collect_initialize_and_run_independent_backtesting(
                     tools[constants.BOT_TOOLS_DATA_COLLECTOR], tools[constants.BOT_TOOLS_BACKTESTING],
@@ -185,8 +187,9 @@ async def _collect_initialize_and_run_independent_backtesting(
         try:
             await octobot_api.stop_independent_backtesting(independent_backtesting)
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = None
-        except Exception:
-            pass
+        except Exception as e:
+            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
+                e, True, f"Error when stopping backtesting: {e}")
 
 
 def get_backtesting_status():
