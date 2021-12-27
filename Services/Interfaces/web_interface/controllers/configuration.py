@@ -219,8 +219,7 @@ def config_tentacle():
             success, response = models.reset_config_to_default(tentacle_name)
         if flask.request.args.get("reload"):
             try:
-                trading_mode = models.get_config_activated_trading_mode()
-                models.reload_scripts(trading_mode, True)
+                models.reload_scripts()
             except Exception as e:
                 success = False
                 response = str(e)

@@ -55,8 +55,10 @@ function _buildOptimizerSettingsForm(schemaElements, configValues){
         Object.values(element.schema.properties).forEach(function (inputDetail) {
             const valueType = _getValueType(inputDetail);
             const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail, tentacleName)
-            inputGroupContent.append(newInputSetting);
-            _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName);
+            if(newInputSetting !== null){
+                inputGroupContent.append(newInputSetting);
+                _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName);
+            }
         });
     })
     _updateInputSettingsDisplay(settingsRoot);
@@ -71,10 +73,16 @@ function _appendInputGroupFromTemplate(settingsRoot, tentacleName){
 
 function _getInputSettingFromTemplate(valueType, inputDetail, tentacleName){
     const template = _getInputSettingTemplate(valueType);
-    let inputSettings = template.html().replace(new RegExp("XYZ","g"), inputDetail.title);
-    inputSettings = inputSettings.replace(new RegExp("ZYXDefaultValue","g"), inputDetail.default);
-    inputSettings = inputSettings.replace(new RegExp("TENTACLEABC","g"), tentacleName);
-    return inputSettings
+    if(template.length){
+        let inputSettings = template.html().replace(new RegExp("XYZ","g"), inputDetail.title);
+        inputSettings = inputSettings.replace(new RegExp("ZYXDefaultValue","g"), inputDetail.default);
+        inputSettings = inputSettings.replace(new RegExp("TENTACLEABC","g"), tentacleName);
+        return inputSettings;
+    }
+    else {
+        log(`Unhandled value type: "${valueType}": no strategy optimizer template found.`)
+        return null;
+    }
 }
 
 function _getInputSettingTemplate(valueType){
