@@ -18,9 +18,10 @@ import tentacles.Evaluator.Scripted.scripted.evaluator.evaluator_script as evalu
 
 
 class ScriptedEvaluator(evaluators.ScriptedEvaluator):
-    def __init__(self, tentacles_setup_config):
-        super().__init__(tentacles_setup_config)
+    def __init__(self, tentacles_setup_config, post_init=True):
+        super().__init__(tentacles_setup_config, post_init=post_init)
         self.register_script_module(evaluator_script)
 
-    def use_cache(self):
+    @classmethod
+    def use_cache(cls):
         return True
