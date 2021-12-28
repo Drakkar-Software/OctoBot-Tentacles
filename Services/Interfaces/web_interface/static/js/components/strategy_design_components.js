@@ -284,23 +284,32 @@ function _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, ba
 function _displayInputsForTentacle(elements, replot, editors, mainTab, tentacleType){
     elements.data.elements.forEach(function (inputDetails) {
         if(inputDetails.tentacle_type === tentacleType){
-            const tabIdentifier = mainTab == null ? inputDetails.tentacle : mainTab
-            const divId = inputDetails.title.replaceAll(" ", "-");
-            const masterTab = $(`#${tabIdentifier}-inputs`);
-            masterTab.empty();
-            masterTab.append(`<div id="${tabIdentifier}-${divId}"></div>`);
-            editors[inputDetails.tentacle] = new JSONEditor(
-                document.getElementById(`${tabIdentifier}-${divId}`),
-                {
-                    schema: inputDetails.schema,
-                    startval: inputDetails.config,
-                    no_additional_properties: true,
-                    prompt_before_delete: true,
-                    disable_array_reorder: true,
-                    disable_collapse: true,
-                    disable_properties: true
+            try{
+                const tabIdentifier = mainTab == null ? inputDetails.tentacle : mainTab
+                const divId = inputDetails.title.replaceAll(" ", "-");
+                const masterTab = $(`#${tabIdentifier}-inputs`);
+                masterTab.empty();
+                masterTab.append(`<div id="${tabIdentifier}-${divId}"></div>`);
+                const element = document.getElementById(`${tabIdentifier}-${divId}`)
+                if(element === null){
+                    window.console&&console.error(`Missing evaluator configuration tab "${tabIdentifier}-${divId}"`);
+                    return;
                 }
-            );
+                editors[inputDetails.tentacle] = new JSONEditor(
+                    element,
+                    {
+                        schema: inputDetails.schema,
+                        startval: inputDetails.config,
+                        no_additional_properties: true,
+                        prompt_before_delete: true,
+                        disable_array_reorder: true,
+                        disable_collapse: true,
+                        disable_properties: true
+                    }
+                );
+            }catch (error){
+                window.console&&console.error(error);
+            }
         }
     });
 }
