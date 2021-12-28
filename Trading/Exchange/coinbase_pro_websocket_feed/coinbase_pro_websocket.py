@@ -22,13 +22,7 @@ class CoinbaseProCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConne
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,
         Feeds.TICKER: cryptofeed_constants.TICKER,
-        Feeds.CANDLE: Feeds.UNSUPPORTED.value,
-        Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
-        Feeds.BOOK_DELTA: Feeds.UNSUPPORTED.value,
-        Feeds.VOLUME: Feeds.UNSUPPORTED.value,
-        Feeds.OPEN_INTEREST: Feeds.UNSUPPORTED.value,
     }
 
     @classmethod

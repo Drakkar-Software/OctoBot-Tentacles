@@ -22,13 +22,9 @@ class HuobiCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,
-        Feeds.TICKER: Feeds.UNSUPPORTED.value,
-        Feeds.CANDLE: Feeds.UNSUPPORTED.value,
-        Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
-        Feeds.BOOK_DELTA: Feeds.UNSUPPORTED.value,
-        Feeds.VOLUME: Feeds.UNSUPPORTED.value,
-        Feeds.OPEN_INTEREST: Feeds.UNSUPPORTED.value,
+        Feeds.KLINE: cryptofeed_constants.CANDLES,
+        Feeds.TICKER: cryptofeed_constants.TICKER,
+        Feeds.CANDLE: cryptofeed_constants.CANDLES,
     }
 
     @classmethod

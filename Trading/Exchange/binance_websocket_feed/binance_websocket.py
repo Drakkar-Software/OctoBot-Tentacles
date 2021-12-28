@@ -25,10 +25,6 @@ class BinanceCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector
         Feeds.KLINE: cryptofeed_constants.CANDLES,
         Feeds.TICKER: cryptofeed_constants.TICKER,
         Feeds.CANDLE: cryptofeed_constants.CANDLES,
-        Feeds.L2_BOOK: Feeds.UNSUPPORTED.value,
-        Feeds.BOOK_DELTA: Feeds.UNSUPPORTED.value,
-        Feeds.VOLUME: Feeds.UNSUPPORTED.value,
-        Feeds.OPEN_INTEREST: Feeds.UNSUPPORTED.value,
     }
 
     EXCHANGE_CONSTRUCTOR_KWARGS = {
