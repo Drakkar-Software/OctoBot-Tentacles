@@ -1,0 +1,1 @@
+from .bittrex_websocket import BittrexCryptofeedWebsocketConnector
