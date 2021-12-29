@@ -286,7 +286,7 @@ function _hideNotShownUserInputs(tentacle, schema, is_hidden){
     Object.keys(schema.properties).forEach((key) => {
         const value = schema.properties[key];
         if(typeof value.properties === "object"){
-            hiddenColumns = hiddenColumns.concat(_hideNotShownUserInputs(key, value, is_hidden));
+            hiddenColumns = hiddenColumns.concat(_hideNotShownUserInputs(key, value, false));
         }else{
             if(is_hidden || !value.options.in_summary){
                 hiddenColumns.push(_userInputKey(key, tentacle));
@@ -524,16 +524,23 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
     });
 }
 
+function _formatUserInputRow(parent, userInputData, parentIdentifier){
+    Object.keys(userInputData).forEach((userInputIdentifier) => {
+        const value = userInputData[userInputIdentifier];
+        if (value instanceof Object && !(value instanceof Array)) {
+            _formatUserInputRow(parent, userInputData[userInputIdentifier], userInputIdentifier);
+        } else {
+            parent[_userInputKey(userInputIdentifier, parentIdentifier)] = value;
+        }
+    })
+}
+
 function _formatMetadataRow(row, recordId, optimizerId){
     row.timestamp = typeof row.timestamp === "undefined" ? undefined : Math.round(row.timestamp * 1000);
     row["start time"] = typeof row["start time"] === "undefined" ? undefined : Math.round(row["start time"] * 1000);
     row["end time"] = typeof row["end time"] === "undefined" ? undefined : Math.round(row["end time"] * 1000);
     if(typeof row["user inputs"] !== "undefined"){
-        Object.keys(row["user inputs"]).forEach((inputTentacle) => {
-            Object.keys(row["user inputs"][inputTentacle]).forEach((userInput) => {
-                row[_userInputKey(userInput, inputTentacle)] = row["user inputs"][inputTentacle][userInput];
-            })
-        })
+        _formatUserInputRow(row, row["user inputs"], null);
     }
     Object.keys(row).forEach(function (key){
         if(typeof row[key] === "object" && key !== "children"){
@@ -699,6 +706,33 @@ function _ensureBacktestingMetadataColumnsOrder(runDataColumns){
     runDataColumns.splice(0, 0, runDataColumns.splice(idIndex, 1)[0]);
 }
 
+function _getUserInputColumns(userInputColumns, inputTentacle, userInputKeys, userInputSampleValueByKey,
+                              inputPerTentacle, inputsByConfig){
+    Object.keys(inputsByConfig[inputTentacle]).forEach((userInput) => {
+        const key = _userInputKey(userInput, inputTentacle);
+        if (userInputKeys.indexOf(key) === -1 && hiddenBacktestingMetadataColumns.indexOf(key) === -1) {
+            userInputSampleValueByKey[key] = inputsByConfig[inputTentacle][userInput]
+            if(userInputSampleValueByKey[key] instanceof Object && !(userInputSampleValueByKey[key] instanceof Array)){
+                _getUserInputColumns(userInputColumns, userInput, userInputKeys, userInputSampleValueByKey,
+                    inputPerTentacle, inputsByConfig[inputTentacle])
+            }else {
+                userInputKeys.push(key);
+                userInputColumns.push({
+                    field: key,
+                    text: userInput,
+                    sortable: true,
+                    hidden: true
+                });
+                if (typeof inputPerTentacle[inputTentacle] !== "undefined") {
+                    inputPerTentacle[inputTentacle] += 1;
+                } else {
+                    inputPerTentacle[inputTentacle] = 1;
+                }
+            }
+        }
+    });
+}
+
 function _userInputKey(userInput, tentacle){
     return `${userInput}${TENTACLE_SEPARATOR}${tentacle}`;
 }
@@ -729,6 +763,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         const addedTentacles = [];
         const inputPerTentacle = {};
         const userInputKeys = [];
+        const userInputSampleValueByKey = {};
         if(hiddenBacktestingMetadataColumns === null){
             window.console&&console.error(`createBacktestingMetadataTable called before hiddenBacktestingMetadataColumns was initialized`);
             hiddenBacktestingMetadataColumns = [];
@@ -737,23 +772,8 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
             if(typeof run_metadata["user inputs"] !== "undefined"){
                 Object.keys(run_metadata["user inputs"]).forEach((inputTentacle) => {
                     const hasTentacle = addedTentacles.indexOf(inputTentacle) === -1;
-                    Object.keys(run_metadata["user inputs"][inputTentacle]).forEach((userInput) => {
-                        const key = _userInputKey(userInput, inputTentacle);
-                        if(userInputKeys.indexOf(key) === -1 && hiddenBacktestingMetadataColumns.indexOf(key) === -1){
-                            userInputKeys.push(key);
-                            userInputColumns.push({
-                                field: key,
-                                text: userInput,
-                                sortable: true,
-                                hidden: true
-                            });
-                            if(typeof inputPerTentacle[inputTentacle] !== "undefined"){
-                                inputPerTentacle[inputTentacle] ++;
-                            }else{
-                                inputPerTentacle[inputTentacle] = 1;
-                            }
-                        }
-                    })
+                    _getUserInputColumns(userInputColumns, inputTentacle, userInputKeys, userInputSampleValueByKey,
+                        inputPerTentacle, run_metadata["user inputs"]);
                     if(!hasTentacle) {
                         addedTentacles.push(inputTentacle);
                     }
@@ -784,8 +804,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         // init searches before formatting rows to access user_inputs objects
         const userInputSearches = userInputKeys.map((key) => {
             const splitKey = key.split(TENTACLE_SEPARATOR);
-            const sampleValue = typeof sortedMetadata[0]["user inputs"][splitKey[1]] === "undefined" ? undefined :
-                sortedMetadata[0]["user inputs"][splitKey[1]][splitKey[0]];
+            const sampleValue = userInputSampleValueByKey[key];
             const label = splitKey[0].length > MAX_SEARCH_LABEL_SIZE ?
                 `${splitKey[0].slice(0, MAX_SEARCH_LABEL_SIZE)} ...`: splitKey[0];
             return {
@@ -990,7 +1009,7 @@ let hiddenBacktestingMetadataColumns = null;
 const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
 const TENTACLE_SEPARATOR = "###";
-const MAX_SEARCH_LABEL_SIZE = 45;
+const MAX_SEARCH_LABEL_SIZE = 32;
 const TIMESTAMP_DATA = ["timestamp", "start time", "end time"];
 const METADATA_HIDDEN_FIELDS = ["backtesting files", "user inputs"]
 
