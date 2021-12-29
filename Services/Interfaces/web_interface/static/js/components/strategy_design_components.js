@@ -497,7 +497,7 @@ function _updateTables(sub_element, replot, backtesting_id, optimizer_id, added,
                 return {
                     field: search.field,
                     label: search.label,
-                    type: _getTableDataType(records, search, "undefined", null),
+                    type: _getTableDataType(records, search, "text", null),
                     options: search.options,
                 }
             });
@@ -824,7 +824,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
                 field: key,
                 label: key,
                 type: TIMESTAMP_DATA.indexOf(key) !== -1 ? "datetime" : _getTableDataType(records,
-                    {type: null, field: key}, "undefined", null),
+                    {type: null, field: key}, "text", null),
             };
         });
         _ensureBacktestingMetadataColumnsOrder(runDataSearches);
