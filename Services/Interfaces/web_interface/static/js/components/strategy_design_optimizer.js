@@ -49,17 +49,25 @@ function _buildOptimizerSettingsForm(schemaElements, configValues){
     const settingsRoot = $("#optimizer-settings-root");
     settingsRoot.empty();
     schemaElements.data.elements.forEach(function (element){
+        let atLeastOneUserInput = false;
         const tentacleName = element.tentacle
         const inputGroupId = _appendInputGroupFromTemplate(settingsRoot, tentacleName);
         const inputGroupContent = $(`#${inputGroupId}`).find(".input-content");
         Object.values(element.schema.properties).forEach(function (inputDetail) {
-            const valueType = _getValueType(inputDetail);
-            const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail, tentacleName)
-            if(newInputSetting !== null){
-                inputGroupContent.append(newInputSetting);
-                _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName);
+            log(inputDetail)
+            if(inputDetail.options.in_optimizer){
+                atLeastOneUserInput = true;
+                const valueType = _getValueType(inputDetail);
+                const newInputSetting = _getInputSettingFromTemplate(valueType, inputDetail, tentacleName)
+                if(newInputSetting !== null){
+                    inputGroupContent.append(newInputSetting);
+                    _updateInputDetailValues(valueType, inputDetail, configValues, tentacleName);
+                }
             }
         });
+        if(!atLeastOneUserInput){
+            $(`#${inputGroupId}`).remove();
+        }
     })
     _updateInputSettingsDisplay(settingsRoot);
 }

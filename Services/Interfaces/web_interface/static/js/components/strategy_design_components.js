@@ -742,7 +742,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
     if(metadata !== null && metadata.length){
         const sortedMetadata = metadata.sort((a, b) => b.timestamp - a.timestamp);
         $("#no-backtesting-message").addClass(hidden_class);
-        const keys = Object.keys(sortedMetadata[0]);
+        const keys = Object.keys(sortedMetadata[0]).filter(key => METADATA_UNDISPLAYED_FIELDS.indexOf(key) === -1);
         const runDataColumns = keys.map((key) => {
             return {
                 field: key,
@@ -1012,6 +1012,7 @@ const TENTACLE_SEPARATOR = "###";
 const MAX_SEARCH_LABEL_SIZE = 32;
 const TIMESTAMP_DATA = ["timestamp", "start time", "end time"];
 const METADATA_HIDDEN_FIELDS = ["backtesting files", "user inputs"]
+const METADATA_UNDISPLAYED_FIELDS = ["children"]
 
 function removeExplicitSize(figure){
   delete figure.layout.width;
