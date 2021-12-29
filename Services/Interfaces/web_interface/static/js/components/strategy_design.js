@@ -1,4 +1,4 @@
-function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, symbol, time_frame, cleanCharts){
+function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, symbol, time_frame, cleanCharts, resolve, reject){
     const chartIdentifier = backtestingRunId ? backtestingRunId : "live";
     const chartsDiv = $("#charts");
     let url = `${chartsDiv.data("live-url")}?exchange_id=${getExchangeId()}`;
@@ -15,12 +15,18 @@ function displayChartsAndInputs(replot, backtestingRunId, optimizerId, added, sy
                 $("#sub-chart").empty();
                 plotlyCreatedChartsIDs.splice(0, plotlyCreatedChartsIDs.length);
             }
-            updateDisplayedElement(data, replot, editors, false, backtestingRunId, optimizerId, added, backtestingTableName, chartIdentifier)
+            updateDisplayedElement(data, replot, editors, false, backtestingRunId, optimizerId, added, backtestingTableName, chartIdentifier);
+            if(resolve !== null){
+                resolve(data);
+            }
         },
         error: function(result, status) {
             const errorMessage = `Impossible to get charting data: ${result.responseText}. More details in logs.`;
             $("#main-chart").text(errorMessage)
             window.console && console.error(errorMessage);
+            if(reject !== null){
+                reject(result);
+            }
         }
     });
 }
@@ -47,7 +53,7 @@ function handleCacheButtons(){
 
 function cacheClearSuccessCallback(updated_data, update_url, dom_root_element, msg, status) {
     create_alert("success", msg["title"], msg["details"]);
-    updateSymbolGraphs();
+    updateSymbolGraphs(null, null);
 }
 
 function handleBacktestingButtons(){
@@ -94,7 +100,7 @@ function backtestingRunIdFetchedCallback(updated_data, update_url, dom_root_elem
 }
 
 function reloadRequestSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
-    updateSymbolGraphs();
+    (new Promise(updateSymbolGraphs)).then(() => initBacktestingRunSelector(false));
     startBacktestingUsingSettings();
 }
 
@@ -293,7 +299,7 @@ function updateBacktestingAnalysisReport(run_id, optimizer_id, addReport){
         displayedRunIds.splice(displayedRunIds.indexOf(fullId), 1);
     }
     // upper charts
-    displayChartsAndInputs(true, run_id, optimizer_id, addReport, getSelectedSymbol(), getSelectedTimeFrame(), false)
+    displayChartsAndInputs(true, run_id, optimizer_id, addReport, getSelectedSymbol(), getSelectedTimeFrame(), false, null, null)
     // toolbox
     const data = {
         id: run_id,
@@ -340,7 +346,7 @@ function handleTimeFramesSelector(){
                         tfSelect.addClass("selected")
                     }
                 });
-                updateSymbolGraphs();
+                updateSymbolGraphs(null, null);
             }
         });
     })
@@ -616,21 +622,21 @@ function updateExchangeIdFailureCallback(requestData, update_url, dom_root_eleme
     }
 }
 
-function updateSymbolGraphs(){
+function updateSymbolGraphs(resolve, reject){
     const selectedSymbol =getSelectedSymbol();
     const selectedTimeFrame = getSelectedTimeFrame();
-    displayChartsAndInputs(false, null, null, true, selectedSymbol,selectedTimeFrame, true);
+    displayChartsAndInputs(false, null, null, true, selectedSymbol,selectedTimeFrame, true, resolve, reject);
     displayedRunIds.forEach(function (fullId) {
         const splitIds = fullId.split(ID_SEPARATOR);
         const runID = Number(splitIds[0]);
         const optimizerId = Number(splitIds[1]);
-        displayChartsAndInputs(true, runID, optimizerId, true, selectedSymbol,selectedTimeFrame, false);
+        displayChartsAndInputs(true, runID, optimizerId, true, selectedSymbol,selectedTimeFrame, false, null, null);
     })
 }
 
 function handleSymbolSelectors(){
     $(".symbol-selector").on("shown.bs.tab", function (){
-        updateSymbolGraphs();
+        updateSymbolGraphs(null, null);
     })
 }
 
@@ -690,9 +696,14 @@ function registerBacktestingAndCollectorsElements(){
     init_data_collector_status_websocket();
 }
 
+function initDesignerRemoteObjectsDisplay(){
+    (new Promise(updateSymbolGraphs)).then(() => initBacktestingRunSelector(false));
+    init_optimizer_queue_editor();
+}
+
 $(document).ready(function() {
     handleCrossHair();
-    initBacktestingRunSelector(false);
+    initDesignerRemoteObjectsDisplay();
     handleScriptButtons();
     handleCacheButtons();
     handleBacktestingButtons();
@@ -704,11 +715,9 @@ $(document).ready(function() {
     handleOptimizerActions();
     handleTabSelectionEvents();
     handleDateSelectors();
-    updateSymbolGraphs();
     handleSymbolSelectors();
     handleTimeFramesSelector();
     handleConfigTimeFramesSelectors();
-    init_optimizer_queue_editor();
     init_optimizer_status_websocket();
     handleMainNavBarWidthChange();
     handleSidebarWidthChange();

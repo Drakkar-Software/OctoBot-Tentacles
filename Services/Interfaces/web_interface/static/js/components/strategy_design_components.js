@@ -281,9 +281,34 @@ function _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, ba
     }
 }
 
+function _hideNotShownUserInputs(tentacle, schema, is_hidden){
+    let hiddenColumns = [];
+    Object.keys(schema.properties).forEach((key) => {
+        const value = schema.properties[key];
+        if(typeof value.properties === "object"){
+            hiddenColumns = hiddenColumns.concat(_hideNotShownUserInputs(key, value, is_hidden));
+        }else{
+            if(is_hidden || !value.options.in_summary){
+                hiddenColumns.push(_userInputKey(key, tentacle));
+                hiddenColumns.push(_userInputKey(key.replaceAll("_", " "), tentacle));
+            }
+        }
+    })
+    return hiddenColumns;
+}
+
+function _handleHiddenUserInputs(elements){
+    hiddenBacktestingMetadataColumns = [];
+    elements.data.elements.forEach(function (inputDetails) {
+        hiddenBacktestingMetadataColumns = hiddenBacktestingMetadataColumns.concat(
+            _hideNotShownUserInputs(inputDetails.tentacle, inputDetails.schema, inputDetails.is_hidden)
+        );
+    });
+}
+
 function _displayInputsForTentacle(elements, replot, editors, mainTab, tentacleType){
     elements.data.elements.forEach(function (inputDetails) {
-        if(inputDetails.tentacle_type === tentacleType){
+        if(inputDetails.tentacle_type === tentacleType && !inputDetails.is_hidden){
             try{
                 const tabIdentifier = mainTab == null ? inputDetails.tentacle : mainTab
                 const divId = inputDetails.title.replaceAll(" ", "-");
@@ -315,30 +340,11 @@ function _displayInputsForTentacle(elements, replot, editors, mainTab, tentacleT
 }
 
 function _displayInputs(elements, replot, editors){
-    _displayInputsForTentacle(elements, replot, editors, "trading", "trading_mode")
-    _displayInputsForTentacle(elements, replot, editors, null, "evaluator")
+    _handleHiddenUserInputs(elements)
+    _displayInputsForTentacle(elements, replot, editors, "trading", "trading_mode", backtestingTableName)
+    _displayInputsForTentacle(elements, replot, editors, null, "evaluator", backtestingTableName)
 }
 
-function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier){
-    data.data.sub_elements.forEach(function (sub_element) {
-        if (backtesting_id === null && sub_element.type === "input") {
-            // only update inputs on live data
-            _displayInputs(sub_element, replot, editors);
-            displayOptimizerSettings(sub_element, replot);
-        }
-        if (sub_element.type === "table"){
-            _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName);
-        }
-        if (sub_element.type === "value"){
-            _updateBacktestingValues(sub_element, replot, backtesting_id, added, backtestingTableName);
-        }
-    });
-    if(backtestingPart){
-        _updateBacktestingChart(data, true, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier)
-    }else{
-        _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier);
-    }
-}
 
 function updateOptimizerQueueEditor(optimizerQueue, containerId, queueUpdateCallback){
     createOptimizerQueueTables(optimizerQueue, containerId, queueUpdateCallback)
@@ -525,7 +531,7 @@ function _formatMetadataRow(row, recordId, optimizerId){
     if(typeof row["user inputs"] !== "undefined"){
         Object.keys(row["user inputs"]).forEach((inputTentacle) => {
             Object.keys(row["user inputs"][inputTentacle]).forEach((userInput) => {
-                row[`${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`] = row["user inputs"][inputTentacle][userInput];
+                row[_userInputKey(userInput, inputTentacle)] = row["user inputs"][inputTentacle][userInput];
             })
         })
     }
@@ -588,7 +594,7 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             MAX_SEARCH_LABEL_SIZE)} ...`: inputDetail.user_input;
         keys.push({
             text: `${label} (${inputDetail.tentacle})`,
-            field: `${inputDetail.user_input}${TENTACLE_SEPARATOR}${inputDetail.tentacle}`
+            field: _userInputKey(inputDetail.user_input, inputDetail.tentacle)
         });
         if(typeof tentaclesInputsCounts[inputDetail.tentacle] !== "undefined"){
             tentaclesInputsCounts[inputDetail.tentacle] ++;
@@ -618,7 +624,7 @@ function _createOptimizerRunQueueTable(optimizerRun, mainContainer, queueUpdateC
             recid: recId++
         };
         run.forEach(function (runUserInputDetails){
-            const field = `${runUserInputDetails.user_input}${TENTACLE_SEPARATOR}${runUserInputDetails.tentacle}`;
+            const field = _userInputKey(runUserInputDetails.user_input, runUserInputDetails.tentacle)
             row[field] = runUserInputDetails.value;
             userInputSamples[field] = runUserInputDetails.value;
         })
@@ -693,11 +699,16 @@ function _ensureBacktestingMetadataColumnsOrder(runDataColumns){
     runDataColumns.splice(0, 0, runDataColumns.splice(idIndex, 1)[0]);
 }
 
+function _userInputKey(userInput, tentacle){
+    return `${userInput}${TENTACLE_SEPARATOR}${tentacle}`;
+}
+
 function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLatest){
     _clearBacktestingValues();
     if(metadata !== null && metadata.length){
+        const sortedMetadata = metadata.sort((a, b) => b.timestamp - a.timestamp);
         $("#no-backtesting-message").addClass(hidden_class);
-        const keys = Object.keys(metadata[0]);
+        const keys = Object.keys(sortedMetadata[0]);
         const runDataColumns = keys.map((key) => {
             return {
                 field: key,
@@ -718,13 +729,17 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         const addedTentacles = [];
         const inputPerTentacle = {};
         const userInputKeys = [];
-        metadata.forEach((run_metadata) => {
+        if(hiddenBacktestingMetadataColumns === null){
+            window.console&&console.error(`createBacktestingMetadataTable called before hiddenBacktestingMetadataColumns was initialized`);
+            hiddenBacktestingMetadataColumns = [];
+        }
+        sortedMetadata.forEach((run_metadata) => {
             if(typeof run_metadata["user inputs"] !== "undefined"){
                 Object.keys(run_metadata["user inputs"]).forEach((inputTentacle) => {
                     const hasTentacle = addedTentacles.indexOf(inputTentacle) === -1;
                     Object.keys(run_metadata["user inputs"][inputTentacle]).forEach((userInput) => {
-                        const key = `${userInput}${TENTACLE_SEPARATOR}${inputTentacle}`
-                        if(userInputKeys.indexOf(key) === -1){
+                        const key = _userInputKey(userInput, inputTentacle);
+                        if(userInputKeys.indexOf(key) === -1 && hiddenBacktestingMetadataColumns.indexOf(key) === -1){
                             userInputKeys.push(key);
                             userInputColumns.push({
                                 field: key,
@@ -769,8 +784,8 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
         // init searches before formatting rows to access user_inputs objects
         const userInputSearches = userInputKeys.map((key) => {
             const splitKey = key.split(TENTACLE_SEPARATOR);
-            const sampleValue = typeof metadata[metadata.length - 1]["user inputs"][splitKey[1]] === "undefined" ? undefined :
-                metadata[metadata.length - 1]["user inputs"][splitKey[1]][splitKey[0]];
+            const sampleValue = typeof sortedMetadata[0]["user inputs"][splitKey[1]] === "undefined" ? undefined :
+                sortedMetadata[0]["user inputs"][splitKey[1]][splitKey[0]];
             const label = splitKey[0].length > MAX_SEARCH_LABEL_SIZE ?
                 `${splitKey[0].slice(0, MAX_SEARCH_LABEL_SIZE)} ...`: splitKey[0];
             return {
@@ -781,7 +796,7 @@ function createBacktestingMetadataTable(metadata, sectionHandler, forceSelectLat
             }
         })
         let recordId = 0;
-        const records = metadata.map((row) => {
+        const records = sortedMetadata.map((row) => {
             recordId = _formatMetadataRow(row, recordId, 0);
             return row
         });
@@ -971,6 +986,7 @@ function _getTableDataType(records, search, defaultValue, sampleValue){
     return defaultValue;
 }
 
+let hiddenBacktestingMetadataColumns = null;
 const plotlyCreatedChartsIDs = [];
 const ID_SEPARATOR = "_";
 const TENTACLE_SEPARATOR = "###";
@@ -985,4 +1001,26 @@ function removeExplicitSize(figure){
   // Turn off responsive (ie. responsive to window resize)
   figure.config = { responsive: false };
   return figure;
+}
+
+// main entrypoint of this file
+function updateDisplayedElement(data, replot, editors, backtestingPart, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier){
+    data.data.sub_elements.forEach(function (sub_element) {
+        if (backtesting_id === null && sub_element.type === "input") {
+            // only update inputs on live data
+            _displayInputs(sub_element, replot, editors);
+            displayOptimizerSettings(sub_element, replot);
+        }
+        if (sub_element.type === "table"){
+            _updateTables(sub_element, replot, backtesting_id, optimizer_id, added, backtestingTableName);
+        }
+        if (sub_element.type === "value"){
+            _updateBacktestingValues(sub_element, replot, backtesting_id, added, backtestingTableName);
+        }
+    });
+    if(backtestingPart){
+        _updateBacktestingChart(data, true, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier)
+    }else{
+        _updateMainCharts(data, replot, backtesting_id, optimizer_id, added, backtestingTableName, chartIdentifier);
+    }
 }
