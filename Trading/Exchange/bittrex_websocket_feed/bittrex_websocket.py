@@ -22,9 +22,9 @@ class BittrexCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
-        # Feeds.KLINE: cryptofeed_constants.CANDLES,
+        Feeds.KLINE: cryptofeed_constants.CANDLES,
         Feeds.TICKER: cryptofeed_constants.TICKER,
-        # Feeds.CANDLE: cryptofeed_constants.CANDLES,
+        Feeds.CANDLE: cryptofeed_constants.CANDLES,
     }
 
     @classmethod
