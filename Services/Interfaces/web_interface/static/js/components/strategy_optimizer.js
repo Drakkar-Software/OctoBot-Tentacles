@@ -104,7 +104,7 @@ function update_strategy_params(url, strategy){
     });
 }
 
-function update_progress(progress, overall_progress){
+function updateOptimizerProgress(progress, overall_progress){
     $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress);
 
     const nb_progress = Number(overall_progress);
@@ -141,7 +141,7 @@ function handle_optimizer_state_update(data){
     }
     if(status === "computing"){
         lock_inputs();
-        update_progress(progress, overall_progress);
+        updateOptimizerProgress(progress, overall_progress);
         first_refresh_state = status;
         if(report_datatable_card.is(":visible")){
             report_datatable_card.hide();

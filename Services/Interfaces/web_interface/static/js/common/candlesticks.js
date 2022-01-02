@@ -266,7 +266,10 @@ function create_layout(graph_title){
             autorange: true,
             domain: [0, 1],
             title: 'Date',
-            type: 'date'
+            type: 'date',
+            rangeslider: {
+                visible: false,
+            }
         },
         yaxis1: {
             domain: [0, 0.2],
@@ -374,6 +377,7 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
         const data = [volume_trace, price_trace, real_trader_trades, simulator_trades];
         const plotlyConfig = {
+            scrollZoom: true,
             modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
             responsive: true,
             showEditInChartStudio: true,

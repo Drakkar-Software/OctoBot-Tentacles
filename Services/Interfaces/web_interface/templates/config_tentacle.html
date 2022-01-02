@@ -33,7 +33,9 @@
                 </a>
             </h2>
         </div>
-        <div class="card-body" id="configEditorBody" schema="{{ get_tentacle_config_schema_content(tentacle_class) }}" config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
+        <div class="card-body" id="configEditorBody"
+             schema="{{ get_tentacle_config_schema_content(tentacle_class) }}"
+             config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
             <div id="configEditor"></div>
             <div id="noConfigMessage" style='display: none;'>
                 This {{ tentacle_type }} can't be configured.

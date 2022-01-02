@@ -36,6 +36,7 @@ def backtesting():
         if action_type == "start_backtesting":
             data = flask.request.get_json()
             source = flask.request.args["source"]
+            auto_stop = flask.request.args.get("auto_stop", False)
             run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
             success, reply = models.start_backtesting_using_specific_files(data["files"],
@@ -43,9 +44,31 @@ def backtesting():
                                                                            reset_tentacle_config,
                                                                            run_on_common_part_only,
                                                                            start_timestamp=data.get("start_timestamp", None),
-                                                                           end_timestamp=data.get("end_timestamp", None))
+                                                                           end_timestamp=data.get("end_timestamp", None),
+                                                                           enable_logs=data.get("enable_logs", False),
+                                                                           auto_stop=auto_stop,)
+        elif action_type == "start_backtesting_with_current_bot_data":
+            data = flask.request.get_json()
+            source = flask.request.args["source"]
+            auto_stop = flask.request.args.get("auto_stop", False)
+            exchange_id = data.get("exchange_id", None)
+            reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
+            success, reply = models.start_backtesting_using_current_bot_data(
+                exchange_id,
+                source,
+                reset_tentacle_config,
+                start_timestamp=data.get("start_timestamp", None),
+                end_timestamp=data.get("end_timestamp", None),
+                enable_logs=data.get("enable_logs", False),
+                auto_stop=auto_stop,
+            )
+        elif action_type == "stop_backtesting":
+            success, reply = models.stop_previous_backtesting()
         if success:
-            web_interface.send_backtesting_status()
+            if action_type == "start_backtesting_with_current_bot_data":
+                web_interface.send_data_collector_status()
+            else:
+                web_interface.send_backtesting_status()
             return util.get_rest_reply(flask.jsonify(reply))
         else:
             return util.get_rest_reply(reply, 500)
@@ -62,6 +85,14 @@ def backtesting():
             return flask.render_template('backtesting.html',
                                          activated_trading_mode=models.get_config_activated_trading_mode(),
                                          data_files=models.get_data_files_with_description())
+
+
+@web_interface.server_instance.route("/backtesting_run_id")
+@login.login_required_when_activated
+def backtesting_run_id():
+    trading_mode = models.get_config_activated_trading_mode()
+    run_id = models.get_latest_backtesting_run_id(trading_mode)
+    return flask.jsonify(run_id)
 
 
 @web_interface.server_instance.route("/data_collector")
@@ -97,7 +128,7 @@ def data_collector():
             return flask.render_template('data_collector.html',
                                          data_files=models.get_data_files_with_description(),
                                          other_ccxt_exchanges=sorted(models.get_other_history_exchange_list()),
-                                         full_candle_history_ccxt_exchanges=models.full_candle_history_ccxt_exchanges(),
+                                         full_candle_history_ccxt_exchanges=models.get_full_candle_history_exchange_list(),
                                          current_exchange=models.get_current_exchange(),
                                          full_symbol_list=sorted(models.get_symbol_list([current_exchange])),
                                          available_timeframes_list=[timeframe.value for timeframe in

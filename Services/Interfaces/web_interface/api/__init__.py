@@ -32,6 +32,7 @@ from tentacles.Services.Interfaces.web_interface.api.config import (
 )
 from tentacles.Services.Interfaces.web_interface.api.exchanges import (
     is_compatible_account,
+    first_exchange_details,
 )
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
     version,
@@ -50,6 +51,7 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
 
 __all__ = [
     "is_compatible_account",
+    "first_exchange_details",
     "version",
     "upgrade_version",
     "user_feedback",
