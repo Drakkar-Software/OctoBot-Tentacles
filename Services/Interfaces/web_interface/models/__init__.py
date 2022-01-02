@@ -25,7 +25,6 @@ from tentacles.Services.Interfaces.web_interface.models import logs
 from tentacles.Services.Interfaces.web_interface.models import medias
 from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
-from tentacles.Services.Interfaces.web_interface.models import strategy_designs
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
 
@@ -151,22 +150,6 @@ from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer impor
     get_current_run_params,
     get_optimizer_status,
 )
-from tentacles.Services.Interfaces.web_interface.models.strategy_designs import (
-    get_plotted_data,
-    get_backtesting_run_plotted_data,
-    reload_scripts,
-    get_run_data,
-    save_strategy_design_optimizer_config,
-    start_strategy_design_optimizer,
-    resume_strategy_design_optimizer,
-    get_strategy_optimizer_queue,
-    update_strategy_optimizer_queue,
-    clear_simulated_orders_cache,
-    clear_simulated_trades_cache,
-    clear_plotted_cache,
-    clear_all_cache,
-    get_strategy_design_optimizer_config,
-)
 from tentacles.Services.Interfaces.web_interface.models.tentacles import (
     get_tentacles_packages,
     call_tentacle_manager,
@@ -282,20 +265,6 @@ __all__ = [
     "get_optimizer_report",
     "get_current_run_params",
     "get_optimizer_status",
-    "get_plotted_data",
-    "get_backtesting_run_plotted_data",
-    "reload_scripts",
-    "get_run_data",
-    "save_strategy_design_optimizer_config",
-    "start_strategy_design_optimizer",
-    "resume_strategy_design_optimizer",
-    "get_strategy_optimizer_queue",
-    "update_strategy_optimizer_queue",
-    "clear_simulated_orders_cache",
-    "clear_simulated_trades_cache",
-    "clear_plotted_cache",
-    "clear_all_cache",
-    "get_strategy_design_optimizer_config",
     "get_tentacles_packages",
     "call_tentacle_manager",
     "install_packages",
