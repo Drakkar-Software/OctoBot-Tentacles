@@ -27,6 +27,7 @@ from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
+from tentacles.Services.Interfaces.web_interface.models import web_interface_tab
 
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
@@ -168,6 +169,9 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
     get_exchange_holdings_per_symbol,
     get_symbols_values,
 )
+from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import (
+    WebInterfaceTab,
+)
 
 
 __all__ = [
@@ -286,4 +290,5 @@ __all__ = [
     "get_other_history_exchange_list",
     "change_reference_market_on_config_currencies",
     "update_config_currencies",
+    "WebInterfaceTab",
 ]

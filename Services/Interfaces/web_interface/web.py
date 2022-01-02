@@ -30,6 +30,7 @@ import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
 import tentacles.Services.Interfaces.web_interface.websockets as websockets
+import tentacles.Services.Interfaces.web_interface.plugins as web_interface_plugins
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Services_bases as Service_bases
 
@@ -164,6 +165,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
 
         try:
             server_instance = web_interface_root.server_instance
+            web_interface_root.registered_plugins.extend(web_interface_plugins.register_all_plugins(server_instance))
             if self.dev_mode:
                 server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
             else:
