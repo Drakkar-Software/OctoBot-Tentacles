@@ -28,6 +28,7 @@ function fetch_images() {
         if(element.attr("src") === ""){
             $.get(element.attr("url"), function(data) {
                 element.attr("src", data["image"]);
+                element.removeClass(hidden_class)
                 const parentLink = element.parent("a");
                 if (parentLink.attr("href") === ""){
                     parentLink.attr("href", data["url"]);

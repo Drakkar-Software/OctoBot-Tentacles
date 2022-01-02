@@ -79,7 +79,8 @@ class RedditService(services.AbstractService):
                                  username=
                                  self.config[services_constants.CONFIG_CATEGORY_SERVICES][
                                      services_constants.CONFIG_REDDIT][
-                                     self.USERNAME])
+                                     self.USERNAME],
+                                 check_for_updates=False)
 
     def get_type(self):
         return services_constants.CONFIG_REDDIT

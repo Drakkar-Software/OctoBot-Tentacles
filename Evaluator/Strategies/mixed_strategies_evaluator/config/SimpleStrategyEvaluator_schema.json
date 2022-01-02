@@ -15,6 +15,12 @@
             "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
         }
     },
+    "required_candles_count": {
+        "title": "Number of candles to fetch from exchange to be made available for evaluations.",
+        "type": "integer",
+        "minimum": 0,
+        "default": 500
+    },
     "social_evaluators_notification_timeout": {
         "title": "Number of seconds to consider a social evaluation valid from the moment it appears on OctoBot. Example: a tweet evaluation.",
         "type": "integer",

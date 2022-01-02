@@ -44,8 +44,8 @@ function handle_backtesting_buttons(){
                 create_alert("error", "Invalid date range.", "");
                 return;
             }
-            request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime() / 1000) : null;
-            request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime() / 1000) : null;
+            request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime()) : null;
+            request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime()) : null;
         }
         const update_url = $("#startBacktesting").attr("start-url");
         const run_on_common_part_only = syncDataOnlyCheckbox.is(":checked");
@@ -136,7 +136,7 @@ function handle_date_selection(){
     endDate[0].min = newStartDate;
 }
 
-const dataFilesTable = $('#dataFilesTable').DataTable({"order": [], "destroy": true});
+const dataFilesTable = $('#dataFilesTable').DataTable({"order": [[ 2, 'desc' ]], "destroy": true});
 const syncDataOnlyDiv = $("#synchronized-data-only-div");
 const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
 const startDate = $("#startDate");

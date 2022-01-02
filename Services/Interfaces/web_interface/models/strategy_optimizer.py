@@ -65,6 +65,15 @@ def get_risks_list():
     return [i / 10 for i in range(10, 0, -1)]
 
 
+def cancel_optimizer():
+    tools = web_interface_root.WebInterface.tools
+    optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
+    if optimizer is None:
+        return False, "No optimizer is running"
+    octobot_api.cancel_strategy_optimizer(optimizer)
+    return True, "Optimizer is being cancelled"
+
+
 def start_optimizer(strategy, time_frames, evaluators, risks):
     try:
         tools = web_interface_root.WebInterface.tools
@@ -74,23 +83,22 @@ def start_optimizer(strategy, time_frames, evaluators, risks):
         independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         if independent_backtesting and octobot_api.is_independent_backtesting_in_progress(independent_backtesting):
             return False, "A backtesting is already running"
-        else:
-            formatted_time_frames = time_frame_manager.parse_time_frames(time_frames)
-            float_risks = [float(risk) for risk in risks]
-            temp_independent_backtesting = octobot_api.create_independent_backtesting(
-                interfaces_util.get_global_config(), None, [])
-            optimizer_config = interfaces_util.run_in_bot_async_executor(
-                octobot_api.initialize_independent_backtesting_config(temp_independent_backtesting)
-            )
-            optimizer = octobot_api.create_strategy_optimizer(optimizer_config,
-                                                              interfaces_util.get_bot_api().get_edited_tentacles_config(),
-                                                              strategy)
-            tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
-            thread = threading.Thread(target=octobot_api.find_optimal_configuration,
-                                      args=(optimizer, evaluators, formatted_time_frames, float_risks),
-                                      name=f"{optimizer.get_name()}-WebInterface-runner")
-            thread.start()
-            return True, "Optimizer started"
+        formatted_time_frames = time_frame_manager.parse_time_frames(time_frames)
+        float_risks = [float(risk) for risk in risks]
+        temp_independent_backtesting = octobot_api.create_independent_backtesting(
+            interfaces_util.get_global_config(), None, [])
+        optimizer_config = interfaces_util.run_in_bot_async_executor(
+            octobot_api.initialize_independent_backtesting_config(temp_independent_backtesting)
+        )
+        optimizer = octobot_api.create_strategy_optimizer(optimizer_config,
+                                                          interfaces_util.get_bot_api().get_edited_tentacles_config(),
+                                                          strategy)
+        tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] = optimizer
+        thread = threading.Thread(target=octobot_api.find_optimal_configuration,
+                                  args=(optimizer, evaluators, formatted_time_frames, float_risks),
+                                  name=f"{optimizer.get_name()}-WebInterface-runner")
+        thread.start()
+        return True, "Optimizer started"
     except Exception as e:
         LOGGER.exception(e, True, f"Error when starting optimizer: {e}")
         raise e
@@ -138,7 +146,7 @@ def get_optimizer_status():
     if optimizer:
         if octobot_api.is_optimizer_computing(optimizer):
             return "computing", octobot_api.get_optimizer_current_test_suite_progress(optimizer), \
-                   octobot_api.get_optimizer_overall_progress(optimizer), \
+                   interfaces_util.run_in_bot_async_executor(octobot_api.get_optimizer_overall_progress(optimizer)), \
                    octobot_api.get_optimizer_errors_description(optimizer)
         else:
             return "finished", 100, 100, octobot_api.get_optimizer_errors_description(optimizer)

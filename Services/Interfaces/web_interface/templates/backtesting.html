@@ -29,7 +29,7 @@
                 </tr>
               </thead>
               <tbody>
-                {% for file, description in data_files.items() | sort(reverse=True) %}
+                {% for file, description in data_files.items() %}
                     <tr class="selectable_datafile">
                         <td><div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input dataFileCheckbox" data-file="{{file}}" symbols="{{description.symbols}}">
@@ -54,7 +54,7 @@
               </tbody>
             </table>
             <div class="d-flex justify-content-end">
-                <a href="{{ url_for('data_collector') }}" class="btn btn-info waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
+                <a href="{{ url_for('data_collector') }}" class="btn btn-outline-info waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
             </div>
             {% if activated_trading_mode.is_backtestable() %}
                 <div class="container-fluid row mx-0">
