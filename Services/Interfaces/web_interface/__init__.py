@@ -68,6 +68,7 @@ loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
 for logger in loggers:
     logging.getLogger(logger).setLevel(logging.WARNING)
 
+registered_plugins = []
 notifications = []
 
 matrix_history = []

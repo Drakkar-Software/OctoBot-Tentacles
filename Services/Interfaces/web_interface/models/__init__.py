@@ -27,6 +27,7 @@ from tentacles.Services.Interfaces.web_interface.models import profiles
 from tentacles.Services.Interfaces.web_interface.models import strategy_optimizer
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
+from tentacles.Services.Interfaces.web_interface.models import web_interface_tab
 
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
@@ -170,6 +171,9 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
     get_exchange_holdings_per_symbol,
     get_symbols_values,
 )
+from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import (
+    WebInterfaceTab,
+)
 
 
 __all__ = [
@@ -290,4 +294,5 @@ __all__ = [
     "send_command_to_activated_tentacles",
     "reload_scripts",
     "update_config_currencies",
+    "WebInterfaceTab",
 ]
