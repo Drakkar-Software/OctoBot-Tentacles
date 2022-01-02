@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Tentacles
+#  Drakkar-Software OctoBot-Interfaces
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -13,18 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import enum
 
-
-class PriceStrings(enum.Enum):
-    STR_PRICE_TIME = "time"
-    STR_PRICE_CLOSE = "close"
-    STR_PRICE_OPEN = "open"
-    STR_PRICE_HIGH = "high"
-    STR_PRICE_LOW = "low"
-    STR_PRICE_VOL = "vol"
-
-
-class TabsLocation(enum.Enum):
-    START = "start"
-    END = "end"
+class WebInterfaceTab:
+    def __init__(self, identifier, route, display_name, location):
+        self.identifier = identifier
+        self.route = route
+        self.display_name = display_name
+        self.location = location

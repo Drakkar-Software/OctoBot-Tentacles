@@ -106,6 +106,11 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
                         </li>
+                        {% for plugin_tab in get_plugin_tabs(TAB_START) %}
+                        <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
+                        </li>
+                        {% endfor %}
                     </ul>
                 </div>
                 <div class="mx-auto order-0">
@@ -125,6 +130,11 @@
                             </a>
                         </li>
                         {% endif %}
+                        {% for plugin_tab in get_plugin_tabs(TAB_END) %}
+                        <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
+                        </li>
+                        {% endfor %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>
