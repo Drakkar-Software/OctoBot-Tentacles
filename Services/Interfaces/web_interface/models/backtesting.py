@@ -29,8 +29,12 @@ import octobot_backtesting.enums as backtesting_enums
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
+
+
+STOPPING_TIMEOUT = 30
 
 
 def get_full_candle_history_exchange_list():
@@ -68,12 +72,42 @@ def get_data_files_with_description():
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                                           start_timestamp=None, end_timestamp=None):
+                                           start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                           auto_stop=False):
+    return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
+                              run_on_common_part_only=run_on_common_part_only,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              use_current_bot_data=False, enable_logs=enable_logs,
+                              auto_stop=auto_stop)
+
+
+def start_backtesting_using_current_bot_data(exchange_id, source, reset_tentacle_config=False,
+                                             start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                             auto_stop=False):
+    return _start_backtesting(None, source, reset_tentacle_config=reset_tentacle_config, run_on_common_part_only=False,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              use_current_bot_data=True, exchange_id=exchange_id, enable_logs=enable_logs,
+                              auto_stop=auto_stop)
+
+
+def stop_previous_backtesting():
+    previous_independent_backtesting = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING]
+    if previous_independent_backtesting and \
+            not octobot_api.is_independent_backtesting_stopped(previous_independent_backtesting):
+        interfaces_util.run_in_bot_main_loop(
+            octobot_api.stop_independent_backtesting(previous_independent_backtesting))
+        return True, "Backtesting is stopping"
+    return True, "No backtesting to stop"
+
+
+def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
+                       start_timestamp=None, end_timestamp=None, use_current_bot_data=False, exchange_id=None,
+                       enable_logs=False, auto_stop=False):
     try:
         tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
-        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and octobot_api.is_optimizer_in_progress(
-                tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]):
+        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and interfaces_util.run_in_bot_async_executor(
+                octobot_api.is_optimizer_in_progress(tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER])):
             return False, "Optimizer already running"
         elif previous_independent_backtesting and \
                 octobot_api.is_independent_backtesting_in_progress(previous_independent_backtesting):
@@ -88,20 +122,74 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
             else:
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_global_config()
-            independent_backtesting = octobot_api.create_independent_backtesting(config,
-                                                                                 tentacles_setup_config,
-                                                                                 files,
-                                                                                 run_on_common_part_only=run_on_common_part_only,
-                                                                                 start_timestamp=start_timestamp,
-                                                                                 end_timestamp=end_timestamp)
-            interfaces_util.run_in_bot_main_loop(
-                octobot_api.initialize_and_run_independent_backtesting(independent_backtesting), blocking=False)
-            tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
+            if use_current_bot_data:
+                tools[constants.BOT_TOOLS_DATA_COLLECTOR] = \
+                    _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+                tools[constants.BOT_TOOLS_BACKTESTING] = None
+            else:
+                tools[constants.BOT_TOOLS_BACKTESTING] = octobot_api.create_independent_backtesting(
+                    config,
+                    tentacles_setup_config,
+                    files,
+                    run_on_common_part_only=run_on_common_part_only,
+                    start_timestamp=start_timestamp / 1000 if start_timestamp else None,
+                    end_timestamp=end_timestamp / 1000 if end_timestamp else None,
+                    enable_logs=enable_logs,
+                    stop_when_finished=auto_stop)
+                tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+            interfaces_util.run_in_bot_main_loop(
+                _collect_initialize_and_run_independent_backtesting(
+                    tools[constants.BOT_TOOLS_DATA_COLLECTOR], tools[constants.BOT_TOOLS_BACKTESTING],
+                    config, tentacles_setup_config, files, run_on_common_part_only,
+                    start_timestamp, end_timestamp, enable_logs, auto_stop),
+                blocking=False)
             return True, "Backtesting started"
     except Exception as e:
         bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, False)
         return False, f"Error when starting backtesting: {e}"
+
+
+async def _collect_initialize_and_run_independent_backtesting(
+        data_collector_instance, independent_backtesting, config, tentacles_setup_config, files, run_on_common_part_only,
+        start_timestamp, end_timestamp, enable_logs, auto_stop):
+    if data_collector_instance is not None:
+        try:
+            files = [await backtesting_api.initialize_and_run_data_collector(data_collector_instance)]
+        except Exception as e:
+            bot_logging.get_logger("DataCollectorModel").exception(
+                e, True, f"Error when collecting historical data: {e}")
+        finally:
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+    if independent_backtesting is None:
+        try:
+            independent_backtesting = octobot_api.create_independent_backtesting(
+                config,
+                tentacles_setup_config,
+                files,
+                run_on_common_part_only=run_on_common_part_only,
+                start_timestamp=start_timestamp / 1000 if start_timestamp else None,
+                end_timestamp=end_timestamp / 1000 if end_timestamp else None,
+                enable_logs=enable_logs,
+                stop_when_finished=auto_stop)
+        except Exception as e:
+            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
+                e, True, f"Error when initializing backtesting: {e}")
+        finally:
+            # only unregister collector now that we can associate a backtesting
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+    try:
+        await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
+    except Exception as e:
+        bot_logging.get_logger("StartIndependentBacktestingModel").exception(e, True,
+                                                                             f"Error when running backtesting: {e}")
+        try:
+            await octobot_api.stop_independent_backtesting(independent_backtesting)
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = None
+        except Exception as e:
+            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
+                e, True, f"Error when stopping backtesting: {e}")
 
 
 def get_backtesting_status():
@@ -123,6 +211,19 @@ def get_backtesting_report(source):
         if tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] == source:
             return interfaces_util.run_in_bot_async_executor(
                 octobot_api.get_independent_backtesting_report(backtesting))
+    return {}
+
+
+def get_latest_backtesting_run_id(trading_mode):
+    tools = web_interface_root.WebInterface.tools
+    if tools[constants.BOT_TOOLS_BACKTESTING]:
+        backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        interfaces_util.run_in_bot_main_loop(octobot_api.join_independent_backtesting_stop(backtesting,
+                                                                                           STOPPING_TIMEOUT))
+        bot_id = octobot_api.get_independent_backtesting_bot_id(backtesting)
+        return {
+            "id": interfaces_util.run_in_bot_async_executor(trading_mode.get_backtesting_id(bot_id))
+        }
     return {}
 
 
@@ -159,6 +260,31 @@ def stop_data_collector():
         message = "Data collector stopped"
         web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     return success, message
+
+
+def _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
+    exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+    exchange_name = trading_api.get_exchange_name(exchange_manager)
+    return backtesting_api.exchange_bot_snapshot_data_collector_factory(
+        exchange_name,
+        interfaces_util.get_bot_api().get_edited_tentacles_config(),
+        trading_api.get_trading_pairs(exchange_manager),
+        exchange_id,
+        time_frames=trading_api.get_exchange_available_required_time_frames(exchange_name, exchange_id),
+        start_timestamp=start_timestamp,
+        end_timestamp=end_timestamp)
+
+
+def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp):
+    data_collector_instance = _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+    web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
+    try:
+        collected_files = interfaces_util.run_in_bot_main_loop(
+            backtesting_api.initialize_and_run_data_collector(data_collector_instance)
+        )
+        return collected_files
+    finally:
+        web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
 
 
 def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):

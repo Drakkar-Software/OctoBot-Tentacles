@@ -62,14 +62,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             self.exchange = self.exchange_manager.exchange
             self._load_timeframes_if_necessary()
 
-            if self.start_timestamp is not None:
-                lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,
-                                        time_frame_manager.find_min_time_frame(self.time_frames))
-                                        for symbol in self.symbols])
-                if lowest_timestamp > self.start_timestamp:
-                    self.start_timestamp = lowest_timestamp
-                if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time()*1000)):
-                    raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
+            await self.check_timestamps()
 
             # create description
             await self._create_description()
@@ -173,10 +166,13 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                         while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
                             candles.pop(-1)
                     self.exchange.uniformize_candles_if_necessary(candles)
-                    await self.save_ohlcv(exchange=exchange,
-                                          cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                          symbol=symbol, time_frame=time_frame, candle=candles,
-                                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                    await self.save_ohlcv(
+                        exchange=exchange,
+                        cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                        symbol=symbol, time_frame=time_frame, candle=candles,
+                        timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
+                                   for candle in candles],
+                        multiple=True)
                     candles.clear()
         else:
             candles = await self.exchange.get_symbol_prices(symbol, time_frame)
@@ -188,6 +184,17 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
+
+    async def check_timestamps(self):
+        if self.start_timestamp is not None:
+            lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,
+                                                                          time_frame_manager.find_min_time_frame(
+                                                                              self.time_frames))
+                                    for symbol in self.symbols])
+            if lowest_timestamp > self.start_timestamp:
+                self.start_timestamp = lowest_timestamp
+            if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
+                raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
         return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0]\
