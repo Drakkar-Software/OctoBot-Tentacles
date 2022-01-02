@@ -55,7 +55,8 @@ function _buildOptimizerSettingsForm(schemaElements, configValues){
         let atLeastOneUserInput = false;
         const tentacleName = element.tentacle
         const inputGroupId = _appendInputGroupFromTemplate(settingsRoot, tentacleName);
-        const inputGroupContent = $(`#${inputGroupId}`).find(".input-content");
+        const inputGroupElement = $(document.getElementById(inputGroupId));
+        const inputGroupContent = inputGroupElement.find(".input-content");
         Object.values(element.schema.properties).forEach(function (inputDetail) {
             if (_buildOptimizerConfigElementSettingForm(inputGroupContent, inputDetail,
                 configValues, tentacleName, inputDetail.title)) {
@@ -63,7 +64,7 @@ function _buildOptimizerSettingsForm(schemaElements, configValues){
             }
         });
         if(!atLeastOneUserInput){
-            $(`#${inputGroupId}`).remove();
+            inputGroupElement.remove();
         }
     })
     _updateInputSettingsDisplay(settingsRoot);
@@ -96,7 +97,8 @@ function _buildOptimizerConfigElementSettingForm(inputGroupContent, inputDetails
 function _buildOptimizerNestedConfigSettingsForm(inputGroupContent, inputDetail, configValues, parentInputIdentifier){
     let atLeastOneUserInput = false;
     const nestedInputGroupId = _appendNestedInputGroupFromTemplate(inputGroupContent,parentInputIdentifier, inputDetail.title);
-    const nestedInputGroupContent = $(`#${nestedInputGroupId}`).find(".input-content");
+    const nestedInputGroupElement = $(document.getElementById(nestedInputGroupId));
+    const nestedInputGroupContent = nestedInputGroupElement.find(".input-content");
     Object.keys(inputDetail.properties).forEach(function (nestedInput) {
         const nestedInputDetails = inputDetail.properties[nestedInput];
         if(_buildOptimizerConfigElementSettingForm(nestedInputGroupContent, nestedInputDetails,
@@ -105,7 +107,7 @@ function _buildOptimizerNestedConfigSettingsForm(inputGroupContent, inputDetail,
         }
     });
     if(!atLeastOneUserInput){
-        $(`#${nestedInputGroupId}`).remove();
+        nestedInputGroupElement.remove();
     }
 }
 
