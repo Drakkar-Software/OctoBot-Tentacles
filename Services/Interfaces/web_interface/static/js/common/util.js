@@ -78,9 +78,9 @@ function isDefined(thing){
     return (typeof thing !== "undefined" && thing !== false && thing !==null);
 }
 
-function log(text){
+function log(...texts){
     if(window.console){
-        console.log(text);
+        console.log(...texts);
     }
 }
 

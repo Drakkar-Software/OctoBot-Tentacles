@@ -9,6 +9,7 @@
     </div>
     <div class="row border d-none" id="optimizer-settings-default-values">
         {{ strategy_optimizer_setting_tentacle_group_template() }}
+        {{ strategy_optimizer_setting_nested_tentacle_config_template() }}
         {{ strategy_optimizer_setting("number") }}
         {{ strategy_optimizer_setting("options") }}
         {{ strategy_optimizer_setting("multiple-options") }}
@@ -21,7 +22,19 @@
 <div id="optimizer-settings-tentacle-group-template">
     <div id="optimizer-settings-XYZ-tentacle-group-template" class="w-100 border">
         <div class="row">
-            XYZ
+            XYZT
+        </div>
+        <div class="row input-content w-100 mx-0">
+        </div>
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro strategy_optimizer_setting_nested_tentacle_config_template() -%}
+<div id="optimizer-settings-nested-tentacle-config-template">
+    <div id="optimizer-settings-XYZ-nested-tentacle-config-template" class="w-100 px-4 border">
+        <div class="row">
+            XYZT
         </div>
         <div class="row input-content w-100 mx-0">
         </div>
@@ -33,7 +46,7 @@
 {% macro strategy_optimizer_setting(value_type) -%}
     <div class="row w-100 mx-0 border" id="optimizer-settings-{{value_type}}-template">
         <div class="col-3 setting-name p-2" id="XYZInput-name">
-            XYZ
+            XYZT
         </div>
         <div class="col-8 setting-values row p-2" id="XYZInput-values">
             {% if value_type == "number" %}
