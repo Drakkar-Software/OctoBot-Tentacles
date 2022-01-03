@@ -52,9 +52,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         services_interfaces.AbstractWebInterface.__init__(self, config)
         threading.Thread.__init__(self, name=self.get_name())
         self.logger = self.get_logger()
-        self.app = None
-        self.srv = None
-        self.ctx = None
         self.host = None
         self.port = None
         self.session_secret_key = None
@@ -63,6 +60,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.requires_password = False
         self.password_hash = ""
         self.dev_mode = False
+        self.started = False
+        self.registered_plugins = []
         # Set services_constants.ENV_CORS_ALLOWED_ORIGINS env variable add stricter cors rules allowed origins
         # example: http://localhost:5000
         # Note: you can specify multiple origins using comma as a separator, ex: http://localhost:5000,https://a.com
@@ -109,7 +108,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
                 self.should_open_web_interface = env_value.lower() == "true"
         except KeyError:
             self.should_open_web_interface = True
-        self.dev_mode = interfaces_util.get_edited_config(dict_only=False).dev_mode_enabled()
+        self.dev_mode = False if interfaces_util.get_bot_api() is None else\
+            interfaces_util.get_edited_config(dict_only=False).dev_mode_enabled()
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
@@ -165,7 +165,11 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
 
         try:
             server_instance = web_interface_root.server_instance
-            web_interface_root.registered_plugins.extend(web_interface_plugins.register_all_plugins(server_instance))
+            self.registered_plugins = web_interface_plugins.register_all_plugins(server_instance,
+                                                                                 web_interface_root.registered_plugins)
+            web_interface_root.registered_plugins.extend([plugin
+                                                          for plugin in self.registered_plugins
+                                                          if plugin not in web_interface_root.registered_plugins])
             if self.dev_mode:
                 server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
             else:
@@ -181,7 +185,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             if self.should_open_web_interface:
                 self._open_web_interface_on_browser()
 
-            self.websocket_instance.run(web_interface_root.server_instance,
+            self.started = True
+            self.websocket_instance.run(server_instance,
                                         host=self.host,
                                         port=self.port,
                                         log_output=False,
