@@ -22,7 +22,7 @@ import octobot_commons.tests as commons_tests
 import octobot_trading.exchanges as exchanges
 import octobot_trading.util.test_tools.exchanges_test_tools as exchanges_test_tools
 import octobot_trading.util.test_tools.websocket_test_tools as websocket_test_tools
-from ...huobi_websocket_feed import HuobiCryptofeedWebsocketConnector
+from ...huobi_pro_websocket_feed import HuobiProCryptofeedWebsocketConnector
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -31,11 +31,11 @@ pytestmark = pytest.mark.asyncio
 async def test_start_spot_websocket():
     config = commons_tests.load_test_config()
     exchange_manager_instance = await exchanges_test_tools.create_test_exchange_manager(
-        config=config, exchange_name=HuobiCryptofeedWebsocketConnector.get_name())
+        config=config, exchange_name=HuobiProCryptofeedWebsocketConnector.get_name())
 
     await websocket_test_tools.test_unauthenticated_push_to_channel_coverage_websocket(
         websocket_exchange_class=exchanges.CryptofeedWebSocketExchange,
-        websocket_connector_class=HuobiCryptofeedWebsocketConnector,
+        websocket_connector_class=HuobiProCryptofeedWebsocketConnector,
         exchange_manager=exchange_manager_instance,
         config=config,
         symbols=["BTC/USDT", "ETH/USDT"],
