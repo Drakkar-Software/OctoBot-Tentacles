@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.modes.scripting_library as scripting_library
+import octobot_trading.modes as modes
 
 
-class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):
+class ScriptedTradingMode(modes.AbstractScriptedTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -27,5 +27,5 @@ class ScriptedTradingMode(scripting_library.AbstractScriptedTradingMode):
         self.register_script_module(backtesting_script, live=False)
 
 
-class ScriptedTradingModeProducer(scripting_library.AbstractScriptedTradingModeProducer):
+class ScriptedTradingModeProducer(modes.AbstractScriptedTradingModeProducer):
     pass

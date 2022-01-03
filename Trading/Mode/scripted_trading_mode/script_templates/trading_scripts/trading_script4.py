@@ -1,5 +1,5 @@
 from tentacles.Evaluator.TA import *
-from octobot_trading.modes.scripting_library import *
+from tentacles.Meta.Keywords import *
 
 
 def crossover(val1, val2):

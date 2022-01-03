@@ -38,11 +38,11 @@ class BlankMomentumEvaluator(evaluators.TAEvaluator):
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle):
         self.eval_note = 0.3
         #TMP
-        import octobot_trading.modes.scripting_library as scripting_library
+        import octobot_trading.modes.scripted_trading_mode as scripting_library
         eval_time = evaluators_util.get_eval_time(full_candle=candle, time_frame=time_frame)
         ctx = self.get_context(symbol, time_frame, eval_time)
-        await scripting_library.plot(ctx, "EMA20", cache_value="ema20", own_yaxis=True)
-        ema_length = await scripting_library.external_user_input(ctx, "EMA length", tentacle="ScriptedEvaluator")
+        await scripted_trading_mode.plot(ctx, "EMA20", cache_value="ema20", own_yaxis=True)
+        ema_length = await scripted_trading_mode.external_user_input(ctx, "EMA length", tentacle="ScriptedEvaluator")
         value, missing = await ctx.get_cached_value("ema20", eval_time)
         if missing:
             await ctx.set_cached_value(candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value], "ema20", eval_time)

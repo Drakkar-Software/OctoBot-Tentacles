@@ -1,7 +1,7 @@
-from octobot_trading.modes.scripting_library import *
+from tentacles.Meta.Keywords import *
 
 
-async def script(ctx: Context):
+async def script(ctx):
     from tentacles.Evaluator.Scripted.second_scripted.scripted import SecondScriptedEvaluator
     set_script_name(ctx, "Second scripted eval")
 
