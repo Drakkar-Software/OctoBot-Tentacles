@@ -1,5 +1,7 @@
+from tentacles.Meta.Keywords import *
 
-async def other_script(ctx: Context):
+
+async def other_script(ctx):
     ctx.logger.info("script start")
     # init and vars
     pair = "BTC/USDT"

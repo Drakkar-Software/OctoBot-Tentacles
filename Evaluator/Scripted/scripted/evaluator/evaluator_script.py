@@ -1,10 +1,8 @@
-import octobot_commons.constants as commons_constants
-import octobot_commons.enums as commons_enums
-from octobot_trading.modes.scripting_library import *
+from tentacles.Meta.Keywords import *
 from tentacles.Evaluator.Scripted.second_scripted import SecondScriptedEvaluator
 
 
-async def script(ctx: Context):
+async def script(ctx):
     set_script_name(ctx, "EMA Trend")
 
     ema_length = await user_input(ctx, "EMA length", "int", 15)

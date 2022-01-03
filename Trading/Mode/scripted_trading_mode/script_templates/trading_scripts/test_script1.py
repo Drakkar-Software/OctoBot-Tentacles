@@ -1,3 +1,6 @@
+from tentacles.Meta.Keywords import *
+
+
 async def other_script(ctx: Context):
     set_script_name(ctx, "SimpleRSI")
     pair = ctx.traded_pair
