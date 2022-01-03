@@ -167,9 +167,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             server_instance = web_interface_root.server_instance
             self.registered_plugins = web_interface_plugins.register_all_plugins(server_instance,
                                                                                  web_interface_root.registered_plugins)
-            web_interface_root.registered_plugins.extend([plugin
-                                                          for plugin in self.registered_plugins
-                                                          if plugin not in web_interface_root.registered_plugins])
+            web_interface_root.update_registered_plugins(self.registered_plugins)
             if self.dev_mode:
                 server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
             else:
