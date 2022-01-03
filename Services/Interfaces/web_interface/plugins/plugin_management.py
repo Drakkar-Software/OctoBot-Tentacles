@@ -18,12 +18,20 @@ import octobot_commons.logging as logging
 import tentacles.Services.Interfaces.web_interface.plugins as plugins
 
 
-def register_all_plugins(server_instance, **kwargs) -> list:
+def register_all_plugins(server_instance, already_registered_plugins, **kwargs) -> list:
     registered_plugins = []
+    already_registered_plugins_by_classes = {
+        plugin.__class__: plugin
+        for plugin in already_registered_plugins
+    }
     for plugin_class in _get_all_plugins():
         try:
-            plugin = plugin_class.factory(**kwargs)
-            plugin.register(server_instance)
+            # flask blueprints can't be be unregistered: reuse them when already registered
+            if plugin_class in already_registered_plugins_by_classes:
+                plugin = already_registered_plugins_by_classes[plugin_class]
+            else:
+                plugin = plugin_class.factory(**kwargs)
+                plugin.register(server_instance)
             registered_plugins.append(plugin)
         except Exception as e:
             logging.get_logger("WebInterfacePluggingRegistration").exception(
