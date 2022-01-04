@@ -2,7 +2,7 @@ from tentacles.Evaluator.TA import *
 import octobot_trading.api as api
 import octobot_commons.enums as commons_enums
 import time
-from octobot_trading.modes.scripting_library import *
+from tentacles.Meta.Keywords.scripting_library import *
 
 
 async def script(ctx):
