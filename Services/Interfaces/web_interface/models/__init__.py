@@ -108,6 +108,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     send_command_to_activated_tentacles,
     reload_scripts,
     update_config_currencies,
+    get_config_required_candles_count,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -294,5 +295,6 @@ __all__ = [
     "send_command_to_activated_tentacles",
     "reload_scripts",
     "update_config_currencies",
+    "get_config_required_candles_count",
     "WebInterfaceTab",
 ]
