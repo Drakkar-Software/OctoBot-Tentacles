@@ -815,3 +815,7 @@ def update_config_currencies(currencies: list, replace: bool=False):
         success = False
         bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
     return success, message
+
+
+def get_config_required_candles_count(exchange_manager):
+    return trading_api.get_required_historical_candles_count(exchange_manager)
