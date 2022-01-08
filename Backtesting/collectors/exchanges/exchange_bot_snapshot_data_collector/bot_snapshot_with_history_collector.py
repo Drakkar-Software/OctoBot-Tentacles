@@ -195,7 +195,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             for index, time_val in enumerate(candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value])
         ]
 
-    async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec, start_time, end_time):
+    async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
+                                       start_time, end_time, update_progress=True):
         last_progress = 0
         async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
                                                              start_time, end_time):
@@ -209,9 +210,10 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             )
             progress = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
                                         ((end_time - start_time) / 1000) * 100
-            progress_over_all_steps = progress / self.total_steps
-            self.current_step_percent += progress_over_all_steps - last_progress
-            last_progress = progress_over_all_steps
+            if update_progress:
+                progress_over_all_steps = progress / self.total_steps
+                self.current_step_percent += progress_over_all_steps - last_progress
+                last_progress = progress_over_all_steps
         return last_progress
 
     def find_candle(self, candles, timestamp):
@@ -270,16 +272,27 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 )
             else:
                 database_candles = importers.import_ohlcvs(
-                    await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV, size=data.DataBase.DEFAULT_SIZE,
+                    await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV,
+                                               size=data.DataBase.DEFAULT_SIZE,
                                                exchange_name=self.exchange_name, symbol=symbol,
                                                time_frame=time_frame.value)
                 )
                 first_candle_data_time = min(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
                                              for candle in database_candles) * 1000
+                last_candle_data_time = max(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                                            for candle in database_candles) * 1000
                 if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
-                    # fetch missing data
+                    # fetch missing data between required start time and actual start time in data file
                     last_progress = await self.collect_historical_ohlcv(
                         exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time)
+                if last_candle_data_time + 1 < bot_first_data_timestamp:
+                    # fetch missing data between end time in data file and available data
+                    # last_candle_data_time + 1 not to fetch the first candle twice
+                    # do not add (time_frame_sec * 1000) to bot_first_data_timestamp to avoid double adding
+                    await self.collect_historical_ohlcv(
+                        exchange, symbol, time_frame, time_frame_sec, last_candle_data_time + 1,
+                        bot_first_data_timestamp, update_progress=False)
+                # finally, apply current candles
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, current_bot_candles)
             self.current_step_percent += 100 / self.total_steps - last_progress
