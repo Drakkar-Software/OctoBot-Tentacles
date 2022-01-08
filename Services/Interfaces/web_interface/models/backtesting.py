@@ -163,6 +163,8 @@ async def _collect_initialize_and_run_independent_backtesting(
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     if independent_backtesting is None:
         try:
+            if files is None:
+                raise RuntimeError("No datafiles")
             independent_backtesting = octobot_api.create_independent_backtesting(
                 config,
                 tentacles_setup_config,
@@ -180,7 +182,8 @@ async def _collect_initialize_and_run_independent_backtesting(
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     try:
-        await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
+        if files is not None:
+            await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
     except Exception as e:
         bot_logging.get_logger("StartIndependentBacktestingModel").exception(e, True,
                                                                              f"Error when running backtesting: {e}")
