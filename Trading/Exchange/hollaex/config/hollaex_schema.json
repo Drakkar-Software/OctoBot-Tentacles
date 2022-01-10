@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "title": "Hollaex",
+  "properties": {
+    "api": {
+        "title": "Your Hollaex exchange api url (similar to https://api.hollaex.com)",
+        "type": "string",
+        "options": {
+          "inputAttributes": {
+            "placeholder":  "https://api.hollaex.com"
+          }
+        },
+        "required": true
+    }
+  }
+}
