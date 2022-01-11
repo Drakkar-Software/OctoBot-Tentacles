@@ -159,6 +159,7 @@
         </div>
         <br>
     {% endif %}
+    {% if tentacle_type != "exchange" %}
     <div class="card" id="backtestingInputPart">
         <div class="card-header" id="backtestingPage" update-url="{{ url_for('backtesting', update_type='backtesting_status') }}">
             <h2>Test configuration
@@ -297,6 +298,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 {% else %}
     <div class="card">
         <div class="card-header">
