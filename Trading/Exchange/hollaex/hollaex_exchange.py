@@ -43,6 +43,10 @@ class hollaex(exchanges.SpotCCXTExchange):
         return 'hollaex'
 
     @classmethod
+    def is_configurable(cls):
+        return True
+
+    @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
