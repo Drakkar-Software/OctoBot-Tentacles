@@ -1,5 +1,5 @@
 from tentacles.Evaluator.TA import *
-from octobot_trading.modes.scripting_library import *
+from tentacles.Meta.Keywords import *
 import time
 import octobot_trading.api as api
 
