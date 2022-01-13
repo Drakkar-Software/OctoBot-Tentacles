@@ -86,7 +86,9 @@ def profile():
 def profiles_management(action):
     if action == "update":
         data = flask.request.get_json()
-        models.update_profile(flask.request.get_json()["id"], data)
+        success, err = models.update_profile(flask.request.get_json()["id"], data)
+        if not success:
+            return util.get_rest_reply(flask.jsonify(str(err)), code=400)
         return util.get_rest_reply(flask.jsonify(data))
     if action == "duplicate":
         profile_id = flask.request.args.get("profile_id")

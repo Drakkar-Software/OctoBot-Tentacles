@@ -68,16 +68,23 @@ def get_profiles_activated_tentacles(profiles_list):
 def update_profile(profile_id, json_profile):
     config = interfaces_util.get_edited_config(dict_only=False)
     profile = config.profile_by_id[profile_id]
-    profile.name = json_profile.get("name", profile.name)
+    new_name = json_profile.get("name", profile.name)
+    renamed = profile.name != new_name
+    if renamed and get_current_profile().profile_id == profile_id:
+        return False, "Can't rename the active profile"
+    profile.name = new_name
     profile.description = json_profile.get("description", profile.description)
     profile.avatar = json_profile.get("avatar", profile.avatar)
     profile.validate_and_save_config()
+    if renamed:
+        profile.rename_folder(new_name)
+    return True, "Profile updated"
 
 
 def remove_profile(profile_id):
     profile = None
     if get_current_profile().profile_id == profile_id:
-        return profile, "Can't remove the activated profile"
+        return profile, "Can't remove the active profile"
     try:
         profile = interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id]
         interfaces_util.get_edited_config(dict_only=False).remove_profile(profile_id)
