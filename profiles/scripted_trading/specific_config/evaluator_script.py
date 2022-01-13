@@ -3,7 +3,7 @@ import octobot_commons.enums as commons_enums
 from tentacles.Meta.Keywords import *
 
 
-async def script(ctx):
+async def script(ctx: Context):
     set_script_name(ctx, "EMA Trend")
     ctx.logger.info(ctx.time_frame)
 
