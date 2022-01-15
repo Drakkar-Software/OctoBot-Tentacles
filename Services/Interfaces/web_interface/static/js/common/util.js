@@ -263,3 +263,20 @@ function display_generic_modal(title, content, warning, yes_button_callback, no_
     showModalIfAny(generic_modal);
     return generic_modal;
 }
+
+function updateInputIfValue(elementId, config, configKey, elementType){
+    const value = config[configKey];
+    if(typeof value !== "undefined" && value !== null && value !== ""){
+        const element = $(document.getElementById(elementId));
+        if(element.length){
+            if(elementType === "date") {
+                element.val(new Date(config[configKey]).toISOString().split('T')[0].slice(0, 10))
+            } else if(elementType === "bool"){
+                element.prop("checked", config[configKey]);
+            }
+            else {
+                element.val(config[configKey]);
+            }
+        }
+    }
+}
