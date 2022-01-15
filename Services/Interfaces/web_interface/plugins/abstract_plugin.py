@@ -37,6 +37,10 @@ class AbstractWebInterfacePlugin:
         self.logger = logging.get_logger(self.name)
         self._plugin_folder = plugin_folder
 
+    @classmethod
+    def get_name(cls):
+        return cls.__name__
+
     def register_routes(self):
         raise NotImplementedError("register_routes is not implemented")
 
