@@ -145,7 +145,7 @@ function add_graphs(chart_identifiers){
 }
 
 function updateBacktestingProgress(progress){
-    $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress);
+    updateProgressBar("progess_bar_anim", progress);
 }
 
 function refreshBacktestingStatus(){

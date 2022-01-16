@@ -98,6 +98,10 @@ function add_event_if_not_already_added(elem, event_type, handler){
     }
 }
 
+function updateProgressBar(elementId, progress){
+    $(document.getElementById(elementId)).css('width', progress+'%').attr("aria-valuenow", progress);
+}
+
 function check_has_event_using_handler(elem, event_type, handler){
     const events = get_events(elem, event_type);
     let has_events = false;
