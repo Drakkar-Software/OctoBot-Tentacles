@@ -278,8 +278,10 @@ def _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
         end_timestamp=end_timestamp)
 
 
-def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp):
+def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=True):
     data_collector_instance = _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+    if not collect:
+        return data_collector_instance.file_name
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
     try:
         collected_files = interfaces_util.run_in_bot_main_loop(

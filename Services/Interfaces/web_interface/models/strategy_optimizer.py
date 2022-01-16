@@ -145,10 +145,12 @@ def get_optimizer_status():
     optimizer = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
     if optimizer:
         if octobot_api.is_optimizer_computing(optimizer):
+            overall_progress, remaining_time =\
+                interfaces_util.run_in_bot_async_executor(octobot_api.get_optimizer_overall_progress(optimizer))
             return "computing", octobot_api.get_optimizer_current_test_suite_progress(optimizer), \
-                   interfaces_util.run_in_bot_async_executor(octobot_api.get_optimizer_overall_progress(optimizer)), \
+                   overall_progress, remaining_time, \
                    octobot_api.get_optimizer_errors_description(optimizer)
         else:
-            return "finished", 100, 100, octobot_api.get_optimizer_errors_description(optimizer)
+            return "finished", 100, 100, 0, octobot_api.get_optimizer_errors_description(optimizer)
     else:
-        return "not started", 0, 0, None
+        return "not started", 0, 0, 0, None
