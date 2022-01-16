@@ -24,11 +24,14 @@ class StrategyOptimizerNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_strategy_optimizer_status():
-        optimizer_status, progress, overall_progress, errors = models.get_optimizer_status()
-        return {"status": optimizer_status,
-                "progress": progress,
-                "overall_progress": overall_progress,
-                "errors": errors}
+        optimizer_status, progress, overall_progress, remaining_time, errors = models.get_optimizer_status()
+        return {
+            "status": optimizer_status,
+            "progress": progress,
+            "overall_progress": overall_progress,
+            "remaining_time": remaining_time,
+            "errors": errors
+        }
 
     @websockets.websocket_with_login_required_when_activated
     def on_strategy_optimizer_status(self):
