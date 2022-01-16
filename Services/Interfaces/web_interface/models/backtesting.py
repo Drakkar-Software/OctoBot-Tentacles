@@ -18,6 +18,7 @@ import asyncio
 import ccxt
 import threading
 
+import octobot.strategy_optimizer
 import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
@@ -106,10 +107,14 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
     try:
         tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
-        if tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and interfaces_util.run_in_bot_async_executor(
-                octobot_api.is_optimizer_in_progress(tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER])):
-            return False, "Optimizer already running"
-        elif previous_independent_backtesting and \
+        optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
+        is_optimizer_running = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and \
+                               interfaces_util.run_in_bot_async_executor(
+                                octobot_api.is_optimizer_in_progress(tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER])
+                               )
+        if is_optimizer_running and not isinstance(optimizer, octobot.strategy_optimizer.StrategyDesignOptimizer):
+            return False, "An optimizer is already running"
+        if previous_independent_backtesting and \
                 octobot_api.is_independent_backtesting_in_progress(previous_independent_backtesting):
             return False, "A backtesting is already running"
         else:
@@ -123,7 +128,10 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_global_config()
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
-            if use_current_bot_data:
+            # is_optimizer_running = True  #TMP
+            if is_optimizer_running and files is None:
+                files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
+            if not is_optimizer_running and use_current_bot_data:
                 tools[constants.BOT_TOOLS_DATA_COLLECTOR] = \
                     _create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
                 tools[constants.BOT_TOOLS_BACKTESTING] = None
