@@ -359,8 +359,8 @@ async def test_invalid_create_new_orders(tools):
     with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
         await consumer.create_new_orders(symbol, decimal.Decimal(str(0.6)), trading_enums.EvaluatorStates.SHORT.value)
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(0.000000000000000000005))
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(2000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal(str(0.000000000000000000005))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal(str(2000))
 
     # invalid buy order with not enough currency to buy
     with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
@@ -592,7 +592,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
     gradient_step = 0.005
     nb_orders = 1
-    initial_portfolio = copy.deepcopy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio)
+    initial_portfolio = await exchange_manager.exchange_personal_data.portfolio_manager.portfolio.copy()
     portfolio_wrapper = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     min_trigger_market = "ADA/BNB"
@@ -658,7 +658,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
 
     gradient_step = 0.001
     nb_orders = "unknown"
-    initial_portfolio = copy.deepcopy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio)
+    initial_portfolio = await exchange_manager.exchange_personal_data.portfolio_manager.portfolio.copy()
     portfolio_wrapper = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     min_trigger_market = "ADA/BNB"
