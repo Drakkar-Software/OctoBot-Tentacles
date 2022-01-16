@@ -166,7 +166,7 @@ function create_alert(a_level, a_title, a_msg, url="_blank"){
 }
 
 function lock_ui(){
-    $(".nav-link").addClass("disabled");
+    $("#main-nav-bar").find($(".nav-link")).addClass("disabled");
     update_status(false);
 }
 

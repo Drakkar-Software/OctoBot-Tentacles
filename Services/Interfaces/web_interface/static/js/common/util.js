@@ -118,7 +118,11 @@ function generic_request_success_callback(updated_data, update_url, dom_root_ele
 }
 
 function generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
-    create_alert("error", msg.responseText, "");
+    if(isBotDisconnected()){
+        create_alert("error", "Can't connect to OctoBot", "Your OctoBot might be offline.");
+    }else{
+        create_alert("error", msg.responseText, "");
+    }
 }
 
 function isMobileDisplay() {
