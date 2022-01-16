@@ -126,6 +126,10 @@ const notificationCallbacks = [];
 const _reconnectedCallbacks = [];
 let _isBotDisconnected = false;
 
+function isBotDisconnected(){
+    return _isBotDisconnected;
+}
+
 function register_notification_callback(callback){
     notificationCallbacks.push(callback);
 }
