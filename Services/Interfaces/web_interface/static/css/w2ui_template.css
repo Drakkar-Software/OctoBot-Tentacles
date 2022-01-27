@@ -44,7 +44,7 @@
     margin: 0 !important;
 }
 
-.form-control, input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
+input.w2ui-input, .w2ui-overlay *, .w2ui-overlay select, .w2ui-btn {
     background-color: #131722 !important;
     color: #b2b5be !important;
     border-color: #2a2e39 !important;
