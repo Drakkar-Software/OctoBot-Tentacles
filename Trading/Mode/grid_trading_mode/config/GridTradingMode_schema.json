@@ -48,7 +48,7 @@
               },
               "buy_funds": {
                 "type": "number",
-                "title": "[Optional] Total buy funds: total funds to use for buy orders creation (in base currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
+                "title": "[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency simultaneously in multiple traded pairs.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
@@ -60,7 +60,7 @@
               },
               "starting_price": {
                 "type": "number",
-                "title": "[Optional] Starting price: price price to compute initial orders from. Set 0 to use current exchange price during initial grid orders creation.",
+                "title": "[Optional] Starting price: price to compute initial orders from. Set 0 to use current exchange price during initial grid orders creation.",
                 "minimum": 0,
                 "exclusiveMinimum": false
               },
