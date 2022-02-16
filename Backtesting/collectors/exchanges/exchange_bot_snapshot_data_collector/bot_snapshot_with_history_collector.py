@@ -219,15 +219,15 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     def find_candle(self, candles, timestamp):
         for candle in candles:
             if candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] == timestamp:
-                return candle[-1]
-        return None
+                return candle[-1], candle[0]
+        return None, None
 
     async def update_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
                            database_candles, current_bot_candles):
         to_add_candles = []
         for up_to_date_candle in current_bot_candles:
             current_candle_time = up_to_date_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-            equivalent_db_candle = self.find_candle(database_candles, current_candle_time)
+            equivalent_db_candle, candle_timestamp = self.find_candle(database_candles, current_candle_time)
             if equivalent_db_candle is None:
                 to_add_candles.append(up_to_date_candle)
             elif equivalent_db_candle != up_to_date_candle:
@@ -239,7 +239,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                            exchange_name=exchange,
                                            cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
                                            symbol=symbol,
-                                           time_frame=time_frame.value)
+                                           time_frame=time_frame.value,
+                                           timestamp=candle_timestamp)
         if to_add_candles:
             await self.save_ohlcv(
                 exchange=exchange,
@@ -249,6 +250,17 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                            for candle in to_add_candles],
                 multiple=True
             )
+
+    async def _check_ohlcv_integrity(self, exchange, symbol, time_frame):
+        database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+        # ensure no timestamp is here twice
+        timestamps = set(candle[0] for candle in database_candles)
+        if len(timestamps) != len(database_candles):
+            self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol} on {time_frame}: "
+                                f"{len(timestamps)} different timestamps for {len(database_candles)} "
+                                f"different candles.")
+            return False
+        return True
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         try:
@@ -271,12 +283,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         multiple=True
                 )
             else:
-                database_candles = importers.import_ohlcvs(
-                    await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV,
-                                               size=data.DataBase.DEFAULT_SIZE,
-                                               exchange_name=self.exchange_name, symbol=symbol,
-                                               time_frame=time_frame.value)
-                )
+                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
                 first_candle_data_time = min(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
                                              for candle in database_candles) * 1000
                 last_candle_data_time = max(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
@@ -295,9 +302,20 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 # finally, apply current candles
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, current_bot_candles)
+            if not await self._check_ohlcv_integrity(exchange, symbol, time_frame):
+                self.logger.error(f"Error when checking database integrity. "
+                                  f"Delete this data file: {self.file_name} to reset it.")
             self.current_step_percent += 100 / self.total_steps - last_progress
         except Exception:
             raise
+
+    async def _import_candles_from_datafile(self, exchange, symbol, time_frame):
+        return importers.import_ohlcvs(
+            await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV,
+                                       size=data.DataBase.DEFAULT_SIZE,
+                                       exchange_name=exchange, symbol=symbol,
+                                       time_frame=time_frame.value)
+        )
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass

@@ -27,6 +27,7 @@ import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
 import octobot_backtesting.enums as backtesting_enums
+import octobot_backtesting.collectors as collectors
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
@@ -104,8 +105,8 @@ def stop_previous_backtesting():
 def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
                        start_timestamp=None, end_timestamp=None, use_current_bot_data=False, exchange_id=None,
                        enable_logs=False, auto_stop=False):
+    tools = web_interface_root.WebInterface.tools
     try:
-        tools = web_interface_root.WebInterface.tools
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
         is_optimizer_running = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER] and \
@@ -114,10 +115,17 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                                )
         if is_optimizer_running and not isinstance(optimizer, octobot.strategy_optimizer.StrategyDesignOptimizer):
             return False, "An optimizer is already running"
+        if use_current_bot_data and \
+                isinstance(tools[constants.BOT_TOOLS_DATA_COLLECTOR], collectors.AbstractExchangeBotSnapshotCollector):
+            # can't start a new backtest with use_current_bot_data when a snapshot collector is on
+            return False, "An data collector is already running"
+        if tools[constants.BOT_PREPARING_BACKTESTING]:
+            return False, "An backtesting is already running"
         if previous_independent_backtesting and \
                 octobot_api.is_independent_backtesting_in_progress(previous_independent_backtesting):
             return False, "A backtesting is already running"
         else:
+            tools[constants.BOT_PREPARING_BACKTESTING] = True
             if previous_independent_backtesting:
                 interfaces_util.run_in_bot_main_loop(
                     octobot_api.stop_independent_backtesting(previous_independent_backtesting))
@@ -128,7 +136,6 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_global_config()
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
-            # is_optimizer_running = True  #TMP
             if is_optimizer_running and files is None:
                 files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
             if not is_optimizer_running and use_current_bot_data:
@@ -154,6 +161,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 blocking=False)
             return True, "Backtesting started"
     except Exception as e:
+        tools[constants.BOT_PREPARING_BACKTESTING] = False
         bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, False)
         return False, f"Error when starting backtesting: {e}"
 
@@ -190,6 +198,7 @@ async def _collect_initialize_and_run_independent_backtesting(
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     try:
+        web_interface_root.WebInterface.tools[constants.BOT_PREPARING_BACKTESTING] = False
         if files is not None:
             await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
     except Exception as e:

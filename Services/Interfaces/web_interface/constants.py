@@ -39,6 +39,7 @@ DEFAULT_TIMEFRAME = "1h"
 # backtesting
 BOT_TOOLS_BACKTESTING = "backtesting"
 BOT_TOOLS_BACKTESTING_SOURCE = "backtesting_source"
+BOT_PREPARING_BACKTESTING = "preparing_backtesting"
 
 # strategy optimizer
 BOT_TOOLS_STRATEGY_OPTIMIZER = "strategy_optimizer"
