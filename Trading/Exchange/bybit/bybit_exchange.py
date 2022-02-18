@@ -14,6 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+import math
+import copy
+
+import ccxt.base.errors
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
@@ -24,6 +28,18 @@ import octobot_trading.errors
 
 class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     DESCRIPTION = ""
+
+    # Bybit default take profits are market orders
+    # note: use BUY_MARKET and SELL_MARKET since in reality those are conditional market orders, which behave the same
+    # way as limit order but with higher fees
+    _BYBIT_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS,
+                             trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
+    SUPPORTED_BUNDLED_ORDERS = {
+        trading_enums.TraderOrderType.BUY_MARKET: _BYBIT_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.SELL_MARKET: _BYBIT_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.BUY_LIMIT: _BYBIT_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
+    }
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
@@ -64,10 +80,27 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        try:
+            # on AscendEx, precision is a decimal instead of a number of digits
+            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
+            if with_fixer:
+                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
+            return market_status
+        except ccxt.NotSupported:
+            raise octobot_trading.errors.NotSupported
+        except Exception as e:
+            self.logger.error(f"Fail to get market status of {symbol}: {e}")
+            return {}
+
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         # Bybit return an error if there is no limit or since parameter
         try:
-            return await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=kwargs)
+            params = kwargs.pop("params", {})
+            # never fetch more than 200 candles or get candles from the past
+            limit = min(limit, 200)
+            return await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
+                                                           **kwargs)
         except Exception as e:
             raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
 
@@ -76,6 +109,71 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     async def get_positions(self) -> list:
         return self.parse_positions(await self.connector.client.fetch_positions())
+
+    async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
+        # buy_leverage and sell_leverage are required on Bybit
+        kwargs["buy_leverage"] = kwargs.get("buy_leverage", float(leverage))
+        kwargs["sell_leverage"] = kwargs.get("sell_leverage", float(leverage))
+        return await self.connector.set_symbol_leverage(leverage=leverage, symbol=symbol, **kwargs)
+
+    async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
+                                                       tp_sl_mode: trading_enums.TakeProfitStopLossMode):
+        # v2/private/tpsl/switch-mode
+        # from https://bybit-exchange.github.io/docs/inverse/#t-switchmode
+        params = {
+            "symbol": self.connector.client.market(symbol)['id'],
+            "tp_sl_mode": tp_sl_mode.value
+        }
+        try:
+            if inverse:
+                await self.connector.client.privatePostPrivateTpslSwitchMode(params)
+            await self.connector.client.privatePostPrivateLinearTpslSwitchMode(params)
+        except ccxt.ExchangeError as e:
+            if "same tp sl mode1" in str(e):
+                # can't fetch the tp sl mode1 value
+                return
+            raise
+
+    def get_order_additional_params(self, order) -> dict:
+        params = {}
+        if self.exchange_manager.is_future:
+            contract = self.exchange_manager.exchange.get_pair_future_contract(order.symbol)
+            params["position_idx"] = self._get_position_idx(contract)
+            params["reduce_only"] = order.reduce_only
+        return params
+
+    def get_bundled_order_parameters(self, stop_loss_price=None, take_profit_price=None) -> dict:
+        """
+        Returns True when this exchange supports orders created upon other orders fill (ex: a stop loss created at
+        the same time as a buy order)
+        :param stop_loss_price: the bundled order stop_loss price
+        :param take_profit_price: the bundled order take_profit price
+        :return: A dict with the necessary parameters to create the bundled order on exchange alongside the
+        base order in one request
+        """
+        params = {}
+        if stop_loss_price is not None:
+            params["stop_loss"] = float(stop_loss_price)
+        if take_profit_price is not None:
+            params["take_profit"] = float(take_profit_price)
+        return params
+
+    def _get_position_idx(self, contract):
+        # "position_idx" has to be set when trading futures
+        # from https://bybit-exchange.github.io/docs/inverse/#t-myposition
+        # Position idx, used to identify positions in different position modes:
+        # 0-One-Way Mode
+        # 1-Buy side of both side mode
+        # 2-Sell side of both side mode
+        if contract.is_one_way_position_mode():
+            return 0
+        else:
+            raise NotImplementedError("get_order_additional_params Hedge mode is not implemented")
+            # TODO
+            # if Buy side of both side mode:
+            #     return 1
+            # else Buy side of both side mode:
+            #     return 2
 
     def parse_positions(self, positions) -> list:
         """
@@ -200,3 +298,17 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     def is_futures_symbol(self, symbol):
         return self._get_pair_market_type(symbol) == 'futures'
+
+    def _fix_market_status(self, market_status):
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = self._get_digits_count(
+            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value])
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = self._get_digits_count(
+            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value])
+        return market_status
+
+    def _get_digits_count(self, value):
+        return round(abs(math.log(value, 10)))
