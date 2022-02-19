@@ -110,6 +110,51 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     async def get_positions(self) -> list:
         return self.parse_positions(await self.connector.client.fetch_positions())
 
+    async def get_open_orders(self, symbol: str = None, since: int = None,
+                              limit: int = None, **kwargs: dict) -> list:
+        if "stop_order_status" in kwargs:
+            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        else:
+            # fetch both conditional as well as normal orders
+            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+            # only fetch untriggered stop orders
+            orders += await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit,
+                                                           stop_order_status="Untriggered", **kwargs)
+        return orders
+
+    def clean_order(self, order):
+        return super().clean_order(self._update_order_and_trade_data(order))
+
+    def clean_trade(self, trade):
+        return super().clean_trade(self._update_order_and_trade_data(trade))
+
+    def _update_order_and_trade_data(self, order):
+        # parse reduce_only if present
+        order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
+            order[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get("reduce_only", False)
+
+        # market orders with stop price are stop loss
+        if order.get(trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value, None) is not None and \
+                order[
+                    trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == trading_enums.TradeOrderType.MARKET.value:
+            order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.STOP_LOSS.value
+
+        order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
+            order[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get("reduce_only", False)
+        return order
+
+    async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> bool:
+        if await self.connector.cancel_order(order_id, symbol=symbol, **kwargs):
+            return True
+        else:
+            # order might not have been triggered yet, try with stop order endpoint
+            # from docs: You may cancel all untriggered conditional orders or take profit/stop loss order. Essentially,
+            # after a conditional order is triggered, it will become an active order. So, when a conditional order
+            # is triggered, cancellation has to be done through the active order endpoint for any unfilled or
+            # partially filled active order
+            return await self.connector.cancel_order(order_id, symbol=symbol, params={"stop_order_id": order_id})
+
+
     async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
         # buy_leverage and sell_leverage are required on Bybit
         kwargs["buy_leverage"] = kwargs.get("buy_leverage", float(leverage))
