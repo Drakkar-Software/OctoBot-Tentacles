@@ -234,7 +234,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
             symbol = self.get_pair_from_exchange(
                 position_dict[trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value])
-            side = self.parse_position_side(position_dict.get(trading_enums.ExchangePositionCCXTColumns.SIDE.value))
+            mode = self._parse_position_mode(position_dict.get(self.BYBIT_MODE))
+            original_side = position_dict.get(trading_enums.ExchangePositionCCXTColumns.SIDE.value)
+            side = self.parse_position_side(original_side, mode)
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
                 trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value:
@@ -243,7 +245,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
                     self._parse_position_margin_type(position_dict.get(self.BYBIT_IS_ISOLATED, True)),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
-                    size if side is trading_enums.PositionSide.LONG else -size,
+                    size if original_side == self.LONG_STR else -size,
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:
                     decimal.Decimal(position_dict.get(self.BYBIT_INITIAL_MARGIN, 0)),
                 trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value:
@@ -264,8 +266,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
                     decimal.Decimal(position_dict.get(self.BYBIT_ENTRY_PRICE, 0)),
                 trading_enums.ExchangeConstantsPositionColumns.CONTRACT_TYPE.value:
                     self._parse_position_contract_type(symbol),
-                trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value:
-                    self._parse_position_mode(position_dict.get(self.BYBIT_MODE)),
+                trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value: mode,
             }
         except KeyError as e:
             self.logger.error(f"Fail to parse position dict ({e})")
