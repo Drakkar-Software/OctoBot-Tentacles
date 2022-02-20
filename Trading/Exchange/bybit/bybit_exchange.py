@@ -128,6 +128,12 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     def clean_trade(self, trade):
         return super().clean_trade(self._update_order_and_trade_data(trade))
 
+    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        params = params or {}
+        params["stop_px"] = price
+        params["base_price"] = current_price
+        return await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
+
     def _update_order_and_trade_data(self, order):
         # parse reduce_only if present
         order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
