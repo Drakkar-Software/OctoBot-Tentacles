@@ -134,6 +134,27 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         params["base_price"] = current_price
         return await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
 
+    async def _edit_order(self, order_id: str, order_type: trading_enums.TraderOrderType, symbol: str,
+                          quantity: float, price: float, stop_price: float = None, side: str = None,
+                          current_price: float = None, params: dict = None):
+        params = params or {}
+        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
+            params["stop_order_id"] = order_id
+        if stop_price is not None:
+            # params["stop_px"] = stop_price
+            # params["stop_loss"] = stop_price
+            params["p_r_trigger_price"] = stop_price
+        return await super()._edit_order(order_id, order_type, symbol, quantity=quantity,
+                                         price=price, stop_price=stop_price, side=side,
+                                         current_price=current_price, params=params)
+
+    async def _verify_order(self, created_order, order_type, symbol, price, params=None):
+        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
+            params = params or {}
+            params["stop_order_id"] = created_order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
+        return await super()._verify_order(created_order, order_type, symbol, price, params=params)
+
+
     def _update_order_and_trade_data(self, order):
         # parse reduce_only if present
         order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
