@@ -39,14 +39,16 @@ def backtesting():
             auto_stop = flask.request.args.get("auto_stop", False)
             run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
             reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
-            success, reply = models.start_backtesting_using_specific_files(data["files"],
-                                                                           source,
-                                                                           reset_tentacle_config,
-                                                                           run_on_common_part_only,
-                                                                           start_timestamp=data.get("start_timestamp", None),
-                                                                           end_timestamp=data.get("end_timestamp", None),
-                                                                           enable_logs=data.get("enable_logs", False),
-                                                                           auto_stop=auto_stop,)
+            success, reply = models.start_backtesting_using_specific_files(
+                data["files"],
+                source,
+                reset_tentacle_config,
+                run_on_common_part_only,
+                start_timestamp=data.get("start_timestamp", None),
+                end_timestamp=data.get("end_timestamp", None),
+                enable_logs=data.get("enable_logs", False),
+                auto_stop=auto_stop,
+                start_callback=web_interface.send_backtesting_status)
         elif action_type == "start_backtesting_with_current_bot_data":
             data = flask.request.get_json()
             source = flask.request.args["source"]
@@ -61,6 +63,7 @@ def backtesting():
                 end_timestamp=data.get("end_timestamp", None),
                 enable_logs=data.get("enable_logs", False),
                 auto_stop=auto_stop,
+                start_callback=web_interface.send_backtesting_status
             )
         elif action_type == "stop_backtesting":
             success, reply = models.stop_previous_backtesting()

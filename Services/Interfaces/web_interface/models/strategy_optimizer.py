@@ -151,6 +151,7 @@ def get_optimizer_status():
                    overall_progress, remaining_time, \
                    octobot_api.get_optimizer_errors_description(optimizer)
         else:
-            return "finished", 100, 100, 0, octobot_api.get_optimizer_errors_description(optimizer)
+            status = "finished" if octobot_api.is_optimizer_finished(optimizer) else "starting"
+            return status, 100, 100, 0, octobot_api.get_optimizer_errors_description(optimizer)
     else:
         return "not started", 0, 0, 0, None
