@@ -213,6 +213,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             if update_progress:
                 progress_over_all_steps = progress / self.total_steps
                 self.current_step_percent += progress_over_all_steps - last_progress
+                self.logger.debug(f"progress: {self.current_step_percent}%")
                 last_progress = progress_over_all_steps
         return last_progress
 
