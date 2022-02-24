@@ -16,7 +16,14 @@
 
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
-import octobot_commons.constants as commons_constants
+import tentacles.Services.Interfaces.web_interface.errors as errors
+
+
+def ensure_valid_exchange_id(exchange_id) -> str:
+    try:
+        trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+    except KeyError as e:
+        raise errors.MissingExchangeId() from e
 
 
 def get_exchange_time_frames(exchange_id):

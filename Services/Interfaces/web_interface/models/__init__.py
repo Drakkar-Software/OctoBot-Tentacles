@@ -166,6 +166,7 @@ from tentacles.Services.Interfaces.web_interface.models.tentacles import (
     get_tentacles,
 )
 from tentacles.Services.Interfaces.web_interface.models.trading import (
+    ensure_valid_exchange_id,
     get_exchange_time_frames,
     get_initializing_currencies_prices_set,
     get_evaluation,
@@ -282,6 +283,7 @@ __all__ = [
     "update_modules",
     "uninstall_modules",
     "get_tentacles",
+    "ensure_valid_exchange_id",
     "get_exchange_time_frames",
     "get_initializing_currencies_prices_set",
     "get_evaluation",

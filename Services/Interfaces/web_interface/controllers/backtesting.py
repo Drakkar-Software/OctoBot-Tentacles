@@ -23,6 +23,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
+import tentacles.Services.Interfaces.web_interface.errors as errors
 
 
 @web_interface.server_instance.route("/backtesting")
@@ -30,51 +31,53 @@ import tentacles.Services.Interfaces.web_interface.util as util
 @login.login_required_when_activated
 def backtesting():
     if flask.request.method == 'POST':
-        action_type = flask.request.args["action_type"]
-        success = False
-        reply = "Action failed"
-        if action_type == "start_backtesting":
-            data = flask.request.get_json()
-            source = flask.request.args["source"]
-            auto_stop = flask.request.args.get("auto_stop", False)
-            run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
-            reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
-            success, reply = models.start_backtesting_using_specific_files(
-                data["files"],
-                source,
-                reset_tentacle_config,
-                run_on_common_part_only,
-                start_timestamp=data.get("start_timestamp", None),
-                end_timestamp=data.get("end_timestamp", None),
-                enable_logs=data.get("enable_logs", False),
-                auto_stop=auto_stop,
-                start_callback=web_interface.send_backtesting_status)
-        elif action_type == "start_backtesting_with_current_bot_data":
-            data = flask.request.get_json()
-            source = flask.request.args["source"]
-            auto_stop = flask.request.args.get("auto_stop", False)
-            exchange_id = data.get("exchange_id", None)
-            reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
-            success, reply = models.start_backtesting_using_current_bot_data(
-                exchange_id,
-                source,
-                reset_tentacle_config,
-                start_timestamp=data.get("start_timestamp", None),
-                end_timestamp=data.get("end_timestamp", None),
-                enable_logs=data.get("enable_logs", False),
-                auto_stop=auto_stop,
-                start_callback=web_interface.send_backtesting_status
-            )
-        elif action_type == "stop_backtesting":
-            success, reply = models.stop_previous_backtesting()
-        if success:
-            if action_type == "start_backtesting_with_current_bot_data":
-                web_interface.send_data_collector_status()
+        try:
+            action_type = flask.request.args["action_type"]
+            success = False
+            reply = "Action failed"
+            if action_type == "start_backtesting":
+                data = flask.request.get_json()
+                source = flask.request.args["source"]
+                auto_stop = flask.request.args.get("auto_stop", False)
+                run_on_common_part_only = flask.request.args.get("run_on_common_part_only", "true") == "true"
+                reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
+                success, reply = models.start_backtesting_using_specific_files(
+                    data["files"],
+                    source,
+                    reset_tentacle_config,
+                    run_on_common_part_only,
+                    start_timestamp=data.get("start_timestamp", None),
+                    end_timestamp=data.get("end_timestamp", None),
+                    enable_logs=data.get("enable_logs", False),
+                    auto_stop=auto_stop,
+                    collector_start_callback=web_interface.send_data_collector_status,
+                    start_callback=web_interface.send_backtesting_status)
+            elif action_type == "start_backtesting_with_current_bot_data":
+                data = flask.request.get_json()
+                source = flask.request.args["source"]
+                auto_stop = flask.request.args.get("auto_stop", False)
+                exchange_id = data.get("exchange_id", None)
+                reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
+                success, reply = models.start_backtesting_using_current_bot_data(
+                    exchange_id,
+                    source,
+                    reset_tentacle_config,
+                    start_timestamp=data.get("start_timestamp", None),
+                    end_timestamp=data.get("end_timestamp", None),
+                    enable_logs=data.get("enable_logs", False),
+                    auto_stop=auto_stop,
+                    collector_start_callback=web_interface.send_data_collector_status,
+                    start_callback=web_interface.send_backtesting_status
+                )
+            elif action_type == "stop_backtesting":
+                success, reply = models.stop_previous_backtesting()
+            if success:
+                return util.get_rest_reply(flask.jsonify(reply))
             else:
-                web_interface.send_backtesting_status()
-            return util.get_rest_reply(flask.jsonify(reply))
-        else:
-            return util.get_rest_reply(reply, 500)
+                return util.get_rest_reply(reply, 500)
+
+        except errors.MissingExchangeId:
+            return util.get_rest_reply(errors.MissingExchangeId.EXPLANATION, 500)
 
     elif flask.request.method == 'GET':
         if flask.request.args:
