@@ -142,14 +142,13 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(7.6))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
@@ -170,11 +169,9 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.12554936))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
@@ -198,7 +195,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.11573814))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -221,7 +218,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(2.5156224))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -261,15 +258,14 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(4.4))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
@@ -290,11 +286,9 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.21685799))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
@@ -314,7 +308,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.07013502))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -335,7 +329,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(4.08244671))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -432,14 +426,13 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.origin_quantity == decimal.Decimal(str(64625635.97358073))
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
+    assert isinstance(adapted_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     trading_mode_test_toolkit.check_order_limits(adapted_order, market_status)
 
-    assert len(adapted_order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(adapted_order, adapted_order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(adapted_order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     for order in identical_orders:
         assert isinstance(order, trading_personal_data.SellLimitOrder)
@@ -458,13 +451,12 @@ async def test_split_create_new_orders(tools):
         assert order.origin_quantity > adapted_order.origin_quantity
         assert order.filled_quantity > adapted_order.filled_quantity
         assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
-        assert len(order.linked_orders) == 1
+        assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
         trading_mode_test_toolkit.check_order_limits(order, market_status)
-        trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                     trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                     market_status)
+        trading_mode_test_toolkit.check_oco_order_group(order,
+                                                        trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                        market_status)
 
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal(str(40000000000))
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal(str(40000000000))
@@ -492,11 +484,8 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.origin_quantity == decimal.Decimal("396851564266.65327383")
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
 
     trading_mode_test_toolkit.check_order_limits(adapted_order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     for order in identical_orders:
         assert isinstance(order, trading_personal_data.BuyLimitOrder)
@@ -515,11 +504,8 @@ async def test_split_create_new_orders(tools):
         assert order.origin_quantity > adapted_order.origin_quantity
         assert order.filled_quantity > adapted_order.filled_quantity
         assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
 
         trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-        # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
 
 
 async def test_valid_create_new_orders_without_stop_order(tools):
@@ -556,12 +542,9 @@ async def test_valid_create_new_orders_without_stop_order(tools):
     assert order.origin_quantity == decimal.Decimal(str(7.6))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert no stop orders
-    assert len(order.linked_orders) == 0
 
 
 def _get_evaluations_gradient(step):
