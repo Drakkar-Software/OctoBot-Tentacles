@@ -288,3 +288,7 @@ function updateInputIfValue(elementId, config, configKey, elementType){
         }
     }
 }
+
+function randomizeArray(array) {
+    array.sort(() => Math.random() - 0.5);
+}
