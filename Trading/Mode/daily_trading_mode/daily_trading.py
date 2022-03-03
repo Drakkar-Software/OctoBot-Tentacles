@@ -327,6 +327,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_orders.append(updated_limit)
 
                     if self.USE_STOP_ORDERS:
+                        oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                            .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                        updated_limit.add_to_order_group(oco_group)
                         stop_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                                price * self._get_stop_price_from_risk())
                         current_order = trading_personal_data.create_order_instance(trader=self.trader,
@@ -335,7 +338,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                     current_price=price,
                                                                                     quantity=order_quantity,
                                                                                     price=stop_price,
-                                                                                    linked_to=updated_limit)
+                                                                                    group=oco_group)
                         await self.trader.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.NEUTRAL.value:

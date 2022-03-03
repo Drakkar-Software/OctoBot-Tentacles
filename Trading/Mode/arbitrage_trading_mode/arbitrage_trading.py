@@ -171,13 +171,17 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity,
                 arbitrage_container.target_price,
                 symbol_market):
+            oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                trading_personal_data.OneCancelsTheOtherOrderGroup
+            )
             current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
                                                                         order_type=trading_enums.TraderOrderType.SELL_LIMIT if now_selling
                                                                         else trading_enums.TraderOrderType.BUY_LIMIT,
                                                                         symbol=self.trading_mode.symbol,
                                                                         current_price=arbitrage_container.own_exchange_price,
                                                                         quantity=order_quantity,
-                                                                        price=order_price)
+                                                                        price=order_price,
+                                                                        group=oco_group)
             created_order = await self.exchange_manager.trader.create_order(current_order)
             created_orders.append(created_order)
             arbitrage_container.secondary_limit_order_id = created_order.order_id
@@ -191,8 +195,9 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                         current_price=arbitrage_container.own_exchange_price,
                                                                         quantity=order_quantity,
                                                                         price=stop_price,
-                                                                        linked_to=created_order,
-                                                                        side=trading_enums.TradeOrderSide.SELL if now_selling else trading_enums.TradeOrderSide.BUY)
+                                                                        group=oco_group,
+                                                                        side=trading_enums.TradeOrderSide.SELL
+                                                                        if now_selling else trading_enums.TradeOrderSide.BUY)
             await self.exchange_manager.trader.create_order(current_order)
             arbitrage_container.secondary_stop_order_id = current_order.order_id
             return created_orders
