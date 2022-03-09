@@ -198,8 +198,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
                                        start_time, end_time, update_progress=True):
         last_progress = 0
-        async for candles in self.historical_ohlcv_collector(self.exchange_manager, symbol, time_frame,
-                                                             start_time, end_time):
+        async for candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol, time_frame,
+                                                              start_time, end_time):
             await self.save_ohlcv(
                     exchange=exchange,
                     cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
