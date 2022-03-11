@@ -25,9 +25,11 @@ import octobot_backtesting.importers as importers
 import octobot_backtesting.enums as backtesting_enums
 import octobot_backtesting.constants as backtesting_constants
 import octobot_backtesting.errors as backtesting_errors
+import octobot_commons.errors as commons_errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbol_util as symbol_util
+import octobot_commons.databases as databases
 import octobot_backtesting.data as data
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
@@ -93,7 +95,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             if found_time_frames != self.time_frames:
                 raise backtesting_errors.IncompatibleDatafileError(f"Time frames name in database: {found_time_frames}, "
                                                                    f"requested exchange: {self.time_frames}")
-        except backtesting_errors.DataBaseNotExists:
+        except commons_errors.DatabaseNotFoundError:
             # newly created datafile
             self.is_creating_database = True
 
@@ -313,7 +315,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def _import_candles_from_datafile(self, exchange, symbol, time_frame):
         return importers.import_ohlcvs(
             await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV,
-                                       size=data.DataBase.DEFAULT_SIZE,
+                                       size=databases.SQLiteDatabase.DEFAULT_SIZE,
                                        exchange_name=exchange, symbol=symbol,
                                        time_frame=time_frame.value)
         )
