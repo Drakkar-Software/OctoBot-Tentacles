@@ -17,7 +17,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class Binance(exchanges.SpotCCXTExchange):
+class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     DESCRIPTION = ""
 
     BUY_STR = "BUY"
