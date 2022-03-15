@@ -15,6 +15,7 @@
 #  License along with this library.
 import functools
 import flask_login
+import flask
 
 import octobot_commons.configuration as configuration
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -33,7 +34,7 @@ class WebLoginManager(flask_login.LoginManager):
         self.init_app(flask_app)
         self.password_hash = password_hash
         # register login view to redirect to when login is required
-        self.login_view = "login"
+        self.login_view = "/login"
         self._register_callbacks()
 
     def is_valid_password(self, ip, password):
@@ -65,6 +66,18 @@ def login_required_when_activated(func):
         if is_login_required():
             return _login_required_func(func, *args, **kwargs)
         return func(*args, **kwargs)
+    return decorated_view
+
+
+def active_login_required(func):
+    @functools.wraps(func)
+    def decorated_view(*args, **kwargs):
+        if is_login_required():
+            return _login_required_func(func, *args, **kwargs)
+        flask.flash("For security reasons, please enable password authentication in "
+                    "accounts configuration to use this page.",
+                    category=flask_login.LOGIN_MESSAGE_CATEGORY)
+        return flask.redirect(flask.current_app.login_manager.login_view)
     return decorated_view
 
 

@@ -24,6 +24,7 @@ from tentacles.Services.Interfaces.web_interface.login.user import (
 from tentacles.Services.Interfaces.web_interface.login import web_login_manager
 from tentacles.Services.Interfaces.web_interface.login.web_login_manager import (
     WebLoginManager,
+    active_login_required,
     login_required_when_activated,
     register_attempt,
     is_banned,
@@ -37,6 +38,7 @@ from tentacles.Services.Interfaces.web_interface.login.web_login_manager import 
 __all__ = [
     "User",
     "WebLoginManager",
+    "active_login_required",
     "login_required_when_activated",
     "register_attempt",
     "is_banned",

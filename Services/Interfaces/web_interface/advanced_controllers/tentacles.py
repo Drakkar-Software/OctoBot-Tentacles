@@ -24,7 +24,7 @@ import octobot_services.interfaces.util as interfaces_util
 
 
 @advanced_controllers.advanced.route("/tentacles")
-@login.login_required_when_activated
+@login.active_login_required
 def tentacles():
     return flask.render_template("advanced_tentacles.html",
                                  tentacles=models.get_tentacles())
@@ -52,7 +52,8 @@ def _handle_package_operation(update_type):
                 if installation_result:
                     return util.get_rest_reply(flask.jsonify(installation_result))
                 else:
-                    return util.get_rest_reply('Impossible to install the given tentacles package, #TODO in 0.4.', 500)
+                    return util.get_rest_reply('Impossible to install the given tentacles package. '
+                                               'Please see logs for more details.', 500)
 
         if not success:
             return util.get_rest_reply('{"operation": "ko"}', 500)
@@ -101,7 +102,7 @@ def _handle_tentacles_pages_post(update_type):
 
 @advanced_controllers.advanced.route("/tentacle_packages")
 @advanced_controllers.advanced.route('/tentacle_packages', methods=['GET', 'POST'])
-@login.login_required_when_activated
+@login.active_login_required
 def tentacle_packages():
     if flask.request.method == 'POST':
         update_type = flask.request.args["update_type"]
