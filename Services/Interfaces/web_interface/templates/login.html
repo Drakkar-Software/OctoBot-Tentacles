@@ -16,6 +16,15 @@
             </h2>
         </div>
         <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+              {% endif %}
+            {% endwith %}
             <h5>Please enter your password to access your OctoBot</h5>
             <form method=post>
                 <div class="my-4">

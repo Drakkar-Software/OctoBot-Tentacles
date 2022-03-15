@@ -80,7 +80,9 @@ async def test_browse_all_pages_no_required_password():
         async with aiohttp.ClientSession() as session:
             await asyncio.gather(*[_check_page_no_login_redirect(f"http://localhost:{PORT}{rule.replace('.', '/')}",
                                                                  session)
-                                   for rule in _get_all_rules(web_interface.server_instance)])
+                                   for rule in _get_all_rules(web_interface.server_instance,
+                                                              black_list=["/advanced/tentacles",
+                                                                          "/advanced/tentacle_packages"])])
 
 
 async def test_browse_all_pages_required_password_without_login():
