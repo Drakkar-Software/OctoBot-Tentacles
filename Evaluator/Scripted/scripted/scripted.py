@@ -18,8 +18,8 @@ import tentacles.Evaluator.Scripted.scripted.evaluator.evaluator_script as evalu
 
 
 class ScriptedEvaluator(evaluators.ScriptedEvaluator):
-    def __init__(self, tentacles_setup_config, post_init=True):
-        super().__init__(tentacles_setup_config, post_init=post_init)
+    def __init__(self, tentacles_setup_config, should_trigger_post_init=True):
+        super().__init__(tentacles_setup_config, should_trigger_post_init=should_trigger_post_init)
         self.register_script_module(evaluator_script)
 
     @classmethod
