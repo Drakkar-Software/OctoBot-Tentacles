@@ -20,6 +20,7 @@ import octobot_evaluators.enums as enums
 class BlankStrategyEvaluator(evaluators.StrategyEvaluator):
 
     def get_full_cycle_evaluator_types(self) -> tuple:
+        # returns a tuple as it is faster to create than a list
         return enums.EvaluatorMatrixTypes.TA.value, enums.EvaluatorMatrixTypes.SCRIPTED.value
 
     async def matrix_callback(self,
