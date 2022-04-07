@@ -232,7 +232,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # into one currency (at least 3 traded assets are available here)
                 try:
                     currency_ratio = self.get_holdings_ratio(currency)
-                except KeyError:
+                except trading_errors.MissingPriceDataError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)
                     currency_ratio = self.DEFAULT_HOLDING_RATIO
