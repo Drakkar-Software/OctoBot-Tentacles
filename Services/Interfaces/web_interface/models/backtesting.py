@@ -38,6 +38,7 @@ import tentacles.Services.Interfaces.web_interface.models.trading as trading_mod
 
 
 STOPPING_TIMEOUT = 30
+CURRENT_BOT_DATA = "current_bot_data"
 
 
 def get_full_candle_history_exchange_list():
@@ -54,7 +55,7 @@ def get_other_history_exchange_list():
 async def _get_description(data_file, files_with_description):
     description = await backtesting_api.get_file_description(data_file)
     if _is_usable_description(description):
-        files_with_description[data_file] = description
+        files_with_description.append((data_file, description))
 
 
 def _is_usable_description(description):
@@ -64,9 +65,13 @@ def _is_usable_description(description):
 
 
 async def _retrieve_data_files_with_description(files):
-    files_with_description = {}
+    files_with_description = []
     await asyncio.gather(*[_get_description(data_file, files_with_description) for data_file in files])
-    return files_with_description
+    return sorted(
+        files_with_description,
+        key=lambda f: f[1][backtesting_enums.DataFormatKeys.TIMESTAMP.value],
+        reverse=True
+    )
 
 
 def get_data_files_with_description():
@@ -85,12 +90,16 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
                               start_callback=start_callback)
 
 
-def start_backtesting_using_current_bot_data(exchange_id, source, reset_tentacle_config=False,
+def start_backtesting_using_current_bot_data(data_source, exchange_id, source, reset_tentacle_config=False,
                                              start_timestamp=None, end_timestamp=None, enable_logs=False,
                                              auto_stop=False, collector_start_callback=None, start_callback=None):
-    return _start_backtesting(None, source, reset_tentacle_config=reset_tentacle_config, run_on_common_part_only=False,
+    use_current_bot_data = data_source == CURRENT_BOT_DATA
+    files = None if use_current_bot_data else [data_source]
+    return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
+                              run_on_common_part_only=False,
                               start_timestamp=start_timestamp, end_timestamp=end_timestamp,
-                              use_current_bot_data=True, exchange_id=exchange_id, enable_logs=enable_logs,
+                              use_current_bot_data=use_current_bot_data,
+                              exchange_id=exchange_id, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
                               start_callback=start_callback)
 

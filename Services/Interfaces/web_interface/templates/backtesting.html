@@ -29,7 +29,7 @@
                 </tr>
               </thead>
               <tbody>
-                {% for file, description in data_files.items() %}
+                {% for file, description in data_files %}
                     <tr class="selectable_datafile">
                         <td><div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input dataFileCheckbox" data-file="{{file}}" symbols="{{description.symbols}}">

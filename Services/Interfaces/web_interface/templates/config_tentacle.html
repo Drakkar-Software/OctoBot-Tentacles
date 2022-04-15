@@ -184,7 +184,7 @@
                         <div class="col-6">
                            <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
                                    {{ "disabled" if not tentacle_desc["activation"] }}>
-                            {% for file, description in data_files.items() | sort(reverse=True) %}
+                            {% for file, description in data_files%}
                              <option value={{file}}
                                 {% if loop.first %}
                                     selected="selected"
