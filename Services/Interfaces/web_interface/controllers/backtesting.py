@@ -59,6 +59,7 @@ def backtesting():
                 exchange_id = data.get("exchange_id", None)
                 reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
                 success, reply = models.start_backtesting_using_current_bot_data(
+                    data.get("data_source", models.CURRENT_BOT_DATA),
                     exchange_id,
                     source,
                     reset_tentacle_config,
