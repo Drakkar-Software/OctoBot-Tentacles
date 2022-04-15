@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "title": "TradingViewSignalsTradingMode",
+  "properties": {
+    "trading_strategy": {
+        "title": "All in trades: Trade with all available funds at each order.",
+        "type": "string",
+        "minLength": 1
+    }
+  }
+}
