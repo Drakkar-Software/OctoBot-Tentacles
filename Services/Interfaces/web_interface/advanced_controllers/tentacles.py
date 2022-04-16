@@ -20,7 +20,7 @@ import tentacles.Services.Interfaces.web_interface.advanced_controllers as advan
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.models as models
-import octobot_services.interfaces.util as interfaces_util
+import octobot_commons.authentication as authentication
 
 
 @advanced_controllers.advanced.route("/tentacles")
@@ -48,7 +48,7 @@ def _handle_package_operation(update_type):
                 installation_result = models.install_packages(
                     path_or_url,
                     version,
-                    authenticator=interfaces_util.get_bot_api().get_community_auth())
+                    authenticator=authentication.Authenticator.instance())
                 if installation_result:
                     return util.get_rest_reply(flask.jsonify(installation_result))
                 else:

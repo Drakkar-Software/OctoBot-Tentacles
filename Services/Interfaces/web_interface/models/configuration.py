@@ -39,6 +39,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.authentication as authentication
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 
@@ -701,7 +702,7 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
     is_compatible = False
     is_sponsoring = trading_api.is_sponsoring(exchange_name)
     is_configured = False
-    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    authenticator = authentication.Authenticator.instance()
     is_supporter = authenticator.supports.is_supporting()
     error = None
     if _is_possible_exchange_config(to_check_config):
