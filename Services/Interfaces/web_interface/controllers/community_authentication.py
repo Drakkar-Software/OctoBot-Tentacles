@@ -27,7 +27,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route('/community_login', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def community_login():
-    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    authenticator = authentication.Authenticator.instance()
     logged_in_email = form = None
     try:
         logged_in_email = authenticator.get_logged_in_email()
@@ -56,7 +56,7 @@ def community_login():
 @web_interface.server_instance.route("/community_logout")
 @login.login_required_when_activated
 def community_logout():
-    interfaces_util.get_bot_api().get_community_auth().logout()
+    authentication.Authenticator.instance().logout()
     return flask.redirect(flask.url_for('community_login'))
 
 

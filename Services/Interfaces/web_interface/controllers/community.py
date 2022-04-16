@@ -16,9 +16,7 @@
 
 import flask
 
-import octobot.constants as constants
 import octobot_commons.authentication as authentication
-import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -27,7 +25,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route("/community")
 @login.login_required_when_activated
 def community():
-    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    authenticator = authentication.Authenticator.instance()
     logged_in_email = None
     use_preview = not authenticator.can_authenticate()
     try:

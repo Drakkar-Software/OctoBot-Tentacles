@@ -165,8 +165,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         s = _mocked_signal()
         await trading_signals.emit_remote_trading_signal(
             _mocked_signal(),
-            self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY],
-            self.exchange_manager
+            self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
         )
         await self._remote_trading_signal_callback(s.strategy, s.exchange, s.symbol, s.version, self.bot_id, s)
 
