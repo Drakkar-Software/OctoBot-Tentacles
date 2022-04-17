@@ -16,7 +16,9 @@
 
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
+import octobot_commons.enums as commons_enums
 import tentacles.Services.Interfaces.web_interface.errors as errors
+import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 
 
 def ensure_valid_exchange_id(exchange_id) -> str:
@@ -111,3 +113,10 @@ def get_symbols_values(symbols, has_real_trader, has_simulated_trader):
     portfolio = real_portfolio_holdings if has_real_trader else simulated_portfolio_holdings
     value_per_symbols.update(portfolio)
     return value_per_symbols
+
+
+def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=None, to_timestamp=None, exchange=None):
+    time_frame = commons_enums.TimeFrames(time_frame) if time_frame else commons_enums.TimeFrames.ONE_DAY
+    exchange_manager = dashboard.get_first_exchange_data(exchange)[0]
+    return trading_api.get_portfolio_historical_values(exchange_manager, currency, time_frame,
+                                                       from_timestamp=from_timestamp, to_timestamp=to_timestamp)

@@ -19,6 +19,9 @@ import octobot_commons.errors as errors
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 
+COPY_TRADING_PROFILE_ID = "copy_trading"
+
+
 def get_current_profile():
     return interfaces_util.get_edited_config(dict_only=False).profile
 
@@ -35,6 +38,13 @@ def duplicate_and_select_profile(profile_id):
 def select_profile(profile_id):
     config = interfaces_util.get_edited_config(dict_only=False)
     _select_and_save(config, profile_id)
+
+
+def select_copy_trading_profile():
+    profile = get_current_profile()
+    if profile.profile_id != COPY_TRADING_PROFILE_ID:
+        select_profile(COPY_TRADING_PROFILE_ID)
+    return f"{profile.name} profile selected"
 
 
 def _select_and_save(config, profile_id):
