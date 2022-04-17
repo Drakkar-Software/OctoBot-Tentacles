@@ -59,3 +59,16 @@ def refresh_portfolio():
 @login.login_required_when_activated
 def currency_list():
     return flask.jsonify(models.get_all_symbols_dict())
+
+
+@api.api.route("/historical_portfolio_value", methods=['GET'])
+@login.login_required_when_activated
+def historical_portfolio_value():
+    currency = flask.request.args.get("currency", "USDT")
+    time_frame = flask.request.args.get("time_frame")
+    from_timestamp = flask.request.args.get("time_frame")
+    to_timestamp = flask.request.args.get("time_frame")
+    exchange = flask.request.args.get("exchange")
+    return flask.jsonify(models.get_portfolio_historical_values(currency, time_frame,
+                                                                from_timestamp, to_timestamp,
+                                                                exchange))
