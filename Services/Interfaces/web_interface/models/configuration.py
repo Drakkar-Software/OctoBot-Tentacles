@@ -301,6 +301,16 @@ def update_tentacle_config(tentacle_name, config_update):
         return False, f"Error when updating tentacle config: {e}"
 
 
+def update_copied_trading_strategy_slug(product_slug):
+    import tentacles.Trading.Mode as modes
+    return update_tentacle_config(
+        modes.RemoteTradingSignalsTradingMode.get_name(),
+        {
+            "trading_strategy": product_slug
+        }
+    )
+
+
 def reset_config_to_default(tentacle_name):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
