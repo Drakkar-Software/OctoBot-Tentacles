@@ -92,7 +92,10 @@ async def check_page_no_login_redirect(url, session):
         if not (url.endswith("login") or url.endswith("logout") or url.endswith("/community")):
             assert "input type=submit value=Login" not in text
             assert not resp.real_url.name == "login"
-        assert resp.status == 200
+        if url.endswith("historical_portfolio_value"):
+            assert resp.status == 404
+        else:
+            assert resp.status == 200
 
 
 async def check_page_login_redirect(url, session):

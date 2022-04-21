@@ -47,5 +47,3 @@ __all__ = [
     "is_authenticated",
     "GENERIC_USER",
 ]
-
-
