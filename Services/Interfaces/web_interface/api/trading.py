@@ -69,6 +69,9 @@ def historical_portfolio_value():
     from_timestamp = flask.request.args.get("time_frame")
     to_timestamp = flask.request.args.get("time_frame")
     exchange = flask.request.args.get("exchange")
-    return flask.jsonify(models.get_portfolio_historical_values(currency, time_frame,
-                                                                from_timestamp, to_timestamp,
-                                                                exchange))
+    try:
+        return flask.jsonify(models.get_portfolio_historical_values(currency, time_frame,
+                                                                    from_timestamp, to_timestamp,
+                                                                    exchange))
+    except KeyError:
+        return util.get_rest_reply("No exchange portfolio", 404)
