@@ -203,9 +203,13 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             to_cancel_orders_descriptions, to_group_orders_descriptions = \
             self._parse_signal_orders(signal)
         await self._group_orders(to_group_orders_descriptions, signal.symbol)
-        await self._cancel_orders(to_cancel_orders_descriptions, signal.symbol)
-        await self._edit_orders(to_edit_orders_descriptions, signal.symbol)
-        await self._create_orders(to_create_orders_descriptions, signal.symbol)
+        cancelled_count = await self._cancel_orders(to_cancel_orders_descriptions, signal.symbol)
+        edited_count = await self._edit_orders(to_edit_orders_descriptions, signal.symbol)
+        created_count = await self._create_orders(to_create_orders_descriptions, signal.symbol)
+
+        # send_notification
+        if not self.exchange_manager.is_backtesting:
+            await self._send_alert_notification(signal.symbol, created_count, edited_count, cancelled_count)
 
     async def _group_orders(self, orders_descriptions, symbol):
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
@@ -215,10 +219,14 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             order.add_to_order_group(order_group)
 
     async def _cancel_orders(self, orders_descriptions, symbol):
+        cancelled_count = 0
         for _, order in self.get_open_order_from_description(orders_descriptions, symbol):
             await self.exchange_manager.trader.cancel_order(order)
+            cancelled_count += 1
+        return cancelled_count
 
     async def _edit_orders(self, orders_descriptions, symbol):
+        edited_count = 0
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
             edited_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE]
             edited_stop_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE]
@@ -229,6 +237,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 edited_price=decimal.Decimal(edited_price) if edited_price else None,
                 edited_stop_price=decimal.Decimal(edited_stop_price) if edited_stop_price else None
             )
+            edited_count += 1
+        return edited_count
 
     async def _get_quantity_from_signal_percent(self, order_description, side, symbol, reduce_only):
         quantity_type, quantity = script_keywords.parse_quantity(
@@ -283,7 +293,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         base_order.add_chained_order(chained_order)
         if base_order.is_filled() and chained_order.should_be_created():
             await personal_data.create_as_chained_order(chained_order)
-        return chained_order
+            return 1
+        return 0
 
     async def _create_order(self, order_description, symbol, created_groups, fees_currency_side, target_quantity=None):
         group = None
@@ -364,13 +375,16 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             created_orders[shared_signal_order_id] = \
                 await self.exchange_manager.trader.create_order(order_with_param[0], params=order_with_param[1])
         # handle chained orders
+        created_chained_orders_count = 0
         for order_description in orders_descriptions:
             if chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]:
-                await self._chain_order(order_description, created_orders, chained_to, fees_currency_side,
-                                        created_groups, symbol, order_description_by_id)
+                created_chained_orders_count += \
+                    await self._chain_order(order_description, created_orders, chained_to, fees_currency_side,
+                                            created_groups, symbol, order_description_by_id)
 
         for group in created_groups.values():
             await group.enable(True)
+        return len(to_create_orders) + created_chained_orders_count
 
     def get_open_order_from_description(self, order_description, symbol):
         # filter orders using shared_signal_order_id
@@ -414,6 +428,26 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 to_group_orders.append(order_description)
         return to_create_orders, to_edit_orders, to_cancel_orders, to_group_orders
 
+    async def _send_alert_notification(self, symbol, created, edited, cancelled):
+        try:
+            import octobot_services.api as services_api
+            import octobot_services.enums as services_enum
+            title = f"New trading signal for {symbol}"
+            messages = []
+            if created:
+                messages.append(f"- Created {created} order{'s' if created > 1 else ''}")
+            if edited:
+                messages.append(f"- Edited {edited} order{'s' if edited > 1 else ''}")
+            if cancelled:
+                messages.append(f"- Canceled {cancelled} order{'s' if cancelled > 1 else ''}")
+            content = "\n".join(messages)
+            await services_api.send_notification(services_api.create_notification(
+                content, title=title,
+                category=services_enum.NotificationCategory.TRADING_SCRIPT_ALERTS
+            ))
+        except ImportError as e:
+            self.logger.exception(e, True, f"Impossible to send notification: {e}")
+
 
 class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer):
 
@@ -440,30 +474,3 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
                                              final_note=self.final_eval,
                                              state=self.state,
                                              data=signal)
-
-        # send_notification
-        if not self.exchange_manager.is_backtesting:
-            await self._send_alert_notification(symbol, signal)
-
-
-    async def _send_alert_notification(self, symbol, signal):
-        try:
-            import octobot_services.api as services_api
-            import octobot_services.enums as services_enum
-            title = f"New trading signal for {symbol}"
-            #todo
-            created = 0
-            edited = 0
-            cancelled = 0
-            messages = []
-            if created:
-                messages.append(f"Create {created} orders")
-            if edited:
-                messages.append(f"edit {edited} orders")
-            if cancelled:
-                messages.append(f"cancel {cancelled} orders")
-            content = ", ".join(messages)
-            await services_api.send_notification(services_api.create_notification(content, title=title,
-                                                                                  category=services_enum.NotificationCategory.TRADING_SCRIPT_ALERTS))
-        except ImportError as e:
-            self.logger.exception(e, True, f"Impossible to send notification: {e}")
