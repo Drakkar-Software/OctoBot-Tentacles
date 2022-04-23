@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import asyncio
 import decimal
 
 import async_channel.constants as channel_constants
@@ -48,22 +47,25 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
+        signal_producers = await self._subscribe_to_signal_feed()
+        return [mode_producer] + signal_producers
+
+    async def _subscribe_to_signal_feed(self):
         channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
             self.exchange_manager
         )
         if self.exchange_manager.is_backtesting:
             # TODO: create and return producer simulator with this bot id
             raise NotImplementedError("signal producer simulator is not implemented")
-            return [mode_producer]
-        else:
-            try:
-                await channel.subscribe_to_product_feed(
-                    self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
-                )
-            except Exception as e:
-                self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
-                                               f"be operating")
-            return [mode_producer]
+            return []
+        try:
+            await channel.subscribe_to_product_feed(
+                self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
+            )
+        except Exception as e:
+            self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
+                                           f"be operating")
+        return []
 
     async def create_consumers(self) -> list:
         mode_consumer = RemoteTradingSignalsModeConsumer(self)
@@ -82,92 +84,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
-        # asyncio.create_task(self.delayed_signal())
         return [mode_consumer, signals_consumer]
-
-    async def delayed_signal(self):
-        def _mocked_signal():
-            orders = [
-                {
-                    "action": "create",
-                    "side": "sell",
-                    "type": "stop_loss",
-                    "quantity": 0.004,
-                    "target_amount": "5.356892%",
-                    "target_position": None,
-                    "updated_quantity": 0.0,
-                    "limit_price": 38971.0,
-                    "updated_limit_price": 0.0,
-                    "stop_price": 0.0,
-                    "updated_stop_price": 0.0,
-                    "current": 40176.69,
-                    "updated_current_price": 0.0,
-                    "reduce_only": True,
-                    "post_only": False,
-                    "group_id": "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
-                    "group_type": "BalancedTakeProfitAndStopOrderGroup",
-                    "tag": "managed_order long exit (id: 143968020)",
-                    "shared_signal_order_id": "5ad2a999-5ac2-47f0-9b69-c75a36f3858a",
-                    "bundled_with": "adc24701-573b-40dd-b6c9-3666cd22f33e",
-                    "chained_to": "adc24701-573b-40dd-b6c9-3666cd22f33e"
-                },
-                {
-                    "action": "create",
-                    "side": "buy",
-                    "type": "buy_market",
-                    "quantity": 0.004,
-                    "target_amount": "5.356892%",
-                    "target_position": None,
-                    "updated_quantity": 0.0,
-                    "limit_price": 40176.69,
-                    "updated_limit_price": 0.0,
-                    "stop_price": 0.0,
-                    "updated_stop_price": 0.0,
-                    "current": 40176.69,
-                    "updated_current_price": 0.0,
-                    "reduce_only": False,
-                    "post_only": False,
-                    "group_id": None,
-                    "group_type": None,
-                    "tag": "managed_order long entry (id: 143968020)",
-                    "shared_signal_order_id": "adc24701-573b-40dd-b6c9-3666cd22f33e",
-                    "bundled_with": None,
-                    "chained_to": None
-                },
-                {
-                    "action": "create",
-                    "side": "sell",
-                    "type": "sell_limit",
-                    "quantity": 0.004,
-                    "target_amount": "5.3574085830652285%",
-                    "target_position": None,
-                    "updated_quantity": 0.0,
-                    "limit_price": 52711.0,
-                    "updated_limit_price": 0.0,
-                    "stop_price": 0.0,
-                    "updated_stop_price": 0.0,
-                    "current": 40176.69,
-                    "updated_current_price": 0.0,
-                    "reduce_only": True,
-                    "post_only": False,
-                    "group_id": "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
-                    "group_type": "BalancedTakeProfitAndStopOrderGroup",
-                    "tag": "managed_order long exit (id: 143968020)",
-                    "shared_signal_order_id": "5705d395-f970-45d9-9ba8-f63da17f17b2",
-                    "bundled_with": None,
-                    "chained_to": "adc24701-573b-40dd-b6c9-3666cd22f33e"
-                }
-            ]
-            return trading_signals.TradingSignal("moonmoon", "bybit", "future", "BTC/USDT",
-                                                 None, None, orders, identifier="identifier",
-                                                 version="version")
-        await asyncio.sleep(3)
-        s = _mocked_signal()
-        await trading_signals.emit_remote_trading_signal(
-            _mocked_signal(),
-            self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
-        )
-        await self._remote_trading_signal_callback(s.strategy, s.exchange, s.symbol, s.version, self.bot_id, s)
 
     async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")
@@ -228,9 +145,11 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
     async def _edit_orders(self, orders_descriptions, symbol):
         edited_count = 0
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
-            edited_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE]
-            edited_stop_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE]
-            edited_quantity = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_QUANTITY]
+            edited_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value]
+            edited_stop_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value]
+            edited_quantity, _ = await self._get_quantity_from_signal_percent(
+                order_description, order.side, symbol, order.reduce_only, True
+            )
             await self.exchange_manager.trader.edit_order(
                 order,
                 edited_quantity=decimal.Decimal(edited_quantity) if edited_quantity else None,
@@ -240,9 +159,12 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             edited_count += 1
         return edited_count
 
-    async def _get_quantity_from_signal_percent(self, order_description, side, symbol, reduce_only):
+    async def _get_quantity_from_signal_percent(self, order_description, side, symbol, reduce_only, update_amount):
         quantity_type, quantity = script_keywords.parse_quantity(
-            order_description[trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value]
+            order_description[
+                trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value
+                if update_amount else trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value
+            ]
         )
         portfolio_type = common_constants.PORTFOLIO_TOTAL if quantity_type is script_keywords.QuantityType.PERCENT \
             else common_constants.PORTFOLIO_AVAILABLE
@@ -251,7 +173,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                                                    timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT,
                                                    portfolio_type=portfolio_type)
         if self.exchange_manager.is_future:
-            position_percent = order_description[trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value]
+            position_percent = order_description[
+                trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value
+                if update_amount else trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value
+            ]
             if position_percent is not None:
                 quantity_type, quantity = script_keywords.parse_quantity(position_percent)
                 if quantity_type is script_keywords.QuantityType.POSITION_PERCENT:
@@ -303,7 +228,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         side = trading_enums.TradeOrderSide(order_description[trading_enums.TradingSignalOrdersAttrs.SIDE.value])
         reduce_only = order_description[trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value]
         quantity, current_price = await self._get_quantity_from_signal_percent(
-            order_description, side, symbol, reduce_only
+            order_description, side, symbol, reduce_only, False
         )
         quantity = target_quantity or quantity
         symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
@@ -377,7 +302,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         # handle chained orders
         created_chained_orders_count = 0
         for order_description in orders_descriptions:
-            if chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]:
+            if (chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]) \
+                    and order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value] is None:
                 created_chained_orders_count += \
                     await self._chain_order(order_description, created_orders, chained_to, fees_currency_side,
                                             created_groups, symbol, order_description_by_id)
@@ -386,23 +312,27 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             await group.enable(True)
         return len(to_create_orders) + created_chained_orders_count
 
-    def get_open_order_from_description(self, order_description, symbol):
-        # filter orders using shared_signal_order_id
-        if accurate_orders := [
-            (order_description, order)
-            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-            if order.shared_signal_order_id == order_description[
-                trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
-        ]:
-            return accurate_orders
-        # 2nd chance: use order type and price as these are kept between bot restarts (loaded from exchange)
-        return [
-            (order_description, order)
-            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-            if (order.price == order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] or
-                order.price == order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value])
-                and self._is_compatible_order_type(order, order_description)
-        ]
+    def get_open_order_from_description(self, order_descriptions, symbol):
+        found_orders = []
+        for order_description in order_descriptions:
+            # filter orders using shared_signal_order_id
+            if accurate_orders := [
+                (order_description, order)
+                for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+                if order.shared_signal_order_id == order_description[
+                    trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+            ]:
+                found_orders += accurate_orders
+                continue
+            # 2nd chance: use order type and price as these are kept between bot restarts (loaded from exchange)
+            found_orders += [
+                (order_description, order)
+                for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+                if (order.price == order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] or
+                    order.price == order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value])
+                    and self._is_compatible_order_type(order, order_description)
+            ]
+        return found_orders
 
     def _is_compatible_order_type(self, order, order_description):
         side = order_description[trading_enums.TradingSignalOrdersAttrs.SIDE.value]
@@ -439,7 +369,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             if edited:
                 messages.append(f"- Edited {edited} order{'s' if edited > 1 else ''}")
             if cancelled:
-                messages.append(f"- Canceled {cancelled} order{'s' if cancelled > 1 else ''}")
+                messages.append(f"- Cancelled {cancelled} order{'s' if cancelled > 1 else ''}")
             content = "\n".join(messages)
             await services_api.send_notification(services_api.create_notification(
                 content, title=title,
@@ -459,7 +389,7 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
         exchange_type = signal.exchange_type
         if exchange_type == trading_signals.get_signal_exchange_type(self.exchange_manager).value:
             state = trading_enums.EvaluatorStates(signal.state)
-            await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state, signal)
+            await self._set_state(self.trading_mode.cryptocurrency, signal.symbol, state, signal)
         else:
             self.logger.error(f"Incompatible signal exchange type: {exchange_type} "
                               f"with current exchange: {self.exchange_manager}")
