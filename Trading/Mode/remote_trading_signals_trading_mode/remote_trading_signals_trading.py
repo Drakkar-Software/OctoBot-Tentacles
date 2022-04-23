@@ -37,10 +37,12 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         self.load_config()
         self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
+        self.last_signal_description = ""
 
     def get_current_state(self) -> (str, float):
-        return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
-               self.producers[0].final_eval
+        producer_state = "" if self.producers[0].state in (None, trading_enums.EvaluatorStates.UNKNOWN) \
+            else self.producers[0].state.name
+        return producer_state, self.last_signal_description
 
     async def create_producers(self) -> list:
         mode_producer = RemoteTradingSignalsModeProducer(
@@ -124,6 +126,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         edited_count = await self._edit_orders(to_edit_orders_descriptions, signal.symbol)
         created_count = await self._create_orders(to_create_orders_descriptions, signal.symbol)
 
+        self.trading_mode.last_signal_description = \
+            f"Last signal: {created_count} new order{'s' if created_count > 1 else ''}"
         # send_notification
         if not self.exchange_manager.is_backtesting:
             await self._send_alert_notification(signal.symbol, created_count, edited_count, cancelled_count)
