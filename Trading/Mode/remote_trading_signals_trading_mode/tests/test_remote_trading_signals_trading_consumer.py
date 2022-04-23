@@ -23,6 +23,9 @@ import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as trading_personal_data
 import octobot_services.api as services_api
 
+from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import exchange, mocked_signal
+
+
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
@@ -61,6 +64,7 @@ async def test_internal_callback(exchange, mocked_signal):
 async def test_handle_signal_orders(exchange, mocked_signal):
     _, consumer, exchange_manager = exchange
     assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+    assert consumer.trading_mode.last_signal_description == ""
     await consumer._handle_signal_orders(mocked_signal)
     # ensure orders are created
     orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
@@ -75,6 +79,7 @@ async def test_handle_signal_orders(exchange, mocked_signal):
     assert len(trades) == 1
     assert trades[0].trade_type, trading_enums.TraderOrderType.BUY_MARKET
     assert trades[0].status is trading_enums.OrderStatus.FILLED
+    assert "2" in consumer.trading_mode.last_signal_description
 
     # disable created order group so that changing their groups doesnt cancel them
     await orders[0].order_group.enable(False)
@@ -101,6 +106,7 @@ async def test_handle_signal_orders(exchange, mocked_signal):
     assert trades[0].trade_type, trading_enums.TraderOrderType.BUY_MARKET
     assert trades[1].trade_type, trading_enums.TraderOrderType.SellLimitOrder
     assert trades[1].status is trading_enums.OrderStatus.CANCELED
+    assert "1" in consumer.trading_mode.last_signal_description
 
 
 async def test_send_alert_notification(exchange, mocked_signal):
