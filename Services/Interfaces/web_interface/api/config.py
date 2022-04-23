@@ -47,13 +47,16 @@ def change_reference_market_on_config_currencies():
     return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
 
 
-@api.api.route('/copy_trading_strategy', methods=["POST"])
+@api.api.route('/start_copy_trading', methods=["POST"])
 @login.login_required_when_activated
-def copy_trading_strategy():
+def start_copy_trading():
     try:
-        product_slug = flask.request.get_json()["product_slug"]
-        response = models.select_copy_trading_profile()
-        success, config_resp = models.update_copied_trading_strategy_slug(product_slug)
+        copy_id = flask.request.get_json()["copy_id"]
+        profile_id = flask.request.get_json()["profile_id"]
+        if models.get_current_profile().profile_id != profile_id:
+            models.select_profile(profile_id)
+        response = f"{models.get_current_profile().name} profile selected"
+        success, config_resp = models.update_copied_trading_id(copy_id)
         response = f"{response}, {config_resp}"
         return util.get_rest_reply(flask.jsonify(response)) if success else util.get_rest_reply(response, 500)
     except Exception as e:

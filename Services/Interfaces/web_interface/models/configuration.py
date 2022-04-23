@@ -301,12 +301,12 @@ def update_tentacle_config(tentacle_name, config_update):
         return False, f"Error when updating tentacle config: {e}"
 
 
-def update_copied_trading_strategy_slug(product_slug):
+def update_copied_trading_id(copy_id):
     import tentacles.Trading.Mode as modes
     return update_tentacle_config(
         modes.RemoteTradingSignalsTradingMode.get_name(),
         {
-            "trading_strategy": product_slug
+            "trading_strategy": copy_id
         }
     )
 
