@@ -16,6 +16,6 @@ async def script(ctx):
     ema_data = ti.ema(candles_data, ema_length)
     await ctx.set_cached_value(ema_data[-1] * 10, "10x_ema")
 
-    await plot(ctx, f"{ema_length} EMA", cache_value="v", chart=trading_enums.PlotCharts.MAIN_CHART.value)
+    await plot(ctx, f"{ema_length} EMA", cache_value="v", chart=commons_enums.PlotCharts.MAIN_CHART.value)
 
     return ema_data[-1]

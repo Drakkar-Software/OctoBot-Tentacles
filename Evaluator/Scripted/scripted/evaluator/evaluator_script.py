@@ -66,10 +66,10 @@ async def script(ctx):
 
         super_complicated_value = 0.5 if ema_is_rising else -0.5
 
-    await plot(ctx, ema_title, cache_value=ema_title, chart=trading_enums.PlotCharts.MAIN_CHART.value)
+    await plot(ctx, ema_title, cache_value=ema_title, chart=commons_enums.PlotCharts.MAIN_CHART.value)
     await plot(ctx, ema_rising_title, condition=True, cache_value=ema_rising_title,
-               chart=trading_enums.PlotCharts.MAIN_CHART.value, mode="markers")
+               chart=commons_enums.PlotCharts.MAIN_CHART.value, mode="markers")
     await plot(ctx, ema_falling_title, condition=True, cache_value=ema_falling_title,
-               chart=trading_enums.PlotCharts.MAIN_CHART.value, mode="markers")
+               chart=commons_enums.PlotCharts.MAIN_CHART.value, mode="markers")
 
     return super_complicated_value
