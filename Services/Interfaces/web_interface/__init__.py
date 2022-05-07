@@ -161,11 +161,12 @@ def send_new_trade(dict_new_trade, is_simulated):
         _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[dict_new_trade])
 
 
-async def add_notification(level, title, message):
+async def add_notification(level, title, message, sound):
     notifications.append({
         "Level": level.value,
         "Title": title,
-        "Message": message
+        "Message": message,
+        "Sound": sound
     })
     send_general_notifications()
 

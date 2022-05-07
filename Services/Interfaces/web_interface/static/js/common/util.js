@@ -28,6 +28,11 @@ function get_websocket(namespace){
         });
 }
 
+function getAudioMediaUrl(mediaName){
+    const baseUrl = $("#resources-urls").data("audio-media-url")
+    return `${baseUrl}${mediaName}`
+}
+
 function setup_editable(){
     $.fn.editable.defaults.mode = 'inline';
 }
