@@ -45,7 +45,7 @@ function manage_alert(data){
             }
         }
         $.each(data["notifications"], function(i, item) {
-            create_alert(item["Level"], item["Title"], item["Message"]);
+            create_alert(item["Level"], item["Title"], item["Message"], "", item["Sound"]);
             $.each(notificationCallbacks, function(_, callback) {
                callback(item["Title"], item);
             });

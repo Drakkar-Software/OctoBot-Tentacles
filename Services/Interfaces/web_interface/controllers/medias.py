@@ -34,3 +34,11 @@ def tentacle_media(path=None):
 @login.login_required_when_activated
 def exchange_logo(name):
     return flask.jsonify(models.get_exchange_logo(name))
+
+
+@web_interface.server_instance.route('/audio_media/<name>')
+@login.login_required_when_activated
+def audio_media(name):
+    if models.is_valid_audio_path(name):
+        # reference point is the web interface directory: use OctoBot root folder as a reference
+        return flask.send_from_directory("static/audio", name)

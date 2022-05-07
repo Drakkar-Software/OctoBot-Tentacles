@@ -143,8 +143,11 @@ function update_dom(root_element, message){
     update_activated_deactivated_tentacles(root_element, message, "tentacle_updated_config");
 }
 
-function create_alert(a_level, a_title, a_msg, url="_blank"){
+function create_alert(a_level, a_title, a_msg, url="_blank", sound=null){
     toastr[a_level](a_msg, a_title);
+    if(sound !== null){
+        new Audio(getAudioMediaUrl(sound)).play();
+    }
 
     toastr.options = {
       "closeButton": false,
