@@ -24,3 +24,8 @@ def is_valid_tentacle_image_path(path):
     path_ending = path.split(".")[-1].lower()
     return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path,
                                                                            tentacles_manager_constants.TENTACLES_PATH)
+
+
+def is_valid_audio_path(path):
+    path_ending = path.split(".")[-1].lower()
+    return path_ending in ["mp3"] and _is_valid_path(path, "")

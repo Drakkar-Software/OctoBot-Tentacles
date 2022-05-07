@@ -183,6 +183,11 @@
         {{ m_trading_state_modal.create_trading_state_modal(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
         {{ m_generic_modal.create_generic_modal() }}
 
+        <!-- Resources urls -->
+        <span class="d-none" id="resources-urls"
+              data-audio-media-url="{{ url_for('audio_media', name='', _external=True) }}"
+        ></span>
+
         {% block additional_scripts %}
         {% endblock additional_scripts %}
     </body>

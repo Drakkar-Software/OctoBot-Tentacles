@@ -132,6 +132,7 @@ from tentacles.Services.Interfaces.web_interface.models.logs import (
 )
 from tentacles.Services.Interfaces.web_interface.models.medias import (
     is_valid_tentacle_image_path,
+    is_valid_audio_path,
 )
 from tentacles.Services.Interfaces.web_interface.models.profiles import (
     get_current_profile,
@@ -259,6 +260,7 @@ __all__ = [
     "remove_watched_symbol",
     "export_logs",
     "is_valid_tentacle_image_path",
+    "is_valid_audio_path",
     "get_current_profile",
     "duplicate_and_select_profile",
     "select_profile",
