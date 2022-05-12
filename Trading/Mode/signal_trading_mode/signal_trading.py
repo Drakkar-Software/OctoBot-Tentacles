@@ -18,6 +18,7 @@ import decimal
 import async_channel.constants as channel_constants
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
+import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 
@@ -26,6 +27,16 @@ class SignalTradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.load_config()
+
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
