@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.modes as modes
+import octobot_trading.enums as trading_enums
 
 
 class ScriptedTradingMode(modes.AbstractScriptedTradingMode):
@@ -25,6 +26,16 @@ class ScriptedTradingMode(modes.AbstractScriptedTradingMode):
         import profile_trading_script
         self.register_script_module(profile_trading_script)
         self.register_script_module(backtesting_script, live=False)
+
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
 
 
 class ScriptedTradingModeProducer(modes.AbstractScriptedTradingModeProducer):
