@@ -173,6 +173,6 @@ def mocked_signal():
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: "adc24701-573b-40dd-b6c9-3666cd22f33e"
         }
     ]
-    return trading_signals.TradingSignal("moonmoon", "bybit", trading_enums.TradingSignalExchangeTypes.SPOT.value,
+    return trading_signals.TradingSignal("moonmoon", "bybit", trading_enums.ExchangeTypes.SPOT.value,
                                          "BTC/USDT", None, None, orders, identifier="identifier",
                                          version="1.0.0")

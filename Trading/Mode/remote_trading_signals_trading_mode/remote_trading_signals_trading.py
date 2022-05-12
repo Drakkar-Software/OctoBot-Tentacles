@@ -39,6 +39,16 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         self.merged_symbol = None
         self.last_signal_description = ""
 
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
+
     def get_current_state(self) -> (str, float):
         producer_state = "" if self.producers[0].state in (None, trading_enums.EvaluatorStates.UNKNOWN) \
             else self.producers[0].state.name

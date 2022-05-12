@@ -38,6 +38,16 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         self.load_config()
         self.sell_orders_per_buy = self.trading_config.get("sell_orders_count", 3)
 
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
+
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                "N/A"

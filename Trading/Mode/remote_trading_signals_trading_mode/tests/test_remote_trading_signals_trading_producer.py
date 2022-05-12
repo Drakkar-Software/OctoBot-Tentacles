@@ -41,12 +41,12 @@ async def test_signal_callback(exchange, mocked_signal):
 
         submit_trading_evaluation_mock.reset_mock()
         # with incompatible exchange type
-        mocked_signal.exchange_type = trading_enums.TradingSignalExchangeTypes.MARGIN.value
+        mocked_signal.exchange_type = trading_enums.ExchangeTypes.MARGIN.value
         await producer.signal_callback(mocked_signal)
         submit_trading_evaluation_mock.assert_not_called()
 
         # with invalid state
-        mocked_signal.exchange_type = trading_enums.TradingSignalExchangeTypes.SPOT.value
+        mocked_signal.exchange_type = trading_enums.ExchangeTypes.SPOT.value
         mocked_signal.state = "123"
         with pytest.raises(ValueError):
             await producer.signal_callback(mocked_signal)
