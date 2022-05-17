@@ -219,6 +219,8 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                                                                             current_price=current_price,
                                                                             quantity=order_quantity,
                                                                             price=order_price)
+                # disable instant fill to avoid looping order fill in simulator
+                current_order.allow_instant_fill = False
                 created_order = await self.exchange_manager.trader.create_order(current_order)
         except trading_errors.MissingFunds as e:
             raise e
