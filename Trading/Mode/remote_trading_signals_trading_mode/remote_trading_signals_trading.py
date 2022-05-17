@@ -24,6 +24,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as errors
+import octobot_trading.exchanges as exchanges
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as personal_data
@@ -401,7 +402,7 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
 
     async def signal_callback(self, signal):
         exchange_type = signal.exchange_type
-        if exchange_type == trading_signals.get_signal_exchange_type(self.exchange_manager).value:
+        if exchange_type == exchanges.get_exchange_type(self.exchange_manager).value:
             state = trading_enums.EvaluatorStates(signal.state)
             await self._set_state(self.trading_mode.cryptocurrency, signal.symbol, state, signal)
         else:
@@ -418,3 +419,8 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
                                              final_note=self.final_eval,
                                              state=self.state,
                                              data=signal)
+
+    async def stop(self):
+        if self.trading_mode is not None:
+            self.trading_mode.consumers[0].flush()
+        await super().stop()
