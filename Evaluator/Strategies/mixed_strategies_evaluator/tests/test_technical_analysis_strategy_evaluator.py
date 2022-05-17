@@ -40,42 +40,42 @@ class TechnicalAnalysisStrategyEvaluatorTest(abstract_strategy_test.AbstractStra
 
     async def test_default_run(self):
         # market: -12.052505966587105
-        await self.run_test_default_run(decimal.Decimal(str(-2.718)))
+        await self.run_test_default_run(decimal.Decimal(str(-8.699)))
 
     async def test_slow_downtrend(self):
         # market: -12.052505966587105
         # market: -15.195702225633141
         # market: -29.12366137549725
         # market: -32.110091743119256
-        await self.run_test_slow_downtrend(decimal.Decimal(str(-2.718)), decimal.Decimal(str(-4.584)),
-                                           decimal.Decimal(str(-9.798)), decimal.Decimal(str(-12.562)))
+        await self.run_test_slow_downtrend(decimal.Decimal(str(-8.699)), decimal.Decimal(str(-9.675)),
+                                           decimal.Decimal(str(-16.634)), decimal.Decimal(str(-8.210)))
 
     async def test_sharp_downtrend(self):
         # market: -26.07183938094741
         # market: -32.1654501216545
-        await self.run_test_sharp_downtrend(decimal.Decimal(str(-19.514)), decimal.Decimal(str(-13.322)))
+        await self.run_test_sharp_downtrend(decimal.Decimal(str(-19.997)), decimal.Decimal(str(-23.093)))
 
     async def test_flat_markets(self):
         # market: -10.560669456066947
         # market: -3.401191658391241
         # market: -5.7854560064282765
         # market: -8.067940552016978
-        await self.run_test_flat_markets(decimal.Decimal(str(-0.811)), decimal.Decimal(str(0.733)),
-                                         decimal.Decimal(str(-7.592)), decimal.Decimal(str(8.324)))
+        await self.run_test_flat_markets(decimal.Decimal(str(0.681)), decimal.Decimal(str(1.917)),
+                                         decimal.Decimal(str(-0.298)), decimal.Decimal(str(3.022)))
 
     async def test_slow_uptrend(self):
         # market: 17.203948364436457
         # market: 16.19613670133728
-        await self.run_test_slow_uptrend(decimal.Decimal(str(3.895)), decimal.Decimal(str(16.862)))
+        await self.run_test_slow_uptrend(decimal.Decimal(str(9.729)), decimal.Decimal(str(2.882)))
 
     async def test_sharp_uptrend(self):
         # market: 30.881852230166828
         # market: 12.28597871355852
-        await self.run_test_sharp_uptrend(decimal.Decimal(str(11.995)), decimal.Decimal(str(0.035)))
+        await self.run_test_sharp_uptrend(decimal.Decimal(str(1.418)), decimal.Decimal(str(3.772)))
 
     async def test_up_then_down(self):
         # market: -6.040105108015155
-        await self.run_test_up_then_down(decimal.Decimal(str(0.161)))
+        await self.run_test_up_then_down(decimal.Decimal(str(-0.909)))
 
 
 async def test_default_run(strategy_tester):
