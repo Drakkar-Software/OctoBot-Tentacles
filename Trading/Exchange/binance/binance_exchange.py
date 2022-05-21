@@ -29,6 +29,10 @@ class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     BINANCE_MARK_PRICE = "markPrice"
 
+    def __init__(self, config, exchange_manager):
+        exchanges.FutureCCXTExchange.__init__(self, config, exchange_manager)
+        exchanges.SpotCCXTExchange.__init__(self, config, exchange_manager)
+
     @classmethod
     def get_name(cls):
         return 'binance'
