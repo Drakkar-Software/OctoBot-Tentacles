@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import pytest
+import pytest_asyncio
 import os.path
 import asyncio
 import mock
@@ -42,7 +43,7 @@ import tests.test_utils.config as test_utils_config
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def tools():
     trader = None
     try:
