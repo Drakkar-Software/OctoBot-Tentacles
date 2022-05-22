@@ -18,6 +18,7 @@ import decimal
 import pytest
 import os.path
 import asyncio
+import pytest_asyncio
 
 import async_channel.util as channel_util
 import octobot_backtesting.api as backtesting_api
@@ -38,7 +39,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def tools(symbol="BTC/USDT"):
     tentacles_manager_api.reload_tentacle_info()
     trader = None
