@@ -18,15 +18,15 @@ import mock
 
 import octobot_commons.constants as common_constants
 import octobot_trading.enums as trading_enums
-from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import exchange, mocked_signal
+from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_signal
 
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
-async def test_signal_callback(exchange, mocked_signal):
-    producer, _, _ = exchange
+async def test_signal_callback(local_trader, mocked_signal):
+    producer, _, _ = local_trader
     with mock.patch.object(producer, "submit_trading_evaluation", new=mock.AsyncMock()) \
          as submit_trading_evaluation_mock:
         await producer.signal_callback(mocked_signal)

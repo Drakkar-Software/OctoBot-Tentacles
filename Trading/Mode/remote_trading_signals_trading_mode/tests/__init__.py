@@ -16,9 +16,12 @@
 import os.path
 import mock
 import pytest
+import pytest_asyncio
 
 import octobot_backtesting.api as backtesting_api
 import async_channel.util as channel_util
+import async_channel.channels as channels
+import octobot_commons.channels_name as channels_names
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.constants as commons_constants
 import octobot_commons.asyncio_tools as asyncio_tools
@@ -35,10 +38,11 @@ from tentacles.Trading.Mode.remote_trading_signals_trading_mode.remote_trading_s
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 
-@pytest.fixture
-async def exchange(exchange_name="binance", backtesting=None, symbol="BTC/USDT"):
+@pytest_asyncio.fixture
+async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/USDT"):
     tentacles_manager_api.reload_tentacle_info()
     exchange_manager = None
+    signal_channel = None
     try:
         config = test_config.load_test_config()
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
@@ -73,7 +77,7 @@ async def exchange(exchange_name="binance", backtesting=None, symbol="BTC/USDT")
         with mock.patch.object(RemoteTradingSignalsTradingMode, "_subscribe_to_signal_feed",
                                new=mock.AsyncMock(return_value=[])) \
                 as _subscribe_to_signal_feed_mock:
-            await trading_signals.create_remote_trading_signal_channel_if_missing(
+            signal_channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
                 exchange_manager
             )
             await mode.initialize()
@@ -85,7 +89,7 @@ async def exchange(exchange_name="binance", backtesting=None, symbol="BTC/USDT")
             # let trading modes start
             await asyncio_tools.wait_asyncio_next_cycle()
             _subscribe_to_signal_feed_mock.assert_called_once()
-        yield mode.producers[0], mode.consumers[0], exchange_manager
+        yield mode.producers[0], mode.consumers[0], trader
     finally:
         if exchange_manager is not None:
             for importer in backtesting_api.get_importers(exchange_manager.exchange.backtesting):
@@ -93,6 +97,9 @@ async def exchange(exchange_name="binance", backtesting=None, symbol="BTC/USDT")
             if exchange_manager.exchange.backtesting.time_updater is not None:
                 await exchange_manager.exchange.backtesting.stop()
             await exchange_manager.stop()
+        if signal_channel is not None:
+            await signal_channel.stop()
+            channels.del_chan(channels_names.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)
 
 
 @pytest.fixture

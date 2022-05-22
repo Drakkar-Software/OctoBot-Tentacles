@@ -97,6 +97,8 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
 
 
 async def _stop(exchange_manager):
+    if exchange_manager is None:
+        return
     for importer in backtesting_api.get_importers(exchange_manager.exchange.backtesting):
         await backtesting_api.stop_importer(importer)
     await exchange_manager.exchange.backtesting.stop()
@@ -116,6 +118,7 @@ async def test_run_independent_backtestings_with_memory_check():
 
 
 async def test_init_allowed_price_ranges():
+    exchange_manager = None
     try:
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
@@ -137,6 +140,7 @@ async def test_init_allowed_price_ranges():
 
 
 async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders():
+    exchange_manager = None
     try:
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
@@ -188,6 +192,7 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
 
 
 async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders():
+    exchange_manager = None
     try:
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)
@@ -239,6 +244,7 @@ async def test_create_orders_without_enough_funds_for_all_orders_3_total_orders(
 
 
 async def test_create_orders_with_fixed_volume_per_order():
+    exchange_manager = None
     try:
         symbol = "BTC/USDT"
         producer, _, exchange_manager = await _get_tools(symbol)

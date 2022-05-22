@@ -23,15 +23,15 @@ import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as trading_personal_data
 import octobot_services.api as services_api
 
-from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import exchange, mocked_signal
+from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_signal
 
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
-async def test_internal_callback(exchange, mocked_signal):
-    _, consumer, _ = exchange
+async def test_internal_callback(local_trader, mocked_signal):
+    _, consumer, _ = local_trader
     consumer.logger = mock.Mock(info=mock.Mock(), exception=mock.Mock())
     with mock.patch.object(consumer, "_handle_signal_orders", new=mock.AsyncMock()) \
          as _handle_signal_orders_mock:
@@ -61,8 +61,9 @@ async def test_internal_callback(exchange, mocked_signal):
         consumer.logger.exception.assert_called_once()
 
 
-async def test_handle_signal_orders(exchange, mocked_signal):
-    _, consumer, exchange_manager = exchange
+async def test_handle_signal_orders(local_trader, mocked_signal):
+    _, consumer, trader = local_trader
+    exchange_manager = trader.exchange_manager
     assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
     assert consumer.trading_mode.last_signal_description == ""
     await consumer._handle_signal_orders(mocked_signal)
@@ -109,8 +110,8 @@ async def test_handle_signal_orders(exchange, mocked_signal):
     assert "1" in consumer.trading_mode.last_signal_description
 
 
-async def test_send_alert_notification(exchange, mocked_signal):
-    _, consumer, _ = exchange
+async def test_send_alert_notification(local_trader, mocked_signal):
+    _, consumer, _ = local_trader
     with mock.patch.object(services_api, "send_notification", mock.AsyncMock()) as send_notification_mock:
         await consumer._send_alert_notification("BTC/USDT", 42, 62, 78)
         send_notification_mock.assert_called_once()
