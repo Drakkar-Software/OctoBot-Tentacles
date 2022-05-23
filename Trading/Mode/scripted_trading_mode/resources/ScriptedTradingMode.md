@@ -1,1 +1,0 @@
-ScriptedTradingMode is a **scripted trading mode**.
