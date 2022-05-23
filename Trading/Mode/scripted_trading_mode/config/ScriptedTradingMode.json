@@ -1,8 +1,0 @@
-{
-    "default_config": [
-        "BlankStrategyEvaluator"
-    ],
-    "required_strategies": [
-        "BlankStrategyEvaluator"
-    ]
-}
