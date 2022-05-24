@@ -23,6 +23,9 @@ import octobot_commons.configuration as configuration
 import tentacles.Services.Interfaces.web_interface.controllers as controllers
 import tentacles.Services.Interfaces.web_interface as web_interface
 import octobot_services.interfaces as interfaces
+import octobot_commons.singleton as singleton
+import octobot_commons.authentication as authentication
+import octobot.community as community
 
 
 PORT = 5555
@@ -39,6 +42,9 @@ async def _init_bot():
     import octobot_tentacles_manager.loaders as loaders
     import octobot_evaluators.api as evaluators_api
     import tests.test_utils.config as config
+    # force community CommunityAuthentication reset
+    singleton.Singleton._instances.pop(authentication.Authenticator, None)
+    singleton.Singleton._instances.pop(community.CommunityAuthentication, None)
     octobot = octobot.OctoBot(test_config.load_test_config(dict_only=False))
     octobot.initialized = True
     tentacles_config = config.load_test_tentacles_config()
