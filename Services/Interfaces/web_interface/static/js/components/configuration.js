@@ -208,12 +208,11 @@ function handle_special_values(currentElem){
             otherElem.prop('checked', false);
             otherElem.trigger("change");
         }
-    }
-    else if(currentElem.is(tradingReferenceMarket)){
+    } else if(currentElem.is(tradingReferenceMarket)) {
         display_generic_modal("Change reference market",
             "Do you want to adapt the reference market for all your configured pairs ?",
             "",
-            function(){
+            function () {
                 let url = "/api/change_reference_market_on_config_currencies";
                 let data = {};
                 data["old_base_currency"] = tradingReferenceMarket.attr(config_value_attr);
@@ -221,6 +220,13 @@ function handle_special_values(currentElem){
                 send_and_interpret_bot_update(data, url, null, generic_request_success_callback, generic_request_failure_callback);
             },
             null);
+    } else if(currentElem.data("summary-field") === "radio-select"){
+        currentElem.find('input[type="radio"]').each((index, element) => {
+            const parsedElement = $(element);
+            if(parsedElement.is(":checked")){
+                currentElem.attr("current-value", parsedElement.attr("value"));
+            }
+        })
     }
 }
 

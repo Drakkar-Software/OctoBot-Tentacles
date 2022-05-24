@@ -89,6 +89,7 @@
                                                                        exchanges_details[exchange],
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
                                                                        sandboxed=config_exchanges[exchange].get('sandboxed', False),
+                                                                       selected_exchange_type=config_exchanges[exchange].get('exchange-type', 'spot'),
                                                                        full_config=True,
                                                                        exchange_docs_url=EXCHANGES_DOCS_URL,
                                                                        community_url=OCTOBOT_COMMUNITY_URL)}}
