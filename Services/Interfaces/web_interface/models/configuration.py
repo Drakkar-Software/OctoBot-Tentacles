@@ -715,8 +715,8 @@ def get_other_exchange_list(remove_config_exchanges=False):
 
 
 def get_exchanges_details(exchanges_config) -> dict:
-    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
     details = {}
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
     import tentacles.Trading.Exchange as exchanges
     for exchange_name in exchanges_config:
         exchange_class = tentacles_management.get_class_from_string(
@@ -726,13 +726,15 @@ def get_exchanges_details(exchanges_config) -> dict:
         )
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
-            "configurable": False if exchange_class is None else exchange_class.is_configurable()
+            "configurable": False if exchange_class is None else exchange_class.is_configurable(),
+            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name)
         }
     return details
 
 
 def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dict:
-    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(exchange_name, {}))
+    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(
+        exchange_name, {}))
     if _is_real_exchange_value(api_key):
         to_check_config[commons_constants.CONFIG_EXCHANGE_KEY] = configuration.encrypt(api_key).decode()
     if _is_real_exchange_value(api_sec):

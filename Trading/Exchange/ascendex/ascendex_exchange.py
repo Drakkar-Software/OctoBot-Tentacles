@@ -26,7 +26,7 @@ import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 
 
-class AscendEx(exchanges.SpotCCXTExchange, exchanges.MarginExchange, exchanges.FutureExchange):
+class AscendEx(exchanges.SpotCCXTExchange):
     DESCRIPTION = ""
 
     BUY_STR = "Buy"

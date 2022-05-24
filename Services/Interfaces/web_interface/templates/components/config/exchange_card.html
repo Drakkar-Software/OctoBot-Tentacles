@@ -1,6 +1,6 @@
  {% import 'components/config/editable_config.html' as m_editable_config %}
 {% macro config_exchange_card(config, exchange, exchanges_details, keys_value="*********", enabled=True,
-                              sandboxed=False, add_class='', config_values=None,
+                              sandboxed=False, selected_exchange_type='spot', add_class='', config_values=None,
                               full_config=True, exchange_docs_url="", community_url="") -%}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
@@ -160,6 +160,29 @@
                                {{ 'checked' if sandboxed else '' }}>
                         <label class="custom-control-label" for="exchange_{{exchange}}_sandboxed">Trade in exchange sandbox</label>
                     </div>
+                    {% else %}
+                    <span
+                         config-key="exchanges_{{exchange}}_exchange-type"
+                         config-type="global_config"
+                         config-value="{{selected_exchange_type}}"
+                         startup-config-value="{{selected_exchange_type}}"
+                         current-value="{{selected_exchange_type}}"
+                         data-type="text"
+                         data-summary-field="radio-select"
+                         class="config-element"
+                    >
+                        {% for exchange_type in exchanges_details['supported_exchange_types'] %}
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="radio"
+                                 name="exchangeTypeRadioOptions{{exchange}}"
+                                 id="exchangeTypeRadio{{exchange}}{{exchange_type.value}}"
+                                 value="{{exchange_type.value}}"
+                                 {{'checked' if exchange_type.value == selected_exchange_type else ''}}>
+                          <label class="form-check-label"
+                                 for="exchangeTypeRadio{{exchange}}{{exchange_type.value}}">{{exchange_type.value}}</label>
+                        </div>
+                        {% endfor %}
+                    </span>
                     {% endif %}
                 </div>
             </div>
