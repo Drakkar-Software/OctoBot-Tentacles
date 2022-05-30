@@ -26,4 +26,4 @@ class WebNotifier(notifier.AbstractNotifier):
     async def _handle_notification(self, notification: services_notification.Notification):
         await web_interface.add_notification(notification.level, notification.title,
                                              notification.text.replace("\n", "<br>"),
-                                             notification.sound.value)
+                                             sound=notification.sound.value)
