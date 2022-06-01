@@ -21,7 +21,9 @@ import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 
+import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
+import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -30,13 +32,14 @@ import octobot_trading.api as trading_api
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import octobot_evaluators.constants as evaluators_constants
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
 import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
+import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.authentication as authentication
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 
@@ -56,10 +59,12 @@ STRATEGY_KEY = "strategy"
 TA_EVALUATOR_KEY = "technical evaluator"
 SOCIAL_EVALUATOR_KEY = "social evaluator"
 RT_EVALUATOR_KEY = "real time evaluator"
+SCRIPTED_EVALUATOR_KEY = "scripted evaluator"
 REQUIRED_KEY = "required"
 SOCIAL_KEY = "social"
 TA_KEY = "ta"
 RT_KEY = "real-time"
+SCRIPTED_KEY = "scripted"
 ACTIVATED_STRATEGIES = "activated_strategies"
 BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
@@ -190,6 +195,8 @@ def _get_tentacle_packages():
     yield social, evaluators.AbstractEvaluator, SOCIAL_EVALUATOR_KEY
     import tentacles.Evaluator.RealTime as rt
     yield rt, evaluators.AbstractEvaluator, RT_EVALUATOR_KEY
+    import tentacles.Evaluator.Scripted as scripted
+    yield scripted, evaluators.ScriptedEvaluator, SCRIPTED_EVALUATOR_KEY
 
 
 def _get_activation_state(name, activation_states):
@@ -223,7 +230,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
 
 
 def get_tentacle_user_commands(klass):
-    return klass.get_user_commands()
+    return {} if klass is None else klass.get_user_commands()
 
 
 def get_tentacle_config(klass):
@@ -283,6 +290,8 @@ def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
 def update_tentacle_config(tentacle_name, config_update):
     try:
         klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
+        if klass is None:
+            return False, f"Can't find {tentacle_name} class"
         tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
                                                      klass,
                                                      config_update)
@@ -290,6 +299,16 @@ def update_tentacle_config(tentacle_name, config_update):
     except Exception as e:
         _get_logger().exception(e, False)
         return False, f"Error when updating tentacle config: {e}"
+
+
+def update_copied_trading_id(copy_id):
+    import tentacles.Trading.Mode as modes
+    return update_tentacle_config(
+        modes.RemoteTradingSignalsTradingMode.get_name(),
+        {
+            "trading_strategy": copy_id
+        }
+    )
 
 
 def reset_config_to_default(tentacle_name):
@@ -398,10 +417,12 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
     import tentacles.Evaluator.TA as ta
     import tentacles.Evaluator.Social as social
     import tentacles.Evaluator.RealTime as rt
+    import tentacles.Evaluator.Scripted as scripted
     detailed_config = {
         SOCIAL_KEY: {},
         TA_KEY: {},
-        RT_KEY: {}
+        RT_KEY: {},
+        SCRIPTED_KEY: {}
     }
     strategy_config = {
         STRATEGIES_KEY: {}
@@ -417,13 +438,16 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
                 is_real_time, klass = _fill_evaluator_config(evaluator_name, activated, RT_KEY,
                                                              rt, detailed_config, media_url)
                 if not is_real_time:
-                    is_strategy, klass = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
-                                                                strategies, strategy_config, media_url,
-                                                                is_strategy=True)
-                    if is_strategy:
-                        strategy_class_by_name[evaluator_name] = klass
-                    else:
-                        _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
+                    is_scripted, klass = _fill_evaluator_config(evaluator_name, activated, SCRIPTED_KEY,
+                                                                scripted, detailed_config, media_url)
+                    if not is_scripted:
+                        is_strategy, klass = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
+                                                                    strategies, strategy_config, media_url,
+                                                                    is_strategy=True)
+                        if is_strategy:
+                            strategy_class_by_name[evaluator_name] = klass
+                        else:
+                            _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
 
     _add_strategies_requirements(strategy_class_by_name, strategy_config)
     required_elements = _get_required_element(strategy_config)
@@ -438,6 +462,14 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
 
 def get_config_activated_trading_mode():
     return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+
+
+def get_config_activated_strategies():
+    return evaluators_api.get_activated_strategies_classes(interfaces_util.get_bot_api().get_edited_tentacles_config())
+
+
+def get_config_activated_evaluators():
+    return evaluators_api.get_activated_evaluators(interfaces_util.get_bot_api().get_edited_tentacles_config())
 
 
 def update_tentacles_activation_config(new_config, deactivate_others=False):
@@ -522,6 +554,14 @@ def get_notifiers_list():
             for service in notifier.REQUIRED_SERVICES]
 
 
+def get_enabled_trading_pairs() -> set:
+    symbols = set()
+    for values in format_config_symbols(interfaces_util.get_edited_config()).values():
+        if values[commons_constants.CONFIG_ENABLED_OPTION]:
+            symbols = symbols.union(set(values[commons_constants.CONFIG_CRYPTO_PAIRS]))
+    return symbols
+
+
 def get_symbol_list(exchanges):
     result = []
     for exchange in exchanges:
@@ -541,6 +581,10 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def get_config_time_frames() -> list:
+    return time_frame_manager.get_config_time_frame(interfaces_util.get_global_config())
+
+
 def get_timeframes_list(exchanges):
     timeframes_list = []
     allowed_timeframes = set(tf.value for tf in commons_enums.TimeFrames)
@@ -549,8 +593,12 @@ def get_timeframes_list(exchanges):
             timeframes_list += interfaces_util.run_in_bot_async_executor(
                     trading_api.get_exchange_available_time_frames(exchange))
     return [commons_enums.TimeFrames(time_frame)
-                for time_frame in list(set(timeframes_list))
-                if time_frame in allowed_timeframes]
+            for time_frame in list(set(timeframes_list))
+            if time_frame in allowed_timeframes]
+
+
+def get_strategy_required_time_frames(strategy_class):
+    return strategy_class.get_required_time_frames({}, interfaces_util.get_edited_tentacles_config())
 
 
 def format_config_symbols(config):
@@ -608,6 +656,13 @@ def get_exchange_logo(exchange_name):
     return exchange_logos[exchange_name]
 
 
+def get_traded_time_frames(exchange_manager):
+    return trading_api.get_exchange_available_required_time_frames(
+        trading_api.get_exchange_name(exchange_manager),
+        trading_api.get_exchange_manager_id(exchange_manager)
+    )
+
+
 def get_full_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
     if remove_config_exchanges:
@@ -657,7 +712,7 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
     is_compatible = False
     is_sponsoring = trading_api.is_sponsoring(exchange_name)
     is_configured = False
-    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    authenticator = authentication.Authenticator.instance()
     is_supporter = authenticator.supports.is_supporting()
     error = None
     if _is_possible_exchange_config(to_check_config):
@@ -728,6 +783,30 @@ def change_reference_market_on_config_currencies(old_base_currency: str, new_bas
     return success, message
 
 
+def send_command_to_activated_tentacles(command, wait_for_processing=True):
+    trading_mode = get_config_activated_trading_mode()
+    evaluators = get_config_activated_evaluators()
+    for tentacle in [trading_mode] + evaluators:
+        interfaces_util.run_in_bot_main_loop(
+            services_api.send_user_command(
+                interfaces_util.get_bot_api().get_bot_id(),
+                tentacle.get_name(),
+                command,
+                None,
+                wait_for_processing=wait_for_processing
+            )
+        )
+
+
+def reload_scripts():
+    try:
+        send_command_to_activated_tentacles(commons_enums.UserCommands.RELOAD_SCRIPT.value)
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
+
+
 def update_config_currencies(currencies: list, replace: bool=False):
     """
     Update the configured currencies list
@@ -747,3 +826,7 @@ def update_config_currencies(currencies: list, replace: bool=False):
         success = False
         bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
     return success, message
+
+
+def get_config_required_candles_count(exchange_manager):
+    return trading_api.get_required_historical_candles_count(exchange_manager)

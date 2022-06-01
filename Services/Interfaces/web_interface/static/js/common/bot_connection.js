@@ -17,12 +17,18 @@
  */
 
 function init_status_websocket(){
+    const onBotReconnected = () => _reconnectedCallbacks.forEach((callback) => callback());
     const socket = get_websocket("/notifications");
     socket.on('update', function(data) {
+        if(_isBotDisconnected){
+            _isBotDisconnected = false;
+            onBotReconnected();
+        }
         unlock_ui();
         manage_alert(data);
     });
     socket.on('disconnect', function() {
+        _isBotDisconnected = true;
         lock_ui();
     });
 }
@@ -39,7 +45,7 @@ function manage_alert(data){
             }
         }
         $.each(data["notifications"], function(i, item) {
-            create_alert(item["Level"], item["Title"], item["Message"]);
+            create_alert(item["Level"], item["Title"], item["Message"], "", item["Sound"]);
             $.each(notificationCallbacks, function(_, callback) {
                callback(item["Title"], item);
             });
@@ -72,10 +78,10 @@ function handle_route_button(){
     });
 }
 
-function send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success_callback, error_callback){
+function send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success_callback, error_callback, method="POST"){
     $.ajax({
         url: update_url,
-        type: "POST",
+        type: method,
         dataType: "json",
         contentType: 'application/json',
         data: JSON.stringify(updated_data),
@@ -117,9 +123,19 @@ function load_metadata() {
 }
 
 const notificationCallbacks = [];
+const _reconnectedCallbacks = [];
+let _isBotDisconnected = false;
+
+function isBotDisconnected(){
+    return _isBotDisconnected;
+}
 
 function register_notification_callback(callback){
     notificationCallbacks.push(callback);
+}
+
+function registerReconnectedCallback(callback){
+    _reconnectedCallbacks.push(callback);
 }
 
 $(document).ready(function () {

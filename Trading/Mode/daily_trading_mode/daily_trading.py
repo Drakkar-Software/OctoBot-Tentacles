@@ -40,6 +40,16 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         super().__init__(config, exchange_manager)
         self.load_config()
 
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
+
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
@@ -239,7 +249,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     def _get_ratio(self, currency):
         try:
             return self.get_holdings_ratio(currency)
-        except KeyError:
+        except trading_errors.MissingPriceDataError:
             # Can happen when ref market is not in the pair, data will be available later (ticker is now registered)
             return self.DEFAULT_HOLDING_RATIO
 
@@ -327,6 +337,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_orders.append(updated_limit)
 
                     if self.USE_STOP_ORDERS:
+                        oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                            .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                        updated_limit.add_to_order_group(oco_group)
                         stop_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                                price * self._get_stop_price_from_risk())
                         current_order = trading_personal_data.create_order_instance(trader=self.trader,
@@ -335,7 +348,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                     current_price=price,
                                                                                     quantity=order_quantity,
                                                                                     price=stop_price,
-                                                                                    linked_to=updated_limit)
+                                                                                    group=oco_group)
                         await self.trader.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.NEUTRAL.value:

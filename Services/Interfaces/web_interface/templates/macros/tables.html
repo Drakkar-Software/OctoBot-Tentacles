@@ -6,8 +6,8 @@
         <td>{{ order.origin_quantity }}</td>
         <td>{{ order.exchange_manager.exchange.name if order.exchange_manager else '' }}</td>
         <td>{{ timestamp }}</td>
-        <td class="text-right" data-order="{{ order.origin_price * order.origin_quantity }}">
-            {{ order.origin_price * order.origin_quantity }} {{ order.market }}
+        <td class="text-right" data-order="{{ order.total_cost }}">
+            {{ order.total_cost }} {{ order.market }}
         </td>
         <td scope="row">
             {% if sim_or_real == 'Simulated' %}
@@ -20,6 +20,25 @@
             <button type="button" class="btn btn-sm btn-outline-danger waves-effect" action="cancel_order" order_desc="{{ order.order_id }}" update-url="{{ url_for('api.orders', action='cancel_order') }}"><i class="fas fa-ban"></i></button>
         </td>
     </tr>
+{%- endmacro %}
+
+{% macro position_tr(position, sim_or_real='Simulated') -%}
+    {% if not position.is_idle() %}
+    <tr>
+        <td>{{ position.side.value | upper }} {{ position.symbol_contract }}</td>
+        <td>{{ position.size | round(5) }}</td>
+        <td>{{ position.value | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }}</td>
+        <td>{{ position.entry_price | round(5) }}</td>
+        <td>{{ position.liquidation_price | round(5) }}</td>
+        <td>{{ position.margin | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }}</td>
+        <td>{{ position.unrealized_pnl | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }} ({{ position.get_unrealized_pnl_percent() | round(5) }}%)</td>
+        <td>{{ position.exchange_manager.exchange.name if position.exchange_manager else '' }}</td>
+        <td>{{ sim_or_real }}</td>
+        <td class="text-center py-1">
+            <button type="button" class="btn btn-sm btn-outline-danger waves-effect"><i class="fas fa-ban"></i></button>
+        </td>
+    </tr>
+    {% endif %}
 {%- endmacro %}
 
 {% macro trades_tr(trade, type='', timestamp='', sim_or_real='Simulated') -%}

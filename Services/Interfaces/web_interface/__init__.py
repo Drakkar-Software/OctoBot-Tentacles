@@ -47,6 +47,7 @@ def register_notifier(notification_key, notifier):
 GENERAL_NOTIFICATION_KEY = "general_notifications"
 BACKTESTING_NOTIFICATION_KEY = "backtesting_notifications"
 DATA_COLLECTOR_NOTIFICATION_KEY = "data_collector_notifications"
+STRATEGY_OPTIMIZER_NOTIFICATION_KEY = "strategy_optimizer_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
@@ -68,6 +69,7 @@ loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
 for logger in loggers:
     logging.getLogger(logger).setLevel(logging.WARNING)
 
+registered_plugins = []
 notifications = []
 
 matrix_history = []
@@ -88,6 +90,18 @@ def dir_last_updated(folder):
 
 
 LAST_UPDATED_STATIC_FILES = dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))
+
+
+def update_registered_plugins(plugins):
+    global LAST_UPDATED_STATIC_FILES
+    last_update_time = float(LAST_UPDATED_STATIC_FILES)
+    for plugin in plugins:
+        if plugin not in registered_plugins:
+            registered_plugins.append(plugin)
+            if plugin.static_folder:
+                last_update_time = max(last_update_time, float(dir_last_updated(plugin.static_folder)))
+    LAST_UPDATED_STATIC_FILES = last_update_time
+
 
 # register flask utilities
 import tentacles.Services.Interfaces.web_interface.flask_util
@@ -136,6 +150,10 @@ def send_data_collector_status(**kwargs):
     _send_notification(DATA_COLLECTOR_NOTIFICATION_KEY, **kwargs)
 
 
+def send_strategy_optimizer_status(**kwargs):
+    _send_notification(STRATEGY_OPTIMIZER_NOTIFICATION_KEY, **kwargs)
+
+
 def send_new_trade(dict_new_trade, is_simulated):
     if is_simulated:
         _send_notification(DASHBOARD_NOTIFICATION_KEY, simulated_trades=[dict_new_trade])
@@ -143,11 +161,12 @@ def send_new_trade(dict_new_trade, is_simulated):
         _send_notification(DASHBOARD_NOTIFICATION_KEY, real_trades=[dict_new_trade])
 
 
-async def add_notification(level, title, message):
+async def add_notification(level, title, message, sound=None):
     notifications.append({
         "Level": level.value,
         "Title": title,
-        "Message": message
+        "Message": message,
+        "Sound": sound
     })
     send_general_notifications()
 

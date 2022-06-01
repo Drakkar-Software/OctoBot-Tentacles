@@ -18,6 +18,7 @@ import flask
 import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.util as util
 
 
 @api.api.route("/is_compatible_account", methods=['POST'])
@@ -28,3 +29,20 @@ def is_compatible_account():
                                                       request_data["apiKey"],
                                                       request_data["apiSecret"],
                                                       request_data["apiPassword"]))
+
+
+@api.api.route("/first_exchange_details")
+@login.login_required_when_activated
+def first_exchange_details():
+    exchange_name = flask.request.args.get('exchange_name', None)
+    try:
+        exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data(exchange_name)
+        return util.get_rest_reply(
+            {
+                "exchange_name": exchange_name,
+                "exchange_id": exchange_id
+            },
+            200
+        )
+    except KeyError as e:
+        return util.get_rest_reply(str(e), 404)

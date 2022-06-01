@@ -208,9 +208,9 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                     symbol_market):
                 selling = order_data.side == trading_enums.TradeOrderSide.SELL
                 if selling:
-                    if trading_api.get_portfolio_currency(self.exchange_manager, currency) < order_quantity:
+                    if trading_api.get_portfolio_currency(self.exchange_manager, currency).available < order_quantity:
                         return []
-                elif trading_api.get_portfolio_currency(self.exchange_manager, market) < order_quantity * order_price:
+                elif trading_api.get_portfolio_currency(self.exchange_manager, market).available < order_quantity * order_price:
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT
                 current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
@@ -219,6 +219,8 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                                                                             current_price=current_price,
                                                                             quantity=order_quantity,
                                                                             price=order_price)
+                # disable instant fill to avoid looping order fill in simulator
+                current_order.allow_instant_fill = False
                 created_order = await self.exchange_manager.trader.create_order(current_order)
         except trading_errors.MissingFunds as e:
             raise e
@@ -596,8 +598,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         currency, market = symbol_util.split_symbol(self.symbol)
         order_limiting_currency = currency if selling else market
 
-        order_limiting_currency_amount = decimal.Decimal(str(trading_api.get_portfolio_currency(
-            self.exchange_manager, order_limiting_currency)))
+        order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
         if state == self.NEW:
             # create staggered orders
             funds_to_use = self._get_maximum_traded_funds(allowed_funds,
@@ -647,12 +648,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     # missing order next to spread
                     starting_bound = upper_bound if selling else lower_bound
                     increment_window = self.flat_increment / 2
-                    order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager,
-                                                                                                  order_limiting_currency)
-                    portfolio_total = decimal.Decimal(str(
-                        trading_api.get_portfolio_currency(self.exchange_manager,
-                                                           order_limiting_currency,
-                                                           portfolio_type=commons_constants.PORTFOLIO_TOTAL)))
+                    order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
+                    portfolio_total = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).total
                     order_limiting_currency_amount = portfolio_total
                     if order_limiting_currency_available_amount:
                         orders_count, average_order_quantity = \

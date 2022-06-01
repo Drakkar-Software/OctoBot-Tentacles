@@ -127,7 +127,9 @@ async def test_create_secondary_arbitrage_order():
         assert limit_order.order_id == arbitrage.secondary_limit_order_id
         assert limit_order.origin_quantity == quantity
 
-        stop_order = limit_order.linked_orders[0]
+        order_group_1 = limit_order.order_group
+        stop_order = order_group_1.get_group_open_orders()[1]
+        assert order_group_1 is stop_order.order_group
         assert stop_order.exchange_order_type is trading_enums.TradeOrderType.STOP_LOSS
         assert stop_order.order_type is trading_enums.TraderOrderType.STOP_LOSS
         assert stop_order.side is trading_enums.TradeOrderSide.SELL
@@ -149,7 +151,10 @@ async def test_create_secondary_arbitrage_order():
         assert limit_order.order_id == arbitrage.secondary_limit_order_id
         assert limit_order.origin_quantity == quantity
 
-        stop_order = limit_order.linked_orders[0]
+        order_group_2 = limit_order.order_group
+        stop_order = order_group_2.get_group_open_orders()[1]
+        assert order_group_2 is stop_order.order_group
+        assert order_group_2 != order_group_1
         assert stop_order.exchange_order_type is trading_enums.TradeOrderType.STOP_LOSS
         assert stop_order.order_type is trading_enums.TraderOrderType.STOP_LOSS
         assert stop_order.side is trading_enums.TradeOrderSide.BUY

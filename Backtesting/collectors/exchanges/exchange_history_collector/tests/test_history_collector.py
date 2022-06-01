@@ -19,7 +19,7 @@ import contextlib
 import json
 import asyncio
 
-import octobot_backtesting.data as backtesting_data
+import octobot_commons.databases as databases
 import octobot_backtesting.enums as enums
 import octobot_backtesting.errors as errors
 import tests.test_utils.config as test_utils_config
@@ -54,7 +54,7 @@ async def data_collector(exchange_name, tentacles_setup_config, symbols, time_fr
 
 @contextlib.asynccontextmanager
 async def collector_database(collector):
-    database = backtesting_data.DataBase(collector.file_path)
+    database = databases.SQLiteDatabase(collector.file_path)
     try:
         await database.initialize()
         yield database

@@ -28,6 +28,11 @@ function get_websocket(namespace){
         });
 }
 
+function getAudioMediaUrl(mediaName){
+    const baseUrl = $("#resources-urls").data("audio-media-url")
+    return `${baseUrl}${mediaName}`
+}
+
 function setup_editable(){
     $.fn.editable.defaults.mode = 'inline';
 }
@@ -78,9 +83,9 @@ function isDefined(thing){
     return (typeof thing !== "undefined" && thing !== false && thing !==null);
 }
 
-function log(text){
+function log(...texts){
     if(window.console){
-        console.log(text);
+        console.log(...texts);
     }
 }
 
@@ -96,6 +101,10 @@ function add_event_if_not_already_added(elem, event_type, handler){
     if(!check_has_event_using_handler(elem, event_type, handler)){
         elem.on(event_type, handler);
     }
+}
+
+function updateProgressBar(elementId, progress){
+    $(document.getElementById(elementId)).css('width', progress+'%').attr("aria-valuenow", progress);
 }
 
 function check_has_event_using_handler(elem, event_type, handler){
@@ -115,11 +124,14 @@ function generic_request_success_callback(updated_data, update_url, dom_root_ele
     }else{
         create_alert("success", msg, "");
     }
-
 }
 
 function generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
-    create_alert("error", msg.responseText, "");
+    if(isBotDisconnected()){
+        create_alert("error", "Can't connect to OctoBot", "Your OctoBot might be offline.");
+    }else{
+        create_alert("error", msg.responseText, "");
+    }
 }
 
 function isMobileDisplay() {
@@ -263,4 +275,25 @@ function display_generic_modal(title, content, warning, yes_button_callback, no_
 
     showModalIfAny(generic_modal);
     return generic_modal;
+}
+
+function updateInputIfValue(elementId, config, configKey, elementType){
+    const value = config[configKey];
+    if(typeof value !== "undefined" && value !== null && value !== ""){
+        const element = $(document.getElementById(elementId));
+        if(element.length){
+            if(elementType === "date") {
+                element.val(new Date(config[configKey]).toISOString().split('T')[0].slice(0, 10))
+            } else if(elementType === "bool"){
+                element.prop("checked", config[configKey]);
+            }
+            else {
+                element.val(config[configKey]);
+            }
+        }
+    }
+}
+
+function randomizeArray(array) {
+    array.sort(() => Math.random() - 0.5);
 }

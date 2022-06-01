@@ -23,3 +23,8 @@ class PriceStrings(enum.Enum):
     STR_PRICE_HIGH = "high"
     STR_PRICE_LOW = "low"
     STR_PRICE_VOL = "vol"
+
+
+class TabsLocation(enum.Enum):
+    START = "start"
+    END = "end"

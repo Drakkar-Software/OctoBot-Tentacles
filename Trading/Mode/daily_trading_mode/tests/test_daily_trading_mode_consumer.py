@@ -18,6 +18,7 @@ import math
 import pytest
 import os.path
 import copy
+import pytest_asyncio
 
 import async_channel.util as channel_util
 import octobot_backtesting.api as backtesting_api
@@ -41,7 +42,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def tools():
     tentacles_manager_api.reload_tentacle_info()
     exchange_manager = None
@@ -142,14 +143,13 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(7.6))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
@@ -170,11 +170,9 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.12554936))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
@@ -198,7 +196,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.11573814))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -221,7 +219,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(2.5156224))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -261,15 +259,14 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(4.4))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    assert len(order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     # valid buy limit order with (price and quantity adapted)
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
@@ -290,11 +287,9 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.21685799))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
@@ -314,7 +309,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(0.07013502))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -335,7 +330,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(4.08244671))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -352,23 +347,15 @@ async def test_invalid_create_new_orders(tools):
     assert await consumer.create_new_orders(min_trigger_market, decimal.Decimal(str(0.6)), trading_enums.EvaluatorStates.SHORT.value,
                                             timeout=1) == []
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(2000)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(0.000000000000000000005))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(0.000000000000000000005))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(2000))
 
     # invalid sell order with not enough currency to sell
     with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
         await consumer.create_new_orders(symbol, decimal.Decimal(str(0.6)), trading_enums.EvaluatorStates.SHORT.value)
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "USDT": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(2000)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(0.000000000000000000005))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal(str(0.000000000000000000005))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal(str(2000))
 
     # invalid buy order with not enough currency to buy
     with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
@@ -378,39 +365,30 @@ async def test_invalid_create_new_orders(tools):
 async def test_create_new_orders_with_dusts_included(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(0.000015)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(0.000015))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(0.000015))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(0.000015))
+
     # trigger order that should not sell everything but does sell everything because remaining amount
     # is not sellable
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.6)), trading_enums.EvaluatorStates.VERY_SHORT.value)
     assert len(orders) == 1
-    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"] == {
-        commons_constants.PORTFOLIO_TOTAL: trading_constants.ZERO,
-        commons_constants.PORTFOLIO_AVAILABLE: trading_constants.ZERO
-    }
+
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = trading_constants.ZERO
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = trading_constants.ZERO
 
     test_currency = "NEO"
     test_pair = f"{test_currency}/BTC"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        test_currency: {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(0.44)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(0.44))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(test_currency).available = decimal.Decimal(str(0.44))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(test_currency).total = decimal.Decimal(str(0.44))
+
     trading_api.force_set_mark_price(exchange_manager, test_pair, 0.005318)
     # trigger order that should not sell everything but does sell everything because remaining amount
     # is not sellable
     orders = await consumer.create_new_orders(test_pair, decimal.Decimal(str(0.75445456165478)),
                                               trading_enums.EvaluatorStates.SHORT.value)
     assert len(orders) == 1
-    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio[test_currency] == {
-        commons_constants.PORTFOLIO_TOTAL: orders[0].origin_quantity,
-        commons_constants.PORTFOLIO_AVAILABLE: trading_constants.ZERO
-    }
+    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(test_currency).available == trading_constants.ZERO
+    assert exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(test_currency).total == orders[0].origin_quantity
 
 
 async def test_split_create_new_orders(tools):
@@ -420,12 +398,9 @@ async def test_split_create_new_orders(tools):
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(2000000001)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(2000000001))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(2000000001))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(2000000001))
+
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
@@ -452,14 +427,13 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.origin_quantity == decimal.Decimal(str(64625635.97358073))
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
+    assert isinstance(adapted_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     trading_mode_test_toolkit.check_order_limits(adapted_order, market_status)
 
-    assert len(adapted_order.linked_orders) == 1
-    trading_mode_test_toolkit.check_linked_order(adapted_order, adapted_order.linked_orders[0],
-                                                 trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                 market_status)
+    trading_mode_test_toolkit.check_oco_order_group(adapted_order,
+                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                    market_status)
 
     for order in identical_orders:
         assert isinstance(order, trading_personal_data.SellLimitOrder)
@@ -478,20 +452,15 @@ async def test_split_create_new_orders(tools):
         assert order.origin_quantity > adapted_order.origin_quantity
         assert order.filled_quantity > adapted_order.filled_quantity
         assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
-        assert len(order.linked_orders) == 1
+        assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
         trading_mode_test_toolkit.check_order_limits(order, market_status)
-        trading_mode_test_toolkit.check_linked_order(order, order.linked_orders[0],
-                                                     trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                     market_status)
+        trading_mode_test_toolkit.check_oco_order_group(order,
+                                                        trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                        market_status)
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "USDT": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(40000000000)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(40000000000))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal(str(40000000000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal(str(40000000000))
 
     # set btc last price to 6998.55407999 * 0.000001 = 0.00699855408
     trading_api.force_set_mark_price(exchange_manager, symbol, float(last_btc_price * decimal.Decimal(str(0.000001))))
@@ -516,11 +485,8 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.origin_quantity == decimal.Decimal("396851564266.65327383")
     assert adapted_order.filled_quantity == adapted_order.origin_quantity
     assert adapted_order.simulated is True
-    assert adapted_order.linked_to is None
 
     trading_mode_test_toolkit.check_order_limits(adapted_order, market_status)
-
-    # assert len(order.linked_orders) == 1  # check linked orders when it will be developed
 
     for order in identical_orders:
         assert isinstance(order, trading_personal_data.BuyLimitOrder)
@@ -539,11 +505,8 @@ async def test_split_create_new_orders(tools):
         assert order.origin_quantity > adapted_order.origin_quantity
         assert order.filled_quantity > adapted_order.filled_quantity
         assert order.simulated == adapted_order.simulated
-        assert order.linked_to == adapted_order.linked_to
 
         trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-        # assert len(order.linked_orders) == 1 # check linked orders when it will be developed
 
 
 async def test_valid_create_new_orders_without_stop_order(tools):
@@ -580,12 +543,9 @@ async def test_valid_create_new_orders_without_stop_order(tools):
     assert order.origin_quantity == decimal.Decimal(str(7.6))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
-    assert order.linked_to is None
+    assert order.order_group is None
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
-
-    # assert no stop orders
-    assert len(order.linked_orders) == 0
 
 
 def _get_evaluations_gradient(step):
@@ -606,23 +566,17 @@ def _get_irrationnal_numbers():
 
 
 def _reset_portfolio(exchange_manager):
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio = {
-        "BTC": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(10)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(10))
-        },
-        "USDT": {
-            commons_constants.PORTFOLIO_TOTAL: decimal.Decimal(str(2000)),
-            commons_constants.PORTFOLIO_AVAILABLE: decimal.Decimal(str(2000))
-        }
-    }
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(10))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(10))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available = decimal.Decimal(str(2000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").total = decimal.Decimal(str(2000))
 
 
 async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_reset(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
     gradient_step = 0.005
     nb_orders = 1
-    initial_portfolio = copy.deepcopy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio)
+    initial_portfolio = copy.copy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio)
     portfolio_wrapper = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     min_trigger_market = "ADA/BNB"
@@ -635,7 +589,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
             try:
                 orders = await consumer.create_new_orders(symbol, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, nb_orders, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
             # orders are impossible
@@ -643,7 +597,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
                 orders = []
                 orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, 0, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
 
@@ -653,7 +607,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
             try:
                 orders = await consumer.create_new_orders(symbol, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, nb_orders, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
             # orders are impossible
@@ -661,7 +615,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
                 orders = []
                 orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, 0, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
 
@@ -670,7 +624,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
         try:
             orders = await consumer.create_new_orders(symbol, math.nan, state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, nb_orders, market_status)
-            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
         except trading_errors.MissingMinimalExchangeTradeVolume:
             pass
         # orders are impossible
@@ -678,7 +632,7 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
             orders = []
             orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, 0, market_status)
-            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders)
+            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
         except trading_errors.MissingMinimalExchangeTradeVolume:
             pass
 
@@ -688,7 +642,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
 
     gradient_step = 0.001
     nb_orders = "unknown"
-    initial_portfolio = copy.deepcopy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio)
+    initial_portfolio = copy.copy(exchange_manager.exchange_personal_data.portfolio_manager.portfolio)
     portfolio_wrapper = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     market_status = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
     min_trigger_market = "ADA/BNB"
@@ -701,7 +655,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
             try:
                 orders = await consumer.create_new_orders(symbol, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, nb_orders, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
                 await trading_mode_test_toolkit.fill_orders(orders, trader)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
@@ -710,7 +664,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
                 orders = []
                 orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, 0, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
                 await trading_mode_test_toolkit.fill_orders(orders, trader)
             except trading_errors.MissingMinimalExchangeTradeVolume:
                 pass
@@ -722,7 +676,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
             try:
                 orders = await consumer.create_new_orders(symbol, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, nb_orders, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
                 if any(order
                        for order in orders
                        if order.order_type not in (
@@ -736,7 +690,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
                 orders = []
                 orders = await consumer.create_new_orders(min_trigger_market, evaluation, state)
                 trading_mode_test_toolkit.check_orders(orders, evaluation, state, 0, market_status)
-                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+                trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
                 if any(order
                        for order in orders
                        if order.order_type not in (
@@ -752,7 +706,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
         try:
             orders = await consumer.create_new_orders(symbol, math.nan, state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, nb_orders, market_status)
-            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
             await trading_mode_test_toolkit.fill_orders(orders, trader)
         except trading_errors.MissingMinimalExchangeTradeVolume:
             pass
@@ -761,7 +715,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
             orders = []
             orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, 0, market_status)
-            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper.portfolio, initial_portfolio, orders, True)
+            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
             await trading_mode_test_toolkit.fill_orders(orders, trader)
         except trading_errors.MissingMinimalExchangeTradeVolume:
             pass

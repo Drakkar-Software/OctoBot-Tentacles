@@ -38,6 +38,16 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         self.load_config()
         self.sell_orders_per_buy = self.trading_config.get("sell_orders_count", 3)
 
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
+
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                "N/A"
@@ -232,7 +242,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # into one currency (at least 3 traded assets are available here)
                 try:
                     currency_ratio = self.get_holdings_ratio(currency)
-                except KeyError:
+                except trading_errors.MissingPriceDataError:
                     # Can happen when ref market is not in the pair, data will be available later (ticker is now
                     # registered)
                     currency_ratio = self.DEFAULT_HOLDING_RATIO

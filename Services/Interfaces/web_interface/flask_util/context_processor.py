@@ -18,6 +18,7 @@ import octobot_commons.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_interface_login
 import octobot_trading.util as trading_util
@@ -85,6 +86,12 @@ def context_processor_register():
             if element in filtering_list
         ]
 
+    def get_plugin_tabs(location):
+        for plugin in web_interface.registered_plugins:
+            for tab in plugin.get_tabs():
+                if tab.location is location:
+                    yield tab
+
     return dict(
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
         OCTOBOT_WEBSITE_URL=constants.OCTOBOT_WEBSITE_URL,
@@ -94,6 +101,8 @@ def context_processor_register():
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
         OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
         IS_DEMO=constants.IS_DEMO,
+        TAB_START=web_enums.TabsLocation.START,
+        TAB_END=web_enums.TabsLocation.END,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
         get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         filter_currency_pairs=filter_currency_pairs,
@@ -106,4 +115,5 @@ def context_processor_register():
         is_real_trading=is_real_trading,
         is_login_required=web_interface_login.is_login_required,
         is_authenticated=web_interface_login.is_authenticated,
+        get_plugin_tabs=get_plugin_tabs,
     )

@@ -111,7 +111,7 @@ function add_cancel_individual_orders_button(){
 
 function disable_cancel_all_buttons(){
     $("#cancel_all_orders").prop("disabled",true);
-    $("#cancel_progress_bar").show();
+    $("#cancel_order_progress_bar").show();
     const cancelIcon = $("#cancel_all_icon");
     cancelIcon.removeClass("fas fa-ban");
     cancelIcon.addClass("fa fa-spinner fa-spin");
@@ -147,7 +147,7 @@ function reload_orders(){
         });
         add_cancel_individual_orders_button();
         const cancelIcon = $("#cancel_all_icon");
-        $("#cancel_progress_bar").hide();
+        $("#cancel_order_progress_bar").hide();
         if(cancelIcon.hasClass("fa-spinner")){
             cancelIcon.removeClass("fa fa-spinner fa-spin");
             cancelIcon.addClass("fas fa-ban");
@@ -170,6 +170,7 @@ function ordersNotificationCallback(title, _) {
 
 const cancelButtonIndex = 8;
 let ordersDataTable = null;
+let positionsDataTable = null;
 
 $(document).ready(function() {
     update_pairs_colors();
@@ -177,6 +178,9 @@ $(document).ready(function() {
         $(this).click(addOrRemoveWatchedSymbol);
     });
     ordersDataTable = $('#open_orders_datatable').DataTable({
+        "paging":   false,
+    });
+    positionsDataTable = $('#positions_datatable').DataTable({
         "paging":   false,
     });
     handle_cancel_buttons();

@@ -33,7 +33,9 @@
                 </a>
             </h2>
         </div>
-        <div class="card-body" id="configEditorBody" schema="{{ get_tentacle_config_schema_content(tentacle_class) }}" config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
+        <div class="card-body" id="configEditorBody"
+             schema="{{ get_tentacle_config_schema_content(tentacle_class) }}"
+             config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
             <div id="configEditor"></div>
             <div id="noConfigMessage" style='display: none;'>
                 This {{ tentacle_type }} can't be configured.
@@ -182,7 +184,7 @@
                         <div class="col-6">
                            <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
                                    {{ "disabled" if not tentacle_desc["activation"] }}>
-                            {% for file, description in data_files.items() | sort(reverse=True) %}
+                            {% for file, description in data_files%}
                              <option value={{file}}
                                 {% if loop.first %}
                                     selected="selected"

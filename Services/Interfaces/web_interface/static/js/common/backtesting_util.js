@@ -28,7 +28,7 @@ function start_success_callback(updated_data, update_url, dom_root_element, msg,
 
 function start_error_callback(updated_data, update_url, dom_root_element, result, status, error){
     create_alert("error", result.responseText, "");
-    $("#backtesting_progress_bar").hide();
+    $(`#${backtestingMainProgressBar}`).hide();
     lock_interface(false);
 }
 
@@ -44,83 +44,87 @@ function lock_interface(lock=true){
     $('#startBacktesting').prop('disabled', should_lock);
 }
 
-function load_report(report, should_alert=False){
-    const url = $("#backtestingReport").attr(update_url_attr);
-    $.get(url,function(data){
-        if ("bot_report" in data){
-            report.show();
-            const profitabilities = [];
-            const show_exchanges = Object.keys(data["bot_report"]["profitability"]).length > 1;
-            $.each( data["bot_report"]["profitability"], function( exchange, profitability ) {
-                const exch = show_exchanges ? `${exchange}: `: "";
-                profitabilities.push(`${exch}${profitability}`);
-            });
-            let profitability = profitabilities.join(", ");
-            const errors_count = data["errors_count"];
-            if ("error" in data || errors_count > 0) {
-                let error_message = "Warning: error(s) during backtesting";
-                if ("error" in data){
-                     error_message += " " + data["error"];
+function load_report(report, should_alert=False) {
+    const reportDiv = $("#backtestingReport");
+    if (reportDiv.length) {
+        const url = reportDiv.attr(update_url_attr);
+        $.get(url, function (data) {
+            if ("bot_report" in data) {
+                report.show();
+                const profitabilities = [];
+                const show_exchanges = Object.keys(data["bot_report"]["profitability"]).length > 1;
+                $.each(data["bot_report"]["profitability"], function (exchange, profitability) {
+                    const exch = show_exchanges ? `${exchange}: ` : "";
+                    profitabilities.push(`${exch}${profitability}`);
+                });
+                let profitability = profitabilities.join(", ");
+                const errors_count = data["errors_count"];
+                if ("error" in data || errors_count > 0) {
+                    let error_message = "Warning: error(s) during backtesting";
+                    if ("error" in data) {
+                        error_message += " " + data["error"];
+                    }
+                    if (errors_count > 0) {
+                        error_message += " " + errors_count + " error(s)";
+                    }
+                    error_message += ", more details in logs.";
+                    profitability = profitability + " " + error_message;
+                    if (should_alert) {
+                        create_alert("error", error_message, "");
+                    }
+                    $("#backtestingErrorsAlert").show();
+                } else {
+                    $("#backtestingErrorsAlert").hide();
                 }
-                if (errors_count > 0){
-                     error_message += " " + errors_count + " error(s)";
-                }
-                error_message += ", more details in logs.";
-                profitability = profitability + " " + error_message;
-                if (should_alert) {
-                    create_alert("error", error_message, "");
-                }
-                $("#backtestingErrorsAlert").show();
-            }else{
-                $("#backtestingErrorsAlert").hide();
-            }
 
-            const symbol_reports = [];
-            $.each( data["symbol_report"], function( index, value ) {
-                $.each( value, function( symbol, profitability ) {
-                    symbol_reports.push(`${symbol}: ${round_digits(profitability, 4)}%`);
+                const symbol_reports = [];
+                $.each(data["symbol_report"], function (index, value) {
+                    $.each(value, function (symbol, profitability) {
+                        symbol_reports.push(`${symbol}: ${round_digits(profitability, 4)}%`);
+                    });
                 });
-            });
-            const all_profitability = symbol_reports.join(", ");
-            $("#bProf").html(`${round_digits(profitability, 4)}%`);
-            const avg_profitabilities = [];
-            $.each( data["bot_report"]["market_average_profitability"], function( exchange, market_average_profitability ) {
-                const exch = show_exchanges ? `${exchange}: `: "";
-                avg_profitabilities.push(`${exch}${round_digits(market_average_profitability, 4)}%`);
-            });
-            $("#maProf").html(avg_profitabilities.join(", "));
-            $("#refM").html(data["bot_report"]["reference_market"]);
-            $("#sProf").html(all_profitability);
-            $("#reportTradingModeName").html(data["bot_report"]["trading_mode"]);
-            $("#reportTradingModeNameLink").attr("href", $("#reportTradingModeNameLink").attr("base_href") + data["bot_report"]["trading_mode"]);
-            const end_portfolio_reports = [];
-            $.each( data["bot_report"]["end_portfolio"], function( exchange, portfolio ) {
-                let exchange_portfolio = show_exchanges ? `${exchange} `: "";
-                $.each( portfolio, function( symbol, holdings ) {
-                    const digits = holdings["total"] > 10 ? 2: 10;
-                    exchange_portfolio = `${exchange_portfolio} ${symbol}: ${round_digits(holdings["total"], digits)}`;
+                const all_profitability = symbol_reports.join(", ");
+                $("#bProf").html(`${round_digits(profitability, 4)}%`);
+                const avg_profitabilities = [];
+                $.each(data["bot_report"]["market_average_profitability"], function (exchange, market_average_profitability) {
+                    const exch = show_exchanges ? `${exchange}: ` : "";
+                    avg_profitabilities.push(`${exch}${round_digits(market_average_profitability, 4)}%`);
                 });
-                end_portfolio_reports.push(exchange_portfolio);
-            });
-            $("#ePort").html(end_portfolio_reports.join(", "));
-            const starting_portfolio_reports = [];
-                $.each( data["bot_report"]["starting_portfolio"], function( exchange, portfolio ) {
-                    let exchange_portfolio = show_exchanges ? `${exchange} `: "";
-                    $.each( portfolio, function( symbol, holdings ) {
+                $("#maProf").html(avg_profitabilities.join(", "));
+                $("#refM").html(data["bot_report"]["reference_market"]);
+                $("#sProf").html(all_profitability);
+                $("#reportTradingModeName").html(data["bot_report"]["trading_mode"]);
+                $("#reportTradingModeNameLink").attr("href", $("#reportTradingModeNameLink").attr("base_href") + data["bot_report"]["trading_mode"]);
+                const end_portfolio_reports = [];
+                $.each(data["bot_report"]["end_portfolio"], function (exchange, portfolio) {
+                    let exchange_portfolio = show_exchanges ? `${exchange} ` : "";
+                    $.each(portfolio, function (symbol, holdings) {
+                        const digits = holdings["total"] > 10 ? 2 : 10;
+                        exchange_portfolio = `${exchange_portfolio} ${symbol}: ${round_digits(holdings["total"], digits)}`;
+                    });
+                    end_portfolio_reports.push(exchange_portfolio);
+                });
+                $("#ePort").html(end_portfolio_reports.join(", "));
+                const starting_portfolio_reports = [];
+                $.each(data["bot_report"]["starting_portfolio"], function (exchange, portfolio) {
+                    let exchange_portfolio = show_exchanges ? `${exchange} ` : "";
+                    $.each(portfolio, function (symbol, holdings) {
                         exchange_portfolio = `${exchange_portfolio} ${symbol}: ${holdings["total"]}`;
                     });
                     starting_portfolio_reports.push(exchange_portfolio);
                 });
-            $("#sPort").html(starting_portfolio_reports.join(", "));
+                $("#sPort").html(starting_portfolio_reports.join(", "));
 
-            add_graphs(data["chart_identifiers"]);
-        }
-    }).fail(function () {
-        report.hide();
-    }).always(function () {
-        report.attr("loading", "false");
-    });
+                add_graphs(data["chart_identifiers"]);
+            }
+        }).fail(function () {
+            report.hide();
+        }).always(function () {
+            report.attr("loading", "false");
+        });
+    }
 }
+
 
 function add_graphs(chart_identifiers){
     const result_graph_id = "result-graph-";
@@ -140,42 +144,50 @@ function add_graphs(chart_identifiers){
     })
 }
 
-function update_progress(progress){
-    $("#progess_bar_anim").css('width', progress+'%').attr("aria-valuenow", progress);
+function updateBacktestingProgress(progress){
+    updateProgressBar("progess_bar_anim", progress);
 }
 
-function _refresh_status(socket){
-    socket.emit('backtesting_status');
+function refreshBacktestingStatus(){
+    backtestingSocket.emit('backtesting_status');
 }
 
 function init_backtesting_status_websocket(){
-    const socket = get_websocket("/backtesting");
-    socket.on('backtesting_status', function(backtesting_status_data) {
-        _handle_backtesting(backtesting_status_data, socket);
+    backtestingSocket = get_websocket("/backtesting");
+    backtestingSocket.on('backtesting_status', function(backtesting_status_data) {
+        _handle_backtesting(backtesting_status_data);
     });
 }
 
-function _handle_backtesting(backtesting_status_data, socket){
+function _handle_backtesting(backtesting_status_data){
     const backtesting_status = backtesting_status_data["status"];
     const progress = backtesting_status_data["progress"];
 
     const report = $("#backtestingReport");
-    const progress_bar = $("#backtesting_progress_bar");
+    const progress_bar = $(`#${backtestingMainProgressBar}`);
+    const stopButton = $("#backtester-stop-button");
 
     if(backtesting_status === "computing" || backtesting_status === "starting"){
         lock_interface(true);
         progress_bar.show();
-        update_progress(progress);
+        if(stopButton.length){
+            stopButton.removeClass(hidden_class);
+        }
+        updateBacktestingProgress(progress);
         first_refresh_state = backtesting_status;
         if(report.is(":visible")){
             report.hide();
         }
+        backtesting_computing_callbacks.forEach((callback) => callback());
         // re-schedule progress refresh
-        setTimeout(function () {_refresh_status(socket)}, 50);
+        setTimeout(function () {refreshBacktestingStatus()}, 50);
     }
     else{
         lock_interface(false);
         progress_bar.hide();
+        if(stopButton.length){
+            stopButton.addClass(hidden_class);
+        }
         if(backtesting_status === "finished"){
             const should_alert = first_refresh_state !== "" && first_refresh_state !== "finished";
             if(should_alert){
@@ -186,13 +198,23 @@ function _handle_backtesting(backtesting_status_data, socket){
                 report.attr("loading", "true");
                 load_report(report, should_alert);
             }
+
+            if(previousBacktestingStatus === "computing") {
+                backtesting_done_callbacks.forEach((callback) => callback());
+            }
         }
     }
     if(first_refresh_state === ""){
         first_refresh_state = backtesting_status;
     }
+    previousBacktestingStatus = backtesting_status;
 }
 
 let first_refresh_state = "";
 
+let backtestingSocket = undefined;
 const lock_interface_callbacks = [];
+const backtesting_done_callbacks = [];
+const backtesting_computing_callbacks = [];
+let previousBacktestingStatus = undefined;
+let backtestingMainProgressBar = "backtesting_progress_bar";

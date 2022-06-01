@@ -13,7 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_services.notification as notification
+import octobot_services.notification as services_notification
 import octobot_services.notifier as notifier
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Services_bases as Services_bases
@@ -23,6 +23,7 @@ class WebNotifier(notifier.AbstractNotifier):
     REQUIRED_SERVICES = [Services_bases.WebService]
     NOTIFICATION_TYPE_KEY = "web"
 
-    async def _handle_notification(self, notification: notification.Notification):
+    async def _handle_notification(self, notification: services_notification.Notification):
         await web_interface.add_notification(notification.level, notification.title,
-                                             notification.text.replace("\n", "<br>"))
+                                             notification.text.replace("\n", "<br>"),
+                                             sound=notification.sound.value)

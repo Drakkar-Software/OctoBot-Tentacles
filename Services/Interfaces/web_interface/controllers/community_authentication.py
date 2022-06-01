@@ -15,9 +15,8 @@
 #  License along with this library.
 import flask
 import flask_wtf
-import wtforms.fields.html5
+import wtforms.fields
 
-import octobot.constants as constants
 import octobot_commons.authentication as authentication
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
@@ -28,7 +27,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route('/community_login', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def community_login():
-    authenticator = interfaces_util.get_bot_api().get_community_auth()
+    authenticator = authentication.Authenticator.instance()
     logged_in_email = form = None
     try:
         logged_in_email = authenticator.get_logged_in_email()
@@ -57,11 +56,11 @@ def community_login():
 @web_interface.server_instance.route("/community_logout")
 @login.login_required_when_activated
 def community_logout():
-    interfaces_util.get_bot_api().get_community_auth().logout()
+    authentication.Authenticator.instance().logout()
     return flask.redirect(flask.url_for('community_login'))
 
 
 class CommunityLoginForm(flask_wtf.FlaskForm):
-    email = wtforms.fields.html5.EmailField('Email', [wtforms.validators.InputRequired()])
+    email = wtforms.fields.EmailField('Email', [wtforms.validators.InputRequired()])
     password = wtforms.PasswordField('Password', [wtforms.validators.InputRequired()])
     remember_me = wtforms.BooleanField('Remember me', default=True)

@@ -45,3 +45,19 @@ def change_reference_market_on_config_currencies():
     success, reply = models.change_reference_market_on_config_currencies(request_data["old_base_currency"],
                                                                          request_data["new_base_currency"])
     return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
+
+
+@api.api.route('/start_copy_trading', methods=["POST"])
+@login.login_required_when_activated
+def start_copy_trading():
+    try:
+        copy_id = flask.request.get_json()["copy_id"]
+        profile_id = flask.request.get_json()["profile_id"]
+        if models.get_current_profile().profile_id != profile_id:
+            models.select_profile(profile_id)
+        response = f"{models.get_current_profile().name} profile selected"
+        success, config_resp = models.update_copied_trading_id(copy_id)
+        response = f"{response}, {config_resp}"
+        return util.get_rest_reply(flask.jsonify(response)) if success else util.get_rest_reply(response, 500)
+    except Exception as e:
+        return util.get_rest_reply(f"Unexpected error : {e}", 500)

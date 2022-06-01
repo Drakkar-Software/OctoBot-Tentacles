@@ -18,6 +18,7 @@ import decimal
 import pytest
 import os.path
 import asyncio
+import pytest_asyncio
 
 import async_channel.util as channel_util
 import octobot_backtesting.api as backtesting_api
@@ -38,7 +39,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def tools(symbol="BTC/USDT"):
     tentacles_manager_api.reload_tentacle_info()
     trader = None
@@ -110,10 +111,10 @@ async def test_set_state(tools):
     producer.final_eval = decimal.Decimal(-1)
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_LONG)
     assert producer.state == trading_enums.EvaluatorStates.VERY_LONG
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 1))
+    _check_trades_count(trader, 0)
     # market order got filled
     await asyncio.create_task(_check_open_orders_count(trader, 0))
+    _check_trades_count(trader, 1)
 
     producer.final_eval = trading_constants.ZERO
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
@@ -124,9 +125,9 @@ async def test_set_state(tools):
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_SHORT)
     assert producer.state == trading_enums.EvaluatorStates.VERY_SHORT
     # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 1))
-    # market order got filled
     await asyncio.create_task(_check_open_orders_count(trader, 0))
+    # market order got filled
+    _check_trades_count(trader, 2)
 
     producer.final_eval = trading_constants.ZERO
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
@@ -229,3 +230,7 @@ async def test_finalize(tools):
 
 async def _check_open_orders_count(trader, count):
     assert len(trading_api.get_open_orders(trader.exchange_manager)) == count
+
+
+def _check_trades_count(trader, count):
+    assert len(trading_api.get_trade_history(trader.exchange_manager)) == count

@@ -46,6 +46,16 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
 
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
+
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
@@ -78,13 +88,21 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
-        for line in data['metadata'].split("\n"):
+        signal_data = data.get("metadata", "")
+        for line in signal_data.split("\n"):
             values = line.split("=")
-            parsed_data[values[0].strip()] = values[1].strip()
+            try:
+                parsed_data[values[0].strip()] = values[1].strip()
+            except IndexError:
+                self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
-        if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
-            await self.producers[0].signal_callback(parsed_data)
+        try:
+            if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
+                    parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
+                await self.producers[0].signal_callback(parsed_data)
+        except KeyError as e:
+            self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
+                              f"Signal: \"{signal_data}\"")
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
