@@ -31,8 +31,10 @@ class hollaex(exchanges.SpotCCXTExchange):
 
     def get_additional_connector_config(self):
         urls = ccxt.hollaex().urls
-        custom_urls = tentacles_manager_api.get_tentacle_config(self.exchange_manager.tentacles_setup_config,
-                                                                self.__class__)
+        custom_urls = {
+            "api": tentacles_manager_api.get_tentacle_config(self.exchange_manager.tentacles_setup_config,
+                                                             self.__class__)
+        }
         urls.update(custom_urls)
         return {
             'urls': urls
