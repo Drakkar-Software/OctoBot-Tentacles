@@ -2,7 +2,7 @@
   "type": "object",
   "title": "Hollaex",
   "properties": {
-    "api": {
+    "rest": {
         "title": "Your Hollaex exchange api url (similar to https://api.hollaex.com)",
         "type": "string",
         "options": {
