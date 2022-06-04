@@ -22,7 +22,7 @@ import decimal
 
 import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
 import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
@@ -200,7 +200,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
 
     async def create_order(self, order_data, current_price, symbol_market):
         created_order = None
-        currency, market = symbol_util.split_symbol(order_data.symbol)
+        currency, market = symbol_util.parse_symbol(order_data.symbol).base_and_quote()
         try:
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     order_data.quantity,
@@ -562,12 +562,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 or (self.buy_volume_per_order > 0 and self.sell_volume_per_order > 0):
             return []
         else:
-            current_base, current_quote = symbol_util.split_symbol(self.symbol)
+            current_base, current_quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
             interfering_pairs = set()
             for order in orders:
                 order_symbol = order.symbol
                 if order_symbol != self.symbol:
-                    base, quote = symbol_util.split_symbol(order_symbol)
+                    base, quote = symbol_util.parse_symbol(order_symbol).base_and_quote()
                     if current_base == base or current_base == quote or current_quote == base or current_quote == quote:
                         interfering_pairs.add(order_symbol)
             return interfering_pairs
@@ -595,7 +595,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         orders = []
         selling = side == trading_enums.TradeOrderSide.SELL
 
-        currency, market = symbol_util.split_symbol(self.symbol)
+        currency, market = symbol_util.parse_symbol(self.symbol).base_and_quote()
         order_limiting_currency = currency if selling else market
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
@@ -1089,11 +1089,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def _create_not_virtual_orders(self, orders_to_create, current_price):
         for order in orders_to_create:
             await self._create_order(order, current_price)
-            quote, base = symbol_util.split_symbol(order.symbol)
+            base, quote = symbol_util.parse_symbol(order.symbol).base_and_quote()
             # keep track of the required funds
             volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \
                 else order.price * order.quantity
-            self._remove_from_available_funds(quote if order.side is trading_enums.TradeOrderSide.SELL else base,
+            self._remove_from_available_funds(base if order.side is trading_enums.TradeOrderSide.SELL else quote,
                                               volume)
 
     def _refresh_symbol_data(self, symbol_market):

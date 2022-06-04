@@ -27,6 +27,7 @@ import tentacles.Services.Interfaces.web_interface.enums as enums
 import octobot_commons.timestamp_util as timestamp_util
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.enums as commons_enums
+import octobot_commons.symbols as commons_symbols
 
 GET_SYMBOL_SEPARATOR = "|"
 DISPLAY_CANCELLED_TRADES = False
@@ -234,25 +235,26 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     # TODO: handle on the fly backtesting price graph
     # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
     #     bot = WebInterface.tools[BOT_TOOLS_BACKTESTING].get_bot()
-    symbol = parse_get_symbol(symbol)
+    parsed_symbol = commons_symbols.parse_symbol(parse_get_symbol(symbol))
     in_backtesting = backtesting_api.is_backtesting_enabled(interfaces_util.get_global_config()) or backtesting
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+    symbol_id = parsed_symbol.legacy_symbol()
     if time_frame is not None:
         try:
-            symbol_data = trading_api.get_symbol_data(exchange_manager, symbol, allow_creation=False)
+            symbol_data = trading_api.get_symbol_data(exchange_manager, symbol_id, allow_creation=False)
             limit = 1 if minimal_candles else -1
             historical_candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame, limit=limit)
             kline = [math.nan]
             if trading_api.has_symbol_klines(symbol_data, time_frame):
                 kline = trading_api.get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
-                return _create_candles_data(symbol, time_frame, historical_candles,
+                return _create_candles_data(symbol_id, time_frame, historical_candles,
                                             kline, bot_api, list_arrays, in_backtesting, ignore_trades)
         except KeyError:
             traded_pairs = trading_api.get_trading_pairs(exchange_manager)
-            if not traded_pairs or symbol in traded_pairs:
+            if not traded_pairs or symbol_id in traded_pairs:
                 # not started yet
                 return None
             else:
-                return {"error": f"no data for {symbol}"}
+                return {"error": f"no data for {parsed_symbol}"}
     return None

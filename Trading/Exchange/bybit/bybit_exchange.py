@@ -105,7 +105,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
 
     def get_default_type(self):
-        return 'linear'
+        if self.exchange_manager.is_future:
+            return 'linear'
+        return 'spot'
 
     async def get_positions(self) -> list:
         return self.parse_positions(await self.connector.client.fetch_positions())

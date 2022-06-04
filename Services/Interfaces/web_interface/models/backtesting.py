@@ -22,6 +22,7 @@ import octobot.strategy_optimizer
 import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.symbols as commons_symbols
 import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -148,7 +149,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(tentacles_config)
             else:
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
-            config = interfaces_util.get_global_config()
+            config = interfaces_util.get_edited_config()
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             if is_optimizer_running and files is None:
                 files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
@@ -306,7 +307,7 @@ def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
     return backtesting_api.exchange_bot_snapshot_data_collector_factory(
         exchange_name,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
-        trading_api.get_trading_pairs(exchange_manager),
+        trading_api.get_trading_symbols(exchange_manager),
         exchange_id,
         time_frames=trading_api.get_exchange_available_required_time_frames(exchange_name, exchange_id),
         start_timestamp=start_timestamp,
@@ -359,10 +360,11 @@ async def _start_collect_and_notify(data_collector_instance):
 
 
 async def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
+    symbols = symbols if isinstance(symbols, list) else [symbols]
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
-        symbols if isinstance(symbols, list) else [symbols],
+        [commons_symbols.parse_symbol(symbol) for symbol in symbols],
         time_frames=time_frames,
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp)

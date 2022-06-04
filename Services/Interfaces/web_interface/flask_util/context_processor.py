@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -46,7 +46,8 @@ def context_processor_register():
         if symbol is None:
             return symbol_list
         filtered_symbol = [s for s in symbol_list
-                    if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
+                           if full_symbol_list[currency_key][models.SYMBOL_KEY]
+                           in symbol_util.parse_symbol(s).base_and_quote()]
         return (filtered_symbol + [s for s in config_symbols[currency]["pairs"]
                                                     if s in symbol_list and s not in filtered_symbol])
 
