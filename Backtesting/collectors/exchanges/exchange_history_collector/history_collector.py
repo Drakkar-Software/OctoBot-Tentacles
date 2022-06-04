@@ -33,6 +33,7 @@ except ImportError:
 
 class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     IMPORTER = generic_exchange_importer.GenericExchangeDataImporter
+    DEFAULT_START_TIMESTAMP = 631152000    # 01/01/1990
 
     def __init__(self, config, exchange_name, tentacles_setup_config, symbols, time_frames,
                  use_all_available_timeframes=False,
@@ -91,7 +92,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 os.remove(self.temp_file_path)
             if not self.should_stop:
                 self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
-                                                 f"{', '.join(self.symbols)}: {err}")
+                                                 f"{', '.join([str(symbol) for symbol in self.symbols])}: {err}")
                 raise errors.DataCollectorError(err)
         finally:
             await self.stop(should_stop_database=should_stop_database)
@@ -127,6 +128,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         self.current_step_percent = 0
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
+        symbol_id = symbol.legacy_symbol()
+        cryptocurrency = self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id)
 
         if self.start_timestamp is not None:
             first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
@@ -137,7 +140,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
             if ((self.end_timestamp or time.time()*1000) - since) < (time_frame_sec * 1000):
                 return
 
-            candles = await self.exchange.get_symbol_prices(symbol, time_frame, since=since)
+            candles = await self.exchange.get_symbol_prices(symbol_id, time_frame, since=since)
             last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
             total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
             start_fetch_time = last_candle_timestamp
@@ -148,8 +151,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             self.exchange.uniformize_candles_if_necessary(candles)
             await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  cryptocurrency=cryptocurrency,
+                                  symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
                                   timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
             candles.clear()
 
@@ -158,7 +161,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 since = last_candle_timestamp
                 self.current_step_percent = round((since-start_fetch_time) / total_interval * 100)
                 self.logger.info(f"[{self.current_step_percent}%] historical data fetched for {symbol} {time_frame}")
-                candles += await self.exchange.get_symbol_prices(symbol, time_frame,
+                candles += await self.exchange.get_symbol_prices(symbol_id, time_frame,
                                                                  since=(since + (time_frame_sec * 1000)))
                 if candles:
                     last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
@@ -168,18 +171,18 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                     self.exchange.uniformize_candles_if_necessary(candles)
                     await self.save_ohlcv(
                         exchange=exchange,
-                        cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                        symbol=symbol, time_frame=time_frame, candle=candles,
+                        cryptocurrency=cryptocurrency,
+                        symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
                         timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
                                    for candle in candles],
                         multiple=True)
                     candles.clear()
         else:
-            candles = await self.exchange.get_symbol_prices(symbol, time_frame)
+            candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
             self.exchange.uniformize_candles_if_necessary(candles)
             await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                  symbol=symbol, time_frame=time_frame, candle=candles,
+                                  cryptocurrency=cryptocurrency,
+                                  symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
                                   timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
 
     async def get_kline_history(self, exchange, symbol, time_frame):
@@ -197,5 +200,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol, time_frame, limit=1, since=0))[0]\
+        return (await self.exchange.get_symbol_prices(symbol.legacy_symbol(), time_frame, limit=1,
+                                                      since=self.DEFAULT_START_TIMESTAMP))[0]\
                                             [commons_enums.PriceIndexes.IND_PRICE_TIME.value]

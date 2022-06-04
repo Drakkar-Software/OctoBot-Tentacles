@@ -16,7 +16,7 @@
 import asyncio
 import decimal
 
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 
 import octobot_trading.modes as trading_modes
 import octobot_trading.enums as trading_enums
@@ -38,7 +38,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
         try:
-            base, market = symbol_util.split_symbol(symbol)
+            base, market = symbol_util.parse_symbol(symbol).base_and_quote()
             if market != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
                 self.logger.warning(f"Ignored DCA order creation on {symbol} : it's not a reference market pair.")
                 return []
@@ -78,7 +78,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def can_create_order(self, symbol, state):
         can_create_order_result = await super().can_create_order(symbol, state)
         if not can_create_order_result:
-            currency, market = symbol_util.split_symbol(symbol)
+            market = symbol_util.parse_symbol(symbol).quote
             self.logger.error(f"Can't create order : not enough balance. Please get more {market}.")
         return can_create_order_result
 

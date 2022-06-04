@@ -18,7 +18,7 @@ import decimal
 import octobot_commons.constants as commons_constants
 import async_channel.constants as channel_constants
 import octobot_commons.evaluators_util as evaluators_util
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.matrix as matrix
 import octobot_evaluators.enums as evaluators_enums
@@ -156,7 +156,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             price = price
 
-            base, _ = symbol_util.split_symbol(symbol)
+            base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
@@ -367,7 +367,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         self.first_trigger = True
 
         self.last_buy_candle = None
-        self.base, _ = symbol_util.split_symbol(self.trading_mode.symbol)
+        self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
 
         self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 

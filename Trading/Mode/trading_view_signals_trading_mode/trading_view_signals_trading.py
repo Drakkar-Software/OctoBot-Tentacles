@@ -17,7 +17,7 @@ import decimal
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.api as services_api
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode

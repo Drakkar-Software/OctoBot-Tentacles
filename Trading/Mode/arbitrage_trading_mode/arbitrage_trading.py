@@ -21,7 +21,7 @@ import async_channel.constants as channel_constants
 import async_channel.channels as channel_instances
 import octobot_commons.data_util as data_util
 import octobot_commons.enums as commons_enums
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
@@ -233,7 +233,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
         self.state = trading_enums.EvaluatorStates.NEUTRAL
         self.final_eval = ""
-        self.quote, self.base = symbol_util.split_symbol(self.trading_mode.symbol)
+        self.quote, self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base_and_quote()
         self.lock = asyncio.Lock()
 
     async def start(self) -> None:

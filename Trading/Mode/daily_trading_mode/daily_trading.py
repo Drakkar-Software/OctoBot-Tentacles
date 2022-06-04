@@ -20,7 +20,7 @@ import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.pretty_printer as pretty_printer
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
@@ -291,12 +291,12 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
 
-            quote, _ = symbol_util.split_symbol(symbol)
+            base = symbol_util.parse_symbol(symbol).base
             created_orders = []
 
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume \
-                           or self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
+                           or self._get_market_quantity_from_risk(final_note, current_symbol_holding, base, True)
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
                                                                                             symbol_market,
                                                                                             current_symbol_holding)
@@ -316,7 +316,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume or \
-                           self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
+                           self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, base)
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
@@ -356,7 +356,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             # TODO : stop loss
             elif state == trading_enums.EvaluatorStates.LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote) \
+                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, base) \
                     if user_volume == 0 else user_volume
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                         user_price or
@@ -377,7 +377,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote) \
+                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, base) \
                     if user_volume == 0 else user_volume
                 for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                         quantity,

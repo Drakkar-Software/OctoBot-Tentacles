@@ -18,7 +18,7 @@ import decimal
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.channel as services_channels
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
@@ -222,7 +222,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         orders = []
         selling = side == trading_enums.TradeOrderSide.SELL
 
-        currency, market = symbol_util.split_symbol(self.symbol)
+        currency, market = symbol_util.parse_symbol(self.symbol).base_and_quote()
         order_limiting_currency = currency if selling else market
 
         order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
