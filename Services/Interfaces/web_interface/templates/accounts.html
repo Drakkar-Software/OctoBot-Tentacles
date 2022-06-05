@@ -64,12 +64,14 @@
                                     <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False'}}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
+                            {% if ccxt_simulated_tested_exchanges %}
                             <optgroup label="OctoBot tested with simulated trading">
                                {% for exchange in ccxt_simulated_tested_exchanges %}
                                     {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
                                     <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False' }}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
+                            {% endif %}
                             <optgroup label="OctoBot untested">
                                {% for exchange in ccxt_other_exchanges %}
                                     {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
