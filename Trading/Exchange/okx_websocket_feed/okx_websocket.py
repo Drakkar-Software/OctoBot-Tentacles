@@ -18,7 +18,7 @@ import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
 
 
-class OKExCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
+class OKXCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
     REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: cryptofeed_constants.TRADES,
@@ -30,11 +30,11 @@ class OKExCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
 
     @classmethod
     def get_name(cls):
-        return 'okex'
+        return 'okx'
 
     @classmethod
     def get_feed_name(cls):
-        return cryptofeed_constants.OKEX
+        return cryptofeed_constants.OKX
 
     @classmethod
     def is_handling_spot(cls) -> bool:

@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import tentacles.Trading.Exchange.okex as okex_tentacle
+import tentacles.Trading.Exchange.okx as okx_tentacle
 
 
-class Okcoin(okex_tentacle.Okex):
+class Okcoin(okx_tentacle.Okx):
     @classmethod
     def get_name(cls):
         return 'okcoin'
