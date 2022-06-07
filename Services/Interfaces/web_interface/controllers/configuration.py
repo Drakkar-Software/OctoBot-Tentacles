@@ -109,6 +109,11 @@ def profiles_management(action):
         models.import_profile(file, name)
         flask.flash(f"{name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
+    if action == "download":
+        url = flask.request.form['inputProfileLink']
+        name = models.download_and_import_profile(url)
+        flask.flash(f"{name} profile successfully imported.", "success")
+        return flask.redirect(flask.url_for('profile'))
     if action == "export":
         profile_id = flask.request.args.get("profile_id")
         temp_file = os.path.abspath("profile")

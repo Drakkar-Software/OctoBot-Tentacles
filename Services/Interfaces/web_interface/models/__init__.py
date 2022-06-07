@@ -144,6 +144,7 @@ from tentacles.Services.Interfaces.web_interface.models.profiles import (
     remove_profile,
     export_profile,
     import_profile,
+    download_and_import_profile,
     get_profile_name,
 )
 from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import (
@@ -270,6 +271,7 @@ __all__ = [
     "remove_profile",
     "export_profile",
     "import_profile",
+    "download_and_import_profile",
     "get_profile_name",
     "get_strategies_list",
     "get_time_frames_list",
