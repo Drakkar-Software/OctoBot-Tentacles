@@ -13,9 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import os
+
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
+import octobot_commons.authentication as authentication
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 
@@ -100,9 +103,19 @@ def export_profile(profile_id, export_path) -> str:
     )
 
 
-def import_profile(profile_path, name):
-    profiles.import_profile(profile_path, name=name)
+def import_profile(profile_path, name, replace_if_exists=False):
+    profiles.import_profile(profile_path, name=name, replace_if_exists=replace_if_exists)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
+
+
+def download_and_import_profile(profile_url):
+    name = profile_url.split('/')[-1]
+    authenticator = authentication.Authenticator.instance()
+    file_path = authenticator.download(profile_url, name)
+    import_profile(file_path, name, replace_if_exists=False)
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+    return name
 
 
 def get_profile_name(profile_id) -> str:

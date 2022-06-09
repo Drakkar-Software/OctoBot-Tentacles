@@ -224,13 +224,50 @@
         </div>
     </div>
     <div class="float-right">
-        <form class="d-none profile-import-form" action="{{ url_for('profiles_management', action='import') }}" method="POST"
-         enctype = "multipart/form-data">
-            <input class="profile-input" type="file" name="file" accept=".zip"/>
-        </form>
-        <button class="btn btn-outline-primary waves-effect import-profile-button">
-            <i class="fas fa-download"></i> Import a new profile
+        <button class="btn btn-outline-primary waves-effect"
+                data-toggle="modal" data-target="#importProfileModal">
+            Import a profile
         </button>
     </div>
+</div>
+{% endmacro %}
+
+
+{% macro profile_import_modal() %}
+<div class="modal fade" id="importProfileModal" tabindex="-1" role="dialog" aria-labelledby="#importProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content modal-text">
+      <div class="modal-header primary-text">
+        <h5 class="modal-title" id="#importProfileModalLabel">Import a new profile</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+          <div>
+              <form class="form-inline profile-download-form" action="{{ url_for('profiles_management', action='download') }}" method="POST">
+                <div class="form-group mx-sm-3 mb-2 w-75">
+                  <label for="inputProfileLink" class="mr-2">Import from a profile link</label>
+                  <input type="text" class="form-control w-50" id="inputProfileLink" name="inputProfileLink" placeholder="https://profile-to-import-url.zip">
+                </div>
+                <button type="button" class="btn btn-primary waves-effect mb-2"
+                        data-role="download-profile-button">Import</button>
+              </form>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <div>
+          <form class="d-none profile-import-form" action="{{ url_for('profiles_management', action='import') }}" method="POST"
+           enctype = "multipart/form-data">
+              <input class="profile-input" type="file" name="file" accept=".zip"/>
+          </form>
+          <button class="btn btn-outline-primary waves-effect import-profile-button">
+            <i class="fas fa-download"></i> Import a local profile
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endmacro %}

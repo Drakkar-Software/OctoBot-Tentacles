@@ -88,6 +88,19 @@ function handleProfileImporter(){
     }
 }
 
+function handleProfileDownloader(){
+    const downloadForm = $(".profile-download-form");
+    const importButton = downloadForm.find('button[data-role="download-profile-button"]');
+    const profileInput = $("#inputProfileLink");
+    if(importButton.length && profileInput.length){
+        importButton.click(function () {
+            if($("#inputProfileLink").val()){
+                $(this).parents(".profile-download-form").submit();
+            }
+        });
+    }
+}
+
 function handleProfileExporter(){
     trigger_file_downloader_on_click($(".export-profile-button"));
 }
@@ -127,6 +140,7 @@ $(document).ready(function() {
     handleProfileEditor();
     handleProfileCreator();
     handleProfileImporter();
+    handleProfileDownloader();
     handleProfileExporter();
     handleProfileRemover();
 });
