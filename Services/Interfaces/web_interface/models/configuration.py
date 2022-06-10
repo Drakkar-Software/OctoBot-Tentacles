@@ -753,7 +753,8 @@ def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dic
             trading_api.is_compatible_account(
                 exchange_name,
                 to_check_config,
-                interfaces_util.get_edited_tentacles_config()
+                interfaces_util.get_edited_tentacles_config(),
+                to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
             )
         )
     return {

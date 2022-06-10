@@ -322,6 +322,7 @@
                             {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                             exchange,
                             exchanges_details[exchange],
+                            is_supporting_future_trading,
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
                             selected_exchange_type=config_exchanges[exchange].get('exchange-type', 'spot'),
