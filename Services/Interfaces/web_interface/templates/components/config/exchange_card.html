@@ -1,7 +1,9 @@
  {% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_exchange_card(config, exchange, exchanges_details, keys_value="*********", enabled=True,
+{% macro config_exchange_card(config, exchange, exchanges_details, is_supporting_future_trading,
+                              keys_value="*********", enabled=True,
                               sandboxed=False, selected_exchange_type='spot', add_class='', config_values=None,
                               full_config=True, exchange_docs_url="", community_url="") -%}
+    {% set display_future_warn = is_supporting_future_trading(exchanges_details['supported_exchange_types']) %}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
@@ -13,12 +15,15 @@
                         <i class="fas fa-star" data-toggle="tooltip" data-placement="top" title="Partner exchange:
                         Support the OctoBot project by trading on this exchange."></i>
                     </span>
+                    {% if display_future_warn %}
                     <span data-role="account-warning" class="text-danger mx-md-4 d-none">
                         <i class="fas fa-exclamation-triangle" data-toggle="tooltip" data-placement="top" title="Login successful
                         however {{exchange | capitalize}} will not support OctoBot on this account (based its own exchange rules).
-                        OctoBot will work but will be using the REST interface.
-                        Please either create a new {{exchange | capitalize}} account or donate to the project to use websockets."></i>
+                        OctoBot will only support spot trading.
+                        Please either create a new {{exchange | capitalize}} account or donate to the project to use futures
+                        trading on live mode."></i>
                     </span>
+                    {% endif %}
                     <span data-role="valid-account" class="mx-md-4 d-none">
                         <i class="fas fa-check" data-toggle="tooltip" data-placement="top" title="Login successful"></i>
                     </span>
@@ -57,6 +62,7 @@
 
         <!--Card content-->
         <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
+            {% if display_future_warn %}
             <div data-role="account-warning-details-wrapper" class="alert alert-danger d-none">
                 <span data-role="account-warning-details">
                     OctoBot works with exchanges to remain free, please create a new exchange account to support the project.
@@ -70,10 +76,11 @@
                     If you prefer not to create a new account, you can instead donate to the project and register your donation
                     <a target="_blank" rel="noopener"
                     href="{{community_url}}donations/new">on the community website</a>. Donation amounts are up to you and
-                    will enable websockets on your OctoBot after
+                    will enable live futures trading on your OctoBot after
                     <a target="_blank" rel="noopener" href="{{url_for('community')}}">logging in with your community account</a>.
                 </span>
             </div>
+            {% endif %}
             <div class="d-flex">
                 {% if full_config %}
                     <div class="flex-grow-1">
