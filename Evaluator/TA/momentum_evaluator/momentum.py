@@ -19,8 +19,6 @@ import tulipy
 import typing
 
 import octobot_commons.constants as commons_constants
-import octobot_commons.errors as commons_errors
-import octobot_commons.enums as commons_enums
 import octobot_commons.data_util as data_util
 import octobot_commons.errors as error
 import octobot_evaluators.evaluators as evaluators
@@ -28,32 +26,6 @@ import octobot_evaluators.util as evaluators_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
-
-
-class BlankMomentumEvaluator(evaluators.TAEvaluator):
-    async def ohlcv_callback(self, exchange: str, exchange_id: str,
-                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
-        await self.evaluate(cryptocurrency, symbol, time_frame, candle)
-
-    async def evaluate(self, cryptocurrency, symbol, time_frame, candle):
-        self.eval_note = 0.3
-        #TMP
-        import octobot_trading.modes.scripted_trading_mode as scripting_library
-        eval_time = evaluators_util.get_eval_time(full_candle=candle, time_frame=time_frame)
-        ctx = self.get_context(symbol, time_frame, eval_time)
-        await scripted_trading_mode.plot(ctx, "EMA20", cache_value="ema20", own_yaxis=True)
-        ema_length = await scripted_trading_mode.external_user_input(ctx, "EMA length", tentacle="ScriptedEvaluator")
-        value, missing = await ctx.get_cached_value("ema20", eval_time)
-        if missing:
-            await ctx.set_cached_value(candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value], "ema20", eval_time)
-        #TMP
-
-        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
-                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
-                                                                                time_frame=time_frame))
-
-    def use_cache(self):
-        return True
 
 
 class RSIMomentumEvaluator(evaluators.TAEvaluator):
