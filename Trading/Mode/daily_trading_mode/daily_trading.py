@@ -335,8 +335,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 price=order_price)
                     updated_limit = await self.trader.create_order(current_order)
                     created_orders.append(updated_limit)
-
-                    if self.USE_STOP_ORDERS:
+                    # ensure stop orders are enabled and limit order was not instantly filled
+                    if self.USE_STOP_ORDERS and updated_limit.is_open():
                         oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
                             .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
                         updated_limit.add_to_order_group(oco_group)
