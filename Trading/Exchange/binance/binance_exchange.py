@@ -13,11 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
+class Binance(exchanges.SpotCCXTExchange):
     DESCRIPTION = ""
 
     BUY_STR = "BUY"
@@ -30,7 +32,6 @@ class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     BINANCE_MARK_PRICE = "markPrice"
 
     def __init__(self, config, exchange_manager):
-        exchanges.FutureCCXTExchange.__init__(self, config, exchange_manager)
         exchanges.SpotCCXTExchange.__init__(self, config, exchange_manager)
 
     @classmethod
@@ -70,10 +71,16 @@ class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return await self._ensure_order_completeness(
             await super().get_order(order_id=order_id, symbol=symbol, **kwargs), symbol, **kwargs)
 
-    async def create_order(self, order_type, symbol, quantity, price=None, stop_price=None, **kwargs):
+    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
+                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
+                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                           params: dict = None):
         return await self._ensure_order_completeness(
-            await super().create_order(order_type, symbol, quantity, price=price, stop_price=stop_price, **kwargs),
-            symbol, **kwargs)
+            await super().create_order(order_type, symbol, quantity,
+                                       price=price, stop_price=stop_price,
+                                       side=side, current_price=current_price,
+                                       params=params),
+            symbol)
 
     async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs):
         orders = await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
