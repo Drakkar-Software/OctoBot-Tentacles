@@ -13,9 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import asyncio
 import os.path as path
 import ccxt
+import ccxt.async_support
 import copy
 import re
 import requests.adapters
@@ -571,22 +572,36 @@ def get_enabled_trading_pairs() -> set:
 
 
 def get_symbol_list(exchanges):
+    result = interfaces_util.run_in_bot_async_executor(_load_markets(exchanges))
+    return list(set(result))
+
+
+async def _load_market(exchange, results):
+    try:
+        async with getattr(ccxt.async_support, exchange)({'verbose': False}) as exchange_inst:
+            await exchange_inst.load_markets()
+            # filter symbols with a "." or no "/" because bot can't handle them for now
+            markets_by_exchanges[exchange] = [res for res in exchange_inst.symbols if "/" in res]
+            results.append(markets_by_exchanges[exchange])
+    except Exception as e:
+        _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
+
+
+async def _load_markets(exchanges):
     result = []
+    results = []
+    fetch_coros = []
     for exchange in exchanges:
         if exchange not in exchange_symbol_fetch_blacklist:
             if exchange in markets_by_exchanges:
                 result += markets_by_exchanges[exchange]
             else:
-                try:
-                    inst = getattr(ccxt, exchange)({'verbose': False})
-                    inst.load_markets()
-                    # filter symbols with a "." or no "/" because bot can't handle them for now
-                    markets_by_exchanges[exchange] = [res for res in inst.symbols if "/" in res]
-                    result += markets_by_exchanges[exchange]
-                except Exception as e:
-                    _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
-
-    return list(set(result))
+                fetch_coros.append(_load_market(exchange, results))
+    if fetch_coros:
+        await asyncio.gather(*fetch_coros)
+        for res in results:
+            result += res
+    return result
 
 
 def get_config_time_frames() -> list:
