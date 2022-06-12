@@ -107,7 +107,7 @@ def get_exchange_holdings_per_symbol():
 
 
 def get_symbols_values(symbols, has_real_trader, has_simulated_trader):
-    loading = "loading ..."
+    loading = 0
     value_per_symbols = {symbol: loading for symbol in symbols}
     real_portfolio_holdings, simulated_portfolio_holdings = interfaces_util.get_portfolio_holdings()
     portfolio = real_portfolio_holdings if has_real_trader else simulated_portfolio_holdings
