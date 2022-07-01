@@ -317,7 +317,7 @@
                     </div>
                     <div class="card-body deck-container">
                         <!-- Card deck -->
-                        <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.is_compatible_account') }}">
+                        <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.are_compatible_accounts') }}">
                             {% for exchange in config_exchanges %}
                             {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                             exchange,

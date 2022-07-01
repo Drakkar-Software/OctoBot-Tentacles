@@ -31,7 +31,7 @@ from tentacles.Services.Interfaces.web_interface.api.config import (
     change_reference_market_on_config_currencies,
 )
 from tentacles.Services.Interfaces.web_interface.api.exchanges import (
-    is_compatible_account,
+    are_compatible_accounts,
     first_exchange_details,
 )
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
@@ -50,7 +50,7 @@ from tentacles.Services.Interfaces.web_interface.api.user_commands import (
 )
 
 __all__ = [
-    "is_compatible_account",
+    "are_compatible_accounts",
     "first_exchange_details",
     "version",
     "upgrade_version",
