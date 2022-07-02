@@ -360,7 +360,6 @@ async def _start_collect_and_notify(data_collector_instance):
 
 
 async def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
-    symbols = symbols if isinstance(symbols, list) else [symbols]
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
