@@ -39,12 +39,26 @@ class TelegramApiService(services.AbstractService):
         self.telegram_client: telethon.TelegramClient = None
         self.user_account = None
         self.connected = False
+        self.auth_code = ""
         self.tentacle_resources_path = tentacles_manager_api.get_tentacle_resources_path(self.__class__)
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
 
+    async def set_telegram_2fa_code(self, auth_code) -> (bool, str):
+        error = ""
+        try:
+            self.auth_code = auth_code
+            await self.telegram_client.sign_in(self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM_API]\
+                        [services_constants.CONFIG_TELEGRAM_PHONE], auth_code)
+            self.user_account = (await self.telegram_client.get_me())
+            self.connected = True
+        except Exception as e:
+            error = f"Error when login in TelegramApiService: {e}"
+            self.logger.exception(e, True, )
+        return self.connected, error
+
     def get_fields_description(self):
         return {
-            services_constants.CONFIG_API: "App api key.",
+            services_constants.CONFIG_API: "App api id.",
             services_constants.CONFIG_API_HASH: "App api hash.",
             services_constants.CONFIG_TELEGRAM_PHONE: "Your telegram phone number (beginning with '+' country code).",
         }
@@ -80,6 +94,7 @@ class TelegramApiService(services.AbstractService):
     async def prepare(self):
         if not self.telegram_client:
             try:
+                self.connected = False
                 self.telegram_client = telethon.TelegramClient(f"{common_constants.USER_FOLDER}/telegram-api",
                                                                self.config[services_constants.CONFIG_CATEGORY_SERVICES]
                                                                [services_constants.CONFIG_TELEGRAM_API]
@@ -88,14 +103,14 @@ class TelegramApiService(services.AbstractService):
                                                                [services_constants.CONFIG_TELEGRAM_API]
                                                                [services_constants.CONFIG_API_HASH],
                                                                base_logger=self.get_name())
-
-                await self.telegram_client.start(
-                    phone=
-                    self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM_API]
-                    [services_constants.CONFIG_TELEGRAM_PHONE]
-                )
-                self.user_account = await self.telegram_client.get_me()
-                self.connected = True
+                await self.telegram_client.connect()
+                if not (await self.telegram_client.is_user_authorized()):
+                    await self.telegram_client.send_code_request(
+                        self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM_API]\
+                        [services_constants.CONFIG_TELEGRAM_PHONE])
+                else:
+                    self.user_account = (await self.telegram_client.get_me())
+                    self.connected = True
             except Exception as e:
                 self.logger.error(f"Failed to connect to Telegram Api : {e}")
 
@@ -154,6 +169,9 @@ class TelegramApiService(services.AbstractService):
     def get_successful_startup_message(self):
         try:
             return f"Successfully connected to {self.user_account.username} account.", True
+        except AttributeError:
+            self.logger.error(f"Error when connecting to Telegram API: invalid telegram configuration.")
+            return "", False
         except Exception as e:
             self.logger.error(f"Error when connecting to Telegram API ({e}): invalid telegram configuration.")
             return "", False
