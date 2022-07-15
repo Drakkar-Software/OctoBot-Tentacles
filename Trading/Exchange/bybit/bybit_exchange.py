@@ -366,13 +366,13 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return None
 
     def is_linear_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'linear'
+        return self.get_pair_market_type(symbol) == 'linear'
 
     def is_inverse_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'inverse'
+        return self.get_pair_market_type(symbol) == 'inverse'
 
     def is_futures_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'futures'
+        return self.get_pair_market_type(symbol) == 'futures'
 
     def _fix_market_status(self, market_status):
         market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
