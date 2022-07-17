@@ -27,10 +27,6 @@ class BinanceUSWebsocketFeedConnector(exchanges.CryptofeedWebsocketConnector):
         Feeds.CANDLE: cryptofeed_constants.CANDLES,
     }
 
-    EXCHANGE_CONSTRUCTOR_KWARGS = {
-        "candle_closed_only": False,
-    }
-
     @classmethod
     def get_name(cls):
         return 'binanceus'
