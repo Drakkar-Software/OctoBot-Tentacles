@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import pytest
+import pytest_asyncio
 
 
 from tests.functional_tests.evaluators_tests.abstract_TA_test import AbstractTATest
@@ -25,7 +26,7 @@ from tentacles.Evaluator.TA import DoubleMovingAverageTrendEvaluator
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def evaluator_tester():
     evaluator_tester_instance = TestDoubleMovingAveragesEvaluator()
     evaluator_tester_instance.TA_evaluator_class = DoubleMovingAverageTrendEvaluator
