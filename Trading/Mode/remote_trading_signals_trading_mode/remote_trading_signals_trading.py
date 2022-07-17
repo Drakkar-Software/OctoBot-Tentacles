@@ -213,7 +213,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         chained_order = await self._create_order(order_description, symbol, created_groups, fees_currency_side)
         main_order = to_create_orders[bundled_with][0]
         # always align bundled order quantity with the main order one
-        chained_order.origin_quantity = main_order.origin_quantity
+        chained_order.update(chained_order.symbol, quantity=main_order.origin_quantity)
         params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(main_order, chained_order)
         to_create_orders[bundled_with][1].update(params)
 
