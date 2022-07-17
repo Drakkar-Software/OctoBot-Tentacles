@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import pytest
+import pytest_asyncio
 
 import tests.functional_tests.evaluators_tests.abstract_TA_test as abstract_TA_test
 import tentacles.Evaluator.TA as TA
@@ -24,7 +25,7 @@ import tentacles.Evaluator.TA as TA
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def evaluator_tester():
     evaluator_tester_instance = TestRSIEvaluator()
     evaluator_tester_instance.TA_evaluator_class = TA.RSIMomentumEvaluator
