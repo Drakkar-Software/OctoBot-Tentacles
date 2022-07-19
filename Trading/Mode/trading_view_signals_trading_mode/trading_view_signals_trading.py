@@ -43,7 +43,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
+        self.USE_MARKET_ORDERS = self.trading_config.get(
+            "use_market_orders", True)
         self.merged_symbol = None
 
     @classmethod
@@ -58,11 +59,12 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
-               self.producers[0].final_eval
+            self.producers[0].final_eval
 
     async def create_producers(self) -> list:
         mode_producer = TradingViewSignalsModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
+            exchanges_channel.get_chan(
+                trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
         return [mode_producer]
@@ -76,14 +78,16 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
             time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
         self.merged_symbol = symbol_util.merge_symbol(self.symbol)
-        service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
+        service_feed = services_api.get_service_feed(
+            self.SERVICE_FEED_CLASS, self.bot_id)
         feed_consumer = None
         if service_feed is not None:
             feed_consumer = await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
                 self._trading_view_signal_callback
             )
         else:
-            self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
+            self.logger.error(
+                "Impossible to find the Trading view service feed, this trading mode can't work.")
         return [mode_consumer, feed_consumer]
 
     async def _trading_view_signal_callback(self, data):
@@ -94,7 +98,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             try:
                 parsed_data[values[0].strip()] = values[1].strip()
             except IndexError:
-                self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
+                self.logger.error(
+                    f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
@@ -128,9 +133,11 @@ class TradingViewSignalsModeConsumer(daily_trading_mode.DailyTradingModeConsumer
 
         self.USE_CLOSE_TO_CURRENT_PRICE = True
         self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = decimal.Decimal(str(trading_mode.trading_config.get("close_to_current_price_difference",
-                                                                                    0.02)))
-        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
-        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get("use_maximum_size_orders", False)
+                                                                                                        0.02)))
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get(
+            "use_maximum_size_orders", False)
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_mode.trading_config.get(
+            "use_maximum_size_orders", False)
         self.USE_STOP_ORDERS = False
 
 
@@ -150,9 +157,10 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         pass
 
     def _parse_order_details(self, parsed_data):
-        side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]
-        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None)
-        if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
+        side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
+        order_type = parsed_data.get(
+            TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None)
+        if side == TradingViewSignalsTradingMode.SELL_SIGNAL.casefold():
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
@@ -160,7 +168,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             else:
                 state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
                     else trading_enums.EvaluatorStates.SHORT
-        elif side == TradingViewSignalsTradingMode.BUY_SIGNAL:
+        elif side == TradingViewSignalsTradingMode.BUY_SIGNAL.casefold():
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_LONG
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
