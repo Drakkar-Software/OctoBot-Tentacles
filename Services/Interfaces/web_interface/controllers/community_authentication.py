@@ -39,9 +39,10 @@ def community_login():
         form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
         if form.validate_on_submit():
             try:
-                authenticator.login(form.email.data, form.password.data)
+                interfaces_util.run_in_bot_main_loop(
+                    authenticator.login(form.email.data, form.password.data)
+                )
                 logged_in_email = form.email.data
-                flask.flash(f"Authenticated as {form.email.data}", "success")
                 return flask.redirect('community')
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
