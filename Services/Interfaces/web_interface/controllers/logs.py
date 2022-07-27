@@ -34,5 +34,10 @@ def logs():
 @login.login_required_when_activated
 def export_logs():
     temp_file = os.path.abspath("exported_logs")
+    temp_file_with_ext = f"{temp_file}.{models.LOG_EXPORT_FORMAT}"
+    if os.path.isdir(temp_file_with_ext):
+        raise RuntimeError(f"To be able to export logs, please remove or rename the {temp_file_with_ext} directory")
+    elif os.path.isfile(temp_file_with_ext):
+        os.remove(temp_file_with_ext)
     file_path = models.export_logs(temp_file)
     return flask_util.send_and_remove_file(file_path, "logs_export.zip")

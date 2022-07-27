@@ -128,6 +128,7 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
     remove_watched_symbol,
 )
 from tentacles.Services.Interfaces.web_interface.models.logs import (
+    LOG_EXPORT_FORMAT,
     export_logs,
 )
 from tentacles.Services.Interfaces.web_interface.models.medias import (
@@ -259,6 +260,7 @@ __all__ = [
     "get_watched_symbols",
     "add_watched_symbol",
     "remove_watched_symbol",
+    "LOG_EXPORT_FORMAT",
     "export_logs",
     "is_valid_tentacle_image_path",
     "is_valid_audio_path",
