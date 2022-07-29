@@ -35,10 +35,10 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     PRICE_KEY = "PRICE"
     VOLUME_KEY = "VOLUME"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
-    BUY_SIGNAL = "BUY"
-    SELL_SIGNAL = "SELL"
-    MARKET_SIGNAL = "MARKET"
-    LIMIT_SIGNAL = "LIMIT"
+    BUY_SIGNAL = "buy"
+    SELL_SIGNAL = "sell"
+    MARKET_SIGNAL = "market"
+    LIMIT_SIGNAL = "limit"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -151,8 +151,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
 
     def _parse_order_details(self, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
-        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None)
-        if side == TradingViewSignalsTradingMode.SELL_SIGNAL.casefold():
+        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None).casefold()
+        if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
@@ -160,7 +160,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             else:
                 state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
                     else trading_enums.EvaluatorStates.SHORT
-        elif side == TradingViewSignalsTradingMode.BUY_SIGNAL.casefold():
+        elif side == TradingViewSignalsTradingMode.BUY_SIGNAL:
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_LONG
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
