@@ -201,7 +201,8 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
     # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, 1, trading_enums.EvaluatorStates.VERY_SHORT.value)
+    orders = await consumer.create_new_orders(symbol, trading_constants.ONE,
+                                              trading_enums.EvaluatorStates.VERY_SHORT.value)
     assert len(orders) == 1
     order = orders[0]
     assert isinstance(order, trading_personal_data.SellMarketOrder)
@@ -622,14 +623,22 @@ async def test_create_orders_using_a_lot_of_different_inputs_with_portfolio_rese
         _reset_portfolio(exchange_manager)
         # orders are possible
         try:
-            orders = await consumer.create_new_orders(symbol, math.nan, state)
-            trading_mode_test_toolkit.check_orders(orders, math.nan, state, nb_orders, market_status)
+            orders = await consumer.create_new_orders(symbol, decimal.Decimal("nan"), state)
+            trading_mode_test_toolkit.check_orders(orders, decimal.Decimal("nan"), state, nb_orders, market_status)
             trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
         except trading_errors.MissingMinimalExchangeTradeVolume:
             pass
         # orders are impossible
         try:
             orders = []
+            orders = await consumer.create_new_orders(min_trigger_market, decimal.Decimal("nan"), state)
+            trading_mode_test_toolkit.check_orders(orders, decimal.Decimal("nan"), state, 0, market_status)
+            trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
+        except trading_errors.MissingMinimalExchangeTradeVolume:
+            pass
+        try:
+            orders = []
+            # float evaluation
             orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, 0, market_status)
             trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders)
@@ -704,7 +713,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
     for state in _get_states_gradient_with_invald_states():
         # orders are possible
         try:
-            orders = await consumer.create_new_orders(symbol, math.nan, state)
+            orders = await consumer.create_new_orders(symbol, decimal.Decimal("nan"), state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, nb_orders, market_status)
             trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
             await trading_mode_test_toolkit.fill_orders(orders, trader)
@@ -713,7 +722,7 @@ async def test_create_order_using_a_lot_of_different_inputs_without_portfolio_re
         # orders are impossible
         try:
             orders = []
-            orders = await consumer.create_new_orders(min_trigger_market, math.nan, state)
+            orders = await consumer.create_new_orders(min_trigger_market, decimal.Decimal("nan"), state)
             trading_mode_test_toolkit.check_orders(orders, math.nan, state, 0, market_status)
             trading_mode_test_toolkit.check_portfolio(portfolio_wrapper, initial_portfolio, orders, True)
             await trading_mode_test_toolkit.fill_orders(orders, trader)

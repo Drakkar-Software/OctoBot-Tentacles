@@ -282,6 +282,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return trading_constants.ZERO
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
+        try:
+            if final_note.is_nan():
+                return []
+        except AttributeError:
+            final_note = decimal.Decimal(str(final_note))
+            if final_note.is_nan():
+                return []
         data = kwargs.get("data", {})
         user_price = data.get(self.PRICE_KEY, trading_constants.ZERO)
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
@@ -452,8 +459,14 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         return self.RISK_THRESHOLD * self.exchange_manager.trader.risk
 
     async def create_state(self, cryptocurrency: str, symbol: str):
-        delta_risk = self._get_delta_risk()
+        if self.final_eval.is_nan():
+            # discard NaN case as it is not usable
+            await self._set_state(cryptocurrency=cryptocurrency,
+                                  symbol=symbol,
+                                  new_state=trading_enums.EvaluatorStates.NEUTRAL)
+            return
 
+        delta_risk = self._get_delta_risk()
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
@@ -481,7 +494,6 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state):
         if new_state != self.state:
-            # previous_state = self.state
             self.state = new_state
             self.logger.info(f"[{symbol}] new state: {self.state.name}")
 

@@ -16,7 +16,7 @@
 import pytest
 import mock
 
-import octobot_commons.constants as common_constants
+import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_signal
 
@@ -34,7 +34,7 @@ async def test_signal_callback(local_trader, mocked_signal):
             cryptocurrency=producer.trading_mode.cryptocurrency,
             symbol=mocked_signal.symbol,
             time_frame=None,
-            final_note=common_constants.INIT_EVAL_NOTE,
+            final_note=trading_constants.ZERO,
             state=trading_enums.EvaluatorStates(mocked_signal.state),
             data=mocked_signal
         )
