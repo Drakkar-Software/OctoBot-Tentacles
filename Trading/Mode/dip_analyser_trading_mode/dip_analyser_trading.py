@@ -285,6 +285,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         symbol_market):
                     total_volume += adapted_quantity
                     volume_with_price.append((adapted_quantity, adapted_price))
+            if not volume_with_price:
+                volume_with_price.append((quantity, trading_personal_data.decimal_adapt_price(symbol_market,
+                                                                                              sell_base + increment)))
+                total_volume += quantity
             if total_volume < quantity:
                 # ensure the whole target quantity is used
                 full_quantity = volume_with_price[-1][0] + quantity - total_volume
