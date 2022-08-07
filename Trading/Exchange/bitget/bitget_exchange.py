@@ -15,6 +15,8 @@
 #  License along with this library.
 import copy
 import math
+import decimal
+import typing
 
 import ccxt
 
@@ -42,6 +44,27 @@ class Bitget(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
+
+    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
+                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
+                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                           params: dict = None) -> typing.Optional[dict]:
+        convert_quantity = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET)
+        if convert_quantity:
+            # on Bitget, market orders are in quote currency (YYY in XYZ/YYY)
+            if price is None:
+                raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
+                                                          f"market orders as quantity is in quote currency")
+            quantity = quantity * price
+        created_order = await super().create_order(order_type, symbol, quantity,
+                                                   price=price, stop_price=stop_price,
+                                                   side=side, current_price=current_price,
+                                                   params=params)
+        if convert_quantity:
+            # convert it back: use FILLED for accuracy
+            created_order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                created_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        return created_order
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         try:
