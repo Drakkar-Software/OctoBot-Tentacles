@@ -203,7 +203,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     symbol=symbol,
                     current_price=sell_base,
                     quantity=order_quantity,
-                    price=order_price
+                    price=order_price,
+                    reduce_only=True if self.exchange_manager.is_future else None
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
