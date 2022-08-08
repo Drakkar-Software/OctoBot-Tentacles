@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+import math
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
@@ -34,11 +35,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SIGNAL_KEY = "SIGNAL"
     PRICE_KEY = "PRICE"
     VOLUME_KEY = "VOLUME"
+    REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
+    STOP_PRICE_KEY = "STOP_PRICE"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
     MARKET_SIGNAL = "market"
     LIMIT_SIGNAL = "limit"
+    TRUE_SIGNAL = "true"
+    FALSE_SIGNAL = "false"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -173,8 +178,15 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                               f"full data= {parsed_data}")
             state = trading_enums.EvaluatorStates.NEUTRAL
         order_data = {
-            TradingViewSignalsModeConsumer.PRICE_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
-            TradingViewSignalsModeConsumer.VOLUME_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
+            TradingViewSignalsModeConsumer.PRICE_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
+            TradingViewSignalsModeConsumer.VOLUME_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
+            TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
+                bool(parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY,
+                                     TradingViewSignalsTradingMode.FALSE_SIGNAL).lower() == "true")
         }
         return state, order_data
 
