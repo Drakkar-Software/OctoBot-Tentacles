@@ -1,11 +1,15 @@
 {
   "type": "object",
-  "title": "TradingViewSignalsTradingMode",
+  "title": "RemoteTradingSignalsTradingMode",
   "properties": {
     "trading_strategy": {
-        "title": "All in trades: Trade with all available funds at each order.",
+        "title": "Trading strategy: identifier of the trading strategy to use.",
         "type": "string",
-        "minLength": 1
+        "options": {
+          "inputAttributes": {
+            "placeholder":  "Paste your trading strategy identifier here"
+          }
+        }
     }
   }
 }
