@@ -788,7 +788,7 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
             check_coro.append(_fetch_is_compatible_account(exchange_name, to_check_config,
                                                            compatibility_results, is_sponsoring, is_supporter))
         else:
-            compatibility_results[exchange_name] =  get_compatibility_result(
+            compatibility_results[exchange_name] = get_compatibility_result(
                 exchange_name,
                 auth_success,
                 is_compatible,
