@@ -208,12 +208,11 @@ function handle_special_values(currentElem){
             otherElem.prop('checked', false);
             otherElem.trigger("change");
         }
-    }
-    else if(currentElem.is(tradingReferenceMarket)){
+    } else if(currentElem.is(tradingReferenceMarket)) {
         display_generic_modal("Change reference market",
             "Do you want to adapt the reference market for all your configured pairs ?",
             "",
-            function(){
+            function () {
                 let url = "/api/change_reference_market_on_config_currencies";
                 let data = {};
                 data["old_base_currency"] = tradingReferenceMarket.attr(config_value_attr);
@@ -221,6 +220,13 @@ function handle_special_values(currentElem){
                 send_and_interpret_bot_update(data, url, null, generic_request_success_callback, generic_request_failure_callback);
             },
             null);
+    } else if(currentElem.data("summary-field") === "radio-select"){
+        currentElem.find('input[type="radio"]').each((index, element) => {
+            const parsedElement = $(element);
+            if(parsedElement.is(":checked")){
+                currentElem.attr("current-value", parsedElement.attr("value"));
+            }
+        })
     }
 }
 
@@ -683,100 +689,69 @@ function updated_validated_updated_global_config(updated_data){
 function update_exchanges_details(exchangeCard, exchangeData){
     const warnIcon = $(exchangeCard.find("[data-role=account-warning]"));
     const unloggedSupportingIcon = $(exchangeCard.find("[data-role=supporting-exchange]"));
+    const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
     const validIcon = $(exchangeCard.find("[data-role=valid-account]"));
     const warnDetailsWrapper = $(exchangeCard.find("[data-role=account-warning-details-wrapper]"));
     const warnDetails = $(exchangeCard.find("[data-role=account-warning-details]"));
     const partnersDocs = $(exchangeCard.find("[data-role=account-partners-docs]"));
-    const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
     const supporterAccountWarn = $(exchangeCard.find("[data-role=supporter-account]"))
+
     partnersDocs.addClass(hidden_class);
-    if(exchangeData["supporting"]){
-        supporterAccountWarn.removeClass(hidden_class);
-        if (exchangeData["supporter_account"]){
-            warnIcon.addClass(hidden_class);
-            warnDetailsWrapper.addClass(hidden_class);
+    supporterAccountWarn.addClass(hidden_class);
+    if(exchangeData["supporting_exchange"]){
+        if(exchangeData["auth_success"] && exchangeData["compatible_account"]){
             supportingIcon.removeClass(hidden_class);
-            validIcon.addClass(hidden_class);
-            supporterAccountWarn.addClass(hidden_class)
-        }
-        if(exchangeData["compatible"]){
-            warnIcon.addClass(hidden_class);
-            warnDetailsWrapper.addClass(hidden_class);
-            supportingIcon.removeClass(hidden_class);
-            validIcon.removeClass(hidden_class);
             unloggedSupportingIcon.addClass(hidden_class);
         }else{
-            if(exchangeData["configured"]) {
-                if(exchangeData["supporter_account"]) {
-                    // supporter account have websocket access
-                    warnIcon.addClass(hidden_class);
-                    if (!exchangeData["error_message"].includes("create a new")) {
-                        warnDetailsWrapper.removeClass(hidden_class);
-                        warnDetails.text(exchangeData["error_message"]);
-                    }
-                }else{
-                    warnIcon.addClass(hidden_class);
-                    supportingIcon.addClass(hidden_class);
-                    unloggedSupportingIcon.addClass(hidden_class);
-                    warnDetailsWrapper.removeClass(hidden_class);
-                    if (exchangeData["error_message"].includes("create a new")) {
-                        partnersDocs.removeClass(hidden_class);
-                        warnDetails.text(exchangeData["error_message"]);
-                        warnIcon.removeClass(hidden_class);
-                    }else{
-                        validIcon.addClass(hidden_class);
-                        warnDetails.text(exchangeData["error_message"]);
-                        unloggedSupportingIcon.removeClass(hidden_class);
-                        supporterAccountWarn.addClass(hidden_class);
-                    }
-                }
-            } else {
-                supportingIcon.addClass(hidden_class);
-                warnIcon.addClass(hidden_class);
-                warnDetailsWrapper.addClass(hidden_class);
-                validIcon.addClass(hidden_class);
-                unloggedSupportingIcon.removeClass(hidden_class);
-            }
+            supportingIcon.addClass(hidden_class);
+            unloggedSupportingIcon.removeClass(hidden_class);
         }
-    }else {
-        supporterAccountWarn.addClass(hidden_class);
+    }
+    if(exchangeData["auth_success"]){
         warnIcon.addClass(hidden_class);
-        supportingIcon.addClass(hidden_class);
-        if(exchangeData["compatible"]){
-            warnDetailsWrapper.addClass(hidden_class);
+        if(!exchangeData["compatible_account"]){
+            warnDetailsWrapper.removeClass(hidden_class);
+            supporterAccountWarn.removeClass(hidden_class);
+            warnDetails.text(exchangeData["error_message"]);
+            if (exchangeData["error_message"] !== null && exchangeData["error_message"].includes("create a new")) {
+                partnersDocs.removeClass(hidden_class);
+                warnIcon.removeClass(hidden_class);
+            }
+        }else{
             validIcon.removeClass(hidden_class);
-        }else if(exchangeData["error_message"]){
-            validIcon.addClass(hidden_class);
+            warnDetailsWrapper.addClass(hidden_class);
+        }
+    }else{
+        validIcon.addClass(hidden_class);
+        if(exchangeData["configured_account"]) {
             warnDetailsWrapper.removeClass(hidden_class);
             warnDetails.text(exchangeData["error_message"]);
+        }else{
+            warnDetailsWrapper.addClass(hidden_class);
         }
     }
 }
 
-
 function check_account(exchangeCard, source, newValue){
     const exchange = exchangeCard.find(".card-body").attr("name");
     if(exchange !== config_default_value){
-        let apiKey = "Empty";
-        let apiSecret = apiKey;
-        let apiPassword = apiKey;
-        if(source !== exchangeCard){
-            apiKey = source.attr("id") === "exchange_api-key" ? newValue : exchangeCard.find("#exchange_api-key").editable('getValue', true).trim();
-            apiSecret = source.attr("id") === "exchange_api-secret" ? newValue : exchangeCard.find("#exchange_api-secret").editable('getValue', true).trim();
-            apiPassword = source.attr("id") === "exchange_api-password" ? newValue : exchangeCard.find("#exchange_api-password").editable('getValue', true).trim();
-        }
+        const apiKey = source.attr("id") === "exchange_api-key" ? newValue : exchangeCard.find("#exchange_api-key").editable('getValue', true).trim();
+        const apiSecret = source.attr("id") === "exchange_api-secret" ? newValue : exchangeCard.find("#exchange_api-secret").editable('getValue', true).trim();
+        const apiPassword = source.attr("id") === "exchange_api-password" ? newValue : exchangeCard.find("#exchange_api-password").editable('getValue', true).trim();
         $.post({
             url: $("#exchange-container").attr(update_url_attr),
             data: JSON.stringify({
-                "exchange": exchange,
-                "apiKey": apiKey,
-                "apiSecret": apiSecret,
-                "apiPassword": apiPassword,
+                exchange: {
+                    "exchange": exchange,
+                    "apiKey": apiKey,
+                    "apiSecret": apiSecret,
+                    "apiPassword": apiPassword,
+                }
             }),
             contentType: 'application/json',
             dataType: "json",
             success: function(data, status){
-                update_exchanges_details(exchangeCard, data)
+                update_exchanges_details(exchangeCard, data[exchange]);
             },
             error: function(result, status, error){
                 window.console&&console.error(`Impossible to check the exchange account compatibility: ${result.responseText}. More details in logs.`);
@@ -785,22 +760,60 @@ function check_account(exchangeCard, source, newValue){
     }
 }
 
+function check_accounts(exchangeCards){
+    const exchangesCardsByExchange = {};
+    const exchangesReq = {};
+    const apiKey = "Empty";
+    const apiSecret = apiKey;
+    const apiPassword = apiKey;
+    exchangeCards.forEach((exchangeCard) => {
+        const exchange = exchangeCard.find(".card-body").attr("name");
+        if(exchange !== config_default_value) {
+            exchangesReq[exchange] = {
+                exchange: exchange,
+                apiKey: apiKey,
+                apiSecret: apiSecret,
+                apiPassword: apiPassword,
+            };
+        }
+    })
+    $.post({
+        url: $("#exchange-container").attr(update_url_attr),
+        data: JSON.stringify(exchangesReq),
+        contentType: 'application/json',
+        dataType: "json",
+        success: function(data, status){
+            exchangeCards.forEach((exchangeCard) => {
+                const exchange = exchangeCard.find(".card-body").attr("name");
+                if(typeof data[exchange] !== "undefined"){
+                    update_exchanges_details(exchangeCard, data[exchange]);
+                }
+            });
+        },
+        error: function(result, status, error){
+            window.console&&console.error(`Impossible to check the exchange accounts compatibility: ${result.responseText}. More details in logs.`);
+        }
+    })
+}
+
 function exchange_account_check(e, params){
     const element = $(e.target);
     check_account(element.parents("div[data-role=exchange]"), element, params.newValue);
 }
 
 function register_exchanges_checks(check_existing_accounts){
+    const cards = [];
     $("div[data-role=exchange]").each(function (){
         const card = $(this);
         const inputs = card.find("a[data-type=text]");
         if(inputs.length){
             add_event_if_not_already_added(inputs, 'save', exchange_account_check);
         }
-        if(check_existing_accounts){
-            check_account(card, card, "");
-        }
+        cards.push(card);
     });
+    if(check_existing_accounts){
+        check_accounts(cards);
+    }
 }
 
 let validated_updated_global_config = {};

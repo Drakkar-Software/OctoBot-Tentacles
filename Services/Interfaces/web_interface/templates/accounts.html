@@ -64,12 +64,14 @@
                                     <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False'}}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
+                            {% if ccxt_simulated_tested_exchanges %}
                             <optgroup label="OctoBot tested with simulated trading">
                                {% for exchange in ccxt_simulated_tested_exchanges %}
                                     {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
                                     <option data-tokens="{{ exchange }}" data-ws="{{ 'True' if has_ws else 'False' }}">{{ exchange }}</option>
                                {% endfor %}
                             </optgroup>
+                            {% endif %}
                             <optgroup label="OctoBot untested">
                                {% for exchange in ccxt_other_exchanges %}
                                     {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
@@ -82,13 +84,15 @@
                 </div>
                 <br>
                 <!-- Card deck -->
-                <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.is_compatible_account') }}">
+                <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.are_compatible_accounts') }}">
                     {% for exchange in config_exchanges %}
                         {{ m_config_exchange_card.config_exchange_card(config_exchanges,
                                                                        exchange,
                                                                        exchanges_details[exchange],
+                                                                       is_supporting_future_trading,
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
                                                                        sandboxed=config_exchanges[exchange].get('sandboxed', False),
+                                                                       selected_exchange_type=config_exchanges[exchange].get('exchange-type', 'spot'),
                                                                        full_config=True,
                                                                        exchange_docs_url=EXCHANGES_DOCS_URL,
                                                                        community_url=OCTOBOT_COMMUNITY_URL)}}
@@ -152,6 +156,7 @@
         {{ m_config_exchange_card.config_exchange_card( config=config_exchanges,
                                                         exchange=config_default_value,
                                                         exchanges_details=exchanges_details,
+                                                        is_supporting_future_trading=is_supporting_future_trading,
                                                         add_class=added_class,
                                                         keys_value="NO KEY",
                                                         config_values="no value",

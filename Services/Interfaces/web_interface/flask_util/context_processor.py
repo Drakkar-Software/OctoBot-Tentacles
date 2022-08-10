@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -22,6 +22,7 @@ import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_interface_login
 import octobot_trading.util as trading_util
+import octobot_trading.enums as trading_enums
 
 
 @web_interface.server_instance.context_processor
@@ -46,7 +47,8 @@ def context_processor_register():
         if symbol is None:
             return symbol_list
         filtered_symbol = [s for s in symbol_list
-                    if full_symbol_list[currency_key][models.SYMBOL_KEY] in symbol_util.split_symbol(s)]
+                           if full_symbol_list[currency_key][models.SYMBOL_KEY]
+                           in symbol_util.parse_symbol(s).base_and_quote()]
         return (filtered_symbol + [s for s in config_symbols[currency]["pairs"]
                                                     if s in symbol_list and s not in filtered_symbol])
 
@@ -71,6 +73,9 @@ def context_processor_register():
         if trading_util.is_trader_enabled(profile.config):
             return True
         return False
+
+    def is_supporting_future_trading(supported_exchange_types):
+        return trading_enums.ExchangeTypes.FUTURE in supported_exchange_types
 
     def get_enabled_trader(profile):
         if is_real_trading(profile):
@@ -113,6 +118,7 @@ def context_processor_register():
         get_filtered_list=get_filtered_list,
         get_current_profile=models.get_current_profile,
         is_real_trading=is_real_trading,
+        is_supporting_future_trading=is_supporting_future_trading,
         is_login_required=web_interface_login.is_login_required,
         is_authenticated=web_interface_login.is_authenticated,
         get_plugin_tabs=get_plugin_tabs,

@@ -21,14 +21,11 @@ import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 
 
-@api.api.route("/is_compatible_account", methods=['POST'])
+@api.api.route("/are_compatible_accounts", methods=['POST'])
 @login.login_required_when_activated
-def is_compatible_account():
+def are_compatible_accounts():
     request_data = flask.request.get_json()
-    return flask.jsonify(models.is_compatible_account(request_data["exchange"],
-                                                      request_data["apiKey"],
-                                                      request_data["apiSecret"],
-                                                      request_data["apiPassword"]))
+    return flask.jsonify(models.are_compatible_accounts(request_data))
 
 
 @api.api.route("/first_exchange_details")

@@ -20,6 +20,7 @@ import json
 import asyncio
 
 import octobot_commons.databases as databases
+import octobot_commons.symbols as commons_symbols
 import octobot_backtesting.enums as enums
 import octobot_backtesting.errors as errors
 import tests.test_utils.config as test_utils_config
@@ -37,7 +38,8 @@ BINANCE_MAX_CANDLES_COUNT = 500
 async def data_collector(exchange_name, tentacles_setup_config, symbols, time_frames, use_all_available_timeframes,
                          start_timestamp=None, end_timestamp=None):
     collector_instance = collector_exchanges.ExchangeHistoryDataCollector(
-        {}, exchange_name, tentacles_setup_config, symbols, time_frames,
+        {}, exchange_name, tentacles_setup_config,
+        [commons_symbols.parse_symbol(symbol) for symbol in symbols], time_frames,
         use_all_available_timeframes=use_all_available_timeframes,
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp
@@ -67,7 +69,7 @@ async def test_collect_valid_data():
     symbols = ["ETH/BTC"]
     async with data_collector(BINANCE, tentacles_setup_config, symbols, None, True) as collector:
         assert collector.time_frames == []
-        assert collector.symbols == symbols
+        assert collector.symbols == [commons_symbols.parse_symbol(symbol) for symbol in symbols]
         assert collector.exchange_name == BINANCE
         assert collector.tentacles_setup_config == tentacles_setup_config
         await collector.start()
@@ -153,7 +155,7 @@ async def test_collect_multi_pair():
     symbols = ["ETH/BTC", "BTC/USDT", "1INCH/BTC"]
     async with data_collector(BINANCE, tentacles_setup_config, symbols, None, True) as collector:
         assert collector.time_frames == []
-        assert collector.symbols == symbols
+        assert collector.symbols == [commons_symbols.parse_symbol(symbol) for symbol in symbols]
         assert collector.exchange_name == BINANCE
         assert collector.tentacles_setup_config == tentacles_setup_config
         await collector.start()
@@ -191,7 +193,7 @@ async def test_stop_collect():
 
         await asyncio.gather(collector.start(), stop_soon())
         assert collector.time_frames != []
-        assert collector.symbols == symbols
+        assert collector.symbols == [commons_symbols.parse_symbol(symbol) for symbol in symbols]
         assert collector.exchange_name == BINANCE
         assert collector.tentacles_setup_config == tentacles_setup_config
         assert collector.finished

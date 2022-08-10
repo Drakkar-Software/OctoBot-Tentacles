@@ -28,7 +28,7 @@ import octobot_backtesting.errors as backtesting_errors
 import octobot_commons.errors as commons_errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.databases as databases
 import octobot_backtesting.data as data
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
@@ -59,7 +59,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         self.set_file_path()
 
     def get_permanent_file_identifier(self):
-        symbols = "-".join(symbol_util.merge_symbol(symbol) for symbol in self.symbols)
+        symbols = "-".join(symbol_util.merge_symbol(symbol.symbol_str).replace(":", "_") for symbol in self.symbols)
         time_frames = "-".join(tf.value for tf in self.time_frames)
         return f"{self.exchange_name}{backtesting_constants.BACKTESTING_DATA_FILE_SEPARATOR}" \
                f"{symbols}{backtesting_constants.BACKTESTING_DATA_FILE_SEPARATOR}{time_frames}"
@@ -84,7 +84,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         try:
             self.description = await data.get_database_description(self.database)
             found_exchange_name = self.description[backtesting_enums.DataFormatKeys.EXCHANGE.value]
-            found_symbols = self.description[backtesting_enums.DataFormatKeys.SYMBOLS.value]
+            found_symbols = [symbol_util.parse_symbol(symbol)
+                             for symbol in self.description[backtesting_enums.DataFormatKeys.SYMBOLS.value]]
             found_time_frames = self.description[backtesting_enums.DataFormatKeys.TIME_FRAMES.value]
             if found_exchange_name != self.exchange_name:
                 raise backtesting_errors.IncompatibleDatafileError(f"Exchange name in database: {found_exchange_name}, "
@@ -143,7 +144,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 os.remove(self.temp_file_path)
             if not self.should_stop:
                 self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
-                                                 f"{', '.join(self.symbols)}: {err}")
+                                                 f"{', '.join([symbol.symbol_str for symbol in self.symbols])}: {err}")
                 raise backtesting_errors.DataCollectorError(err)
         finally:
             await self.stop(should_stop_database=should_stop_database)
@@ -170,7 +171,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                        updated_value_by_column=updated_values,
                                        version=self.VERSION,
                                        exchange=self.exchange_name,
-                                       symbols=json.dumps(self.symbols),
+                                       symbols=json.dumps([symbol.symbol_str for symbol in self.symbols]),
                                        time_frames=json.dumps([tf.value for tf in self.time_frames]))
 
     async def get_ticker_history(self, exchange, symbol):
@@ -183,7 +184,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         pass
 
     def get_ohlcv_snapshot(self, symbol, time_frame):
-        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol, allow_creation=False)
+        symbol_id = symbol_util.merge_currencies(symbol.base, symbol.quote)
+        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol_id, allow_creation=False)
         candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
         return [
             [
@@ -200,12 +202,13 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
                                        start_time, end_time, update_progress=True):
         last_progress = 0
-        async for candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol, time_frame,
+        symbol_id = symbol_util.merge_currencies(symbol.base, symbol.quote)
+        async for candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol_id, time_frame,
                                                               start_time, end_time):
             await self.save_ohlcv(
                     exchange=exchange,
-                    cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                    symbol=symbol, time_frame=time_frame, candle=candles,
+                    cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
+                    symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
                     timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
                                for candle in candles],
                     multiple=True
@@ -228,6 +231,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def update_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
                            database_candles, current_bot_candles):
         to_add_candles = []
+        symbol_id = symbol.legacy_symbol()
         for up_to_date_candle in current_bot_candles:
             current_candle_time = up_to_date_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
             equivalent_db_candle, candle_timestamp = self.find_candle(database_candles, current_candle_time)
@@ -240,14 +244,15 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 await self.database.update(backtesting_enums.ExchangeDataTables.OHLCV,
                                            updated_value_by_column=updated_value_by_column,
                                            exchange_name=exchange,
-                                           cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                                           symbol=symbol,
+                                           cryptocurrency=
+                                           self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
+                                           symbol=symbol.symbol_str,
                                            time_frame=time_frame.value,
                                            timestamp=candle_timestamp)
         if to_add_candles:
             await self.save_ohlcv(
                 exchange=exchange,
-                cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
+                cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
                 symbol=symbol, time_frame=time_frame, candle=to_add_candles,
                 timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
                            for candle in to_add_candles],
@@ -259,7 +264,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         # ensure no timestamp is here twice
         timestamps = set(candle[0] for candle in database_candles)
         if len(timestamps) != len(database_candles):
-            self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol} on {time_frame}: "
+            self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol.symbol_str} on {time_frame}: "
                                 f"{len(timestamps)} different timestamps for {len(database_candles)} "
                                 f"different candles.")
             return False
@@ -277,10 +282,11 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                     # fetch missing data
                     last_progress = await self.collect_historical_ohlcv(
                         exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, bot_first_data_timestamp)
+                symbol_id = symbol_util.merge_currencies(symbol.base, symbol.quote)
                 await self.save_ohlcv(
                         exchange=exchange,
-                        cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol),
-                        symbol=symbol, time_frame=time_frame, candle=current_bot_candles,
+                        cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
+                        symbol=symbol.symbol_str, time_frame=time_frame, candle=current_bot_candles,
                         timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
                                    for candle in current_bot_candles],
                         multiple=True
@@ -316,7 +322,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         return importers.import_ohlcvs(
             await self.database.select(backtesting_enums.ExchangeDataTables.OHLCV,
                                        size=databases.SQLiteDatabase.DEFAULT_SIZE,
-                                       exchange_name=exchange, symbol=symbol,
+                                       exchange_name=exchange, symbol=symbol.symbol_str,
                                        time_frame=time_frame.value)
         )
 
@@ -334,6 +340,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             raise backtesting_errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol, allow_creation=False)
+        symbol_data = trading_api.get_symbol_data(self.exchange_manager, symbol.legacy_symbol(), allow_creation=False)
         candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
         return candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0] * 1000

@@ -215,7 +215,7 @@ async def test_finalize(tools):
     matrix_id = evaluators_api.create_matrix()
 
     await producer.finalize(trading_api.get_exchange_name(trader.exchange_manager), matrix_id, currency, symbol)
-    assert producer.final_eval == commons_constants.INIT_EVAL_NOTE
+    assert producer.final_eval == trading_constants.ZERO
 
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
     assert producer.state == trading_enums.EvaluatorStates.SHORT

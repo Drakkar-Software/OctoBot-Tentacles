@@ -62,6 +62,13 @@ class GateIO(exchanges.SpotCCXTExchange):
             trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = self._get_digits_count(
             market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
                 trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value])
+
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
         return market_status
 
     def _get_digits_count(self, value):

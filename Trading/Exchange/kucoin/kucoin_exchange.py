@@ -13,6 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import copy
+
+import ccxt
+
+import octobot_trading.errors
+import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
@@ -34,3 +40,24 @@ class Kucoin(exchanges.SpotCCXTExchange):
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
+
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        try:
+            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
+            if with_fixer:
+                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
+            return market_status
+        except ccxt.NotSupported:
+            raise octobot_trading.errors.NotSupported
+        except Exception as e:
+            self.logger.error(f"Fail to get market status of {symbol}: {e}")
+        return {}
+
+    def _fix_market_status(self, market_status):
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
+        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
+        return market_status

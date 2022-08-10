@@ -27,7 +27,7 @@ import octobot_backtesting.enums as backtesting_enums
 import octobot_commons.databases as databases
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 
 
 class LegacyDataConverter(converters.DataConverter):

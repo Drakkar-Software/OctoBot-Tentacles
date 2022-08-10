@@ -14,10 +14,11 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+import math
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.api as services_api
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
@@ -34,11 +35,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SIGNAL_KEY = "SIGNAL"
     PRICE_KEY = "PRICE"
     VOLUME_KEY = "VOLUME"
+    REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
-    BUY_SIGNAL = "BUY"
-    SELL_SIGNAL = "SELL"
-    MARKET_SIGNAL = "MARKET"
-    LIMIT_SIGNAL = "LIMIT"
+    STOP_PRICE_KEY = "STOP_PRICE"
+    BUY_SIGNAL = "buy"
+    SELL_SIGNAL = "sell"
+    MARKET_SIGNAL = "market"
+    LIMIT_SIGNAL = "limit"
+    TRUE_SIGNAL = "true"
+    FALSE_SIGNAL = "false"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -150,8 +155,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         pass
 
     def _parse_order_details(self, parsed_data):
-        side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]
-        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None)
+        side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
+        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None).casefold()
         if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
@@ -173,8 +178,15 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                               f"full data= {parsed_data}")
             state = trading_enums.EvaluatorStates.NEUTRAL
         order_data = {
-            TradingViewSignalsModeConsumer.PRICE_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
-            TradingViewSignalsModeConsumer.VOLUME_KEY: decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
+            TradingViewSignalsModeConsumer.PRICE_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
+            TradingViewSignalsModeConsumer.VOLUME_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))),
+            TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
+                bool(parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY,
+                                     TradingViewSignalsTradingMode.FALSE_SIGNAL).lower() == "true")
         }
         return state, order_data
 

@@ -15,12 +15,13 @@
 #  License along with this library.
 import asyncio
 import decimal
+import math
 
 import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.pretty_printer as pretty_printer
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
@@ -47,7 +48,6 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         """
         return [
             trading_enums.ExchangeTypes.SPOT,
-            trading_enums.ExchangeTypes.FUTURE,
         ]
 
     def get_current_state(self) -> (str, float):
@@ -79,6 +79,8 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
 class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     PRICE_KEY = "PRICE"
     VOLUME_KEY = "VOLUME"
+    STOP_PRICE_KEY = "STOP_PRICE"
+    REDUCE_ONLY_KEY = "REDUCE_ONLY"
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -166,10 +168,14 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     and self.STOP_LOSS_ORDER_MAX_PERCENT
     """
 
-    def _get_stop_price_from_risk(self):
-        factor = self.STOP_LOSS_ORDER_MAX_PERCENT - (self.trader.risk * self.STOP_LOSS_ORDER_ATTENUATION)
-        return trading_modes.check_factor(self.STOP_LOSS_ORDER_MIN_PERCENT, self.STOP_LOSS_ORDER_MAX_PERCENT,
-                                          factor)
+    def _get_stop_price_from_risk(self, is_long):
+        max_percent = self.STOP_LOSS_ORDER_MAX_PERCENT if is_long \
+            else 2 * trading_constants.ONE - self.STOP_LOSS_ORDER_MIN_PERCENT
+        min_percent = self.STOP_LOSS_ORDER_MIN_PERCENT if is_long \
+            else 2 * trading_constants.ONE - self.STOP_LOSS_ORDER_MAX_PERCENT
+        risk_difference = self.trader.risk * self.STOP_LOSS_ORDER_ATTENUATION
+        factor = max_percent - risk_difference if is_long else min_percent + risk_difference
+        return trading_modes.check_factor(min_percent, max_percent, factor)
 
     """
     Starting point : self.QUANTITY_MIN_PERCENT
@@ -282,21 +288,30 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return trading_constants.ZERO
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
+        try:
+            if final_note.is_nan():
+                return []
+        except AttributeError:
+            final_note = decimal.Decimal(str(final_note))
+            if final_note.is_nan():
+                return []
         data = kwargs.get("data", {})
         user_price = data.get(self.PRICE_KEY, trading_constants.ZERO)
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
+        user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
+        user_stop_price = data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
         current_order = None
         timeout = kwargs.pop("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
 
-            quote, _ = symbol_util.split_symbol(symbol)
+            base = symbol_util.parse_symbol(symbol).base
             created_orders = []
 
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume \
-                           or self._get_market_quantity_from_risk(final_note, current_symbol_holding, quote, True)
+                           or self._get_market_quantity_from_risk(final_note, current_symbol_holding, base, True)
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
                                                                                             symbol_market,
                                                                                             current_symbol_holding)
@@ -310,13 +325,14 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 symbol=symbol,
                                                                                 current_price=order_price,
                                                                                 quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                price=order_price,
+                                                                                reduce_only=user_reduce_only)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume or \
-                           self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, quote)
+                           self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, base)
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                     current_symbol_holding)
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
@@ -332,22 +348,26 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 symbol=symbol,
                                                                                 current_price=price,
                                                                                 quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                price=order_price,
+                                                                                reduce_only=user_reduce_only)
                     updated_limit = await self.trader.create_order(current_order)
                     created_orders.append(updated_limit)
                     # ensure stop orders are enabled and limit order was not instantly filled
-                    if self.USE_STOP_ORDERS and updated_limit.is_open():
+                    if (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) and updated_limit.is_open():
                         oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
                             .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
                         updated_limit.add_to_order_group(oco_group)
-                        stop_price = trading_personal_data.decimal_adapt_price(symbol_market,
-                                                                               price * self._get_stop_price_from_risk())
+                        stop_price = trading_personal_data.decimal_adapt_price(
+                            symbol_market, price * self._get_stop_price_from_risk(True)
+                        ) if user_stop_price.is_nan() else user_stop_price
                         current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                     order_type=trading_enums.TraderOrderType.STOP_LOSS,
                                                                                     symbol=symbol,
                                                                                     current_price=price,
                                                                                     quantity=order_quantity,
                                                                                     price=stop_price,
+                                                                                    side=trading_enums.TradeOrderSide.SELL,
+                                                                                    reduce_only=True,
                                                                                     group=oco_group)
                         await self.trader.create_order(current_order)
 
@@ -356,7 +376,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             # TODO : stop loss
             elif state == trading_enums.EvaluatorStates.LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, quote) \
+                quantity = self._get_buy_limit_quantity_from_risk(final_note, market_quantity, base) \
                     if user_volume == 0 else user_volume
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                         user_price or
@@ -372,12 +392,32 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 symbol=symbol,
                                                                                 current_price=price,
                                                                                 quantity=order_quantity,
-                                                                                price=order_price)
-                    await self.trader.create_order(current_order)
-                    created_orders.append(current_order)
+                                                                                price=order_price,
+                                                                                reduce_only=user_reduce_only)
+                    updated_limit = await self.trader.create_order(current_order)
+                    created_orders.append(updated_limit)
+                    # ensure future trading and stop orders are enabled and limit order was not instantly filled
+                    if self.exchange_manager.is_future and (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) \
+                            and updated_limit.is_open():
+                        oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                            .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                        updated_limit.add_to_order_group(oco_group)
+                        stop_price = trading_personal_data.decimal_adapt_price(
+                            symbol_market, price * self._get_stop_price_from_risk(False)
+                        ) if user_stop_price.is_nan() else user_stop_price
+                        current_order = trading_personal_data.create_order_instance(trader=self.trader,
+                                                                                    order_type=trading_enums.TraderOrderType.STOP_LOSS,
+                                                                                    symbol=symbol,
+                                                                                    current_price=price,
+                                                                                    quantity=order_quantity,
+                                                                                    price=stop_price,
+                                                                                    side=trading_enums.TradeOrderSide.BUY,
+                                                                                    reduce_only=True,
+                                                                                    group=oco_group)
+                        await self.trader.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, quote) \
+                quantity = self._get_market_quantity_from_risk(final_note, market_quantity, base) \
                     if user_volume == 0 else user_volume
                 for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                         quantity,
@@ -388,7 +428,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 symbol=symbol,
                                                                                 current_price=order_price,
                                                                                 quantity=order_quantity,
-                                                                                price=order_price)
+                                                                                price=order_price,
+                                                                                reduce_only=user_reduce_only)
                     await self.trader.create_order(current_order)
                     created_orders.append(current_order)
             if created_orders:
@@ -452,8 +493,14 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         return self.RISK_THRESHOLD * self.exchange_manager.trader.risk
 
     async def create_state(self, cryptocurrency: str, symbol: str):
-        delta_risk = self._get_delta_risk()
+        if self.final_eval.is_nan():
+            # discard NaN case as it is not usable
+            await self._set_state(cryptocurrency=cryptocurrency,
+                                  symbol=symbol,
+                                  new_state=trading_enums.EvaluatorStates.NEUTRAL)
+            return
 
+        delta_risk = self._get_delta_risk()
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,
                                   symbol=symbol,
@@ -481,7 +528,6 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state):
         if new_state != self.state:
-            # previous_state = self.state
             self.state = new_state
             self.logger.info(f"[{symbol}] new state: {self.state.name}")
 

@@ -105,7 +105,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
 
     def get_default_type(self):
-        return 'linear'
+        if self.exchange_manager.is_future:
+            return 'linear'
+        return 'spot'
 
     async def get_positions(self) -> list:
         return self.parse_positions(await self.connector.client.fetch_positions())
@@ -364,13 +366,13 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return None
 
     def is_linear_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'linear'
+        return self.get_pair_market_type(symbol) == 'linear'
 
     def is_inverse_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'inverse'
+        return self.get_pair_market_type(symbol) == 'inverse'
 
     def is_futures_symbol(self, symbol):
-        return self._get_pair_market_type(symbol) == 'futures'
+        return self.get_pair_market_type(symbol) == 'futures'
 
     def _fix_market_status(self, market_status):
         market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][

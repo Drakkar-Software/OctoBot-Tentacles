@@ -18,7 +18,7 @@ import decimal
 import octobot_commons.constants as commons_constants
 import async_channel.constants as channel_constants
 import octobot_commons.evaluators_util as evaluators_util
-import octobot_commons.symbol_util as symbol_util
+import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.matrix as matrix
 import octobot_evaluators.enums as evaluators_enums
@@ -156,7 +156,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             price = price
 
-            base, _ = symbol_util.split_symbol(symbol)
+            base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
@@ -203,7 +203,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     symbol=symbol,
                     current_price=sell_base,
                     quantity=order_quantity,
-                    price=order_price
+                    price=order_price,
+                    reduce_only=True if self.exchange_manager.is_future else None
                 )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
@@ -285,6 +286,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         symbol_market):
                     total_volume += adapted_quantity
                     volume_with_price.append((adapted_quantity, adapted_price))
+            if not volume_with_price:
+                volume_with_price.append((quantity, trading_personal_data.decimal_adapt_price(symbol_market,
+                                                                                              sell_base + increment)))
+                total_volume += quantity
             if total_volume < quantity:
                 # ensure the whole target quantity is used
                 full_quantity = volume_with_price[-1][0] + quantity - total_volume
@@ -367,7 +372,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         self.first_trigger = True
 
         self.last_buy_candle = None
-        self.base, _ = symbol_util.split_symbol(self.trading_mode.symbol)
+        self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
 
         self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 

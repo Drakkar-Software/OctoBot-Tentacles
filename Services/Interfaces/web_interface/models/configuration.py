@@ -715,8 +715,8 @@ def get_other_exchange_list(remove_config_exchanges=False):
 
 
 def get_exchanges_details(exchanges_config) -> dict:
-    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
     details = {}
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
     import tentacles.Trading.Exchange as exchanges
     for exchange_name in exchanges_config:
         exchange_class = tentacles_management.get_class_from_string(
@@ -726,42 +726,84 @@ def get_exchanges_details(exchanges_config) -> dict:
         )
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
-            "configurable": False if exchange_class is None else exchange_class.is_configurable()
+            "configurable": False if exchange_class is None else exchange_class.is_configurable(),
+            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name)
         }
     return details
 
 
-def is_compatible_account(exchange_name: str, api_key, api_sec, api_pass) -> dict:
-    to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(exchange_name, {}))
-    if _is_real_exchange_value(api_key):
-        to_check_config[commons_constants.CONFIG_EXCHANGE_KEY] = configuration.encrypt(api_key).decode()
-    if _is_real_exchange_value(api_sec):
-        to_check_config[commons_constants.CONFIG_EXCHANGE_SECRET] = configuration.encrypt(api_sec).decode()
-    if _is_real_exchange_value(api_pass):
-        to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
-    is_compatible = False
-    is_sponsoring = trading_api.is_sponsoring(exchange_name)
-    is_configured = False
-    authenticator = authentication.Authenticator.instance()
-    is_supporter = authenticator.supports.is_supporting()
-    error = None
-    if _is_possible_exchange_config(to_check_config):
-        is_configured = True
-        is_compatible, error = interfaces_util.run_in_bot_async_executor(
-            trading_api.is_compatible_account(
-                exchange_name,
-                to_check_config,
-                interfaces_util.get_edited_tentacles_config()
-            )
-        )
+def get_compatibility_result(exchange_name, auth_success, compatible_account, supporter_account,
+                             configured_account, supporting_exchange, error_message):
     return {
         "exchange": exchange_name,
-        "compatible": is_compatible,
-        "supporter_account": is_supporter,
-        "configured": is_configured,
-        "supporting": is_sponsoring,
-        "error_message": error
+        "auth_success": auth_success,
+        "compatible_account": compatible_account,
+        "supporter_account": supporter_account,
+        "configured_account": configured_account,
+        "supporting_exchange": supporting_exchange,
+        "error_message": error_message
     }
+
+
+async def _fetch_is_compatible_account(exchange_name, to_check_config,
+                                       compatibility_results, is_sponsoring, is_supporter):
+    is_compatible, auth_success, error = await trading_api.is_compatible_account(
+        exchange_name,
+        to_check_config,
+        interfaces_util.get_edited_tentacles_config(),
+        to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+    )
+    compatibility_results[exchange_name] = get_compatibility_result(
+        exchange_name,
+        auth_success,
+        is_compatible,
+        is_supporter,
+        True,
+        is_sponsoring,
+        error
+    )
+
+
+def are_compatible_accounts(exchange_details: dict) -> dict:
+    compatibility_results = {}
+    check_coro = []
+    for exchange, exchange_detail in exchange_details.items():
+        exchange_name = exchange_detail["exchange"]
+        api_key = exchange_detail["apiKey"]
+        api_sec = exchange_detail["apiSecret"]
+        api_pass = exchange_detail["apiPassword"]
+        to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(
+            exchange_name, {}))
+        if _is_real_exchange_value(api_key):
+            to_check_config[commons_constants.CONFIG_EXCHANGE_KEY] = configuration.encrypt(api_key).decode()
+        if _is_real_exchange_value(api_sec):
+            to_check_config[commons_constants.CONFIG_EXCHANGE_SECRET] = configuration.encrypt(api_sec).decode()
+        if _is_real_exchange_value(api_pass):
+            to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
+        is_compatible = auth_success = is_configured = False
+        is_sponsoring = trading_api.is_sponsoring(exchange_name)
+        is_supporter = authentication.Authenticator.instance().supports.is_supporting()
+        error = None
+        if _is_possible_exchange_config(to_check_config):
+            check_coro.append(_fetch_is_compatible_account(exchange_name, to_check_config,
+                                                           compatibility_results, is_sponsoring, is_supporter))
+        else:
+            compatibility_results[exchange_name] =  get_compatibility_result(
+                exchange_name,
+                auth_success,
+                is_compatible,
+                is_supporter,
+                is_configured,
+                is_sponsoring,
+                error
+            )
+    if check_coro:
+        async def gather_wrapper(coros):
+            await asyncio.gather(*coros)
+        interfaces_util.run_in_bot_async_executor(
+            gather_wrapper(check_coro)
+        )
+    return compatibility_results
 
 
 def _is_possible_exchange_config(exchange_config):

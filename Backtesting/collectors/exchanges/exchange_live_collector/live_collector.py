@@ -35,7 +35,7 @@ class ExchangeLiveDataCollector(exchanges.AbstractExchangeLiveCollector):
         exchange_manager = await trading_api.create_exchange_builder(self.config, self.exchange_name) \
             .is_simulated() \
             .is_rest_only() \
-            .is_collecting() \
+            .is_without_auth() \
             .is_ignoring_config() \
             .disable_trading_mode() \
             .use_tentacles_setup_config(self.tentacles_setup_config) \
