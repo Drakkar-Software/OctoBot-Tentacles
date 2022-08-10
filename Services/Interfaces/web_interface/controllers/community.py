@@ -43,7 +43,7 @@ def community():
                                  preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
                                  current_logged_in_email=logged_in_email,
                                  role=authenticator.supports.support_role,
-                                 is_donor=bool(authenticator.supports.donations),
+                                 is_donor=bool(authenticator.supports.is_donor()),
                                  tentacles_packages=tentacles_packages,
                                  current_bots_stats=models.get_current_octobots_stats(),
                                  default_tentacles_package_image=default_image)
