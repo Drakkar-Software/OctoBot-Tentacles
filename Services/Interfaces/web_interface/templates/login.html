@@ -25,7 +25,13 @@
                     {% endfor %}
               {% endif %}
             {% endwith %}
-            <h5>Please enter your password to access your OctoBot</h5>
+            <h5>
+                {% if is_remote_login %}
+                Please enter your OctoBot account password to access your OctoBot
+                {% else %}
+                Please enter your password to access your OctoBot
+                {% endif %}
+            </h5>
             <form method=post>
                 <div class="my-4">
                     {{ form.csrf_token }}
