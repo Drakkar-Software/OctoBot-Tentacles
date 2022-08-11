@@ -105,6 +105,7 @@ def context_processor_register():
         EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
         OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
+        OCTOBOT_DONATION_URL=constants.OCTOBOT_DONATION_URL,
         IS_DEMO=constants.IS_DEMO,
         TAB_START=web_enums.TabsLocation.START,
         TAB_END=web_enums.TabsLocation.END,
