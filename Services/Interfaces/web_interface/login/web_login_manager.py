@@ -18,12 +18,15 @@ import flask_login
 import flask
 
 import octobot_commons.configuration as configuration
+import octobot_commons.authentication as authentication
+import octobot_services.interfaces.util as interfaces_util
+import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 
 GENERIC_USER = login.User()
 _IS_LOGIN_REQUIRED = True
 IP_TO_CONNECTION_ATTEMPTS = {}
-MAX_CONNECTION_ATTEMPTS = 10
+MAX_CONNECTION_ATTEMPTS = 50
 
 
 class WebLoginManager(flask_login.LoginManager):
@@ -37,7 +40,23 @@ class WebLoginManager(flask_login.LoginManager):
         self.login_view = "/login"
         self._register_callbacks()
 
-    def is_valid_password(self, ip, password):
+    def is_valid_password(self, ip, password, form):
+        authenticator = authentication.Authenticator.instance()
+        if authenticator.must_be_authenticated_through_authenticator():
+            try:
+                if constants.USER_ACCOUNT_EMAIL is None:
+                    raise authentication.AuthenticationError("Login impossible. "
+                                                             "USER_ACCOUNT_EMAIL constant must to be set")
+                interfaces_util.run_in_bot_main_loop(
+                    authenticator.login(constants.USER_ACCOUNT_EMAIL, password),
+                    log_exceptions=False
+                )
+                return not is_banned(ip)
+            except authentication.FailedAuthentication:
+                return False
+            except Exception as e:
+                form.password.errors.append(f"Error during authentication: {e}")
+                return False
         return not is_banned(ip) and configuration.get_password_hash(password) == self.password_hash
 
     def _register_callbacks(self):
@@ -52,7 +71,7 @@ def is_authenticated():
 
 
 def is_login_required():
-    return _IS_LOGIN_REQUIRED
+    return _IS_LOGIN_REQUIRED or authentication.Authenticator.instance().must_be_authenticated_through_authenticator()
 
 
 @flask_login.login_required
@@ -91,7 +110,7 @@ def register_attempt(ip):
 
 def is_banned(ip):
     if ip in set(IP_TO_CONNECTION_ATTEMPTS.keys()):
-        return IP_TO_CONNECTION_ATTEMPTS[ip] >= 10
+        return IP_TO_CONNECTION_ATTEMPTS[ip] >= MAX_CONNECTION_ATTEMPTS
     return False
 
 
