@@ -16,8 +16,7 @@
 import json
 
 import octobot.api as octobot_api
-import octobot_commons.external_resources_manager as external_resources_manager
-import octobot_services.constants as service_constants
+import octobot.constants as constants
 import octobot_services.interfaces as interfaces
 import tentacles.Services.Interfaces.web_interface.api as api
 
@@ -38,13 +37,12 @@ def upgrade_version():
 
 @api.api.route("/user_feedback")
 def user_feedback():
-    return json.dumps(external_resources_manager.get_external_resource(
-        service_constants.EXTERNAL_RESOURCE_CURRENT_USER_FORM,
-        catch_exception=True))
+    return json.dumps(constants.OCTOBOT_FEEDBACK_FORM_URL)
 
 
 @api.api.route("/announcements")
 def announcements():
-    return json.dumps(external_resources_manager.get_external_resource(
-        service_constants.EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS,
-        catch_exception=True))
+    return ""
+    # return json.dumps("external_resources_manager.get_external_resource(
+    #     service_constants.EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS,
+    #     catch_exception=True)")
