@@ -44,21 +44,32 @@ function setNoFeedback(feedbackButton){
 
 function update_metrics_option(){
     const metrics_input = $("#metricsCheckbox");
-    const activated_metrics = metrics_input.is(':checked');
-    const updated_url = metrics_input.attr(update_url_attr);
-    send_and_interpret_bot_update(activated_metrics, updated_url, null, metrics_success_callback, metrics_failure_callback);
-}
-
-
-function metrics_success_callback(updated_data, update_url, dom_root_element, msg, status) {
-    if(updated_data){
-        create_alert("success", "Anonymous statistics enabled", "Thank you for supporting OctoBot development!");
-    }else{
-        create_alert("success", "Anonymous statistics disabled", "");
+    function metrics_success_callback(updated_data, update_url, dom_root_element, msg, status) {
+        if(updated_data){
+            create_alert("success", "Anonymous statistics enabled", "Thank you for supporting OctoBot development!");
+        }else{
+            create_alert("success", "Anonymous statistics disabled", "");
+        }
     }
+    send_and_interpret_bot_update(metrics_input.is(':checked'), metrics_input.attr(update_url_attr), null,
+        metrics_success_callback, update_failure_callback);
 }
 
-function metrics_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
+function update_beta_option(){
+    function beta_success_callback(updated_data, update_url, dom_root_element, msg, status) {
+        const details = "Please restart your OctoBot for it to take effect."
+        if(updated_data){
+            create_alert("success", "Beta environment enabled", details);
+        }else{
+            create_alert("success", "Beta environment disabled", details);
+        }
+    }
+    const beta_input = $("#beta-checkbox");
+    send_and_interpret_bot_update(beta_input.is(':checked'), beta_input.attr(update_url_attr), null,
+        beta_success_callback, update_failure_callback);
+}
+
+function update_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
     create_alert("error", msg.responseText, "");
 }
 
@@ -66,5 +77,8 @@ $(document).ready(function() {
     load_commands_metadata();
     $("#metricsCheckbox").change(function(){
         update_metrics_option();
+    });
+    $("#beta-checkbox").change(function(){
+        update_beta_option();
     });
 });

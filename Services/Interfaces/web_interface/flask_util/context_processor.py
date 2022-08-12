@@ -17,6 +17,8 @@
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
 import octobot.constants as constants
+import octobot.enums as enums
+import octobot.community.identifiers_provider as identifiers_provider
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
@@ -97,6 +99,9 @@ def context_processor_register():
                 if tab.location is location:
                     yield tab
 
+    def is_in_stating_community_env():
+        return identifiers_provider.IdentifiersProvider.ENABLED_ENVIRONMENT is enums.CommunityEnvironments.Staging
+
     return dict(
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
         OCTOBOT_WEBSITE_URL=constants.OCTOBOT_WEBSITE_URL,
@@ -104,7 +109,7 @@ def context_processor_register():
         DEVELOPER_DOCS_URL=constants.DEVELOPER_DOCS_URL,
         EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
-        OCTOBOT_COMMUNITY_URL=constants.OCTOBOT_COMMUNITY_URL,
+        OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
         OCTOBOT_DONATION_URL=constants.OCTOBOT_DONATION_URL,
         IS_DEMO=constants.IS_DEMO,
         TAB_START=web_enums.TabsLocation.START,
@@ -122,5 +127,6 @@ def context_processor_register():
         is_supporting_future_trading=is_supporting_future_trading,
         is_login_required=web_interface_login.is_login_required,
         is_authenticated=web_interface_login.is_authenticated,
+        is_in_stating_community_env=is_in_stating_community_env,
         get_plugin_tabs=get_plugin_tabs,
     )
