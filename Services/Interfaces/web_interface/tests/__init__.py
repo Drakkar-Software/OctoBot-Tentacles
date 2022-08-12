@@ -43,6 +43,7 @@ async def _init_bot():
     import octobot_evaluators.api as evaluators_api
     import tests.test_utils.config as config
     # force community CommunityAuthentication reset
+    community.IdentifiersProvider.use_production()
     singleton.Singleton._instances.pop(authentication.Authenticator, None)
     singleton.Singleton._instances.pop(community.CommunityAuthentication, None)
     octobot = octobot.OctoBot(test_config.load_test_config(dict_only=False))
