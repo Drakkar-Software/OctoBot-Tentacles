@@ -40,7 +40,8 @@ def community_login():
         if form.validate_on_submit():
             try:
                 interfaces_util.run_in_bot_main_loop(
-                    authenticator.login(form.email.data, form.password.data)
+                    authenticator.login(form.email.data, form.password.data),
+                    log_exceptions=False
                 )
                 logged_in_email = form.email.data
                 return flask.redirect('community')
