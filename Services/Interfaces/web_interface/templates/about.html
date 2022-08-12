@@ -15,7 +15,7 @@
             <div class="float-right">
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-warning waves-effect">
                     <i class="fas fa-sign-out-alt"></i>
-                    Log out
+                    Lock
                 </a>
             </div>
         {% endif %}
@@ -95,6 +95,36 @@ Nothing else is ever shared: no personal data, zero identification enabling data
         <p>
             <a href="{{ url_for('terms') }}">
                 Terms and conditions
+            </a>
+        </p>
+    </div>
+</div>
+<br>
+
+<div class="card">
+    <div class="card-header"><h2>OctoBot Beta tester program</h2></div>
+    <div class="card-body">
+        <p>
+            You can help the team improving OctoBot by testing features in advance through the beta tester group.
+            Registering to the beta tester group will grant you access to major new features weeks in advance as well
+            as a direct communication channel to the OctoBot team to share your feedback and ideas before new versions are
+            released to the public.
+        </p>
+        <div class="custom-control custom-switch my-2">
+            <input type="checkbox" class="custom-control-input" id="beta-checkbox" update-url="{{ url_for('beta_env_settings') }}"
+                   {{ 'checked' if beta_env_enabled_in_config else ''}}
+            >
+            <label class="custom-control-label" for="beta-checkbox">Connect to the beta environment</label>
+        </div>
+        <div class="alert alert-info">
+            When the beta environment is enabled, you will be connected to the "in development" version of {{OCTOBOT_COMMUNITY_URL}}.
+            Available elements will be different from normal ones and your OctoBot might produce unexpected behaviors.
+            Only enable it when actively beta testing and disable it afterwards.
+        </div>
+
+        <p>
+            <a href="{{ octobot_beta_program_form_url }}" class="btn btn-primary waves-effect" target="_blank" rel="noopener">
+                Register to the beta tester program
             </a>
         </p>
     </div>
