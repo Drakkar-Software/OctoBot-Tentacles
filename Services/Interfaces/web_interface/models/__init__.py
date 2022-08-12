@@ -61,6 +61,10 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     get_account_tentacles_packages,
     get_preview_tentacles_packages,
     get_current_octobots_stats,
+    get_all_user_devices,
+    get_selected_user_device,
+    select_device,
+    create_new_device,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
@@ -211,6 +215,10 @@ __all__ = [
     "get_account_tentacles_packages",
     "get_preview_tentacles_packages",
     "get_current_octobots_stats",
+    "get_all_user_devices",
+    "get_selected_user_device",
+    "select_device",
+    "create_new_device",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",
     "get_tentacle_documentation",

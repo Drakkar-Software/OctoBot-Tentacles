@@ -23,6 +23,7 @@ from tentacles.Services.Interfaces.web_interface.api import exchanges
 from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
 from tentacles.Services.Interfaces.web_interface.api import user_commands
+from tentacles.Services.Interfaces.web_interface.api import devices
 
 
 from tentacles.Services.Interfaces.web_interface.api.config import (
@@ -48,6 +49,10 @@ from tentacles.Services.Interfaces.web_interface.api.trading import (
 from tentacles.Services.Interfaces.web_interface.api.user_commands import (
     user_command,
 )
+from tentacles.Services.Interfaces.web_interface.api.devices import (
+    select_device,
+    create_device,
+)
 
 __all__ = [
     "are_compatible_accounts",
@@ -63,4 +68,6 @@ __all__ = [
     "get_config_currency",
     "set_config_currency",
     "change_reference_market_on_config_currencies",
+    "select_device",
+    "create_device",
 ]
