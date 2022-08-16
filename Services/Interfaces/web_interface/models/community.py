@@ -59,7 +59,7 @@ def get_current_octobots_stats():
 
 def _format_device(device):
     return {
-        "name": octobot_community.CommunityUserAccount.get_device_name(device) if device else None,
+        "name": octobot_community.CommunityUserAccount.get_device_name_or_id(device) if device else None,
         "id": octobot_community.CommunityUserAccount.get_device_id(device) if device else None,
     }
 

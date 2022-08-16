@@ -549,7 +549,10 @@ def activate_beta_env(enable_beta):
     new_env = octobot_enums.CommunityEnvironments.Staging if enable_beta \
         else octobot_enums.CommunityEnvironments.Production
     current_edited_config = interfaces_util.get_edited_config(dict_only=False)
-    current_edited_config.config[octobot_constants.CONFIG_COMMUNITY_ENVIRONMENT] = new_env.value
+    if octobot_constants.CONFIG_COMMUNITY not in current_edited_config.config:
+        current_edited_config.config[octobot_constants.CONFIG_COMMUNITY] = {}
+    current_edited_config.config[octobot_constants.CONFIG_COMMUNITY][
+        octobot_constants.CONFIG_COMMUNITY_ENVIRONMENT] = new_env.value
     current_edited_config.save()
 
 
