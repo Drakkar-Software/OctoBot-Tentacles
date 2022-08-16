@@ -18,6 +18,7 @@ import flask_wtf
 import wtforms.fields
 
 import octobot_commons.authentication as authentication
+import octobot_commons.logging as logging
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -48,6 +49,7 @@ def community_login():
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
+                logging.get_logger("CommunityAuthentication").exception(e, False)
                 flask.flash(f"Error during authentication: {e}", "error")
     return flask.render_template('community_login.html',
                                  form=form,
@@ -62,6 +64,9 @@ def community_logout():
         # can't logout when authentication is required
         return flask.redirect(flask.url_for('community'))
     authentication.Authenticator.instance().logout()
+    interfaces_util.run_in_bot_main_loop(
+        authentication.Authenticator.instance().stop_feeds()
+    )
     return flask.redirect(flask.url_for('community_login'))
 
 

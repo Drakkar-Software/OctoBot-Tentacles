@@ -19,6 +19,7 @@ import flask
 
 import octobot_commons.configuration as configuration
 import octobot_commons.authentication as authentication
+import octobot_commons.logging as logging
 import octobot_services.interfaces.util as interfaces_util
 import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -55,6 +56,7 @@ class WebLoginManager(flask_login.LoginManager):
             except authentication.FailedAuthentication:
                 return False
             except Exception as e:
+                logging.get_logger("WebLoginManager").exception(e, False)
                 form.password.errors.append(f"Error during authentication: {e}")
                 return False
         return not is_banned(ip) and configuration.get_password_hash(password) == self.password_hash
