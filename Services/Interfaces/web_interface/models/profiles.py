@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import os
+import requests
 
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
@@ -108,10 +109,19 @@ def import_profile(profile_path, name, replace_if_exists=False):
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
 
 
+def _download_profile(url, target_file):
+    # unauthenticated download
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(target_file, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    return target_file
+
+
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
-    authenticator = authentication.Authenticator.instance()
-    file_path = authenticator.download(profile_url, name)
+    file_path = _download_profile(profile_url, name)
     import_profile(file_path, name, replace_if_exists=False)
     if os.path.isfile(file_path):
         os.remove(file_path)
