@@ -18,36 +18,30 @@ import mock
 
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
-from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_signal
+from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, \
+    mocked_bundle_stop_loss_in_sell_limit_signal, mocked_sell_limit_signal
 
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
-async def test_signal_callback(local_trader, mocked_signal):
+async def test_signal_callback(local_trader, mocked_bundle_stop_loss_in_sell_limit_signal):
     producer, _, _ = local_trader
     with mock.patch.object(producer, "submit_trading_evaluation", new=mock.AsyncMock()) \
          as submit_trading_evaluation_mock:
-        await producer.signal_callback(mocked_signal)
+        await producer.signal_callback(mocked_bundle_stop_loss_in_sell_limit_signal)
         submit_trading_evaluation_mock.assert_called_once_with(
             cryptocurrency=producer.trading_mode.cryptocurrency,
-            symbol=mocked_signal.symbol,
+            symbol=mocked_bundle_stop_loss_in_sell_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.SYMBOL.value],
             time_frame=None,
             final_note=trading_constants.ZERO,
-            state=trading_enums.EvaluatorStates(mocked_signal.state),
-            data=mocked_signal
+            state=trading_enums.EvaluatorStates.UNKNOWN,
+            data=mocked_bundle_stop_loss_in_sell_limit_signal
         )
 
         submit_trading_evaluation_mock.reset_mock()
         # with incompatible exchange type
-        mocked_signal.exchange_type = trading_enums.ExchangeTypes.MARGIN.value
-        await producer.signal_callback(mocked_signal)
-        submit_trading_evaluation_mock.assert_not_called()
-
-        # with invalid state
-        mocked_signal.exchange_type = trading_enums.ExchangeTypes.SPOT.value
-        mocked_signal.state = "123"
-        with pytest.raises(ValueError):
-            await producer.signal_callback(mocked_signal)
+        mocked_bundle_stop_loss_in_sell_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value] = trading_enums.ExchangeTypes.MARGIN.value
+        await producer.signal_callback(mocked_bundle_stop_loss_in_sell_limit_signal)
         submit_trading_evaluation_mock.assert_not_called()
