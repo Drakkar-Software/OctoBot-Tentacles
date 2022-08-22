@@ -10,6 +10,12 @@
             "placeholder":  "Paste your trading strategy identifier here"
           }
         }
+    },
+    "max_volume": {
+      "title": "Maximum volume per buy order in % of quote symbol holdings (USDT for BTC/USDT)",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
     }
   }
 }
