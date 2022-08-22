@@ -46,6 +46,21 @@
         "type": "number",
         "minimum": 0,
         "maximum": 1
+    },
+    "emit_trading_signals": {
+        "title": "Emit trading signals on Astrolab for people to follow.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "trading_strategy": {
+        "title": "Name of the strategy to send signals under on Astrolab.",
+        "type": "string",
+        "minLength": 0,
+        "options": {
+          "inputAttributes": {
+            "placeholder": "my strategy name"
+          }
+        }
     }
   }
 }
