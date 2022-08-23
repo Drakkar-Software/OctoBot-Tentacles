@@ -32,6 +32,7 @@ jobs:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
+        echo "GITHUB_REF=$GITHUB_REF"
         TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
         git clone -q $OCTOBOT_GH_REPO -b ${TARGET_BRANCH} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
         cd OctoBot
@@ -50,6 +51,7 @@ jobs:
         OCTOBOT_GH_REPO: https://github.com/Drakkar-Software/OctoBot.git
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
+        echo "GITHUB_REF=$env:GITHUB_REF"
         $env:TARGET_BRANCH = $env:GITHUB_REF
         If ((Test-Path env:GITHUB_HEAD_REF) -and -not ([string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF))) {
           echo "using GITHUB_HEAD_REF"
