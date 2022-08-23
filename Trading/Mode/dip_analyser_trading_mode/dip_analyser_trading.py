@@ -172,7 +172,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=order_quantity,
                     price=order_price
                 )
-                created_order = await self.exchange_manager.trader.create_order(current_order)
+                created_order = await self.trading_mode.create_order(current_order)
                 created_orders.append(created_order)
                 self._register_buy_order(created_order.order_id, price_weight)
             if created_orders:
@@ -206,7 +206,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     price=order_price,
                     reduce_only=True if self.exchange_manager.is_future else None
                 )
-                created_order = await self.exchange_manager.trader.create_order(current_order)
+                created_order = await self.trading_mode.create_order(current_order)
                 created_orders.append(created_order)
             if created_orders:
                 return created_orders
@@ -436,15 +436,14 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     async def _create_bottom_order(self, notification_candle_time, volume_weight, price_weight):
         self.logger.info(f"** New buy signal for ** : {self.trading_mode.symbol}")
         # call orders creation method
-        await self._create_buy_order_if_enabled(self.exchange_manager.trader, notification_candle_time,
-                                                volume_weight, price_weight)
+        await self._create_buy_order_if_enabled(notification_candle_time, volume_weight, price_weight)
 
-    async def _create_buy_order_if_enabled(self, trader, notification_candle_time, volume_weight, price_weight):
-        if trader.is_enabled:
+    async def _create_buy_order_if_enabled(self, notification_candle_time, volume_weight, price_weight):
+        if self.exchange_manager.trader.is_enabled:
             # cancel previous by orders if any
-            cancelled_orders = await self._cancel_buy_orders_for_trader(trader)
+            cancelled_orders = await self._cancel_buy_orders()
             if self.last_buy_candle == notification_candle_time and cancelled_orders or \
-                    self.last_buy_candle != notification_candle_time:
+               self.last_buy_candle != notification_candle_time:
                 # if subsequent notification from the same candle: only create order if able to cancel the previous buy
                 # to avoid multiple order on the same candle
                 data = {
@@ -465,19 +464,15 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     def get_should_cancel_loaded_orders(cls):
         return True
 
-    async def _cancel_buy_orders(self):
-        trader = self.exchange_manager.trader
-        if trader.is_enabled:
-            await self._cancel_buy_orders_for_trader(trader)
-
     def _get_current_buy_orders(self):
         return [order
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
                     self.trading_mode.symbol)
                 if order.side == trading_enums.TradeOrderSide.BUY]
 
-    async def _cancel_buy_orders_for_trader(self, trader):
+    async def _cancel_buy_orders(self):
         cancelled_orders = False
-        for order in self._get_current_buy_orders():
-            cancelled_orders = await trader.cancel_order(order) or cancelled_orders
+        if self.exchange_manager.trader.is_enabled:
+            for order in self._get_current_buy_orders():
+                cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
         return cancelled_orders

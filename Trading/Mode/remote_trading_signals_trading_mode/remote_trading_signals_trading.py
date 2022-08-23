@@ -93,7 +93,6 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             .new_consumer(
                 self._remote_trading_signal_callback,
                 strategy=self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY],
-                exchange=self.exchange_manager.exchange_name,
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
@@ -114,34 +113,40 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
 
 
 class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer):
+    MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY = "max_volume"
+
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
+        self.MAX_VOLUME_PER_BUY_ORDER = \
+            decimal.Decimal(f"{self.trading_mode.trading_config.get(self.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY, 100)}")
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state,
                                 data):
         # creates a new order (or multiple split orders), always check self.can_create_order() first.
         try:
-            await self._handle_signal_orders(data)
+            await self._handle_signal_orders(symbol, data)
         except errors.MissingMinimalExchangeTradeVolume:
             self.logger.info(f"Not enough funds to create a new order: {self.exchange_manager.exchange_name} "
                              f"exchange minimal order volume has not been reached.")
         except Exception as e:
             self.logger.exception(e, True, f"Error when handling remote signal orders: {e}")
 
-    async def _handle_signal_orders(self, signal):
+    async def _handle_signal_orders(self, symbol, signal):
         to_create_orders_descriptions, to_edit_orders_descriptions, \
             to_cancel_orders_descriptions, to_group_orders_descriptions = \
             self._parse_signal_orders(signal)
-        await self._group_orders(to_group_orders_descriptions, signal.symbol)
-        cancelled_count = await self._cancel_orders(to_cancel_orders_descriptions, signal.symbol)
-        edited_count = await self._edit_orders(to_edit_orders_descriptions, signal.symbol)
-        created_count = await self._create_orders(to_create_orders_descriptions, signal.symbol)
+        self._update_orders_according_to_config(to_edit_orders_descriptions)
+        self._update_orders_according_to_config(to_create_orders_descriptions)
+        await self._group_orders(to_group_orders_descriptions, symbol)
+        cancelled_count = await self._cancel_orders(to_cancel_orders_descriptions, symbol)
+        edited_count = await self._edit_orders(to_edit_orders_descriptions, symbol)
+        created_count = await self._create_orders(to_create_orders_descriptions, symbol)
 
         self.trading_mode.last_signal_description = \
             f"Last signal: {created_count} new order{'s' if created_count > 1 else ''}"
         # send_notification
         if not self.exchange_manager.is_backtesting:
-            await self._send_alert_notification(signal.symbol, created_count, edited_count, cancelled_count)
+            await self._send_alert_notification(symbol, created_count, edited_count, cancelled_count)
 
     async def _group_orders(self, orders_descriptions, symbol):
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
@@ -219,7 +224,13 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
 
     async def _chain_order(self, order_description, created_orders, chained_to, fees_currency_side,
                            created_groups, symbol, order_description_by_id):
-        base_order = created_orders[chained_to]
+        try:
+            base_order = created_orders[chained_to]
+        except KeyError as e:
+            self.logger.error(
+                f"Ignored chained order from {order_description}. Chained orders have to be sent in the same signal "
+                f"as the order they are chained to. Missing order with id: {e}.")
+            return 0
         desc_base_order_quantity = \
             order_description_by_id[chained_to][trading_enums.TradingSignalOrdersAttrs.QUANTITY.value]
         desc_chained_order_quantity = order_description[trading_enums.TradingSignalOrdersAttrs.QUANTITY.value]
@@ -229,6 +240,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         chained_order = await self._create_order(
             order_description, symbol, created_groups, fees_currency_side, target_quantity=target_quantity
         )
+        if chained_order.origin_quantity == trading_constants.ZERO:
+            self.logger.warning(f"Ignored chained order: {chained_order}: not enough funds")
+            return 0
         await chained_order.set_as_chained_order(base_order, False, {})
         base_order.add_chained_order(chained_order)
         if base_order.is_filled() and chained_order.should_be_created():
@@ -304,8 +318,12 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 # chained orders are created later on
                 continue
             created_order = await self._create_order(order_description, symbol, created_groups, fees_currency_side)
-            to_create_orders[order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]] = \
-                (created_order, {})
+            if created_order.origin_quantity == trading_constants.ZERO:
+                self.logger.warning(f"Ignored order to create: {created_order}: not enough funds")
+            else:
+                to_create_orders[order_description[
+                    trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                ] = (created_order, {})
         for order_description in orders_descriptions:
             if bundled_with := order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value]:
                 await self._bundle_order(order_description, to_create_orders, bundled_with, fees_currency_side,
@@ -361,8 +379,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         to_edit_orders = []
         to_cancel_orders = []
         to_group_orders = []
-        for order_description in signal.orders:
-            action = order_description.get(trading_enums.TradingSignalOrdersAttrs.ACTION.value)
+        for order_description in [signal.content] + self._get_nested_signal_order_descriptions(signal.content):
+            action = order_description.get(trading_enums.TradingSignalCommonsAttrs.ACTION.value)
             if action == trading_enums.TradingSignalOrdersActions.CREATE.value:
                 to_create_orders.append(order_description)
             elif action == trading_enums.TradingSignalOrdersActions.EDIT.value:
@@ -372,6 +390,39 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             elif action == trading_enums.TradingSignalOrdersActions.ADD_TO_GROUP.value:
                 to_group_orders.append(order_description)
         return to_create_orders, to_edit_orders, to_cancel_orders, to_group_orders
+
+    def _get_nested_signal_order_descriptions(self, order_description):
+        order_descriptions = []
+        for nested_desc in order_description.get(trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value) or []:
+            order_descriptions.append(nested_desc)
+            # also explore multiple level nested signals
+            order_descriptions += self._get_nested_signal_order_descriptions(nested_desc)
+        return order_descriptions
+
+    def _update_orders_according_to_config(self, order_descriptions):
+        for order_description in order_descriptions:
+            self._update_according_to_config(order_description)
+
+    def _update_according_to_config(self, order_description):
+        # filter max buy order size
+        side = order_description.get(trading_enums.TradingSignalOrdersAttrs.SIDE.value, None)
+        if side is None:
+            found_orders = self.get_open_order_from_description([order_description], None)
+            try:
+                side = found_orders[0][1].side.value
+            except KeyError:
+                pass
+        if side is trading_enums.TradeOrderSide.BUY.value:
+            for key in (trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value,
+                        trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value):
+                self._update_quantity_according_to_config(order_description, key)
+
+    def _update_quantity_according_to_config(self, order_description, quantity_key):
+        quantity_type, quantity = script_keywords.parse_quantity(order_description[quantity_key])
+        if quantity is not None and quantity > self.MAX_VOLUME_PER_BUY_ORDER:
+            self.logger.warning(f"Updating signal order {quantity_key} from {quantity}{quantity_type.value} "
+                                f"to {self.MAX_VOLUME_PER_BUY_ORDER}{quantity_type.value}")
+            order_description[quantity_key] = f"{self.MAX_VOLUME_PER_BUY_ORDER}{quantity_type.value}"
 
     async def _send_alert_notification(self, symbol, created, edited, cancelled):
         try:
@@ -401,10 +452,14 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
         return []
 
     async def signal_callback(self, signal):
-        exchange_type = signal.exchange_type
+        exchange_type = signal.content[trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value]
         if exchange_type == exchanges.get_exchange_type(self.exchange_manager).value:
-            state = trading_enums.EvaluatorStates(signal.state)
-            await self._set_state(self.trading_mode.cryptocurrency, signal.symbol, state, signal)
+            state = trading_enums.EvaluatorStates.UNKNOWN
+            await self._set_state(
+                self.trading_mode.cryptocurrency,
+                signal.content[trading_enums.TradingSignalOrdersAttrs.SYMBOL.value],
+                state, signal
+            )
         else:
             self.logger.error(f"Incompatible signal exchange type: {exchange_type} "
                               f"with current exchange: {self.exchange_manager}")

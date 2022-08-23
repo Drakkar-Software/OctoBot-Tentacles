@@ -1,1 +1,1 @@
-RemoteTradingSignalsTradingMode trades using signals from community strategies
+RemoteTradingSignalsTradingMode trades using signals from community strategies you are subscribed to.

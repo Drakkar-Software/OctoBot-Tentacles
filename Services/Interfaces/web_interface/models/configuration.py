@@ -27,6 +27,7 @@ import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
+import octobot_services.interfaces.util as interfaces_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.constants as tentacles_manager_constants
 import octobot_trading.api as trading_api
@@ -34,7 +35,6 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchanges as trading_exchanges
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
@@ -44,6 +44,8 @@ import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
+import octobot.constants as octobot_constants
+import octobot.enums as octobot_enums
 
 NAME_KEY = "name"
 SYMBOL_KEY = "symbol"
@@ -530,7 +532,7 @@ def update_global_config(new_config, delete=False):
     return True
 
 
-def manage_metrics(enable_metrics):
+def activate_metrics(enable_metrics):
     current_edited_config = interfaces_util.get_edited_config(dict_only=False)
     if commons_constants.CONFIG_METRICS not in current_edited_config.config:
         current_edited_config.config[commons_constants.CONFIG_METRICS] = {
@@ -543,8 +545,25 @@ def manage_metrics(enable_metrics):
     current_edited_config.save()
 
 
+def activate_beta_env(enable_beta):
+    new_env = octobot_enums.CommunityEnvironments.Staging if enable_beta \
+        else octobot_enums.CommunityEnvironments.Production
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
+    if octobot_constants.CONFIG_COMMUNITY not in current_edited_config.config:
+        current_edited_config.config[octobot_constants.CONFIG_COMMUNITY] = {}
+    current_edited_config.config[octobot_constants.CONFIG_COMMUNITY][
+        octobot_constants.CONFIG_COMMUNITY_ENVIRONMENT] = new_env.value
+    current_edited_config.save()
+
+
 def get_metrics_enabled():
     return interfaces_util.get_edited_config(dict_only=False).get_metrics_enabled()
+
+
+def get_beta_env_enabled_in_config():
+    return community.IdentifiersProvider.is_staging_environment_enabled(
+        interfaces_util.get_edited_config(dict_only=True)
+    )
 
 
 def get_services_list():
@@ -782,13 +801,13 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
             to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
         is_compatible = auth_success = is_configured = False
         is_sponsoring = trading_api.is_sponsoring(exchange_name)
-        is_supporter = authentication.Authenticator.instance().supports.is_supporting()
+        is_supporter = authentication.Authenticator.instance().user_account.supports.is_supporting()
         error = None
         if _is_possible_exchange_config(to_check_config):
             check_coro.append(_fetch_is_compatible_account(exchange_name, to_check_config,
                                                            compatibility_results, is_sponsoring, is_supporter))
         else:
-            compatibility_results[exchange_name] =  get_compatibility_result(
+            compatibility_results[exchange_name] = get_compatibility_result(
                 exchange_name,
                 auth_success,
                 is_compatible,

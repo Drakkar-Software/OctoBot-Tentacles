@@ -15,6 +15,7 @@
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
+import octobot_commons.authentication as authentication
 
 
 def get_community_metrics_to_display():
@@ -54,3 +55,31 @@ def get_preview_tentacles_packages(url_for):
 
 def get_current_octobots_stats():
     return interfaces_util.run_in_bot_async_executor(octobot_community.get_current_octobots_stats())
+
+
+def _format_device(device):
+    return {
+        "name": octobot_community.CommunityUserAccount.get_device_name_or_id(device) if device else None,
+        "id": octobot_community.CommunityUserAccount.get_device_id(device) if device else None,
+    }
+
+
+def get_all_user_devices():
+    # reload user devices to make sure the list is up to date
+    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().load_user_devices())
+    return sorted([
+        _format_device(device)
+        for device in authentication.Authenticator.instance().user_account.get_all_user_devices_raw_data()
+    ], key=lambda d: d["name"])
+
+
+def get_selected_user_device():
+    return _format_device(authentication.Authenticator.instance().user_account.get_selected_device_raw_data())
+
+
+def select_device(device_id):
+    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().select_device(device_id))
+
+
+def create_new_device():
+    return interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().create_new_device())

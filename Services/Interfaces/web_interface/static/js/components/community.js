@@ -66,9 +66,42 @@ function packagesOperationErrorCallback(updated_data, update_url, dom_root_eleme
     create_alert("error", "Error when managing packages: "+result.responseText, "");
 }
 
+function displayDeviceSelectorWhenNoSelectedDevice(){
+    if($("#device-selector").find("button[data-role='selected-device']").length === 0) {
+        // no selected device, force selection
+        $('#device-select-modal').modal({backdrop: 'static', keyboard: false})
+    }
+}
+
+function initDevicesCallbacks(){
+    $("#device-selector").find("button[data-role='select-device']").click((element) => {
+        const data = $(element.target).data("device-id");
+        const update_url = $("#device-selector").data("update-url");
+        send_and_interpret_bot_update(data, update_url, null,
+            deviceOperationSuccessCallback, deviceOperationErrorCallback);
+
+    })
+    $("#create-new-device").click((element) => {
+        const update_url = $(element.target).data("update-url");
+        send_and_interpret_bot_update({}, update_url, null,
+            deviceOperationSuccessCallback, deviceOperationErrorCallback);
+    })
+}
+
+function deviceOperationSuccessCallback(updated_data, update_url, dom_root_element, result, status, error){
+    // reload the page to retest devices
+    window.location.reload();
+}
+
+function deviceOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
+    create_alert("error", "Error when managing devices: "+result.responseText, "");
+}
+
 $(document).ready(function() {
     reloadTable();
     $("#synchronize-tentacles").click(function(){
         syncPackages($(this));
     });
+    displayDeviceSelectorWhenNoSelectedDevice();
+    initDevicesCallbacks();
 });

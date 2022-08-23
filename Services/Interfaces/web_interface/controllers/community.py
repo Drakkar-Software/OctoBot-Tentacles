@@ -38,15 +38,20 @@ def community():
         return flask.redirect('community_login')
     tentacles_packages = models.get_account_tentacles_packages(authenticator) if logged_in_email else []
     default_image = flask.url_for('static', filename="img/community/tentacles_packages_previews/octobot.png")
-    return flask.render_template('community.html',
-                                 use_preview=use_preview,
-                                 preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
-                                 current_logged_in_email=logged_in_email,
-                                 role=authenticator.supports.support_role,
-                                 is_donor=bool(authenticator.supports.donations),
-                                 tentacles_packages=tentacles_packages,
-                                 current_bots_stats=models.get_current_octobots_stats(),
-                                 default_tentacles_package_image=default_image)
+    return flask.render_template(
+        'community.html',
+        use_preview=use_preview,
+        preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
+        current_logged_in_email=logged_in_email,
+        role=authenticator.user_account.supports.support_role,
+        is_donor=bool(authenticator.user_account.supports.is_donor()),
+        tentacles_packages=tentacles_packages,
+        current_bots_stats=models.get_current_octobots_stats(),
+        all_devices=models.get_all_user_devices(),
+        selected_device=models.get_selected_user_device(),
+        default_tentacles_package_image=default_image,
+        can_logout=not authentication.Authenticator.instance().must_be_authenticated_through_authenticator()
+    )
 
 
 @web_interface.server_instance.route("/community_metrics")
