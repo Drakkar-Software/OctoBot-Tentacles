@@ -266,7 +266,8 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
 
     @staticmethod
     def command_error(update, _, error=None):
-        TelegramBotInterface.get_logger().exception(error, False)
+        TelegramBotInterface.get_logger().warning("Command receiver error. Please check logs for more details.") \
+            if error is None else TelegramBotInterface.get_logger().exception(error, False)
         if update is not None and TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,
                                                f"Failed to perform this command {update.message.text} : `{error}`")
