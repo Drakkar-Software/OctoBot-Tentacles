@@ -40,6 +40,7 @@ import tentacles.Services.Interfaces.web_interface.controllers
 
 class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     REQUIRED_SERVICES = [Service_bases.WebService]
+    IS_FLASK_APP_CONFIGURED = False
 
     tools = {
         constants.BOT_TOOLS_BACKTESTING: None,
@@ -138,8 +139,31 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
 
+    def init_flask_plugins(self, server_instance):
+        # Only setup flask plugins once per flask app (can't call flask setup methods after the 1st request
+        # has been received).
+        if self.dev_mode:
+            server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
+        elif not WebInterface.IS_FLASK_APP_CONFIGURED:
+            web_interface_root.cache.init_app(server_instance)
+            Compress(server_instance)
+
+        if not WebInterface.IS_FLASK_APP_CONFIGURED:
+            # register session secret key
+            server_instance.secret_key = self.session_secret_key
+            self._handle_login(server_instance)
+
+            security.register_responses_extra_header(server_instance, True)
+
+        WebInterface.IS_FLASK_APP_CONFIGURED = True
+
     def _handle_login(self, server_instance):
-        self.web_login_manger = login.WebLoginManager(server_instance, self.requires_password, self.password_hash)
+        self.web_login_manger = login.WebLoginManager(server_instance, self.password_hash)
+        login.set_is_login_required(self.requires_password)
+
+    def set_requires_password(self, requires_password):
+        self.requires_password = requires_password
+        login.set_is_login_required(requires_password)
 
     def _prepare_websocket(self):
         # handles all namespaces without an explicit error handler
@@ -169,17 +193,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             self.registered_plugins = web_interface_plugins.register_all_plugins(server_instance,
                                                                                  web_interface_root.registered_plugins)
             web_interface_root.update_registered_plugins(self.registered_plugins)
-            if self.dev_mode:
-                server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
-            else:
-                web_interface_root.cache.init_app(server_instance)
-                Compress(server_instance)
-            # register session secret key
-            server_instance.secret_key = self.session_secret_key
-            self._handle_login(server_instance)
+            self.init_flask_plugins(server_instance)
             self.websocket_instance = self._prepare_websocket()
-
-            security.register_responses_extra_header(server_instance, True)
 
             if self.should_open_web_interface:
                 self._open_web_interface_on_browser()
