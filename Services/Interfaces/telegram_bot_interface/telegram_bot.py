@@ -75,7 +75,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             telegram.ext.CommandHandler(["version", "v"], self.command_version),
             telegram.ext.CommandHandler("stop", self.command_stop),
             telegram.ext.CommandHandler("restart", self.command_restart),
-            telegram.ext.CommandHandler("help", self.command_help),
+            telegram.ext.CommandHandler(["help", "h"], self.command_help),
             telegram.ext.CommandHandler(["pause", "resume"], self.command_pause_resume),
             telegram.ext.MessageHandler(telegram.ext.Filters.command, self.command_unknown)
         ]
@@ -114,13 +114,13 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             message += "/stop: `Stops me.`" + interfaces_bots.EOL
             message += "/version or /v: `Displays my current software version.`" + interfaces_bots.EOL
             message += "/help: `Displays this help.`"
-            update.message.reply_markdown(message)
+            update.effective_message.reply_markdown(message)
         elif TelegramBotInterface._is_authorized_chat(update):
-            update.message.reply_text(interfaces_bots.UNAUTHORIZED_USER_MESSAGE)
+            update.effective_message.reply_text(interfaces_bots.UNAUTHORIZED_USER_MESSAGE)
 
     @staticmethod
     def get_command_param(command_name, update):
-        return update.message.text.replace(command_name, "").strip()
+        return update.effective_message.text.replace(command_name, "").strip()
 
     @staticmethod
     def command_start(update, _):
@@ -270,7 +270,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
             if error is None else TelegramBotInterface.get_logger().exception(error, False)
         if update is not None and TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,
-                                               f"Failed to perform this command {update.message.text} : `{error}`")
+                                               f"Failed to perform this command {update.effective_message} : `{error}`")
 
     @staticmethod
     def echo(_, update):
@@ -315,6 +315,6 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                                                                                     interfaces_bots.EOL)
         for m in messages:
             if markdown:
-                update.message.reply_markdown(m)
+                update.effective_message.reply_markdown(m)
             else:
-                update.message.reply_text(m)
+                update.effective_message.reply_text(m)
