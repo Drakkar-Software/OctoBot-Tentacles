@@ -60,27 +60,34 @@ class RedditService(services.AbstractService):
                and services_constants.CONFIG_SERVICE_INSTANCE in config[services_constants.CONFIG_CATEGORY_SERVICES][
                    services_constants.CONFIG_REDDIT]
 
+    def create_reddit_api(self):
+        self.reddit_api = \
+            asyncpraw.Reddit(client_id=
+                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                 services_constants.CONFIG_REDDIT][
+                                 self.CLIENT_ID],
+                             client_secret=
+                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                 services_constants.CONFIG_REDDIT][
+                                 self.CLIENT_SECRET],
+                             password=
+                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                 services_constants.CONFIG_REDDIT][
+                                 self.PASSWORD],
+                             user_agent='bot',
+                             username=
+                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                                 services_constants.CONFIG_REDDIT][
+                                 self.USERNAME],
+                             **self.mocked_asyncpraw_ini()
+                             )
+
     async def prepare(self):
         if not self.reddit_api:
-            self.reddit_api = \
-                asyncpraw.Reddit(client_id=
-                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                     services_constants.CONFIG_REDDIT][
-                                     self.CLIENT_ID],
-                                 client_secret=
-                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                     services_constants.CONFIG_REDDIT][
-                                     self.CLIENT_SECRET],
-                                 password=
-                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                     services_constants.CONFIG_REDDIT][
-                                     self.PASSWORD],
-                                 user_agent='bot',
-                                 username=
-                                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                     services_constants.CONFIG_REDDIT][
-                                     self.USERNAME],
-                                 check_for_updates=False)
+            try:
+                self.create_reddit_api()
+            except KeyError:
+                asyncpraw.createIni()
 
     def get_type(self):
         return services_constants.CONFIG_REDDIT
@@ -100,3 +107,56 @@ class RedditService(services.AbstractService):
     def get_successful_startup_message(self):
         return f"Successfully initialized using {self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][self.USERNAME]}" \
                f" account.", True
+
+    def mocked_asyncpraw_ini(self):
+        # asyncpraw praw.ini file is sometimes not found in binary env, mock its values.
+        # mock values from https://github.com/praw-dev/praw/blob/master/praw/praw.ini using [DEFAULT]
+        # warning, on updating the asycpraw lib, make sure this file did not change
+        # last update: 24 aug 2022 with asyncpraw==7.5.0
+        # file:
+        # [DEFAULT]
+        # # A boolean to indicate whether or not to check for package updates.
+        # check_for_updates = True
+        #
+        # # Object to kind mappings
+        # comment_kind = t1
+        # message_kind = t4
+        # redditor_kind = t2
+        # submission_kind = t3
+        # subreddit_kind = t5
+        # trophy_kind = t6
+        #
+        # # The URL prefix for OAuth-related requests.
+        # oauth_url = https: // oauth.reddit.com
+        #
+        # # The amount of seconds of ratelimit to sleep for upon encountering a specific type of 429 error.
+        # ratelimit_seconds = 5
+        #
+        # # The URL prefix for regular requests.
+        # reddit_url = https: // www.reddit.com
+        #
+        # # The URL prefix for short URLs.
+        # short_url = https: // redd.it
+        #
+        # # The timeout for requests to Reddit in number of seconds
+        # timeout = 16
+        return {
+            "check_for_updates": "False",  # local overwrite to avoid update check at startup
+
+            "comment_kind": "t1",
+            "message_kind": "t4",
+            "redditor_kind": "t2",
+            "submission_kind": "t3",
+            "subreddit_kind": "t5",
+            "trophy_kind": "t6",
+
+            "oauth_url": "https://oauth.reddit.com",
+
+            "ratelimit_seconds": "5",
+
+            "reddit_url": "https://www.reddit.com",
+
+            "short_url": "https://redd.it",
+
+            "timeout": "16",
+        }
