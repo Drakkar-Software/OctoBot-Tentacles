@@ -656,18 +656,23 @@ def _is_legit_currency(currency):
 
 
 def get_all_symbols_dict():
-    global all_symbols_dict
     if not all_symbols_dict:
         request_response = None
+        base_error = "Failed to get currencies list from coingecko.com (this is a display only issue): "
         try:
             # inspired from https://github.com/man-c/pycoingecko
             session = requests.Session()
-            retries = requests.packages.urllib3.util.retry.Retry(total=5, backoff_factor=0.5,
+            retries = requests.packages.urllib3.util.retry.Retry(total=3, backoff_factor=0.5,
                                                                  status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
             # get top 500 coins (2 * 250)
             for i in range(1, 3):
                 request_response = session.get(f"{constants.CURRENCIES_LIST_URL}{i}")
+                if request_response.status_code == 429:
+                    # rate limit issue
+                    all_symbols_dict.clear()
+                    _get_logger().warning(f"{base_error}Too many requests, retry in a few seconds")
+                    break
                 for currency_data in request_response.json():
                     if _is_legit_currency(currency_data[NAME_KEY]):
                         all_symbols_dict[currency_data[NAME_KEY]] = {
@@ -677,7 +682,7 @@ def get_all_symbols_dict():
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
-            _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
+            _get_logger().exception(e, True, f"{base_error}{e}")
             _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_symbols_dict
