@@ -31,10 +31,8 @@ MAX_CONNECTION_ATTEMPTS = 50
 
 
 class WebLoginManager(flask_login.LoginManager):
-    def __init__(self, flask_app, requires_login, password_hash):
+    def __init__(self, flask_app, password_hash):
         flask_login.LoginManager.__init__(self)
-        global _IS_LOGIN_REQUIRED
-        _IS_LOGIN_REQUIRED = requires_login
         self.init_app(flask_app)
         self.password_hash = password_hash
         # register login view to redirect to when login is required
@@ -70,6 +68,11 @@ class WebLoginManager(flask_login.LoginManager):
 
 def is_authenticated():
     return flask_login.current_user.is_authenticated
+
+
+def set_is_login_required(login_required):
+    global _IS_LOGIN_REQUIRED
+    _IS_LOGIN_REQUIRED = login_required
 
 
 def is_login_required():
