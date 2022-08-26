@@ -22,6 +22,7 @@ import octobot.octobot as octobot
 import octobot.constants as octobot_constants
 import octobot.producers as octobot_producers
 import octobot.producers as trading_producers
+import octobot.community as community
 import octobot_commons.tests.test_config as test_config
 import octobot_tentacles_manager.loaders as loaders
 import octobot_evaluators.api as evaluator_api
@@ -34,6 +35,7 @@ pytestmark = pytest.mark.asyncio
 
 async def create_minimalist_unconnected_octobot():
     # import here to prevent later web interface import issues
+    community.IdentifiersProvider.use_production()
     octobot_instance = octobot.OctoBot(test_config.load_test_config(dict_only=False))
     octobot_instance.initialized = True
     tentacles_config = test_utils_config.load_test_tentacles_config()

@@ -2,7 +2,7 @@
 {% macro config_exchange_card(config, exchange, exchanges_details, is_supporting_future_trading,
                               keys_value="*********", enabled=True,
                               sandboxed=False, selected_exchange_type='spot', add_class='', config_values=None,
-                              full_config=True, exchange_docs_url="", community_url="") -%}
+                              full_config=True, exchange_docs_url="", donation_url="") -%}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
@@ -71,7 +71,7 @@
                 <span data-role="supporter-account">
                     If you prefer not to create a new account, you can instead donate to the project and register your donation
                     <a target="_blank" rel="noopener"
-                    href="{{community_url}}donations/new">on the community website</a>. Donation amounts are up to you and
+                    href="{{donation_url}}">on this form</a>. Donation amounts are up to you and
                     will enable live futures trading on your OctoBot after
                     <a target="_blank" rel="noopener" href="{{url_for('community')}}">logging in with your community account</a>.
                 </span>

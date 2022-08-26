@@ -300,8 +300,13 @@ def config_tentacles():
 @web_interface.server_instance.route('/metrics_settings', methods=['POST'])
 @login.login_required_when_activated
 def metrics_settings():
-    enable_metrics = flask.request.get_json()
-    return util.get_rest_reply(flask.jsonify(models.manage_metrics(enable_metrics)))
+    return util.get_rest_reply(flask.jsonify(models.activate_metrics(flask.request.get_json())))
+
+
+@web_interface.server_instance.route('/beta_env_settings', methods=['POST'])
+@login.login_required_when_activated
+def beta_env_settings():
+    return util.get_rest_reply(flask.jsonify(models.activate_beta_env(flask.request.get_json())))
 
 
 @web_interface.server_instance.route('/config_actions', methods=['POST'])

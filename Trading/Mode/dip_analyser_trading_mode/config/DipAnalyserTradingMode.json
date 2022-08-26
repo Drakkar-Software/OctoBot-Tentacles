@@ -9,5 +9,7 @@
     "light_weight_volume_multiplier": 0.5,
     "medium_weight_volume_multiplier": 0.7,
     "heavy_weight_volume_multiplier": 1,
-    "ignore_exchange_fees": false
+    "ignore_exchange_fees": false,
+    "emit_trading_signals": false,
+    "trading_strategy": ""
 }

@@ -27,6 +27,7 @@ import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
+import octobot_services.interfaces.util as interfaces_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.constants as tentacles_manager_constants
 import octobot_trading.api as trading_api
@@ -34,7 +35,6 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchanges as trading_exchanges
 import tentacles.Services.Interfaces.web_interface.constants as constants
-import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
@@ -44,6 +44,8 @@ import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
+import octobot.constants as octobot_constants
+import octobot.enums as octobot_enums
 
 NAME_KEY = "name"
 SYMBOL_KEY = "symbol"
@@ -530,7 +532,7 @@ def update_global_config(new_config, delete=False):
     return True
 
 
-def manage_metrics(enable_metrics):
+def activate_metrics(enable_metrics):
     current_edited_config = interfaces_util.get_edited_config(dict_only=False)
     if commons_constants.CONFIG_METRICS not in current_edited_config.config:
         current_edited_config.config[commons_constants.CONFIG_METRICS] = {
@@ -543,8 +545,25 @@ def manage_metrics(enable_metrics):
     current_edited_config.save()
 
 
+def activate_beta_env(enable_beta):
+    new_env = octobot_enums.CommunityEnvironments.Staging if enable_beta \
+        else octobot_enums.CommunityEnvironments.Production
+    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
+    if octobot_constants.CONFIG_COMMUNITY not in current_edited_config.config:
+        current_edited_config.config[octobot_constants.CONFIG_COMMUNITY] = {}
+    current_edited_config.config[octobot_constants.CONFIG_COMMUNITY][
+        octobot_constants.CONFIG_COMMUNITY_ENVIRONMENT] = new_env.value
+    current_edited_config.save()
+
+
 def get_metrics_enabled():
     return interfaces_util.get_edited_config(dict_only=False).get_metrics_enabled()
+
+
+def get_beta_env_enabled_in_config():
+    return community.IdentifiersProvider.is_staging_environment_enabled(
+        interfaces_util.get_edited_config(dict_only=True)
+    )
 
 
 def get_services_list():
@@ -637,18 +656,23 @@ def _is_legit_currency(currency):
 
 
 def get_all_symbols_dict():
-    global all_symbols_dict
     if not all_symbols_dict:
         request_response = None
+        base_error = "Failed to get currencies list from coingecko.com (this is a display only issue): "
         try:
             # inspired from https://github.com/man-c/pycoingecko
             session = requests.Session()
-            retries = requests.packages.urllib3.util.retry.Retry(total=5, backoff_factor=0.5,
+            retries = requests.packages.urllib3.util.retry.Retry(total=3, backoff_factor=0.5,
                                                                  status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
             # get top 500 coins (2 * 250)
             for i in range(1, 3):
                 request_response = session.get(f"{constants.CURRENCIES_LIST_URL}{i}")
+                if request_response.status_code == 429:
+                    # rate limit issue
+                    all_symbols_dict.clear()
+                    _get_logger().warning(f"{base_error}Too many requests, retry in a few seconds")
+                    break
                 for currency_data in request_response.json():
                     if _is_legit_currency(currency_data[NAME_KEY]):
                         all_symbols_dict[currency_data[NAME_KEY]] = {
@@ -658,7 +682,7 @@ def get_all_symbols_dict():
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
-            _get_logger().error(f"Failed to get currencies list from coingecko.com : {e}")
+            _get_logger().exception(e, True, f"{base_error}{e}")
             _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_symbols_dict
@@ -782,13 +806,13 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
             to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
         is_compatible = auth_success = is_configured = False
         is_sponsoring = trading_api.is_sponsoring(exchange_name)
-        is_supporter = authentication.Authenticator.instance().supports.is_supporting()
+        is_supporter = authentication.Authenticator.instance().user_account.supports.is_supporting()
         error = None
         if _is_possible_exchange_config(to_check_config):
             check_coro.append(_fetch_is_compatible_account(exchange_name, to_check_config,
                                                            compatibility_results, is_sponsoring, is_supporter))
         else:
-            compatibility_results[exchange_name] =  get_compatibility_result(
+            compatibility_results[exchange_name] = get_compatibility_result(
                 exchange_name,
                 auth_success,
                 is_compatible,

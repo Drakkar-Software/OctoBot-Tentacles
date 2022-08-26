@@ -14,5 +14,7 @@
     "use_prices_close_to_current_price": false,
     "disable_buy_orders": false,
     "disable_sell_orders": false,
-    "use_stop_orders": true
+    "use_stop_orders": true,
+    "emit_trading_signals": false,
+    "trading_strategy": ""
 }

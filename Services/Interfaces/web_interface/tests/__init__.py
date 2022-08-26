@@ -43,6 +43,7 @@ async def _init_bot():
     import octobot_evaluators.api as evaluators_api
     import tests.test_utils.config as config
     # force community CommunityAuthentication reset
+    community.IdentifiersProvider.use_production()
     singleton.Singleton._instances.pop(authentication.Authenticator, None)
     singleton.Singleton._instances.pop(community.CommunityAuthentication, None)
     octobot = octobot.OctoBot(test_config.load_test_config(dict_only=False))
@@ -73,7 +74,7 @@ async def get_web_interface(require_password):
         web_interface_instance = web_interface.WebInterface({})
         web_interface_instance.port = PORT
         web_interface_instance.should_open_web_interface = False
-        web_interface_instance.requires_password = require_password
+        web_interface_instance.set_requires_password(require_password)
         web_interface_instance.password_hash = configuration.get_password_hash(PASSWORD)
         interfaces.AbstractInterface.bot_api = (await _init_bot()).octobot_api
         with mock.patch.object(web_interface_instance, "_register_on_channels", new=mock.AsyncMock()):
@@ -116,7 +117,7 @@ async def check_page_login_redirect(url, session):
 
 
 def get_plugins_routes(web_interface_instance, app):
-    all_rules = (rule for rule in app.url_map.iter_rules())
+    all_rules = tuple(rule for rule in app.url_map.iter_rules())
     plugin_routes = []
     for plugin in web_interface_instance.registered_plugins:
         plugin_routes += [rule.rule for rule in get_plugin_routes(app, plugin, all_rules)]

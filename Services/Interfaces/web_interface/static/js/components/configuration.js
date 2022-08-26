@@ -698,8 +698,8 @@ function update_exchanges_details(exchangeCard, exchangeData){
 
     partnersDocs.addClass(hidden_class);
     supporterAccountWarn.addClass(hidden_class);
-    if(exchangeData["supporting_exchange"]){
-        if(exchangeData["auth_success"] && exchangeData["compatible_account"]){
+    if(exchangeData["supporting_exchange"] || exchangeData["supporter_account"]){
+        if(exchangeData["auth_success"] && (exchangeData["compatible_account"] || exchangeData["supporter_account"])){
             supportingIcon.removeClass(hidden_class);
             unloggedSupportingIcon.addClass(hidden_class);
         }else{
@@ -709,7 +709,7 @@ function update_exchanges_details(exchangeCard, exchangeData){
     }
     if(exchangeData["auth_success"]){
         warnIcon.addClass(hidden_class);
-        if(!exchangeData["compatible_account"]){
+        if(!exchangeData["compatible_account"] && !exchangeData["supporter_account"]){
             warnDetailsWrapper.removeClass(hidden_class);
             supporterAccountWarn.removeClass(hidden_class);
             warnDetails.text(exchangeData["error_message"]);
