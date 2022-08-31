@@ -82,7 +82,10 @@ function initDevicesCallbacks(){
 
     })
     $("#create-new-device").click((element) => {
-        const update_url = $(element.target).data("update-url");
+        const createButton = $(element.target);
+        const update_url = createButton.data("update-url");
+        createButton.attr("disabled", true);
+        createButton.text("Creating ...")
         send_and_interpret_bot_update({}, update_url, null,
             deviceOperationSuccessCallback, deviceOperationErrorCallback);
     })
