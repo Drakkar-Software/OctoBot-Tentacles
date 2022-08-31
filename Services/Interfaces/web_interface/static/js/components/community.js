@@ -100,6 +100,12 @@ function deviceOperationErrorCallback(updated_data, update_url, dom_root_element
     create_alert("error", "Error when managing devices: "+result.responseText, "");
 }
 
+function initLoginSubmit(){
+    $("form[name=community-login]").on("submit", () => {
+        $("input[value=Login]").attr("disabled", true);
+    });
+}
+
 $(document).ready(function() {
     reloadTable();
     $("#synchronize-tentacles").click(function(){
@@ -107,4 +113,5 @@ $(document).ready(function() {
     });
     displayDeviceSelectorWhenNoSelectedDevice();
     initDevicesCallbacks();
+    initLoginSubmit();
 });
