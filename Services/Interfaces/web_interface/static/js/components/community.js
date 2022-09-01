@@ -75,7 +75,9 @@ function displayDeviceSelectorWhenNoSelectedDevice(){
 
 function initDevicesCallbacks(){
     $("#device-selector").find("button[data-role='select-device']").click((element) => {
-        const data = $(element.target).data("device-id");
+        const selectButton = $(element.target);
+        const data = selectButton.data("device-id")
+        selectButton.attr("disabled", true);
         const update_url = $("#device-selector").data("update-url");
         send_and_interpret_bot_update(data, update_url, null,
             deviceOperationSuccessCallback, deviceOperationErrorCallback);
