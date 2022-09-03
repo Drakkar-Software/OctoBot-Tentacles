@@ -75,14 +75,19 @@ function displayDeviceSelectorWhenNoSelectedDevice(){
 
 function initDevicesCallbacks(){
     $("#device-selector").find("button[data-role='select-device']").click((element) => {
-        const data = $(element.target).data("device-id");
+        const selectButton = $(element.target);
+        const data = selectButton.data("device-id")
+        selectButton.attr("disabled", true);
         const update_url = $("#device-selector").data("update-url");
         send_and_interpret_bot_update(data, update_url, null,
             deviceOperationSuccessCallback, deviceOperationErrorCallback);
 
     })
     $("#create-new-device").click((element) => {
-        const update_url = $(element.target).data("update-url");
+        const createButton = $(element.target);
+        const update_url = createButton.data("update-url");
+        createButton.attr("disabled", true);
+        createButton.text("Creating ...")
         send_and_interpret_bot_update({}, update_url, null,
             deviceOperationSuccessCallback, deviceOperationErrorCallback);
     })
@@ -97,6 +102,12 @@ function deviceOperationErrorCallback(updated_data, update_url, dom_root_element
     create_alert("error", "Error when managing devices: "+result.responseText, "");
 }
 
+function initLoginSubmit(){
+    $("form[name=community-login]").on("submit", () => {
+        $("input[value=Login]").attr("disabled", true);
+    });
+}
+
 $(document).ready(function() {
     reloadTable();
     $("#synchronize-tentacles").click(function(){
@@ -104,4 +115,5 @@ $(document).ready(function() {
     });
     displayDeviceSelectorWhenNoSelectedDevice();
     initDevicesCallbacks();
+    initLoginSubmit();
 });

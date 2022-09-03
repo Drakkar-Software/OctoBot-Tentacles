@@ -30,7 +30,7 @@
                 <a class="btn btn-sm btn-outline-warning waves-effect mt-4" href="{{ url_for('community_logout') }}">Logout</a>
             {% else %}
                 <h5>Login and access your OctoBot community account.</h5>
-                <form method=post>
+                <form method=post name="community-login">
                     <div class="my-4">
                         {{ form.csrf_token }}
                         <div class="mb-2">
@@ -60,4 +60,5 @@
 {% endblock %}
 
 {% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/community.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

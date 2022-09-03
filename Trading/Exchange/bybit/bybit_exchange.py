@@ -269,7 +269,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
                 trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value:
-                    self.parse_timestamp(position_dict, self.BYBIT_TIMESTAMP),
+                    self.parse_timestamp(position_dict, self.BYBIT_TIMESTAMP, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
                     self._parse_position_margin_type(position_dict.get(self.BYBIT_IS_ISOLATED, True)),
