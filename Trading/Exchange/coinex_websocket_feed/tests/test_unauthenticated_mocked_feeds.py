@@ -21,7 +21,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.tests as commons_tests
 import octobot_trading.exchanges as exchanges
 import octobot_trading.util.test_tools.websocket_test_tools as websocket_test_tools
-from ...coinbase_pro_websocket_feed import CoinbaseProCryptofeedWebsocketConnector
+from ...coinex_websocket_feed import CoinexCryptofeedWebsocketConnector
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
