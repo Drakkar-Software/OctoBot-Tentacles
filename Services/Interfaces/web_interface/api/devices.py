@@ -34,8 +34,8 @@ def select_device():
 @api.api.route("/create_device", methods=['POST'])
 @login.login_required_when_activated
 def create_device():
-    new_device_id = models.create_new_device()
-    models.select_device(new_device_id)
+    new_device = models.create_new_device()
+    models.select_device(community.CommunityUserAccount.get_device_id(new_device))
     device = models.get_selected_user_device()
     flask.flash(f"Created and selected {device['name']} device", "success")
     return flask.jsonify(device)
