@@ -56,16 +56,3 @@ class Coinex(exchanges.SpotCCXTExchange):
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit)
-
-    def get_trades_history(bot_api=None, symbol=None, independent_backtesting=None, since=None, as_dict=False):
-        simulated_trades_history = []
-        real_trades_history = []
-
-        for exchange_manager in interfaces.get_exchange_managers(bot_api=bot_api,
-                                                             independent_backtesting=independent_backtesting):
-           if trading_api.is_trader_existing_and_enabled(exchange_manager):
-               if trading_api.is_trader_simulated(exchange_manager):
-                simulated_trades_history += trading_api.get_trade_history(exchange_manager, symbol, since, as_dict)
-               else:
-                real_trades_history += trading_api.get_trade_history(exchange_manager, symbol, since, as_dict)
-        return real_trades_history, simulated_trades_history
