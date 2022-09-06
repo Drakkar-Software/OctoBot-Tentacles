@@ -18,9 +18,9 @@ import os
 import tentacles.Services.Interfaces.web_interface.models as models
 
 
-def send_and_remove_file(file_path, attachment_filename):
+def send_and_remove_file(file_path, download_name):
     try:
-        return flask.send_file(file_path, as_attachment=True, attachment_filename=attachment_filename, cache_timeout=0)
+        return flask.send_file(file_path, as_attachment=True, download_name=download_name, max_age=0)
     finally:
         # cleanup temp_file
         def remove_file(file_path):
