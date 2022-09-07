@@ -168,6 +168,7 @@ from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer impor
 )
 from tentacles.Services.Interfaces.web_interface.models.tentacles import (
     get_tentacles_packages,
+    get_official_tentacles_url,
     call_tentacle_manager,
     install_packages,
     update_packages,
@@ -298,6 +299,7 @@ __all__ = [
     "get_current_run_params",
     "get_optimizer_status",
     "get_tentacles_packages",
+    "get_official_tentacles_url",
     "call_tentacle_manager",
     "install_packages",
     "update_packages",

@@ -30,8 +30,7 @@ function register_and_install_package(){
 
 function disable_packages_operations(should_lock=true){
     const disabled_attr = 'disabled';
-    $("#update_tentacles_packages").prop(disabled_attr, should_lock);
-    $("#install_tentacles_packages").prop(disabled_attr, should_lock);
+    $("#install_tentacles_packages, #update_tentacles_packages, #install-beta-tentacles, #install-regular-tentacles").prop(disabled_attr, should_lock);
     $("#reset_tentacles_packages").prop(disabled_attr, should_lock);
     const register_and_install_package_input = $("#register_and_install_package_input");
     register_and_install_package_input.prop(disabled_attr, should_lock);
@@ -143,10 +142,7 @@ function get_selected_modules(){
 }
 
 function handle_tentacles_buttons(){
-    $("#install_tentacles_packages").click(function(){
-        perform_packages_operation($(this));
-    });
-    $("#update_tentacles_packages").click(function(){
+    $("#install_tentacles_packages, #update_tentacles_packages, #install-beta-tentacles, #install-regular-tentacles").click(function(){
         perform_packages_operation($(this));
     });
     $("#reset_tentacles_packages").click(function(){

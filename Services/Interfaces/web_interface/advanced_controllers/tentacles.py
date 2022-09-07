@@ -67,7 +67,7 @@ def _handle_package_operation(update_type):
         elif update_type == "reset_packages":
             packages_operation_result = models.reset_packages()
 
-        if packages_operation_result is not None:
+        if packages_operation_result:
             return util.get_rest_reply(flask.jsonify(packages_operation_result))
         else:
             action = update_type.split("_")[0]
@@ -98,6 +98,17 @@ def _handle_tentacles_pages_post(update_type):
 
     elif update_type in ["update_modules", "uninstall_modules"]:
         return _handle_module_operation(update_type)
+
+
+@advanced_controllers.advanced.route('/install_official_tentacle_packages<use_beta_tentacles>', methods=['POST'])
+@login.login_required_when_activated
+def install_official_tentacle_packages(use_beta_tentacles):
+    bundle_url = models.get_official_tentacles_url(use_beta_tentacles == "True")
+    packages_operation_result = models.install_packages(path_or_url=bundle_url)
+    if packages_operation_result:
+        return util.get_rest_reply(flask.jsonify(packages_operation_result))
+    else:
+        return util.get_rest_reply(f'Impossible to install tentacles, check the logs for more information.', 500)
 
 
 @advanced_controllers.advanced.route("/tentacle_packages")

@@ -17,16 +17,17 @@
 import tentacles.Services.Interfaces.web_interface as web_interface
 
 
-@web_interface.server_instance.template_filter()
-def is_dict(value):
-    return isinstance(value, dict)
+def register_template_filters():
+    # should only be called after app configuration
 
+    @web_interface.server_instance.template_filter()
+    def is_dict(value):
+        return isinstance(value, dict)
 
-@web_interface.server_instance.template_filter()
-def is_list(value):
-    return isinstance(value, list)
+    @web_interface.server_instance.template_filter()
+    def is_list(value):
+        return isinstance(value, list)
 
-
-@web_interface.server_instance.template_filter()
-def is_bool(value):
-    return isinstance(value, bool)
+    @web_interface.server_instance.template_filter()
+    def is_bool(value):
+        return isinstance(value, bool)
