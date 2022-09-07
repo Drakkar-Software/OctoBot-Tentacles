@@ -54,7 +54,7 @@ import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 # Override system configuration content types
 flask_util.init_content_types()
-server_instance.json_encoder = flask_util.Jsonifier
+server_instance.json = flask_util.FloatDecimalJSONProvider(server_instance)
 
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface

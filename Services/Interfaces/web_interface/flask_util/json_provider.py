@@ -15,13 +15,13 @@
 #  License along with this library.
 
 import decimal
-import flask.json
+import flask.json.provider
 
 
-class Jsonifier(flask.json.JSONEncoder):
+class FloatDecimalJSONProvider(flask.json.provider.DefaultJSONProvider):
 
-    def default(self, obj):
+    def dumps(self, obj, **kwargs):
         if isinstance(obj, decimal.Decimal):
-            # Convert decimal instances to strings.
+            # Convert decimal instances to float.
             return float(obj)
-        return super().default(obj)
+        return super().dumps(obj, **kwargs)
