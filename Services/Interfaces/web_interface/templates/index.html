@@ -6,6 +6,33 @@
         <h5 class="d-none d-sm-inline"><span class="d-none d-md-inline"><i class="far fa-bell"></i> Good news ! </span>OctoBot version <span update-url="{{ url_for('api.upgrade_version') }}" id="upgradeVersion"></span> is available.</h5><button route="{{ url_for('commands', cmd='update') }}" type="button" class="btn btn-warning waves-effect">Upgrade now <i class="fas fa-cloud-download-alt"></i></button>
     </div>
     <span id="exchange-specific-data">
+        {% if is_in_stating_community_env() %}
+        <div class="card mt-2 mt-md-4">
+            <div class="card-header"><h2>
+                Welcome to the OctoBot beta environment
+                </h2></div>
+            <div class="card-body card-text">
+                <div class="alert alert-info">
+                    When the beta environment is enabled, you will be connected to the "in development"
+                    version of Astrolab (<a href="{{OCTOBOT_COMMUNITY_URL}}">{{OCTOBOT_COMMUNITY_URL}})</a>. The beta Astrolab has its own accounts and products.
+                    Please login using your beta account.
+                </div>
+                <div>
+                    <div>
+                        Beta tentacles with early access features might be available.
+                    </div>
+                    <div>
+                        <button class="btn btn-primary waves-effect ">Install / Update beta tentacles</button>
+                        <button class="btn btn-primary waves-effect ">Reinstall regular tentacles</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    You can disable the beta environment and go back to the regular one at anytime from the
+                    <a href="{{ url_for('about', _anchor='beta-program') }}"> about tab</a>.
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="card mt-2 mt-md-4">
             <div class="card-header"><h2>
                 Profitability
