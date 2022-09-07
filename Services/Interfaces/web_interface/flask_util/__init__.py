@@ -34,9 +34,9 @@ from tentacles.Services.Interfaces.web_interface.flask_util.template_filters imp
     register_template_filters,
 )
 
-from tentacles.Services.Interfaces.web_interface.flask_util import jsonifier
-from tentacles.Services.Interfaces.web_interface.flask_util.jsonifier import (
-    Jsonifier,
+from tentacles.Services.Interfaces.web_interface.flask_util import json_provider
+from tentacles.Services.Interfaces.web_interface.flask_util.json_provider import (
+    FloatDecimalJSONProvider,
 )
 
 __all__ = [
@@ -44,5 +44,5 @@ __all__ = [
     "context_processor_register",
     "send_and_remove_file",
     "register_template_filters",
-    "Jsonifier",
+    "FloatDecimalJSONProvider",
 ]
