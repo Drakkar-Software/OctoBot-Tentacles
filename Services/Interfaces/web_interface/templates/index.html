@@ -10,7 +10,8 @@
         <div class="card mt-2 mt-md-4">
             <div class="card-header"><h2>
                 Welcome to the OctoBot beta environment
-                </h2></div>
+                </h2>
+            </div>
             <div class="card-body card-text">
                 <div class="alert alert-info">
                     When the beta environment is enabled, you will be connected to the "in development"
@@ -22,14 +23,23 @@
                         Beta tentacles with early access features might be available.
                     </div>
                     <div>
-                        <button class="btn btn-primary waves-effect ">Install / Update beta tentacles</button>
-                        <button class="btn btn-primary waves-effect ">Reinstall regular tentacles</button>
+                        <button class="btn btn-primary waves-effect" id="install-beta-tentacles"
+                                update-url="{{url_for('advanced.install_official_tentacle_packages', use_beta_tentacles=True)}}">
+                            Install / Update beta tentacles
+                        </button>
+                        <button class="btn btn-outline-primary waves-effect" id="install-regular-tentacles"
+                                update-url="{{url_for('advanced.install_official_tentacle_packages', use_beta_tentacles=False)}}">
+                            Reinstall regular tentacles
+                        </button>
+                    </div>
+                    <div class='progress' id='packages_action_progess_bar' style='display: none;'>
+                        <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%;'></div>
                     </div>
                 </div>
-                <div class="mt-4">
-                    You can disable the beta environment and go back to the regular one at anytime from the
-                    <a href="{{ url_for('about', _anchor='beta-program') }}"> about tab</a>.
-                </div>
+            </div>
+            <div class="card-footer">
+                You can disable the beta environment and go back to the regular one at anytime from the
+                <a href="{{ url_for('about', _anchor='beta-program') }}"> about tab</a>.
             </div>
         </div>
         {% endif %}
@@ -114,4 +124,5 @@
     <script src="{{ url_for('static', filename='js/common/custom_elements.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/common/candlesticks.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/components/dashboard.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+    <script src="{{ url_for('static', filename='js/components/tentacles_configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
