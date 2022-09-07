@@ -37,8 +37,14 @@ def _add_version_to_tentacles_package_path(path_or_url, version):
     return f"{path_or_url}/{version.replace('.', tentacles_manager_constants.ARTIFACT_VERSION_DOT_REPLACEMENT)}"
 
 
+def get_official_tentacles_url(use_beta_tentacles) -> str:
+    return configuration_manager.get_default_tentacles_url(
+        version=octobot_constants.BETA_TENTACLE_PACKAGE_NAME if use_beta_tentacles else None
+    )
+
+
 def install_packages(path_or_url=None, version=None, authenticator=None):
-    message = "Tentacles installed"
+    message = "Tentacles installed. Restart your OctoBot to load the new tentacles."
     success = True
     if path_or_url and version:
         path_or_url = _add_version_to_tentacles_package_path(path_or_url, version)
@@ -93,7 +99,7 @@ def reset_packages():
 def update_modules(modules):
     success = True
     for url in [
-        configuration_manager.get_default_tentacles_url(),
+        get_official_tentacles_url(False),
         # tentacles_manager_api.get_compiled_tentacles_url(
         #     octobot_constants.DEFAULT_COMPILED_TENTACLES_URL,
         #     octobot_constants.TENTACLES_REQUIRED_VERSION
