@@ -42,6 +42,8 @@ import octobot_commons.constants as commons_constants
 
 STOPPING_TIMEOUT = 30
 CURRENT_BOT_DATA = "current_bot_data"
+# data collector can be really slow, let it up to 2 hours to run
+DATA_COLLECTOR_TIMEOUT = 2 * commons_constants.HOURS_TO_SECONDS
 
 
 def get_full_candle_history_exchange_list():
@@ -195,7 +197,8 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                     tools[constants.BOT_TOOLS_DATA_COLLECTOR], tools[constants.BOT_TOOLS_BACKTESTING],
                     config, tentacles_setup_config, files, run_on_common_part_only,
                     start_timestamp, end_timestamp, enable_logs, auto_stop, collector_start_callback, start_callback),
-                blocking=False)
+                blocking=False,
+                timeout=DATA_COLLECTOR_TIMEOUT)
             return True, "Backtesting started"
     except Exception as e:
         tools[constants.BOT_PREPARING_BACKTESTING] = False
@@ -343,7 +346,8 @@ def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp,
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
     try:
         collected_files = interfaces_util.run_in_bot_main_loop(
-            backtesting_api.initialize_and_run_data_collector(data_collector_instance)
+            backtesting_api.initialize_and_run_data_collector(data_collector_instance),
+            timeout=DATA_COLLECTOR_TIMEOUT
         )
         return collected_files
     finally:
@@ -362,8 +366,7 @@ def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None,
             time_frames = time_frames if isinstance(time_frames, list) else [time_frames]
             if not any(isinstance(time_frame, commons_enums.TimeFrames) for time_frame in time_frames):
                 time_frames = time_frame_manager.parse_time_frames(time_frames)
-        interfaces_util.run_in_bot_main_loop(
-            _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp))
+        _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp)
         return True, f"Historical data collection started."
     else:
         return False, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
@@ -381,7 +384,7 @@ async def _start_collect_and_notify(data_collector_instance):
     await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
-async def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
+def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
