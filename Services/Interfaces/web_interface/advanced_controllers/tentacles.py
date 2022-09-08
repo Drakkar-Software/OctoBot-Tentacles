@@ -18,14 +18,33 @@ import flask
 
 import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
 import tentacles.Services.Interfaces.web_interface.login as login
+from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import import_cross_origin_if_enabled, dev_mode_is_on
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.models as models
 import octobot_commons.authentication as authentication
 
+tentacles_route = "/tentacles"
+if cross_origin := import_cross_origin_if_enabled():
+    if dev_mode_is_on:
+        @advanced_controllers.advanced.route(tentacles_route)
+        @login.login_required_when_activated
+        @cross_origin(origins="*")
+        def tentacles():
+            return _tentacles()
+    else:
+        @advanced_controllers.advanced.route(tentacles_route)
+        @login.active_login_required
+        @cross_origin(origins="*")
+        def tentacles():
+            return _tentacles()
+else:
+    @advanced_controllers.advanced.route(tentacles_route)
+    @login.active_login_required
+    def tentacles():
+        return _tentacles()
 
-@advanced_controllers.advanced.route("/tentacles")
-@login.active_login_required
-def tentacles():
+
+def _tentacles():
     return flask.render_template("advanced_tentacles.html",
                                  tentacles=models.get_tentacles())
 
@@ -111,10 +130,29 @@ def install_official_tentacle_packages(use_beta_tentacles):
         return util.get_rest_reply(f'Impossible to install tentacles, check the logs for more information.', 500)
 
 
-@advanced_controllers.advanced.route("/tentacle_packages")
-@advanced_controllers.advanced.route('/tentacle_packages', methods=['GET', 'POST'])
-@login.active_login_required
-def tentacle_packages():
+tentacles_package_route = "/tentacle_packages"
+methods = ['GET', 'POST']
+if cross_origin := import_cross_origin_if_enabled():
+    if dev_mode_is_on:
+        @advanced_controllers.advanced.route(tentacles_route)
+        @login.login_required_when_activated
+        @cross_origin(origins="*")
+        def tentacle_packages():
+            return _tentacle_packages()
+    else:
+        @advanced_controllers.advanced.route(tentacles_route)
+        @login.active_login_required
+        @cross_origin(origins="*")
+        def tentacle_packages():
+            return _tentacle_packages()
+else:
+    @advanced_controllers.advanced.route(tentacles_route)
+    @login.active_login_required
+    def tentacle_packages():
+        return _tentacle_packages()
+
+
+def _tentacle_packages():
     if flask.request.method == 'POST':
         update_type = flask.request.args["update_type"]
         return _handle_tentacles_pages_post(update_type)
