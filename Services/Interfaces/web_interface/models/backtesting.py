@@ -32,6 +32,7 @@ import octobot_backtesting.collectors as collectors
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
@@ -82,25 +83,26 @@ def get_data_files_with_description():
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                                           start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                           start_timestamp=None, end_timestamp=None, trading_type=None,
+                                           enable_logs=False,
                                            auto_stop=False, collector_start_callback=None, start_callback=None):
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=run_on_common_part_only,
-                              start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
                               use_current_bot_data=False, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
                               start_callback=start_callback)
 
 
 def start_backtesting_using_current_bot_data(data_source, exchange_id, source, reset_tentacle_config=False,
-                                             start_timestamp=None, end_timestamp=None, exchange_type=None,
+                                             start_timestamp=None, end_timestamp=None, trading_type=None,
                                              enable_logs=False, auto_stop=False,
                                              collector_start_callback=None, start_callback=None):
     use_current_bot_data = data_source == CURRENT_BOT_DATA
     files = None if use_current_bot_data else [data_source]
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=False,
-                              start_timestamp=start_timestamp, end_timestamp=end_timestamp, exchange_type=exchange_type,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
                               use_current_bot_data=use_current_bot_data,
                               exchange_id=exchange_id, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
@@ -117,8 +119,22 @@ def stop_previous_backtesting():
     return True, "No backtesting to stop"
 
 
+def _parse_trading_type(trading_type):
+    if trading_type is None or trading_type == commons_constants.USE_CURRENT_PROFILE:
+        return commons_constants.USE_CURRENT_PROFILE, commons_constants.USE_CURRENT_PROFILE
+    if trading_type == trading_enums.ExchangeTypes.SPOT.value:
+        return commons_constants.CONFIG_EXCHANGE_SPOT, commons_constants.USE_CURRENT_PROFILE
+    if trading_type == trading_enums.FutureContractType.INVERSE_PERPETUAL.value:
+        return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.INVERSE_PERPETUAL
+    if trading_type == trading_enums.FutureContractType.LINEAR_PERPETUAL.value:
+        return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.LINEAR_PERPETUAL
+    if trading_type == trading_enums.ExchangeTypes.MARGIN.value:
+        return commons_constants.CONFIG_EXCHANGE_MARGIN, commons_constants.USE_CURRENT_PROFILE
+    raise RuntimeError(f"Unsupported trading type: {trading_type}")
+
+
 def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                       start_timestamp=None, end_timestamp=None, exchange_type=None, use_current_bot_data=False,
+                       start_timestamp=None, end_timestamp=None, trading_type=None, use_current_bot_data=False,
                        exchange_id=None, enable_logs=False, auto_stop=False,
                        collector_start_callback=None, start_callback=None):
     tools = web_interface_root.WebInterface.tools
@@ -153,7 +169,9 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
             else:
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_edited_config()
+            exchange_type, contract_type = _parse_trading_type(trading_type)
             config[commons_constants.CONFIG_EXCHANGE_TYPE] = exchange_type
+            config[commons_constants.CONFIG_CONTRACT_TYPE] = contract_type
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             if is_optimizer_running and files is None:
                 files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
