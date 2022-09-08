@@ -129,14 +129,16 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         return state.name, f"{buy_count} buy {sell_count} sell"
 
     async def create_producers(self) -> list:
+        default_producers = await self.create_default_producers()
         mode_producer = StaggeredOrdersTradingModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
-        return [mode_producer]
+        return [mode_producer] + default_producers
 
     async def create_consumers(self) -> list:
         # trading mode consumer
+        default_consumers = await self.create_default_consumers()
         mode_consumer = StaggeredOrdersTradingModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -151,7 +153,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        return [mode_consumer, order_consumer] + default_consumers
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
                                            is_new, is_from_bot):
@@ -360,10 +362,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # remove self.exchange_manager.id from available funds
             StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
         await super().stop()
-
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
-        # nothing to do: this is not a strategy related trading mode
-        pass
 
     def _schedule_order_refresh(self):
         # schedule order creation / health check

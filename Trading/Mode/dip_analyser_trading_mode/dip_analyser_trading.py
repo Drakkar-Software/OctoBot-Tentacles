@@ -53,14 +53,16 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
                "N/A"
 
     async def create_producers(self) -> list:
+        default_producers = await self.create_default_producers()
         mode_producer = DipAnalyserTradingModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
-        return [mode_producer]
+        return [mode_producer] + default_producers
 
     async def create_consumers(self) -> list:
         # trading mode consumer
+        default_consumers = await self.create_default_consumers()
         mode_consumer = DipAnalyserTradingModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -75,7 +77,7 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        return [mode_consumer, order_consumer] + default_consumers
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
                                            symbol, order, is_new, is_from_bot):
@@ -395,6 +397,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                                                      Strategies.DipAnalyserStrategyEvaluator.get_eval_type()):
                 self.final_eval = evaluators_api.get_value(evaluated_strategy_node)
                 await self.create_state()
+        await super().set_final_eval(matrix_id, cryptocurrency, symbol, time_frame)
 
     async def create_state(self):
         self.state = trading_enums.EvaluatorStates.LONG

@@ -66,13 +66,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                self.producers[0].final_eval
 
     async def create_producers(self) -> list:
+        default_producers = await self.create_default_producers()
         mode_producer = TradingViewSignalsModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
-        return [mode_producer]
+        return [mode_producer] + default_producers
 
     async def create_consumers(self) -> list:
+        default_consumers = await self.create_default_consumers()
         mode_consumer = TradingViewSignalsModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -89,7 +91,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             )
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return [mode_consumer, feed_consumer]
+        return [mode_consumer, feed_consumer] + default_consumers
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
@@ -149,10 +151,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             trading_enums.EvaluatorStates.VERY_SHORT: 1,
             trading_enums.EvaluatorStates.NEUTRAL: 0,
         }
-
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
-        # Ignore matrix calls
-        pass
 
     def _parse_order_details(self, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()

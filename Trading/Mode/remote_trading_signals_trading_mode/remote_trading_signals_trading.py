@@ -56,12 +56,13 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         return producer_state, self.last_signal_description
 
     async def create_producers(self) -> list:
+        default_producers = await self.create_default_producers()
         mode_producer = RemoteTradingSignalsModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
         signal_producers = await self._subscribe_to_signal_feed()
-        return [mode_producer] + signal_producers
+        return [mode_producer] + signal_producers + default_producers
 
     async def _subscribe_to_signal_feed(self):
         channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
@@ -81,6 +82,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         return []
 
     async def create_consumers(self) -> list:
+        default_consumers = await self.create_default_consumers()
         mode_consumer = RemoteTradingSignalsModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -96,7 +98,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
-        return [mode_consumer, signals_consumer]
+        return [mode_consumer, signals_consumer] + default_consumers
 
     async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")

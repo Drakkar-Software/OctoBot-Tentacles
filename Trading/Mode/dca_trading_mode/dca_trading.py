@@ -126,6 +126,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def start(self) -> None:
         self.task = await asyncio.create_task(self.delayed_start())
+        await super().start()
 
     async def delayed_start(self):
         # wait for portfolio to be fetched

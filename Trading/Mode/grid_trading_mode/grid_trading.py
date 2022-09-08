@@ -47,14 +47,16 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     USER_COMMAND_PAUSE_TIME = "pause length in seconds"
 
     async def create_producers(self) -> list:
+        default_producers = await super(staggered_orders_trading.StaggeredOrdersTradingMode, self).create_producers()
         mode_producer = GridTradingModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
         await mode_producer.run()
-        return [mode_producer]
+        return [mode_producer] + default_producers
 
     async def create_consumers(self) -> list:
         # trading mode consumer
+        default_consumers = await self.create_default_consumers()
         mode_consumer = GridTradingModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -76,8 +78,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                     {"bot_id": self.bot_id, "subject": self.get_name()}
                 )
         except KeyError:
-            return [mode_consumer, order_consumer]
-        return [mode_consumer, order_consumer, user_commands_consumer]
+            return [mode_consumer, order_consumer] + default_consumers
+        return [mode_consumer, order_consumer, user_commands_consumer] + default_consumers
 
     async def _user_commands_callback(self, bot_id, subject, action, data) -> None:
         if data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
