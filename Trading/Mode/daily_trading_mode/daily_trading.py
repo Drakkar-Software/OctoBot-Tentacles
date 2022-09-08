@@ -33,6 +33,7 @@ import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
+import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 
 
 class DailyTradingMode(trading_modes.AbstractTradingMode):
@@ -87,6 +88,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
+
         self.trader = self.exchange_manager.trader
 
         self.MAX_SUM_RESULT = decimal.Decimal(2)
@@ -124,17 +126,56 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
         trading_config = self.trading_mode.trading_config if self.trading_mode else {}
 
-        self.USE_CLOSE_TO_CURRENT_PRICE = trading_config.get("use_prices_close_to_current_price", False)
-        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = decimal.Decimal(str(
-            trading_config.get("close_to_current_price_difference", 0.02)))
-        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("buy_with_maximum_size_orders", False)
-        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("sell_with_maximum_size_orders", False)
-        self.DISABLE_SELL_ORDERS = trading_config.get("disable_sell_orders", False)
-        self.DISABLE_BUY_ORDERS = trading_config.get("disable_buy_orders", False)
-        self.USE_STOP_ORDERS = trading_config.get("use_stop_orders", True)
-        self.MAX_CURRENCY_RATIO = trading_config.get("max_currency_percent", None)
+        self.USE_CLOSE_TO_CURRENT_PRICE = None
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO = None
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS = None
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS = None
+        self.DISABLE_SELL_ORDERS = None
+        self.DISABLE_BUY_ORDERS = None
+        self.USE_STOP_ORDERS = None
+        self.MAX_CURRENCY_RATIO = None
         if self.MAX_CURRENCY_RATIO is not None:
             self.MAX_CURRENCY_RATIO = decimal.Decimal(str(self.MAX_CURRENCY_RATIO)) / trading_constants.ONE_HUNDRED
+
+    async def initialize_user_input_settings(self, context) -> None:
+        self.USE_CLOSE_TO_CURRENT_PRICE \
+            = await basic_keywords.user_input(ctx=context, name="use_prices_close_to_current_price",
+                                              title="Fixed limit prices: Use a fixed ratio to compute "
+                                                    "prices in sell / buy orders.",
+                                              input_type="boolean", def_val=False)
+        self.CLOSE_TO_CURRENT_PRICE_DEFAULT_RATIO \
+            = await basic_keywords.user_input(ctx=context, name="close_to_current_price_difference",
+                                              title="Fixed limit prices difference: Difference to take into account "
+                                                    "when placing a limit order (used if fixed limit prices is "
+                                                    "enabled). For a 200 USD price and 0.005 in difference: buy price "
+                                                    "would be 199 and sell price 201.",
+                                              input_type="float", def_val=0.005, min_val=0)
+        self.BUY_WITH_MAXIMUM_SIZE_ORDERS \
+            = await basic_keywords.user_input(ctx=context, name="buy_with_maximum_size_orders",
+                                              title="All in buy trades: Trade with all available "
+                                                    "funds at each buy order.",
+                                              input_type="boolean", def_val=False)
+        self.SELL_WITH_MAXIMUM_SIZE_ORDERS \
+            = await basic_keywords.user_input(ctx=context, name="sell_with_maximum_size_orders",
+                                              title="All in sell trades: Trade with all available "
+                                                    "funds at each sell order.",
+                                              input_type="boolean", def_val=False)
+        self.DISABLE_SELL_ORDERS \
+            = await basic_keywords.user_input(ctx=context, name="disable_sell_orders",
+                                              title="Disable sell orders (sell market and sell limit).",
+                                              input_type="boolean", def_val=False)
+        self.DISABLE_BUY_ORDERS \
+            = await basic_keywords.user_input(ctx=context, name="disable_buy_orders",
+                                              title="Disable buy orders (buy market and buy limit).",
+                                              input_type="boolean", def_val=False)
+        self.USE_STOP_ORDERS = await basic_keywords.user_input(ctx=context, name="use_stop_orders",
+                                                               title="Stop orders: Use stop loss orders.",
+                                                               input_type="boolean", def_val=False)
+        self.MAX_CURRENCY_RATIO \
+            = await basic_keywords.user_input(ctx=context, name="max_currency_percent",
+                                              title="Maximum currency percent: Maximum portfolio % to allocate on a "
+                                                    "given currency. Used to compute buy order volumes.",
+                                              input_type="float", def_val=100, min_val=0, max_val=100)
 
     def flush(self):
         super().flush()
@@ -336,8 +377,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume or \
                            self._get_sell_limit_quantity_from_risk(final_note, current_symbol_holding, base)
-                quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
-                                                                                    current_symbol_holding)
+                quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
+                                                                                            symbol_market,
+                                                                                            current_symbol_holding)
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                         user_price or
                                                                         (price * self._get_limit_price_from_risk(
