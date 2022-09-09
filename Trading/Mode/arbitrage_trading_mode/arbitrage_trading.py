@@ -195,7 +195,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     order_type=trading_enums.TraderOrderType.STOP_LOSS,
                     symbol=self.trading_mode.symbol,
                     current_price=arbitrage_container.own_exchange_price,
-                                                                        quantity=order_quantity,
+                    quantity=order_quantity,
                     price=stop_price,
                     group=oco_group,
                     side=trading_enums.TradeOrderSide.SELL
