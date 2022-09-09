@@ -242,7 +242,10 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         if contract.is_one_way_position_mode():
             return 0
         else:
-            raise NotImplementedError("get_order_additional_params Hedge mode is not implemented")
+            raise NotImplementedError(
+                f"Hedge mode is not implemented yet. Please switch to One-Way position mode from the Bybit "
+                f"trading interface preferences of {contract.pair}"
+            )
             # TODO
             # if Buy side of both side mode:
             #     return 1
