@@ -25,6 +25,8 @@ import octobot_evaluators.util as evaluators_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
+from octobot_trading.modes.script_keywords import basic_keywords
+import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 
 
 class SuperTrendEvaluator(evaluators.TAEvaluator):
@@ -110,42 +112,53 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
         self.config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, self.__class__)
-        self.fast_length = self.config.get(self.FAST_LENGTH, 50)
-        self.slow_length = self.config.get(self.SLOW_LENGTH, 200)
-        self.fast_ma_type = self.config.get(self.FAST_MA_TYPE, "SMA").lower()
-        self.slow_ma_type = self.config.get(self.SLOW_MA_TYPE, "SMA").lower()
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
-
-        close = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
-                                                     time_frame,
-                                                     include_in_construction=inc_in_construction_data)
-        volume = trading_api.get_symbol_volume_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
-                                                       time_frame,
-                                                       include_in_construction=inc_in_construction_data)
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(close) > self.slow_length:
-            await self.evaluate(cryptocurrency, symbol, time_frame, candle, close, volume)
+        await self.evaluate(cryptocurrency, symbol, time_frame)
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
 
-    async def evaluate(self, cryptocurrency, symbol, time_frame, candle, candle_data, volume_data):
-        if self.fast_ma_type == "vwma":
-            ma1 = tulipy.vwma(candle_data, volume_data, self.fast_length)[-1]
-        elif self.fast_ma_type == "lsma":
-            ma1 = tulipy.linreg(candle_data, self.fast_length)[-1]
-        else:
-            ma1 = getattr(tulipy, self.fast_ma_type)(candle_data, self.fast_length)[-1]
+    async def evaluate(self, cryptocurrency, symbol, time_frame):
+        available_sources = ["EMA", "WMA", "SMA", "LSMA", "KAMA", "DEMA", "TEMA", "VWMA"]
+        fast_length = await basic_keywords.user_input(self.context, name="fast_length", title="Fast MA length",
+                                                      input_type="int", def_val=50, min_val=1)
+        fast_ma_type = await basic_keywords.user_input(self.context, name="fast_ma_type", title="Type of MA fast",
+                                                       input_type="options", def_val="SMA", options=available_sources)
+        plot_fast_ma = await basic_keywords.user_input(self.context, name="plot_fast_ma", title="Plot MA fast",
+                                                       input_type="boolean", def_val=False)
+        slow_length = await basic_keywords.user_input(self.context, name="slow_length", title="Slow MA Length",
+                                                      input_type="int", def_val=200, min_val=1)
+        slow_ma_type = await basic_keywords.user_input(self.context, name="slow_ma_type", title="Type of MA slow",
+                                                       input_type="int", def_val="SMA", options=available_sources)
+        plot_slow_ma = await basic_keywords.user_input(self.context, name="plot_slow_ma", title="Plot MA slow",
+                                                       input_type="boolean", def_val=False)
 
-        if self.slow_ma_type == "vwma":
-            ma2 = tulipy.vwma(candle_data, volume_data, self.slow_length)[-1]
-        elif self.slow_ma_type == "lsma":
-            ma2 = tulipy.linreg(candle_data, self.slow_length)[-1]
+        candle_closes = await exchange_public_data.Close(self.context)
+
+        if len(candle_closes) <= slow_length or fast_length:
+            return
+
+        fast_ma_type, slow_ma_type = (fast_ma_type.lower(), slow_ma_type.lower())
+
+        if fast_ma_type == "vwma":
+            volume_data = await exchange_public_data.Volume(self.context)
+            ma1 = tulipy.vwma(candle_closes, volume_data, fast_length)[-1]
+        elif fast_ma_type == "lsma":
+            ma1 = tulipy.linreg(candle_closes, fast_length)[-1]
         else:
-            ma2 = getattr(tulipy, self.slow_ma_type)(candle_data, self.slow_length)[-1]
+            ma1 = getattr(tulipy, fast_ma_type)(candle_closes, fast_length)[-1]
+
+        if slow_ma_type == "vwma":
+            volume_data = await exchange_public_data.Volume(self.context)
+            ma2 = tulipy.vwma(candle_closes, volume_data, slow_length)[-1]
+        elif slow_ma_type == "lsma":
+            ma2 = tulipy.linreg(candle_closes, slow_length)[-1]
+        else:
+            ma2 = getattr(tulipy, slow_ma_type)(candle_closes, slow_length)[-1]
 
         if ma1 > ma2:
             self.eval_note = -1
@@ -167,6 +180,7 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
                                                            time_frame,
                                                            include_in_construction=inc_in_construction_data)
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
+
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE

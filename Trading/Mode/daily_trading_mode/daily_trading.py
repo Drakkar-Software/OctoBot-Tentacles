@@ -176,6 +176,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                               title="Maximum currency percent: Maximum portfolio % to allocate on a "
                                                     "given currency. Used to compute buy order volumes.",
                                               input_type="float", def_val=100, min_val=0, max_val=100)
+        await basic_keywords.user_select_emit_trading_signals(context, "my-strategy-id")
 
     def flush(self):
         super().flush()
