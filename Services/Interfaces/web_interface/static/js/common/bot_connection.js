@@ -108,20 +108,6 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
     })
 }
 
-function load_metadata() {
-    const botVersionTag = $("#botVersion");
-    $.get({
-        url: botVersionTag.attr(update_url_attr),
-        dataType: "json",
-        success: function(msg, status){
-            botVersionTag.text(msg);
-        },
-        error: function(result, status, error){
-            window.console&&console.error(`Impossible to get the current OctoBot version: ${result.responseText}. More details in logs.`);
-        }
-    })
-}
-
 const notificationCallbacks = [];
 const _reconnectedCallbacks = [];
 let _isBotDisconnected = false;
@@ -142,6 +128,4 @@ $(document).ready(function () {
     handle_route_button();
 
     init_status_websocket();
-
-    load_metadata();
 });
