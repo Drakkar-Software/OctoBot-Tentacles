@@ -50,7 +50,7 @@ def profile():
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
-                                 profiles_activated_tentacles=models.get_profiles_activated_tentacles(profiles),
+                                 profiles_tentacles_details=models.get_profiles_tentacles_details(profiles),
 
                                  config_exchanges=config_exchanges,
                                  config_trading=display_config[commons_constants.CONFIG_TRADING],
