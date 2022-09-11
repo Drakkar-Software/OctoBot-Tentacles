@@ -6,7 +6,7 @@
         "title": "Period: length of the stochastic RSI period.",
         "type": "number",
         "multipleOf": 1.0,
-        "minimum": 1
+        "minimum": 2
     },
     "low_level": {
         "title": "Low threshold: stochastic RSI level from which evaluation is considered a buy signal.",

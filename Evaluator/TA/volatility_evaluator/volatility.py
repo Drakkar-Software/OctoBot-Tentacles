@@ -53,7 +53,10 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
                 else:
                     self.eval_note = stochrsi_value - 0.5
         except tulipy.lib.InvalidOptionError as e:
-            self.logger.debug(f"Error when computing StochRSI: {e}")
+            message = ""
+            if self.period <= 1:
+                message = " period should be higher than 1."
+            self.logger.warning(f"Error when computing StochasticRSIVolatilityEvaluator: {e}{message}")
             self.logger.exception(e, False)
             self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
