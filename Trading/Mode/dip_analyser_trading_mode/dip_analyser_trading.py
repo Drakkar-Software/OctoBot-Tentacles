@@ -154,12 +154,16 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
-            price = price
-
+            max_buy_size = market_quantity
+            if self.exchange_manager.is_future:
+                max_buy_size, is_increasing_position = trading_personal_data.get_futures_max_order_size(
+                    self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
+                    price, False, current_symbol_holding, market_quantity
+                )
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             orders_should_have_been_created = False
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
+            quantity = await self._get_buy_quantity_from_weight(volume_weight, max_buy_size, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
