@@ -106,13 +106,13 @@ def profiles_management(action):
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
-        models.import_profile(file, name)
-        flask.flash(f"{name} profile successfully imported.", "success")
+        new_profile = models.import_profile(file, name)
+        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
     if action == "download":
         url = flask.request.form['inputProfileLink']
-        name = models.download_and_import_profile(url)
-        flask.flash(f"{name} profile successfully imported.", "success")
+        new_profile = name = models.download_and_import_profile(url)
+        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
     if action == "export":
         profile_id = flask.request.args.get("profile_id")
