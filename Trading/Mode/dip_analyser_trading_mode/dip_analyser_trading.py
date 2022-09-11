@@ -158,14 +158,14 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
-            has_enough_funds = False
+            orders_should_have_been_created = False
             quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     limit_price,
                     symbol_market):
-                has_enough_funds = True
+                orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.BUY_LIMIT,
@@ -179,7 +179,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 self._register_buy_order(created_order.order_id, price_weight)
             if created_orders:
                 return created_orders
-            if has_enough_funds:
+            if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
@@ -199,12 +199,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             created_orders = []
-            has_enough_funds = False
+            orders_should_have_been_created = False
             sell_max_quantity = decimal.Decimal(min(decimal.Decimal(f"{current_symbol_holding}"), quantity))
             to_create_orders = self._generate_sell_orders(sell_orders_count, sell_max_quantity, sell_weight,
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
-                has_enough_funds = True
+                orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.SELL_LIMIT,
@@ -218,7 +218,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 created_orders.append(created_order)
             if created_orders:
                 return created_orders
-            if has_enough_funds:
+            if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
