@@ -19,8 +19,11 @@ import requests
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
-import octobot_commons.authentication as authentication
 import octobot_tentacles_manager.api as tentacles_manager_api
+
+
+ACTIVATION = "activation"
+VERSION = "version"
 
 
 def get_current_profile():
@@ -56,13 +59,17 @@ def get_profiles():
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id
 
 
-def get_profiles_activated_tentacles(profiles_list):
+def get_profiles_tentacles_details(profiles_list):
     tentacles_by_profile_id = {}
     for profile in profiles_list.values():
         try:
-            tentacles_by_profile_id[profile.profile_id] = tentacles_manager_api.get_activated_tentacles(
-                tentacles_manager_api.get_tentacles_setup_config(profile.get_tentacles_config_path())
+            tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(
+                profile.get_tentacles_config_path()
             )
+            tentacles_by_profile_id[profile.profile_id] = {
+                ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
+                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config)
+            }
         except Exception:
             # do not raise here to prevent avoid config display
             pass

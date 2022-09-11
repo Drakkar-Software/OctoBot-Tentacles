@@ -23,6 +23,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_interface_login
+import octobot_services.interfaces as interfaces
 import octobot_trading.util as trading_util
 import octobot_trading.enums as trading_enums
 
@@ -111,6 +112,7 @@ def context_processor_register():
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
         OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
         OCTOBOT_DONATION_URL=constants.OCTOBOT_DONATION_URL,
+        CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
         IS_DEMO=constants.IS_DEMO,
         TAB_START=web_enums.TabsLocation.START,
         TAB_END=web_enums.TabsLocation.END,
