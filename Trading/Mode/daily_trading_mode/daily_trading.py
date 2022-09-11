@@ -301,7 +301,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
         user_stop_price = data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
         current_order = None
-        has_enough_funds = False
+        orders_should_have_been_created = False
         timeout = kwargs.pop("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
@@ -321,7 +321,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         quantity,
                         price,
                         symbol_market):
-                    has_enough_funds = True
+                    orders_should_have_been_created = True
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.SELL_MARKET,
                                                                                 symbol=symbol,
@@ -345,7 +345,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         quantity,
                         limit_price,
                         symbol_market):
-                    has_enough_funds = True
+                    orders_should_have_been_created = True
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.SELL_LIMIT,
                                                                                 symbol=symbol,
@@ -389,7 +389,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         quantity,
                         limit_price,
                         symbol_market):
-                    has_enough_funds = True
+                    orders_should_have_been_created = True
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.BUY_LIMIT,
                                                                                 symbol=symbol,
@@ -426,7 +426,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         quantity,
                         price,
                         symbol_market):
-                    has_enough_funds = True
+                    orders_should_have_been_created = True
                     current_order = trading_personal_data.create_order_instance(trader=self.trader,
                                                                                 order_type=trading_enums.TraderOrderType.BUY_MARKET,
                                                                                 symbol=symbol,
@@ -438,7 +438,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         created_orders.append(current_order)
             if created_orders:
                 return created_orders
-            if has_enough_funds:
+            if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 

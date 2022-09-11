@@ -48,7 +48,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
 
             created_orders = []
-            has_enough_funds = False
+            orders_should_have_been_created = False
             quantity = self.order_quantity_of_ref_market / price
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, price * (trading_constants.ONE -
                                                                                             self.ORDER_PRICE_DISTANCE))
@@ -56,7 +56,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity,
                     limit_price,
                     symbol_market):
-                has_enough_funds = True
+                orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
                                                                             order_type=trading_enums.TraderOrderType.BUY_LIMIT,
                                                                             symbol=symbol,
@@ -67,7 +67,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 created_orders.append(created_order)
             if created_orders:
                 return created_orders
-            if has_enough_funds:
+            if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
