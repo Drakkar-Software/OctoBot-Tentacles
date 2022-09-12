@@ -78,9 +78,10 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
         with mock.patch.object(RemoteTradingSignalsTradingMode, "_subscribe_to_signal_feed",
                                new=mock.AsyncMock(return_value=[])) \
                 as _subscribe_to_signal_feed_mock:
-            signal_channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
+            signal_channel, created = await trading_signals.create_remote_trading_signal_channel_if_missing(
                 exchange_manager
             )
+            assert created is True
             await mode.initialize()
             # add mode to exchange manager so that it can be stopped and freed from memory
             exchange_manager.trading_modes.append(mode)
