@@ -41,15 +41,10 @@ class Bittrex(exchanges.SpotCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv limit is not working as expected, limit is doing [:-limit] but we want [-limit:]
-        try:
-            params = kwargs.pop("params", {})
-            candles = await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                              **kwargs)
-            if limit:
-                return candles[-limit:]
-            return candles
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        candles = await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        if limit:
+            return candles[-limit:]
+        return candles
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
         """
@@ -58,9 +53,6 @@ class Bittrex(exchanges.SpotCCXTExchange):
         Default ccxt call is using publicGetMarketsMarketSymbolTicker
         But the mandatory data is available by calling publicGetMarketsMarketSymbolSummary
         """
-        try:
-            return await self.connector.client.fetch_ticker(symbol, params={
-                'method': 'publicGetMarketsMarketSymbolSummary'
-            })
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        if "method" not in kwargs:
+            kwargs["method"] = "publicGetMarketsMarketSymbolSummary"
+        return await super().get_price_ticker(symbol=symbol, **kwargs)

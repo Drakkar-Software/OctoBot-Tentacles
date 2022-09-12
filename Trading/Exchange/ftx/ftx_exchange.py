@@ -70,13 +70,12 @@ class FTX(exchanges.SpotCCXTExchange):
         return round(abs(math.log(value, 10)))
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        try:
-            ticker = await self.connector.client.fetch_ticker(symbol, params=kwargs)
-            ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-            ticker[trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value] = ticker[trading_enums.ExchangeConstantsTickersColumns.QUOTE_VOLUME.value] / ticker[trading_enums.ExchangeConstantsTickersColumns.CLOSE.value]
-            return ticker
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        ticker[trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value] = \
+            ticker[trading_enums.ExchangeConstantsTickersColumns.QUOTE_VOLUME.value] / \
+            ticker[trading_enums.ExchangeConstantsTickersColumns.CLOSE.value]
+        return ticker
 
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetSubaccounts()).get("result", [])

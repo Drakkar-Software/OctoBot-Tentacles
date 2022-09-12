@@ -30,12 +30,7 @@ class Bithumb(exchanges.SpotCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv limit is not working as expected, limit is doing [:-limit] but we want [-limit:]
-        try:
-            params = kwargs.pop("params", {})
-            candles = await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                              **kwargs)
-            if limit:
-                return candles[-limit:]
-            return candles
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        candles = await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        if limit:
+            return candles[-limit:]
+        return candles
