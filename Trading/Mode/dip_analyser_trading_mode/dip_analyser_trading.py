@@ -178,9 +178,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=order_quantity,
                     price=order_price
                 )
-                created_order = await self.trading_mode.create_order(current_order)
-                created_orders.append(created_order)
-                self._register_buy_order(created_order.order_id, price_weight)
+                if created_order := await self.trading_mode.create_order(current_order):
+                    created_orders.append(created_order)
+                    self._register_buy_order(created_order.order_id, price_weight)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
