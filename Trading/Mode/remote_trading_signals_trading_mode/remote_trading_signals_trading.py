@@ -64,20 +64,22 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         return [mode_producer] + signal_producers
 
     async def _subscribe_to_signal_feed(self):
-        channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
+        channel, created = await trading_signals.create_remote_trading_signal_channel_if_missing(
             self.exchange_manager
         )
         if self.exchange_manager.is_backtesting:
             # TODO: create and return producer simulator with this bot id
             raise NotImplementedError("signal producer simulator is not implemented")
             return []
-        try:
-            await channel.subscribe_to_product_feed(
-                self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
-            )
-        except Exception as e:
-            self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
-                                           f"be operating")
+        if created:
+            # only subscribe once to the signal channel
+            try:
+                await channel.subscribe_to_product_feed(
+                    self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
+                )
+            except Exception as e:
+                self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
+                                               f"be operating")
         return []
 
     async def create_consumers(self) -> list:
