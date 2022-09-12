@@ -65,7 +65,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     BYBIT_UNREALISED_PNL = "unrealised_pnl"
     BYBIT_REALIZED_PNL = "cum_realised_pnl"
     BYBIT_ONE_WAY = "MergedSingle"
+    BYBIT_ONE_WAY_DIGIT = "0"
     BYBIT_HEDGE = "BothSide"
+    BYBIT_HEDGE_DIGITS = ["1", "2"]
     BYBIT_ENTRY_PRICE = "entry_price"
 
     # Funding
@@ -110,7 +112,12 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return 'spot'
 
     async def get_positions(self) -> list:
-        return self.parse_positions(await self.connector.client.fetch_positions())
+        params = {}
+        raw_positions = []
+        for position_type in ("linear", "inverse"):
+            params["type"] = position_type
+            raw_positions += await self.connector.client.fetch_positions(params=params)
+        return self.parse_positions(raw_positions)
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:
@@ -155,7 +162,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params = params or {}
             params["stop_order_id"] = created_order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
         return await super()._verify_order(created_order, order_type, symbol, price, params=params)
-
 
     def _update_order_and_trade_data(self, order):
         # parse reduce_only if present
@@ -362,9 +368,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return None
 
     def _parse_position_mode(self, raw_mode):
-        if raw_mode == self.BYBIT_ONE_WAY:
+        if raw_mode == self.BYBIT_ONE_WAY or raw_mode == self.BYBIT_ONE_WAY_DIGIT:
             return trading_enums.PositionMode.ONE_WAY
-        if raw_mode == self.BYBIT_HEDGE:
+        if raw_mode == self.BYBIT_HEDGE or raw_mode in self.BYBIT_HEDGE_DIGITS:
             return trading_enums.PositionMode.HEDGE
         return None
 
