@@ -67,16 +67,13 @@ class AscendEx(exchanges.SpotCCXTExchange):
             return {}
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        try:
-            ticker = await self.connector.client.fetch_ticker(symbol, params=kwargs)
-            ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-            return ticker
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return ticker
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On AscendEx, account recent trades is available under fetch_closed_orders
-        return await self.connector.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
+        return await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
     async def get_symbol_prices(self,
                                 symbol: str,

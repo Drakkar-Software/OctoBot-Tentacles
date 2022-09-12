@@ -97,14 +97,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         # Bybit return an error if there is no limit or since parameter
-        try:
-            params = kwargs.pop("params", {})
-            # never fetch more than 200 candles or get candles from the past
-            limit = min(limit, 200)
-            return await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                           **kwargs)
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        # never fetch more than 200 candles or get candles from the past
+        limit = min(limit, 200)
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     def get_default_type(self):
         if self.exchange_manager.is_future:
@@ -116,19 +111,16 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         raw_positions = []
         for position_type in ("linear", "inverse"):
             params["type"] = position_type
-            raw_positions += await self.connector.client.fetch_positions(params=params)
+            raw_positions += await super().get_positions(**params)
         return self.parse_positions(raw_positions)
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:
-        if "stop_order_status" in kwargs:
-            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        else:
-            # fetch both conditional as well as normal orders
-            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        if "stop_order_status" not in kwargs:
             # only fetch untriggered stop orders
-            orders += await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit,
-                                                           stop_order_status="Untriggered", **kwargs)
+            kwargs["stop_order_status"] = "Untriggered"
+            orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return orders
 
     def clean_order(self, order):
@@ -179,7 +171,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return order
 
     async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> bool:
-        if await self.connector.cancel_order(order_id, symbol=symbol, **kwargs):
+        if await super().cancel_order(order_id, symbol=symbol, **kwargs):
             return True
         else:
             # order might not have been triggered yet, try with stop order endpoint
@@ -187,7 +179,8 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             # after a conditional order is triggered, it will become an active order. So, when a conditional order
             # is triggered, cancellation has to be done through the active order endpoint for any unfilled or
             # partially filled active order
-            return await self.connector.cancel_order(order_id, symbol=symbol, params={"stop_order_id": order_id})
+            kwargs["stop_order_id"] = order_id
+            return await super().cancel_order(order_id, symbol=symbol, **kwargs)
 
 
     async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
