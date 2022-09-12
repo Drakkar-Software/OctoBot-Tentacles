@@ -35,6 +35,7 @@ def duplicate_and_select_profile(profile_id):
     to_duplicate = config.profile_by_id[profile_id]
     new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name}_(copy)",
                                                              description=to_duplicate.description)
+    tentacles_manager_api.refresh_profile_tentacles_setup_config(new_profile.path)
     config.load_profiles()
     _select_and_save(config, new_profile.profile_id)
 
