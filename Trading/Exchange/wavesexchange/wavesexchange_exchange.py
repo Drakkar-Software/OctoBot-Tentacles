@@ -32,9 +32,6 @@ class WavesExchange(exchanges.SpotCCXTExchange):
         return cls.get_name() == exchange_candidate_name
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        try:
-            ticker = await self.connector.client.fetch_ticker(symbol, params=kwargs)
-            ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-            return ticker
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return ticker

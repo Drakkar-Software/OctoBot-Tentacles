@@ -65,7 +65,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     BYBIT_UNREALISED_PNL = "unrealised_pnl"
     BYBIT_REALIZED_PNL = "cum_realised_pnl"
     BYBIT_ONE_WAY = "MergedSingle"
+    BYBIT_ONE_WAY_DIGIT = "0"
     BYBIT_HEDGE = "BothSide"
+    BYBIT_HEDGE_DIGITS = ["1", "2"]
     BYBIT_ENTRY_PRICE = "entry_price"
 
     # Funding
@@ -95,14 +97,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         # Bybit return an error if there is no limit or since parameter
-        try:
-            params = kwargs.pop("params", {})
-            # never fetch more than 200 candles or get candles from the past
-            limit = min(limit, 200)
-            return await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                           **kwargs)
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        # never fetch more than 200 candles or get candles from the past
+        limit = min(limit, 200)
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     def get_default_type(self):
         if self.exchange_manager.is_future:
@@ -110,18 +107,20 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return 'spot'
 
     async def get_positions(self) -> list:
-        return self.parse_positions(await self.connector.client.fetch_positions())
+        params = {}
+        raw_positions = []
+        for position_type in ("linear", "inverse"):
+            params["type"] = position_type
+            raw_positions += await super().get_positions(**params)
+        return self.parse_positions(raw_positions)
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:
-        if "stop_order_status" in kwargs:
-            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        else:
-            # fetch both conditional as well as normal orders
-            orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        if "stop_order_status" not in kwargs:
             # only fetch untriggered stop orders
-            orders += await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit,
-                                                           stop_order_status="Untriggered", **kwargs)
+            kwargs["stop_order_status"] = "Untriggered"
+            orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return orders
 
     def clean_order(self, order):
@@ -156,7 +155,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params["stop_order_id"] = created_order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
         return await super()._verify_order(created_order, order_type, symbol, price, params=params)
 
-
     def _update_order_and_trade_data(self, order):
         # parse reduce_only if present
         order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
@@ -173,7 +171,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return order
 
     async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> bool:
-        if await self.connector.cancel_order(order_id, symbol=symbol, **kwargs):
+        if await super().cancel_order(order_id, symbol=symbol, **kwargs):
             return True
         else:
             # order might not have been triggered yet, try with stop order endpoint
@@ -181,7 +179,8 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             # after a conditional order is triggered, it will become an active order. So, when a conditional order
             # is triggered, cancellation has to be done through the active order endpoint for any unfilled or
             # partially filled active order
-            return await self.connector.cancel_order(order_id, symbol=symbol, params={"stop_order_id": order_id})
+            kwargs["stop_order_id"] = order_id
+            return await super().cancel_order(order_id, symbol=symbol, **kwargs)
 
 
     async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
@@ -242,7 +241,10 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         if contract.is_one_way_position_mode():
             return 0
         else:
-            raise NotImplementedError("get_order_additional_params Hedge mode is not implemented")
+            raise NotImplementedError(
+                f"Hedge mode is not implemented yet. Please switch to One-Way position mode from the Bybit "
+                f"trading interface preferences of {contract.pair}"
+            )
             # TODO
             # if Buy side of both side mode:
             #     return 1
@@ -359,9 +361,9 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return None
 
     def _parse_position_mode(self, raw_mode):
-        if raw_mode == self.BYBIT_ONE_WAY:
+        if raw_mode == self.BYBIT_ONE_WAY or raw_mode == self.BYBIT_ONE_WAY_DIGIT:
             return trading_enums.PositionMode.ONE_WAY
-        if raw_mode == self.BYBIT_HEDGE:
+        if raw_mode == self.BYBIT_HEDGE or raw_mode in self.BYBIT_HEDGE_DIGITS:
             return trading_enums.PositionMode.HEDGE
         return None
 
