@@ -26,6 +26,7 @@ import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as bot_logging
 
 server_instance = flask.Flask(__name__)
+server_instance.config['SEND_FILE_MAX_AGE_DEFAULT'] = 604800
 cache = Cache(config={"CACHE_TYPE": "SimpleCache"})
 
 
