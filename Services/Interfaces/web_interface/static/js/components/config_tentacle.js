@@ -49,7 +49,7 @@ function factory_reset(update_url){
 
 function handle_tentacle_config_reset_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
-    location.reload();
+    initConfigEditor();
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -67,7 +67,7 @@ function check_config(){
 }
 
 function handleConfigDisplay(){
-
+    $("#editor-waiter").hide();
     if(canEditConfig()){
         $("#saveConfigFooter").show();
         $("#saveConfig").click(function() {
@@ -140,8 +140,6 @@ function handleUserCommands(){
 }
 
 function handleButtons() {
-
-    handleConfigDisplay();
     handle_save_button();
     handleUserCommands();
 
@@ -223,33 +221,76 @@ function get_selected_files(){
     return [$("#dataFileSelect").val()];
 }
 
-const configEditorBody = $("#configEditorBody");
-const configSchema = configEditorBody.attr("schema");
-const configValue = configEditorBody.attr("config");
-
-const parsedConfigSchema = configSchema !== "" ? $.parseJSON(configSchema) : null;
-const parsedConfigValue = configValue !== "" ? $.parseJSON(configValue) : null;
-if (canEditConfig){
-    fix_config_values(parsedConfigValue)
-}
-
-let savedConfig = parsedConfigValue;
 
 function canEditConfig() {
     return parsedConfigSchema && parsedConfigValue
 }
 
-const configEditor = canEditConfig() ? (new JSONEditor($("#configEditor")[0],{
-    schema: parsedConfigSchema,
-    startval: parsedConfigValue,
-    no_additional_properties: true,
-    prompt_before_delete: true,
-    disable_array_reorder: true,
-    disable_collapse: true,
-    disable_properties: true
-})) : null;
+let configEditor = null;
+let savedConfig = null;
+let parsedConfigSchema = null;
+let parsedConfigValue = null;
+
+function _addGridDisplayOptions(schema){
+    if(typeof schema.properties === "undefined" && typeof schema.items === "undefined"){
+        return;
+    }
+    // display user inputs as grid
+    schema.format = "grid"
+    if(typeof schema.options === "undefined"){
+        schema.options = {};
+    }
+    schema.options.grid_columns = 4;
+    if(typeof schema.properties !== "undefined"){
+        Object.values(schema.properties).forEach (property => {
+            _addGridDisplayOptions(property)
+        });
+    }
+    if(typeof schema.items !== "undefined"){
+        _addGridDisplayOptions(schema.items)
+    }
+}
+
+function initConfigEditor() {
+    $("#editor-waiter").show();
+    const configEditorBody = $("#configEditorBody");
+    const configSchema = configEditorBody.attr("schema");
+    const configValue = configEditorBody.attr("config");
+
+    function editDetailsSuccess(updated_data, update_url, dom_root_element, msg, status){
+        const inputs = msg["displayed_elements"]["data"]["elements"];
+        if(inputs.length === 0){
+            return;
+        }
+        parsedConfigValue = msg["config"];
+        savedConfig = parsedConfigValue
+        parsedConfigSchema = inputs[0]["schema"];
+        if(configEditor !== null){
+            configEditor.destroy();
+        }
+
+        if (canEditConfig()){
+            fix_config_values(parsedConfigValue)
+        }
+        _addGridDisplayOptions(parsedConfigSchema);
+        configEditor = canEditConfig() ? (new JSONEditor($("#configEditor")[0],{
+            schema: parsedConfigSchema,
+            startval: parsedConfigValue,
+            no_additional_properties: true,
+            prompt_before_delete: true,
+            disable_array_reorder: true,
+            disable_collapse: true,
+            disable_properties: true
+        })) : null;
+        handleConfigDisplay();
+    }
+
+    send_and_interpret_bot_update(null, configEditorBody.data("edit-details-url"), null,
+        editDetailsSuccess, undefined, "GET");
+}
 
 $(document).ready(function() {
+    initConfigEditor();
     handleButtons();
     lock_interface(false);
 

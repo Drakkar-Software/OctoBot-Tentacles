@@ -210,6 +210,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             return True
         except Exception as e:
             self.logger.exception(e, False, f"Fail to start web interface : {e}")
+        finally:
+            self.logger.debug("Web interface thread stopped")
         return False
 
     def _open_web_interface_on_browser(self):
