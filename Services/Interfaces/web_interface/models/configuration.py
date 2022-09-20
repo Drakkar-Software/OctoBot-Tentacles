@@ -21,6 +21,7 @@ import copy
 import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
+import octobot_commons.display as display
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -73,6 +74,8 @@ SCRIPTED_KEY = "scripted"
 ACTIVATED_STRATEGIES = "activated_strategies"
 BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
+CONFIG_KEY = "config"
+DISPLAYED_ELEMENTS_KEY = "displayed_elements"
 
 # tentacles from which configuration is not handled in strategies / evaluators configuration
 NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
@@ -242,6 +245,23 @@ def get_tentacle_from_string(name, media_url, with_info=True):
 
 def get_tentacle_user_commands(klass):
     return klass.get_user_commands() if klass is not None and hasattr(klass, "get_user_commands") else {}
+
+
+def get_tentacle_config_and_edit_display(tentacle):
+    tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle)
+    config, user_inputs = interfaces_util.run_in_bot_main_loop(
+        tentacle_class.get_raw_config_and_user_inputs(
+            interfaces_util.get_edited_tentacles_config(),
+            interfaces_util.get_bot_api().get_bot_id()
+        )
+    )
+    display_elements = display.display_translator_factory()
+    display_elements.add_user_inputs(user_inputs)
+    return {
+        NAME_KEY: tentacle,
+        CONFIG_KEY: config or {},
+        DISPLAYED_ELEMENTS_KEY: display_elements.to_json()
+    }
 
 
 def get_tentacle_config(klass):

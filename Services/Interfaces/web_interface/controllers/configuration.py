@@ -19,6 +19,7 @@ import os
 from datetime import datetime
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as commons_logging
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -268,6 +269,18 @@ def config_tentacle():
                                          )
         else:
             return flask.render_template('config_tentacle.html')
+
+
+@web_interface.server_instance.route('/config_tentacle_edit_details/<tentacle>')
+@login.login_required_when_activated
+def config_tentacle_edit_details(tentacle):
+    try:
+        return util.get_rest_reply(
+            models.get_tentacle_config_and_edit_display(tentacle)
+        )
+    except Exception as e:
+        commons_logging.get_logger("configuration").exception(e)
+        return util.get_rest_reply(str(e), 500)
 
 
 @web_interface.server_instance.route('/config_tentacles', methods=['POST'])

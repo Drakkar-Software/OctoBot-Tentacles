@@ -34,9 +34,16 @@
             </h2>
         </div>
         <div class="card-body" id="configEditorBody"
-             schema="{{ get_tentacle_config_schema_content(tentacle_class) }}"
-             config='{{ get_tentacle_config_file_content(tentacle_class)|tojson }}')>
+             data-edit-details-url="{{ url_for('config_tentacle_edit_details', tentacle=name) }}">
             <div id="configEditor"></div>
+            <div id="editor-waiter" class="text-center my-4">
+                <div>
+                    <h2>Loading configuration</h2>
+                </div>
+                <div>
+                    <h2><i class="fa fa-spinner fa-spin"></i></h2>
+                </div>
+            </div>
             <div id="noConfigMessage" style='display: none;'>
                 This {{ tentacle_type }} can't be configured.
             </div>

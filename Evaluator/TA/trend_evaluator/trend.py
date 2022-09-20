@@ -19,6 +19,7 @@ import tulipy
 import numpy
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as enums
 import octobot_commons.data_util as data_util
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
@@ -42,6 +43,13 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         self.length = self.config.get(self.LENGTH, 10)
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         self.previous_value = {}
+
+    def init_user_inputs(self, inputs: list) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.factor = self.user_input("factor", enums.UserInputTypes.FLOAT, 3, inputs, min_val=0, title="Factor")
+        self.length = self.user_input("length", enums.UserInputTypes.INT, 10, inputs, min_val=1, title="Length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str,
                              symbol: str, time_frame, candle, inc_in_construction_data):
