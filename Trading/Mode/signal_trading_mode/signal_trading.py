@@ -24,9 +24,6 @@ import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_
 
 
 class SignalTradingMode(trading_modes.AbstractTradingMode):
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.load_config()
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:

@@ -112,10 +112,6 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
 
-    def __init__(self, config, exchange):
-        super().__init__(config, exchange)
-        self.load_config()
-
     def get_current_state(self) -> (str, float):
         order = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
         sell_count = len([o for o in order if o.side == trading_enums.TradeOrderSide.SELL])

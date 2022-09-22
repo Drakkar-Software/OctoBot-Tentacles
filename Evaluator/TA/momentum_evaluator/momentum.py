@@ -111,19 +111,10 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.period_length = self.evaluator_config[self.PERIOD]
-        self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
-        self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]
-
-        try:
-            # ensure rsi weights are sorted
-            self.weights = sorted(self.evaluator_config[self.RSI_TO_WEIGHTS], key=lambda a: a[self.SLOW_THRESHOLD])
-            for i, fast_threshold in enumerate(self.weights):
-                fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
-                                                              key=lambda a: a[self.FAST_THRESHOLD])
-        except KeyError as e:
-            raise error.ConfigError(f"Error when reading config: {e}")
+        self.period_length = None
+        self.slow_eval_count = None
+        self.fast_eval_count = None
+        self.weights = []
 
     def _init_fast_threshold(self, inputs, fast_threshold, price_weight, volume_weight):
         self.user_input(self.WEIGHTS, enums.UserInputTypes.OBJECT, None, inputs, parent_input_name=self.FAST_THRESHOLDS,
@@ -164,7 +155,7 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
-        Called right before starting the evaluator, should define all the evaluator's user inputs unless
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
         self.period_length = self.user_input("period", enums.UserInputTypes.INT, 14, inputs, min_val=1,
@@ -191,7 +182,6 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         for i, fast_threshold in enumerate(self.weights):
             fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
                                                           key=lambda a: a[self.FAST_THRESHOLD])
-
 
     def _get_rsi_averages(self, symbol_candles, time_frame, include_in_construction):
         # compute the slow and fast RSI average

@@ -154,7 +154,3 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [DCATradingModeProducer]
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
-
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.load_config()
