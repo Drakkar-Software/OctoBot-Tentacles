@@ -47,11 +47,29 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
         self.last_volume = 0
 
         # Constants
-        self.time_frame = self.specific_config[commons_constants.CONFIG_TIME_FRAME]
-        self.VOLUME_HAPPENING_THRESHOLD = 1 + (self.specific_config[self.VOLUME_THRESHOLD_KEY] / 100)
-        self.PRICE_HAPPENING_THRESHOLD = self.specific_config[self.PRICE_THRESHOLD_KEY] / 100
+        self.time_frame = None
+        self.VOLUME_HAPPENING_THRESHOLD = None
+        self.PRICE_HAPPENING_THRESHOLD = None
         self.MIN_TRIGGERING_DELTA = 0.15
         self.candle_segments = [10, 8, 6, 5, 4, 3, 2, 1]
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.time_frame = self.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
+                                          commons_enums.TimeFrames.ONE_MINUTE.value,
+                                          inputs, options=[tf.value for tf in commons_enums.TimeFrames],
+                                          title="Time frame: The time frame to observe in order to spot changes.")
+        self.VOLUME_HAPPENING_THRESHOLD = 1 + self.user_input(
+            self.VOLUME_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 50, inputs, min_val=0, max_val=100,
+            title="Volume threshold: volume difference in percent from which to trigger a notification."
+        ) / 100
+        self.PRICE_HAPPENING_THRESHOLD = self.user_input(
+            self.PRICE_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 0.05, inputs, min_val=0, max_val=100,
+            title="Price threshold: price difference in percent from which to trigger a notification."
+        ) / 100
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle):
@@ -168,7 +186,19 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
         self.last_candle_data = {}
         self.last_moving_average_values = {}
         self.period = 6
-        self.time_frame = self.specific_config[commons_constants.CONFIG_TIME_FRAME]
+        self.time_frame = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.time_frame = self.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
+                                          commons_enums.TimeFrames.ONE_MINUTE.value,
+                                          inputs, options=[tf.value for tf in commons_enums.TimeFrames],
+                                          title="Time frame: The time frame to observe in order to spot changes.")
+        self.period = self.user_input("period", commons_enums.UserInputTypes.INT, 6, inputs,
+                                      min_val=1, title="Period: the EMA period length to use.")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle):
