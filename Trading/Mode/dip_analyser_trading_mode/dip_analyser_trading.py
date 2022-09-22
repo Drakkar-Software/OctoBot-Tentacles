@@ -15,8 +15,9 @@
 #  License along with this library.
 import decimal
 
-import octobot_commons.constants as commons_constants
 import async_channel.constants as channel_constants
+import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
@@ -35,8 +36,53 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.sell_orders_per_buy = self.trading_config.get("sell_orders_count", 3)
+        self.sell_orders_per_buy = 3
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.should_emit_trading_signals_user_input(inputs)
+        self.sell_orders_per_buy = self.user_input(
+            "sell_orders_count", commons_enums.UserInputTypes.INT, 3, inputs, min_val=1,
+            title="Number of sell orders to create after each buy."
+        )
+        self.user_input(
+            DipAnalyserTradingModeProducer.IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Ignore exchange fees when creating sell orders. When enabled, 100% of the bought assets will be "
+                  "sold, otherwise a small part will be kept to cover exchange fees."
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
+            min_val=1,
+            title="Price multiplier for the top sell order in a light price weight signal.",
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.07, inputs,
+            min_val=1,
+            title="Price multiplier for the top sell order in a medium price weight signal.",
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.1, inputs,
+            min_val=1,
+            title="Price multiplier for the top sell order in a heavy price weight signal.",
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.5, inputs,
+            min_val=0, max_val=1,
+            title="Volume multiplier for the top sell order in a light volume weight signal.",
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.MEDIUM_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
+            min_val=0, max_val=1,
+            title="Volume multiplier for the top sell order in a medium volume weight signal.",
+        )
+        self.user_input(
+            DipAnalyserTradingModeConsumer.HEAVY_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
+            min_val=0, max_val=1,
+            title="Volume multiplier for the top sell order in a heavy volume weight signal.",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -120,6 +166,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         super().__init__(trading_mode)
         self.sell_targets_by_order_id = {}
 
+    def reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.PRICE_WEIGH_TO_PRICE_PERCENT = {}
         self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
             decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
         self.PRICE_WEIGH_TO_PRICE_PERCENT[2] = \
@@ -389,7 +441,13 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         self.last_buy_candle = None
         self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
+        self.ignore_exchange_fees = False
 
+    def reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
         self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 
     async def stop(self):

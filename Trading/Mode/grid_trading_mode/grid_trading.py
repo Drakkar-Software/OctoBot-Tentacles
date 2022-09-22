@@ -166,7 +166,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
-        self.trading_mode.load_config()
+        await self.trading_mode.reload_config()
         self._load_symbol_trading_config()
         self.read_config()
         if self.symbol_trading_config:

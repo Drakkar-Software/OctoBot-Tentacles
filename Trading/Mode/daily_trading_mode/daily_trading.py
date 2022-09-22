@@ -37,10 +37,6 @@ import octobot_trading.api as trading_api
 
 class DailyTradingMode(trading_modes.AbstractTradingMode):
 
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.load_config()
-
     @classmethod
     def get_supported_exchange_types(cls) -> list:
         """
