@@ -220,17 +220,26 @@ def config_tentacle():
         action = flask.request.args.get("action")
         success = True
         response = ""
+        reload_config = False
         if action == "update":
             request_data = flask.request.get_json()
             success, response = models.update_tentacle_config(tentacle_name, request_data)
+            reload_config = True
         elif action == "factory_reset":
             success, response = models.reset_config_to_default(tentacle_name)
+            reload_config = True
         if flask.request.args.get("reload"):
             try:
                 models.reload_scripts()
             except Exception as e:
                 success = False
                 response = str(e)
+        if reload_config and success:
+            try:
+                models.reload_tentacle_config(tentacle_name)
+            except Exception as e:
+                success = False
+                response = f"Error when reloading configuration {e}"
         if success:
             return util.get_rest_reply(flask.jsonify(response))
         else:
