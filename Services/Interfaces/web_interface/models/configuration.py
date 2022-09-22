@@ -900,13 +900,20 @@ def change_reference_market_on_config_currencies(old_base_currency: str, new_bas
 
 
 def send_command_to_activated_tentacles(command, wait_for_processing=True):
-    trading_mode = get_config_activated_trading_mode()
-    evaluators = get_config_activated_evaluators()
-    for tentacle in [trading_mode] + evaluators:
+    trading_mode_name = get_config_activated_trading_mode().get_name()
+    evaluator_names = [
+        evaluator.get_name()
+        for evaluator in get_config_activated_evaluators()
+    ]
+    send_command_to_tentacles(command, [trading_mode_name] + evaluator_names, wait_for_processing=wait_for_processing)
+
+
+def send_command_to_tentacles(command, tentacle_names: list, wait_for_processing=True):
+    for tentacle_name in tentacle_names:
         interfaces_util.run_in_bot_main_loop(
             services_api.send_user_command(
                 interfaces_util.get_bot_api().get_bot_id(),
-                tentacle.get_name(),
+                tentacle_name,
                 command,
                 None,
                 wait_for_processing=wait_for_processing
@@ -920,6 +927,15 @@ def reload_scripts():
         return {"success": True}
     except Exception as e:
         _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
+
+
+def reload_tentacle_config(tentacle_name):
+    try:
+        send_command_to_tentacles(commons_enums.UserCommands.RELOAD_CONFIG.value, [tentacle_name])
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload {tentacle_name} configuration: {e}")
         raise
 
 
