@@ -13,11 +13,24 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot_commons.constants as common_constants
+import octobot_commons.enums as common_enums
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.enums as enums
 
 
 class BlankStrategyEvaluator(evaluators.StrategyEvaluator):
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        super().init_user_inputs(inputs)
+        self.user_input(common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, common_enums.UserInputTypes.INT,
+                        200, inputs, min_val=200,
+                        title="Initialization candles count: the number of historical candles to fetch from "
+                              "exchanges when OctoBot is starting.")
 
     def get_full_cycle_evaluator_types(self) -> tuple:
         # returns a tuple as it is faster to create than a list

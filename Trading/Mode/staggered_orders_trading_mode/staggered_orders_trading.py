@@ -22,6 +22,7 @@ import decimal
 
 import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
 import octobot_trading.api as trading_api
@@ -111,6 +112,83 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
+                        self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
+                        item_title="Pair configuration",
+                        other_schema_values={"minItems": 1, "uniqueItems": True},
+                        title="Configuration for each traded pairs.")
+        self.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
+                        other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                        parent_input_name=self.CONFIG_PAIR_SETTINGS,
+                        title="Name of the traded pair."),
+        self.user_input(
+            self.CONFIG_MODE, commons_enums.UserInputTypes.OPTIONS, StrategyModes.NEUTRAL.value, inputs,
+            options=list(mode.value for mode in StrategyModes),
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Mode: way to allocate funds in created orders.",
+        )
+        self.user_input(
+            self.CONFIG_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Spread: price difference between buy and sell orders: percent of the current price to use as "
+                  "spread (difference between highest buy and lowest sell).",
+        )
+        self.user_input(
+            self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Increment: price difference between grid orders: percent of the current price to use as increment "
+                  "between orders. WARNING: this should to be lower than the Spread value: profitability is close to "
+                  "Spread-Increment.",
+        )
+        self.user_input(
+            self.CONFIG_LOWER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Lower bound: lower limit of the grid: minimum price to start placing buy orders from: lower "
+                  "limit of the grid.",
+        )
+        self.user_input(
+            self.CONFIG_UPPER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders from.",
+        )
+        self.user_input(
+            self.CONFIG_OPERATIONAL_DEPTH, commons_enums.UserInputTypes.INT, 50, inputs,
+            min_val=1, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Operational depth: maximum number of orders to be maintained on exchange.",
+        )
+        self.user_input(
+            self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
+                  "is filled. This can generate extra profits on quick market moves.",
+        )
+        self.user_input(
+            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
+                  "size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange "
+                  "fees into account.",
+        )
+        self.user_input(
+            self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Use existing orders only: when checked, new orders will only be created upon pre-existing orders "
+                  "fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. "
+                  "This mode allows staggered orders to operate on user created orders. "
+                  "Can't work on trading simulator.",
+        )
 
     def get_current_state(self) -> (str, float):
         order = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
@@ -267,6 +345,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.scheduled_health_check = None
         self.sell_volume_per_order = self.buy_volume_per_order = self.starting_price = trading_constants.ZERO
         self.mirror_orders_tasks = []
+        self.mirroring_pause_task = None
 
         self.healthy = False
 
@@ -275,6 +354,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         # staggered orders strategy parameters
         self.symbol_trading_config = None
+
+        self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
+            self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
+        self.mode = self.spread \
+            = self.increment = self.operational_depth \
+            = self.lowest_buy = self.highest_sell \
+            = None
+        self.single_pair_setup = len(self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]) <= 1
+        self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
+        self.allowed_mirror_orders = asyncio.Event()
+        self.healthy = False
+
         try:
             self._load_symbol_trading_config()
         except KeyError as e:
@@ -291,21 +382,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"trading pairs. Configured {self.ORDERS_DESC} orders pairs are"
                               f" {', '.join(configured_pairs)}")
             return
-        self.mode = self.spread \
-            = self.increment = self.operational_depth \
-            = self.lowest_buy = self.highest_sell \
-            = None
-        self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
-            self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
-        self.single_pair_setup = len(self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]) <= 1
-        self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
-        self.mirroring_pause_task = None
-        self.allowed_mirror_orders = asyncio.Event()
+        self.already_errored_on_out_of_window_price = False
+
         self.allowed_mirror_orders.set()
         self.read_config()
         self._check_params()
+
         self.healthy = True
-        self.already_errored_on_out_of_window_price = False
 
     def _load_symbol_trading_config(self):
         for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
@@ -1064,6 +1147,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     @staticmethod
     def _get_min_max_quantity(average_order_quantity, mode):
+        if mode is None:
+            fdsf=1
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
         min_quantity = average_order_quantity * (1 - mode_multiplier / 2)
         max_quantity = average_order_quantity * (1 + mode_multiplier / 2)
