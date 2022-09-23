@@ -16,11 +16,12 @@
 import asyncio
 import decimal
 
-import octobot.constants as octobot_constants
 import async_channel.constants as channel_constants
 import async_channel.channels as channel_instances
+import octobot.constants as octobot_constants
 import octobot_commons.data_util as data_util
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -38,9 +39,38 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.user_input(
+            "portfolio_percent_per_trade", commons_enums.UserInputTypes.FLOAT, 25, inputs,
+            min_val=0, max_val=100,
+            title="Trade size: percent of your portfolio to include in each arbitrage order.",
+        )
+        self.user_input(
+            "stop_loss_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.1, inputs,
+            min_val=0, max_val=100,
+            title="Stop loss price: price percent from the price of the initial order to set the stop loss on.",
+        )
+        exchanges = list(self.config[commons_constants.CONFIG_EXCHANGES].keys())
+        self.user_input(
+            "exchanges_to_trade_on", commons_enums.UserInputTypes.MULTIPLE_OPTIONS, [exchanges[0]], inputs,
+            options=exchanges,
+            title="Trading exchanges: exchanges on which to perform arbitrage trading: these will be used to create "
+                  "arbitrage orders. Leaving this empty will result in arbitrage trading on every exchange, "
+                  "which is sub-optimal. Add exchange configurations to add exchanges to this list.",
+        )
+        self.user_input(
+            "minimal_price_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.25, inputs,
+            min_val=0, max_val=100,
+            title="Cross exchange triggering delta: minimal percent difference to trigger an arbitrage order. Remember "
+                  "to set it higher than twice your trading exchanges' fees since two orders will be placed each time.",
+        )
+
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
@@ -111,11 +141,17 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(
-            trading_mode.trading_config["portfolio_percent_per_trade"] / 100))
-        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(
-            trading_mode.trading_config["stop_loss_delta_percent"] / 100))
         self.open_arbitrages = []
+
+    def reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(
+            self.trading_mode.trading_config["portfolio_percent_per_trade"] / 100))
+        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(
+            self.trading_mode.trading_config["stop_loss_delta_percent"] / 100))
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # no possible default values in kwargs: interrupt if missing element
@@ -227,14 +263,20 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.own_exchange_mark_price: decimal.Decimal = None
         self.other_exchanges_mark_prices = {}
-        self.sup_triggering_price_delta_ratio: decimal.Decimal = \
-            1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
-        self.inf_triggering_price_delta_ratio: decimal.Decimal = \
-            1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
         self.state = trading_enums.EvaluatorStates.NEUTRAL
         self.final_eval = ""
         self.quote, self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base_and_quote()
         self.lock = asyncio.Lock()
+
+    def reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.sup_triggering_price_delta_ratio: decimal.Decimal = \
+            1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
+        self.inf_triggering_price_delta_ratio: decimal.Decimal = \
+            1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
 
     async def start(self) -> None:
         """

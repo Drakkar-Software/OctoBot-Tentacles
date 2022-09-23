@@ -19,6 +19,7 @@ import math
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.enums as commons_enums
 import octobot_services.api as services_api
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
@@ -47,9 +48,31 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
+        self.USE_MARKET_ORDERS = True
         self.merged_symbol = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.should_emit_trading_signals_user_input(inputs)
+        self.user_input(
+            "use_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="All in trades: Trade with all available funds at each order.",
+        )
+        self.USE_MARKET_ORDERS = self.user_input(
+            "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
+                  "are set using the Fixed limit prices difference value.",
+        )
+        self.user_input(
+            "close_to_current_price_difference", commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            title="Fixed limit prices difference: Difference to take into account when placing a limit order "
+                  "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
+                  "buy price would be 199 and sell price 201.",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:

@@ -18,6 +18,7 @@ import decimal
 import async_channel.constants as channel_constants
 import octobot_commons.channels_name as channels_name
 import octobot_commons.constants as common_constants
+import octobot_commons.enums as common_enums
 import octobot_commons.tentacles_management as tentacles_management
 import async_channel.channels as channels
 import octobot_trading.constants as trading_constants
@@ -35,10 +36,24 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
         self.last_signal_description = ""
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.user_input(
+            common_constants.CONFIG_TRADING_SIGNALS_STRATEGY, common_enums.UserInputTypes.TEXT, "", inputs,
+            title="Trading strategy: identifier of the trading strategy to use."
+        )
+        self.user_input(
+            RemoteTradingSignalsModeConsumer.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY,
+            common_enums.UserInputTypes.FLOAT, 100, inputs,
+            min_val=0, max_val=100,
+            title="Maximum volume per buy order in % of quote symbol holdings (USDT for BTC/USDT).",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:

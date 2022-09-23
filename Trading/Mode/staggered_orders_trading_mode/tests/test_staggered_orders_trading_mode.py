@@ -69,7 +69,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
             config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES][
                 commons_constants.CONFIG_SIMULATOR_FEES_MAKER] = fees
         exchange_manager = exchanges.ExchangeManager(config, "binance")
-        exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
+        exchange_manager.tentacles_setup_config = test_utils_config.load_test_tentacles_config()
 
         # use backtesting not to spam exchanges apis
         exchange_manager.is_simulated = True
@@ -101,6 +101,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         producer.operational_depth = 50
         producer.spread = decimal.Decimal("0.06")
         producer.increment = decimal.Decimal("0.04")
+        producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
 
         yield producer, mode.consumers[0], exchange_manager
     finally:
@@ -150,18 +151,21 @@ async def _get_tools_multi_symbol():
         btcusd_producer.operational_depth = 50
         btcusd_producer.spread = decimal.Decimal("0.06")
         btcusd_producer.increment = decimal.Decimal("0.04")
+        btcusd_producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
 
         eth_usdt_producer.lowest_buy = decimal.Decimal(20)
         eth_usdt_producer.highest_sell = decimal.Decimal(5000)
         eth_usdt_producer.operational_depth = 30
         eth_usdt_producer.spread = decimal.Decimal("0.07")
         eth_usdt_producer.increment = decimal.Decimal("0.03")
+        eth_usdt_producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
 
         nano_usdt_producer.lowest_buy = decimal.Decimal(20)
         nano_usdt_producer.highest_sell = decimal.Decimal(5000)
         nano_usdt_producer.operational_depth = 30
         nano_usdt_producer.spread = decimal.Decimal("0.07")
         nano_usdt_producer.increment = decimal.Decimal("0.03")
+        nano_usdt_producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
 
         yield btcusd_producer, eth_usdt_producer, nano_usdt_producer, exchange_manager
     finally:

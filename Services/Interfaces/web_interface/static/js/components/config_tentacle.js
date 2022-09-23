@@ -49,12 +49,12 @@ function factory_reset(update_url){
 
 function handle_tentacle_config_reset_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
-    initConfigEditor();
+    initConfigEditor(false);
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
-    savedConfig = configEditor.getValue();
+    initConfigEditor(false);
 }
 
 function handle_tentacle_config_update_error_callback(updated_data, update_url, dom_root_element, msg, status){
@@ -70,7 +70,7 @@ function handleConfigDisplay(){
     $("#editor-waiter").hide();
     if(canEditConfig()){
         $("#saveConfigFooter").show();
-        $("#saveConfig").click(function() {
+        $("#saveConfig").unbind("click").click(function() {
             if(check_config())
                 updateTentacleConfig(configEditor.getValue());
             else
@@ -236,11 +236,13 @@ function _addGridDisplayOptions(schema){
         return;
     }
     // display user inputs as grid
-    schema.format = "grid"
+    // if(typeof schema.format === "undefined") {
+    //     schema.format = "grid";
+    // }
     if(typeof schema.options === "undefined"){
         schema.options = {};
     }
-    schema.options.grid_columns = 4;
+    schema.options.grid_columns = 6;
     if(typeof schema.properties !== "undefined"){
         Object.values(schema.properties).forEach (property => {
             _addGridDisplayOptions(property)
@@ -251,15 +253,16 @@ function _addGridDisplayOptions(schema){
     }
 }
 
-function initConfigEditor() {
-    $("#editor-waiter").show();
+function initConfigEditor(showWaiter) {
+    if(showWaiter){
+        $("#editor-waiter").show();
+    }
     const configEditorBody = $("#configEditorBody");
-    const configSchema = configEditorBody.attr("schema");
-    const configValue = configEditorBody.attr("config");
 
     function editDetailsSuccess(updated_data, update_url, dom_root_element, msg, status){
         const inputs = msg["displayed_elements"]["data"]["elements"];
         if(inputs.length === 0){
+            handleConfigDisplay();
             return;
         }
         parsedConfigValue = msg["config"];
@@ -268,12 +271,13 @@ function initConfigEditor() {
         if(configEditor !== null){
             configEditor.destroy();
         }
-
+        log(parsedConfigSchema)
         if (canEditConfig()){
             fix_config_values(parsedConfigValue)
         }
         _addGridDisplayOptions(parsedConfigSchema);
-        configEditor = canEditConfig() ? (new JSONEditor($("#configEditor")[0],{
+        const settingsRoot = $("#configEditor");
+        configEditor = canEditConfig() ? (new JSONEditor(settingsRoot[0],{
             schema: parsedConfigSchema,
             startval: parsedConfigValue,
             no_additional_properties: true,
@@ -282,6 +286,11 @@ function initConfigEditor() {
             disable_collapse: true,
             disable_properties: true
         })) : null;
+        settingsRoot.find("select[multiple=\"multiple\"]").select2({
+            width: 'resolve', // need to override the changed default
+            closeOnSelect: false,
+            placeholder: "Select values to use"
+        });
         handleConfigDisplay();
     }
 
@@ -290,7 +299,7 @@ function initConfigEditor() {
 }
 
 $(document).ready(function() {
-    initConfigEditor();
+    initConfigEditor(true);
     handleButtons();
     lock_interface(false);
 
