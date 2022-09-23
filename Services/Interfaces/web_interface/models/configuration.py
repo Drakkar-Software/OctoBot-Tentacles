@@ -251,6 +251,7 @@ def get_tentacle_config_and_edit_display(tentacle):
     tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle)
     config, user_inputs = interfaces_util.run_in_bot_main_loop(
         tentacle_class.get_raw_config_and_user_inputs(
+            interfaces_util.get_edited_config(),
             interfaces_util.get_edited_tentacles_config(),
             interfaces_util.get_bot_api().get_bot_id()
         )
