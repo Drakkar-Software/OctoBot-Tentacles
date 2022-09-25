@@ -116,23 +116,23 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         self.fast_eval_count = None
         self.weights = []
 
-    def _init_fast_threshold(self, inputs, fast_threshold, price_weight, volume_weight):
+    def _init_fast_threshold(self, inputs, indexes, fast_threshold, price_weight, volume_weight):
         self.user_input(self.WEIGHTS, enums.UserInputTypes.OBJECT, None, inputs, parent_input_name=self.FAST_THRESHOLDS,
-                        title="Price and volume weights of this interpretation.")
+                        title="Price and volume weights of this interpretation.", array_indexes=indexes)
         return {
             self.FAST_THRESHOLD: self.user_input(self.FAST_THRESHOLD, enums.UserInputTypes.INT, fast_threshold,
                                                  inputs, min_val=0, parent_input_name=self.FAST_THRESHOLDS,
                                                  title="Fast RSI threshold under which this interpretation will "
-                                                       "be triggered."),
+                                                       "be triggered.", array_indexes=indexes),
             self.WEIGHTS: {
                 self.PRICE: self.user_input(self.PRICE, enums.UserInputTypes.OPTIONS, price_weight,
                                             inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
                                             editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
-                                            title="Price weight."),
+                                            title="Price weight.", array_indexes=indexes),
                 self.VOLUME: self.user_input(self.VOLUME, enums.UserInputTypes.OPTIONS, volume_weight,
                                              inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
                                              editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
-                                             title="Volume weight."),
+                                             title="Volume weight.", array_indexes=indexes),
             }
         }
 
@@ -146,10 +146,10 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
             self.SLOW_THRESHOLD: self.user_input(self.SLOW_THRESHOLD, enums.UserInputTypes.INT, slow_threshold, inputs,
                                                  min_val=0, parent_input_name=self.RSI_TO_WEIGHTS,
                                                  title="Slow RSI threshold under which this interpretation will "
-                                                       "be triggered."),
+                                                       "be triggered.", array_indexes=[len(self.weights)]),
             self.FAST_THRESHOLDS: [
-                self._init_fast_threshold(inputs, *fast_threshold)
-                for fast_threshold in fast_thresholds
+                self._init_fast_threshold(inputs, [len(self.weights), index], *fast_threshold)
+                for index, fast_threshold in enumerate(fast_thresholds)
             ],
         }
 
@@ -550,6 +550,19 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(evaluators.TAEvalua
         self.short_period = 35  # standard with klinger
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.period_length = self.user_input("short_period", enums.UserInputTypes.INT, 35, inputs, min_val=1,
+                                             title="Short period: length of the short klinger period (standard is 35).")
+        self.slow_eval_count = self.user_input("long_period", enums.UserInputTypes.INT, 55, inputs, min_val=1,
+                                               title="Long period: length of the long klinger period (standard is 55).")
+        self.fast_eval_count = self.user_input("ema_signal_period", enums.UserInputTypes.INT, 13, inputs, min_val=1,
+                                               title="Long period: length of the exponential moving average used "
+                                                     "to apply on the klinger results (standard is 13).")
 
     @staticmethod
     def get_eval_type():
