@@ -63,11 +63,11 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
                                           inputs, options=[tf.value for tf in commons_enums.TimeFrames],
                                           title="Time frame: The time frame to observe in order to spot changes.")
         self.VOLUME_HAPPENING_THRESHOLD = 1 + self.user_input(
-            self.VOLUME_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 50, inputs, min_val=0, max_val=100,
+            self.VOLUME_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 400, inputs, min_val=0,
             title="Volume threshold: volume difference in percent from which to trigger a notification."
         ) / 100
         self.PRICE_HAPPENING_THRESHOLD = self.user_input(
-            self.PRICE_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 0.05, inputs, min_val=0, max_val=100,
+            self.PRICE_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 1, inputs, min_val=0,
             title="Price threshold: price difference in percent from which to trigger a notification."
         ) / 100
 
