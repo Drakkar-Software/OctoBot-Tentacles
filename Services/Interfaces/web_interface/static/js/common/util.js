@@ -297,3 +297,15 @@ function updateInputIfValue(elementId, config, configKey, elementType){
 function randomizeArray(array) {
     array.sort(() => Math.random() - 0.5);
 }
+
+function validateJSONEditor(editor) {
+    const errors = editor.validate();
+    let errorsDesc = "";
+    if(errors.length) {
+        window.console&&console.error("Errors when validating editor:", errors);
+        errors.map((error) => {
+            errorsDesc = `${errorsDesc}${error.path.split("root.")[1]} ${error.message}\n`
+        })
+    }
+    return errorsDesc;
+}

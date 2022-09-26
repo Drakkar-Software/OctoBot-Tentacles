@@ -61,20 +61,18 @@ function handle_tentacle_config_update_error_callback(updated_data, update_url, 
     create_alert("error", "Error when updating config", msg.responseText);
 }
 
-function check_config(){
-    const errors = configEditor.validate();
-    return !errors.length;
-}
-
 function handleConfigDisplay(){
     $("#editor-waiter").hide();
     if(canEditConfig()){
         $("#saveConfigFooter").show();
         $("#saveConfig").unbind("click").click(function() {
-            if(check_config())
-                updateTentacleConfig(configEditor.getValue());
+            const errorsDesc = validateJSONEditor(configEditor);
+            if(errorsDesc.length){
+                create_alert("error", "Error when saving configuration",
+                    `Invalid configuration data: ${errorsDesc}.`);
+            }
             else
-                create_alert("error", "Error when saving configuration", "Invalid configuration data.");
+                updateTentacleConfig(configEditor.getValue());
         });
     }else{
         $("#noConfigMessage").show();
@@ -271,7 +269,6 @@ function initConfigEditor(showWaiter) {
         if(configEditor !== null){
             configEditor.destroy();
         }
-        log(parsedConfigSchema)
         if (canEditConfig()){
             fix_config_values(parsedConfigValue)
         }
