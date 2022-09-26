@@ -23,6 +23,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.databases as databases
 import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -286,7 +287,9 @@ def get_latest_backtesting_run_id(trading_mode):
                                                                                            STOPPING_TIMEOUT))
         bot_id = octobot_api.get_independent_backtesting_bot_id(backtesting)
         return {
-            "id": interfaces_util.run_in_bot_async_executor(trading_mode.get_backtesting_id(bot_id))
+            "id": databases.RunDatabasesProvider.instance().get_run_databases_identifier(
+                bot_id
+            ).backtesting_id
         }
     return {}
 
