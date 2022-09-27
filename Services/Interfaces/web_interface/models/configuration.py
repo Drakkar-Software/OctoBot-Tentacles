@@ -22,6 +22,7 @@ import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 import octobot_commons.display as display
+import octobot_commons.databases as databases
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -928,6 +929,15 @@ def reload_scripts():
         return {"success": True}
     except Exception as e:
         _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
+
+
+def reload_activated_tentacles_config():
+    try:
+        send_command_to_activated_tentacles(commons_enums.UserCommands.RELOAD_CONFIG.value)
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload configurations: {e}")
         raise
 
 

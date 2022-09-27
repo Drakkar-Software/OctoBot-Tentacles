@@ -98,6 +98,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         return []
 
     async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
         mode_consumer = RemoteTradingSignalsModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -113,7 +114,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
-        return [mode_consumer, signals_consumer]
+        return consumers + [mode_consumer, signals_consumer]
 
     async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")

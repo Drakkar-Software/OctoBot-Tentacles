@@ -103,6 +103,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         return [mode_producer]
 
     async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
         mode_consumer = DailyTradingModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -110,7 +111,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
             time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-        return [mode_consumer]
+        return consumers + [mode_consumer]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
