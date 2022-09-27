@@ -96,6 +96,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return [mode_producer]
 
     async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
         mode_consumer = TradingViewSignalsModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
@@ -112,7 +113,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             )
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return [mode_consumer, feed_consumer]
+        return consumers + [mode_consumer, feed_consumer]
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}

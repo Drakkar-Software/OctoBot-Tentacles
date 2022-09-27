@@ -106,6 +106,7 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         return [mode_producer]
 
     async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
         # trading mode consumer
         mode_consumer = DipAnalyserTradingModeConsumer(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
@@ -121,7 +122,7 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        return consumers + [mode_consumer, order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
                                            symbol, order, is_new, is_from_bot):

@@ -309,7 +309,7 @@ def config_tentacles():
             response = ", ".join(responses)
         if success and flask.request.args.get("reload"):
             try:
-                models.reload_scripts()
+                models.reload_activated_tentacles_config()
             except Exception as e:
                 success = False
                 response = str(e)
