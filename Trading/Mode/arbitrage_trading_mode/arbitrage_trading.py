@@ -518,7 +518,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.final_eval = ""
 
     def _get_open_arbitrages(self):
-        return self.trading_mode.consumers[0].open_arbitrages
+        return self.trading_mode.get_trading_mode_consumers()[0].open_arbitrages
 
     def _register_state(self, new_state, price_difference):
         self.state = new_state
@@ -555,5 +555,5 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()

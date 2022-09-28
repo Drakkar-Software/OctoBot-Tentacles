@@ -145,7 +145,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             if not self.should_stop:
                 self.logger.exception(err, True, f"Error when collecting {self.exchange_name} history for "
                                                  f"{', '.join([symbol.symbol_str for symbol in self.symbols])}: {err}")
-                raise backtesting_errors.DataCollectorError(err)
+                raise backtesting_errors.DataCollectorError(err) from err
         finally:
             await self.stop(should_stop_database=should_stop_database)
 
