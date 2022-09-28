@@ -218,6 +218,7 @@ async def _collect_initialize_and_run_independent_backtesting(
         except Exception as e:
             bot_logging.get_logger("DataCollectorModel").exception(
                 e, True, f"Error when collecting historical data: {e}")
+            return
         finally:
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     if independent_backtesting is None:
@@ -331,13 +332,12 @@ def stop_data_collector():
 
 def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
-    exchange_name = trading_api.get_exchange_name(exchange_manager)
     return backtesting_api.exchange_bot_snapshot_data_collector_factory(
-        exchange_name,
+        trading_api.get_exchange_name(exchange_manager),
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         trading_api.get_trading_symbols(exchange_manager),
         exchange_id,
-        time_frames=trading_api.get_exchange_available_required_time_frames(exchange_name, exchange_id),
+        time_frames=trading_api.get_relevant_time_frames(exchange_manager),
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp)
 

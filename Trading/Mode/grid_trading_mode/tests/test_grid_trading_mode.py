@@ -93,7 +93,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
     producer.buy_orders_count = 25
     producer.sell_orders_count = 25
 
-    return producer, mode.consumers[0], exchange_manager
+    return producer, mode.get_trading_mode_consumers()[0], exchange_manager
 
 
 async def _stop(exchange_manager):

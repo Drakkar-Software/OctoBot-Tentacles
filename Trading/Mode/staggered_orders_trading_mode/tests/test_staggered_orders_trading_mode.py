@@ -103,7 +103,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         producer.increment = decimal.Decimal("0.04")
         producer.mode = staggered_orders_trading.StrategyModes.MOUNTAIN
 
-        yield producer, mode.consumers[0], exchange_manager
+        yield producer, mode.get_trading_mode_consumers()[0], exchange_manager
     finally:
         if exchange_manager:
             await _stop(exchange_manager)

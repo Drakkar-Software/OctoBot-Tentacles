@@ -47,6 +47,10 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     USER_COMMAND_TRADING_PAIR = "trading pair"
     USER_COMMAND_PAUSE_TIME = "pause length in seconds"
 
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.consumer_class = GridTradingModeConsumer
+
     def init_user_inputs(self, inputs: dict) -> None:
         """
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
@@ -149,7 +153,6 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
         )
 
-
     async def create_producers(self) -> list:
         mode_producer = GridTradingModeProducer(
             exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
@@ -157,39 +160,14 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         await mode_producer.run()
         return [mode_producer]
 
-    async def create_consumers(self) -> list:
-        # trading mode consumer
-        mode_consumer = GridTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-
-        # order consumer: filter by symbol not be triggered only on this symbol's orders
-        order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
-                                                          self.exchange_manager.id).new_consumer(
-            self._order_notification_callback,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
-        )
-        try:
-            user_commands_consumer = \
-                await channels.get_chan(services_channels.UserCommandsChannel.get_name()).new_consumer(
-                    self._user_commands_callback,
-                    {"bot_id": self.bot_id, "subject": self.get_name()}
-                )
-        except KeyError:
-            return [mode_consumer, order_consumer]
-        return [mode_consumer, order_consumer, user_commands_consumer]
-
-    async def _user_commands_callback(self, bot_id, subject, action, data) -> None:
-        if data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
+    async def user_commands_callback(self, bot_id, subject, action, data) -> None:
+        await super().user_commands_callback(bot_id, subject, action, data)
+        if data and data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
             self.logger.info(f"Received {action} command for {self.symbol}.")
             if action == GridTradingMode.USER_COMMAND_CREATE_ORDERS:
                 await self.producers[0].trigger_staggered_orders_creation()
             elif action == GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION:
-                await self.consumers[0].cancel_orders_creation()
+                await self.get_trading_mode_consumers()[0].cancel_orders_creation()
             elif action == GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING:
                 delay = float(data.get(GridTradingMode.USER_COMMAND_PAUSE_TIME, 0))
                 self.producers[0].start_mirroring_pause(delay)
