@@ -726,10 +726,7 @@ def get_exchange_logo(exchange_name):
 
 
 def get_traded_time_frames(exchange_manager):
-    return trading_api.get_exchange_available_required_time_frames(
-        trading_api.get_exchange_name(exchange_manager),
-        trading_api.get_exchange_manager_id(exchange_manager)
-    )
+    return trading_api.get_relevant_time_frames(exchange_manager)
 
 
 def get_full_exchange_list(remove_config_exchanges=False):

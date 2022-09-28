@@ -79,7 +79,7 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
             # let trading modes start
             await asyncio_tools.wait_asyncio_next_cycle()
             start_mock.assert_called_once()
-        yield mode.producers[0], mode.consumers[0], exchange_manager
+        yield mode.producers[0], mode.get_trading_mode_consumers()[0], exchange_manager
     finally:
         if exchange_manager is not None:
             for importer in backtesting_api.get_importers(exchange_manager.exchange.backtesting):

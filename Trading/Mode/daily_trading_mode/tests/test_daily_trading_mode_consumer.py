@@ -81,7 +81,7 @@ async def tools():
         await mode.initialize()
         # add mode to exchange manager so that it can be stopped and freed from memory
         exchange_manager.trading_modes.append(mode)
-        consumer = mode.consumers[0]
+        consumer = mode.get_trading_mode_consumers()[0]
         consumer.MAX_CURRENCY_RATIO = 1
 
         # set BTC/USDT price at 7009.194999999998 USDT

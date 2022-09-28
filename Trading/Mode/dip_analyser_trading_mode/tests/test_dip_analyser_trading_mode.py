@@ -597,7 +597,7 @@ async def _get_tools(symbol="BTC/USDT"):
     # set BTC/USDT price at 1000 USDT
     trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
 
-    return mode.producers[0], mode.consumers[0], trader
+    return mode.producers[0], mode.get_trading_mode_consumers()[0], trader
 
 
 async def _stop(exchange_manager):

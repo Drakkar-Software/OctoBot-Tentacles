@@ -113,6 +113,10 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
 
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.consumer_class = StaggeredOrdersTradingModeConsumer
+
     def init_user_inputs(self, inputs: dict) -> None:
         """
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
@@ -212,7 +216,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     async def create_consumers(self) -> list:
         consumers = await super().create_consumers()
         # trading mode consumer
-        mode_consumer = StaggeredOrdersTradingModeConsumer(self)
+        mode_consumer = self.consumer_class(self)
         await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
             consumer_instance=mode_consumer,
             trading_mode_name=self.get_name(),
@@ -429,7 +433,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         if self.scheduled_health_check is not None:
             self.scheduled_health_check.cancel()
         if self.mirroring_pause_task is not None and not self.mirroring_pause_task.done():

@@ -91,7 +91,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
             # let trading modes start
             await asyncio_tools.wait_asyncio_next_cycle()
             _subscribe_to_signal_feed_mock.assert_called_once()
-        yield mode.producers[0], mode.consumers[0], trader
+        yield mode.producers[0], mode.get_trading_mode_consumers()[0], trader
     finally:
         if exchange_manager is not None:
             for importer in backtesting_api.get_importers(exchange_manager.exchange.backtesting):

@@ -453,7 +453,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
