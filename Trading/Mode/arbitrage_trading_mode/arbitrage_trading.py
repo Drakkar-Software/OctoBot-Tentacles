@@ -382,21 +382,23 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             self.logger.exception(e, True, f"Error when handling mark_price_callback for {self.exchange_name}: {e}")
 
     async def _analyse_arbitrage_opportunities(self):
-        other_exchanges_average_price = decimal.Decimal(str(data_util.mean(self.other_exchanges_mark_prices.values())))
-        state = None
-        if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
-            # min long = high price > own_price / (1 - 2fees)
-            state = trading_enums.EvaluatorStates.LONG
-        elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
-            # min short = low price < own_price * (1 - 2fees)
-            state = trading_enums.EvaluatorStates.SHORT
-        if state is not None:
-            # lock to prevent concurrent order management
-            async with self.lock:
-                # 1. cancel invalided opportunities if any
-                await self._ensure_no_expired_opportunities(other_exchanges_average_price, state)
-                # 2. handle new opportunities
-                await self._trigger_arbitrage_opportunity(other_exchanges_average_price, state)
+        async with self.trading_mode_trigger():
+            other_exchanges_average_price = \
+                decimal.Decimal(str(data_util.mean(self.other_exchanges_mark_prices.values())))
+            state = None
+            if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
+                # min long = high price > own_price / (1 - 2fees)
+                state = trading_enums.EvaluatorStates.LONG
+            elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
+                # min short = low price < own_price * (1 - 2fees)
+                state = trading_enums.EvaluatorStates.SHORT
+            if state is not None:
+                # lock to prevent concurrent order management
+                async with self.lock:
+                    # 1. cancel invalided opportunities if any
+                    await self._ensure_no_expired_opportunities(other_exchanges_average_price, state)
+                    # 2. handle new opportunities
+                    await self._trigger_arbitrage_opportunity(other_exchanges_average_price, state)
 
     async def _trigger_arbitrage_opportunity(self, other_exchanges_average_price, state):
         # ensure no similar arbitrage is already in place
