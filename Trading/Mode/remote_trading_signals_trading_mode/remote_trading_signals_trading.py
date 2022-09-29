@@ -483,15 +483,16 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
                               f"with current exchange: {self.exchange_manager}")
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, signal):
-        self.state = new_state
-        self.logger.info(f"[{symbol}] update state: {self.state.name}")
-        # call orders creation from consumers
-        await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                             symbol=symbol,
-                                             time_frame=None,
-                                             final_note=self.final_eval,
-                                             state=self.state,
-                                             data=signal)
+        async with self.trading_mode_trigger():
+            self.state = new_state
+            self.logger.info(f"[{symbol}] update state: {self.state.name}")
+            # call orders creation from consumers
+            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                 symbol=symbol,
+                                                 time_frame=None,
+                                                 final_note=self.final_eval,
+                                                 state=self.state,
+                                                 data=signal)
 
     async def stop(self):
         if self.trading_mode is not None:

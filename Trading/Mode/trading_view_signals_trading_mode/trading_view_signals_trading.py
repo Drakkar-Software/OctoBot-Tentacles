@@ -221,22 +221,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state, order_data)
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
-        self.state = new_state
-        self.logger.info(f"[{symbol}] new state: {self.state.name}")
+        async with self.trading_mode_trigger():
+            self.state = new_state
+            self.logger.info(f"[{symbol}] new state: {self.state.name}")
 
-        # if new state is not neutral --> cancel orders and create new else keep orders
-        if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-            # cancel open orders
-            await self.cancel_symbol_open_orders(symbol)
+            # if new state is not neutral --> cancel orders and create new else keep orders
+            if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
+                # cancel open orders
+                await self.cancel_symbol_open_orders(symbol)
 
-            # call orders creation from consumers
-            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                                 symbol=symbol,
-                                                 time_frame=None,
-                                                 final_note=self.final_eval,
-                                                 state=self.state,
-                                                 data=order_data)
+                # call orders creation from consumers
+                await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                     symbol=symbol,
+                                                     time_frame=None,
+                                                     final_note=self.final_eval,
+                                                     state=self.state,
+                                                     data=order_data)
 
-            # send_notification
-            if not self.exchange_manager.is_backtesting:
-                await self._send_alert_notification(symbol, new_state)
+                # send_notification
+                if not self.exchange_manager.is_backtesting:
+                    await self._send_alert_notification(symbol, new_state)
