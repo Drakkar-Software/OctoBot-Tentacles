@@ -1,4 +1,4 @@
-Uses the [Average Directional Index](https://www.investopedia.com/terms/a/adx.asp) with a length of 14 
+Uses the [Average Directional Index](https://www.investopedia.com/terms/a/adx.asp)  
 to find reversals. The default implementation is according to 
 [Investopedia's ADX: The Trend Strength Indicator](https://www.investopedia.com/articles/technical/02/041002.asp).
 

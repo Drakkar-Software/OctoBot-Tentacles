@@ -21,10 +21,8 @@ import typing
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as enums
 import octobot_commons.data_util as data_util
-import octobot_commons.errors as error
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
-import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
 
@@ -42,7 +40,7 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         """
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
-        self.period_length = self.user_input("period_length", enums.UserInputTypes.INT, 14,
+        self.period_length = self.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
                                              inputs, min_val=0, title="RSI period length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
@@ -118,9 +116,9 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.period_length = None
-        self.slow_eval_count = None
-        self.fast_eval_count = None
+        self.period_length = 14
+        self.slow_eval_count = 16
+        self.fast_eval_count = 4
         self.weights = []
 
     def _init_fast_threshold(self, inputs, indexes, fast_threshold, price_weight, volume_weight):
@@ -165,12 +163,15 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.period_length = self.user_input("period", enums.UserInputTypes.INT, 14, inputs, min_val=1,
-                                             title="Period: length RSI period.")
-        self.slow_eval_count = self.user_input("slow_eval_count", enums.UserInputTypes.INT, 16, inputs, min_val=1,
+        self.period_length = self.user_input("period", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: RSI period length.")
+        self.slow_eval_count = self.user_input("slow_eval_count", enums.UserInputTypes.INT, self.slow_eval_count,
+                                               inputs, min_val=1,
                                                title="Number of recent RSI values to consider to get the current slow "
                                                      "moving market sentiment.")
-        self.fast_eval_count = self.user_input("fast_eval_count", enums.UserInputTypes.INT, 4, inputs, min_val=1,
+        self.fast_eval_count = self.user_input("fast_eval_count", enums.UserInputTypes.INT, self.fast_eval_count,
+                                               inputs, min_val=1,
                                                title="Number of recent RSI values to consider to get the current fast "
                                                      "moving market sentiment.")
         weights = []
@@ -263,6 +264,11 @@ class BBMomentumEvaluator(evaluators.TAEvaluator):
         super().__init__(tentacles_setup_config)
         self.period_length = 20
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period_length = self.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: Bollinger bands period length.")
+
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
@@ -325,8 +331,15 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
         self.period_length = 14
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period_length = self.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: ADX period length.")
+
+    def _get_minimal_data(self):
         # 26 minimal_data length required for 14 period_length
-        self.minimal_data = self.period_length + 12
+        return self.period_length + 12
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
@@ -336,7 +349,7 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         close_candles = trading_api.get_symbol_close_candles(symbol_candles, time_frame,
                                                              include_in_construction=inc_in_construction_data)
-        if len(close_candles) > self.minimal_data:
+        if len(close_candles) > self._get_minimal_data():
             high_candles = trading_api.get_symbol_high_candles(symbol_candles, time_frame,
                                                                include_in_construction=inc_in_construction_data)
             low_candles = trading_api.get_symbol_low_candles(symbol_candles, time_frame,
@@ -350,7 +363,7 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, close_candles, high_candles, low_candles, candle):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(close_candles) >= self.minimal_data:
+        if len(close_candles) >= self._get_minimal_data():
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
@@ -403,6 +416,20 @@ class MACDMomentumEvaluator(evaluators.TAEvaluator):
         self.long_period_length = 26
         self.short_period_length = 12
         self.signal_period_length = 9
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.short_period_length = self.user_input("short_period_length", enums.UserInputTypes.INT,
+                                                   self.short_period_length,
+                                                   inputs, min_val=1,
+                                                   title="MACD fast period length.")
+        self.long_period_length = self.user_input("long_period_length", enums.UserInputTypes.INT,
+                                                  self.long_period_length,
+                                                  inputs, min_val=1,
+                                                  title="MACD slow period length.")
+        self.signal_period_length = self.user_input("signal_period_length", enums.UserInputTypes.INT,
+                                                    self.signal_period_length,
+                                                    inputs, min_val=1,
+                                                    title="MACD signal period.")
 
     def _analyse_pattern(self, pattern, macd_hist, zero_crossing_indexes, price_weight,
                          pattern_move_time, sign_multiplier):
@@ -489,6 +516,18 @@ class KlingerOscillatorMomentumEvaluator(evaluators.TAEvaluator):
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.short_period = self.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
+                                            inputs, min_val=1,
+                                            title="Short period: length of the short klinger period (standard is 35).")
+        self.long_period = self.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
+                                           inputs, min_val=1,
+                                           title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
+                                                 inputs, min_val=1,
+                                                 title="Long period: length of the exponential moving average used "
+                                                 "to apply on the klinger results (standard is 13).")
+
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
@@ -561,13 +600,16 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(evaluators.TAEvalua
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.period_length = self.user_input("short_period", enums.UserInputTypes.INT, 35, inputs, min_val=1,
-                                             title="Short period: length of the short klinger period (standard is 35).")
-        self.slow_eval_count = self.user_input("long_period", enums.UserInputTypes.INT, 55, inputs, min_val=1,
-                                               title="Long period: length of the long klinger period (standard is 55).")
-        self.fast_eval_count = self.user_input("ema_signal_period", enums.UserInputTypes.INT, 13, inputs, min_val=1,
-                                               title="Long period: length of the exponential moving average used "
-                                                     "to apply on the klinger results (standard is 13).")
+        self.short_period = self.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
+                                            inputs, min_val=1,
+                                            title="Short period: length of the short klinger period (standard is 35).")
+        self.long_period = self.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
+                                           inputs, min_val=1,
+                                           title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
+                                                 inputs, min_val=1,
+                                                 title="Long period: length of the exponential moving average used "
+                                                 "to apply on the klinger results (standard is 13).")
 
     @staticmethod
     def get_eval_type():
