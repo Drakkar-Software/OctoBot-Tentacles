@@ -36,22 +36,27 @@ async def _trigger_callback_with_data_and_assert_note(evaluator: Social.Telegram
 def _create_evaluator_with_supported_channel_signals():
     evaluator = Social.TelegramChannelSignalEvaluator(test_utils_config.load_test_tentacles_config())
     evaluator.logger = logging.get_logger(evaluator.get_name())
-    evaluator.channels_config = {
-        "TEST-CHAN-1": {
-            "signal_pattern": {
-                "MARKET_BUY": "Side: (BUY)",
-                "MARKET_SELL": "Side: (SELL)"
+    evaluator.specific_config = {
+        "telegram-channels": [
+            {
+                "channel_name": "TEST-CHAN-1",
+                "signal_pattern": {
+                    "MARKET_BUY": "Side: (BUY)",
+                    "MARKET_SELL": "Side: (SELL)"
+                },
+                "signal_pair": "Pair: (.*)"
             },
-            "signal_pair": "Pair: (.*)"
-        },
-        "TEST-CHAN-2": {
-            "signal_pattern": {
-                "MARKET_BUY": ".* : (-1)$",
-                "MARKET_SELL": ".* : (1)$"
-            },
-            "signal_pair": "(.*):"
-        }
+            {
+                "channel_name": "TEST-CHAN-2",
+                "signal_pattern": {
+                    "MARKET_BUY": ".* : (-1)$",
+                    "MARKET_SELL": ".* : (1)$"
+                },
+                "signal_pair": "(.*):"
+            }
+        ]
     }
+    evaluator.init_user_inputs({})
     evaluator.eval_note = commons_constants.START_PENDING_EVAL_NOTE
     return evaluator
 
