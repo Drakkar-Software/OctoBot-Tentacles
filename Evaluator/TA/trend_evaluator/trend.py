@@ -44,7 +44,7 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         self.previous_value = {}
 
-    def init_user_inputs(self, inputs: list) -> None:
+    def init_user_inputs(self, inputs: dict) -> None:
         """
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
@@ -166,11 +166,20 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.long_period_length = 10
+        self.slow_period_length = 10
+        self.fast_period_length = 5
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.slow_period_length = self.user_input("long_period_length", enums.UserInputTypes.INT, 10,
+                                                  inputs, min_val=0, title="Slow SMA length")
+        self.fast_period_length = self.user_input("short_period_length", enums.UserInputTypes.INT, 5,
+                                                  inputs, min_val=0, title="Fast SMA length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
-        # self.logger.info(f"ohlcv_callback {time_frame}")
         candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
                                                            time_frame,
                                                            include_in_construction=inc_in_construction_data)
@@ -178,11 +187,10 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(candle_data) >= self.long_period_length:
-            time_units = [5, self.long_period_length]
+        if len(candle_data) >= max(self.slow_period_length, self.fast_period_length):
             current_moving_average = tulipy.sma(candle_data, 2)
             results = [self.get_moving_average_analysis(candle_data, current_moving_average, time_unit)
-                       for time_unit in time_units]
+                       for time_unit in (self.fast_period_length, self.slow_period_length)]
             if len(results):
                 self.eval_note = numpy.mean(results)
             else:

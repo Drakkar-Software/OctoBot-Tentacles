@@ -38,6 +38,13 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         self.short_term_averages = [7, 5, 4, 3, 2, 1]
         self.long_term_averages = [40, 30, 20, 15, 10]
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.period_length = self.user_input("period_length", enums.UserInputTypes.INT, 14,
+                                             inputs, min_val=0, title="RSI period length")
+
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
@@ -137,7 +144,7 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         }
 
     def _init_RSI_to_weight(self, inputs, slow_threshold, fast_thresholds):
-        self.user_input(self.FAST_THRESHOLDS, enums.UserInputTypes.OBJECT_ARRAY, None, inputs,
+        self.user_input(self.FAST_THRESHOLDS, enums.UserInputTypes.OBJECT_ARRAY, fast_thresholds, inputs,
                         item_title="Fast RSI interpretation",
                         other_schema_values={"minItems": 1, "uniqueItems": True},
                         parent_input_name=self.RSI_TO_WEIGHTS,
@@ -146,9 +153,9 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
             self.SLOW_THRESHOLD: self.user_input(self.SLOW_THRESHOLD, enums.UserInputTypes.INT, slow_threshold, inputs,
                                                  min_val=0, parent_input_name=self.RSI_TO_WEIGHTS,
                                                  title="Slow RSI threshold under which this interpretation will "
-                                                       "be triggered.", array_indexes=[len(self.weights)]),
+                                                       "be triggered.", array_indexes=[0]),
             self.FAST_THRESHOLDS: [
-                self._init_fast_threshold(inputs, [len(self.weights), index], *fast_threshold)
+                self._init_fast_threshold(inputs, [0, index], *fast_threshold)
                 for index, fast_threshold in enumerate(fast_thresholds)
             ],
         }
@@ -166,18 +173,16 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         self.fast_eval_count = self.user_input("fast_eval_count", enums.UserInputTypes.INT, 4, inputs, min_val=1,
                                                title="Number of recent RSI values to consider to get the current fast "
                                                      "moving market sentiment.")
-        self.weights = []
-        self.user_input(self.RSI_TO_WEIGHTS, enums.UserInputTypes.OBJECT_ARRAY, self.weights, inputs,
-                        item_title="Slow RSI interpretation",
-                        other_schema_values={"minItems": 1, "uniqueItems": True},
-                        title="RSI values and interpretations.")
-        # ensure rsi weights are sorted by slow_threshold
-        self.weights.append(self._init_RSI_to_weight(inputs, 30, [[20, 2, 2], [30, 1, 1]]))
-        self.weights.append(self._init_RSI_to_weight(inputs, 35, [[20, 3, 3], [35, 1, 1]]))
-        self.weights.append(self._init_RSI_to_weight(inputs, 45, [[20, 3, 3], [40, 2, 1]]))
-        self.weights.append(self._init_RSI_to_weight(inputs, 55, [[45, 1, 1]]))
-        self.weights.append(self._init_RSI_to_weight(inputs, 65, [[45, 1, 1], [55, 3, 2], [60, 2, 1]]))
-        self.weights.append(self._init_RSI_to_weight(inputs, 70, [[55, 3, 2], [70, 2, 2]]))
+        weights = []
+        self.weights = sorted(
+            self.user_input(self.RSI_TO_WEIGHTS, enums.UserInputTypes.OBJECT_ARRAY, weights, inputs,
+                            item_title="Slow RSI interpretation",
+                            other_schema_values={"minItems": 1, "uniqueItems": True},
+                            title="RSI values and interpretations."),
+            key=lambda a: a[self.SLOW_THRESHOLD]
+        )
+        # init one user input to generate user input schema and default values
+        weights.append(self._init_RSI_to_weight(inputs, 30, [[20, 2, 2]]))
 
         for i, fast_threshold in enumerate(self.weights):
             fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
