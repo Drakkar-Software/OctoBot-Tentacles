@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_evaluators.api as evaluators_api
@@ -37,12 +38,44 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
         super().__init__(tentacles_setup_config)
         self.re_evaluation_triggering_eval_types = [evaluators_enums.EvaluatorMatrixTypes.SOCIAL.value,
                                                     evaluators_enums.EvaluatorMatrixTypes.REAL_TIME.value]
-        config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.social_evaluators_default_timeout = config.get(
-            SimpleStrategyEvaluator.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY, 1 * commons_constants.HOURS_TO_SECONDS)
-        self.re_evaluate_TA_when_social_or_realtime_notification = config.get(
-            SimpleStrategyEvaluator.RE_EVAL_TA_ON_RT_OR_SOCIAL, True)
-        self.background_social_evaluators = config.get(SimpleStrategyEvaluator.BACKGROUND_SOCIAL_EVALUATORS, [])
+        self.social_evaluators_default_timeout = None
+        self.re_evaluate_TA_when_social_or_realtime_notification = True
+        self.background_social_evaluators = []
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        super().init_user_inputs(inputs)
+        self.user_input(commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, commons_enums.UserInputTypes.INT,
+                        500, inputs, min_val=200,
+                        title="Initialization candles count: the number of historical candles to fetch from "
+                              "exchanges when OctoBot is starting.")
+        self.social_evaluators_default_timeout = \
+            self.user_input(self.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY, commons_enums.UserInputTypes.INT,
+                            1 * commons_constants.HOURS_TO_SECONDS, inputs, min_val=0,
+                            title="Number of seconds to consider a social evaluation valid from the moment it "
+                                  "appears on OctoBot. Example: a tweet evaluation.")
+        self.re_evaluate_TA_when_social_or_realtime_notification = \
+            self.user_input(self.RE_EVAL_TA_ON_RT_OR_SOCIAL, commons_enums.UserInputTypes.BOOLEAN,
+                            True, inputs,
+                            title="Recompute technical evaluators on real-time evaluator signal: "
+                                  "When activated, technical evaluators will be asked to recompute their evaluation "
+                                  "based on the current in-construction candle "
+                                  "for each new evaluation appearing on social or "
+                                  "real-time evaluators. After such an event, this strategy will finalize its "
+                                  "evaluation only once this updated technical analyses will be completed. "
+                                  "If deactivated, social and real-time evaluations will be taken into account "
+                                  "alongside technical analysis results of the last closed candle.")
+        self.background_social_evaluators = \
+            self.user_input(self.BACKGROUND_SOCIAL_EVALUATORS, commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
+                            [], inputs, other_schema_values={"minItems": 0, "uniqueItems": True},
+                            options=["RedditForumEvaluator", "TwitterNewsEvaluator",
+                                     "TelegramSignalEvaluator", "GoogleTrendsEvaluator"],
+                            title="Social evaluator to consider as background evaluators: they won't trigger technical "
+                                  "evaluators re-evaluation when updated. Avoiding unnecessary updates increases "
+                                  "performances.")
 
     async def matrix_callback(self,
                               matrix_id,
@@ -204,6 +237,42 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
         config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
         self.weight_by_time_frames = TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(
             config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT])
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        super().init_user_inputs(inputs)
+        time_frames_and_weight = []
+        config_time_frames_and_weight = self.user_input(
+            self.TIME_FRAMES_TO_WEIGHT, commons_enums.UserInputTypes.OBJECT_ARRAY,
+            time_frames_and_weight, inputs, other_schema_values={"minItems": 1, "uniqueItems": True},
+            item_title="Time frame",
+            title="Analysed time frames and their associated weight."
+        )
+        # init one user input to generate user input schema and default values
+        time_frames_and_weight.append(self._init_tf_and_weight(inputs, commons_enums.TimeFrames.THIRTY_MINUTES, 30))
+        self.weight_by_time_frames = TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(
+            config_time_frames_and_weight
+        )
+
+    def _init_tf_and_weight(self, inputs, timeframe, weight):
+        return {
+            self.TIME_FRAME: self.user_input(self.TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
+                                             timeframe.value, inputs,
+                                             options=[tf.value for tf in commons_enums.TimeFrames],
+                                             parent_input_name=self.TIME_FRAMES_TO_WEIGHT,
+                                             array_indexes=[0],
+                                             title="Time frame"),
+            self.WEIGHT: self.user_input(self.WEIGHT, commons_enums.UserInputTypes.FLOAT,
+                                         weight, inputs, min_val=0, max_val=100,
+                                         parent_input_name=self.TIME_FRAMES_TO_WEIGHT,
+                                         array_indexes=[0],
+                                         title="Weight of this time frame. This is a multiplier: 0 means this time "
+                                               "frame is ignored, 100 means it's 100 times more impactful than another "
+                                               "time frame with a weight of 1."),
+        }
 
     async def matrix_callback(self,
                               matrix_id,
