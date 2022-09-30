@@ -350,6 +350,10 @@ def reset_config_to_default(tentacle_name):
         tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
                                                             klass)
         return True, f"{tentacle_name} configuration reset to default values"
+    except FileNotFoundError as e:
+        error_message = f"Error when resetting factory tentacle config: no default values file at {e.filename}"
+        _get_logger().error(error_message)
+        return False, error_message
     except Exception as e:
         _get_logger().exception(e, False)
         return False, f"Error when resetting factory tentacle config: {e}"
