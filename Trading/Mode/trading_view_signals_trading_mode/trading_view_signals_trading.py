@@ -16,7 +16,6 @@
 import decimal
 import math
 
-import async_channel.constants as channel_constants
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
@@ -26,7 +25,6 @@ import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
-import octobot_trading.exchange_channel as exchanges_channel
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
@@ -88,32 +86,24 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
 
-    async def create_producers(self) -> list:
-        mode_producer = TradingViewSignalsModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [TradingViewSignalsModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [TradingViewSignalsModeConsumer]
 
     async def create_consumers(self) -> list:
         consumers = await super().create_consumers()
-        mode_consumer = TradingViewSignalsModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
         self.merged_symbol = symbol_util.merge_symbol(self.symbol)
         service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
-        feed_consumer = None
+        feed_consumer = []
         if service_feed is not None:
-            feed_consumer = await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
+            feed_consumer = [await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
                 self._trading_view_signal_callback
-            )
+            )]
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return consumers + [mode_consumer, feed_consumer]
+        return consumers + feed_consumer
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}

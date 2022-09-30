@@ -98,23 +98,14 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                "N/A"
 
-    async def create_producers(self) -> list:
-        mode_producer = DipAnalyserTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [DipAnalyserTradingModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [DipAnalyserTradingModeConsumer]
 
     async def create_consumers(self) -> list:
         consumers = await super().create_consumers()
-        # trading mode consumer
-        mode_consumer = DipAnalyserTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
 
         # order consumer: filter by symbol not be triggered only on this symbol's orders
         order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
@@ -122,7 +113,7 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return consumers + [mode_consumer, order_consumer]
+        return consumers + [order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
                                            symbol, order, is_new, is_from_bot):
