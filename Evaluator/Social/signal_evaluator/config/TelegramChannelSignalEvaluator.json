@@ -1,11 +1,11 @@
 {
-  "telegram-channels": {
-    "Test-Channel": {
-      "signal_patterns": {
+  "telegram-channels": [{
+      "channel_name":"Test-Channel",
+      "signal_pattern": {
         "MARKET_BUY": "Side: (BUY)$",
         "MARKET_SELL": "Side: (SELL)$"
       },
       "signal_pair": "Pair: (.*)$"
-    }
-  }
+      }
+  ]
 }

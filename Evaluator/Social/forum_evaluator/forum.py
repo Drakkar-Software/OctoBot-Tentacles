@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_evaluators.evaluators as evaluators
 import octobot_services.constants as services_constants
@@ -38,6 +39,40 @@ class RedditForumEvaluator(evaluators.SocialEvaluator):
         self.count = 0
         self.sentiment_analyser = None
         self.is_self_refreshing = True
+        self.subreddits_by_cryptocurrency = {}
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        cryptocurrencies = []
+        config_cryptocurrencies = self.user_input(
+            commons_constants.CONFIG_CRYPTO_CURRENCIES, commons_enums.UserInputTypes.OBJECT_ARRAY,
+            cryptocurrencies, inputs, other_schema_values={"minItems": 1, "uniqueItems": True},
+            item_title="Crypto currency",
+            title="Crypto currencies to watch."
+        )
+        # init one user input to generate user input schema and default values
+        cryptocurrencies.append(self._init_cryptocurrencies(inputs, "Bitcoin", ["Bitcoin"]))
+        # remove other symbols data to avoid unnecessary entries
+        self.subreddits_by_cryptocurrency = self._get_config_elements(config_cryptocurrencies, CONFIG_REDDIT_SUBREDDITS)
+        self.feed_config[services_constants.CONFIG_REDDIT_SUBREDDITS] = self.subreddits_by_cryptocurrency
+
+    def _init_cryptocurrencies(self, inputs, cryptocurrency, subreddits):
+        return {
+            commons_constants.CONFIG_CRYPTO_CURRENCY:
+                self.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
+                                cryptocurrency, inputs, other_schema_values={"minLength": 2},
+                                parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
+                                title="Crypto currency name"),
+            CONFIG_REDDIT_SUBREDDITS:
+                self.user_input(CONFIG_REDDIT_SUBREDDITS, commons_enums.UserInputTypes.STRING_ARRAY,
+                                subreddits, inputs, other_schema_values={"uniqueItems": True},
+                                parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
+                                item_title="Subreddit name",
+                                title="Subreddits to watch")
+        }
 
     @classmethod
     def get_is_cryptocurrencies_wildcard(cls) -> bool:
@@ -79,22 +114,22 @@ class RedditForumEvaluator(evaluators.SocialEvaluator):
 
     def _is_interested_by_this_notification(self, notification_description):
         # true if the given subreddit is in this cryptocurrency's subreddits configuration
-        if self.specific_config[CONFIG_REDDIT_SUBREDDITS]:
-            for subreddit in self.specific_config[CONFIG_REDDIT_SUBREDDITS][self.cryptocurrency_name]:
+        try:
+            for subreddit in self.subreddits_by_cryptocurrency[self.cryptocurrency_name]:
                 if subreddit.lower() == notification_description:
                     return True
+        except KeyError:
+            pass
         return False
 
-    def _get_config_elements(self, key):
-        if commons_constants.CONFIG_CRYPTO_CURRENCIES in self.specific_config and self.specific_config[commons_constants.CONFIG_CRYPTO_CURRENCIES]:
-            return {cc[commons_constants.CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in self.specific_config[commons_constants.CONFIG_CRYPTO_CURRENCIES]
-                    if cc[commons_constants.CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name}
+    def _get_config_elements(self, config_cryptocurrencies, key):
+        if config_cryptocurrencies:
+            return {
+                cc[commons_constants.CONFIG_CRYPTO_CURRENCY]: cc[key]
+                for cc in config_cryptocurrencies
+                if cc[commons_constants.CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name
+            }
         return {}
 
-    def _format_config(self):
-        # remove other symbols data to avoid unnecessary entries
-        self.specific_config[CONFIG_REDDIT_SUBREDDITS] = self._get_config_elements(CONFIG_REDDIT_SUBREDDITS)
-
     async def prepare(self):
-        self._format_config()
         self.sentiment_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.TextAnalysis)()
