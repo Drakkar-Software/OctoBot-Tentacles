@@ -17,7 +17,6 @@ import asyncio
 import decimal
 import math
 
-import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
@@ -27,7 +26,6 @@ import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
@@ -95,23 +93,11 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
 
-    async def create_producers(self) -> list:
-        mode_producer = DailyTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [DailyTradingModeProducer]
 
-    async def create_consumers(self) -> list:
-        consumers = await super().create_consumers()
-        mode_consumer = DailyTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-        return consumers + [mode_consumer]
+    def get_mode_consumer_classes(self) -> list:
+        return [DailyTradingModeConsumer]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:

@@ -16,16 +16,11 @@
 import dataclasses
 import decimal
 
-import async_channel.constants as channel_constants
-import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
-import octobot_services.channel as services_channels
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
-import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
@@ -46,10 +41,6 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     USER_COMMAND_PAUSE_ORDER_MIRRORING = "pause orders mirroring"
     USER_COMMAND_TRADING_PAIR = "trading pair"
     USER_COMMAND_PAUSE_TIME = "pause length in seconds"
-
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.consumer_class = GridTradingModeConsumer
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -153,12 +144,11 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
         )
 
-    async def create_producers(self) -> list:
-        mode_producer = GridTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [GridTradingModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [GridTradingModeConsumer]
 
     async def user_commands_callback(self, bot_id, subject, action, data) -> None:
         await super().user_commands_callback(bot_id, subject, action, data)
