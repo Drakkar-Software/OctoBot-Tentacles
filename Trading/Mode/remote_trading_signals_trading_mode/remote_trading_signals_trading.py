@@ -15,7 +15,6 @@
 #  License along with this library.
 import decimal
 
-import async_channel.constants as channel_constants
 import octobot_commons.channels_name as channels_name
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
@@ -26,7 +25,6 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as errors
 import octobot_trading.exchanges as exchanges
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as personal_data
 import octobot_trading.modes.script_keywords as script_keywords
@@ -70,13 +68,15 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             else self.producers[0].state.name
         return producer_state, self.last_signal_description
 
+    def get_mode_producer_classes(self) -> list:
+        return [RemoteTradingSignalsModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [RemoteTradingSignalsModeConsumer]
+
     async def create_producers(self) -> list:
-        mode_producer = RemoteTradingSignalsModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        signal_producers = await self._subscribe_to_signal_feed()
-        return [mode_producer] + signal_producers
+        producers = await super().create_producers()
+        return producers + await self._subscribe_to_signal_feed()
 
     async def _subscribe_to_signal_feed(self):
         channel, created = await trading_signals.create_remote_trading_signal_channel_if_missing(
@@ -99,13 +99,6 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     async def create_consumers(self) -> list:
         consumers = await super().create_consumers()
-        mode_consumer = RemoteTradingSignalsModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
         signals_consumer = await channels.get_chan(
             channels_name.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)\
             .new_consumer(
@@ -114,7 +107,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
-        return consumers + [mode_consumer, signals_consumer]
+        return consumers + [signals_consumer]
 
     async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")

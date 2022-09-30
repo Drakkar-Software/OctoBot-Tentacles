@@ -17,6 +17,7 @@ import asyncio
 import decimal
 
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.enums as commons_enums
 
 import octobot_trading.modes as trading_modes
 import octobot_trading.enums as trading_enums
@@ -29,11 +30,6 @@ import octobot_trading.personal_data as trading_personal_data
 class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     AMOUNT_TO_BUY_IN_REF_MARKET = "amount_to_buy_in_reference_market"
     ORDER_PRICE_DISTANCE = decimal.Decimal(str(0.001))
-
-    def __init__(self, trading_mode):
-        super().__init__(trading_mode)
-        self.order_quantity_of_ref_market = decimal.Decimal(str(
-            self.trading_mode.trading_config.get(self.AMOUNT_TO_BUY_IN_REF_MARKET, 1)))
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
@@ -49,7 +45,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
             created_orders = []
             orders_should_have_been_created = False
-            quantity = self.order_quantity_of_ref_market / price
+            quantity = self.trading_mode.order_quantity_of_ref_market / price
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, price * (trading_constants.ONE -
                                                                                             self.ORDER_PRICE_DISTANCE))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
@@ -96,7 +92,6 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.task = None
         self.state = trading_enums.EvaluatorStates.LONG
-        self.minutes_before_next_buy = self.trading_mode.trading_config.get(self.MINUTES_BEFORE_NEXT_BUY, 60)
 
     async def stop(self):
         if self.trading_mode is not None:
@@ -122,11 +117,12 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             try:
                 self.logger.info("DCA task triggered")
 
-                for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(self.exchange_manager.config).items():
+                for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
+                        self.exchange_manager.config).items():
                     for pair in pairs:
                         await self.trigger_dca_for_symbol(cryptocurrency=cryptocurrency, symbol=pair)
 
-                await asyncio.sleep(self.minutes_before_next_buy)
+                await asyncio.sleep(self.trading_mode.minutes_before_next_buy)
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
@@ -154,3 +150,29 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [DCATradingModeProducer]
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.order_quantity_of_ref_market = None
+        self.minutes_before_next_buy = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.order_quantity_of_ref_market = decimal.Decimal(str(self.user_input(
+            DCATradingModeConsumer.AMOUNT_TO_BUY_IN_REF_MARKET, commons_enums.UserInputTypes.FLOAT, 1, inputs,
+            min_val=1,
+            title="The amount of dollars (or unit of reference market) to buy on each transaction.",
+        )))
+        self.minutes_before_next_buy = int(self.user_input(
+            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 60, inputs,
+            min_val=1,
+            title="The amount of minutes to wait between each transaction (60 for 1 hour, 1440 for 1 day, "
+                  "10080 for 1 week and 43200 1 month).",
+        ))
+
+    @staticmethod
+    def is_backtestable():
+        return False
