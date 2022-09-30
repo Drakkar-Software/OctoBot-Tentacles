@@ -61,22 +61,25 @@ function handle_tentacle_config_update_error_callback(updated_data, update_url, 
     create_alert("error", "Error when updating config", msg.responseText);
 }
 
-function handleConfigDisplay(){
+function handleConfigDisplay(success){
     $("#editor-waiter").hide();
-    if(canEditConfig()){
-        $("#saveConfigFooter").show();
-        $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function() {
-            const errorsDesc = validateJSONEditor(configEditor);
-            if(errorsDesc.length){
-                create_alert("error", "Error when saving configuration",
-                    `Invalid configuration data: ${errorsDesc}.`);
-            }
-            else
-                updateTentacleConfig(configEditor.getValue());
-        });
+    if(success){
+        $("#configErrorDetails").hide();
+        if(canEditConfig()) {
+            $("#saveConfigFooter").show();
+            $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function () {
+                const errorsDesc = validateJSONEditor(configEditor);
+                if (errorsDesc.length) {
+                    create_alert("error", "Error when saving configuration",
+                        `Invalid configuration data: ${errorsDesc}.`);
+                } else
+                    updateTentacleConfig(configEditor.getValue());
+            });
+        }else{
+            $("#noConfigMessage").show();
+        }
     }else{
-        $("button[data-role='saveConfig']").addClass(hidden_class);
-        $("#noConfigMessage").show();
+        $("#configErrorDetails").show();
     }
 }
 
@@ -156,9 +159,9 @@ function handleButtons() {
         start_backtesting(request, update_url);
     });
 
-    $("#factoryResetConfig").click(function(){
+    $("button[data-role='factoryResetConfig']").click(function(){
         if (confirm("Reset this tentacle configuration to its default values ?") === true) {
-            factory_reset($("#factoryResetConfig").attr("update-url"));
+            factory_reset($("button[data-role='factoryResetConfig']").attr("update-url"));
         }
     });
     
@@ -261,7 +264,7 @@ function initConfigEditor(showWaiter) {
     function editDetailsSuccess(updated_data, update_url, dom_root_element, msg, status){
         const inputs = msg["displayed_elements"]["data"]["elements"];
         if(inputs.length === 0){
-            handleConfigDisplay();
+            handleConfigDisplay(true);
             return;
         }
         parsedConfigValue = msg["config"];
@@ -289,11 +292,17 @@ function initConfigEditor(showWaiter) {
             closeOnSelect: false,
             placeholder: "Select values to use"
         });
-        handleConfigDisplay();
+        handleConfigDisplay(true);
     }
 
+    const editDetailsFailure = (updated_data, update_url, dom_root_element, msg, status) => {
+        create_alert("error", "Error when fetching tentacle config", msg.responseText);
+        handleConfigDisplay(false);
+    }
+
+
     send_and_interpret_bot_update(null, configEditorBody.data("edit-details-url"), null,
-        editDetailsSuccess, undefined, "GET");
+        editDetailsSuccess, editDetailsFailure, "GET");
 }
 
 $(document).ready(function() {
