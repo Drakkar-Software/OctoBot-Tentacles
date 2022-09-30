@@ -39,7 +39,7 @@ function handle_apply_evaluator_default_config_success_callback(updated_data, up
 }
 
 function updateTentacleConfig(updatedConfig){
-    const update_url = $("#saveConfig").attr(update_url_attr);
+    const update_url = $("button[data-role='saveConfig']").attr(update_url_attr);
     send_and_interpret_bot_update(updatedConfig, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
 }
 
@@ -48,7 +48,7 @@ function factory_reset(update_url){
 }
 
 function handle_tentacle_config_reset_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    create_alert("success", "Configuration saved", msg);
+    create_alert("success", "Configuration reset", msg);
     initConfigEditor(false);
 }
 
@@ -65,7 +65,7 @@ function handleConfigDisplay(){
     $("#editor-waiter").hide();
     if(canEditConfig()){
         $("#saveConfigFooter").show();
-        $("#saveConfig").unbind("click").click(function() {
+        $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function() {
             const errorsDesc = validateJSONEditor(configEditor);
             if(errorsDesc.length){
                 create_alert("error", "Error when saving configuration",
@@ -75,6 +75,7 @@ function handleConfigDisplay(){
                 updateTentacleConfig(configEditor.getValue());
         });
     }else{
+        $("button[data-role='saveConfig']").addClass(hidden_class);
         $("#noConfigMessage").show();
     }
 }
