@@ -158,7 +158,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         super().__init__(trading_mode)
         self.sell_targets_by_order_id = {}
 
-    def reload_config(self):
+    def on_reload_config(self):
         """
         Called at constructor and after the associated trading mode's reload_config.
         Implement if necessary
@@ -435,7 +435,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
         self.ignore_exchange_fees = False
 
-    def reload_config(self):
+    def on_reload_config(self):
         """
         Called at constructor and after the associated trading mode's reload_config.
         Implement if necessary
