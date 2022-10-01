@@ -135,7 +135,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
         super().__init__(trading_mode)
         self.open_arbitrages = []
 
-    def reload_config(self):
+    def on_reload_config(self):
         """
         Called at constructor and after the associated trading mode's reload_config.
         Implement if necessary
@@ -260,7 +260,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.quote, self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base_and_quote()
         self.lock = asyncio.Lock()
 
-    def reload_config(self):
+    def on_reload_config(self):
         """
         Called at constructor and after the associated trading mode's reload_config.
         Implement if necessary
