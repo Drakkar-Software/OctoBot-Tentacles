@@ -18,10 +18,10 @@ import math
 
 import ccxt
 
+import octobot_commons.enums as commons_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
-import octobot_tentacles_manager.api as tentacles_manager_api
 
 
 class hollaex(exchanges.SpotCCXTExchange):
@@ -29,11 +29,18 @@ class hollaex(exchanges.SpotCCXTExchange):
 
     DEFAULT_MAX_LIMIT = 500
 
+    @classmethod
+    def init_user_inputs(cls, tentacle_config: dict, inputs: dict) -> None:
+        """
+        Called at constructor, should define all the exchange's user inputs.
+        """
+        cls.user_input("rest", commons_enums.UserInputTypes.TEXT, "https://api.hollaex.com", inputs, tentacle_config,
+                       title="Address of the Hollaex based exchange API (similar to https://api.hollaex.com)")
+
     def get_additional_connector_config(self):
         urls = ccxt.hollaex().urls
         custom_urls = {
-            "api": tentacles_manager_api.get_tentacle_config(self.exchange_manager.tentacles_setup_config,
-                                                             self.__class__)
+            "api": self.tentacle_config
         }
         urls.update(custom_urls)
         return {
