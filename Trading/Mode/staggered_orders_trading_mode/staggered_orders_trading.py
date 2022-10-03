@@ -118,29 +118,29 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
+        self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                         self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
                         item_title="Pair configuration",
                         other_schema_values={"minItems": 1, "uniqueItems": True},
                         title="Configuration for each traded pairs.")
-        self.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
+        self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
                         other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
                         parent_input_name=self.CONFIG_PAIR_SETTINGS,
                         title="Name of the traded pair."),
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_MODE, commons_enums.UserInputTypes.OPTIONS, StrategyModes.NEUTRAL.value, inputs,
             options=list(mode.value for mode in StrategyModes),
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Mode: way to allocate funds in created orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between buy and sell orders: percent of the current price to use as "
                   "spread (difference between highest buy and lowest sell).",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -148,40 +148,40 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                   "between orders. WARNING: this should to be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_LOWER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Lower bound: lower limit of the grid: minimum price to start placing buy orders from: lower "
                   "limit of the grid.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_UPPER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders from.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_OPERATIONAL_DEPTH, commons_enums.UserInputTypes.INT, 50, inputs,
             min_val=1, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Operational depth: maximum number of orders to be maintained on exchange.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
                   "is filled. This can generate extra profits on quick market moves.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
                   "size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange "
                   "fees into account.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Use existing orders only: when checked, new orders will only be created upon pre-existing orders "

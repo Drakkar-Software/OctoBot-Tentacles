@@ -26,7 +26,7 @@ class TelegramSignalEvaluator(evaluators.SocialEvaluator):
     SERVICE_FEED_CLASS = Services_feeds.TelegramServiceFeed
 
     def init_user_inputs(self, inputs: dict) -> None:
-        channels_config = self.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
+        channels_config = self.UI.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
                                           commons_enums.UserInputTypes.STRING_ARRAY,
                                           [], inputs, item_title="Channel name",
                                           title="Name of the watched channels")
@@ -120,7 +120,7 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
 
     def init_user_inputs(self, inputs: dict) -> None:
         channels = []
-        config_channels = self.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
+        config_channels = self.UI.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
                                           commons_enums.UserInputTypes.OBJECT_ARRAY,
                                           channels, inputs, item_title="Channel",
                                           other_schema_values={"minItems": 1, "uniqueItems": True},
@@ -135,19 +135,19 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
 
     def _init_channel_config(self, inputs, channel_name, signal_pair, buy_regex, sell_regex):
         return {
-            self.SIGNAL_CHANNEL_NAME_KEY: self.user_input(
+            self.SIGNAL_CHANNEL_NAME_KEY: self.UI.user_input(
                 self.SIGNAL_CHANNEL_NAME_KEY, commons_enums.UserInputTypes.TEXT,
                 channel_name, inputs,
                 parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
                 array_indexes=[0],
                 title="Channel name"),
-            self.SIGNAL_PAIR_KEY: self.user_input(
+            self.SIGNAL_PAIR_KEY: self.UI.user_input(
                 self.SIGNAL_PAIR_KEY, commons_enums.UserInputTypes.TEXT,
                 signal_pair, inputs,
                 parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
                 array_indexes=[0],
                 title="Trading pair regex, ex: Pair: (.*)$"),
-            self.SIGNAL_PATTERN_KEY: self.user_input(
+            self.SIGNAL_PATTERN_KEY: self.UI.user_input(
                 self.SIGNAL_PATTERN_KEY, commons_enums.UserInputTypes.OBJECT,
                 self._init_pattern_config(inputs, buy_regex, sell_regex), inputs,
                 parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
@@ -157,12 +157,12 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
 
     def _init_pattern_config(self, inputs, buy_regex, sell_regex):
         return {
-            self.SIGNAL_PATTERN_MARKET_BUY_KEY: self.user_input(
+            self.SIGNAL_PATTERN_MARKET_BUY_KEY: self.UI.user_input(
                 self.SIGNAL_PATTERN_MARKET_BUY_KEY, commons_enums.UserInputTypes.TEXT,
                 buy_regex, inputs, parent_input_name=self.SIGNAL_PATTERN_KEY,
                 array_indexes=[0],
                 title="Market buy signal regex, ex: Side: (BUY)$"),
-            self.SIGNAL_PATTERN_MARKET_SELL_KEY: self.user_input(
+            self.SIGNAL_PATTERN_MARKET_SELL_KEY: self.UI.user_input(
                 self.SIGNAL_PATTERN_MARKET_SELL_KEY,
                 commons_enums.UserInputTypes.TEXT,
                 sell_regex, inputs,

@@ -55,16 +55,16 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         those are defined somewhere else.
         """
         self.should_emit_trading_signals_user_input(inputs)
-        self.user_input(
+        self.UI.user_input(
             "use_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in trades: Trade with all available funds at each order.",
         )
-        self.USE_MARKET_ORDERS = self.user_input(
+        self.USE_MARKET_ORDERS = self.UI.user_input(
             "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
                   "are set using the Fixed limit prices difference value.",
         )
-        self.user_input(
+        self.UI.user_input(
             "close_to_current_price_difference", commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             title="Fixed limit prices difference: Difference to take into account when placing a limit order "

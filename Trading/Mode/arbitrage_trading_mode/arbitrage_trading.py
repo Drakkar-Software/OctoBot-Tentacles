@@ -46,25 +46,25 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.user_input(
+        self.UI.user_input(
             "portfolio_percent_per_trade", commons_enums.UserInputTypes.FLOAT, 25, inputs,
             min_val=0, max_val=100,
             title="Trade size: percent of your portfolio to include in each arbitrage order.",
         )
-        self.user_input(
+        self.UI.user_input(
             "stop_loss_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.1, inputs,
             min_val=0, max_val=100,
             title="Stop loss price: price percent from the price of the initial order to set the stop loss on.",
         )
         exchanges = list(self.config[commons_constants.CONFIG_EXCHANGES].keys())
-        self.user_input(
+        self.UI.user_input(
             "exchanges_to_trade_on", commons_enums.UserInputTypes.MULTIPLE_OPTIONS, [exchanges[0]], inputs,
             options=exchanges,
             title="Trading exchanges: exchanges on which to perform arbitrage trading: these will be used to create "
                   "arbitrage orders. Leaving this empty will result in arbitrage trading on every exchange, "
                   "which is sub-optimal. Add exchange configurations to add exchanges to this list.",
         )
-        self.user_input(
+        self.UI.user_input(
             "minimal_price_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.25, inputs,
             min_val=0, max_val=100,
             title="Cross exchange triggering delta: minimal percent difference to trigger an arbitrage order. Remember "

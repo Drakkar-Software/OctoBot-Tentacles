@@ -27,7 +27,7 @@ class BlankStrategyEvaluator(evaluators.StrategyEvaluator):
         those are defined somewhere else.
         """
         super().init_user_inputs(inputs)
-        self.user_input(common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, common_enums.UserInputTypes.INT,
+        self.UI.user_input(common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, common_enums.UserInputTypes.INT,
                         200, inputs, min_val=200,
                         title="Initialization candles count: the number of historical candles to fetch from "
                               "exchanges when OctoBot is starting.")
