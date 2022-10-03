@@ -46,7 +46,7 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
         those are defined somewhere else.
         """
         cryptocurrencies = []
-        config_cryptocurrencies = self.user_input(
+        config_cryptocurrencies = self.UI.user_input(
             commons_constants.CONFIG_CRYPTO_CURRENCIES, commons_enums.UserInputTypes.OBJECT_ARRAY,
             cryptocurrencies, inputs, other_schema_values={"minItems": 1, "uniqueItems": True},
             item_title="Crypto currency",
@@ -65,18 +65,18 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
     def _init_cryptocurrencies(self, inputs, cryptocurrency, accounts, hashtags):
         return {
             commons_constants.CONFIG_CRYPTO_CURRENCY:
-                self.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
+                self.UI.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
                                 cryptocurrency, inputs, other_schema_values={"minLength": 2},
                                 parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
                                 title="Crypto currency name"),
             services_constants.CONFIG_TWITTERS_ACCOUNTS:
-                self.user_input(services_constants.CONFIG_TWITTERS_ACCOUNTS, commons_enums.UserInputTypes.STRING_ARRAY,
+                self.UI.user_input(services_constants.CONFIG_TWITTERS_ACCOUNTS, commons_enums.UserInputTypes.STRING_ARRAY,
                                 accounts, inputs, other_schema_values={"uniqueItems": True},
                                 parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
                                 item_title="Twitter account name",
                                 title="Twitter accounts to watch"),
             services_constants.CONFIG_TWITTERS_HASHTAGS:
-                self.user_input(services_constants.CONFIG_TWITTERS_HASHTAGS, commons_enums.UserInputTypes.STRING_ARRAY,
+                self.UI.user_input(services_constants.CONFIG_TWITTERS_HASHTAGS, commons_enums.UserInputTypes.STRING_ARRAY,
                                 hashtags, inputs, other_schema_values={"uniqueItems": True},
                                 parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
                                 item_title="Hashtag",

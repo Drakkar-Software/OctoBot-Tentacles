@@ -47,7 +47,7 @@ class RedditForumEvaluator(evaluators.SocialEvaluator):
         those are defined somewhere else.
         """
         cryptocurrencies = []
-        config_cryptocurrencies = self.user_input(
+        config_cryptocurrencies = self.UI.user_input(
             commons_constants.CONFIG_CRYPTO_CURRENCIES, commons_enums.UserInputTypes.OBJECT_ARRAY,
             cryptocurrencies, inputs, other_schema_values={"minItems": 1, "uniqueItems": True},
             item_title="Crypto currency",
@@ -62,12 +62,12 @@ class RedditForumEvaluator(evaluators.SocialEvaluator):
     def _init_cryptocurrencies(self, inputs, cryptocurrency, subreddits):
         return {
             commons_constants.CONFIG_CRYPTO_CURRENCY:
-                self.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
+                self.UI.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
                                 cryptocurrency, inputs, other_schema_values={"minLength": 2},
                                 parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
                                 title="Crypto currency name"),
             CONFIG_REDDIT_SUBREDDITS:
-                self.user_input(CONFIG_REDDIT_SUBREDDITS, commons_enums.UserInputTypes.STRING_ARRAY,
+                self.UI.user_input(CONFIG_REDDIT_SUBREDDITS, commons_enums.UserInputTypes.STRING_ARRAY,
                                 subreddits, inputs, other_schema_values={"uniqueItems": True},
                                 parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
                                 item_title="Subreddit name",

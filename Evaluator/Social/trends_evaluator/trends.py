@@ -34,13 +34,13 @@ class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
         self.relevant_history_months = 3
 
     def init_user_inputs(self, inputs: dict) -> None:
-        self.refresh_rate_seconds = self.user_input(commons_constants.CONFIG_REFRESH_RATE,
+        self.refresh_rate_seconds = self.UI.user_input(commons_constants.CONFIG_REFRESH_RATE,
                                                     commons_enums.UserInputTypes.INT,
                                                     self.refresh_rate_seconds, inputs, min_val=1,
                                                     title="Seconds between each re-evaluation "
                                                           "(do not set too low because google has a low "
                                                           "monthly rate limit).")
-        self.relevant_history_months = self.user_input(services_constants.CONFIG_TREND_HISTORY_TIME,
+        self.relevant_history_months = self.UI.user_input(services_constants.CONFIG_TREND_HISTORY_TIME,
                                                        commons_enums.UserInputTypes.INT,
                                                        self.relevant_history_months, inputs, min_val=3, max_val=3,
                                                        title="Number of months to look into to compute the trend "

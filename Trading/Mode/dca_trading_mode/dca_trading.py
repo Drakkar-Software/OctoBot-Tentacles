@@ -161,12 +161,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.order_quantity_of_ref_market = decimal.Decimal(str(self.user_input(
+        self.order_quantity_of_ref_market = decimal.Decimal(str(self.UI.user_input(
             DCATradingModeConsumer.AMOUNT_TO_BUY_IN_REF_MARKET, commons_enums.UserInputTypes.FLOAT, 1, inputs,
             min_val=1,
             title="The amount of dollars (or unit of reference market) to buy on each transaction.",
         )))
-        self.minutes_before_next_buy = int(self.user_input(
+        self.minutes_before_next_buy = int(self.UI.user_input(
             DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 60, inputs,
             min_val=1,
             title="The amount of minutes to wait between each transaction (60 for 1 hour, 1440 for 1 day, "

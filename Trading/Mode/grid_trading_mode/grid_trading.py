@@ -47,23 +47,23 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
+        self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                         self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
                         item_title="Pair configuration",
                         other_schema_values={"minItems": 1, "uniqueItems": True},
                         title="Configuration for each traded pairs.")
-        self.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
+        self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
                         other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
                         parent_input_name=self.CONFIG_PAIR_SETTINGS,
                         title="Name of the traded pair."),
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_FLAT_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between the closest buy and sell orders in the quote currency "
                   "(USDT for BTC/USDT).",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -71,21 +71,21 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_BUY_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Buy orders count: number of initial buy orders to create. Make sure to have enough funds "
                   "to create that many orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_SELL_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Sell orders count: Number of initial sell orders to create. Make sure to have enough funds "
                   "to create that many orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -93,7 +93,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency "
                   "simultaneously in multiple traded pairs.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -101,14 +101,14 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same "
                   "currency simultaneously in multiple traded pairs.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Starting price: price price to compute initial orders from. Set 0 to use current "
                   "exchange price during initial grid orders creation.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -116,27 +116,27 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "available quote funds in portfolio (or total sell funds if set) to create orders with constant "
                   "total order cost (price * volume).",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
                   "is filled. This can generate extra profits on quick market moves.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
                   "size mirror orders. When unchecked, a part of the total volume will be reduced to take "
                   "exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for "
                   "mirror orders. WARNING: incompatible with profits reinvesting.",
         )
-        self.user_input(
+        self.UI.user_input(
             self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Use existing orders only: when checked, new orders will only be created upon pre-existing orders "

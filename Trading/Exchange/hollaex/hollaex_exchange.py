@@ -30,12 +30,14 @@ class hollaex(exchanges.SpotCCXTExchange):
     DEFAULT_MAX_LIMIT = 500
 
     @classmethod
-    def init_user_inputs(cls, tentacle_config: dict, inputs: dict) -> None:
+    def init_user_inputs(cls, inputs: dict) -> None:
         """
         Called at constructor, should define all the exchange's user inputs.
         """
-        cls.user_input("rest", commons_enums.UserInputTypes.TEXT, "https://api.hollaex.com", inputs, tentacle_config,
-                       title="Address of the Hollaex based exchange API (similar to https://api.hollaex.com)")
+        cls.UI.user_input(
+            "rest", commons_enums.UserInputTypes.TEXT, "https://api.hollaex.com", inputs,
+            title="Address of the Hollaex based exchange API (similar to https://api.hollaex.com)"
+        )
 
     def get_additional_connector_config(self):
         urls = ccxt.hollaex().urls
