@@ -46,7 +46,7 @@ class DipAnalyserStrategyEvaluator(evaluators.StrategyEvaluator):
         those are defined somewhere else.
         """
         self.evaluation_time_frame = commons_enums.TimeFrames(
-            self.user_input(
+            self.UI.user_input(
                 evaluator_constants.STRATEGIES_REQUIRED_TIME_FRAME,
                 commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
                 [commons_enums.TimeFrames.ONE_HOUR.value],

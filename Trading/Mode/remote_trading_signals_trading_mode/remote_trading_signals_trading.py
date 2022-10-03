@@ -42,11 +42,11 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.user_input(
+        self.UI.user_input(
             common_constants.CONFIG_TRADING_SIGNALS_STRATEGY, common_enums.UserInputTypes.TEXT, "", inputs,
             title="Trading strategy: identifier of the trading strategy to use."
         )
-        self.user_input(
+        self.UI.user_input(
             RemoteTradingSignalsModeConsumer.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY,
             common_enums.UserInputTypes.FLOAT, 100, inputs,
             min_val=0, max_val=100,

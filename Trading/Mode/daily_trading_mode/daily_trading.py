@@ -42,38 +42,38 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         those are defined somewhere else.
         """
         self.should_emit_trading_signals_user_input(inputs)
-        self.user_input(
+        self.UI.user_input(
             "use_prices_close_to_current_price", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Fixed limit prices: Use a fixed ratio to compute prices in sell / buy orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             "close_to_current_price_difference", commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             title="Fixed limit prices difference: Difference to take into account when placing a limit order "
                   "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
                   "buy price would be 199 and sell price 201.",
         )
-        self.user_input(
+        self.UI.user_input(
             "buy_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in buy trades: Trade with all available funds at each buy order.",
         )
-        self.user_input(
+        self.UI.user_input(
             "sell_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in sell trades: Trade with all available funds at each sell order.",
         )
-        self.user_input(
+        self.UI.user_input(
             "disable_sell_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Disable sell orders (sell market and sell limit).",
         )
-        self.user_input(
+        self.UI.user_input(
             "disable_buy_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Disable buy orders (buy market and buy limit).",
         )
-        self.user_input(
+        self.UI.user_input(
             "use_stop_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             title="Stop orders: Use stop loss orders.",
         )
-        self.user_input(
+        self.UI.user_input(
             "max_currency_percent", commons_enums.UserInputTypes.FLOAT, 100, inputs,
             min_val=0, max_val=100,
             title="Maximum currency percent: Maximum portfolio % to allocate on a given currency. "

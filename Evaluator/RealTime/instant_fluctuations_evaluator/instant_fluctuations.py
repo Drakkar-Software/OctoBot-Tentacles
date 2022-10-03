@@ -58,15 +58,15 @@ class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.time_frame = self.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
-                                          commons_enums.TimeFrames.ONE_MINUTE.value,
-                                          inputs, options=[tf.value for tf in commons_enums.TimeFrames],
-                                          title="Time frame: The time frame to observe in order to spot changes.")
-        self.VOLUME_HAPPENING_THRESHOLD = 1 + self.user_input(
+        self.time_frame = self.UI.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
+                                             commons_enums.TimeFrames.ONE_MINUTE.value,
+                                             inputs, options=[tf.value for tf in commons_enums.TimeFrames],
+                                             title="Time frame: The time frame to observe in order to spot changes.")
+        self.VOLUME_HAPPENING_THRESHOLD = 1 + self.UI.user_input(
             self.VOLUME_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 400, inputs, min_val=0,
             title="Volume threshold: volume difference in percent from which to trigger a notification."
         ) / 100
-        self.PRICE_HAPPENING_THRESHOLD = self.user_input(
+        self.PRICE_HAPPENING_THRESHOLD = self.UI.user_input(
             self.PRICE_THRESHOLD_KEY, commons_enums.UserInputTypes.FLOAT, 1, inputs, min_val=0,
             title="Price threshold: price difference in percent from which to trigger a notification."
         ) / 100
@@ -193,11 +193,11 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.time_frame = self.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
+        self.time_frame = self.UI.user_input(commons_constants.CONFIG_TIME_FRAME, commons_enums.UserInputTypes.OPTIONS,
                                           commons_enums.TimeFrames.ONE_MINUTE.value,
                                           inputs, options=[tf.value for tf in commons_enums.TimeFrames],
                                           title="Time frame: The time frame to observe in order to spot changes.")
-        self.period = self.user_input("period", commons_enums.UserInputTypes.INT, 6, inputs,
+        self.period = self.UI.user_input("period", commons_enums.UserInputTypes.INT, 6, inputs,
                                       min_val=1, title="Period: the EMA period length to use.")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,

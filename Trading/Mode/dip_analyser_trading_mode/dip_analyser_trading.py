@@ -44,41 +44,41 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         those are defined somewhere else.
         """
         self.should_emit_trading_signals_user_input(inputs)
-        self.sell_orders_per_buy = self.user_input(
+        self.sell_orders_per_buy = self.UI.user_input(
             "sell_orders_count", commons_enums.UserInputTypes.INT, 3, inputs, min_val=1,
             title="Number of sell orders to create after each buy."
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeProducer.IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Ignore exchange fees when creating sell orders. When enabled, 100% of the bought assets will be "
                   "sold, otherwise a small part will be kept to cover exchange fees."
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
             min_val=0, max_val=1,
             title="Price multiplier for the top sell order in a light price weight signal.",
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.07, inputs,
             min_val=0, max_val=1,
             title="Price multiplier for the top sell order in a medium price weight signal.",
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.1, inputs,
             min_val=0, max_val=1,
             title="Price multiplier for the top sell order in a heavy price weight signal.",
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.5, inputs,
             min_val=1,
             title="Volume multiplier for the top sell order in a light volume weight signal.",
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
             min_val=1,
             title="Volume multiplier for the top sell order in a medium volume weight signal.",
         )
-        self.user_input(
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
             min_val=1,
             title="Volume multiplier for the top sell order in a heavy volume weight signal.",

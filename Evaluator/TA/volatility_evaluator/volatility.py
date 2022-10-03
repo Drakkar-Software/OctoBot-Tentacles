@@ -36,14 +36,14 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
         self.high_level = 98
 
     def init_user_inputs(self, inputs: dict) -> None:
-        self.period = self.user_input(self.STOCHRSI_PERIOD, enums.UserInputTypes.INT,
+        self.period = self.UI.user_input(self.STOCHRSI_PERIOD, enums.UserInputTypes.INT,
                                       self.period, inputs, min_val=2,
                                       title="Period: length of the stochastic RSI period.")
-        self.low_level = self.user_input(self.LOW_LEVEL, enums.UserInputTypes.FLOAT,
+        self.low_level = self.UI.user_input(self.LOW_LEVEL, enums.UserInputTypes.FLOAT,
                                          self.low_level, inputs, min_val=0,
                                          title="Low threshold: stochastic RSI level from which evaluation "
                                                "is considered a buy signal.")
-        self.high_level = self.user_input(self.HIGH_LEVEL, enums.UserInputTypes.FLOAT,
+        self.high_level = self.UI.user_input(self.HIGH_LEVEL, enums.UserInputTypes.FLOAT,
                                           self.high_level, inputs, min_val=0,
                                           title="High threshold: stochastic RSI level from which evaluation "
                                                 "is considered a sell signal.")
