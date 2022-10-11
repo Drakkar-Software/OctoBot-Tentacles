@@ -27,6 +27,7 @@ import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as ge
 
 try:
     import octobot_trading.api as trading_api
+    import octobot_trading.enums as trading_enums
 except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
@@ -35,12 +36,12 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     IMPORTER = generic_exchange_importer.GenericExchangeDataImporter
     DEFAULT_START_TIMESTAMP = 631152000    # 01/01/1990
 
-    def __init__(self, config, exchange_name, tentacles_setup_config, symbols, time_frames,
+    def __init__(self, config, exchange_name, exchange_type, tentacles_setup_config, symbols, time_frames,
                  use_all_available_timeframes=False,
                  data_format=backtesting_enums.DataFormats.REGULAR_COLLECTOR_DATA,
                  start_timestamp=None,
                  end_timestamp=None):
-        super().__init__(config, exchange_name, tentacles_setup_config, symbols, time_frames,
+        super().__init__(config, exchange_name, exchange_type, tentacles_setup_config, symbols, time_frames,
                          use_all_available_timeframes, data_format=data_format,
                          start_timestamp=start_timestamp, end_timestamp=end_timestamp)
         self.exchange = None
@@ -50,12 +51,14 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         self.should_stop = False
         should_stop_database = True
         try:
+            use_future = self.exchange_type == trading_enums.ExchangeTypes.FUTURE
             self.exchange_manager = await trading_api.create_exchange_builder(self.config, self.exchange_name) \
                 .is_simulated() \
                 .is_rest_only() \
                 .is_exchange_only() \
                 .is_without_auth() \
                 .is_ignoring_config() \
+                .is_future(use_future) \
                 .disable_trading_mode() \
                 .use_tentacles_setup_config(self.tentacles_setup_config) \
                 .build()
@@ -128,7 +131,7 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         self.current_step_percent = 0
         # use time_frame_sec to add time to save the candle closing time
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
-        symbol_id = symbol.legacy_symbol()
+        symbol_id = str(symbol)
         cryptocurrency = self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id)
 
         if self.start_timestamp is not None:
@@ -200,6 +203,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(symbol.legacy_symbol(), time_frame, limit=1,
+        return (await self.exchange.get_symbol_prices(str(symbol), time_frame, limit=1,
                                                       since=self.DEFAULT_START_TIMESTAMP))[0]\
                                             [commons_enums.PriceIndexes.IND_PRICE_TIME.value]

@@ -47,7 +47,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.USE_MARKET_ORDERS = True
-        self.merged_symbol = None
+        self.merged_simple_symbol = None
+        self.str_symbol = None
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -94,7 +95,9 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     async def create_consumers(self) -> list:
         consumers = await super().create_consumers()
-        self.merged_symbol = symbol_util.merge_symbol(self.symbol)
+        parsed_symbol = symbol_util.parse_symbol(self.symbol)
+        self.str_symbol = str(parsed_symbol)
+        self.merged_simple_symbol = parsed_symbol.merged_str_base_and_quote_only_symbol(market_separator="")
         service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
         feed_consumer = []
         if service_feed is not None:
@@ -117,7 +120,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                    parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
+                    (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
+                     parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data)
         except KeyError as e:
             self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
