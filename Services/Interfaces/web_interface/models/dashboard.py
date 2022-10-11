@@ -238,7 +238,7 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     parsed_symbol = commons_symbols.parse_symbol(parse_get_symbol(symbol))
     in_backtesting = backtesting_api.is_backtesting_enabled(interfaces_util.get_global_config()) or backtesting
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
-    symbol_id = parsed_symbol.legacy_symbol()
+    symbol_id = str(parsed_symbol)
     if time_frame is not None:
         try:
             symbol_data = trading_api.get_symbol_data(exchange_manager, symbol_id, allow_creation=False)

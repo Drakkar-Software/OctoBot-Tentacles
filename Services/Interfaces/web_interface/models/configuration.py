@@ -22,7 +22,6 @@ import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 import octobot_commons.display as display
-import octobot_commons.databases as databases
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -44,6 +43,7 @@ import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
+import octobot_commons.symbols as commons_symbols
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
@@ -878,28 +878,33 @@ def get_current_exchange():
         return DEFAULT_EXCHANGE
 
 
-def change_reference_market_on_config_currencies(old_base_currency: str, new_base_currency: str) -> bool:
+def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:
     """
     Change the base currency from old to new for all configured pair
-    :param old_base_currency:
-    :param new_base_currency:
     :return: bool, str
     """
     success = True
     message = "Reference market changed for each pair using the old reference market"
     try:
         config_currencies = format_config_symbols(interfaces_util.get_edited_config())
-        regex = rf"/{old_base_currency}$"
         for currencies_config in config_currencies.values():
             currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS] = \
-                list(set([re.sub(regex, f"/{new_base_currency}", pair)
-                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]]))
+                list(set([
+                    _change_base(pair, new_quote_currency)
+                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]
+                ]))
         interfaces_util.get_edited_config(dict_only=False).save()
     except Exception as e:
         message = f"Error while changing reference market on currencies list: {e}"
         success = False
         bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(e, False)
     return success, message
+
+
+def _change_base(pair, new_quote_currency):
+    parsed_symbol = commons_symbols.parse_symbol(pair)
+    parsed_symbol.quote = new_quote_currency
+    return parsed_symbol.merged_str_symbol()
 
 
 def send_command_to_activated_tentacles(command, wait_for_processing=True):

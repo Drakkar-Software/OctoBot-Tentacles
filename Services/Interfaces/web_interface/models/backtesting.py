@@ -24,6 +24,7 @@ import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.databases as databases
+import octobot_commons.constants as commons_constants
 import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -38,7 +39,6 @@ import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Interfaces.web_interface.models.trading as trading_model
-import octobot_commons.constants as commons_constants
 
 
 STOPPING_TIMEOUT = 30
@@ -210,6 +210,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
 async def _collect_initialize_and_run_independent_backtesting(
         data_collector_instance, independent_backtesting, config, tentacles_setup_config, files, run_on_common_part_only,
         start_timestamp, end_timestamp, enable_logs, auto_stop, collector_start_callback, start_callback):
+    logger = bot_logging.get_logger("StartIndependentBacktestingModel")
     if data_collector_instance is not None:
         try:
             if collector_start_callback:
@@ -235,8 +236,7 @@ async def _collect_initialize_and_run_independent_backtesting(
                 enable_logs=enable_logs,
                 stop_when_finished=auto_stop)
         except Exception as e:
-            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
-                e, True, f"Error when initializing backtesting: {e}")
+            logger.exception(e, True, f"Error when initializing backtesting: {e}")
         finally:
             # only unregister collector now that we can associate a backtesting
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
@@ -369,7 +369,12 @@ def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None,
             time_frames = time_frames if isinstance(time_frames, list) else [time_frames]
             if not any(isinstance(time_frame, commons_enums.TimeFrames) for time_frame in time_frames):
                 time_frames = time_frame_manager.parse_time_frames(time_frames)
-        _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp)
+        first_symbol = commons_symbols.parse_symbol(symbols[0])
+        exchange_type = trading_enums.ExchangeTypes.SPOT if first_symbol.is_spot() \
+            else trading_enums.ExchangeTypes.FUTURE if first_symbol.is_future() \
+            else trading_enums.ExchangeTypes.UNKNOWN
+        _background_collect_exchange_historical_data(exchange, exchange_type, symbols, time_frames,
+                                                     start_timestamp, end_timestamp)
         return True, f"Historical data collection started."
     else:
         return False, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
@@ -387,9 +392,11 @@ async def _start_collect_and_notify(data_collector_instance):
     await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
-def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
+def _background_collect_exchange_historical_data(exchange, exchange_type, symbols, time_frames,
+                                                 start_timestamp, end_timestamp):
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
+        exchange_type,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         [commons_symbols.parse_symbol(symbol) for symbol in symbols],
         time_frames=time_frames,
