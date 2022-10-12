@@ -13,13 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import copy
-import math
-
-import ccxt
 
 import octobot_trading.exchanges as exchanges
-import octobot_trading.errors
 import octobot_trading.enums as trading_enums
 
 

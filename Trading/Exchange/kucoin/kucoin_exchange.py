@@ -13,13 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import copy
-
-import ccxt
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
-import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
