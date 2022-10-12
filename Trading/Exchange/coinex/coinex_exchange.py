@@ -41,6 +41,8 @@ class Coinex(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,

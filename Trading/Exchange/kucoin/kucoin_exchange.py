@@ -56,6 +56,9 @@ class Kucoin(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
@@ -71,25 +74,8 @@ class Kucoin(exchanges.SpotCCXTExchange):
         return super().get_order_book(symbol, limit=limit, **kwargs)
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        try:
-            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
-            if with_fixer:
-                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
-            return market_status
-        except ccxt.NotSupported:
-            raise octobot_trading.errors.NotSupported
-        except Exception as e:
-            self.logger.error(f"Fail to get market status of {symbol}: {e}")
-        return {}
-
-    def _fix_market_status(self, market_status):
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
-        return market_status
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
+                                            remove_price_limits=True)
 
     def should_log_on_ddos_exception(self, exception) -> bool:
         """
