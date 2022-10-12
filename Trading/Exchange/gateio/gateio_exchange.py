@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
 class GateIO(exchanges.SpotCCXTExchange):
@@ -38,3 +39,8 @@ class GateIO(exchanges.SpotCCXTExchange):
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
                                             remove_price_limits=True)
+
+    async def get_price_ticker(self, symbol: str, **kwargs: dict):
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return ticker
