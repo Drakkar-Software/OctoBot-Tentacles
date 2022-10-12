@@ -53,7 +53,8 @@ class Kucoin(exchanges.SpotCCXTExchange):
         return cls.get_name() == exchange_candidate_name
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
+                                            remove_price_limits=True)
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
@@ -68,10 +69,6 @@ class Kucoin(exchanges.SpotCCXTExchange):
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
     def should_log_on_ddos_exception(self, exception) -> bool:
         """
