@@ -89,7 +89,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Total buy funds: total funds to use for buy orders creation (in base currency: USDT "
+            title="[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT "
                   "for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency "
                   "simultaneously in multiple traded pairs.",
         )
@@ -105,7 +105,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Starting price: price price to compute initial orders from. Set 0 to use current "
+            title="[Optional] Starting price: price to compute initial orders from. Set 0 to use current "
                   "exchange price during initial grid orders creation.",
         )
         self.UI.user_input(
