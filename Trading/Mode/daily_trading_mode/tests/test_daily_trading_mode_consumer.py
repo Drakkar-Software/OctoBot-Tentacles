@@ -92,7 +92,10 @@ async def tools():
         yield exchange_manager, trader, symbol, consumer, decimal.Decimal(str(last_btc_price))
     finally:
         if exchange_manager:
-            await _stop(exchange_manager)
+            try:
+                await _stop(exchange_manager)
+            except Exception as err:
+                print(f"error when stopping exchange manager: {err}")
 
 
 async def _stop(exchange_manager):
