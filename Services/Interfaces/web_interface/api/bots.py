@@ -22,20 +22,20 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@api.api.route("/select_device", methods=['POST'])
+@api.api.route("/select_bot", methods=['POST'])
 @login.login_required_when_activated
-def select_device():
-    models.select_device(flask.request.get_json())
-    device = models.get_selected_user_device()
-    flask.flash(f"Selected {device['name']} device", "success")
-    return flask.jsonify(device)
+def select_bot():
+    models.select_bot(flask.request.get_json())
+    bot = models.get_selected_user_bot()
+    flask.flash(f"Selected {bot['name']} bot", "success")
+    return flask.jsonify(bot)
 
 
-@api.api.route("/create_device", methods=['POST'])
+@api.api.route("/create_bot", methods=['POST'])
 @login.login_required_when_activated
-def create_device():
-    new_device = models.create_new_device()
-    models.select_device(community.CommunityUserAccount.get_device_id(new_device))
-    device = models.get_selected_user_device()
-    flask.flash(f"Created and selected {device['name']} device", "success")
-    return flask.jsonify(device)
+def create_bot():
+    new_bot = models.create_new_bot()
+    models.select_bot(community.CommunityUserAccount.get_bot_id(new_bot))
+    bot = models.get_selected_user_bot()
+    flask.flash(f"Created and selected {bot['name']} device", "success")
+    return flask.jsonify(bot)

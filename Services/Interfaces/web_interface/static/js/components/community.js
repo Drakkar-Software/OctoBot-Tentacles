@@ -66,40 +66,40 @@ function packagesOperationErrorCallback(updated_data, update_url, dom_root_eleme
     create_alert("error", "Error when managing packages: "+result.responseText, "");
 }
 
-function displayDeviceSelectorWhenNoSelectedDevice(){
-    if($("#device-selector").find("button[data-role='selected-device']").length === 0) {
-        // no selected device, force selection
-        $('#device-select-modal').modal({backdrop: 'static', keyboard: false})
+function displayBotSelectorWhenNoSelectedBot(){
+    if($("#bot-selector").find("button[data-role='selected-bot']").length === 0) {
+        // no selected bot, force selection
+        $('#bot-select-modal').modal({backdrop: 'static', keyboard: false})
     }
 }
 
-function initDevicesCallbacks(){
-    $("#device-selector").find("button[data-role='select-device']").click((element) => {
+function initBotsCallbacks(){
+    $("#bot-selector").find("button[data-role='select-bot']").click((element) => {
         const selectButton = $(element.target);
-        const data = selectButton.data("device-id")
+        const data = selectButton.data("bot-id")
         selectButton.attr("disabled", true);
-        const update_url = $("#device-selector").data("update-url");
+        const update_url = $("#bot-selector").data("update-url");
         send_and_interpret_bot_update(data, update_url, null,
-            deviceOperationSuccessCallback, deviceOperationErrorCallback);
+            botOperationSuccessCallback, botOperationErrorCallback);
 
     })
-    $("#create-new-device").click((element) => {
+    $("#create-new-bot").click((element) => {
         const createButton = $(element.target);
         const update_url = createButton.data("update-url");
         createButton.attr("disabled", true);
         createButton.text("Creating ...")
         send_and_interpret_bot_update({}, update_url, null,
-            deviceOperationSuccessCallback, deviceOperationErrorCallback);
+            botOperationSuccessCallback, botOperationErrorCallback);
     })
 }
 
-function deviceOperationSuccessCallback(updated_data, update_url, dom_root_element, result, status, error){
-    // reload the page to retest devices
+function botOperationSuccessCallback(updated_data, update_url, dom_root_element, result, status, error){
+    // reload the page to retest bots
     window.location.reload();
 }
 
-function deviceOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
-    create_alert("error", "Error when managing devices: "+result.responseText, "");
+function botOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
+    create_alert("error", "Error when managing bots: "+result.responseText, "");
 }
 
 function initLoginSubmit(){
@@ -113,7 +113,7 @@ $(document).ready(function() {
     $("#synchronize-tentacles").click(function(){
         syncPackages($(this));
     });
-    displayDeviceSelectorWhenNoSelectedDevice();
-    initDevicesCallbacks();
+    displayBotSelectorWhenNoSelectedBot();
+    initBotsCallbacks();
     initLoginSubmit();
 });
