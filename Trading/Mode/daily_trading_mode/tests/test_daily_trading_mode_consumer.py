@@ -35,6 +35,7 @@ import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode as Mode
 import tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit as trading_mode_test_toolkit
 import tests.test_utils.config as test_utils_config
+import tests.test_utils.test_exchanges as test_exchanges
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 
@@ -54,7 +55,7 @@ async def tools():
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
             "BNB"] = 0.000000000000000000005
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
-        exchange_manager = exchanges.ExchangeManager(config, "binance")
+        exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
         exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
         # use backtesting not to spam exchanges apis

@@ -38,6 +38,7 @@ import tentacles.Evaluator.Strategies as Strategies
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.config as test_utils_config
+import tests.test_utils.test_exchanges as test_exchanges
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -565,7 +566,7 @@ async def _fill_order(order, trader, trigger_update_callback=True, ignore_open_o
 async def _get_tools(symbol="BTC/USDT"):
     config = test_config.load_test_config()
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
-    exchange_manager = exchanges.ExchangeManager(config, "binance")
+    exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
     exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
     # use backtesting not to spam exchanges apis
