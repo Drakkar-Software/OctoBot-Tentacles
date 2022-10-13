@@ -57,29 +57,29 @@ def get_current_octobots_stats():
     return interfaces_util.run_in_bot_async_executor(octobot_community.get_current_octobots_stats())
 
 
-def _format_device(device):
+def _format_bot(bot):
     return {
-        "name": octobot_community.CommunityUserAccount.get_device_name_or_id(device) if device else None,
-        "id": octobot_community.CommunityUserAccount.get_device_id(device) if device else None,
+        "name": octobot_community.CommunityUserAccount.get_bot_name_or_id(bot) if bot else None,
+        "id": octobot_community.CommunityUserAccount.get_bot_id(bot) if bot else None,
     }
 
 
-def get_all_user_devices():
-    # reload user devices to make sure the list is up to date
-    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().load_user_devices())
+def get_all_user_bots():
+    # reload user bots to make sure the list is up to date
+    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().load_user_bots())
     return sorted([
-        _format_device(device)
-        for device in authentication.Authenticator.instance().user_account.get_all_user_devices_raw_data()
+        _format_bot(bot)
+        for bot in authentication.Authenticator.instance().user_account.get_all_user_bots_raw_data()
     ], key=lambda d: d["name"])
 
 
-def get_selected_user_device():
-    return _format_device(authentication.Authenticator.instance().user_account.get_selected_device_raw_data())
+def get_selected_user_bot():
+    return _format_bot(authentication.Authenticator.instance().user_account.get_selected_bot_raw_data())
 
 
-def select_device(device_id):
-    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().select_device(device_id))
+def select_bot(bot_id):
+    interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().select_bot(bot_id))
 
 
-def create_new_device():
-    return interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().create_new_device())
+def create_new_bot():
+    return interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().create_new_bot())

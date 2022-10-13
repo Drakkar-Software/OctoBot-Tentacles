@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import octobot_trading.errors
 
 
 class Bithumb(exchanges.SpotCCXTExchange):

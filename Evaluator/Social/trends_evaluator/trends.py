@@ -16,6 +16,7 @@
 import numpy
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_evaluators.evaluators as evaluators
 import octobot_services.constants as services_constants
@@ -29,6 +30,22 @@ class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
     def __init__(self, tentacles_setup_config):
         evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)
         self.stats_analyser = None
+        self.refresh_rate_seconds = 86400
+        self.relevant_history_months = 3
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.refresh_rate_seconds = self.UI.user_input(commons_constants.CONFIG_REFRESH_RATE,
+                                                    commons_enums.UserInputTypes.INT,
+                                                    self.refresh_rate_seconds, inputs, min_val=1,
+                                                    title="Seconds between each re-evaluation "
+                                                          "(do not set too low because google has a low "
+                                                          "monthly rate limit).")
+        self.relevant_history_months = self.UI.user_input(services_constants.CONFIG_TREND_HISTORY_TIME,
+                                                       commons_enums.UserInputTypes.INT,
+                                                       self.relevant_history_months, inputs, min_val=3, max_val=3,
+                                                       title="Number of months to look into to compute the trend "
+                                                             "evaluation (for now works only with 3).")
+        self.feed_config[services_constants.CONFIG_TREND_TOPICS] = self._build_trend_topics()
 
     @classmethod
     def get_is_cryptocurrencies_wildcard(cls) -> bool:
@@ -55,13 +72,12 @@ class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
         return self.cryptocurrency_name in notification_description
 
     def _build_trend_topics(self):
-        trend_time_frame = f"today {str(self.specific_config[services_constants.CONFIG_TREND_HISTORY_TIME])}-m"
+        trend_time_frame = f"today {self.relevant_history_months}-m"
         return [
-            Services_feeds.TrendTopic(self.specific_config[commons_constants.CONFIG_REFRESH_RATE],
+            Services_feeds.TrendTopic(self.refresh_rate_seconds,
                                       [self.cryptocurrency_name],
                                       time_frame=trend_time_frame)
         ]
 
     async def prepare(self):
-        self.specific_config[services_constants.CONFIG_TREND_TOPICS] = self._build_trend_topics()
         self.stats_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.StatisticAnalysis)()

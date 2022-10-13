@@ -15,9 +15,9 @@
 #  License along with this library.
 import decimal
 
-import async_channel.constants as channel_constants
 import octobot_commons.channels_name as channels_name
 import octobot_commons.constants as common_constants
+import octobot_commons.enums as common_enums
 import octobot_commons.tentacles_management as tentacles_management
 import async_channel.channels as channels
 import octobot_trading.constants as trading_constants
@@ -25,7 +25,6 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as errors
 import octobot_trading.exchanges as exchanges
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as personal_data
 import octobot_trading.modes.script_keywords as script_keywords
@@ -35,10 +34,24 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
         self.last_signal_description = ""
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.UI.user_input(
+            common_constants.CONFIG_TRADING_SIGNALS_STRATEGY, common_enums.UserInputTypes.TEXT, "", inputs,
+            title="Trading strategy: identifier of the trading strategy to use."
+        )
+        self.UI.user_input(
+            RemoteTradingSignalsModeConsumer.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY,
+            common_enums.UserInputTypes.FLOAT, 100, inputs,
+            min_val=0, max_val=100,
+            title="Maximum volume per buy order in % of quote symbol holdings (USDT for BTC/USDT).",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -55,13 +68,15 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             else self.producers[0].state.name
         return producer_state, self.last_signal_description
 
+    def get_mode_producer_classes(self) -> list:
+        return [RemoteTradingSignalsModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [RemoteTradingSignalsModeConsumer]
+
     async def create_producers(self) -> list:
-        mode_producer = RemoteTradingSignalsModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        signal_producers = await self._subscribe_to_signal_feed()
-        return [mode_producer] + signal_producers
+        producers = await super().create_producers()
+        return producers + await self._subscribe_to_signal_feed()
 
     async def _subscribe_to_signal_feed(self):
         channel, created = await trading_signals.create_remote_trading_signal_channel_if_missing(
@@ -83,13 +98,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
         return []
 
     async def create_consumers(self) -> list:
-        mode_consumer = RemoteTradingSignalsModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
+        consumers = await super().create_consumers()
         signals_consumer = await channels.get_chan(
             channels_name.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)\
             .new_consumer(
@@ -98,7 +107,7 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
-        return [mode_consumer, signals_consumer]
+        return consumers + [signals_consumer]
 
     async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")
@@ -467,17 +476,18 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
                               f"with current exchange: {self.exchange_manager}")
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, signal):
-        self.state = new_state
-        self.logger.info(f"[{symbol}] update state: {self.state.name}")
-        # call orders creation from consumers
-        await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                             symbol=symbol,
-                                             time_frame=None,
-                                             final_note=self.final_eval,
-                                             state=self.state,
-                                             data=signal)
+        async with self.trading_mode_trigger():
+            self.state = new_state
+            self.logger.info(f"[{symbol}] update state: {self.state.name}")
+            # call orders creation from consumers
+            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                 symbol=symbol,
+                                                 time_frame=None,
+                                                 final_note=self.final_eval,
+                                                 state=self.state,
+                                                 data=signal)
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()

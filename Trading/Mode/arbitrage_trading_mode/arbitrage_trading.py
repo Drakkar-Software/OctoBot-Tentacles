@@ -16,11 +16,12 @@
 import asyncio
 import decimal
 
-import octobot.constants as octobot_constants
 import async_channel.constants as channel_constants
 import async_channel.channels as channel_instances
+import octobot.constants as octobot_constants
 import octobot_commons.data_util as data_util
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -38,45 +39,67 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
         self.merged_symbol = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.UI.user_input(
+            "portfolio_percent_per_trade", commons_enums.UserInputTypes.FLOAT, 25, inputs,
+            min_val=0, max_val=100,
+            title="Trade size: percent of your portfolio to include in each arbitrage order.",
+        )
+        self.UI.user_input(
+            "stop_loss_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.1, inputs,
+            min_val=0, max_val=100,
+            title="Stop loss price: price percent from the price of the initial order to set the stop loss on.",
+        )
+        exchanges = list(self.config[commons_constants.CONFIG_EXCHANGES].keys())
+        self.UI.user_input(
+            "exchanges_to_trade_on", commons_enums.UserInputTypes.MULTIPLE_OPTIONS, [exchanges[0]], inputs,
+            options=exchanges,
+            title="Trading exchanges: exchanges on which to perform arbitrage trading: these will be used to create "
+                  "arbitrage orders. Leaving this empty will result in arbitrage trading on every exchange, "
+                  "which is sub-optimal. Add exchange configurations to add exchanges to this list.",
+        )
+        self.UI.user_input(
+            "minimal_price_delta_percent", commons_enums.UserInputTypes.FLOAT, 0.25, inputs,
+            min_val=0, max_val=100,
+            title="Cross exchange triggering delta: minimal percent difference to trigger an arbitrage order. Remember "
+                  "to set it higher than twice your trading exchanges' fees since two orders will be placed each time.",
+        )
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval if self.producers[0].final_eval else "N/A"
 
-    async def create_producers(self) -> list:
-        mode_producer = ArbitrageModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [ArbitrageModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [ArbitrageModeConsumer]
 
     async def create_consumers(self) -> list:
-        mode_consumer = ArbitrageModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-
+        consumers = await super().create_consumers()
         # order consumer
         order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
                                                           self.exchange_manager.id).new_consumer(
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        return consumers + [order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
                                            is_new, is_from_bot):
         if order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
+            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value \
+                and is_from_bot:
             await self.producers[0].order_filled_callback(order)
         elif order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.CANCELED.value and is_from_bot:
+            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.CANCELED.value \
+                and is_from_bot:
             await self.producers[0].order_cancelled_callback(order)
 
     @classmethod
@@ -85,7 +108,7 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
         :return: True if exchange_name is in exchanges_to_trade_on (case insensitive)
         or if exchanges_to_trade_on is missing or empty
         """
-        exchanges_to_trade_on = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls)\
+        exchanges_to_trade_on = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls) \
             .get("exchanges_to_trade_on", [])
         return not exchanges_to_trade_on or exchange_name.lower() in [exchange.lower()
                                                                       for exchange in exchanges_to_trade_on]
@@ -111,11 +134,17 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(
-            trading_mode.trading_config["portfolio_percent_per_trade"] / 100))
-        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(
-            trading_mode.trading_config["stop_loss_delta_percent"] / 100))
         self.open_arbitrages = []
+
+    def on_reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.PORTFOLIO_PERCENT_PER_TRADE = decimal.Decimal(str(
+            self.trading_mode.trading_config["portfolio_percent_per_trade"] / 100))
+        self.STOP_LOSS_DELTA_FROM_OWN_PRICE = decimal.Decimal(str(
+            self.trading_mode.trading_config["stop_loss_delta_percent"] / 100))
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # no possible default values in kwargs: interrupt if missing element
@@ -134,7 +163,8 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                            timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
 
         created_orders = []
-        order_type = trading_enums.TraderOrderType.BUY_LIMIT if arbitrage_container.state is trading_enums.EvaluatorStates.LONG \
+        order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+            if arbitrage_container.state is trading_enums.EvaluatorStates.LONG \
             else trading_enums.TraderOrderType.SELL_LIMIT
         quantity = self._get_quantity_from_holdings(current_symbol_holding, market_quantity, arbitrage_container.state)
         if order_type is trading_enums.TraderOrderType.SELL_LIMIT:
@@ -166,7 +196,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
         now_selling = arbitrage_container.state is trading_enums.EvaluatorStates.LONG
         if now_selling:
             quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
-                                                                                current_symbol_holding)
+                                                                                        current_symbol_holding)
         for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                 quantity,
                 arbitrage_container.target_price,
@@ -214,11 +244,11 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
     def _get_stop_loss_price(self, symbol_market, starting_price, now_selling):
         if now_selling:
             return trading_personal_data.decimal_adapt_price(symbol_market,
-                                                     starting_price * (trading_constants.ONE
-                                                                       - self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
+                                                             starting_price * (trading_constants.ONE
+                                                                               - self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
         return trading_personal_data.decimal_adapt_price(symbol_market,
-                                                 starting_price * (trading_constants.ONE
-                                                                   + self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
+                                                         starting_price * (trading_constants.ONE
+                                                                           + self.STOP_LOSS_DELTA_FROM_OWN_PRICE))
 
 
 class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
@@ -227,14 +257,20 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.own_exchange_mark_price: decimal.Decimal = None
         self.other_exchanges_mark_prices = {}
-        self.sup_triggering_price_delta_ratio: decimal.Decimal = \
-            1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
-        self.inf_triggering_price_delta_ratio: decimal.Decimal = \
-            1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
         self.state = trading_enums.EvaluatorStates.NEUTRAL
         self.final_eval = ""
         self.quote, self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base_and_quote()
         self.lock = asyncio.Lock()
+
+    def on_reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.sup_triggering_price_delta_ratio: decimal.Decimal = \
+            1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
+        self.inf_triggering_price_delta_ratio: decimal.Decimal = \
+            1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
 
     async def start(self) -> None:
         """
@@ -248,18 +284,18 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
                 # subscribe on existing exchanges
                 if exchange_id != self.exchange_manager.id:
                     await self._subscribe_exchange_id_mark_price(exchange_id)
-            await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id).\
+            await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id). \
                 new_consumer(
-                    self._own_exchange_mark_price_callback,
-                    symbol=self.trading_mode.symbol
-                )
-            await channel_instances.get_chan_at_id(octobot_constants.OCTOBOT_CHANNEL, self.trading_mode.bot_id).\
+                self._own_exchange_mark_price_callback,
+                symbol=self.trading_mode.symbol
+            )
+            await channel_instances.get_chan_at_id(octobot_constants.OCTOBOT_CHANNEL, self.trading_mode.bot_id). \
                 new_consumer(
-                    # listen for new available exchange
-                    self._exchange_added_callback,
-                    subject=commons_enums.OctoBotChannelSubjects.NOTIFICATION.value,
-                    action=octobot_channel_consumer.OctoBotChannelTradingActions.EXCHANGE.value
-                )
+                # listen for new available exchange
+                self._exchange_added_callback,
+                subject=commons_enums.OctoBotChannelSubjects.NOTIFICATION.value,
+                action=octobot_channel_consumer.OctoBotChannelTradingActions.EXCHANGE.value
+            )
         except Exception as e:
             self.logger.exception(e, True, f"Error when starting arbitrage trading on {self.exchange_name}: {e}")
 
@@ -339,21 +375,23 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             self.logger.exception(e, True, f"Error when handling mark_price_callback for {self.exchange_name}: {e}")
 
     async def _analyse_arbitrage_opportunities(self):
-        other_exchanges_average_price = decimal.Decimal(str(data_util.mean(self.other_exchanges_mark_prices.values())))
-        state = None
-        if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
-            # min long = high price > own_price / (1 - 2fees)
-            state = trading_enums.EvaluatorStates.LONG
-        elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
-            # min short = low price < own_price * (1 - 2fees)
-            state = trading_enums.EvaluatorStates.SHORT
-        if state is not None:
-            # lock to prevent concurrent order management
-            async with self.lock:
-                # 1. cancel invalided opportunities if any
-                await self._ensure_no_expired_opportunities(other_exchanges_average_price, state)
-                # 2. handle new opportunities
-                await self._trigger_arbitrage_opportunity(other_exchanges_average_price, state)
+        async with self.trading_mode_trigger():
+            other_exchanges_average_price = \
+                decimal.Decimal(str(data_util.mean(self.other_exchanges_mark_prices.values())))
+            state = None
+            if other_exchanges_average_price > self.own_exchange_mark_price * self.sup_triggering_price_delta_ratio:
+                # min long = high price > own_price / (1 - 2fees)
+                state = trading_enums.EvaluatorStates.LONG
+            elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
+                # min short = low price < own_price * (1 - 2fees)
+                state = trading_enums.EvaluatorStates.SHORT
+            if state is not None:
+                # lock to prevent concurrent order management
+                async with self.lock:
+                    # 1. cancel invalided opportunities if any
+                    await self._ensure_no_expired_opportunities(other_exchanges_average_price, state)
+                    # 2. handle new opportunities
+                    await self._trigger_arbitrage_opportunity(other_exchanges_average_price, state)
 
     async def _trigger_arbitrage_opportunity(self, other_exchanges_average_price, state):
         # ensure no similar arbitrage is already in place
@@ -475,7 +513,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.final_eval = ""
 
     def _get_open_arbitrages(self):
-        return self.trading_mode.consumers[0].open_arbitrages
+        return self.trading_mode.get_trading_mode_consumers()[0].open_arbitrages
 
     def _register_state(self, new_state, price_difference):
         self.state = new_state
@@ -512,5 +550,5 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()

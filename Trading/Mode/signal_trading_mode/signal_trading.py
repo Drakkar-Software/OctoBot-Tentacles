@@ -15,18 +15,12 @@
 #  License along with this library.
 import decimal
 
-import async_channel.constants as channel_constants
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
-import octobot_trading.modes as trading_modes
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 
 
-class SignalTradingMode(trading_modes.AbstractTradingMode):
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.load_config()
+class SignalTradingMode(daily_trading_mode.DailyTradingMode):
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -42,21 +36,11 @@ class SignalTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
             self.producers[0].final_eval
 
-    async def create_producers(self) -> list:
-        mode_producer = SignalTradingModeProducer(exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-                                                  self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [SignalTradingModeProducer]
 
-    async def create_consumers(self) -> list:
-        mode_consumer = SignalTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-        return [mode_consumer]
+    def get_mode_consumer_classes(self) -> list:
+        return [SignalTradingModeConsumer]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:

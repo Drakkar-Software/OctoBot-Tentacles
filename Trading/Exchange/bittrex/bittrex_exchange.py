@@ -13,10 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import ccxt
 
 import octobot_trading.exchanges as exchanges
-import octobot_trading.errors
 
 
 class Bittrex(exchanges.SpotCCXTExchange):
@@ -32,6 +30,9 @@ class Bittrex(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
+
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:

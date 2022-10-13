@@ -16,10 +16,10 @@
 import tulipy
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as enums
 import octobot_commons.data_util as data_util
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
-import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 
 
@@ -31,8 +31,22 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.period = self.evaluator_config[self.STOCHRSI_PERIOD]
+        self.period = 14
+        self.low_level = 1
+        self.high_level = 98
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period = self.UI.user_input(self.STOCHRSI_PERIOD, enums.UserInputTypes.INT,
+                                      self.period, inputs, min_val=2,
+                                      title="Period: length of the stochastic RSI period.")
+        self.low_level = self.UI.user_input(self.LOW_LEVEL, enums.UserInputTypes.FLOAT,
+                                         self.low_level, inputs, min_val=0,
+                                         title="Low threshold: stochastic RSI level from which evaluation "
+                                               "is considered a buy signal.")
+        self.high_level = self.UI.user_input(self.HIGH_LEVEL, enums.UserInputTypes.FLOAT,
+                                          self.high_level, inputs, min_val=0,
+                                          title="High threshold: stochastic RSI level from which evaluation "
+                                                "is considered a sell signal.")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -46,9 +60,9 @@ class StochasticRSIVolatilityEvaluator(evaluators.TAEvaluator):
             if len(candle_data) >= self.period * 2:
                 stochrsi_value = tulipy.stochrsi(data_util.drop_nan(candle_data), self.period)[-1]
 
-                if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.evaluator_config[self.HIGH_LEVEL]:
+                if stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR >= self.high_level:
                     self.eval_note = 1
-                elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.evaluator_config[self.LOW_LEVEL]:
+                elif stochrsi_value * self.TULIPY_INDICATOR_MULTIPLICATOR <= self.low_level:
                     self.eval_note = -1
                 else:
                     self.eval_note = stochrsi_value - 0.5

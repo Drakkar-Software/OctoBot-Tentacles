@@ -13,21 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import ccxt.async_support as ccxt
-import copy
-import math
 
-import ccxt
-
-import octobot_trading.errors
-import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
-
-import octobot_commons.logging as logging
-
-import octobot_trading.api as trading_api
-
-import octobot_services.interfaces as interfaces
 
 class Coinex(exchanges.SpotCCXTExchange):
     DESCRIPTION = ""
@@ -41,6 +28,8 @@ class Coinex(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,

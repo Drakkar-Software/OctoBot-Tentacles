@@ -39,7 +39,7 @@ function handle_apply_evaluator_default_config_success_callback(updated_data, up
 }
 
 function updateTentacleConfig(updatedConfig){
-    const update_url = $("#saveConfig").attr(update_url_attr);
+    const update_url = $("button[data-role='saveConfig']").attr(update_url_attr);
     send_and_interpret_bot_update(updatedConfig, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
 }
 
@@ -48,36 +48,38 @@ function factory_reset(update_url){
 }
 
 function handle_tentacle_config_reset_success_callback(updated_data, update_url, dom_root_element, msg, status){
-    create_alert("success", "Configuration saved", msg);
-    location.reload();
+    create_alert("success", "Configuration reset", msg);
+    initConfigEditor(false);
 }
 
 function handle_tentacle_config_update_success_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("success", "Configuration saved", msg);
-    savedConfig = configEditor.getValue();
+    initConfigEditor(false);
 }
 
 function handle_tentacle_config_update_error_callback(updated_data, update_url, dom_root_element, msg, status){
     create_alert("error", "Error when updating config", msg.responseText);
 }
 
-function check_config(){
-    const errors = configEditor.validate();
-    return !errors.length;
-}
-
-function handleConfigDisplay(){
-
-    if(canEditConfig()){
-        $("#saveConfigFooter").show();
-        $("#saveConfig").click(function() {
-            if(check_config())
-                updateTentacleConfig(configEditor.getValue());
-            else
-                create_alert("error", "Error when saving configuration", "Invalid configuration data.");
-        });
+function handleConfigDisplay(success){
+    $("#editor-waiter").hide();
+    if(success){
+        $("#configErrorDetails").hide();
+        if(canEditConfig()) {
+            $("#saveConfigFooter").show();
+            $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function () {
+                const errorsDesc = validateJSONEditor(configEditor);
+                if (errorsDesc.length) {
+                    create_alert("error", "Error when saving configuration",
+                        `Invalid configuration data: ${errorsDesc}.`);
+                } else
+                    updateTentacleConfig(configEditor.getValue());
+            });
+        }else{
+            $("#noConfigMessage").show();
+        }
     }else{
-        $("#noConfigMessage").show();
+        $("#configErrorDetails").show();
     }
 }
 
@@ -140,8 +142,6 @@ function handleUserCommands(){
 }
 
 function handleButtons() {
-
-    handleConfigDisplay();
     handle_save_button();
     handleUserCommands();
 
@@ -159,9 +159,9 @@ function handleButtons() {
         start_backtesting(request, update_url);
     });
 
-    $("#factoryResetConfig").click(function(){
+    $("button[data-role='factoryResetConfig']").click(function(){
         if (confirm("Reset this tentacle configuration to its default values ?") === true) {
-            factory_reset($("#factoryResetConfig").attr("update-url"));
+            factory_reset($("button[data-role='factoryResetConfig']").attr("update-url"));
         }
     });
     
@@ -223,33 +223,90 @@ function get_selected_files(){
     return [$("#dataFileSelect").val()];
 }
 
-const configEditorBody = $("#configEditorBody");
-const configSchema = configEditorBody.attr("schema");
-const configValue = configEditorBody.attr("config");
-
-const parsedConfigSchema = configSchema !== "" ? $.parseJSON(configSchema) : null;
-const parsedConfigValue = configValue !== "" ? $.parseJSON(configValue) : null;
-if (canEditConfig){
-    fix_config_values(parsedConfigValue)
-}
-
-let savedConfig = parsedConfigValue;
 
 function canEditConfig() {
     return parsedConfigSchema && parsedConfigValue
 }
 
-const configEditor = canEditConfig() ? (new JSONEditor($("#configEditor")[0],{
-    schema: parsedConfigSchema,
-    startval: parsedConfigValue,
-    no_additional_properties: true,
-    prompt_before_delete: true,
-    disable_array_reorder: true,
-    disable_collapse: true,
-    disable_properties: true
-})) : null;
+let configEditor = null;
+let savedConfig = null;
+let parsedConfigSchema = null;
+let parsedConfigValue = null;
+
+function _addGridDisplayOptions(schema){
+    if(typeof schema.properties === "undefined" && typeof schema.items === "undefined"){
+        return;
+    }
+    // display user inputs as grid
+    // if(typeof schema.format === "undefined") {
+    //     schema.format = "grid";
+    // }
+    if(typeof schema.options === "undefined"){
+        schema.options = {};
+    }
+    schema.options.grid_columns = 6;
+    if(typeof schema.properties !== "undefined"){
+        Object.values(schema.properties).forEach (property => {
+            _addGridDisplayOptions(property)
+        });
+    }
+    if(typeof schema.items !== "undefined"){
+        _addGridDisplayOptions(schema.items)
+    }
+}
+
+function initConfigEditor(showWaiter) {
+    if(showWaiter){
+        $("#editor-waiter").show();
+    }
+    const configEditorBody = $("#configEditorBody");
+
+    function editDetailsSuccess(updated_data, update_url, dom_root_element, msg, status){
+        const inputs = msg["displayed_elements"]["data"]["elements"];
+        if(inputs.length === 0){
+            handleConfigDisplay(true);
+            return;
+        }
+        parsedConfigValue = msg["config"];
+        savedConfig = parsedConfigValue
+        parsedConfigSchema = inputs[0]["schema"];
+        if(configEditor !== null){
+            configEditor.destroy();
+        }
+        if (canEditConfig()){
+            fix_config_values(parsedConfigValue)
+        }
+        _addGridDisplayOptions(parsedConfigSchema);
+        const settingsRoot = $("#configEditor");
+        configEditor = canEditConfig() ? (new JSONEditor(settingsRoot[0],{
+            schema: parsedConfigSchema,
+            startval: parsedConfigValue,
+            no_additional_properties: true,
+            prompt_before_delete: true,
+            disable_array_reorder: true,
+            disable_collapse: true,
+            disable_properties: true
+        })) : null;
+        settingsRoot.find("select[multiple=\"multiple\"]").select2({
+            width: 'resolve', // need to override the changed default
+            closeOnSelect: false,
+            placeholder: "Select values to use"
+        });
+        handleConfigDisplay(true);
+    }
+
+    const editDetailsFailure = (updated_data, update_url, dom_root_element, msg, status) => {
+        create_alert("error", "Error when fetching tentacle config", msg.responseText);
+        handleConfigDisplay(false);
+    }
+
+
+    send_and_interpret_bot_update(null, configEditorBody.data("edit-details-url"), null,
+        editDetailsSuccess, editDetailsFailure, "GET");
+}
 
 $(document).ready(function() {
+    initConfigEditor(true);
     handleButtons();
     lock_interface(false);
 

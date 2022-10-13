@@ -23,6 +23,7 @@ import octobot_commons.databases as databases
 import octobot_commons.symbols as commons_symbols
 import octobot_backtesting.enums as enums
 import octobot_backtesting.errors as errors
+import octobot_trading.enums as trading_enums
 import tests.test_utils.config as test_utils_config
 import tentacles.Backtesting.collectors.exchanges as collector_exchanges
 import tentacles.Trading.Exchange as tentacles_exchanges
@@ -38,7 +39,7 @@ BINANCE_MAX_CANDLES_COUNT = 500
 async def data_collector(exchange_name, tentacles_setup_config, symbols, time_frames, use_all_available_timeframes,
                          start_timestamp=None, end_timestamp=None):
     collector_instance = collector_exchanges.ExchangeHistoryDataCollector(
-        {}, exchange_name, tentacles_setup_config,
+        {}, exchange_name, trading_enums.ExchangeTypes.SPOT, tentacles_setup_config,
         [commons_symbols.parse_symbol(symbol) for symbol in symbols], time_frames,
         use_all_available_timeframes=use_all_available_timeframes,
         start_timestamp=start_timestamp,

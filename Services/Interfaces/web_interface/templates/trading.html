@@ -95,11 +95,7 @@
     {% if real_positions or simulated_positions %}
     <div class="card">
         <div class="card-header">
-            <h2>Positions
-                <button type="button" class="btn btn-outline-danger waves-effect float-right" id="close_all_positions">
-                    <i id="close_all_position_icon" class="fas fa-ban"></i> Close all
-                </button>
-            </h2>
+            <h2>Positions</h2>
         </div>
         <div class="card-body">
             <div class='progress mb-1' id='cancel_position_progress_bar' style='display: none;'>
@@ -119,7 +115,6 @@
                     <th scope="col">Unrealized PNL</th>
                     <th scope="col">Exchange</th>
                     <th scope="col">#</th>
-                    <th class="text-center" scope="col">Cancel</th>
                 </tr>
               </thead>
               <tbody>

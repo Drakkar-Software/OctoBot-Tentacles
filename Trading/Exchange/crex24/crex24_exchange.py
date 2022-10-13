@@ -13,13 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import copy
-import math
 
-import ccxt
-
-import octobot_trading.errors
-import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
@@ -35,23 +29,4 @@ class Crex24(exchanges.SpotCCXTExchange):
         return cls.get_name() == exchange_candidate_name
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        try:
-            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
-            if with_fixer:
-                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
-            return market_status
-        except ccxt.NotSupported:
-            raise octobot_trading.errors.NotSupported
-        except Exception as e:
-            self.logger.error(f"Fail to get market status of {symbol}: {e}")
-        return {}
-
-    def _fix_market_status(self, market_status):
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = self._get_digits_count(
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value])
-        return market_status
-
-    def _get_digits_count(self, value):
-        return round(abs(math.log(value, 10)))
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

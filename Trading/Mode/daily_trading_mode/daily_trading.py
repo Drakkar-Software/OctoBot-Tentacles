@@ -17,8 +17,8 @@ import asyncio
 import decimal
 import math
 
-import async_channel.constants as channel_constants
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_commons.symbols.symbol_util as symbol_util
@@ -26,7 +26,6 @@ import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
@@ -37,9 +36,49 @@ import octobot_trading.api as trading_api
 
 class DailyTradingMode(trading_modes.AbstractTradingMode):
 
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
-        self.load_config()
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.should_emit_trading_signals_user_input(inputs)
+        self.UI.user_input(
+            "use_prices_close_to_current_price", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Fixed limit prices: Use a fixed ratio to compute prices in sell / buy orders.",
+        )
+        self.UI.user_input(
+            "close_to_current_price_difference", commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            title="Fixed limit prices difference: Difference to take into account when placing a limit order "
+                  "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
+                  "buy price would be 199 and sell price 201.",
+        )
+        self.UI.user_input(
+            "buy_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="All in buy trades: Trade with all available funds at each buy order.",
+        )
+        self.UI.user_input(
+            "sell_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="All in sell trades: Trade with all available funds at each sell order.",
+        )
+        self.UI.user_input(
+            "disable_sell_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Disable sell orders (sell market and sell limit).",
+        )
+        self.UI.user_input(
+            "disable_buy_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Disable buy orders (buy market and buy limit).",
+        )
+        self.UI.user_input(
+            "use_stop_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Stop orders: Use stop loss orders.",
+        )
+        self.UI.user_input(
+            "max_currency_percent", commons_enums.UserInputTypes.FLOAT, 100, inputs,
+            min_val=0, max_val=100,
+            title="Maximum currency percent: Maximum portfolio % to allocate on a given currency. "
+                  "Used to compute buy order volumes.",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -54,22 +93,11 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
 
-    async def create_producers(self) -> list:
-        mode_producer = DailyTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [DailyTradingModeProducer]
 
-    async def create_consumers(self) -> list:
-        mode_consumer = DailyTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-        return [mode_consumer]
+    def get_mode_consumer_classes(self) -> list:
+        return [DailyTradingModeConsumer]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
@@ -482,7 +510,7 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):

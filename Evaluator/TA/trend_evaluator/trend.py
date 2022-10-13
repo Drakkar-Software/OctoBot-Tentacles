@@ -19,10 +19,10 @@ import tulipy
 import numpy
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as enums
 import octobot_commons.data_util as data_util
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
-import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
 
@@ -37,11 +37,19 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, self.__class__)
-        self.factor = self.config.get(self.FACTOR, 3)
-        self.length = self.config.get(self.LENGTH, 10)
+        self.factor = 3
+        self.length = 10
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         self.previous_value = {}
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.factor = self.UI.user_input("factor", enums.UserInputTypes.FLOAT, self.factor,
+                                      inputs, min_val=0, title="Factor")
+        self.length = self.UI.user_input("length", enums.UserInputTypes.INT, self.length,
+                                      inputs, min_val=1, title="Length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str,
                              symbol: str, time_frame, candle, inc_in_construction_data):
@@ -106,15 +114,28 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
     SLOW_LENGTH = "slow_length"
     SLOW_MA_TYPE = "slow_ma_type"
     FAST_MA_TYPE = "fast_ma_type"
+    MA_TYPES = ["EMA", "WMA", "SMA", "LSMA", "KAMA", "DEMA", "TEMA", "VWMA"]
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, self.__class__)
-        self.fast_length = self.config.get(self.FAST_LENGTH, 50)
-        self.slow_length = self.config.get(self.SLOW_LENGTH, 200)
-        self.fast_ma_type = self.config.get(self.FAST_MA_TYPE, "SMA").lower()
-        self.slow_ma_type = self.config.get(self.SLOW_MA_TYPE, "SMA").lower()
+        self.fast_length = 50
+        self.slow_length = 200
+        self.fast_ma_type = "sma"
+        self.slow_ma_type = "sma"
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.fast_length = self.UI.user_input(self.FAST_LENGTH, enums.UserInputTypes.INT, self.fast_length,
+                                           inputs, min_val=1, title="Fast MA length")
+        self.slow_length = self.UI.user_input(self.SLOW_LENGTH, enums.UserInputTypes.INT, self.slow_length,
+                                           inputs, min_val=1, title="Fast MA length")
+        self.fast_ma_type = self.UI.user_input(self.FAST_MA_TYPE, enums.UserInputTypes.OPTIONS, self.fast_ma_type,
+                                            inputs, options=self.MA_TYPES, title="Fast MA type").lower()
+        self.slow_ma_type = self.UI.user_input(self.SLOW_MA_TYPE, enums.UserInputTypes.OPTIONS, self.slow_ma_type,
+                                            inputs, options=self.MA_TYPES, title="Slow MA type").lower()
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -158,11 +179,22 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.long_period_length = 10
+        self.slow_period_length = 10
+        self.fast_period_length = 5
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.slow_period_length = self.UI.user_input("long_period_length", enums.UserInputTypes.INT,
+                                                  self.slow_period_length,
+                                                  inputs, min_val=1, title="Slow SMA length")
+        self.fast_period_length = self.UI.user_input("short_period_length", enums.UserInputTypes.INT,
+                                                  self.fast_period_length,
+                                                  inputs, min_val=1, title="Fast SMA length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
-        # self.logger.info(f"ohlcv_callback {time_frame}")
         candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
                                                            time_frame,
                                                            include_in_construction=inc_in_construction_data)
@@ -170,11 +202,10 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(candle_data) >= self.long_period_length:
-            time_units = [5, self.long_period_length]
+        if len(candle_data) >= max(self.slow_period_length, self.fast_period_length):
             current_moving_average = tulipy.sma(candle_data, 2)
             results = [self.get_moving_average_analysis(candle_data, current_moving_average, time_unit)
-                       for time_unit in time_units]
+                       for time_unit in (self.fast_period_length, self.slow_period_length)]
             if len(results):
                 self.eval_note = numpy.mean(results)
             else:
@@ -235,8 +266,22 @@ class EMADivergenceTrendEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.period = self.evaluator_config[self.EMA_SIZE]
+        self.period = 50
+        self.long_value = 2
+        self.short_value = -2
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.period = self.UI.user_input(self.EMA_SIZE, enums.UserInputTypes.INT, self.period,
+                                      inputs, min_val=1, title="EMA period length")
+        self.long_value = self.UI.user_input("long_value", enums.UserInputTypes.INT, self.long_value,
+                                          inputs, title="Long threshold: Minimum % price difference from EMA "
+                                                        "consider a long signal. Should be positive in most cases")
+        self.short_value = self.UI.user_input("short_value", enums.UserInputTypes.INT, self.short_value,
+                                           inputs, title="Short threshold: Minimum % price difference from EMA "
+                                                         "consider a short signal. Should be negative in most cases")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -252,9 +297,9 @@ class EMADivergenceTrendEvaluator(evaluators.TAEvaluator):
             current_price_close = candle_data[-1]
             diff = (current_price_close / current_ema * 100) - 100
 
-            if diff <= self.evaluator_config[self.LONG_VALUE]:
+            if diff <= self.long_value:
                 self.eval_note = -1
-            elif diff >= self.evaluator_config[self.SHORT_VALUE]:
+            elif diff >= self.short_value:
                 self.eval_note = 1
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,

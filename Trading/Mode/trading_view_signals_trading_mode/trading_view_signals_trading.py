@@ -16,16 +16,15 @@
 import decimal
 import math
 
-import async_channel.constants as channel_constants
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.enums as commons_enums
 import octobot_services.api as services_api
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
-import octobot_trading.exchange_channel as exchanges_channel
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
@@ -47,9 +46,32 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.USE_MARKET_ORDERS = self.trading_config.get("use_market_orders", True)
-        self.merged_symbol = None
+        self.USE_MARKET_ORDERS = True
+        self.merged_simple_symbol = None
+        self.str_symbol = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.should_emit_trading_signals_user_input(inputs)
+        self.UI.user_input(
+            "use_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="All in trades: Trade with all available funds at each order.",
+        )
+        self.USE_MARKET_ORDERS = self.UI.user_input(
+            "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
+                  "are set using the Fixed limit prices difference value.",
+        )
+        self.UI.user_input(
+            "close_to_current_price_difference", commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            title="Fixed limit prices difference: Difference to take into account when placing a limit order "
+                  "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
+                  "buy price would be 199 and sell price 201.",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -65,31 +87,26 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                self.producers[0].final_eval
 
-    async def create_producers(self) -> list:
-        mode_producer = TradingViewSignalsModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [TradingViewSignalsModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [TradingViewSignalsModeConsumer]
 
     async def create_consumers(self) -> list:
-        mode_consumer = TradingViewSignalsModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-        self.merged_symbol = symbol_util.merge_symbol(self.symbol)
+        consumers = await super().create_consumers()
+        parsed_symbol = symbol_util.parse_symbol(self.symbol)
+        self.str_symbol = str(parsed_symbol)
+        self.merged_simple_symbol = parsed_symbol.merged_str_base_and_quote_only_symbol(market_separator="")
         service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
-        feed_consumer = None
+        feed_consumer = []
         if service_feed is not None:
-            feed_consumer = await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
+            feed_consumer = [await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
                 self._trading_view_signal_callback
-            )
+            )]
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return [mode_consumer, feed_consumer]
+        return consumers + feed_consumer
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
@@ -103,7 +120,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                    parsed_data[self.SYMBOL_KEY] == self.merged_symbol:
+                    (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
+                     parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data)
         except KeyError as e:
             self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
@@ -197,22 +215,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state, order_data)
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
-        self.state = new_state
-        self.logger.info(f"[{symbol}] new state: {self.state.name}")
+        async with self.trading_mode_trigger():
+            self.state = new_state
+            self.logger.info(f"[{symbol}] new state: {self.state.name}")
 
-        # if new state is not neutral --> cancel orders and create new else keep orders
-        if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-            # cancel open orders
-            await self.cancel_symbol_open_orders(symbol)
+            # if new state is not neutral --> cancel orders and create new else keep orders
+            if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
+                # cancel open orders
+                await self.cancel_symbol_open_orders(symbol)
 
-            # call orders creation from consumers
-            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                                 symbol=symbol,
-                                                 time_frame=None,
-                                                 final_note=self.final_eval,
-                                                 state=self.state,
-                                                 data=order_data)
+                # call orders creation from consumers
+                await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                     symbol=symbol,
+                                                     time_frame=None,
+                                                     final_note=self.final_eval,
+                                                     state=self.state,
+                                                     data=order_data)
 
-            # send_notification
-            if not self.exchange_manager.is_backtesting:
-                await self._send_alert_notification(symbol, new_state)
+                # send_notification
+                if not self.exchange_manager.is_backtesting:
+                    await self._send_alert_notification(symbol, new_state)

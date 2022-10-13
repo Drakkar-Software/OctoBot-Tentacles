@@ -16,6 +16,7 @@
 import decimal
 
 import pytest
+import os
 import os.path
 import asyncio
 import pytest_asyncio
@@ -33,6 +34,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.config as test_utils_config
+import tests.test_utils.test_exchanges as test_exchanges
 import octobot_tentacles_manager.api as tentacles_manager_api
 
 # All test coroutines will be treated as marked.
@@ -46,7 +48,7 @@ async def tools(symbol="BTC/USDT"):
     try:
         config = test_config.load_test_config()
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
-        exchange_manager = exchanges.ExchangeManager(config, "binance")
+        exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
         exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
         # use backtesting not to spam exchanges apis
@@ -73,12 +75,12 @@ async def tools(symbol="BTC/USDT"):
         await mode.initialize()
         # add mode to exchange manager so that it can be stopped and freed from memory
         exchange_manager.trading_modes.append(mode)
-        mode.consumers[0].MAX_CURRENCY_RATIO = 1
+        mode.get_trading_mode_consumers()[0].MAX_CURRENCY_RATIO = 1
 
         # set BTC/USDT price at 1000 USDT
         trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
 
-        yield mode.producers[0], mode.consumers[0], trader
+        yield mode.producers[0], mode.get_trading_mode_consumers()[0], trader
     finally:
         if trader:
             await _stop(trader)

@@ -19,11 +19,10 @@ import tulipy
 import typing
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as enums
 import octobot_commons.data_util as data_util
-import octobot_commons.errors as error
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
-import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import tentacles.Evaluator.Util as EvaluatorUtil
 
@@ -36,6 +35,13 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         self.period_length = 14
         self.short_term_averages = [7, 5, 4, 3, 2, 1]
         self.long_term_averages = [40, 30, 20, 15, 10]
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the evaluator, should define all the evaluator's user inputs
+        """
+        self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=0, title="RSI period length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -110,19 +116,78 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.evaluator_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.period_length = self.evaluator_config[self.PERIOD]
-        self.slow_eval_count = self.evaluator_config[self.SLOW_EVAL_COUNT]
-        self.fast_eval_count = self.evaluator_config[self.FAST_EVAL_COUNT]
+        self.period_length = 14
+        self.slow_eval_count = 16
+        self.fast_eval_count = 4
+        self.weights = []
 
-        try:
-            # ensure rsi weights are sorted
-            self.weights = sorted(self.evaluator_config[self.RSI_TO_WEIGHTS], key=lambda a: a[self.SLOW_THRESHOLD])
-            for i, fast_threshold in enumerate(self.weights):
-                fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
-                                                              key=lambda a: a[self.FAST_THRESHOLD])
-        except KeyError as e:
-            raise error.ConfigError(f"Error when reading config: {e}")
+    def _init_fast_threshold(self, inputs, indexes, fast_threshold, price_weight, volume_weight):
+        self.UI.user_input(self.WEIGHTS, enums.UserInputTypes.OBJECT, None, inputs, parent_input_name=self.FAST_THRESHOLDS,
+                        title="Price and volume weights of this interpretation.", array_indexes=indexes)
+        return {
+            self.FAST_THRESHOLD: self.UI.user_input(self.FAST_THRESHOLD, enums.UserInputTypes.INT, fast_threshold,
+                                                 inputs, min_val=0, parent_input_name=self.FAST_THRESHOLDS,
+                                                 title="Fast RSI threshold under which this interpretation will "
+                                                       "be triggered.", array_indexes=indexes),
+            self.WEIGHTS: {
+                self.PRICE: self.UI.user_input(self.PRICE, enums.UserInputTypes.OPTIONS, price_weight,
+                                            inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
+                                            editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
+                                            title="Price weight.", array_indexes=indexes),
+                self.VOLUME: self.UI.user_input(self.VOLUME, enums.UserInputTypes.OPTIONS, volume_weight,
+                                             inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
+                                             editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
+                                             title="Volume weight.", array_indexes=indexes),
+            }
+        }
+
+    def _init_RSI_to_weight(self, inputs, slow_threshold, fast_thresholds):
+        self.UI.user_input(self.FAST_THRESHOLDS, enums.UserInputTypes.OBJECT_ARRAY, fast_thresholds, inputs,
+                        item_title="Fast RSI interpretation",
+                        other_schema_values={"minItems": 1, "uniqueItems": True},
+                        parent_input_name=self.RSI_TO_WEIGHTS,
+                        title="Interpretations on this slow threshold trigger case."),
+        return {
+            self.SLOW_THRESHOLD: self.UI.user_input(self.SLOW_THRESHOLD, enums.UserInputTypes.INT, slow_threshold, inputs,
+                                                 min_val=0, parent_input_name=self.RSI_TO_WEIGHTS,
+                                                 title="Slow RSI threshold under which this interpretation will "
+                                                       "be triggered.", array_indexes=[0]),
+            self.FAST_THRESHOLDS: [
+                self._init_fast_threshold(inputs, [0, index], *fast_threshold)
+                for index, fast_threshold in enumerate(fast_thresholds)
+            ],
+        }
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.period_length = self.UI.user_input("period", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: RSI period length.")
+        self.slow_eval_count = self.UI.user_input("slow_eval_count", enums.UserInputTypes.INT, self.slow_eval_count,
+                                               inputs, min_val=1,
+                                               title="Number of recent RSI values to consider to get the current slow "
+                                                     "moving market sentiment.")
+        self.fast_eval_count = self.UI.user_input("fast_eval_count", enums.UserInputTypes.INT, self.fast_eval_count,
+                                               inputs, min_val=1,
+                                               title="Number of recent RSI values to consider to get the current fast "
+                                                     "moving market sentiment.")
+        weights = []
+        self.weights = sorted(
+            self.UI.user_input(self.RSI_TO_WEIGHTS, enums.UserInputTypes.OBJECT_ARRAY, weights, inputs,
+                            item_title="Slow RSI interpretation",
+                            other_schema_values={"minItems": 1, "uniqueItems": True},
+                            title="RSI values and interpretations."),
+            key=lambda a: a[self.SLOW_THRESHOLD]
+        )
+        # init one user input to generate user input schema and default values
+        weights.append(self._init_RSI_to_weight(inputs, 30, [[20, 2, 2]]))
+
+        for i, fast_threshold in enumerate(self.weights):
+            fast_threshold[self.FAST_THRESHOLDS] = sorted(fast_threshold[self.FAST_THRESHOLDS],
+                                                          key=lambda a: a[self.FAST_THRESHOLD])
 
     def _get_rsi_averages(self, symbol_candles, time_frame, include_in_construction):
         # compute the slow and fast RSI average
@@ -199,6 +264,11 @@ class BBMomentumEvaluator(evaluators.TAEvaluator):
         super().__init__(tentacles_setup_config)
         self.period_length = 20
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: Bollinger bands period length.")
+
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
@@ -261,8 +331,15 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
         self.period_length = 14
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
+                                             inputs, min_val=1,
+                                             title="Period: ADX period length.")
+
+    def _get_minimal_data(self):
         # 26 minimal_data length required for 14 period_length
-        self.minimal_data = self.period_length + 12
+        return self.period_length + 12
 
     # implementation according to: https://www.investopedia.com/articles/technical/02/041002.asp => length = 14 and
     # exponential moving average = 20 in a uptrend market
@@ -272,7 +349,7 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
         close_candles = trading_api.get_symbol_close_candles(symbol_candles, time_frame,
                                                              include_in_construction=inc_in_construction_data)
-        if len(close_candles) > self.minimal_data:
+        if len(close_candles) > self._get_minimal_data():
             high_candles = trading_api.get_symbol_high_candles(symbol_candles, time_frame,
                                                                include_in_construction=inc_in_construction_data)
             low_candles = trading_api.get_symbol_low_candles(symbol_candles, time_frame,
@@ -286,7 +363,7 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, close_candles, high_candles, low_candles, candle):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(close_candles) >= self.minimal_data:
+        if len(close_candles) >= self._get_minimal_data():
             min_adx = 7.5
             max_adx = 45
             neutral_adx = 25
@@ -339,6 +416,20 @@ class MACDMomentumEvaluator(evaluators.TAEvaluator):
         self.long_period_length = 26
         self.short_period_length = 12
         self.signal_period_length = 9
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.short_period_length = self.UI.user_input("short_period_length", enums.UserInputTypes.INT,
+                                                   self.short_period_length,
+                                                   inputs, min_val=1,
+                                                   title="MACD fast period length.")
+        self.long_period_length = self.UI.user_input("long_period_length", enums.UserInputTypes.INT,
+                                                  self.long_period_length,
+                                                  inputs, min_val=1,
+                                                  title="MACD slow period length.")
+        self.signal_period_length = self.UI.user_input("signal_period_length", enums.UserInputTypes.INT,
+                                                    self.signal_period_length,
+                                                    inputs, min_val=1,
+                                                    title="MACD signal period.")
 
     def _analyse_pattern(self, pattern, macd_hist, zero_crossing_indexes, price_weight,
                          pattern_move_time, sign_multiplier):
@@ -425,6 +516,18 @@ class KlingerOscillatorMomentumEvaluator(evaluators.TAEvaluator):
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.short_period = self.UI.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
+                                            inputs, min_val=1,
+                                            title="Short period: length of the short klinger period (standard is 35).")
+        self.long_period = self.UI.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
+                                           inputs, min_val=1,
+                                           title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
+                                                 inputs, min_val=1,
+                                                 title="Long period: length of the exponential moving average used "
+                                                 "to apply on the klinger results (standard is 13).")
+
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
         symbol_candles = self.get_exchange_symbol_data(exchange, exchange_id, symbol)
@@ -491,6 +594,22 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(evaluators.TAEvalua
         self.short_period = 35  # standard with klinger
         self.long_period = 55  # standard with klinger
         self.ema_signal_period = 13  # standard ema signal for klinger
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.short_period = self.UI.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
+                                            inputs, min_val=1,
+                                            title="Short period: length of the short klinger period (standard is 35).")
+        self.long_period = self.UI.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
+                                           inputs, min_val=1,
+                                           title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
+                                                 inputs, min_val=1,
+                                                 title="Long period: length of the exponential moving average used "
+                                                 "to apply on the klinger results (standard is 13).")
 
     @staticmethod
     def get_eval_type():

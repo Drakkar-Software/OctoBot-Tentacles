@@ -16,14 +16,21 @@
 import re
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import octobot_evaluators.evaluators as evaluators
 import tentacles.Services.Services_feeds as Services_feeds
-import octobot_tentacles_manager.api.configurator as tentacles_manager_api
 
 
 class TelegramSignalEvaluator(evaluators.SocialEvaluator):
     SERVICE_FEED_CLASS = Services_feeds.TelegramServiceFeed
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        channels_config = self.UI.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
+                                          commons_enums.UserInputTypes.STRING_ARRAY,
+                                          [], inputs, item_title="Channel name",
+                                          title="Name of the watched channels")
+        self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL] = channels_config
 
     async def _feed_callback(self, data):
         if self._is_interested_by_this_notification(data[services_constants.CONFIG_GROUP_MESSAGE_DESCRIPTION]):
@@ -105,11 +112,64 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
     SIGNAL_PATTERN_MARKET_BUY_KEY = "MARKET_BUY"
     SIGNAL_PATTERN_MARKET_SELL_KEY = "MARKET_SELL"
     SIGNAL_PAIR_KEY = "signal_pair"
+    SIGNAL_CHANNEL_NAME_KEY = "channel_name"
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.tentacle_config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.channels_config = self.tentacle_config.get(services_constants.CONFIG_TELEGRAM_CHANNEL, {})
+        self.channels_config_by_channel_name = {}
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        channels = []
+        config_channels = self.UI.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
+                                          commons_enums.UserInputTypes.OBJECT_ARRAY,
+                                          channels, inputs, item_title="Channel",
+                                          other_schema_values={"minItems": 1, "uniqueItems": True},
+                                          title="Channels to watch")
+        channels.append(self._init_channel_config(inputs, "Test-Channel", "Pair: (.*)$",
+                                                  "Side: (BUY)$", "Side: (SELL)$"))
+        self.channels_config_by_channel_name = {
+            channel[self.SIGNAL_CHANNEL_NAME_KEY]: channel
+            for channel in config_channels
+        }
+        self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL] = list(self.channels_config_by_channel_name)
+
+    def _init_channel_config(self, inputs, channel_name, signal_pair, buy_regex, sell_regex):
+        return {
+            self.SIGNAL_CHANNEL_NAME_KEY: self.UI.user_input(
+                self.SIGNAL_CHANNEL_NAME_KEY, commons_enums.UserInputTypes.TEXT,
+                channel_name, inputs,
+                parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
+                array_indexes=[0],
+                title="Channel name"),
+            self.SIGNAL_PAIR_KEY: self.UI.user_input(
+                self.SIGNAL_PAIR_KEY, commons_enums.UserInputTypes.TEXT,
+                signal_pair, inputs,
+                parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
+                array_indexes=[0],
+                title="Trading pair regex, ex: Pair: (.*)$"),
+            self.SIGNAL_PATTERN_KEY: self.UI.user_input(
+                self.SIGNAL_PATTERN_KEY, commons_enums.UserInputTypes.OBJECT,
+                self._init_pattern_config(inputs, buy_regex, sell_regex), inputs,
+                parent_input_name=services_constants.CONFIG_TELEGRAM_CHANNEL,
+                array_indexes=[0],
+                title="Signal patterns"),
+        }
+
+    def _init_pattern_config(self, inputs, buy_regex, sell_regex):
+        return {
+            self.SIGNAL_PATTERN_MARKET_BUY_KEY: self.UI.user_input(
+                self.SIGNAL_PATTERN_MARKET_BUY_KEY, commons_enums.UserInputTypes.TEXT,
+                buy_regex, inputs, parent_input_name=self.SIGNAL_PATTERN_KEY,
+                array_indexes=[0],
+                title="Market buy signal regex, ex: Side: (BUY)$"),
+            self.SIGNAL_PATTERN_MARKET_SELL_KEY: self.UI.user_input(
+                self.SIGNAL_PATTERN_MARKET_SELL_KEY,
+                commons_enums.UserInputTypes.TEXT,
+                sell_regex, inputs,
+                parent_input_name=self.SIGNAL_PATTERN_KEY,
+                array_indexes=[0],
+                title="Market sell signal regex, ex: Side: (SELL)$"),
+        }
 
     async def _feed_callback(self, data):
         if not data:
@@ -117,10 +177,10 @@ class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
         is_from_channel = data.get(services_constants.CONFIG_IS_CHANNEL_MESSAGE, False)
         if is_from_channel:
             sender = data.get(services_constants.CONFIG_MESSAGE_SENDER, "")
-            if sender in self.channels_config.keys():
+            if sender in self.channels_config_by_channel_name:
                 try:
                     message = data.get(services_constants.CONFIG_MESSAGE_CONTENT, "")
-                    channel_data = self.channels_config[sender]
+                    channel_data = self.channels_config_by_channel_name[sender]
                     is_buy_market_signal = self._get_signal_message(
                         channel_data[self.SIGNAL_PATTERN_KEY][self.SIGNAL_PATTERN_MARKET_BUY_KEY], message)
                     is_sell_market_signal = self._get_signal_message(

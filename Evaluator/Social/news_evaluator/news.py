@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_services.constants as services_constants
@@ -36,6 +37,52 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
         self.count = 0
         self.sentiment_analyser = None
         self.is_self_refreshing = True
+        self.accounts_by_cryptocurrency = {}
+        self.hashtags_by_cryptocurrency = {}
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        cryptocurrencies = []
+        config_cryptocurrencies = self.UI.user_input(
+            commons_constants.CONFIG_CRYPTO_CURRENCIES, commons_enums.UserInputTypes.OBJECT_ARRAY,
+            cryptocurrencies, inputs, other_schema_values={"minItems": 1, "uniqueItems": True},
+            item_title="Crypto currency",
+            title="Crypto currencies to watch."
+        )
+        # init one user input to generate user input schema and default values
+        cryptocurrencies.append(self._init_cryptocurrencies(inputs, "Bitcoin", ["BTCFoundation"], []))
+        # remove other symbols data to avoid unnecessary entries
+        self.accounts_by_cryptocurrency = self._get_config_elements(config_cryptocurrencies,
+                                                                    services_constants.CONFIG_TWITTERS_ACCOUNTS)
+        self.hashtags_by_cryptocurrency = self._get_config_elements(config_cryptocurrencies,
+                                                                    services_constants.CONFIG_TWITTERS_HASHTAGS)
+        self.feed_config[services_constants.CONFIG_TWITTERS_ACCOUNTS] = self.accounts_by_cryptocurrency
+        self.feed_config[services_constants.CONFIG_TWITTERS_HASHTAGS] = self.hashtags_by_cryptocurrency
+
+    def _init_cryptocurrencies(self, inputs, cryptocurrency, accounts, hashtags):
+        return {
+            commons_constants.CONFIG_CRYPTO_CURRENCY:
+                self.UI.user_input(commons_constants.CONFIG_CRYPTO_CURRENCY, commons_enums.UserInputTypes.TEXT,
+                                cryptocurrency, inputs, other_schema_values={"minLength": 2},
+                                parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
+                                title="Crypto currency name"),
+            services_constants.CONFIG_TWITTERS_ACCOUNTS:
+                self.UI.user_input(services_constants.CONFIG_TWITTERS_ACCOUNTS, commons_enums.UserInputTypes.STRING_ARRAY,
+                                accounts, inputs, other_schema_values={"uniqueItems": True},
+                                parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
+                                item_title="Twitter account name",
+                                title="Twitter accounts to watch"),
+            services_constants.CONFIG_TWITTERS_HASHTAGS:
+                self.UI.user_input(services_constants.CONFIG_TWITTERS_HASHTAGS, commons_enums.UserInputTypes.STRING_ARRAY,
+                                hashtags, inputs, other_schema_values={"uniqueItems": True},
+                                parent_input_name=commons_constants.CONFIG_CRYPTO_CURRENCIES, array_indexes=[0],
+                                item_title="Hashtag",
+                                title="Twitter hashtags to watch (without the # character), "
+                                      "warning: might trigger evaluator for irrelevant tweets.")
+        }
 
     @classmethod
     def get_is_cryptocurrencies_wildcard(cls) -> bool:
@@ -86,12 +133,9 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
                 author_screen_name = tweet['user']['screen_name'] if "screen_name" in tweet['user'] \
                     else padding_name
                 author_name = tweet['user']['name'] if "name" in tweet['user'] else padding_name
-                if self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS]:
-                    if author_screen_name in self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS][
-                        self.cryptocurrency_name] \
-                            or author_name in self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS][
-                        self.cryptocurrency_name]:
-                        return -1 * self.sentiment_analyser.analyse(tweet_text)
+                if author_screen_name in self.accounts_by_cryptocurrency[self.cryptocurrency_name] \
+                        or author_name in self.accounts_by_cryptocurrency[self.cryptocurrency_name]:
+                    return -1 * self.sentiment_analyser.analyse(tweet_text)
         except KeyError:
             pass
 
@@ -100,11 +144,12 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
 
     def _is_interested_by_this_notification(self, notification_description):
         # true if in twitter accounts
-        if self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS]:
-            for account in self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS][self.cryptocurrency_name]:
+        try:
+            for account in self.accounts_by_cryptocurrency[self.cryptocurrency_name]:
                 if account.lower() in notification_description:
                     return True
-
+        except KeyError:
+            return False
         # false if it's a RT of an unfollowed account
         if notification_description.startswith("rt"):
             return False
@@ -114,27 +159,20 @@ class TwitterNewsEvaluator(evaluators.SocialEvaluator):
             return True
 
         # true if in hashtags
-        if self.specific_config[services_constants.CONFIG_TWITTERS_HASHTAGS]:
-            for hashtags in self.specific_config[services_constants.CONFIG_TWITTERS_HASHTAGS][self.cryptocurrency_name]:
+        if self.hashtags_by_cryptocurrency:
+            for hashtags in self.hashtags_by_cryptocurrency[self.cryptocurrency_name]:
                 if hashtags.lower() in notification_description:
                     return True
             return False
 
-    def _get_config_elements(self, key):
-        if commons_constants.CONFIG_CRYPTO_CURRENCIES in self.specific_config and self.specific_config[
-            commons_constants.CONFIG_CRYPTO_CURRENCIES]:
-            return {cc[commons_constants.CONFIG_CRYPTO_CURRENCY]: cc[key] for cc in
-                    self.specific_config[commons_constants.CONFIG_CRYPTO_CURRENCIES]
-                    if cc[commons_constants.CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name}
+    def _get_config_elements(self, config_cryptocurrencies, key):
+        if config_cryptocurrencies:
+            return {
+                cc[commons_constants.CONFIG_CRYPTO_CURRENCY]: cc[key]
+                for cc in config_cryptocurrencies
+                if cc[commons_constants.CONFIG_CRYPTO_CURRENCY] == self.cryptocurrency_name
+            }
         return {}
 
-    def _format_config(self):
-        # remove other symbols data to avoid unnecessary tweets
-        self.specific_config[services_constants.CONFIG_TWITTERS_ACCOUNTS] = self._get_config_elements(
-            services_constants.CONFIG_TWITTERS_ACCOUNTS)
-        self.specific_config[services_constants.CONFIG_TWITTERS_HASHTAGS] = self._get_config_elements(
-            services_constants.CONFIG_TWITTERS_HASHTAGS)
-
     async def prepare(self):
-        self._format_config()
         self.sentiment_analyser = tentacles_management.get_single_deepest_child_class(TextAnalysis)()

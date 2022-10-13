@@ -21,6 +21,7 @@ import copy
 import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
+import octobot_commons.display as display
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -42,6 +43,7 @@ import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
+import octobot_commons.symbols as commons_symbols
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
@@ -73,6 +75,8 @@ SCRIPTED_KEY = "scripted"
 ACTIVATED_STRATEGIES = "activated_strategies"
 BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
+CONFIG_KEY = "config"
+DISPLAYED_ELEMENTS_KEY = "displayed_elements"
 
 # tentacles from which configuration is not handled in strategies / evaluators configuration
 NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
@@ -244,6 +248,24 @@ def get_tentacle_user_commands(klass):
     return klass.get_user_commands() if klass is not None and hasattr(klass, "get_user_commands") else {}
 
 
+def get_tentacle_config_and_edit_display(tentacle):
+    tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle)
+    config, user_inputs = interfaces_util.run_in_bot_main_loop(
+        tentacle_class.get_raw_config_and_user_inputs(
+            interfaces_util.get_edited_config(),
+            interfaces_util.get_edited_tentacles_config(),
+            interfaces_util.get_bot_api().get_bot_id()
+        )
+    )
+    display_elements = display.display_translator_factory()
+    display_elements.add_user_inputs(user_inputs)
+    return {
+        NAME_KEY: tentacle,
+        CONFIG_KEY: config or {},
+        DISPLAYED_ELEMENTS_KEY: display_elements.to_json()
+    }
+
+
 def get_tentacle_config(klass):
     return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 
@@ -328,6 +350,10 @@ def reset_config_to_default(tentacle_name):
         tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
                                                             klass)
         return True, f"{tentacle_name} configuration reset to default values"
+    except FileNotFoundError as e:
+        error_message = f"Error when resetting factory tentacle config: no default values file at {e.filename}"
+        _get_logger().error(error_message)
+        return False, error_message
     except Exception as e:
         _get_logger().exception(e, False)
         return False, f"Error when resetting factory tentacle config: {e}"
@@ -704,10 +730,7 @@ def get_exchange_logo(exchange_name):
 
 
 def get_traded_time_frames(exchange_manager):
-    return trading_api.get_exchange_available_required_time_frames(
-        trading_api.get_exchange_name(exchange_manager),
-        trading_api.get_exchange_manager_id(exchange_manager)
-    )
+    return trading_api.get_relevant_time_frames(exchange_manager)
 
 
 def get_full_exchange_list(remove_config_exchanges=False):
@@ -855,22 +878,21 @@ def get_current_exchange():
         return DEFAULT_EXCHANGE
 
 
-def change_reference_market_on_config_currencies(old_base_currency: str, new_base_currency: str) -> bool:
+def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:
     """
     Change the base currency from old to new for all configured pair
-    :param old_base_currency:
-    :param new_base_currency:
     :return: bool, str
     """
     success = True
     message = "Reference market changed for each pair using the old reference market"
     try:
         config_currencies = format_config_symbols(interfaces_util.get_edited_config())
-        regex = rf"/{old_base_currency}$"
         for currencies_config in config_currencies.values():
             currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS] = \
-                list(set([re.sub(regex, f"/{new_base_currency}", pair)
-                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]]))
+                list(set([
+                    _change_base(pair, new_quote_currency)
+                    for pair in currencies_config[commons_constants.CONFIG_CRYPTO_PAIRS]
+                ]))
         interfaces_util.get_edited_config(dict_only=False).save()
     except Exception as e:
         message = f"Error while changing reference market on currencies list: {e}"
@@ -879,14 +901,27 @@ def change_reference_market_on_config_currencies(old_base_currency: str, new_bas
     return success, message
 
 
+def _change_base(pair, new_quote_currency):
+    parsed_symbol = commons_symbols.parse_symbol(pair)
+    parsed_symbol.quote = new_quote_currency
+    return parsed_symbol.merged_str_symbol()
+
+
 def send_command_to_activated_tentacles(command, wait_for_processing=True):
-    trading_mode = get_config_activated_trading_mode()
-    evaluators = get_config_activated_evaluators()
-    for tentacle in [trading_mode] + evaluators:
+    trading_mode_name = get_config_activated_trading_mode().get_name()
+    evaluator_names = [
+        evaluator.get_name()
+        for evaluator in get_config_activated_evaluators()
+    ]
+    send_command_to_tentacles(command, [trading_mode_name] + evaluator_names, wait_for_processing=wait_for_processing)
+
+
+def send_command_to_tentacles(command, tentacle_names: list, wait_for_processing=True):
+    for tentacle_name in tentacle_names:
         interfaces_util.run_in_bot_main_loop(
             services_api.send_user_command(
                 interfaces_util.get_bot_api().get_bot_id(),
-                tentacle.get_name(),
+                tentacle_name,
                 command,
                 None,
                 wait_for_processing=wait_for_processing
@@ -900,6 +935,24 @@ def reload_scripts():
         return {"success": True}
     except Exception as e:
         _get_logger().exception(e, True, f"Failed to reload scripts: {e}")
+        raise
+
+
+def reload_activated_tentacles_config():
+    try:
+        send_command_to_activated_tentacles(commons_enums.UserCommands.RELOAD_CONFIG.value)
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload configurations: {e}")
+        raise
+
+
+def reload_tentacle_config(tentacle_name):
+    try:
+        send_command_to_tentacles(commons_enums.UserCommands.RELOAD_CONFIG.value, [tentacle_name])
+        return {"success": True}
+    except Exception as e:
+        _get_logger().exception(e, True, f"Failed to reload {tentacle_name} configuration: {e}")
         raise
 
 
