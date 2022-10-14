@@ -103,13 +103,13 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             channels_name.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)\
             .new_consumer(
                 self._remote_trading_signal_callback,
-                strategy=self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY],
+                identifier=self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY],
                 symbol=self.symbol,
                 bot_id=self.bot_id
             )
         return consumers + [signals_consumer]
 
-    async def _remote_trading_signal_callback(self, strategy, exchange, symbol, version, bot_id, signal):
+    async def _remote_trading_signal_callback(self, identifier, exchange, symbol, version, bot_id, signal):
         self.logger.info(f"received signal: {signal}")
         await self.producers[0].signal_callback(signal)
         self.logger.info("done")
