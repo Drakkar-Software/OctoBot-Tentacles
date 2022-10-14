@@ -11,9 +11,6 @@
         "exchanges": {
             "binance": {
                 "enabled": true
-            },
-            "bybit": {
-                "enabled": true
             }
         },
         "trader": {
