@@ -224,23 +224,32 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             max_order_size = market_quantity if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
         return max_order_size * quantity / trading_constants.ONE_HUNDRED, current_price
 
-    async def _bundle_order(self, order_description, to_create_orders, bundled_with, fees_currency_side,
+    async def _bundle_order(self, order_description, to_create_orders, ignored_orders, bundled_with, fees_currency_side,
                             created_groups, symbol):
         chained_order = await self._create_order(order_description, symbol, created_groups, fees_currency_side)
-        main_order = to_create_orders[bundled_with][0]
-        # always align bundled order quantity with the main order one
-        chained_order.update(chained_order.symbol, quantity=main_order.origin_quantity)
-        params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(main_order, chained_order)
-        to_create_orders[bundled_with][1].update(params)
+        try:
+            main_order = to_create_orders[bundled_with][0]
+            # always align bundled order quantity with the main order one
+            chained_order.update(chained_order.symbol, quantity=main_order.origin_quantity)
+            params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(main_order, chained_order)
+            to_create_orders[bundled_with][1].update(params)
+        except KeyError:
+            if bundled_with in ignored_orders:
+                self.logger.error(f"Ignored order bundled to id {bundled_with}: "
+                                  f"associated master order has not been created")
 
-    async def _chain_order(self, order_description, created_orders, chained_to, fees_currency_side,
+    async def _chain_order(self, order_description, created_orders, ignored_orders, chained_to, fees_currency_side,
                            created_groups, symbol, order_description_by_id):
         try:
             base_order = created_orders[chained_to]
         except KeyError as e:
-            self.logger.error(
-                f"Ignored chained order from {order_description}. Chained orders have to be sent in the same signal "
-                f"as the order they are chained to. Missing order with id: {e}.")
+            if chained_to in ignored_orders:
+                self.logger.error(f"Ignored order chained to id {chained_to}: "
+                                  f"associated master order has not been created")
+            else:
+                self.logger.error(
+                    f"Ignored chained order from {order_description}. Chained orders have to be sent in the same "
+                    f"signal as the order they are chained to. Missing order with id: {e}.")
             return 0
         desc_base_order_quantity = \
             order_description_by_id[chained_to][trading_enums.TradingSignalOrdersAttrs.QUANTITY.value]
@@ -309,6 +318,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         to_create_orders = {}   # dict of (orders, orders_param)
         created_groups = {}
         created_orders = {}
+        ignored_orders = set()
         order_description_by_id = {
             orders_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]: orders_description
             for orders_description in orders_descriptions
@@ -330,15 +340,18 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 continue
             created_order = await self._create_order(order_description, symbol, created_groups, fees_currency_side)
             if created_order.origin_quantity == trading_constants.ZERO:
-                self.logger.warning(f"Ignored order to create: {created_order}: not enough funds")
+                shared_id = order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                self.logger.error(f"Impossible to create order: {created_order} "
+                                  f"(id: {shared_id}): not enough funds on the account.")
+                ignored_orders.add(shared_id)
             else:
                 to_create_orders[order_description[
                     trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
                 ] = (created_order, {})
         for order_description in orders_descriptions:
             if bundled_with := order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value]:
-                await self._bundle_order(order_description, to_create_orders, bundled_with, fees_currency_side,
-                                         created_groups, symbol)
+                await self._bundle_order(order_description, to_create_orders, ignored_orders, bundled_with,
+                                         fees_currency_side, created_groups, symbol)
         # create orders
         for shared_signal_order_id, order_with_param in to_create_orders.items():
             created_orders[shared_signal_order_id] = \
@@ -349,8 +362,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             if (chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]) \
                     and order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value] is None:
                 created_chained_orders_count += \
-                    await self._chain_order(order_description, created_orders, chained_to, fees_currency_side,
-                                            created_groups, symbol, order_description_by_id)
+                    await self._chain_order(order_description, created_orders, ignored_orders, chained_to,
+                                            fees_currency_side, created_groups, symbol, order_description_by_id)
 
         for group in created_groups.values():
             await group.enable(True)
