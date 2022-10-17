@@ -34,6 +34,13 @@
         <td>{{ position.unrealized_pnl | round(5) }} {{ position.currency if position.symbol_contract.is_inverse_contract() else position.market }} ({{ position.get_unrealized_pnl_percent() | round(5) }}%)</td>
         <td>{{ position.exchange_manager.exchange.name if position.exchange_manager else '' }}</td>
         <td>{{ sim_or_real }}</td>
+        <td class="text-center py-1">
+            <button type="button" class="btn btn-sm btn-outline-danger waves-effect" data-action="close_position"
+                    data-position_symbol="{{ position.symbol }}" data-position_side="{{ position.side.value }}"
+                    data-update-url="{{ url_for('api.positions', action='close_position') }}">
+                <i class="fas fa-ban"></i>
+            </button>
+        </td>
     </tr>
     {% endif %}
 {%- endmacro %}
