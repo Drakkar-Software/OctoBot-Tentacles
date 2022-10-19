@@ -368,7 +368,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 quantity=order_quantity,
                                                                                 price=order_price,
                                                                                 reduce_only=user_reduce_only)
-                    if current_order := await self.trader.create_order(current_order):
+                    if current_order := await self.trading_mode.create_order(current_order):
                         created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
@@ -392,7 +392,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 quantity=order_quantity,
                                                                                 price=order_price,
                                                                                 reduce_only=user_reduce_only)
-                    if updated_limit := await self.trader.create_order(current_order):
+                    if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
                         # ensure stop orders are enabled and limit order was not instantly filled
                         if (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) and updated_limit.is_open():
@@ -411,7 +411,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                         side=trading_enums.TradeOrderSide.SELL,
                                                                                         reduce_only=True,
                                                                                         group=oco_group)
-                            await self.trader.create_order(current_order)
+                            await self.trading_mode.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.NEUTRAL.value:
                 return []
@@ -436,7 +436,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 quantity=order_quantity,
                                                                                 price=order_price,
                                                                                 reduce_only=user_reduce_only)
-                    if updated_limit := await self.trader.create_order(current_order):
+                    if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
                         # ensure future trading and stop orders are enabled and limit order was not instantly filled
                         if self.exchange_manager.is_future and (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) \
@@ -456,7 +456,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                         side=trading_enums.TradeOrderSide.BUY,
                                                                                         reduce_only=True,
                                                                                         group=oco_group)
-                            await self.trader.create_order(current_order)
+                            await self.trading_mode.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
                 quantity = self._get_market_quantity_from_risk(final_note, max_buy_size, base) \
@@ -473,7 +473,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                                 quantity=order_quantity,
                                                                                 price=order_price,
                                                                                 reduce_only=user_reduce_only)
-                    if current_order := await self.trader.create_order(current_order):
+                    if current_order := await self.trading_mode.create_order(current_order):
                         created_orders.append(current_order)
             if created_orders:
                 return created_orders
