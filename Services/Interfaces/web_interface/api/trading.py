@@ -45,6 +45,25 @@ def orders():
         return flask.jsonify(result)
 
 
+@api.api.route("/positions", methods=['GET', 'POST'])
+@login.login_required_when_activated
+def positions():
+    if flask.request.method == 'GET':
+        real_positions, simulated_positions = interfaces_util.get_all_positions()
+
+        return json.dumps({"real_positions": real_positions, "simulated_positions": simulated_positions})
+    elif flask.request.method == "POST":
+        result = ""
+        request_data = flask.request.get_json()
+        action = flask.request.args.get("action")
+        if action == "close_position":
+            if interfaces_util.close_positions([request_data]):
+                result = "Position closed"
+            else:
+                return util.get_rest_reply('Impossible to close position: position already closed.', 500)
+        return flask.jsonify(result)
+
+
 @api.api.route("/refresh_portfolio", methods=['POST'])
 @login.login_required_when_activated
 def refresh_portfolio():
