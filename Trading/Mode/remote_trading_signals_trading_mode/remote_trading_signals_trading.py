@@ -214,7 +214,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                     return self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position(
                         symbol,
                         trading_enums.PositionSide.BOTH
-                    ) * quantity / trading_constants.ONE_HUNDRED, current_price
+                    ).size * quantity / trading_constants.ONE_HUNDRED, current_price
                 raise errors.InvalidArgumentError(f"Unhandled position based quantity type: {position_percent}")
             max_order_size, _ = personal_data.get_futures_max_order_size(
                 self.exchange_manager, symbol, side, current_price, reduce_only,
