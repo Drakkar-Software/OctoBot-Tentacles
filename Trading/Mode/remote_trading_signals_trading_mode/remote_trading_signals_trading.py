@@ -211,10 +211,14 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             if position_percent is not None:
                 quantity_type, quantity = script_keywords.parse_quantity(position_percent)
                 if quantity_type is script_keywords.QuantityType.POSITION_PERCENT:
-                    return self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position(
-                        symbol,
-                        trading_enums.PositionSide.BOTH
-                    ).size * quantity / trading_constants.ONE_HUNDRED, current_price
+                    open_position_size_val = \
+                        self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position(
+                            symbol,
+                            trading_enums.PositionSide.BOTH
+                        ).size
+                    target_size = open_position_size_val * quantity / trading_constants.ONE_HUNDRED
+                    order_size = abs(target_size - open_position_size_val)
+                    return order_size, current_price
                 raise errors.InvalidArgumentError(f"Unhandled position based quantity type: {position_percent}")
             max_order_size, _ = personal_data.get_futures_max_order_size(
                 self.exchange_manager, symbol, side, current_price, reduce_only,
