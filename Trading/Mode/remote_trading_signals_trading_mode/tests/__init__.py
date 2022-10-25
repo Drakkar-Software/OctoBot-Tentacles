@@ -34,6 +34,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.signals as trading_signals
 import tentacles.Trading.Mode as modes
 import tests.test_utils.config as test_utils_config
+import tests.test_utils.test_exchanges as test_exchanges
 from tentacles.Trading.Mode.remote_trading_signals_trading_mode.remote_trading_signals_trading import \
     RemoteTradingSignalsTradingMode
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -47,7 +48,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
     try:
         config = test_config.load_test_config()
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
-        exchange_manager = exchanges.ExchangeManager(config, exchange_name)
+        exchange_manager = test_exchanges.get_test_exchange_manager(config, exchange_name)
         exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
         # use backtesting not to spam exchanges apis
@@ -78,9 +79,10 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
         with mock.patch.object(RemoteTradingSignalsTradingMode, "_subscribe_to_signal_feed",
                                new=mock.AsyncMock(return_value=[])) \
                 as _subscribe_to_signal_feed_mock:
-            signal_channel = await trading_signals.create_remote_trading_signal_channel_if_missing(
+            signal_channel, created = await trading_signals.create_remote_trading_signal_channel_if_missing(
                 exchange_manager
             )
+            assert created is True
             await mode.initialize()
             # add mode to exchange manager so that it can be stopped and freed from memory
             exchange_manager.trading_modes.append(mode)
@@ -90,7 +92,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
             # let trading modes start
             await asyncio_tools.wait_asyncio_next_cycle()
             _subscribe_to_signal_feed_mock.assert_called_once()
-        yield mode.producers[0], mode.consumers[0], trader
+        yield mode.producers[0], mode.get_trading_mode_consumers()[0], trader
     finally:
         if exchange_manager is not None:
             for importer in backtesting_api.get_importers(exchange_manager.exchange.backtesting):

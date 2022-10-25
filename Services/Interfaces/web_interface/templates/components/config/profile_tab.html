@@ -1,5 +1,5 @@
 
-{% macro profile_tab(current_profile, profile, activated_tentacles, strategy_config, evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL) %}
+{% macro profile_tab(current_profile, profile, tentacles_details, strategy_config, evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL) %}
 <div class="tab-pane fade" id="panelProfile{{profile.profile_id}}" role="tabpanel"
      aria-labelledby="panelExchanges-tab">
     <div class="card">
@@ -60,7 +60,10 @@
                 </div>
             </div>
             <div>
-                <h4>Overview:</h4>
+                <h4>
+                    Overview:
+                    <span class="float-right"><span class="d-none d-md-inline">Built on OctoBot </span><span class="badge badge-light">{{tentacles_details["version"]}}</span></span>
+                </h4>
                 <div>
                     <div class="row">
                         <div class="card profile-card my-1 my-lg-2 px-0 mx-auto col-12 col-lg-5">
@@ -114,7 +117,7 @@
                                 </h5>
                             </div>
                             <div class="card-body py-0 px-2 px-lg-4">
-                                {% set trading_modes = get_filtered_list(activated_tentacles, strategy_config["trading-modes"]) %}
+                                {% set trading_modes = get_filtered_list(tentacles_details["activation"], strategy_config["trading-modes"]) %}
                                 {% if trading_modes %}
                                 <div class="my-1 my-md-3">
                                     <span class="profile-overview-explanation">Use </span>
@@ -127,7 +130,7 @@
                                     <span class="profile-overview-explanation">as {{'a' if trading_modes | length == 1}} trading mode{{'s' if trading_modes | length > 1 }}</span>.
                                 </div>
                                 {% endif %}
-                                {% set strategies = get_filtered_list(activated_tentacles, strategy_config["strategies"]) %}
+                                {% set strategies = get_filtered_list(tentacles_details["activation"], strategy_config["strategies"]) %}
                                 {% if strategies %}
                                 <div class="my-1 my-md-3">
                                     <span class="profile-overview-explanation">With </span>
@@ -139,7 +142,7 @@
                                     </span>
                                     <span class="profile-overview-explanation">as {{'a' if strategies | length == 1}} strateg{{'ies' if strategies | length > 1 else 'y'}} and</span>
                                     <ul>
-                                        {% set TAs = get_filtered_list(activated_tentacles, evaluator_config["ta"]) %}
+                                        {% set TAs = get_filtered_list(tentacles_details["activation"], evaluator_config["ta"]) %}
                                         {% if TAs %}
                                         <li>
                                             <span class="profile-overview-values">
@@ -151,7 +154,7 @@
                                             <span class="profile-overview-explanation">as {{'a' if TAs | length == 1}} technical evaluator{{'s' if TAs | length > 1}}.</span>
                                         </li>
                                         {% endif %}
-                                        {% set socials = get_filtered_list(activated_tentacles, evaluator_config["social"]) %}
+                                        {% set socials = get_filtered_list(tentacles_details["activation"], evaluator_config["social"]) %}
                                         {% if socials %}
                                         <li>
                                             <span class="profile-overview-values">
@@ -163,7 +166,7 @@
                                             <span class="profile-overview-explanation">as {{'a' if socials | length == 1}} social evaluator{{'s' if socials | length > 1}}.</span>
                                         </li>
                                         {% endif %}
-                                        {% set RTs = get_filtered_list(activated_tentacles, evaluator_config["real-time"]) %}
+                                        {% set RTs = get_filtered_list(tentacles_details["activation"], evaluator_config["real-time"]) %}
                                         {% if RTs %}
                                         <li>
                                             <span class="profile-overview-values">

@@ -38,10 +38,22 @@ class DipAnalyserStrategyEvaluator(evaluators.StrategyEvaluator):
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
-        self.evaluation_time_frame = \
-            commons_enums.TimeFrames(tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config,
-                                                                               self.__class__)[
-                                         evaluator_constants.STRATEGIES_REQUIRED_TIME_FRAME][0]).value
+        self.evaluation_time_frame = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.evaluation_time_frame = commons_enums.TimeFrames(
+            self.UI.user_input(
+                evaluator_constants.STRATEGIES_REQUIRED_TIME_FRAME,
+                commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
+                [commons_enums.TimeFrames.ONE_HOUR.value],
+                inputs, options=[tf.value for tf in commons_enums.TimeFrames],
+                title="Analysed time frame: only the first one will be considered for DipAnalyserStrategyEvaluator."
+            )[0]
+        ).value
 
     async def matrix_callback(self,
                               matrix_id,

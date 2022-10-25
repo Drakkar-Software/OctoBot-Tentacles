@@ -23,6 +23,8 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.databases as databases
+import octobot_commons.constants as commons_constants
 import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -32,6 +34,7 @@ import octobot_backtesting.collectors as collectors
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
@@ -40,6 +43,8 @@ import tentacles.Services.Interfaces.web_interface.models.trading as trading_mod
 
 STOPPING_TIMEOUT = 30
 CURRENT_BOT_DATA = "current_bot_data"
+# data collector can be really slow, let it up to 2 hours to run
+DATA_COLLECTOR_TIMEOUT = 2 * commons_constants.HOURS_TO_SECONDS
 
 
 def get_full_candle_history_exchange_list():
@@ -81,24 +86,26 @@ def get_data_files_with_description():
 
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                                           start_timestamp=None, end_timestamp=None, enable_logs=False,
+                                           start_timestamp=None, end_timestamp=None, trading_type=None,
+                                           enable_logs=False,
                                            auto_stop=False, collector_start_callback=None, start_callback=None):
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=run_on_common_part_only,
-                              start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
                               use_current_bot_data=False, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
                               start_callback=start_callback)
 
 
 def start_backtesting_using_current_bot_data(data_source, exchange_id, source, reset_tentacle_config=False,
-                                             start_timestamp=None, end_timestamp=None, enable_logs=False,
-                                             auto_stop=False, collector_start_callback=None, start_callback=None):
+                                             start_timestamp=None, end_timestamp=None, trading_type=None,
+                                             enable_logs=False, auto_stop=False,
+                                             collector_start_callback=None, start_callback=None):
     use_current_bot_data = data_source == CURRENT_BOT_DATA
     files = None if use_current_bot_data else [data_source]
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=False,
-                              start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
                               use_current_bot_data=use_current_bot_data,
                               exchange_id=exchange_id, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
@@ -115,9 +122,24 @@ def stop_previous_backtesting():
     return True, "No backtesting to stop"
 
 
+def _parse_trading_type(trading_type):
+    if trading_type is None or trading_type == commons_constants.USE_CURRENT_PROFILE:
+        return commons_constants.USE_CURRENT_PROFILE, commons_constants.USE_CURRENT_PROFILE
+    if trading_type == trading_enums.ExchangeTypes.SPOT.value:
+        return commons_constants.CONFIG_EXCHANGE_SPOT, commons_constants.USE_CURRENT_PROFILE
+    if trading_type == trading_enums.FutureContractType.INVERSE_PERPETUAL.value:
+        return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.INVERSE_PERPETUAL
+    if trading_type == trading_enums.FutureContractType.LINEAR_PERPETUAL.value:
+        return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.LINEAR_PERPETUAL
+    if trading_type == trading_enums.ExchangeTypes.MARGIN.value:
+        return commons_constants.CONFIG_EXCHANGE_MARGIN, commons_constants.USE_CURRENT_PROFILE
+    raise RuntimeError(f"Unsupported trading type: {trading_type}")
+
+
 def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
-                       start_timestamp=None, end_timestamp=None, use_current_bot_data=False, exchange_id=None,
-                       enable_logs=False, auto_stop=False, collector_start_callback=None, start_callback=None):
+                       start_timestamp=None, end_timestamp=None, trading_type=None, use_current_bot_data=False,
+                       exchange_id=None, enable_logs=False, auto_stop=False,
+                       collector_start_callback=None, start_callback=None):
     tools = web_interface_root.WebInterface.tools
     if exchange_id is not None:
         trading_model.ensure_valid_exchange_id(exchange_id)
@@ -150,6 +172,9 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
             else:
                 tentacles_setup_config = interfaces_util.get_bot_api().get_edited_tentacles_config()
             config = interfaces_util.get_edited_config()
+            exchange_type, contract_type = _parse_trading_type(trading_type)
+            config[commons_constants.CONFIG_EXCHANGE_TYPE] = exchange_type
+            config[commons_constants.CONFIG_CONTRACT_TYPE] = contract_type
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             if is_optimizer_running and files is None:
                 files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
@@ -173,7 +198,8 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                     tools[constants.BOT_TOOLS_DATA_COLLECTOR], tools[constants.BOT_TOOLS_BACKTESTING],
                     config, tentacles_setup_config, files, run_on_common_part_only,
                     start_timestamp, end_timestamp, enable_logs, auto_stop, collector_start_callback, start_callback),
-                blocking=False)
+                blocking=False,
+                timeout=DATA_COLLECTOR_TIMEOUT)
             return True, "Backtesting started"
     except Exception as e:
         tools[constants.BOT_PREPARING_BACKTESTING] = False
@@ -184,6 +210,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
 async def _collect_initialize_and_run_independent_backtesting(
         data_collector_instance, independent_backtesting, config, tentacles_setup_config, files, run_on_common_part_only,
         start_timestamp, end_timestamp, enable_logs, auto_stop, collector_start_callback, start_callback):
+    logger = bot_logging.get_logger("StartIndependentBacktestingModel")
     if data_collector_instance is not None:
         try:
             if collector_start_callback:
@@ -192,6 +219,7 @@ async def _collect_initialize_and_run_independent_backtesting(
         except Exception as e:
             bot_logging.get_logger("DataCollectorModel").exception(
                 e, True, f"Error when collecting historical data: {e}")
+            return
         finally:
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
     if independent_backtesting is None:
@@ -208,8 +236,7 @@ async def _collect_initialize_and_run_independent_backtesting(
                 enable_logs=enable_logs,
                 stop_when_finished=auto_stop)
         except Exception as e:
-            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
-                e, True, f"Error when initializing backtesting: {e}")
+            logger.exception(e, True, f"Error when initializing backtesting: {e}")
         finally:
             # only unregister collector now that we can associate a backtesting
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = independent_backtesting
@@ -261,7 +288,9 @@ def get_latest_backtesting_run_id(trading_mode):
                                                                                            STOPPING_TIMEOUT))
         bot_id = octobot_api.get_independent_backtesting_bot_id(backtesting)
         return {
-            "id": interfaces_util.run_in_bot_async_executor(trading_mode.get_backtesting_id(bot_id))
+            "id": databases.RunDatabasesProvider.instance().get_run_databases_identifier(
+                bot_id
+            ).backtesting_id
         }
     return {}
 
@@ -303,13 +332,12 @@ def stop_data_collector():
 
 def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
-    exchange_name = trading_api.get_exchange_name(exchange_manager)
     return backtesting_api.exchange_bot_snapshot_data_collector_factory(
-        exchange_name,
+        trading_api.get_exchange_name(exchange_manager),
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         trading_api.get_trading_symbols(exchange_manager),
         exchange_id,
-        time_frames=trading_api.get_exchange_available_required_time_frames(exchange_name, exchange_id),
+        time_frames=trading_api.get_relevant_time_frames(exchange_manager),
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp)
 
@@ -321,7 +349,8 @@ def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp,
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
     try:
         collected_files = interfaces_util.run_in_bot_main_loop(
-            backtesting_api.initialize_and_run_data_collector(data_collector_instance)
+            backtesting_api.initialize_and_run_data_collector(data_collector_instance),
+            timeout=DATA_COLLECTOR_TIMEOUT
         )
         return collected_files
     finally:
@@ -340,8 +369,12 @@ def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None,
             time_frames = time_frames if isinstance(time_frames, list) else [time_frames]
             if not any(isinstance(time_frame, commons_enums.TimeFrames) for time_frame in time_frames):
                 time_frames = time_frame_manager.parse_time_frames(time_frames)
-        interfaces_util.run_in_bot_main_loop(
-            _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp))
+        first_symbol = commons_symbols.parse_symbol(symbols[0])
+        exchange_type = trading_enums.ExchangeTypes.SPOT if first_symbol.is_spot() \
+            else trading_enums.ExchangeTypes.FUTURE if first_symbol.is_future() \
+            else trading_enums.ExchangeTypes.UNKNOWN
+        _background_collect_exchange_historical_data(exchange, exchange_type, symbols, time_frames,
+                                                     start_timestamp, end_timestamp)
         return True, f"Historical data collection started."
     else:
         return False, f"Can't collect data for {symbols} on {exchange} (Historical data collector is already running)"
@@ -359,9 +392,11 @@ async def _start_collect_and_notify(data_collector_instance):
     await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
-async def _background_collect_exchange_historical_data(exchange, symbols, time_frames, start_timestamp, end_timestamp):
+def _background_collect_exchange_historical_data(exchange, exchange_type, symbols, time_frames,
+                                                 start_timestamp, end_timestamp):
     data_collector_instance = backtesting_api.exchange_historical_data_collector_factory(
         exchange,
+        exchange_type,
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
         [commons_symbols.parse_symbol(symbol) for symbol in symbols],
         time_frames=time_frames,

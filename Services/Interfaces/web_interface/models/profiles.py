@@ -19,8 +19,11 @@ import requests
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
-import octobot_commons.authentication as authentication
 import octobot_tentacles_manager.api as tentacles_manager_api
+
+
+ACTIVATION = "activation"
+VERSION = "version"
 
 
 def get_current_profile():
@@ -32,6 +35,7 @@ def duplicate_and_select_profile(profile_id):
     to_duplicate = config.profile_by_id[profile_id]
     new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name}_(copy)",
                                                              description=to_duplicate.description)
+    tentacles_manager_api.refresh_profile_tentacles_setup_config(new_profile.path)
     config.load_profiles()
     _select_and_save(config, new_profile.profile_id)
 
@@ -56,13 +60,17 @@ def get_profiles():
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id
 
 
-def get_profiles_activated_tentacles(profiles_list):
+def get_profiles_tentacles_details(profiles_list):
     tentacles_by_profile_id = {}
     for profile in profiles_list.values():
         try:
-            tentacles_by_profile_id[profile.profile_id] = tentacles_manager_api.get_activated_tentacles(
-                tentacles_manager_api.get_tentacles_setup_config(profile.get_tentacles_config_path())
+            tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(
+                profile.get_tentacles_config_path()
             )
+            tentacles_by_profile_id[profile.profile_id] = {
+                ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
+                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config)
+            }
         except Exception:
             # do not raise here to prevent avoid config display
             pass
@@ -105,8 +113,9 @@ def export_profile(profile_id, export_path) -> str:
 
 
 def import_profile(profile_path, name, replace_if_exists=False):
-    profiles.import_profile(profile_path, name=name, replace_if_exists=replace_if_exists)
+    profile = profiles.import_profile(profile_path, name=name, replace_if_exists=replace_if_exists)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
+    return profile
 
 
 def _download_profile(url, target_file):
@@ -122,10 +131,10 @@ def _download_profile(url, target_file):
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
     file_path = _download_profile(profile_url, name)
-    import_profile(file_path, name, replace_if_exists=False)
+    profile = import_profile(file_path, name, replace_if_exists=False)
     if os.path.isfile(file_path):
         os.remove(file_path)
-    return name
+    return profile
 
 
 def get_profile_name(profile_id) -> str:

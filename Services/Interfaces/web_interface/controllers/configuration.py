@@ -19,6 +19,7 @@ import os
 from datetime import datetime
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as commons_logging
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -50,7 +51,7 @@ def profile():
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
-                                 profiles_activated_tentacles=models.get_profiles_activated_tentacles(profiles),
+                                 profiles_tentacles_details=models.get_profiles_tentacles_details(profiles),
 
                                  config_exchanges=config_exchanges,
                                  config_trading=display_config[commons_constants.CONFIG_TRADING],
@@ -106,13 +107,13 @@ def profiles_management(action):
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
-        models.import_profile(file, name)
-        flask.flash(f"{name} profile successfully imported.", "success")
+        new_profile = models.import_profile(file, name)
+        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
     if action == "download":
         url = flask.request.form['inputProfileLink']
-        name = models.download_and_import_profile(url)
-        flask.flash(f"{name} profile successfully imported.", "success")
+        new_profile = name = models.download_and_import_profile(url)
+        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
         return flask.redirect(flask.url_for('profile'))
     if action == "export":
         profile_id = flask.request.args.get("profile_id")
@@ -219,17 +220,26 @@ def config_tentacle():
         action = flask.request.args.get("action")
         success = True
         response = ""
+        reload_config = False
         if action == "update":
             request_data = flask.request.get_json()
             success, response = models.update_tentacle_config(tentacle_name, request_data)
+            reload_config = True
         elif action == "factory_reset":
             success, response = models.reset_config_to_default(tentacle_name)
+            reload_config = True
         if flask.request.args.get("reload"):
             try:
                 models.reload_scripts()
             except Exception as e:
                 success = False
                 response = str(e)
+        if reload_config and success:
+            try:
+                models.reload_tentacle_config(tentacle_name)
+            except Exception as e:
+                success = False
+                response = f"Error when reloading configuration {e}"
         if success:
             return util.get_rest_reply(flask.jsonify(response))
         else:
@@ -270,6 +280,18 @@ def config_tentacle():
             return flask.render_template('config_tentacle.html')
 
 
+@web_interface.server_instance.route('/config_tentacle_edit_details/<tentacle>')
+@login.login_required_when_activated
+def config_tentacle_edit_details(tentacle):
+    try:
+        return util.get_rest_reply(
+            models.get_tentacle_config_and_edit_display(tentacle)
+        )
+    except Exception as e:
+        commons_logging.get_logger("configuration").exception(e)
+        return util.get_rest_reply(str(e), 500)
+
+
 @web_interface.server_instance.route('/config_tentacles', methods=['POST'])
 @login.login_required_when_activated
 def config_tentacles():
@@ -287,7 +309,7 @@ def config_tentacles():
             response = ", ".join(responses)
         if success and flask.request.args.get("reload"):
             try:
-                models.reload_scripts()
+                models.reload_activated_tentacles_config()
             except Exception as e:
                 success = False
                 response = str(e)

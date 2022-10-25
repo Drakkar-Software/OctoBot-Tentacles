@@ -35,7 +35,11 @@
         <td>{{ position.exchange_manager.exchange.name if position.exchange_manager else '' }}</td>
         <td>{{ sim_or_real }}</td>
         <td class="text-center py-1">
-            <button type="button" class="btn btn-sm btn-outline-danger waves-effect"><i class="fas fa-ban"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger waves-effect" data-action="close_position"
+                    data-position_symbol="{{ position.symbol }}" data-position_side="{{ position.side.value }}"
+                    data-update-url="{{ url_for('api.positions', action='close_position') }}">
+                <i class="fas fa-ban"></i>
+            </button>
         </td>
     </tr>
     {% endif %}

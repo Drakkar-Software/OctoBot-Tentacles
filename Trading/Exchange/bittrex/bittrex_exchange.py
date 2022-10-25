@@ -13,10 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import ccxt
 
 import octobot_trading.exchanges as exchanges
-import octobot_trading.errors
 
 
 class Bittrex(exchanges.SpotCCXTExchange):
@@ -33,6 +31,9 @@ class Bittrex(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
     async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:
             self.logger.debug(f"Trying to get_order_book with limit not {self.SUPPORTED_ORDER_BOOK_LIMITS} : ({limit})")
@@ -41,15 +42,10 @@ class Bittrex(exchanges.SpotCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv limit is not working as expected, limit is doing [:-limit] but we want [-limit:]
-        try:
-            params = kwargs.pop("params", {})
-            candles = await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                              **kwargs)
-            if limit:
-                return candles[-limit:]
-            return candles
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        candles = await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        if limit:
+            return candles[-limit:]
+        return candles
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
         """
@@ -58,9 +54,6 @@ class Bittrex(exchanges.SpotCCXTExchange):
         Default ccxt call is using publicGetMarketsMarketSymbolTicker
         But the mandatory data is available by calling publicGetMarketsMarketSymbolSummary
         """
-        try:
-            return await self.connector.client.fetch_ticker(symbol, params={
-                'method': 'publicGetMarketsMarketSymbolSummary'
-            })
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        if "method" not in kwargs:
+            kwargs["method"] = "publicGetMarketsMarketSymbolSummary"
+        return await super().get_price_ticker(symbol=symbol, **kwargs)

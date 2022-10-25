@@ -13,14 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import copy
-import math
 
-import ccxt
-
-import octobot_trading.errors
-import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
 class GateIO(exchanges.SpotCCXTExchange):
@@ -38,38 +33,14 @@ class GateIO(exchanges.SpotCCXTExchange):
         return await super().get_open_orders(symbol=symbol,
                                              since=since,
                                              limit=min(self.ORDERS_LIMIT, limit) 
-                                                    if limit is not None else None,
+                                                   if limit is not None else None,
                                              **kwargs)
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        try:
-            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
-            if with_fixer:
-                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
-            return market_status
-        except ccxt.NotSupported:
-            raise octobot_trading.errors.NotSupported
-        except Exception as e:
-            self.logger.error(f"Fail to get market status of {symbol}: {e}")
-        return {}
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
+                                            remove_price_limits=True)
 
-    def _fix_market_status(self, market_status):
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = self._get_digits_count(
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value])
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = self._get_digits_count(
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value])
-
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
-        return market_status
-
-    def _get_digits_count(self, value):
-        return round(abs(math.log(value, 10)))
+    async def get_price_ticker(self, symbol: str, **kwargs: dict):
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return ticker

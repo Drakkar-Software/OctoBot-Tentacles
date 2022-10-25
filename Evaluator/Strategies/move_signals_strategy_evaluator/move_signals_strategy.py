@@ -45,6 +45,13 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
         self.medium_period_eval = None
         self.long_period_eval = None
 
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        pass
+
     async def matrix_callback(self,
                               matrix_id,
                               evaluator_name,

@@ -16,15 +16,11 @@
 import dataclasses
 import decimal
 
-import async_channel.constants as channel_constants
-import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
-import octobot_services.channel as services_channels
+import octobot_commons.enums as commons_enums
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
-import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
-import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
@@ -46,46 +42,122 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     USER_COMMAND_TRADING_PAIR = "trading pair"
     USER_COMMAND_PAUSE_TIME = "pause length in seconds"
 
-    async def create_producers(self) -> list:
-        mode_producer = GridTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
-
-    async def create_consumers(self) -> list:
-        # trading mode consumer
-        mode_consumer = GridTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
-
-        # order consumer: filter by symbol not be triggered only on this symbol's orders
-        order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
-                                                          self.exchange_manager.id).new_consumer(
-            self._order_notification_callback,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
+                        self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
+                        item_title="Pair configuration",
+                        other_schema_values={"minItems": 1, "uniqueItems": True},
+                        title="Configuration for each traded pairs.")
+        self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
+                        other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                        parent_input_name=self.CONFIG_PAIR_SETTINGS,
+                        title="Name of the traded pair."),
+        self.UI.user_input(
+            self.CONFIG_FLAT_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Spread: price difference between the closest buy and sell orders in the quote currency "
+                  "(USDT for BTC/USDT).",
         )
-        try:
-            user_commands_consumer = \
-                await channels.get_chan(services_channels.UserCommandsChannel.get_name()).new_consumer(
-                    self._user_commands_callback,
-                    {"bot_id": self.bot_id, "subject": self.get_name()}
-                )
-        except KeyError:
-            return [mode_consumer, order_consumer]
-        return [mode_consumer, order_consumer, user_commands_consumer]
+        self.UI.user_input(
+            self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0, other_schema_values={"exclusiveMinimum": True},
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Increment: price difference between two orders of the same side in the base currency (USDT for "
+                  "BTC/USDT). WARNING: this should to be lower than the Spread value: profitability is close to "
+                  "Spread-Increment.",
+        )
+        self.UI.user_input(
+            self.CONFIG_BUY_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Buy orders count: number of initial buy orders to create. Make sure to have enough funds "
+                  "to create that many orders.",
+        )
+        self.UI.user_input(
+            self.CONFIG_SELL_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Sell orders count: Number of initial sell orders to create. Make sure to have enough funds "
+                  "to create that many orders.",
+        )
+        self.UI.user_input(
+            self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT "
+                  "for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency "
+                  "simultaneously in multiple traded pairs.",
+        )
+        self.UI.user_input(
+            self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: "
+                  "BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same "
+                  "currency simultaneously in multiple traded pairs.",
+        )
+        self.UI.user_input(
+            self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Starting price: price to compute initial orders from. Set 0 to use current "
+                  "exchange price during initial grid orders creation.",
+        )
+        self.UI.user_input(
+            self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all "
+                  "available quote funds in portfolio (or total sell funds if set) to create orders with constant "
+                  "total order cost (price * volume).",
+        )
+        self.UI.user_input(
+            self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
+                  "is filled. This can generate extra profits on quick market moves.",
+        )
+        self.UI.user_input(
+            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
+                  "size mirror orders. When unchecked, a part of the total volume will be reduced to take "
+                  "exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
+        )
+        self.UI.user_input(
+            self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for "
+                  "mirror orders. WARNING: incompatible with profits reinvesting.",
+        )
+        self.UI.user_input(
+            self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Use existing orders only: when checked, new orders will only be created upon pre-existing orders "
+                  "fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. "
+                  "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
+        )
 
-    async def _user_commands_callback(self, bot_id, subject, action, data) -> None:
-        if data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
+    def get_mode_producer_classes(self) -> list:
+        return [GridTradingModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [GridTradingModeConsumer]
+
+    async def user_commands_callback(self, bot_id, subject, action, data) -> None:
+        await super().user_commands_callback(bot_id, subject, action, data)
+        if data and data.get(GridTradingMode.USER_COMMAND_TRADING_PAIR, "").upper() == self.symbol:
             self.logger.info(f"Received {action} command for {self.symbol}.")
             if action == GridTradingMode.USER_COMMAND_CREATE_ORDERS:
                 await self.producers[0].trigger_staggered_orders_creation()
             elif action == GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION:
-                await self.consumers[0].cancel_orders_creation()
+                await self.get_trading_mode_consumers()[0].cancel_orders_creation()
             elif action == GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING:
                 delay = float(data.get(GridTradingMode.USER_COMMAND_PAUSE_TIME, 0))
                 self.producers[0].start_mirroring_pause(delay)
@@ -166,7 +238,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
-        self.trading_mode.load_config()
+        await self.trading_mode.reload_config()
         self._load_symbol_trading_config()
         self.read_config()
         if self.symbol_trading_config:

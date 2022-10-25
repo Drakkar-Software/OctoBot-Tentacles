@@ -15,8 +15,9 @@
 #  License along with this library.
 import decimal
 
-import octobot_commons.constants as commons_constants
 import async_channel.constants as channel_constants
+import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_evaluators.api as evaluators_api
@@ -35,8 +36,53 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.load_config()
-        self.sell_orders_per_buy = self.trading_config.get("sell_orders_count", 3)
+        self.sell_orders_per_buy = 3
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        """
+        Called right before starting the tentacle, should define all the tentacle's user inputs unless
+        those are defined somewhere else.
+        """
+        self.should_emit_trading_signals_user_input(inputs)
+        self.sell_orders_per_buy = self.UI.user_input(
+            "sell_orders_count", commons_enums.UserInputTypes.INT, 3, inputs, min_val=1,
+            title="Number of sell orders to create after each buy."
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeProducer.IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Ignore exchange fees when creating sell orders. When enabled, 100% of the bought assets will be "
+                  "sold, otherwise a small part will be kept to cover exchange fees."
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
+            min_val=0, max_val=1,
+            title="Price multiplier for the top sell order in a light price weight signal.",
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.07, inputs,
+            min_val=0, max_val=1,
+            title="Price multiplier for the top sell order in a medium price weight signal.",
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.1, inputs,
+            min_val=0, max_val=1,
+            title="Price multiplier for the top sell order in a heavy price weight signal.",
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.5, inputs,
+            min_val=1,
+            title="Volume multiplier for the top sell order in a light volume weight signal.",
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.MEDIUM_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
+            min_val=1,
+            title="Volume multiplier for the top sell order in a medium volume weight signal.",
+        )
+        self.UI.user_input(
+            DipAnalyserTradingModeConsumer.HEAVY_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
+            min_val=1,
+            title="Volume multiplier for the top sell order in a heavy volume weight signal.",
+        )
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -52,22 +98,14 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
                "N/A"
 
-    async def create_producers(self) -> list:
-        mode_producer = DipAnalyserTradingModeProducer(
-            exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id),
-            self.config, self, self.exchange_manager)
-        await mode_producer.run()
-        return [mode_producer]
+    def get_mode_producer_classes(self) -> list:
+        return [DipAnalyserTradingModeProducer]
+
+    def get_mode_consumer_classes(self) -> list:
+        return [DipAnalyserTradingModeConsumer]
 
     async def create_consumers(self) -> list:
-        # trading mode consumer
-        mode_consumer = DipAnalyserTradingModeConsumer(self)
-        await exchanges_channel.get_chan(trading_constants.MODE_CHANNEL, self.exchange_manager.id).new_consumer(
-            consumer_instance=mode_consumer,
-            trading_mode_name=self.get_name(),
-            cryptocurrency=self.cryptocurrency if self.cryptocurrency else channel_constants.CHANNEL_WILDCARD,
-            symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD,
-            time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
+        consumers = await super().create_consumers()
 
         # order consumer: filter by symbol not be triggered only on this symbol's orders
         order_consumer = await exchanges_channel.get_chan(trading_personal_data.OrdersChannel.get_name(),
@@ -75,7 +113,7 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
             self._order_notification_callback,
             symbol=self.symbol if self.symbol else channel_constants.CHANNEL_WILDCARD
         )
-        return [mode_consumer, order_consumer]
+        return consumers + [order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency,
                                            symbol, order, is_new, is_from_bot):
@@ -120,6 +158,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         super().__init__(trading_mode)
         self.sell_targets_by_order_id = {}
 
+    def on_reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
+        self.PRICE_WEIGH_TO_PRICE_PERCENT = {}
         self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
             decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
         self.PRICE_WEIGH_TO_PRICE_PERCENT[2] = \
@@ -154,16 +198,22 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
-            price = price
-
+            max_buy_size = market_quantity
+            if self.exchange_manager.is_future:
+                max_buy_size, is_increasing_position = trading_personal_data.get_futures_max_order_size(
+                    self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
+                    price, False, current_symbol_holding, market_quantity
+                )
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, market_quantity, base)
+            orders_should_have_been_created = False
+            quantity = await self._get_buy_quantity_from_weight(volume_weight, max_buy_size, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     limit_price,
                     symbol_market):
+                orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.BUY_LIMIT,
@@ -172,14 +222,18 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=order_quantity,
                     price=order_price
                 )
-                created_order = await self.trading_mode.create_order(current_order)
-                created_orders.append(created_order)
-                self._register_buy_order(created_order.order_id, price_weight)
+                if created_order := await self.trading_mode.create_order(current_order):
+                    created_orders.append(created_order)
+                    self._register_buy_order(created_order.order_id, price_weight)
             if created_orders:
                 return created_orders
+            if orders_should_have_been_created:
+                raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
-        except (trading_errors.MissingFunds, trading_errors.MissingMinimalExchangeTradeVolume):
+        except (trading_errors.MissingFunds,
+                trading_errors.MissingMinimalExchangeTradeVolume,
+                trading_errors.OrderCreationError):
             raise
         except Exception as e:
             self.logger.error(f"Failed to create order : {e}. Order: "
@@ -193,10 +247,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             created_orders = []
+            orders_should_have_been_created = False
             sell_max_quantity = decimal.Decimal(min(decimal.Decimal(f"{current_symbol_holding}"), quantity))
             to_create_orders = self._generate_sell_orders(sell_orders_count, sell_max_quantity, sell_weight,
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
+                orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.SELL_LIMIT,
@@ -210,9 +266,13 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 created_orders.append(created_order)
             if created_orders:
                 return created_orders
+            if orders_should_have_been_created:
+                raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
-        except (trading_errors.MissingFunds, trading_errors.MissingMinimalExchangeTradeVolume):
+        except (trading_errors.MissingFunds,
+                trading_errors.MissingMinimalExchangeTradeVolume,
+                trading_errors.OrderCreationError):
             raise
         except Exception as e:
             self.logger.error(f"Failed to create order : {e} ({e.__class__.__name__}). Order: "
@@ -373,12 +433,18 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         self.last_buy_candle = None
         self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
+        self.ignore_exchange_fees = False
 
+    def on_reload_config(self):
+        """
+        Called at constructor and after the associated trading mode's reload_config.
+        Implement if necessary
+        """
         self.ignore_exchange_fees = self.trading_mode.trading_config.get(self.IGNORE_EXCHANGE_FEES, False)
 
     async def stop(self):
         if self.trading_mode is not None:
-            self.trading_mode.consumers[0].flush()
+            self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):

@@ -31,22 +31,18 @@ from tentacles.Services.Interfaces.web_interface.flask_util.file_services import
 
 from tentacles.Services.Interfaces.web_interface.flask_util import template_filters
 from tentacles.Services.Interfaces.web_interface.flask_util.template_filters import (
-    is_dict,
-    is_list,
-    is_bool,
+    register_template_filters,
 )
 
-from tentacles.Services.Interfaces.web_interface.flask_util import jsonifier
-from tentacles.Services.Interfaces.web_interface.flask_util.jsonifier import (
-    Jsonifier,
+from tentacles.Services.Interfaces.web_interface.flask_util import json_provider
+from tentacles.Services.Interfaces.web_interface.flask_util.json_provider import (
+    FloatDecimalJSONProvider,
 )
 
 __all__ = [
     "init_content_types",
     "context_processor_register",
     "send_and_remove_file",
-    "is_dict",
-    "is_list",
-    "is_bool",
-    "Jsonifier",
+    "register_template_filters",
+    "FloatDecimalJSONProvider",
 ]

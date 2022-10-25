@@ -35,6 +35,9 @@ class Kraken(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
     async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, **kwargs):
         if limit is not None and limit != self.RECENT_TRADE_FIXED_LIMIT:
             self.logger.debug(f"Trying to get_recent_trades with limit != {self.RECENT_TRADE_FIXED_LIMIT} : ({limit})")
@@ -50,12 +53,7 @@ class Kraken(exchanges.SpotCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv limit is not working as expected, limit is doing [:-limit] but we want [-limit:]
-        try:
-            params = kwargs.pop("params", {})
-            candles = await self.connector.client.fetch_ohlcv(symbol, time_frame.value, limit=limit, params=params,
-                                                              **kwargs)
-            if limit:
-                return candles[-limit:]
-            return candles
-        except Exception as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_symbol_prices {e}")
+        candles = await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        if limit:
+            return candles[-limit:]
+        return candles

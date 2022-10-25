@@ -78,6 +78,15 @@ function handle_cancel_buttons() {
     add_cancel_individual_orders_button();
 }
 
+function handle_close_buttons() {
+    $("button[data-action=close_position]").each(function () {
+        $(this).click(function () {
+            close_after_confirm($('#ClosePositionModal'), $(this).data("position_symbol"),
+                $(this).data("position_side"), $(this).data("update-url"));
+        });
+    });
+}
+
 function cancel_after_confirm(modalElement, data, update_url, disable_cancel_buttons=false){
     modalElement.modal("toggle");
     const confirmButton = modalElement.find(".btn-danger");
@@ -90,6 +99,30 @@ function cancel_after_confirm(modalElement, data, update_url, disable_cancel_but
     confirmButton.click(function () {
         handle_confirm(modalElement, confirmButton, data, update_url, disable_cancel_buttons);
     });
+}
+
+function close_after_confirm(modalElement, symbol, side, update_url){
+    modalElement.modal("toggle");
+    const confirmButton = modalElement.find(".btn-danger");
+    confirmButton.off("click");
+    const data = {
+        symbol: symbol,
+        side: side,
+    }
+    modalElement.keypress(function(e) {
+        if(e.which === 13) {
+            handle_close_confirm(modalElement, confirmButton, data, update_url);
+        }
+    });
+    confirmButton.click(function () {
+        handle_close_confirm(modalElement, confirmButton, data, update_url);
+    });
+}
+
+function handle_close_confirm(modalElement, confirmButton, data, update_url){
+    send_and_interpret_bot_update(data, update_url, null, orders_request_success_callback, position_request_failure_callback);
+    modalElement.unbind("keypress");
+    modalElement.modal("hide");
 }
 
 function handle_confirm(modalElement, confirmButton, data, update_url, disable_cancel_buttons){
@@ -132,6 +165,10 @@ function orders_request_success_callback(updated_data, update_url, dom_root_elem
 function orders_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
     create_alert("error", msg.responseText, "");
     reload_orders();
+}
+
+function position_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
+    create_alert("error", msg.responseText, "");
 }
 
 function reload_orders(){
@@ -184,5 +221,6 @@ $(document).ready(function() {
         "paging":   false,
     });
     handle_cancel_buttons();
+    handle_close_buttons();
     register_notification_callback(ordersNotificationCallback);
 });

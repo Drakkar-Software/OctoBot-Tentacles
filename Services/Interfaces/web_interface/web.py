@@ -31,6 +31,7 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
 import tentacles.Services.Interfaces.web_interface.websockets as websockets
 import tentacles.Services.Interfaces.web_interface.plugins as web_interface_plugins
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Services_bases as Service_bases
 
@@ -149,6 +150,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             Compress(server_instance)
 
         if not WebInterface.IS_FLASK_APP_CONFIGURED:
+            flask_util.register_template_filters()
             # register session secret key
             server_instance.secret_key = self.session_secret_key
             self._handle_login(server_instance)
@@ -208,6 +210,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             return True
         except Exception as e:
             self.logger.exception(e, False, f"Fail to start web interface : {e}")
+        finally:
+            self.logger.debug("Web interface thread stopped")
         return False
 
     def _open_web_interface_on_browser(self):

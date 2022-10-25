@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "community" %}
 
-{% import "components/community/device_selector.html" as device_selector %}
+{% import "components/community/bot_selector.html" as bot_selector %}
 {% import "components/community/tentacles_packages.html" as tentacles_packages_display %}
 {% import "components/community/bots_stats.html" as bots_stats %}
 {% import 'macros/flash_messages.html' as m_flash_messages %}
@@ -21,26 +21,26 @@
                                                      OCTOBOT_DONATION_URL, default_tentacles_package_image, True, True, can_logout) }}
 {% endif %}
 
-<a class="btn btn-outline-primary waves-effect float-right" href="#" id="display-device-select-modal"
-   data-toggle="modal" data-target="#device-select-modal">
-   Select device
+<a class="btn btn-outline-primary waves-effect float-right" href="#" id="display-bot-select-modal"
+   data-toggle="modal" data-target="#bot-select-modal">
+   Select bot
 </a>
-<div class="modal" id="device-select-modal" tabindex="-1" role="dialog"
-     aria-labelledby="#display-device-select-modal" aria-hidden="true">
+<div class="modal" id="bot-select-modal" tabindex="-1" role="dialog"
+     aria-labelledby="#display-bot-select-modal" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
     <div class="modal-content modal-text bg-dark text-light">
       <div class="modal-header primary-text">
-        <h2 class="modal-title">Device selection</h2>
-          {% if selected_device["id"] %}
+        <h2 class="modal-title">Bot selection</h2>
+          {% if selected_user_bot["id"] %}
             <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           {% endif %}
       </div>
       <div class="modal-body">
-        {{ device_selector.device_selector(all_devices, selected_device) }}
+        {{ bot_selector.bot_selector(all_user_bots, selected_user_bot) }}
       </div>
-      {% if selected_device["id"] %}
+      {% if selected_user_bot["id"] %}
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
       </div>

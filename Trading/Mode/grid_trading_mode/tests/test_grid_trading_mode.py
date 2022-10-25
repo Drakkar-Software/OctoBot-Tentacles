@@ -32,6 +32,7 @@ import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
+import tests.test_utils.test_exchanges as test_exchanges
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -60,7 +61,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
             commons_constants.CONFIG_SIMULATOR_FEES_TAKER] = fees
         config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES][
             commons_constants.CONFIG_SIMULATOR_FEES_MAKER] = fees
-    exchange_manager = exchanges.ExchangeManager(config, "binance")
+    exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
     exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
 
     # use backtesting not to spam exchanges apis
@@ -93,7 +94,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
     producer.buy_orders_count = 25
     producer.sell_orders_count = 25
 
-    return producer, mode.consumers[0], exchange_manager
+    return producer, mode.get_trading_mode_consumers()[0], exchange_manager
 
 
 async def _stop(exchange_manager):

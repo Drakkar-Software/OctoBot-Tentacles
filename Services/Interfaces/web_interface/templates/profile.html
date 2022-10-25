@@ -106,12 +106,23 @@
         {{ m_flash_messages.flash_messages() }}
         <div class="tab-content" id="super-container">
             {% for profile_id, profile in profiles.items() %}
-            {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_activated_tentacles[profile_id], strategy_config, evaluator_config,
+            {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_tentacles_details[profile_id], strategy_config, evaluator_config,
                                                get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
             {% endfor %}
 
             <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
+                {% if profiles_tentacles_details[current_profile.profile_id]["version"] != CURRENT_BOT_VERSION %}
+                    <div class="alert alert-warning" role="alert">
+                        <h4>Profile version warning</h4>
+                        <p>
+                            Your current profile ({{ current_profile.name }}) has been imported from an OctoBot on version
+                            {{ profiles_tentacles_details[current_profile.profile_id]["version"] }}.
+                            Please make sure that this profile is compatible with OctoBot {{ CURRENT_BOT_VERSION }}
+                            or download a newer version.
+                        </p>
+                    </div>
+                {% endif %}
                 {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
 
                 {% set trading_modes = strategy_config["trading-modes"].items() %}
@@ -301,6 +312,10 @@
                             config_symbols[crypto_currency]['pairs'])}}
                             {% endfor %}
                         </div>
+                    </div>
+                    <div class="card-footer">
+                        <i class="fab fa-octopus-deploy"></i> Pro tip: a pair you want to trade is not in the
+                        selector and your exchange is supporting it ? Just type it in and press enter.
                     </div>
                 </div>
             </div>

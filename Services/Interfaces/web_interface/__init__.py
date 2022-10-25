@@ -26,6 +26,7 @@ import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as bot_logging
 
 server_instance = flask.Flask(__name__)
+server_instance.config['SEND_FILE_MAX_AGE_DEFAULT'] = 604800
 cache = Cache(config={"CACHE_TYPE": "SimpleCache"})
 
 
@@ -54,7 +55,7 @@ import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 # Override system configuration content types
 flask_util.init_content_types()
-server_instance.json_encoder = flask_util.Jsonifier
+server_instance.json = flask_util.FloatDecimalJSONProvider(server_instance)
 
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface

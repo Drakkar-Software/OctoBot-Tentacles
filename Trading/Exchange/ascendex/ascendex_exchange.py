@@ -13,16 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import copy
-import math
 import typing
 import decimal
 
-import ccxt
-
 import octobot_commons.enums
 import octobot_trading.enums as trading_enums
-import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 
 
@@ -54,29 +49,16 @@ class AscendEx(exchanges.SpotCCXTExchange):
         return trading_enums.AccountTypes[account.lower()]
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        try:
-            # on AscendEx, precision is a decimal instead of a number of digits
-            market_status = self._fix_market_status(copy.deepcopy(self.connector.client.market(symbol)))
-            if with_fixer:
-                market_status = exchanges.ExchangeMarketStatusFixer(market_status, price_example).market_status
-            return market_status
-        except ccxt.NotSupported:
-            raise octobot_trading.errors.NotSupported
-        except Exception as e:
-            self.logger.error(f"Fail to get market status of {symbol}: {e}")
-            return {}
+        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        try:
-            ticker = await self.connector.client.fetch_ticker(symbol, params=kwargs)
-            ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-            return ticker
-        except ccxt.BaseError as e:
-            raise octobot_trading.errors.FailedRequest(f"Failed to get_price_ticker {e}")
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return ticker
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On AscendEx, account recent trades is available under fetch_closed_orders
-        return await self.connector.client.fetch_closed_orders(symbol=symbol, since=since, limit=limit, params=kwargs)
+        return await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
     async def get_symbol_prices(self,
                                 symbol: str,
@@ -88,21 +70,6 @@ class AscendEx(exchanges.SpotCCXTExchange):
             options = self.connector.client.safe_value(self.connector.client.options, 'fetchOHLCV', {})
             limit = self.connector.client.safe_integer(options, 'limit', 500)
         return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
-
-
-    def _fix_market_status(self, market_status):
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = self._get_digits_count(
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value])
-        market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = self._get_digits_count(
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value])
-        return market_status
-
-    def _get_digits_count(self, value):
-        return round(abs(math.log(value, 10)))
 
     async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
                                      side: trading_enums.TradeOrderSide = None,
