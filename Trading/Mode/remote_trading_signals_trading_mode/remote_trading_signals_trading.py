@@ -28,6 +28,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as personal_data
 import octobot_trading.modes.script_keywords as script_keywords
+from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc
 
 
 class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
@@ -51,6 +52,12 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
             common_enums.UserInputTypes.FLOAT, 100, inputs,
             min_val=0, max_val=100,
             title="Maximum volume per buy order in % of quote symbol holdings (USDT for BTC/USDT).",
+        )
+        self.UI.user_input(
+            RemoteTradingSignalsModeConsumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY_CONFIG_KEY,
+            common_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Round to minimal size orders if missing funds according to signal. "
+                  "Used when copy signals require a volume that doesn't meet the minimal exchange order size."
         )
 
     @classmethod
@@ -125,11 +132,20 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
 
 class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer):
     MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY = "max_volume"
+    ROUND_TO_MINIMAL_SIZE_IF_NECESSARY_CONFIG_KEY = "round_to_minimal_size_if_necessary"
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
         self.MAX_VOLUME_PER_BUY_ORDER = \
             decimal.Decimal(f"{self.trading_mode.trading_config.get(self.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY, 100)}")
+        self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = \
+            self.trading_mode.trading_config.get(self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY_CONFIG_KEY)
+
+    async def init_user_inputs(self, should_clear_inputs):
+        self.MAX_VOLUME_PER_BUY_ORDER = \
+            decimal.Decimal(f"{self.trading_mode.trading_config.get(self.MAX_VOLUME_PER_BUY_ORDER_CONFIG_KEY, 100)}")
+        self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = \
+            self.trading_mode.trading_config.get(self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY_CONFIG_KEY)
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state,
                                 data):
@@ -178,7 +194,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
             edited_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value]
             edited_stop_price = order_description[trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value]
-            edited_quantity, _ = await self._get_quantity_from_signal_percent(
+            edited_quantity, _, _ = await self._get_quantity_from_signal_percent(
                 order_description, order.side, symbol, order.reduce_only, True
             )
             await self.exchange_manager.trader.edit_order(
@@ -204,6 +220,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                                                    timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT,
                                                    portfolio_type=portfolio_type)
         if self.exchange_manager.is_future:
+            max_order_size, _ = personal_data.get_futures_max_order_size(
+                self.exchange_manager, symbol, side, current_price, reduce_only,
+                current_symbol_holding, market_quantity
+            )
             position_percent = order_description[
                 trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value
                 if update_amount else trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value
@@ -218,15 +238,11 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                         ).size
                     target_size = open_position_size_val * quantity / trading_constants.ONE_HUNDRED
                     order_size = abs(target_size - open_position_size_val)
-                    return order_size, current_price
+                    return order_size, current_price, max_order_size
                 raise errors.InvalidArgumentError(f"Unhandled position based quantity type: {position_percent}")
-            max_order_size, _ = personal_data.get_futures_max_order_size(
-                self.exchange_manager, symbol, side, current_price, reduce_only,
-                current_symbol_holding, market_quantity
-            )
         else:
             max_order_size = market_quantity if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
-        return max_order_size * quantity / trading_constants.ONE_HUNDRED, current_price
+        return max_order_size * quantity / trading_constants.ONE_HUNDRED, current_price, max_order_size
 
     async def _bundle_order(self, order_description, to_create_orders, ignored_orders, bundled_with, fees_currency_side,
                             created_groups, symbol):
@@ -280,12 +296,28 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             group = created_groups[group_id]
         side = trading_enums.TradeOrderSide(order_description[trading_enums.TradingSignalOrdersAttrs.SIDE.value])
         reduce_only = order_description[trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value]
-        quantity, current_price = await self._get_quantity_from_signal_percent(
+        quantity, current_price, max_order_size = await self._get_quantity_from_signal_percent(
             order_description, side, symbol, reduce_only, False
         )
         quantity = target_quantity or quantity
         symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
         adapted_quantity = personal_data.decimal_adapt_quantity(symbol_market, quantity)
+        if adapted_quantity == trading_constants.ZERO:
+            if self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY:
+                adapted_max_size = personal_data.decimal_adapt_quantity(symbol_market, max_order_size)
+                if adapted_max_size >= trading_constants.ZERO:
+                    try:
+                        adapted_quantity = personal_data.get_minimal_order_amount(symbol_market)
+                        self.logger.info(f"Minimal order amount reached, rounding to {adapted_quantity}")
+                    except errors.NotSupported as e:
+                        self.logger.warning(f"Impossible to round order to minimal order size: {e}.")
+                else:
+                    self.logger.warning(f"Not enough funds to create minimal size order: current maximum order "
+                                        f"size={max_order_size}. Add funds or increase leverage to be able to trade.")
+            else:
+                self.logger.info("Not enough funds to create order based on signal target amount. "
+                                 "Enable minimal size rounding to still trade in this situation. "
+                                 "Add funds or increase leverage to be able to trade in this setup.")
         price = order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] \
             or order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value]
         adapted_price = personal_data.decimal_adapt_price(symbol_market, decimal.Decimal(f"{price}"))

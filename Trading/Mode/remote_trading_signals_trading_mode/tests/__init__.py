@@ -41,7 +41,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 
 
 @pytest_asyncio.fixture
-async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/USDT"):
+async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/USDT:USDT"):
     tentacles_manager_api.reload_tentacle_info()
     exchange_manager = None
     signal_channel = None
@@ -114,7 +114,7 @@ def mocked_sell_limit_signal():
         SIGNAL_TOPIC,
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
@@ -150,7 +150,7 @@ def mocked_buy_limit_signal():
         SIGNAL_TOPIC,
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.BUY.value,
@@ -184,7 +184,7 @@ def mocked_bundle_stop_loss_in_sell_limit_signal(mocked_sell_limit_signal):
     mocked_sell_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
@@ -220,7 +220,7 @@ def mocked_bundle_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_sig
     mocked_sell_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
@@ -260,7 +260,7 @@ def mocked_buy_market_signal():
         SIGNAL_TOPIC,
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.BUY.value,

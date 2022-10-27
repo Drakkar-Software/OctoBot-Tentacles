@@ -145,7 +145,7 @@ async def test_handle_signal_orders_reduce_quantity_create_order(local_trader, m
 async def test_handle_signal_orders_reduce_quantity_edit_order(local_trader, mocked_buy_limit_signal):
     _, consumer, trader = local_trader
     symbol = mocked_buy_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.SYMBOL.value]
-    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT", 1000)
+    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT:USDT", 1000)
     edit_signal = commons_signals.Signal(
         "moonmoon",
         {
@@ -194,13 +194,13 @@ async def test_handle_signal_orders_reduce_quantity_edit_order(local_trader, moc
 async def test_send_alert_notification(local_trader):
     _, consumer, _ = local_trader
     with mock.patch.object(services_api, "send_notification", mock.AsyncMock()) as send_notification_mock:
-        await consumer._send_alert_notification("BTC/USDT", 42, 62, 78)
+        await consumer._send_alert_notification("BTC/USDT:USDT", 42, 62, 78)
         send_notification_mock.assert_called_once()
         notification = send_notification_mock.mock_calls[0].args[0]
         assert all(str(counter) in notification.text for counter in (42, 62, 78))
 
         send_notification_mock.reset_mock()
-        await consumer._send_alert_notification("BTC/USDT", 0, 0, 99)
+        await consumer._send_alert_notification("BTC/USDT:USDT", 0, 0, 99)
         send_notification_mock.assert_called_once()
         notification = send_notification_mock.mock_calls[0].args[0]
         assert "99" in notification.text
@@ -219,7 +219,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
             trading_enums.TradingSignalCommonsAttrs.ACTION.value:
                 trading_enums.TradingSignalOrdersActions.ADD_TO_GROUP.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.BUY_LIMIT.value,
@@ -246,7 +246,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
                 {
                     trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.EDIT.value,
                     trading_enums.TradingSignalOrdersAttrs.SIDE.value: None,
-                    trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+                    trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
                     trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
                     trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
                     trading_enums.TradingSignalOrdersAttrs.TYPE.value: None,
@@ -278,7 +278,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CANCEL.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.TYPE.value: None,
@@ -308,7 +308,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
         {
             trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
             trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
-            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT",
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
             trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
             trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.BUY_LIMIT.value,
