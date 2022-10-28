@@ -41,6 +41,24 @@ class Bitget(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
+    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return [
+            self._ensure_order_quantity(order)
+            for order in await super().get_open_orders(symbol=symbol,
+                                                       since=since,
+                                                       limit=limit,
+                                                       **kwargs)
+        ]
+
+    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        return [
+            self._ensure_order_quantity(order)
+            for order in await super().get_closed_orders(symbol=symbol,
+                                                         since=since,
+                                                         limit=limit,
+                                                         **kwargs)
+        ]
+
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -67,12 +85,17 @@ class Bitget(exchanges.SpotCCXTExchange):
         return order
 
     def _ensure_order_quantity(self, order):
-        if order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == trading_enums.TradeOrderType.MARKET.value \
-                and \
-                order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value:
-            # convert amount to have the same units as evert other exchange: use FILLED for accuracy
-            order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        try:
+            if order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
+                    == trading_enums.TradeOrderType.MARKET.value and \
+                    order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
+                    == trading_enums.TradeOrderSide.BUY.value:
+                # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+                order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                    order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        except KeyError:
+            pass
+        return order
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
