@@ -45,24 +45,34 @@ class Bitget(exchanges.SpotCCXTExchange):
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            params: dict = None) -> typing.Optional[dict]:
-        convert_quantity = order_type is trading_enums.TraderOrderType.BUY_MARKET
-        if convert_quantity:
+        # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
+        # (price should not be sent to market orders). Only used for buy market orders
+        self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
+        if order_type is trading_enums.TraderOrderType.BUY_MARKET:
             # on Bitget, market orders are in quote currency (YYY in XYZ/YYY)
             if price is None:
                 raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
                                                           f"market orders as quantity is in quote currency")
             quantity = quantity * price
-        created_order = await super().create_order(order_type, symbol, quantity,
-                                                   price=price, stop_price=stop_price,
-                                                   side=side, current_price=current_price,
-                                                   params=params)
-        # ensure order side (issue with current ccxt version)
-        created_order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] = side.value
-        if convert_quantity:
-            # convert it back: use FILLED for accuracy
-            created_order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                created_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        if created_order := await super().create_order(order_type, symbol, quantity,
+                                                       price=price, stop_price=stop_price,
+                                                       side=side, current_price=current_price,
+                                                       params=params):
+            self._ensure_order_quantity(created_order)
         return created_order
+
+    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        if order := await super().get_order(order_id, symbol=symbol, **kwargs):
+            self._ensure_order_quantity(order)
+        return order
+
+    def _ensure_order_quantity(self, order):
+        if order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == trading_enums.TradeOrderType.MARKET.value \
+                and \
+                order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value:
+            # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+            order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
