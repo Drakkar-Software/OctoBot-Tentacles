@@ -228,7 +228,7 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
     TIME_FRAMES_TO_WEIGHT = "time_frames_to_weight"
     TIME_FRAME = "time_frame"
     WEIGHT = "weight"
-    DEFAULT_WEIGHT = 1
+    DEFAULT_WEIGHT = 50
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
@@ -334,20 +334,6 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
 
         except errors.UnsetTentacleEvaluation as e:
             self.logger.error(f"Missing technical evaluator data for ({e})")
-
-    @classmethod
-    def get_required_time_frames(cls, config: dict,
-                                 tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration):
-        if evaluators_constants.CONFIG_FORCED_TIME_FRAME in config:
-            return time_frame_manager.parse_time_frames(config[evaluators_constants.CONFIG_FORCED_TIME_FRAME])
-        strategy_config = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls)
-        if TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT in strategy_config:
-            tf_to_weight = strategy_config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT]
-            return time_frame_manager.parse_time_frames(
-                list(TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(tf_to_weight)))
-        else:
-            raise Exception(f"'{TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT}' "
-                            f"is missing in configuration file")
 
     @staticmethod
     def _get_weight_by_time_frames(tf_to_weight):
