@@ -2,7 +2,7 @@ TechnicalAnalysisStrategyEvaluator a flexible technical analysis strategy. Meant
 every activated technical evaluator and averages the evaluation value of each to compute its final evaluation. 
 
 This strategy makes it possible to assign a weight to any time frame in order to make the related technical evaluations 
-more or less impactful for the final strategy evaluation.
+more or less impactful for the final strategy evaluation. If not specified for a time frame, default weight is 50.
 
 This strategy can be used to create custom trading signals using as many technical 
 evaluators as desired.
