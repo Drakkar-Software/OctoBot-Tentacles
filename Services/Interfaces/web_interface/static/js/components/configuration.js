@@ -738,6 +738,7 @@ function check_account(exchangeCard, source, newValue){
         const apiKey = source.attr("id") === "exchange_api-key" ? newValue : exchangeCard.find("#exchange_api-key").editable('getValue', true).trim();
         const apiSecret = source.attr("id") === "exchange_api-secret" ? newValue : exchangeCard.find("#exchange_api-secret").editable('getValue', true).trim();
         const apiPassword = source.attr("id") === "exchange_api-password" ? newValue : exchangeCard.find("#exchange_api-password").editable('getValue', true).trim();
+        const sandboxed = exchangeCard.find(`#exchange_${exchange}_sandboxed`).is(':checked');
         $.post({
             url: $("#exchange-container").attr(update_url_attr),
             data: JSON.stringify({
@@ -746,6 +747,7 @@ function check_account(exchangeCard, source, newValue){
                     "apiKey": apiKey,
                     "apiSecret": apiSecret,
                     "apiPassword": apiPassword,
+                    "sandboxed": sandboxed,
                 }
             }),
             contentType: 'application/json',
@@ -774,6 +776,7 @@ function check_accounts(exchangeCards){
                 apiKey: apiKey,
                 apiSecret: apiSecret,
                 apiPassword: apiPassword,
+                sandboxed: exchangeCard.find(`#exchange_${exchange}_sandboxed`).is(':checked')
             };
         }
     })
@@ -798,7 +801,8 @@ function check_accounts(exchangeCards){
 
 function exchange_account_check(e, params){
     const element = $(e.target);
-    check_account(element.parents("div[data-role=exchange]"), element, params.newValue);
+    check_account(element.parents("div[data-role=exchange]"), element,
+        typeof params === "undefined" ? null : params.newValue);
 }
 
 function register_exchanges_checks(check_existing_accounts){
@@ -808,6 +812,10 @@ function register_exchanges_checks(check_existing_accounts){
         const inputs = card.find("a[data-type=text]");
         if(inputs.length){
             add_event_if_not_already_added(inputs, 'save', exchange_account_check);
+        }
+        const bools = card.find("input[data-type=bool]");
+        if(bools.length){
+            add_event_if_not_already_added(bools, 'change', exchange_account_check);
         }
         cards.push(card);
     });
