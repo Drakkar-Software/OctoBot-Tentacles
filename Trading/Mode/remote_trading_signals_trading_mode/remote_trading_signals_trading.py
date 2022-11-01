@@ -305,15 +305,16 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if adapted_quantity == trading_constants.ZERO:
             if self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY:
                 adapted_max_size = personal_data.decimal_adapt_quantity(symbol_market, max_order_size)
-                if adapted_max_size >= trading_constants.ZERO:
+                if adapted_max_size > trading_constants.ZERO:
                     try:
                         adapted_quantity = personal_data.get_minimal_order_amount(symbol_market)
                         self.logger.info(f"Minimal order amount reached, rounding to {adapted_quantity}")
                     except errors.NotSupported as e:
                         self.logger.warning(f"Impossible to round order to minimal order size: {e}.")
                 else:
+                    funds_options = " or increase leverage" if self.exchange_manager.is_future else ""
                     self.logger.warning(f"Not enough funds to create minimal size order: current maximum order "
-                                        f"size={max_order_size}. Add funds or increase leverage to be able to trade.")
+                                        f"size={max_order_size}. Add funds{funds_options} to be able to trade.")
             else:
                 self.logger.info("Not enough funds to create order based on signal target amount. "
                                  "Enable minimal size rounding to still trade in this situation. "
@@ -421,8 +422,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             found_orders += [
                 (order_description, order)
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-                if (order.price == order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] or
-                    order.price == order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value])
+                if (order.origin_price == order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] or
+                    order.origin_price == order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value])
                     and self._is_compatible_order_type(order, order_description)
             ]
         return found_orders
