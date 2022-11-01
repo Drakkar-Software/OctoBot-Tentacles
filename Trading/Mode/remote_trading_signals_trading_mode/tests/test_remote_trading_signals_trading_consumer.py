@@ -21,7 +21,7 @@ import octobot_trading.api as trading_api
 import octobot_commons.signals as commons_signals
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as errors
-import octobot_trading.signals as trading_signals
+import octobot_trading.constants as trading_constants
 import octobot_trading.personal_data as trading_personal_data
 import octobot_services.api as services_api
 
@@ -189,6 +189,154 @@ async def test_handle_signal_orders_reduce_quantity_edit_order(local_trader, moc
     orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
     assert len(orders) == 1
     assert orders[0].origin_quantity == decimal.Decimal("1")    # use 50% max as quantity (vs 80% in signal)
+
+
+async def test_handle_signal_create_orders_not_enough_funds_using_min_amount(local_trader, mocked_buy_limit_signal):
+    _, consumer, trader = local_trader
+    symbol = mocked_buy_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.SYMBOL.value]
+    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT:USDT", 1000)
+    # too small amount for the current porfolio to handle within exchange rules
+    amount = "0.00000001%"
+    limit_signal = commons_signals.Signal(
+        "moonmoon",
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
+            trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: symbol,
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
+            trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.SELL_LIMIT.value,
+            trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value: amount,
+            trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value: 20898.03,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value: None,
+            trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 20600.31,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "98ea73a0-ed38-4fca-9744-ed7f80a2d3ef",
+            trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
+                trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
+            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
+            trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
+            trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
+        },
+    )
+    consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
+    exchange_manager = trader.exchange_manager
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 1
+    order_1 = orders[0]
+    assert order_1.origin_quantity == decimal.Decimal("0.00001")    # minimal amount according to exchange rules
+
+    consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = False
+    # now disable minimal amount config
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 1
+    assert orders[0] is order_1  # no order created
+
+    consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
+    # re-enable minimal amount config
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 2
+    assert orders[0] is order_1  # no order created
+    assert orders[1].origin_quantity == decimal.Decimal("0.00001")    # minimal amount according to exchange rules
+
+
+async def test_handle_signal_create_orders_not_enough_available_funds_even_for_min_order(local_trader, mocked_buy_limit_signal):
+    _, consumer, trader = local_trader
+    symbol = "BTC/USDT:USDT"
+    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT:USDT", 1000)
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"].available = trading_constants.ZERO
+    limit_signal = commons_signals.Signal(
+        "moonmoon",
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
+            trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: symbol,
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
+            trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.SELL_LIMIT.value,
+            trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value: "39.5865%a",
+            trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value: 20898.03,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value: None,
+            trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 20600.31,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "98ea73a0-ed38-4fca-9744-ed7f80a2d3ef",
+            trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
+                trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
+            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
+            trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
+            trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
+        },
+    )
+    consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
+    exchange_manager = trader.exchange_manager
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+
+
+async def test_handle_signal_create_orders_not_enough_total_funds_even_for_min_order(local_trader, mocked_buy_limit_signal):
+    _, consumer, trader = local_trader
+    symbol = "BTC/USDT:USDT"
+    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT:USDT", 1000)
+    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"].total = trading_constants.ZERO
+    limit_signal = commons_signals.Signal(
+        "moonmoon",
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
+            trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: symbol,
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
+            trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.SELL_LIMIT.value,
+            trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value: "39.5865%",
+            trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value: 20898.03,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value: None,
+            trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 20600.31,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "98ea73a0-ed38-4fca-9744-ed7f80a2d3ef",
+            trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
+                trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
+            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
+            trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
+            trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
+        },
+    )
+    consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
+    exchange_manager = trader.exchange_manager
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
 
 
 async def test_send_alert_notification(local_trader):
