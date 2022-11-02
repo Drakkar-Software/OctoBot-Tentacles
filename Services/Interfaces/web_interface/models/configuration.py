@@ -774,7 +774,8 @@ def get_exchanges_details(exchanges_config) -> dict:
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
             "configurable": False if exchange_class is None else exchange_class.is_configurable(),
-            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name)
+            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name),
+            "default_exchange_type": trading_api.get_default_exchange_type(exchange_name),
         }
     return details
 
@@ -819,6 +820,7 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
         api_key = exchange_detail["apiKey"]
         api_sec = exchange_detail["apiSecret"]
         api_pass = exchange_detail["apiPassword"]
+        sandboxed = exchange_detail[commons_constants.CONFIG_EXCHANGE_SANDBOXED]
         to_check_config = copy.deepcopy(interfaces_util.get_edited_config()[commons_constants.CONFIG_EXCHANGES].get(
             exchange_name, {}))
         if _is_real_exchange_value(api_key):
@@ -827,6 +829,7 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
             to_check_config[commons_constants.CONFIG_EXCHANGE_SECRET] = configuration.encrypt(api_sec).decode()
         if _is_real_exchange_value(api_pass):
             to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
+        to_check_config[commons_constants.CONFIG_EXCHANGE_SANDBOXED] = sandboxed
         is_compatible = auth_success = is_configured = False
         is_sponsoring = trading_api.is_sponsoring(exchange_name)
         is_supporter = authentication.Authenticator.instance().user_account.supports.is_supporting()
