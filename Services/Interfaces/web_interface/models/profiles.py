@@ -112,8 +112,8 @@ def export_profile(profile_id, export_path) -> str:
     )
 
 
-def import_profile(profile_path, name, replace_if_exists=False):
-    profile = profiles.import_profile(profile_path, name=name, replace_if_exists=replace_if_exists)
+def import_profile(profile_path, name):
+    profile = profiles.import_profile(profile_path, name=name)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
     return profile
 
