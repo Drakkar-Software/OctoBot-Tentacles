@@ -131,7 +131,7 @@ def _download_profile(url, target_file):
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
     file_path = _download_profile(profile_url, name)
-    profile = import_profile(file_path, name, replace_if_exists=False)
+    profile = import_profile(file_path, name)
     if os.path.isfile(file_path):
         os.remove(file_path)
     return profile
