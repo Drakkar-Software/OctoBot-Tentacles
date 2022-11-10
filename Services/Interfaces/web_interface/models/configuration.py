@@ -873,10 +873,8 @@ def _is_real_exchange_value(value):
 
 
 def get_current_exchange():
-    g_config = interfaces_util.get_global_config()
-    exchanges = g_config[commons_constants.CONFIG_EXCHANGES]
-    if exchanges:
-        return next(iter(exchanges))
+    for exchange_manager in interfaces_util.get_exchange_managers():
+        return trading_api.get_exchange_name(exchange_manager)
     else:
         return DEFAULT_EXCHANGE
 
