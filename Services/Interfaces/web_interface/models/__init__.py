@@ -130,6 +130,7 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     get_first_exchange_data,
     get_watched_symbol_data,
     get_watched_symbols,
+    get_startup_messages,
     get_first_symbol_data,
     get_currency_price_graph_update,
 )
@@ -276,6 +277,7 @@ __all__ = [
     "get_first_symbol_data",
     "get_currency_price_graph_update",
     "get_watched_symbols",
+    "get_startup_messages",
     "add_watched_symbol",
     "remove_watched_symbol",
     "LOG_EXPORT_FORMAT",
