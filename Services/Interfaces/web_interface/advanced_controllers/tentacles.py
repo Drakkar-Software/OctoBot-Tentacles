@@ -117,7 +117,7 @@ def install_official_tentacle_packages(use_beta_tentacles):
 @login.active_login_required
 def tentacle_packages():
     if flask.request.method == 'POST':
-        if constants.CAN_INSTALL_TENTACLES:
+        if not constants.CAN_INSTALL_TENTACLES:
             return util.get_rest_reply(f'Impossible to install tentacles on this cloud OctoBot.', 500)
         update_type = flask.request.args["update_type"]
         return _handle_tentacles_pages_post(update_type)

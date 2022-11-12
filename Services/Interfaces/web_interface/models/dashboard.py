@@ -135,6 +135,10 @@ def get_watched_symbols():
     return config[constants.CONFIG_WATCHED_SYMBOLS]
 
 
+def get_startup_messages():
+    return interfaces_util.get_bot_api().get_startup_messages()
+
+
 def get_first_symbol_data():
     try:
         exchange, exchange_name, exchange_id = _get_first_exchange_identifiers()
