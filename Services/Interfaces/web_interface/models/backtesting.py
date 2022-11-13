@@ -222,6 +222,7 @@ async def _collect_initialize_and_run_independent_backtesting(
             return
         finally:
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = None
     if independent_backtesting is None:
         try:
             if files is None:

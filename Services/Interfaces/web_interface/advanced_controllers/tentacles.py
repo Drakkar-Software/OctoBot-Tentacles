@@ -21,6 +21,7 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.models as models
 import octobot_commons.authentication as authentication
+import octobot.constants as constants
 
 
 @advanced_controllers.advanced.route("/tentacles")
@@ -116,6 +117,8 @@ def install_official_tentacle_packages(use_beta_tentacles):
 @login.active_login_required
 def tentacle_packages():
     if flask.request.method == 'POST':
+        if not constants.CAN_INSTALL_TENTACLES:
+            return util.get_rest_reply(f'Impossible to install tentacles on this cloud OctoBot.', 500)
         update_type = flask.request.args["update_type"]
         return _handle_tentacles_pages_post(update_type)
 

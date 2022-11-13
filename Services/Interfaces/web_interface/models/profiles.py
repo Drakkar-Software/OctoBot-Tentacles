@@ -112,8 +112,8 @@ def export_profile(profile_id, export_path) -> str:
     )
 
 
-def import_profile(profile_path, name, replace_if_exists=False):
-    profile = profiles.import_profile(profile_path, name=name, replace_if_exists=replace_if_exists)
+def import_profile(profile_path, name):
+    profile = profiles.import_profile(profile_path, name=name)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
     return profile
 
@@ -131,7 +131,7 @@ def _download_profile(url, target_file):
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
     file_path = _download_profile(profile_url, name)
-    profile = import_profile(file_path, name, replace_if_exists=False)
+    profile = import_profile(file_path, name)
     if os.path.isfile(file_path):
         os.remove(file_path)
     return profile

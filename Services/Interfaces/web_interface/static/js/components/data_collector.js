@@ -97,9 +97,9 @@ function update_symbol_list(url, exchange){
         symbolSelect.empty(); // remove old options
         const symbolSelectBox = symbolSelect[0];
         $.each(data, function(key,value) {
-            symbolSelectBox.add(new Option(value,value));
+            symbolSelectBox.append(new Option(value,value));
         });
-        symbolSelect.selectpicker('refresh');
+        symbolSelect.trigger('change');
     });
 }
 
@@ -107,12 +107,12 @@ function update_available_timeframes_list(url, exchange){
     const data = {exchange: exchange};
     $.get(url, data, function(data, status){
         const timeframeSelect = $("#timeframesSelect");
-        timeframeSelect.empty();
+        timeframeSelect.empty(); // remove old options
         const timeframeSelectBox = timeframeSelect[0];
         $.each(data, function(key,value) {
-            timeframeSelectBox.add(new Option(value,value));
+            timeframeSelectBox.append(new Option(value,value));
         });
-        timeframeSelect.selectpicker('refresh');
+        timeframeSelect.trigger('change');
     });
 }
 
@@ -141,13 +141,9 @@ function is_full_candle_history_exchanges(){
 
 let dataFilesTable = $('#dataFilesTable').DataTable({"order": [[ 1, 'desc' ]]});
 
-$(document).ready(function() {
-    handle_data_files_buttons();
-    is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
-    $('#importFileButton').attr('disabled', true);
-    dataFilesTable.on("draw.dt", function(){
-        handle_data_files_buttons();
-    });
+
+function handleSelects(){
+    createSelect2();
     $('#exchangeSelect').on('change', function() {
         update_symbol_list($('#symbolsSelect').attr(update_url_attr), $('#exchangeSelect').val());
         update_available_timeframes_list($('#timeframesSelect').attr(update_url_attr), $('#exchangeSelect').val());
@@ -186,23 +182,36 @@ $(document).ready(function() {
             $("#endDate")[0].min = startDate.toISOString().split("T")[0];
         }
     });
+
     const endDateMax = new Date();
     endDateMax.setDate(endDateMax.getDate() - 1);
     $("#endDate")[0].max = endDateMax.toISOString().split("T")[0];
     const startDateMax = new Date();
     startDateMax.setDate(startDateMax.getDate() - 2);
     $("#startDate")[0].max = startDateMax.toISOString().split("T")[0];
+}
 
+
+function createSelect2(){
     $("#symbolsSelect").select2({
         closeOnSelect: false,
         placeholder: "Symbol"
     });
-
     $("#timeframesSelect").select2({
         closeOnSelect: false,
         placeholder: "All Timeframes"
     });
+}
 
+
+$(document).ready(function() {
+    handle_data_files_buttons();
+    is_full_candle_history_exchanges() ? $("#collector_date_range").show() : $("#collector_date_range").hide();
+    $('#importFileButton').attr('disabled', true);
+    dataFilesTable.on("draw.dt", function(){
+        handle_data_files_buttons();
+    });
+    handleSelects();
     DataCollectorDoneCallbacks.push(reload_table);
     init_data_collector_status_websocket();
 });
