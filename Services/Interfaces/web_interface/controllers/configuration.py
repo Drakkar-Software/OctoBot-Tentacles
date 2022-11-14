@@ -47,7 +47,11 @@ def profile():
     missing_tentacles = set()
     profiles = models.get_profiles()
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
-
+    enabled_exchanges = [
+        exchange
+        for exchange, exchange_config in config_exchanges.items()
+        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+    ]
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
@@ -63,9 +67,7 @@ def profile():
 
                                  real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
-                                 symbol_list=sorted(models.get_symbol_list([exchange
-                                                                            for exchange in display_config[
-                                                                                commons_constants.CONFIG_EXCHANGES]])),
+                                 symbol_list=sorted(models.get_symbol_list(enabled_exchanges)),
                                  full_symbol_list=models.get_all_symbols_dict(),
                                  evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
                                  strategy_config=models.get_strategy_config(media_url, missing_tentacles),
