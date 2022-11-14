@@ -400,7 +400,8 @@ function _save_config(element, restart_after_save) {
                 const new_value = parse_new_value(configElement);
                 const config_key = get_config_key(configElement);
 
-                if (get_config_value_changed(configElement, new_value, config_key)) {
+                if (get_config_value_changed(configElement, new_value, config_key)
+                    && !config_key.endsWith("_Empty")) {
                     updated_config[config_type][config_key] = new_value;
                 }
             }
