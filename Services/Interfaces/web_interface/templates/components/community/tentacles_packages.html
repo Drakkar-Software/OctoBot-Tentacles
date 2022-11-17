@@ -1,13 +1,13 @@
 {% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
 
-{% macro tentacles_packages(current_logged_in_email, role, is_donor, tentacles_packages,
+{% macro tentacles_packages(current_logged_in_email, role, is_donor, selected_user_bot, tentacles_packages,
                             community_url, donation_url, default_image, is_preview, show_account,
                             can_logout) -%}
 <div class="card">
     <div class="card-header d-flex justify-content-between flex-wrap">
         <div>
             <h2>
-                Your community tentacles packages
+                Your Astrolab tentacles
                 <span class="badge badge-danger">Coming soon</span>
             </h2>
         </div>
@@ -37,6 +37,11 @@
             <div class="col-8 my-auto">
                 <h5 class="p-0 my-0">
                     Logged in as {{current_logged_in_email}}
+                    {% if selected_user_bot["name"] %}
+                        using bot <span class="badge badge-info">{{ selected_user_bot["name"] }}</span>
+                    {% else %}
+                        <span class="badge badge-danger">without selected bot</span>
+                    {% endif %}
                     <span class="ml-2 ml-md-4 text-danger-darker">
                         {% if 'tester' in role %}
                             <i class="fas fa-tools" data-toggle="tooltip" title="OctoBot tester"></i>
