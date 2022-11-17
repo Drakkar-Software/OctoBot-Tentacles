@@ -50,7 +50,8 @@ def community():
         all_user_bots=models.get_all_user_bots(),
         selected_user_bot=models.get_selected_user_bot(),
         default_tentacles_package_image=default_image,
-        can_logout=not authentication.Authenticator.instance().must_be_authenticated_through_authenticator()
+        can_logout=models.can_logout(),
+        can_select_bot=models.can_select_bot(),
     )
 
 

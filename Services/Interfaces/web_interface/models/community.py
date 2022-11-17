@@ -15,6 +15,7 @@
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
+import octobot.constants as octobot_constants
 import octobot_commons.authentication as authentication
 
 
@@ -83,3 +84,11 @@ def select_bot(bot_id):
 
 def create_new_bot():
     return interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().create_new_bot())
+
+
+def can_select_bot():
+    return not octobot_constants.COMMUNITY_BOT_ID
+
+
+def can_logout():
+    return not authentication.Authenticator.instance().must_be_authenticated_through_authenticator()

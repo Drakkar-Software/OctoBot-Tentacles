@@ -21,6 +21,7 @@
                                                      OCTOBOT_DONATION_URL, default_tentacles_package_image, True, True, can_logout) }}
 {% endif %}
 
+{% if can_select_bot %}
 <a class="btn btn-outline-primary waves-effect float-right" href="#" id="display-bot-select-modal"
    data-toggle="modal" data-target="#bot-select-modal">
    Select bot
@@ -54,6 +55,8 @@
     </div>
   </div>
 </div>
+{% endif %}
+
 <br>
 {% endblock %}
 
