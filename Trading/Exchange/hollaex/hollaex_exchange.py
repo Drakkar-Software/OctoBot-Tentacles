@@ -17,12 +17,17 @@ import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_trading.exchanges as exchanges
+from octobot_trading.exchanges.config import ccxt_exchange_settings
 
+
+class HollaexConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
+    USE_FIXED_MARKET_STATUS = True
+    CANDLE_LOADING_LIMIT = 500
+    
 
 class hollaex(exchanges.SpotCCXTExchange):
+    CONNECTOR_SETTINGS = HollaexConnectorSettings
     DESCRIPTION = ""
-
-    DEFAULT_MAX_LIMIT = 500
 
     @classmethod
     def init_user_inputs(cls, inputs: dict) -> None:
@@ -56,11 +61,3 @@ class hollaex(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
-        # ohlcv without limit is not supported, replaced by a default max limit
-        if limit is None:
-            limit = self.DEFAULT_MAX_LIMIT
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

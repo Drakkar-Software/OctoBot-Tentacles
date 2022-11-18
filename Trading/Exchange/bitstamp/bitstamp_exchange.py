@@ -14,12 +14,17 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
+from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
-class Bitstamp(exchanges.SpotCCXTExchange):
+class BitstampConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
+    USE_FIXED_MARKET_STATUS = True
+    CANDLE_LOADING_LIMIT = 500
+    
+
+class Bitstamp(exchanges.SpotCCXTExchange):    
+    CONNECTOR_SETTINGS = BitstampConnectorSettings
     DESCRIPTION = ""
-
-    DEFAULT_MAX_LIMIT = 500
 
     @classmethod
     def get_name(cls):
@@ -28,12 +33,3 @@ class Bitstamp(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
-
-    async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
-        # ohlcv without limit is not supported, replaced by a default max limit
-        if limit is None:
-            limit = self.DEFAULT_MAX_LIMIT
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

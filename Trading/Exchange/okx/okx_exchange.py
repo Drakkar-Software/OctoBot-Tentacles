@@ -16,10 +16,17 @@
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+from octobot_trading.exchanges.config import ccxt_exchange_settings
+
+
+class OkxConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
+    MAX_RECENT_TRADES_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
+    MAX_ORDERS_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending    
+    USE_FIXED_MARKET_STATUS = True
 
 
 class Okx(exchanges.SpotCCXTExchange):
-    MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
+    CONNECTOR_SETTINGS = OkxConnectorSettings
     DESCRIPTION = ""
 
     # FROM https://www.okex.com/docs-v5/en/#overview-demo-trading-services
@@ -43,18 +50,6 @@ class Okx(exchanges.SpotCCXTExchange):
     def is_supporting_sandbox(cls) -> bool:
         return False
 
-    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
-        return await super().get_open_orders(symbol=symbol,
-                                             since=since,
-                                             limit=self._fix_limit(limit),
-                                             **kwargs)
-
-    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
-        return await super().get_closed_orders(symbol=symbol,
-                                               since=since,
-                                               limit=self._fix_limit(limit),
-                                               **kwargs)
-
     async def _create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
         """
         Add price to default connector call for market orders https://github.com/ccxt/ccxt/issues/9523
@@ -68,12 +63,6 @@ class Okx(exchanges.SpotCCXTExchange):
         """
         return await self.connector.client.create_market_order(symbol=symbol, side='sell', amount=quantity,
                                                                price=price, params=params)
-
-    def _fix_limit(self, limit: int) -> int:
-        return min(self.MAX_PAGINATION_LIMIT, limit)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])

@@ -17,7 +17,13 @@
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
+from octobot_trading.exchanges.config import ccxt_exchange_settings
 
+
+class KucoinConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
+    USE_FIXED_MARKET_STATUS = True
+    MARKET_STATUS_FIXER_REMOVE_PRICE_LIMITS = True
+    
 
 def _kucoin_retrier(f):
     async def wrapper(*args, **kwargs):
@@ -41,6 +47,7 @@ def _kucoin_retrier(f):
 
 
 class Kucoin(exchanges.SpotCCXTExchange):
+    CONNECTOR_SETTINGS = KucoinConnectorSettings
     MAX_CANDLES_FETCH_INSTANT_RETRY = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
 
@@ -51,10 +58,6 @@ class Kucoin(exchanges.SpotCCXTExchange):
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):

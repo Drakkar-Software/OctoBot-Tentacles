@@ -13,26 +13,43 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import decimal
-
+import octobot_commons.constants as common_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
-
-class Binance(exchanges.SpotCCXTExchange):
+    
+class Binance(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):  
     DESCRIPTION = ""
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
 
     ACCOUNTS = {
-        trading_enums.AccountTypes.CASH: 'cash'
+        trading_enums.AccountTypes.CASH: 'cash',
+        trading_enums.AccountTypes.MARGIN: 'margin',
+        trading_enums.AccountTypes.FUTURE: 'future'
     }
 
-    BINANCE_MARK_PRICE = "markPrice"
+    MARK_PRICE_IN_POSITION = True
 
-    def __init__(self, config, exchange_manager):
-        exchanges.SpotCCXTExchange.__init__(self, config, exchange_manager)
+    BINANCE_SYMBOL = "symbol"
+
+    BINANCE_FUTURE_UNREALIZED_PNL = "unRealizedProfit"
+    BINANCE_FUTURE_LIQUIDATION_PRICE = "liquidationPrice"
+    BINANCE_FUTURE_VALUE = "liquidationPrice"
+
+    BINANCE_MARGIN_TYPE = "marginType"
+    BINANCE_MARGIN_TYPE_ISOLATED = "ISOLATED"
+    BINANCE_MARGIN_TYPE_CROSSED = "CROSSED"
+
+    BINANCE_FUNDING_RATE = "fundingRate"
+    BINANCE_LAST_FUNDING_TIME = "fundingTime"
+    BINANCE_FUNDING_DURATION = 8 * common_constants.HOURS_TO_SECONDS
+
+    BINANCE_TIME = "time"
+    BINANCE_MARK_PRICE = "markPrice"
+    BINANCE_ENTRY_PRICE = "entryPrice"
+
 
     @classmethod
     def get_name(cls):
@@ -42,70 +59,57 @@ class Binance(exchanges.SpotCCXTExchange):
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
         return cls.get_name() == exchange_candidate_name
 
-    async def get_balance(self, **kwargs):
-        return await exchanges.SpotCCXTExchange.get_balance(self, **self._get_params(kwargs))
-
-    async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
-        return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
-                                                                          since=since,
-                                                                          limit=limit,
-                                                                          **kwargs))
-
-    def _uniformize_trades(self, trades):
-        for trade in trades:
-            trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
-            trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
-                if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
-                else trading_enums.TradeOrderType.LIMIT.value
-        return trades
-
     def _get_params(self, params):
         if params is None:
             params = {}
         params.update({'recvWindow': 60000})
         return params
 
-    async def get_order(self, order_id, symbol=None, **kwargs):
-        return await self._ensure_order_completeness(
-            await super().get_order(order_id=order_id, symbol=symbol, **kwargs), symbol, **kwargs)
+    async def get_balance(self, **kwargs):
+        return await exchanges.SpotCCXTExchange.get_balance(self, **self._get_params(kwargs))
 
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           params: dict = None):
-        return await self._ensure_order_completeness(
-            await super().create_order(order_type, symbol, quantity,
-                                       price=price, stop_price=stop_price,
-                                       side=side, current_price=current_price,
-                                       params=params),
-            symbol)
+    async def get_funding_rate_history(self, symbol: str, limit: int = 100, **kwargs: dict) -> list:
+        return [
+            self.parse_funding(funding_rate_dict)
+            for funding_rate_dict in (await self.connector.client.fapiPublic_get_fundingrate(
+                {self.BINANCE_SYMBOL: self.get_exchange_pair(symbol),
+                 "limit": limit}))
+        ]
 
-    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs):
-        orders = await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        # closed orders are missing fees on binance: add them from trades
-        trades = {
-            trade[trading_enums.ExchangeConstantsOrderColumns.ORDER.value]: trade
-            for trade in await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
-        }
-        for order in orders:
-            self._fill_order_missing_data(order, trades)
-        return orders
+    async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
+        await self.connector.client.fapiPrivate_post_leverage(
+            {self.BINANCE_SYMBOL: self.get_exchange_pair(symbol),
+             "leverage": leverage})
 
-    async def _ensure_order_completeness(self, order, symbol, **kwargs):
-        if order and order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.CLOSED.value and \
-                not order[trading_enums.ExchangeConstantsOrderColumns.FEE.value]:
-            trades = {
-                trade[trading_enums.ExchangeConstantsOrderColumns.ORDER.value]: trade
-                for trade in await super().get_my_recent_trades(symbol=symbol, **kwargs)
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool):
+        await self.connector.client.fapiPrivate_post_marginType(
+            {
+                self.BINANCE_SYMBOL: self.get_exchange_pair(symbol),
+                self.BINANCE_MARGIN_TYPE: self.BINANCE_MARGIN_TYPE_ISOLATED
+                if isolated else self.BINANCE_MARGIN_TYPE_CROSSED
+            })
+
+    def parse_funding(self, funding_dict, from_ticker=False):
+        try:
+            last_funding_time = self.connector.get_uniform_timestamp(
+                self.connector.client.safe_float(funding_dict, self.BINANCE_LAST_FUNDING_TIME))
+            funding_dict = {
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value: last_funding_time,
+                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value:
+                    self.connector.client.safe_float(funding_dict, self.BINANCE_FUNDING_RATE),
+                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
+                    last_funding_time + self.BINANCE_FUNDING_DURATION
             }
-            self._fill_order_missing_data(order, trades)
-        return order
+        except KeyError as e:
+            self.logger.error(f"Fail to parse funding dict ({e})")
+        return funding_dict
 
-    def _fill_order_missing_data(self, order, trades):
-        order_id = order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
-        if not order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] and order_id in trades:
-            order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] = \
-                trades[order_id][trading_enums.ExchangeConstantsOrderColumns.FEE.value]
+    def parse_mark_price(self, mark_price_dict, from_ticker=False):
+        try:
+            mark_price_dict = {
+                trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
+                    self.connector.client.safe_float(mark_price_dict, self.BINANCE_MARK_PRICE, 0)
+            }
+        except KeyError as e:
+            self.logger.error(f"Fail to parse mark_price dict ({e})")
+        return mark_price_dict

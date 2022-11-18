@@ -15,9 +15,15 @@
 #  License along with this library.
 
 import octobot_trading.exchanges as exchanges
+from octobot_trading.exchanges.config import ccxt_exchange_settings
 
+
+class HitbtcConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
+    USE_FIXED_MARKET_STATUS = True
+    
 
 class Hitbtc(exchanges.SpotCCXTExchange):
+    CONNECTOR_SETTINGS = HitbtcConnectorSettings
     DESCRIPTION = ""
 
     @classmethod
@@ -30,6 +36,3 @@ class Hitbtc(exchanges.SpotCCXTExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, sort='DESC', **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
