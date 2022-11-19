@@ -21,16 +21,16 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 class GateIOConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
     MAX_RECENT_TRADES_PAGINATION_LIMIT = 100
     MAX_ORDERS_PAGINATION_LIMIT = 100
-    USE_FIXED_MARKET_STATUS = True
-    MARKET_STATUS_FIXER_REMOVE_PRICE_LIMITS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+    MARKET_STATUS_REMOVE_INVALID_PRICE_LIMITS = True
+
 
 class GateIO(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = GateIOConnectorSettings
 
     @classmethod
     def get_name(cls):
-        return 'gateio'
+        return "gateio"
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:

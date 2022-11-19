@@ -19,8 +19,8 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class BittrexConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+
 
 class Bittrex(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = BittrexConnectorSettings
@@ -28,11 +28,10 @@ class Bittrex(exchanges.SpotCCXTExchange):
 
     SUPPORTED_ORDER_BOOK_LIMITS = [1, 25, 500]
     DEFAULT_ORDER_BOOK_LIMIT = 25
-    USE_FIXED_MARKET_STATUS = True
 
     @classmethod
     def get_name(cls):
-        return 'bittrex'
+        return "bittrex"
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:

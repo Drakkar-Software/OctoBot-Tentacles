@@ -19,7 +19,7 @@ import octobot_trading.exchanges.config.ccxt_exchange_settings as ccxt_exchange_
 
 
 class AscendExConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
+    MARKET_STATUS_FIX_PRECISION = True
     CANDLE_LOADING_LIMIT = 500
     GET_MY_RECENT_TRADES_METHODS = [
         trading_enums.CCXTExchangeConfigMethods.GET_MY_RECENT_TRADES_USING_CLOSED_ORDERS.value,

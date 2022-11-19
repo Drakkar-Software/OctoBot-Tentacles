@@ -18,7 +18,7 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class BitstampConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
+    MARKET_STATUS_FIX_PRECISION = True
     CANDLE_LOADING_LIMIT = 500
     
 

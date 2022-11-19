@@ -20,8 +20,8 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
-from octobot_trading.exchanges.config import ccxt_exchange_settings
-from octobot_trading.exchanges.util import parser
+import octobot_trading.exchanges.config as ccxt_exchange_settings
+import octobot_trading.exchanges.parser as parser
 
 
 class BybitPositionsParser(parser.PositionsParser):
@@ -34,7 +34,7 @@ class BybitPositionsParser(parser.PositionsParser):
 
 class BybitConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
     POSITIONS_PARSER_CLASS = BybitPositionsParser
-    USE_FIXED_MARKET_STATUS = True
+    MARKET_STATUS_FIX_PRECISION = True
     CANDLE_LOADING_LIMIT = 200
     
 

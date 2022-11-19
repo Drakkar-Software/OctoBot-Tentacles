@@ -19,7 +19,7 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class KrakenConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
+    MARKET_STATUS_FIX_PRECISION = True
     MAX_RECENT_TRADES_PAGINATION_LIMIT = 1000
     MAX_ORDER_PAGINATION_LIMIT = 1000
     

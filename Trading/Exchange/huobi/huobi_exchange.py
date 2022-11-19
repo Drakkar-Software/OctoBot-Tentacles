@@ -19,16 +19,16 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class HuobiConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
-    MARKET_STATUS_FIXER_REMOVE_PRICE_LIMITS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+    MARKET_STATUS_REMOVE_INVALID_PRICE_LIMITS = True
+
 
 class Huobi(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = HuobiConnectorSettings
 
     @classmethod
     def get_name(cls):
-        return 'huobi'
+        return "huobi"
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:

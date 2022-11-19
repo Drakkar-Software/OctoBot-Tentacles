@@ -25,8 +25,8 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 class CoinexConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
     MAX_RECENT_TRADES_PAGINATION_LIMIT: int = 100
     MAX_ORDERS_PAGINATION_LIMIT: int = 100
-    USE_FIXED_MARKET_STATUS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+
 
 class Coinex(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = CoinexConnectorSettings

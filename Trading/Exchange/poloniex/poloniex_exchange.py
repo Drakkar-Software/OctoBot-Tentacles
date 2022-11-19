@@ -19,16 +19,16 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class PolenixConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    MARKET_STATUS_FIXER_REMOVE_PRICE_LIMITS = True
-    USE_FIXED_MARKET_STATUS = True
-    
+    MARKET_STATUS_REMOVE_INVALID_PRICE_LIMITS = True
+    MARKET_STATUS_FIX_PRECISION = True
+
 
 class Poloniex(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = PolenixConnectorSettings
 
     @classmethod
     def get_name(cls):
-        return 'poloniex'
+        return "poloniex"
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:

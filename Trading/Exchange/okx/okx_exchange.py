@@ -20,9 +20,10 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class OkxConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    MAX_RECENT_TRADES_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
-    MAX_ORDERS_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending    
-    USE_FIXED_MARKET_STATUS = True
+    # value from https://www.okex.com/docs/en/#spot-orders_pending
+    MAX_RECENT_TRADES_PAGINATION_LIMIT: int = 100
+    MAX_ORDERS_PAGINATION_LIMIT: int = 100
+    MARKET_STATUS_FIX_PRECISION = True
 
 
 class Okx(exchanges.SpotCCXTExchange):

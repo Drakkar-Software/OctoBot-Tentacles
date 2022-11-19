@@ -21,9 +21,9 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class KucoinConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
-    MARKET_STATUS_FIXER_REMOVE_PRICE_LIMITS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+    MARKET_STATUS_REMOVE_INVALID_PRICE_LIMITS = True
+
 
 def _kucoin_retrier(f):
     async def wrapper(*args, **kwargs):

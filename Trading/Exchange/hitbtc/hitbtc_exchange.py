@@ -19,8 +19,8 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class HitbtcConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+
 
 class Hitbtc(exchanges.SpotCCXTExchange):
     CONNECTOR_SETTINGS = HitbtcConnectorSettings

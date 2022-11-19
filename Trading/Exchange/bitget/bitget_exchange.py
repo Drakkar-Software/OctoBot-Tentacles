@@ -23,8 +23,8 @@ from octobot_trading.exchanges.config import ccxt_exchange_settings
 
 
 class BitgetConnectorSettings(ccxt_exchange_settings.CCXTExchangeConfig):
-    USE_FIXED_MARKET_STATUS = True
-    
+    MARKET_STATUS_FIX_PRECISION = True
+
 
 class _BitgetCCXTExchange(exchanges.CCXTExchange):
     def get_client_time_frames(self):
