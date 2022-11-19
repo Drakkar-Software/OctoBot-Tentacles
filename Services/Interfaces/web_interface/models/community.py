@@ -17,6 +17,7 @@ import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
 import octobot.constants as octobot_constants
 import octobot_commons.authentication as authentication
+import octobot_trading.api as trading_api
 
 
 def get_community_metrics_to_display():
@@ -92,3 +93,23 @@ def can_select_bot():
 
 def can_logout():
     return not authentication.Authenticator.instance().must_be_authenticated_through_authenticator()
+
+
+def get_followed_strategy_url():
+    trading_mode = interfaces_util.get_bot_api().get_trading_mode()
+    if trading_mode is None:
+        return None
+    identifier = trading_api.get_trading_mode_followed_strategy_signals_identifier(trading_mode)
+    if identifier is None:
+        return None
+    return authentication.Authenticator.instance().get_signal_community_url(
+        identifier
+    )
+
+
+def is_community_feed_connected():
+    return authentication.Authenticator.instance().is_feed_connected()
+
+
+def get_last_signal_time():
+    return authentication.Authenticator.instance().get_feed_last_message_time()

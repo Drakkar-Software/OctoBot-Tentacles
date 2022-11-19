@@ -129,6 +129,9 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
     def is_backtestable():
         return False
 
+    def is_following_trading_signals(self):
+        return True
+
     async def stop(self) -> None:
         self.logger.debug("Stopping trading mode: this should normally not be happening unless OctoBot is stopping")
         await super().stop()
