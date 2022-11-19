@@ -177,14 +177,21 @@
             id="{{config_key}}"
             editable_config_id="multi-select-element-{{ identifier }}"
             >
-        {% for name in suggestions %}
+        {% for name in config[key] %}
             <option value="{{ name }}"
-            {% if not no_select and name in config[key] %}
+            {% if not no_select %}
                 selected="selected"
             {% endif %}
             >
                 {{ name }}
             </option>
+        {% endfor %}
+        {% for name in suggestions %}
+            {% if name not in config[key] %}
+            <option value="{{ name }}">
+                {{ name }}
+            </option>
+            {% endif %}
         {% endfor %}
         {% if not suggestions and not no_select and config[key]%}
             {% for name in config[key] %}
