@@ -67,6 +67,9 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     create_new_bot,
     can_select_bot,
     can_logout,
+    get_followed_strategy_url,
+    is_community_feed_connected,
+    get_last_signal_time,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
@@ -229,6 +232,9 @@ __all__ = [
     "create_new_bot",
     "can_select_bot",
     "can_logout",
+    "get_followed_strategy_url",
+    "is_community_feed_connected",
+    "get_last_signal_time",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",
     "get_tentacle_documentation",
