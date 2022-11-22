@@ -29,6 +29,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Evaluator.Strategies as Strategies
 
 
@@ -43,7 +44,10 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.should_emit_trading_signals_user_input(inputs)
+        trading_modes.should_emit_trading_signals_user_input(self, inputs)
+
+        trading_modes.user_select_order_amount(self, inputs, include_sell=False)
+
         self.sell_orders_per_buy = self.UI.user_input(
             "sell_orders_count", commons_enums.UserInputTypes.INT, 3, inputs, min_val=1,
             title="Number of sell orders to create after each buy."
@@ -56,17 +60,17 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.4, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for the top sell order in a light price weight signal.",
+            title="Volume multiplier for a buy order on a light price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for the top sell order in a medium price weight signal.",
+            title="Volume multiplier for a buy order on a medium price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for the top sell order in a heavy price weight signal.",
+            title="Volume multiplier for a buy order on a heavy price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
@@ -207,7 +211,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             orders_should_have_been_created = False
-            quantity = await self._get_buy_quantity_from_weight(volume_weight, max_buy_size, base)
+            ctx = script_keywords.get_base_context(self.trading_mode, symbol)
+            quantity = await self._get_buy_quantity_from_weight(ctx, volume_weight, max_buy_size, base)
             limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -286,11 +291,22 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     def unregister_buy_order(self, order_id):
         self.sell_targets_by_order_id.pop(order_id, None)
 
-    async def _get_buy_quantity_from_weight(self, volume_weight, market_quantity, currency):
+    async def _get_buy_quantity_from_weight(self, ctx, volume_weight, market_quantity, currency):
         weighted_volume = self.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight]
         # high risk is making larger orders, low risk is making smaller ones
         risk_multiplier = 1 + ((self.exchange_manager.trader.risk - decimal.Decimal("0.5")) * self.RISK_VOLUME_MULTIPLIER)
         weighted_volume = min(weighted_volume * risk_multiplier, trading_constants.ONE)
+        # check configured quantity
+        if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
+                                                                       trading_enums.TradeOrderSide.BUY):
+            return await script_keywords.get_amount_from_input_amount(
+                context=ctx,
+                input_amount=user_amount,
+                side=trading_enums.TradeOrderSide.BUY.value,
+                reduce_only=False,
+                is_stop_order=False,
+                use_total_holding=False,
+            ) * weighted_volume
         traded_assets_count = self.get_number_of_traded_assets()
         if traded_assets_count == 1:
             return market_quantity * self.DEFAULT_FULL_VOLUME * weighted_volume
