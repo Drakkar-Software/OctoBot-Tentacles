@@ -84,7 +84,11 @@ def trading():
                                  watched_symbols=models.get_watched_symbols(),
                                  pairs_with_status=interfaces_util.get_currencies_with_status(),
                                  has_real_trader=has_real_trader,
-                                 exchanges_load=exchanges_load)
+                                 exchanges_load=exchanges_load,
+                                 is_community_feed_connected=models.is_community_feed_connected(),
+                                 last_signal_time=models.get_last_signal_time(),
+                                 followed_strategy_url=models.get_followed_strategy_url(),
+                                 )
 
 
 @web_interface.server_instance.route("/trades")

@@ -32,6 +32,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.modes.script_keywords as script_keywords
 import octobot_commons.constants as commons_constants
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -111,6 +112,41 @@ async def test_create_bottom_order(tools):
     expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
         consumer.SOFT_MAX_CURRENCY_RATIO
+    assert order.origin_quantity == expected_quantity
+
+    expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
+    assert order.origin_price == expected_price
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available  > trading_constants.ZERO
+
+    assert order.order_id in consumer.sell_targets_by_order_id
+
+
+async def test_create_bottom_order_with_configured_quantity(tools):
+    producer, consumer, trader = tools
+
+    producer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = \
+        f"20{script_keywords.QuantityType.PERCENT.value}"
+    price = decimal.Decimal("1000")
+    market_quantity = decimal.Decimal("2")
+    volume_weight = decimal.Decimal("1")
+    risk_multiplier = decimal.Decimal("1.1")
+    # force portfolio value
+    trader.exchange_manager.exchange_personal_data. \
+        portfolio_manager.portfolio_value_holder.portfolio_current_value = decimal.Decimal(1)
+    await producer._create_bottom_order(1, volume_weight, 1)
+    # create as task to allow creator's queue to get processed
+    await asyncio.create_task(_check_open_orders_count(trader, 1))
+    await asyncio_tools.wait_asyncio_next_cycle()
+
+    order = trading_api.get_open_orders(trader.exchange_manager)[0]
+    default_expected_quantity = market_quantity * risk_multiplier * \
+        consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+        consumer.SOFT_MAX_CURRENCY_RATIO
+    expected_quantity = decimal.Decimal(1) * risk_multiplier * \
+        consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+        decimal.Decimal("0.2")
+    assert default_expected_quantity != expected_quantity
     assert order.origin_quantity == expected_quantity
 
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER

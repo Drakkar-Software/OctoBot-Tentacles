@@ -14,13 +14,14 @@
 {{ m_flash_messages.flash_messages() }}
 
 {% if use_preview %}
-    {{ tentacles_packages_display.tentacles_packages("example@mail.com", role, is_donor, preview_tentacles_packages, "#",
+    {{ tentacles_packages_display.tentacles_packages("example@mail.com", role, is_donor, selected_user_bot, preview_tentacles_packages, "#",
                                                      default_tentacles_package_image, True, False, can_logout) }}
 {% else %}
-    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, role, is_donor, preview_tentacles_packages, OCTOBOT_COMMUNITY_URL,
+    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, role, is_donor, selected_user_bot, preview_tentacles_packages, OCTOBOT_COMMUNITY_URL,
                                                      OCTOBOT_DONATION_URL, default_tentacles_package_image, True, True, can_logout) }}
 {% endif %}
 
+{% if can_select_bot %}
 <a class="btn btn-outline-primary waves-effect float-right" href="#" id="display-bot-select-modal"
    data-toggle="modal" data-target="#bot-select-modal">
    Select bot
@@ -54,6 +55,8 @@
     </div>
   </div>
 </div>
+{% endif %}
+
 <br>
 {% endblock %}
 

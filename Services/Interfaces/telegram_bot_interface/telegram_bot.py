@@ -265,7 +265,12 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                                                            "evaluations, please retry in a few seconds.`")
 
     @staticmethod
-    def command_error(update, _, error=None):
+    def command_error(update, context, error=None):
+        ctx_error = context.error if hasattr(context, 'error') else None
+        if update is None and error is None and ctx_error is not None:
+            TelegramBotInterface.get_logger().error(f"Telegram bot error: {ctx_error}")
+            return
+        error = error or ctx_error
         TelegramBotInterface.get_logger().warning("Command receiver error. Please check logs for more details.") \
             if error is None else TelegramBotInterface.get_logger().exception(error, False)
         if update is not None and TelegramBotInterface._is_valid_user(update):

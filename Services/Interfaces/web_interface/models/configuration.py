@@ -85,6 +85,19 @@ NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_
 
 DEFAULT_EXCHANGE = "binance"
 
+
+def _get_currency_dict(symbol, identifier):
+    return {
+        SYMBOL_KEY: symbol.upper(),
+        ID_KEY: identifier
+    }
+
+
+# forced cryptocurrencies to be displayed in currency selector
+FORCED_CURRENCIES_DICT = {
+    "HollaEx": _get_currency_dict("XHT", "hollaex-token")
+}
+
 # buffers to faster config page loading
 markets_by_exchanges = {}
 all_symbols_dict = {}
@@ -701,10 +714,11 @@ def get_all_symbols_dict():
                     break
                 for currency_data in request_response.json():
                     if _is_legit_currency(currency_data[NAME_KEY]):
-                        all_symbols_dict[currency_data[NAME_KEY]] = {
-                            SYMBOL_KEY: currency_data[SYMBOL_KEY].upper(),
-                            ID_KEY: currency_data[ID_KEY]
-                        }
+                        all_symbols_dict[currency_data[NAME_KEY]] = _get_currency_dict(
+                            currency_data[SYMBOL_KEY],
+                            currency_data[ID_KEY]
+                        )
+            _add_forced_currencies(all_symbols_dict)
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
@@ -712,6 +726,10 @@ def get_all_symbols_dict():
             _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_symbols_dict
+
+
+def _add_forced_currencies(symbols_dict):
+    symbols_dict.update(FORCED_CURRENCIES_DICT)
 
 
 def get_exchange_logo(exchange_name):
