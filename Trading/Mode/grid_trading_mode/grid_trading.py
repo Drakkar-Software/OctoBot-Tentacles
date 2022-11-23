@@ -48,14 +48,14 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         those are defined somewhere else.
         """
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
-                        self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
-                        item_title="Pair configuration",
-                        other_schema_values={"minItems": 1, "uniqueItems": True},
-                        title="Configuration for each traded pairs.")
+                           self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
+                           item_title="Pair configuration",
+                           other_schema_values={"minItems": 1, "uniqueItems": True},
+                           title="Configuration for each traded pairs.")
         self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
-                        other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
-                        parent_input_name=self.CONFIG_PAIR_SETTINGS,
-                        title="Name of the traded pair."),
+                           other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                           parent_input_name=self.CONFIG_PAIR_SETTINGS,
+                           title="Name of the traded pair."),
         self.UI.user_input(
             self.CONFIG_FLAT_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
@@ -86,7 +86,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "to create that many orders.",
         )
         self.UI.user_input(
-            self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT "
@@ -94,7 +94,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
-            self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: "
@@ -102,14 +102,22 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "currency simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
-            self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Starting price: price to compute initial orders from. Set 0 to use current "
                   "exchange price during initial grid orders creation.",
         )
         self.UI.user_input(
-            self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_BUY_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all "
+                  "available base funds in portfolio (or total buy funds if set) to create orders with constant "
+                  "total order cost (price * volume).",
+        )
+        self.UI.user_input(
+            self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all "
@@ -238,7 +246,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
-        await self.trading_mode.reload_config()
+        await self.trading_mode.reload_config(self.exchange_manager.bot_id)
         self._load_symbol_trading_config()
         self.read_config()
         if self.symbol_trading_config:
