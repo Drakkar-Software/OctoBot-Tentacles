@@ -119,14 +119,14 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         those are defined somewhere else.
         """
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
-                        self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
-                        item_title="Pair configuration",
-                        other_schema_values={"minItems": 1, "uniqueItems": True},
-                        title="Configuration for each traded pairs.")
+                           self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
+                           item_title="Pair configuration",
+                           other_schema_values={"minItems": 1, "uniqueItems": True},
+                           title="Configuration for each traded pairs.")
         self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
-                        other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
-                        parent_input_name=self.CONFIG_PAIR_SETTINGS,
-                        title="Name of the traded pair."),
+                           other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                           parent_input_name=self.CONFIG_PAIR_SETTINGS,
+                           title="Name of the traded pair."),
         self.UI.user_input(
             self.CONFIG_MODE, commons_enums.UserInputTypes.OPTIONS, StrategyModes.NEUTRAL.value, inputs,
             options=list(mode.value for mode in StrategyModes),
