@@ -114,6 +114,8 @@ def context_processor_register():
         OCTOBOT_DONATION_URL=constants.OCTOBOT_DONATION_URL,
         CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
         IS_DEMO=constants.IS_DEMO,
+        IS_CLOUD=constants.IS_CLOUD_ENV,
+        TRACKING_ID=constants.TRACKING_ID,
         TAB_START=web_enums.TabsLocation.START,
         TAB_END=web_enums.TabsLocation.END,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
