@@ -24,6 +24,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 
 ACTIVATION = "activation"
 VERSION = "version"
+IMPORTED = "imported"
 
 
 def get_current_profile():
@@ -69,7 +70,8 @@ def get_profiles_tentacles_details(profiles_list):
             )
             tentacles_by_profile_id[profile.profile_id] = {
                 ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
-                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config)
+                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config),
+                IMPORTED: profile.imported
             }
         except Exception:
             # do not raise here to prevent avoid config display
