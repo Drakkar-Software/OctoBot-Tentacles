@@ -46,7 +46,8 @@ async def create_minimalist_unconnected_octobot():
     octobot_instance.configuration_manager.add_element(octobot_constants.TENTACLES_SETUP_CONFIG_KEY, tentacles_config)
     octobot_instance.exchange_producer = trading_producers.ExchangeProducer(None, octobot_instance, None, False)
     octobot_instance.evaluator_producer = octobot_producers.EvaluatorProducer(None, octobot_instance)
-    octobot_instance.evaluator_producer.matrix_id = await evaluator_api.initialize_evaluators(octobot_instance.config, tentacles_config)
+    await evaluator_api.initialize_evaluators(octobot_instance.config, tentacles_config)
+    octobot_instance.evaluator_producer.matrix_id = evaluator_api.create_matrix()
     return octobot_instance
 
 
