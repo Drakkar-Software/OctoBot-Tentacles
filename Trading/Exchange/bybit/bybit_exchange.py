@@ -60,6 +60,11 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     # Funding
     BYBIT_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
+    # Orders
+    BYBIT_REDUCE_ONLY = "reduceOnly"
+    BYBIT_TRIGGER_ABOVE_KEY = "triggerDirection"
+    BYBIT_TRIGGER_ABOVE_VALUE = "1"
+
     @classmethod
     def get_name(cls) -> str:
         return 'bybit'
@@ -93,22 +98,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params["settleCoin"] = settleCoin
             raw_positions += await super().get_positions(**params)
         return self.parse_positions(raw_positions)
-
-    async def get_open_orders(self, symbol: str = None, since: int = None,
-                              limit: int = None, **kwargs: dict) -> list:
-        orders = []
-        try:
-            orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        except Exception as e:
-            self.logger.exception(e, True, f"Fail to fetching orders : {e}")
-        if "stop" not in kwargs:
-            # only fetch untriggered stop orders
-            kwargs["stop"] = True
-            try:
-                orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-            except Exception as e:
-                self.logger.exception(e, True, f"Fail to fetching stop orders : {e}")
-        return orders
 
     async def get_closed_orders(self, symbol: str = None, since: int = None,
                                 limit: int = None, **kwargs: dict) -> list:
@@ -159,18 +148,19 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         return await super()._verify_order(created_order, order_type, symbol, price, params=params)
 
     def _update_order_and_trade_data(self, order):
+        order_info = order[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
         # parse reduce_only if present
         order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
-            order[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get("reduce_only", False)
+            order_info.get(self.BYBIT_REDUCE_ONLY, False)
 
         # market orders with stop price are stop loss
         if order.get(trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value, None) is not None and \
                 order[
                     trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == trading_enums.TradeOrderType.MARKET.value:
             order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.STOP_LOSS.value
+            order[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
+                order_info[self.BYBIT_TRIGGER_ABOVE_KEY] == self.BYBIT_TRIGGER_ABOVE_VALUE
 
-        order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
-            order[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get("reduce_only", False)
         return order
 
     async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> bool:
@@ -333,7 +323,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             #     return {}  # Don't parse empty position
 
             symbol = self.get_pair_from_exchange(
-                position_dict[trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value])
+                position_dict[trading_enums.ExchangePositionCCXTColumns.SYMBOL.value])
             mode = self._parse_position_mode(raw_position_info.get(self.BYBIT_MODE))
             original_side = position_dict.get(trading_enums.ExchangePositionCCXTColumns.SIDE.value)
             side = self.parse_position_side(original_side, mode)
@@ -358,7 +348,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
                     size if original_side == trading_enums.PositionSide.LONG.value else -size,
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:
-                    decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.COLLATERAL.value, 0))),
+                    decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value:
                     decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.NOTIONAL.value, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value:
@@ -396,16 +386,15 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
             """
             funding_next_timestamp = float(
-                funding_dict[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
+                funding_dict[trading_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value]
             )
-            if funding_next_timestamp is None:
-                funding_next_timestamp
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                     funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
                 trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value, 0)),
-                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp
+                    funding_dict.get(trading_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0)),
+                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp,
+                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: constants.NaN
             })
         except KeyError as e:
             self.logger.error(f"Fail to parse funding dict ({e})")
