@@ -177,6 +177,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
         order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None).casefold()
         if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
+            parsed_side = trading_enums.TradeOrderSide.SELL.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
@@ -185,6 +186,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
                     else trading_enums.EvaluatorStates.SHORT
         elif side == TradingViewSignalsTradingMode.BUY_SIGNAL:
+            parsed_side = trading_enums.TradeOrderSide.BUY.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_LONG
             elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
@@ -199,7 +201,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
-            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(ctx, parsed_data),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(ctx, parsed_data, parsed_side),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
@@ -208,11 +210,11 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         }
         return state, order_data
 
-    async def _parse_volume(self, ctx, parsed_data):
+    async def _parse_volume(self, ctx, parsed_data, side):
         return await script_keywords.get_amount_from_input_amount(
             context=ctx,
             input_amount=str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0)),
-            side=trading_enums.TradeOrderSide.BUY.value,
+            side=side,
             reduce_only=False,
             is_stop_order=False,
             use_total_holding=False,
