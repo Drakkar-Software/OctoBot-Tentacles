@@ -21,16 +21,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 
 
-class _BitgetCCXTExchange(exchanges.CCXTExchange):
-    def get_client_time_frames(self):
-        # on Bitget, it is necessary to specify the instrument type to get timeframes
-        # use client.timeframes["spot"]
-        return set(self.client.timeframes["spot"])
-
-
 class Bitget(exchanges.SpotCCXTExchange):
-
-    CONNECTOR_CLASS = _BitgetCCXTExchange
     DESCRIPTION = ""
 
     @classmethod

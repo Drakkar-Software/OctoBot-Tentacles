@@ -48,17 +48,16 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     FUNDING_IN_TICKER = True
 
     # Position
-    BYBIT_BANKRUPTCY_PRICE = "bust_price"
-    BYBIT_CLOSING_FEE = "occ_closing_fee"
-    BYBIT_MODE = "mode"
-    BYBIT_REALIZED_PNL = "cum_realised_pnl"
+    BYBIT_BANKRUPTCY_PRICE = "bustPrice"
+    BYBIT_CLOSING_FEE = "occClosingFee"
+    BYBIT_MODE = "positionIdx"
+    BYBIT_REALIZED_PNL = "RealisedPnl"
     BYBIT_ONE_WAY = "MergedSingle"
     BYBIT_ONE_WAY_DIGIT = "0"
     BYBIT_HEDGE = "BothSide"
     BYBIT_HEDGE_DIGITS = ["1", "2"]
 
     # Funding
-    BYBIT_FUNDING_TIMESTAMP = "funding_rate_timestamp"
     BYBIT_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     @classmethod
@@ -90,8 +89,8 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     async def get_positions(self) -> list:
         params = {}
         raw_positions = []
-        for position_type in ("linear", "inverse"):
-            params["subType"] = position_type
+        for settleCoin in ("USDT", "BTC"):
+            params["settleCoin"] = settleCoin
             raw_positions += await super().get_positions(**params)
         return self.parse_positions(raw_positions)
 
@@ -329,7 +328,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
     def parse_position(self, position_dict) -> dict:
         try:
             raw_position_info = position_dict.get(trading_enums.ExchangePositionCCXTColumns.INFO.value)
-            size = decimal.Decimal(position_dict.get(trading_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0))
+            size = decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0)))
             # if size == constants.ZERO:
             #     return {}  # Don't parse empty position
 
@@ -350,8 +349,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
                 trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value:
-                    self.parse_timestamp(position_dict,
-                                         trading_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
+                    self.connector.client.safe_value(position_dict, trading_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
                     trading_enums.TraderPositionType(
@@ -360,19 +358,19 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
                     size if original_side == trading_enums.PositionSide.LONG.value else -size,
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:
-                    decimal.Decimal(position_dict.get(trading_enums.ExchangePositionCCXTColumns.COLLATERAL.value, 0)),
+                    decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.COLLATERAL.value, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value:
-                    decimal.Decimal(position_dict.get(trading_enums.ExchangePositionCCXTColumns.NOTIONAL.value, 0)),
+                    decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.NOTIONAL.value, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value:
-                    decimal.Decimal(position_dict.get(trading_enums.ExchangePositionCCXTColumns.LEVERAGE.value, 1)),
+                    decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.LEVERAGE.value, 1))),
                 trading_enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value: unrealized_pnl,
                 trading_enums.ExchangeConstantsPositionColumns.REALISED_PNL.value:
-                    decimal.Decimal(raw_position_info.get(self.BYBIT_REALIZED_PNL, 0)),
+                    decimal.Decimal(str(raw_position_info.get(self.BYBIT_REALIZED_PNL, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.LIQUIDATION_PRICE.value: liquidation_price,
                 trading_enums.ExchangeConstantsPositionColumns.CLOSING_FEE.value:
-                    decimal.Decimal(raw_position_info.get(self.BYBIT_CLOSING_FEE, 0)),
+                    decimal.Decimal(str(raw_position_info.get(self.BYBIT_CLOSING_FEE, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.BANKRUPTCY_PRICE.value:
-                    decimal.Decimal(raw_position_info.get(self.BYBIT_BANKRUPTCY_PRICE, 0)),
+                    decimal.Decimal(str(raw_position_info.get(self.BYBIT_BANKRUPTCY_PRICE, 0))),
                 trading_enums.ExchangeConstantsPositionColumns.ENTRY_PRICE.value: entry_price,
                 trading_enums.ExchangeConstantsPositionColumns.CONTRACT_TYPE.value:
                     self._parse_position_contract_type(symbol),
@@ -384,7 +382,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     def _safe_decimal(self, container, key, default):
         if (val := container.get(key, default)) is not None:
-            return decimal.Decimal(val)
+            return decimal.Decimal(str(val))
         return default
 
     def parse_funding(self, funding_dict, from_ticker=False):
@@ -397,8 +395,11 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             To obtain the last_funding_time : 
             => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
             """
-            funding_next_timestamp = self.parse_timestamp(
-                funding_dict, trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value)
+            funding_next_timestamp = float(
+                funding_dict[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
+            )
+            if funding_next_timestamp is None:
+                funding_next_timestamp
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                     funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
@@ -412,15 +413,21 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
 
     def parse_mark_price(self, mark_price_dict, from_ticker=False) -> dict:
         if from_ticker and constants.CCXT_INFO in mark_price_dict:
-            mark_price_dict = mark_price_dict[constants.CCXT_INFO]
-
+            try:
+                return {
+                    trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
+                        mark_price_dict[constants.CCXT_INFO][trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value]
+                }
+            except KeyError:
+                pass
         try:
             mark_price_dict = {
                 trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
-                    decimal.Decimal(mark_price_dict.get(
-                        trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value, 0))
+                    decimal.Decimal(mark_price_dict[
+                        trading_enums.ExchangeConstantsTickersColumns.CLOSE.value])
             }
         except KeyError as e:
+            # do not fill mark price with 0 when missing as might liquidate positions
             self.logger.error(f"Fail to parse mark price dict ({e})")
 
         return mark_price_dict
