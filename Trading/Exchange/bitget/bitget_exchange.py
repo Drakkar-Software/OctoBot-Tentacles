@@ -59,10 +59,11 @@ class Bitget(exchanges.SpotCCXTExchange):
         self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
         if order_type is trading_enums.TraderOrderType.BUY_MARKET:
             # on Bitget, market orders are in quote currency (YYY in XYZ/YYY)
-            if price is None:
+            used_price = price or current_price
+            if not used_price:
                 raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
                                                           f"market orders as quantity is in quote currency")
-            quantity = quantity * price
+            quantity = quantity * used_price
         if created_order := await super().create_order(order_type, symbol, quantity,
                                                        price=price, stop_price=stop_price,
                                                        side=side, current_price=current_price,
