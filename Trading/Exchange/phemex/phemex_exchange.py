@@ -32,8 +32,10 @@ class Phemex(exchanges.SpotCCXTExchange):
     async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, order_id=order_id, **kwargs):
             return order
+        # try from closed orders (get_order is not returning filled or cancelled orders)
+        if order := await self.get_order_from_open_and_closed_orders(order_id, symbol):
+            return order
         # try from trades (get_order is not returning filled or cancelled orders)
-        # todo: figure out a way to fetch cancelled orders
         return await self._get_order_from_trades(symbol, order_id, {})
 
     async def _get_order_from_trades(self, symbol, order_id, order_to_update):
