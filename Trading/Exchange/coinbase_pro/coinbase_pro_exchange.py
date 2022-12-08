@@ -51,7 +51,7 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
                                                **kwargs)
 
     def _fix_limit(self, limit: int) -> int:
-        return min(self.MAX_PAGINATION_LIMIT, limit)
+        return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
     def _uniformize_trades(self, trades):
         if not trades:

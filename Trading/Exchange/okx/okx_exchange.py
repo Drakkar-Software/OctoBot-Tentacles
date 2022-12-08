@@ -70,7 +70,7 @@ class Okx(exchanges.SpotCCXTExchange):
                                                                price=price, params=params)
 
     def _fix_limit(self, limit: int) -> int:
-        return min(self.MAX_PAGINATION_LIMIT, limit)
+        return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
