@@ -66,23 +66,7 @@ class AscendEx(exchanges.SpotCCXTExchange):
                                 limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
         if limit is None:
-            # force default limit on AscendEx since it's not use by default in fetch_ohlcv
+            # force default limit on AscendEx since it's not used by default in fetch_ohlcv
             options = self.connector.client.safe_value(self.connector.client.options, 'fetchOHLCV', {})
             limit = self.connector.client.safe_integer(options, 'limit', 500)
         return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
-
-    async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
-                                     side: trading_enums.TradeOrderSide = None,
-                                     current_price: decimal.Decimal = None, params=None) -> dict:
-        created_order = await super()._create_specific_order(order_type, symbol, quantity, price=price, side=side,
-                                                             current_price=current_price, params=params)
-        return self._add_missing_order_details(created_order, order_type, quantity, price)
-
-    def _add_missing_order_details(self, order, order_type, quantity, price):
-        order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] = trading_enums.TradeOrderSide.BUY.value \
-            if order_type in {trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT} \
-            else trading_enums.TradeOrderSide.SELL.value
-        order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = price
-        order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = quantity
-        order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.OPEN.value
-        return order
