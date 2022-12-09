@@ -48,6 +48,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.USE_MARKET_ORDERS = True
+        self.CANCEL_PREVIOUS_ORDERS = True
         self.merged_simple_symbol = None
         self.str_symbol = None
 
@@ -72,6 +73,16 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             title="Fixed limit prices difference: Difference to take into account when placing a limit order "
                   "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
                   "buy price would be 199 and sell price 201.",
+        )
+        self.USE_MARKET_ORDERS = self.UI.user_input(
+            "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
+                  "are set using the Fixed limit prices difference value.",
+        )
+        self.CANCEL_PREVIOUS_ORDERS = self.UI.user_input(
+            "cancel_previous_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Cancel previous orders: If enabled, cancel other orders associated to the same symbol when "
+                  "receiving a signal. This way, only the latest signal will be taken into account.",
         )
 
     @classmethod
@@ -198,10 +209,11 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             self.logger.error(f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, "
                               f"full data= {parsed_data}")
             state = trading_enums.EvaluatorStates.NEUTRAL
+        target_price = decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0)))
         order_data = {
-            TradingViewSignalsModeConsumer.PRICE_KEY:
-                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0))),
-            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(ctx, parsed_data, parsed_side),
+            TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
+            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(ctx, parsed_data, parsed_side,
+                                                                                target_price),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
@@ -210,7 +222,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         }
         return state, order_data
 
-    async def _parse_volume(self, ctx, parsed_data, side):
+    async def _parse_volume(self, ctx, parsed_data, side, target_price):
         return await script_keywords.get_amount_from_input_amount(
             context=ctx,
             input_amount=str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0)),
@@ -218,9 +230,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             reduce_only=False,
             is_stop_order=False,
             use_total_holding=False,
+            target_price=target_price,
         )
 
     async def signal_callback(self, parsed_data):
+        if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
+            # cancel open orders
+            await self.cancel_symbol_open_orders(self.trading_mode.symbol)
         ctx = script_keywords.get_base_context(self.trading_mode)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
@@ -234,9 +250,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-                # cancel open orders
-                await self.cancel_symbol_open_orders(symbol)
-
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
                                                      symbol=symbol,
