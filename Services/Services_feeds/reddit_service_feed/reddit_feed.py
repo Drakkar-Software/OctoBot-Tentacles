@@ -16,6 +16,7 @@
 import asyncio
 import time
 import asyncprawcore.exceptions
+import logging
 
 import octobot_commons.constants as commons_constants
 import octobot_services.channel as services_channel
@@ -90,6 +91,8 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed):
         return 5
 
     async def _start_listener(self):
+        # avoid debug log at each asyncprawcore fetch
+        logging.getLogger("asyncprawcore").setLevel(logging.WARNING)
         subreddit = await self.services[0].get_endpoint().subreddit(self.subreddits)
         start_time = time.time()
         async for entry in subreddit.stream.submissions():
