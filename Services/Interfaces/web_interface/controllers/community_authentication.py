@@ -60,7 +60,7 @@ def community_login():
 @web_interface.server_instance.route("/community_logout")
 @login.login_required_when_activated
 def community_logout():
-    if models.can_logout():
+    if not models.can_logout():
         return flask.redirect(flask.url_for('community'))
     authentication.Authenticator.instance().logout()
     interfaces_util.run_in_bot_main_loop(
