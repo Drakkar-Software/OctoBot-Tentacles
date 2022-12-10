@@ -145,7 +145,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Increment: price difference between grid orders: percent of the current price to use as increment "
-                  "between orders. WARNING: this should to be lower than the Spread value: profitability is close to "
+                  "between orders. WARNING: this should be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
         self.UI.user_input(
