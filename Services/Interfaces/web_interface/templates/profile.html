@@ -124,7 +124,6 @@
                         </p>
                     </div>
                 {% endif %}
-                {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
 
                 {% set trading_modes = strategy_config["trading-modes"].items() %}
                 {% set strategies = strategy_config["strategies"].items() %}
@@ -177,6 +176,8 @@
                                 advanced configuration interface</a></p>
                         </div>
                     </div>
+                    <br>
+                    {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
                 {% else %}
                     <div class="card">
                         <div class="card-header">
