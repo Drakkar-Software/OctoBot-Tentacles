@@ -90,7 +90,7 @@ def update_profile(profile_id, json_profile):
     profile.avatar = json_profile.get("avatar", profile.avatar)
     profile.validate_and_save_config()
     if renamed:
-        profile.rename_folder(new_name)
+        profile.rename_folder(new_name, False)
     return True, "Profile updated"
 
 
