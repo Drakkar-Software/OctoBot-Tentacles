@@ -74,35 +74,21 @@
                             <h5>Simulated trading OctoBots this month</h5>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link primary-tab-selector" id="all-tab" data-toggle="tab" href="#all" role="tab"
-                           aria-controls="all"
-                           aria-selected="false">
-                            <h5>OctoBots at all time</h5>
-                        </a>
-                    </li>
                 </ul>
             </div>
             <div class="tab-content my-2" id="tabcontent">
                 <div class="tab-pane fade show active" id="real" role="tabreal" aria-labelledby="real-tab">
                     <div class="row w-100 mx-0 d-block d-md-flex">
-                        {{ top_table_card(community_metrics['top_exchanges']['monthly_real_traders'], "Exchange", "Top community exchanges") }}
-                        {{ top_table_card(community_metrics['top_strategies']['monthly_real_traders'], "Tentacle", "Top community tentacles") }}
-                        {{ top_table_card(community_metrics['top_pairs']['monthly_real_traders'], "Pair", "Top community traded pairs") }}
+                        {{ top_table_card(community_metrics['top_real_exchanges'], "Exchange", "Top community exchanges") }}
+                        {{ top_table_card(community_metrics['top_real_eval_config'], "Tentacle", "Top community tentacles") }}
+                        {{ top_table_card(community_metrics['top_real_pairs'], "Pair", "Top community traded pairs") }}
                     </div>
                 </div>
                 <div class="tab-pane fade" id="simulated" role="tabsimulated" aria-labelledby="simulated-tab">
                     <div class="row w-100 mx-0 d-block d-md-flex">
-                        {{ top_table_card(community_metrics['top_exchanges']['monthly_simulated_traders'], "Exchange", "Top community exchanges") }}
-                        {{ top_table_card(community_metrics['top_strategies']['monthly_simulated_traders'], "Tentacle", "Top community tentacles") }}
-                        {{ top_table_card(community_metrics['top_pairs']['monthly_simulated_traders'], "Pair", "Top community traded pairs") }}
-                    </div>
-                </div>
-                <div class="tab-pane fade" id="all" role="taball" aria-labelledby="all-tab">
-                    <div class="row w-100 mx-0 d-block d-md-flex">
-                        {{ top_table_card(community_metrics['top_exchanges']['all'], "Exchange", "Top community exchanges") }}
-                        {{ top_table_card(community_metrics['top_strategies']['all'], "Tentacle", "Top community tentacles") }}
-                        {{ top_table_card(community_metrics['top_pairs']['all'], "Pair", "Top community traded pairs") }}
+                        {{ top_table_card(community_metrics['top_simulated_exchanges'], "Exchange", "Top community exchanges") }}
+                        {{ top_table_card(community_metrics['top_simulated_eval_config'], "Tentacle", "Top community tentacles") }}
+                        {{ top_table_card(community_metrics['top_simulated_pairs'], "Pair", "Top community traded pairs") }}
                     </div>
                 </div>
             </div>

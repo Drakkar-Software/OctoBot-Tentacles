@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import os
-import requests
 
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
@@ -24,6 +23,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 
 ACTIVATION = "activation"
 VERSION = "version"
+IMPORTED = "imported"
 
 
 def get_current_profile():
@@ -69,7 +69,8 @@ def get_profiles_tentacles_details(profiles_list):
             )
             tentacles_by_profile_id[profile.profile_id] = {
                 ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
-                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config)
+                VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config),
+                IMPORTED: profile.imported
             }
         except Exception:
             # do not raise here to prevent avoid config display
@@ -89,7 +90,7 @@ def update_profile(profile_id, json_profile):
     profile.avatar = json_profile.get("avatar", profile.avatar)
     profile.validate_and_save_config()
     if renamed:
-        profile.rename_folder(new_name)
+        profile.rename_folder(new_name, False)
     return True, "Profile updated"
 
 
@@ -112,26 +113,16 @@ def export_profile(profile_id, export_path) -> str:
     )
 
 
-def import_profile(profile_path, name):
-    profile = profiles.import_profile(profile_path, name=name)
+def import_profile(profile_path, name, profile_url=None):
+    profile = profiles.import_profile(profile_path, name=name, origin_url=profile_url)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
     return profile
 
 
-def _download_profile(url, target_file):
-    # unauthenticated download
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(target_file, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-    return target_file
-
-
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
-    file_path = _download_profile(profile_url, name)
-    profile = import_profile(file_path, name)
+    file_path = profiles.download_profile(profile_url, name)
+    profile = import_profile(file_path, name, profile_url=profile_url)
     if os.path.isfile(file_path):
         os.remove(file_path)
     return profile

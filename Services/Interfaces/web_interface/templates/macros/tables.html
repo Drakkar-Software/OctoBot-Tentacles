@@ -78,11 +78,11 @@
 
 {% macro top_tr(item) -%}
     <tr
-    {% if item["rank"] == 1 %}
+    {% if item["rank"] == 0 %}
         class="unique-color-dark"
-    {% elif item["rank"] == 2 %}
+    {% elif item["rank"] == 1 %}
         class="unique-color"
-    {% elif item["rank"] == 3 %}
+    {% elif item["rank"] == 2 %}
         class="special-color"
     {% endif %}
     >

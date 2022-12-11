@@ -13,12 +13,15 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import logging
+import time
 import threading
 import telegram.ext
 import telegram.constants
+import telegram.error
 import telegram.utils.helpers
 
+import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import octobot_services.interfaces.bots as interfaces_bots
 import tentacles.Services.Services_bases as Services_bases
@@ -31,6 +34,8 @@ import tentacles.Services.Services_bases as Services_bases
 class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
     REQUIRED_SERVICES = [Services_bases.TelegramService]
     HANDLED_CHATS = ["private"]
+    LAST_ERROR_TIMESTAMPS = {}
+    ERROR_LEVEL_INTERVALS_THRESHOLD = 1 * commons_constants.MINUTE_TO_SECONDS
 
     def __init__(self, config):
         super().__init__(config)
@@ -268,14 +273,39 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
     def command_error(update, context, error=None):
         ctx_error = context.error if hasattr(context, 'error') else None
         if update is None and error is None and ctx_error is not None:
-            TelegramBotInterface.get_logger().error(f"Telegram bot error: {ctx_error}")
-            return
+            return TelegramBotInterface.handle_context_error(ctx_error)
         error = error or ctx_error
         TelegramBotInterface.get_logger().warning("Command receiver error. Please check logs for more details.") \
             if error is None else TelegramBotInterface.get_logger().exception(error, False)
         if update is not None and TelegramBotInterface._is_valid_user(update):
             TelegramBotInterface._send_message(update,
                                                f"Failed to perform this command {update.effective_message} : `{error}`")
+
+    @staticmethod
+    def handle_context_error(ctx_error):
+        if isinstance(ctx_error, (telegram.error.NetworkError, telegram.error.Conflict)):
+            error_message = f"Telegram bot error: {ctx_error} ({ctx_error.__class__.__name__})"
+            if TelegramBotInterface.get_error_log_level(ctx_error) is logging.ERROR:
+                TelegramBotInterface.get_logger().error(error_message)
+            elif TelegramBotInterface.get_error_log_level(ctx_error) is logging.WARNING:
+                TelegramBotInterface.get_logger().warning(error_message)
+            else:
+                TelegramBotInterface.get_logger().debug(error_message)
+        else:
+            TelegramBotInterface.get_logger().error(f"Unexpected telegram bot error: {ctx_error} "
+                                                    f"({ctx_error.__class__.__name__})")
+
+    @staticmethod
+    def get_error_log_level(error):
+        try:
+            if time.time() - TelegramBotInterface.LAST_ERROR_TIMESTAMPS[error.__class__] > \
+               TelegramBotInterface.ERROR_LEVEL_INTERVALS_THRESHOLD:
+                TelegramBotInterface.LAST_ERROR_TIMESTAMPS[error.__class__] = time.time()
+                return logging.ERROR
+            return logging.DEBUG
+        except KeyError:
+            TelegramBotInterface.LAST_ERROR_TIMESTAMPS[error.__class__] = time.time()
+            return logging.ERROR
 
     @staticmethod
     def echo(_, update):

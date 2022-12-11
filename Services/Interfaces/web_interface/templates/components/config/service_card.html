@@ -32,7 +32,7 @@
         <!--Card content-->
         <div class="card-body" name="{{service_name}}" config-key="services_{{service_name}}">
 
-            <p class="card-text api">
+            <p class="card-text api analytics-hidden">
                 {% for req in service_config_fields %}
                     {{ m_editable_config.editable_key(  service_config_fields if (default_values or req not in config[service_name]) else config[service_name],
                                                         req,

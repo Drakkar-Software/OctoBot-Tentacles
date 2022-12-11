@@ -112,7 +112,8 @@
 
             <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
-                {% if profiles_tentacles_details[current_profile.profile_id]["version"] != CURRENT_BOT_VERSION %}
+                {% if profiles_tentacles_details[current_profile.profile_id]["version"] != CURRENT_BOT_VERSION
+                    and not profiles_tentacles_details[current_profile.profile_id]["imported"] %}
                     <div class="alert alert-warning" role="alert">
                         <h4>Profile version warning</h4>
                         <p>
@@ -123,7 +124,6 @@
                         </p>
                     </div>
                 {% endif %}
-                {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
 
                 {% set trading_modes = strategy_config["trading-modes"].items() %}
                 {% set strategies = strategy_config["strategies"].items() %}
@@ -176,6 +176,8 @@
                                 advanced configuration interface</a></p>
                         </div>
                     </div>
+                    <br>
+                    {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
                 {% else %}
                     <div class="card">
                         <div class="card-header">

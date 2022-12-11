@@ -21,16 +21,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 
 
-class _BitgetCCXTExchange(exchanges.CCXTExchange):
-    def get_client_time_frames(self):
-        # on Bitget, it is necessary to specify the instrument type to get timeframes
-        # use client.timeframes["spot"]
-        return set(self.client.timeframes["spot"])
-
-
 class Bitget(exchanges.SpotCCXTExchange):
-
-    CONNECTOR_CLASS = _BitgetCCXTExchange
     DESCRIPTION = ""
 
     @classmethod
@@ -68,10 +59,11 @@ class Bitget(exchanges.SpotCCXTExchange):
         self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
         if order_type is trading_enums.TraderOrderType.BUY_MARKET:
             # on Bitget, market orders are in quote currency (YYY in XYZ/YYY)
-            if price is None:
+            used_price = price or current_price
+            if not used_price:
                 raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
                                                           f"market orders as quantity is in quote currency")
-            quantity = quantity * price
+            quantity = quantity * used_price
         if created_order := await super().create_order(order_type, symbol, quantity,
                                                        price=price, stop_price=stop_price,
                                                        side=side, current_price=current_price,

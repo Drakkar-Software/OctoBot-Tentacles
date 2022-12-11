@@ -21,7 +21,7 @@ import octobot_trading.api as trading_api
 
 
 def get_community_metrics_to_display():
-    return octobot_community.get_community_metrics()
+    return interfaces_util.run_in_bot_async_executor(octobot_community.get_community_metrics())
 
 
 def can_get_community_metrics():

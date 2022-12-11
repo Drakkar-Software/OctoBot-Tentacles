@@ -201,7 +201,7 @@ def _add_to_missing_tentacles_if_missing(tentacle_name: str, missing_tentacles: 
     except KeyError:
         missing_tentacles.add(tentacle_name)
     except AttributeError:
-        _get_logger().error(f"Missing tentacles data for {tentacle_name}. This is likely due to an error in the "
+        _get_logger().debug(f"Missing tentacles data for {tentacle_name}. This is likely due to an error in the "
                             f"associated metadata.json file.")
         missing_tentacles.add(tentacle_name)
 
