@@ -15,10 +15,7 @@
             "coinbasepro": {
                 "enabled": true
             },
-            "ftx": {
-                "enabled": true
-            },
-            "kraken": {
+            "kucoin": {
                 "enabled": true
             }
         },
