@@ -1,1 +1,1 @@
-Poloniex is a basic SpotExchange adaptation for FTX exchange. 
+Poloniex is a basic SpotExchange adaptation for Poloniex exchange. 
