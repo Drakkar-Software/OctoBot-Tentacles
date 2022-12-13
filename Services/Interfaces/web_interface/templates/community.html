@@ -32,6 +32,14 @@
     <div class="modal-content modal-text bg-dark text-light">
       <div class="modal-header primary-text">
         <h2 class="modal-title">Bot selection</h2>
+            {% if can_logout and not selected_user_bot["id"]%}
+            <div class="text-right">
+                <a class="btn btn-sm btn-outline-info waves-effect"
+                   href="{{ url_for('community_logout')}}">
+                    logout
+                </a>
+            </div>
+            {% endif %}
           {% if selected_user_bot["id"] %}
             <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
@@ -41,17 +49,6 @@
       <div class="modal-body">
         {{ bot_selector.bot_selector(all_user_bots, selected_user_bot) }}
       </div>
-      {% if selected_user_bot["id"] %}
-      <div class="modal-footer">
-        {% if can_logout %}
-        <a class="align-left btn btn-outline-primary card-link waves-effect"
-           href="{{ url_for('community_logout')}}">
-            logout
-        </a>
-        {% endif %}
-        <button type="button" class="btn btn-primary ml-4" data-dismiss="modal">Close</button>
-      </div>
-      {% endif %}
     </div>
   </div>
 </div>

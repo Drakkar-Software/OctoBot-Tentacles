@@ -418,18 +418,18 @@ class MACDMomentumEvaluator(evaluators.TAEvaluator):
         self.signal_period_length = 9
 
     def init_user_inputs(self, inputs: dict) -> None:
-        self.short_period_length = self.UI.user_input("short_period_length", enums.UserInputTypes.INT,
-                                                   self.short_period_length,
-                                                   inputs, min_val=1,
-                                                   title="MACD fast period length.")
-        self.long_period_length = self.UI.user_input("long_period_length", enums.UserInputTypes.INT,
-                                                  self.long_period_length,
-                                                  inputs, min_val=1,
-                                                  title="MACD slow period length.")
-        self.signal_period_length = self.UI.user_input("signal_period_length", enums.UserInputTypes.INT,
-                                                    self.signal_period_length,
-                                                    inputs, min_val=1,
-                                                    title="MACD signal period.")
+        self.short_period_length = self.UI.user_input(
+            "short_period_length", enums.UserInputTypes.INT, self.short_period_length, inputs,
+            min_val=1, title="MACD fast period length."
+        )
+        self.long_period_length = self.UI.user_input(
+            "long_period_length", enums.UserInputTypes.INT, self.long_period_length, inputs,
+            min_val=1, title="MACD slow period length."
+        )
+        self.signal_period_length = self.UI.user_input(
+            "signal_period_length", enums.UserInputTypes.INT, self.signal_period_length, inputs,
+            min_val=1, title="MACD signal period."
+        )
 
     def _analyse_pattern(self, pattern, macd_hist, zero_crossing_indexes, price_weight,
                          pattern_move_time, sign_multiplier):
