@@ -394,6 +394,10 @@ a.nav-link.primary-tab-selector.active {
     font-size: 1.5em;
 }
 
+.fa.fa-spinner {
+    font-size: 1.4em;
+}
+
 span.large-editable div.editable-input {
     width: 100%;
 }
