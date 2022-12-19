@@ -125,6 +125,9 @@ def import_profile(profile_path, name, profile_url=None):
 
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
+    if "?" in name:
+        # remove parameter
+        name = name.split("?")[0]
     file_path = profiles.download_profile(profile_url, name)
     profile = import_profile(file_path, name, profile_url=profile_url)
     if os.path.isfile(file_path):
