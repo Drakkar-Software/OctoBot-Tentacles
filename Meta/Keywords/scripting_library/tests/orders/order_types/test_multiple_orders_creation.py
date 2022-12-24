@@ -28,7 +28,8 @@ import octobot_trading.constants as trading_constants
 import tentacles.Meta.Keywords.scripting_library as scripting_library
 
 
-from tentacles.Meta.Keywords.scripting_library.tests import event_loop, mock_context
+from tentacles.Meta.Keywords.scripting_library.tests import event_loop, mock_context, \
+    skip_if_octobot_trading_mocking_disabled
 from tentacles.Meta.Keywords.scripting_library.tests.exchanges import backtesting_trader, backtesting_config, \
     backtesting_exchange_manager, fake_backtesting
 import tentacles.Meta.Keywords.scripting_library.tests.test_utils.order_util as test_order_util
@@ -39,7 +40,8 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=["backtesting_config"])
-async def test_orders_with_invalid_values(mock_context):
+async def test_orders_with_invalid_values(mock_context, skip_if_octobot_trading_mocking_disabled):
+    # skip_if_octobot_trading_mocking_disabled mock_context.trader, "create_order"
     initial_usdt_holdings, btc_price = await _usdt_trading_context(mock_context)
 
     if os.getenv('CYTHON_IGNORE'):
@@ -396,7 +398,7 @@ async def test_multiple_sell_limit_with_stop_loss_rounding_issues_in_balanced_ta
 
         btsl_group_1 = scripting_library.create_balanced_take_profit_and_stop_group(mock_context)
         # disable to create orders
-        btsl_group_1.enable(False)
+        await btsl_group_1.enable(False)
         position_size = decimal.Decimal(20)
         added_amount = decimal.Decimal("0.00100001111")
 

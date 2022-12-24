@@ -29,7 +29,8 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 
-from tentacles.Meta.Keywords.scripting_library.tests import event_loop, null_context, mock_context, symbol_market
+from tentacles.Meta.Keywords.scripting_library.tests import event_loop, null_context, mock_context, symbol_market, \
+    skip_if_octobot_trading_mocking_disabled
 from tentacles.Meta.Keywords.scripting_library.tests.exchanges import backtesting_trader, backtesting_config, \
     backtesting_exchange_manager, fake_backtesting
 
@@ -91,7 +92,8 @@ async def test_create_order_instance(mock_context):
                 order_amount='order_amount', order_target_position='order_target_position')
 
 
-def test_paired_order_is_closed(mock_context):
+def test_paired_order_is_closed(mock_context, skip_if_octobot_trading_mocking_disabled):
+    # skip_if_octobot_trading_mocking_disabled oco_group, "get_group_open_orders"
     assert create_order._paired_order_is_closed(mock_context, None) is False
     oco_group = grouping.create_one_cancels_the_other_group(mock_context)
     assert create_order._paired_order_is_closed(mock_context, oco_group) is False
@@ -395,7 +397,8 @@ async def test_create_order(mock_context, symbol_market):
         assert grouped_orders[0] is orders[0]
 
 
-async def test_get_group_adapted_quantity(mock_context):
+async def test_get_group_adapted_quantity(mock_context, skip_if_octobot_trading_mocking_disabled):
+    # skip_if_octobot_trading_mocking_disabled btps_group, "can_create_order"
     oco_group = grouping.create_one_cancels_the_other_group(mock_context)
     # no filter on oco groups
     assert create_order._get_group_adapted_quantity(mock_context, oco_group, "whatever", decimal.Decimal(1000000)) \
