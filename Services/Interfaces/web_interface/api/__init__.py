@@ -24,6 +24,7 @@ from tentacles.Services.Interfaces.web_interface.api import metadata
 from tentacles.Services.Interfaces.web_interface.api import trading
 from tentacles.Services.Interfaces.web_interface.api import user_commands
 from tentacles.Services.Interfaces.web_interface.api import bots
+from tentacles.Services.Interfaces.web_interface.api import webhook
 
 
 from tentacles.Services.Interfaces.web_interface.api.config import (
@@ -53,6 +54,10 @@ from tentacles.Services.Interfaces.web_interface.api.bots import (
     select_bot,
     create_bot,
 )
+from tentacles.Services.Interfaces.web_interface.api.webhook import (
+    register_webhook,
+    has_webhook,
+)
 
 __all__ = [
     "are_compatible_accounts",
@@ -70,4 +75,6 @@ __all__ = [
     "change_reference_market_on_config_currencies",
     "create_bot",
     "select_bot",
+    "register_webhook",
+    "has_webhook",
 ]

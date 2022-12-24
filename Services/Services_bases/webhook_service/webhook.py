@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 import logging
 import os
 import time
@@ -24,10 +25,11 @@ import pyngrok.exception
 
 import octobot_commons.logging as bot_logging
 import octobot_commons.configuration as configuration
-import octobot_commons.constants as commons_constants
+import octobot_commons.authentication as authentication
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
+import octobot.community.errors as community_errors
 
 
 class WebHookService(services.AbstractService):
@@ -35,6 +37,8 @@ class WebHookService(services.AbstractService):
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
+        if self.use_web_interface_for_webhook:
+            return {}
         return {
             services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
@@ -43,6 +47,8 @@ class WebHookService(services.AbstractService):
         }
 
     def get_default_value(self):
+        if self.use_web_interface_for_webhook:
+            return {}
         return {
             services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
@@ -52,6 +58,7 @@ class WebHookService(services.AbstractService):
 
     def __init__(self):
         super().__init__()
+        self.use_web_interface_for_webhook = constants.IS_CLOUD_ENV
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
         self.ngrok_enabled = True
@@ -78,6 +85,8 @@ class WebHookService(services.AbstractService):
         return True
 
     def check_required_config(self, config):
+        if self.use_web_interface_for_webhook:
+            return True
         try:
             token = config.get(services_constants.CONFIG_NGROK_TOKEN)
             enabled = config.get(services_constants.CONFIG_ENABLE_NGROK, True)
@@ -101,14 +110,12 @@ class WebHookService(services.AbstractService):
             return False
 
     def get_required_config(self):
-        return [services_constants.CONFIG_ENABLE_NGROK, services_constants.CONFIG_NGROK_TOKEN]
+        return [] if self.use_web_interface_for_webhook else \
+            [services_constants.CONFIG_ENABLE_NGROK, services_constants.CONFIG_NGROK_TOKEN]
 
     @classmethod
     def get_help_page(cls) -> str:
         return f"{constants.OCTOBOT_DOCS_URL}/webhooks/using-a-webhook-with-octobot"
-
-    def get_endpoint(self) -> None:
-        return ngrok
 
     def get_type(self) -> None:
         return services_constants.CONFIG_WEBHOOK
@@ -156,28 +163,31 @@ class WebHookService(services.AbstractService):
             self.webhook_server = None
             self.get_logger().exception(e, False, f"Fail to start webhook : {e}")
 
-    def _load_webhook_routes(self) -> None:
-        @self.webhook_app.route('/')
+    def _register_webhook_routes(self, blueprint) -> None:
+        @blueprint.route('/')
         def index():
             """
             Route to check if webhook server is online
             """
             return ''
 
-        @self.webhook_app.route('/webhook/<webhook_name>', methods=['POST'])
+        @blueprint.route('/webhook/<webhook_name>', methods=['POST'])
         def webhook(webhook_name):
-            if webhook_name in self.service_feed_webhooks:
-                if flask.request.method == 'POST':
-                    data = flask.request.get_data(as_text=True)
-                    if self.service_feed_auth_callbacks[webhook_name](data):
-                        self.service_feed_webhooks[webhook_name](data)
-                    else:
-                        self.logger.debug(f"Ignored feed (wrong token): {data}")
-                    return '', 200
-                flask.abort(400)
-            else:
-                self.logger.warning(f"Received unknown request from {webhook_name}")
-                flask.abort(500)
+            return self._webhook_call(webhook_name)
+
+    def _webhook_call(self, webhook_name):
+        if webhook_name in self.service_feed_webhooks:
+            if flask.request.method == 'POST':
+                data = flask.request.get_data(as_text=True)
+                if self.service_feed_auth_callbacks[webhook_name](data):
+                    self.service_feed_webhooks[webhook_name](data)
+                else:
+                    self.logger.debug(f"Ignored feed (wrong token): {data}")
+                return '', 200
+            flask.abort(400)
+        else:
+            self.logger.warning(f"Received unknown request from {webhook_name}")
+            flask.abort(500)
 
     async def prepare(self) -> None:
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
@@ -205,7 +215,7 @@ class WebHookService(services.AbstractService):
     def _start_server(self):
         try:
             self._prepare_webhook_server()
-            self._load_webhook_routes()
+            self._register_webhook_routes(self.webhook_app)
             self.webhook_public_url = f"http://{self.webhook_host}:{self.webhook_port}/webhook"
             if self.ngrok_enabled:
                 self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
@@ -219,7 +229,7 @@ class WebHookService(services.AbstractService):
             self.logger.exception(e, True, f"Error when running webhook service: ({e})")
         self.connected = False
 
-    def start_webhooks(self) -> bool:
+    def _start_isolated_server(self):
         if self.webhook_app is None:
             self.webhook_app = flask.Flask(__name__)
             # gevent WSGI server has to be created in the thread it is started: create everything in this thread
@@ -237,14 +247,38 @@ class WebHookService(services.AbstractService):
             return self.connected is True
         return True
 
+    async def _register_on_web_interface(self):
+        import tentacles.Services.Interfaces.web_interface.api as api
+        if not api.has_webhook(self._webhook_call):
+            api.register_webhook(self._webhook_call)
+        authenticator = authentication.Authenticator.instance()
+        if not authenticator.initialized_event.is_set():
+            await asyncio.wait_for(authenticator.initialized_event.wait(), authenticator.LOGIN_TIMEOUT)
+        try:
+            # deployed bot url
+            self.webhook_public_url = f"{authenticator.get_deployment_url()}/api/webhook"
+            self.connected = True
+            return True
+        except community_errors.BotError as err:
+            self.logger.exception(err, True, f"Impossible to start web interface based webhook {err}")
+            return False
+
+    async def start_webhooks(self) -> bool:
+        if self.use_web_interface_for_webhook:
+            return await self._register_on_web_interface()
+        return self._start_isolated_server()
+
     def _is_healthy(self):
         return self.webhook_host is not None and self.webhook_port is not None
 
     def get_successful_startup_message(self):
-        return f"Webhook configured on address: {self.webhook_host} and port: {self.webhook_port}", self._is_healthy()
+        webhook_endpoint = self.webhook_public_url
+        if self.use_web_interface_for_webhook:
+            webhook_endpoint = f"{self.webhook_host} and port: {self.webhook_port}"
+        return f"Webhook configured on address: {webhook_endpoint}", self._is_healthy()
 
     def stop(self):
-        if self.connected:
+        if not self.use_web_interface_for_webhook and self.connected:
             ngrok.kill()
             if self.webhook_server:
                 self.webhook_server.stop()
