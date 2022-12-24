@@ -22,6 +22,7 @@ import asyncio
 
 import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_trading.modes.script_keywords.context_management as context_management
+import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.enums as enums
 
 
@@ -126,6 +127,16 @@ def event_loop():
     # will fail if exceptions have been silently raised
     loop.run_until_complete(error_container.check())
     loop.close()
+
+
+@pytest.fixture
+def skip_if_octobot_trading_mocking_disabled(request):
+    try:
+        with mock.patch.object(trading_exchanges.Trader, "cancel_order", mock.AsyncMock()):
+            pass
+        # mocking is available
+    except TypeError:
+        pytest.skip(reason=f"Disabled {request.node.name} [OctoBot-Trading mocks not allowed]")
 
 
 def _configure_async_test_loop():

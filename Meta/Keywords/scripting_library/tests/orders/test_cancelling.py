@@ -16,13 +16,13 @@
 
 import pytest
 import mock
-import os
 
 import tentacles.Meta.Keywords.scripting_library.orders.order_tags as order_tags
 import tentacles.Meta.Keywords.scripting_library.orders.cancelling as cancelling
 import octobot_trading.enums as trading_enums
 
-from tentacles.Meta.Keywords.scripting_library.tests import event_loop, mock_context
+from tentacles.Meta.Keywords.scripting_library.tests import event_loop, mock_context, \
+    skip_if_octobot_trading_mocking_disabled
 from tentacles.Meta.Keywords.scripting_library.tests.exchanges import backtesting_trader, backtesting_config, \
     backtesting_exchange_manager, fake_backtesting
 
@@ -31,9 +31,8 @@ from tentacles.Meta.Keywords.scripting_library.tests.exchanges import backtestin
 pytestmark = pytest.mark.asyncio
 
 
-async def test_cancel_orders(mock_context):
-    if os.getenv('CYTHON_IGNORE'):
-        return
+async def test_cancel_orders(mock_context, skip_if_octobot_trading_mocking_disabled):
+    # skip_if_octobot_trading_mocking_disabled mock_context.trader, "cancel_order"
     tagged_orders = ["order_1", "order_2"]
     with mock.patch.object(mock_context.trader, "cancel_order",
                            mock.AsyncMock(return_value=True)) as cancel_order_mock, \
