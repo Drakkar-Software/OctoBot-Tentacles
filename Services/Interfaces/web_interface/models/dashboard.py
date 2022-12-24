@@ -104,11 +104,23 @@ def get_first_exchange_data(exchange_name=None):
 
 
 def get_watched_symbol_data(symbol):
-    symbol = parse_get_symbol(symbol)
+    symbol_object = commons_symbols.parse_symbol(parse_get_symbol(symbol))
     try:
-        _, exchange_name, exchange_id = _get_first_exchange_identifiers()
-        time_frame = _get_time_frame(exchange_name, exchange_id)
-        return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
+        last_possibility = {}
+        for exchange_manager in interfaces_util.get_exchange_managers():
+            exchange_id = trading_api.get_exchange_manager_id(exchange_manager)
+            exchange_name = trading_api.get_exchange_name(exchange_manager)
+            last_possibility = _get_candles_reply(
+                    exchange_name,
+                    exchange_id,
+                    symbol,
+                    _get_time_frame(exchange_name, exchange_id)
+                )
+            if symbol_object in trading_api.get_trading_symbols(exchange_manager):
+                return last_possibility
+        # symbol has not been found in exchange, still return the last exchange
+        # in case it becomes available
+        return last_possibility
     except KeyError:
         return {}
 
