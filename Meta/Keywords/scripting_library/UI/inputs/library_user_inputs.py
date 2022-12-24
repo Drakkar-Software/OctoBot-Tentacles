@@ -54,15 +54,13 @@ async def external_user_input(
             # look for the user input in non nested user inputs
             user_inputs = await commons_configuration.get_user_inputs(ctx.run_data_writer)
             # First try with the current top level tentacle (faster and to avoid name conflicts)
-            top_tentacle_config = ctx.top_level_tentacle.specific_config \
-                if hasattr(ctx.top_level_tentacle, "specific_config") else ctx.top_level_tentacle.trading_config
+            top_tentacle_config = ctx.top_level_tentacle.get_local_config()
             tentacle_config = _find_configuration(top_tentacle_config,
                                                   ctx.nested_config_names,
                                                   config_name.replace(" ", "_"))
             if tentacle_config is None:
                 # Then try with the current local tentacle, then use all tentacles
-                current_tentacle_config = ctx.tentacle.specific_config \
-                    if hasattr(ctx.tentacle, "specific_config") else ctx.tentacle.trading_config
+                current_tentacle_config = ctx.tentacle.get_local_config()
                 tentacle_config = current_tentacle_config.get(config_name.replace(" ", "_"), None)
             if tentacle_config is None:
                 for local_user_input in user_inputs:
