@@ -21,16 +21,19 @@ import octobot_commons.dict_util as dict_util
 import octobot_evaluators.matrix as matrix
 import octobot_evaluators.enums as evaluators_enums
 import octobot_tentacles_manager.api as tentacles_manager_api
-import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
+import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Meta.Keywords.scripting_library.UI.inputs.triggers as triggers
+
+
+# 10000000000 = Sat, 20 Nov 2286 17:46:40 GMT to select all values
+ALL_VALUES_CACHE_KEY = 10000000000.0
 
 
 def _is_first_candle_only(context):
     if not context.exchange_manager.is_backtesting:
         # this is a backtesting only optimization
         return False
-    tentacle_config = context.tentacle.trading_config if hasattr(context.tentacle, "trading_config") \
-        else context.tentacle.specific_config
+    tentacle_config = context.tentacle.get_local_config()
     return tentacle_config.get(triggers.TRIGGER_ONLY_ON_THE_FIRST_CANDLE_KEY, False)
 
 
@@ -40,14 +43,14 @@ def _is_first_candle_call(context, init_key):
 
 
 async def evaluator_get_result(
-        context,
+        context: script_keywords.Context,
         tentacle_class,
         time_frame=None,
-        symbol=None,
-        trigger=False,
+        symbol: str = None,
+        trigger: bool = False,
         value_key=commons_enums.CacheDatabaseColumns.VALUE.value,
         cache_key=None,
-        config_name=None,
+        config_name: str = None,
         config: dict = None
 ):
     tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle_class) \
@@ -85,19 +88,19 @@ async def evaluator_get_result(
 
 
 async def evaluator_get_results(
-        context,
+        context: script_keywords.Context,
         tentacle_class,
         time_frame=None,
-        symbol=None,
-        trigger=False,
+        symbol: str = None,
+        trigger: bool = False,
         value_key=commons_enums.CacheDatabaseColumns.VALUE.value,
         cache_key=None,
-        limit=-1,
-        max_history=False,
-        config_name=None,
+        limit: int = -1,
+        max_history: bool = False,
+        config_name: str = None,
         config: dict = None
 ):
-    cache_key = 10000000000.0 if max_history else cache_key
+    cache_key = ALL_VALUES_CACHE_KEY if max_history else cache_key
     tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle_class) \
         if isinstance(tentacle_class, str) else tentacle_class
     config_name = context.get_config_name_or_default(tentacle_class, config_name)
@@ -167,7 +170,7 @@ async def _trigger_single_evaluation(context, tentacle_class, value_key, cache_k
             raise commons_errors.ConfigEvaluatorError(f"Missing evaluator configuration with name {e}")
         # apply forced config if any
         dict_util.nested_update_dict(tentacle_config, config)
-        await basic_keywords.save_user_input(
+        await script_keywords.save_user_input(
             context,
             config_name,
             commons_constants.NESTED_TENTACLE_CONFIG,
