@@ -61,7 +61,7 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
         self._register_to_service()
 
     async def _start_service_feed(self):
-        success = self.services[0].start_webhooks()
+        success = await self.services[0].start_webhooks()
         self.webhook_service_url = self.services[0].get_subscribe_url(self.webhook_service_name)
         if success:
             self.services[1].register_webhook_url(self.webhook_service_url)

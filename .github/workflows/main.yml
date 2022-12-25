@@ -41,7 +41,7 @@ jobs:
         pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
         cd ..
         mkdir new_tentacles
-        cp -r Backtesting Evaluator Services Trading profiles new_tentacles
+        cp -r Backtesting Evaluator Meta Services Trading profiles new_tentacles
         cd OctoBot
         python start.py tentacles -d "../new_tentacles" -p "../../any_platform.zip"
         python start.py tentacles --install --location "../any_platform.zip" --all
@@ -75,6 +75,7 @@ jobs:
         mkdir new_tentacles
         xcopy Backtesting new_tentacles\\Backtesting /E/H/I
         xcopy Evaluator new_tentacles\\Evaluator /E/H/I
+        xcopy Meta new_tentacles\\Meta /E/H/I
         xcopy Services new_tentacles\\Services /E/H/I
         xcopy Trading new_tentacles\\Trading /E/H/I
         xcopy profiles new_tentacles\\profiles /E/H/I
@@ -143,7 +144,7 @@ jobs:
           pip install --prefer-binary -r dev_requirements.txt -r requirements.txt
           cd ..
           mkdir new_tentacles
-          cp -r Backtesting Evaluator Services Trading profiles new_tentacles
+          cp -r Backtesting Evaluator Meta Services Trading profiles new_tentacles
 
       - name: Publish tag tentacles
         if: startsWith(github.ref, 'refs/tags')

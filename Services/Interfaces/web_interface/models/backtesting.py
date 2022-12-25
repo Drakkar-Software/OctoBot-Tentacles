@@ -248,15 +248,15 @@ async def _collect_initialize_and_run_independent_backtesting(
             if start_callback:
                 start_callback()
             await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
+        else:
+            logger.error(f"Data files is None when initializing backtesting: impossible to start")
     except Exception as e:
-        bot_logging.get_logger("StartIndependentBacktestingModel").exception(e, True,
-                                                                             f"Error when running backtesting: {e}")
+        logger.exception(e, True, f"Error when running backtesting: {e}")
         try:
             await octobot_api.stop_independent_backtesting(independent_backtesting)
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = None
         except Exception as e:
-            bot_logging.get_logger("StartIndependentBacktestingModel").exception(
-                e, True, f"Error when stopping backtesting: {e}")
+            logger.exception(e, True, f"Error when stopping backtesting: {e}")
 
 
 def get_backtesting_status():

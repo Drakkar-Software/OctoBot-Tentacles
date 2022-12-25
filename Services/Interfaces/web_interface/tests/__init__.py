@@ -56,7 +56,8 @@ async def _init_bot():
     octobot.configuration_manager.add_element(octobot_constants.TENTACLES_SETUP_CONFIG_KEY, tentacles_config)
     octobot.exchange_producer = producers.ExchangeProducer(None, octobot, None, False)
     octobot.evaluator_producer = producers.EvaluatorProducer(None, octobot)
-    octobot.evaluator_producer.matrix_id = await evaluators_api.initialize_evaluators(octobot.config, tentacles_config)
+    await evaluators_api.initialize_evaluators(octobot.config, tentacles_config)
+    octobot.evaluator_producer.matrix_id = evaluators_api.create_matrix()
     # Do not edit config file
     octobot.community_auth.edited_config = None
     return octobot
