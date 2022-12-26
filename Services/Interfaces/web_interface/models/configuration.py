@@ -561,14 +561,18 @@ def _handle_special_fields(config, new_config):
 
 
 def update_global_config(new_config, delete=False):
-    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
-    if not delete:
-        _handle_special_fields(current_edited_config.config, new_config)
-    current_edited_config.update_config_fields(new_config,
-                                               backtesting_api.is_backtesting_enabled(current_edited_config.config),
-                                               constants.UPDATED_CONFIG_SEPARATOR,
-                                               delete=delete)
-    return True
+    try:
+        current_edited_config = interfaces_util.get_edited_config(dict_only=False)
+        if not delete:
+            _handle_special_fields(current_edited_config.config, new_config)
+        current_edited_config.update_config_fields(new_config,
+                                                   backtesting_api.is_backtesting_enabled(current_edited_config.config),
+                                                   constants.UPDATED_CONFIG_SEPARATOR,
+                                                   delete=delete)
+        return True
+    except Exception as e:
+        _get_logger().exception(e, True, f"Error when updating global config {e}")
+        return False
 
 
 def activate_metrics(enable_metrics):
