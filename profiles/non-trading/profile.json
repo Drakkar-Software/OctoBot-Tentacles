@@ -15,7 +15,7 @@
         },
         "trader": {
             "enabled": false,
-            "load-trade-history": false
+            "load-trade-history": true
         },
         "trader-simulator": {
             "enabled": true,
@@ -24,8 +24,7 @@
                 "taker": 0.1
             },
             "starting-portfolio": {
-                "BTC": 10,
-                "USDT": 1000
+                "USDT": 10000
             }
         },
         "trading": {
@@ -35,9 +34,9 @@
     },
     "profile": {
         "avatar": "default_profile.png",
-        "description": "DailyTrading is a low risk versatile profile that catches buy and sell opportunities using RSI and moving average indicators.",
-        "id": "daily_trading",
-        "name": "DailyTrading",
+        "description": "Non-Trading is a profile that does not trade. It will not create any order. Use this profile to run OctoBot without creating any order.",
+        "id": "default",
+        "name": "Non-Trading",
         "read_only": true
     }
 }
