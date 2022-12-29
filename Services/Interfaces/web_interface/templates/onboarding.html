@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% set active_page = "home" %}
+
+{% import "components/community/login.html" as login %}
+
+{% macro profile_overview(profile, current_profile) -%}
+<div class="col col-md-4 px-1 my-1 profile-overview {{'profile-overview-selected' if profile.profile_id == current_profile.profile_id}}">
+    <h4>
+        {{ profile.name | safe }}
+    </h4>
+    <div class="text-center">
+        <img src="{{url_for('profile_media', path=profile.avatar_path) if profile.avatar_path else url_for('static', filename='img/default_profile.png')}}"
+             class="img-fluid profile-overview-image" alt="{{profile.name}}">
+    </div>
+    <p class="pt-2 text-center">
+        {{ profile.description | safe }}
+    </p>
+    <div class="row">
+        <div class="col">
+            <button class="btn btn-outline-primary btn-md"  data-toggle="modal" data-target="#{{profile.profile_id}}Modal" no-activation-click="true"><i class="fa fa-search" no-activation-click="true"></i></button>
+        </div>
+        <div class="col">
+            <button class="btn btn-primary btn-md"><i class="fa fa-check" no-activation-click="true"></i></button>
+        </div>
+    </div>
+</div>
+{%- endmacro %}
+
+{% block body %}
+<br>
+<div class="card">
+    <div class="card-header">
+        <h2>Welcome to OctoBot</h2>
+    </div>
+    <div class="card-body container-fluid">
+        {% if current_logged_in_email %}
+        <div class="alert alert-dark row py-0">
+            <div class="col-8 my-auto">
+                Logged in as {{current_logged_in_email}}
+                {% if selected_user_bot["name"] %}
+                    using bot <span class="badge badge-info">{{ selected_user_bot["name"] }}</span>
+                {% else %}
+                    <span class="badge badge-danger">without selected bot</span>
+                {% endif %}
+            </div>
+            {% if can_logout %}
+            <div class="col-4 text-right">
+                <a class="align-right btn btn-sm btn-outline-info waves-effect"
+                   href="{{ url_for('community_logout', next=url_for('onboarding'))}}">
+                    logout
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div>
+            Login to you OctoBot Account to access your subscribed profiles as well as the additional profiles.
+
+            <div class="login_box mx-auto mt-1 mt-xl-5">
+                {{ login.login_form(form, is_in_stating_community_env, url_for("onboarding")) }}
+            </div>
+        </div>
+        {% endif %}
+        <h3>Select a profile</h3>
+        <div class="row">
+            {% for profile in profiles %}
+            {{ profile_overview(profile, current_profile) }}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/onboarding.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

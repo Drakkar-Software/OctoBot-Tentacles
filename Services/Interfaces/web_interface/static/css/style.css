@@ -85,6 +85,21 @@ a.profile-overview-values {
     font-weight: inherit;
 }
 
+.profile-overview:hover {
+    animation: all 0.2s ease-in forwards;
+    border-bottom: 2px solid white;
+}
+
+.profile-overview-selected {
+    border-bottom: 2px solid white;
+    font-weight: bolder;
+}
+
+.profile-overview-image {
+    max-height: 120px;
+    max-width: 120px;
+}
+
 .navbar.navbar-dark, footer.page-footer .footer-copyright, .progress-bar {
     background-color: #C62828;
 }
