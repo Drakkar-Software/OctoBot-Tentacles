@@ -15,6 +15,7 @@
 #  License along with this library.
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
+import octobot.commands as octobot_commands
 import octobot.constants as octobot_constants
 import octobot_commons.authentication as authentication
 import octobot_trading.api as trading_api
@@ -113,3 +114,13 @@ def is_community_feed_connected():
 
 def get_last_signal_time():
     return authentication.Authenticator.instance().get_feed_last_message_time()
+
+
+async def _sync_community_account():
+    profile_urls = await authentication.Authenticator.instance().get_subscribed_profile_urls()
+    return octobot_commands.download_missing_profiles(interfaces_util.get_edited_config(dict_only=False), profile_urls)
+
+
+def sync_community_account():
+    return interfaces_util.run_in_bot_main_loop(_sync_community_account())
+

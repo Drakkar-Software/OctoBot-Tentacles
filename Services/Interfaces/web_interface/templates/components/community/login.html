@@ -1,6 +1,6 @@
 {% from "macros/forms.html" import render_field %}
 
-{% macro login_form(form, is_in_stating_community_env, after_login_url) -%}
+{% macro login_form(form, is_in_stating_community_env, after_login_url, after_login_action=None) -%}
 <div class="card text-center">
     <div class="card-header">
         <h2>
@@ -30,7 +30,7 @@
                 {% endif %}
                 Astrolab account.
             </h5>
-            <form method=post action="{{url_for('community_login', next=after_login_url)}}" name="community-login">
+            <form method=post action="{{url_for('community_login', next=after_login_url, after_login_action=after_login_action)}}" name="community-login">
                 <div class="my-4">
                     {{ form.csrf_token }}
                     <div class="mb-2">

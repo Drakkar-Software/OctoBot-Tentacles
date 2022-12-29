@@ -39,6 +39,8 @@ def onboarding():
         for exchange, exchange_config in config_exchanges.items()
         if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
     ]
+    media_url = flask.url_for("tentacle_media", _external=True)
+    missing_tentacles = set()
 
     authenticator = authentication.Authenticator.instance()
     logged_in_email = None
@@ -60,6 +62,9 @@ def onboarding():
         current_profile=current_profile,
         profiles=profiles.values(),
         profiles_tentacles_details=models.get_profiles_tentacles_details(profiles),
+
+        evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
+        strategy_config=models.get_strategy_config(media_url, missing_tentacles),
 
         config_exchanges=config_exchanges,
 
