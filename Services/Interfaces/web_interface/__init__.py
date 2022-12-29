@@ -18,8 +18,9 @@ import copy
 import logging
 import time
 import abc
-import flask
 import os.path
+import flask
+import flask_cors
 from flask_caching import Cache
 
 import tentacles.Services.Interfaces.web_interface.api as api
@@ -56,6 +57,11 @@ import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 # Override system configuration content types
 flask_util.init_content_types()
 server_instance.json = flask_util.FloatDecimalJSONProvider(server_instance)
+
+# Set CORS policy
+if flask_util.get_user_defined_cors_allowed_origins() != "*":
+    # never allow "*" as allowed origin, prefer not setting it if user did not specifically set origins
+    flask_cors.CORS(server_instance, origins=flask_util.get_user_defined_cors_allowed_origins())
 
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface

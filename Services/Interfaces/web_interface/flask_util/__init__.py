@@ -39,10 +39,16 @@ from tentacles.Services.Interfaces.web_interface.flask_util.json_provider import
     FloatDecimalJSONProvider,
 )
 
+from tentacles.Services.Interfaces.web_interface.flask_util import cors
+from tentacles.Services.Interfaces.web_interface.flask_util.cors import (
+    get_user_defined_cors_allowed_origins,
+)
+
 __all__ = [
     "init_content_types",
     "context_processor_register",
     "send_and_remove_file",
     "register_template_filters",
     "FloatDecimalJSONProvider",
+    "get_user_defined_cors_allowed_origins",
 ]
