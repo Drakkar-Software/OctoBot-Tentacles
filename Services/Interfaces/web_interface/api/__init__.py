@@ -37,6 +37,7 @@ from tentacles.Services.Interfaces.web_interface.api.exchanges import (
     first_exchange_details,
 )
 from tentacles.Services.Interfaces.web_interface.api.metadata import (
+    ping,
     version,
     upgrade_version,
     user_feedback,
@@ -62,6 +63,7 @@ from tentacles.Services.Interfaces.web_interface.api.webhook import (
 __all__ = [
     "are_compatible_accounts",
     "first_exchange_details",
+    "ping",
     "version",
     "upgrade_version",
     "user_feedback",

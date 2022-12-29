@@ -14,11 +14,22 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
+import flask_cors
 
 import octobot.api as octobot_api
 import octobot.constants as constants
 import octobot_services.interfaces as interfaces
 import tentacles.Services.Interfaces.web_interface.api as api
+import octobot_commons.timestamp_util as timestamp_util
+
+
+@api.api.route("/ping")
+@flask_cors.cross_origin()
+def ping():
+    start_time = interfaces.get_bot_api().get_start_time()
+    return json.dumps(
+        f"Running sice {timestamp_util.convert_timestamp_to_datetime(start_time, '%Y-%m-%d %H:%M:%S')}."
+    )
 
 
 @api.api.route("/version")
