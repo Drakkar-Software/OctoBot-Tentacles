@@ -35,12 +35,15 @@ import octobot_services.interfaces.util as interfaces_util
 @login.login_required_when_activated
 def profile():
     selected_profile = flask.request.args.get("select", None)
+    next_url = flask.request.args.get("next", None)
     if selected_profile is not None and selected_profile != models.get_current_profile().profile_id:
         models.select_profile(selected_profile)
         current_profile = models.get_current_profile()
         flask.flash(f"Switched to {current_profile.name} profile.", "success")
     else:
         current_profile = models.get_current_profile()
+    if next_url is not None:
+        return flask.redirect(next_url)
     media_url = flask.url_for("tentacle_media", _external=True)
     display_config = interfaces_util.get_edited_config()
 
@@ -106,17 +109,23 @@ def profiles_management(action):
             return util.get_rest_reply(flask.jsonify(str(err)), code=400)
         flask.flash(f"{removed_profile.name} profile removed.", "success")
         return util.get_rest_reply(flask.jsonify("Profile created"))
+    next_url = flask.request.args.get("next", flask.url_for('profile'))
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
         new_profile = models.import_profile(file, name)
         flask.flash(f"{new_profile.name} profile successfully imported.", "success")
-        return flask.redirect(flask.url_for('profile'))
+        return flask.redirect(next_url)
     if action == "download":
         url = flask.request.form['inputProfileLink']
-        new_profile = name = models.download_and_import_profile(url)
-        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
-        return flask.redirect(flask.url_for('profile'))
+        try:
+            new_profile = models.download_and_import_profile(url)
+            flask.flash(f"{new_profile.name} profile successfully imported.", "success")
+        except FileNotFoundError:
+            flask.flash(f"Invalid profile url {url}", "danger")
+        except Exception as err:
+            flask.flash(f"Error when importing profile: {err}", "danger")
+        return flask.redirect(next_url)
     if action == "export":
         profile_id = flask.request.args.get("profile_id")
         temp_file = os.path.abspath("profile")

@@ -16,7 +16,18 @@
  * License along with this library.
  */
 
-
 $(document).ready(function() {
+
+    // for some reason this is not always working when leaving it to bootstrap
+    const ensure_modales = () => {
+        $('button[data-toggle="modal"]').each((_, element) => {
+            $(element).click((jsElement) => {
+                const element = $(jsElement.target);
+                element.parent().children(element.data("target")).modal();
+            })
+        })
+    }
+
+    ensure_modales();
 
 });

@@ -29,6 +29,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @login.login_required_when_activated
 def community_login():
     next_url = flask.request.args.get("next", flask.url_for("community"))
+    after_login_action = flask.request.args.get("after_login_action", None)
     authenticator = authentication.Authenticator.instance()
     logged_in_email = form = None
     try:
@@ -46,6 +47,11 @@ def community_login():
                     log_exceptions=False
                 )
                 logged_in_email = form.email.data
+                if after_login_action == "sync_account":
+                    added_profiles = models.sync_community_account()
+                    if added_profiles:
+                        flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
+                                    f"from your OctoBot account.", "success")
                 return flask.redirect(next_url)
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")

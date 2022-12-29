@@ -69,6 +69,10 @@ body:before {
     max-width: 2.5rem;
 }
 
+pre code {
+    color: white;
+}
+
 .profile-overview-values {
     font-weight: bold;
 }
@@ -85,13 +89,26 @@ a.profile-overview-values {
     font-weight: inherit;
 }
 
+.profile-overview {
+    border: 2px solid black;
+}
+
+.vertically-aligned {
+    justify-content: space-between;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 .profile-overview:hover {
     animation: all 0.2s ease-in forwards;
     border-bottom: 2px solid white;
+    border-right: 2px solid white;
 }
 
 .profile-overview-selected {
-    border-bottom: 2px solid white;
+    border-bottom: 2px solid #C62828;
+    border-right: 2px solid #C62828;
     font-weight: bolder;
 }
 

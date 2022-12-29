@@ -28,7 +28,7 @@ import octobot_commons.timestamp_util as timestamp_util
 def ping():
     start_time = interfaces.get_bot_api().get_start_time()
     return json.dumps(
-        f"Running sice {timestamp_util.convert_timestamp_to_datetime(start_time, '%Y-%m-%d %H:%M:%S')}."
+        f"Running since {timestamp_util.convert_timestamp_to_datetime(start_time, '%Y-%m-%d %H:%M:%S')}."
     )
 
 
