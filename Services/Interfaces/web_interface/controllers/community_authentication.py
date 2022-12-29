@@ -28,6 +28,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route('/community_login', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def community_login():
+    next_url = flask.request.args.get("next", flask.url_for("community"))
     authenticator = authentication.Authenticator.instance()
     logged_in_email = form = None
     try:
@@ -45,7 +46,7 @@ def community_login():
                     log_exceptions=False
                 )
                 logged_in_email = form.email.data
-                return flask.redirect('community')
+                return flask.redirect(next_url)
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
@@ -60,13 +61,14 @@ def community_login():
 @web_interface.server_instance.route("/community_logout")
 @login.login_required_when_activated
 def community_logout():
+    next_url = flask.request.args.get("next", flask.url_for("community_login"))
     if not models.can_logout():
         return flask.redirect(flask.url_for('community'))
     authentication.Authenticator.instance().logout()
     interfaces_util.run_in_bot_main_loop(
         authentication.Authenticator.instance().stop_feeds()
     )
-    return flask.redirect(flask.url_for('community_login'))
+    return flask.redirect(next_url)
 
 
 class CommunityLoginForm(flask_wtf.FlaskForm):

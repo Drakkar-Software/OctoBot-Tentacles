@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_tentacles_manager.constants as tentacles_manager_constants
+import octobot_commons.constants as commons_constants
 
 
 def _is_valid_path(path, header):
@@ -24,6 +25,11 @@ def is_valid_tentacle_image_path(path):
     path_ending = path.split(".")[-1].lower()
     return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path,
                                                                            tentacles_manager_constants.TENTACLES_PATH)
+
+
+def is_valid_profile_image_path(path):
+    path_ending = path.split(".")[-1].lower()
+    return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path, commons_constants.USER_PROFILES_FOLDER)
 
 
 def is_valid_audio_path(path):
