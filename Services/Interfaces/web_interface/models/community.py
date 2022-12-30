@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
+
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
 import octobot.commands as octobot_commands
@@ -124,3 +126,9 @@ async def _sync_community_account():
 def sync_community_account():
     return interfaces_util.run_in_bot_main_loop(_sync_community_account())
 
+
+def wait_for_login_if_processing():
+    try:
+        interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().wait_for_login_if_processing())
+    except asyncio.TimeoutError:
+        pass

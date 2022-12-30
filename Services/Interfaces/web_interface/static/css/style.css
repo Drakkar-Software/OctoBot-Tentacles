@@ -109,7 +109,6 @@ a.profile-overview-values {
 .profile-overview-selected {
     border-bottom: 2px solid #C62828;
     border-right: 2px solid #C62828;
-    font-weight: bolder;
 }
 
 .profile-overview-image {
@@ -428,6 +427,10 @@ a.nav-link.primary-tab-selector.active {
 
 .fa.fa-spinner {
     font-size: 1.4em;
+}
+
+.fa.fa-spinner.fa-2xl {
+    font-size: 32px;
 }
 
 span.large-editable div.editable-input {
