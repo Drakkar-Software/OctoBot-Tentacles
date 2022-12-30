@@ -52,6 +52,7 @@ from tentacles.Services.Interfaces.web_interface.models.backtesting import (
 from tentacles.Services.Interfaces.web_interface.models.commands import (
     schedule_delayed_command,
     restart_bot,
+    is_rebooting,
     stop_bot,
     update_bot,
 )
@@ -71,6 +72,7 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     is_community_feed_connected,
     get_last_signal_time,
     sync_community_account,
+    wait_for_login_if_processing,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
@@ -221,6 +223,7 @@ __all__ = [
     "save_data_file",
     "schedule_delayed_command",
     "restart_bot",
+    "is_rebooting",
     "stop_bot",
     "update_bot",
     "get_community_metrics_to_display",
@@ -238,6 +241,7 @@ __all__ = [
     "is_community_feed_connected",
     "get_last_signal_time",
     "sync_community_account",
+    "wait_for_login_if_processing",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",
     "get_tentacle_documentation",

@@ -282,3 +282,101 @@ get_filtered_list, read_only=False) %}
   </div>
 </div>
 {% endmacro %}
+
+{% macro profile_overview(profile, current_profile, tentacles_details, strategy_config, evaluator_config,
+                          get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
+                          get_filtered_list, read_only=False) -%}
+<div class="col col-md-4 px-1 profile-overview {{'profile-overview-selected' if profile.profile_id == current_profile.profile_id}}">
+    <div class="p-2 vertically-aligned">
+        <div class="row mx-0">
+            <div class="col-9">
+                <h4>{{ profile.name | safe }}</h4>
+            </div>
+            <div class="col-1 col-md-2 text-right">
+                {% if profile.profile_id == current_profile.profile_id %}
+                <h4>
+                    <span class="badge badge-danger float-right d-none d-md-block">active</span>
+                    <i class="fa-solid fa-check d-md-none"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Active"
+                    ></i>
+                </h4>
+                {% endif %}
+            </div>
+            <div class="col-1 text-right">
+                <h4>
+                {% if profile.imported %}
+                    <i class="fa-sharp fa-solid fa-cloud-arrow-down"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Downloaded"
+                    ></i>
+                {% elif profile.read_only %}
+                    <i class="fa-solid fa-user"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Custom">
+                    </i>
+                {% else %}
+                    <i class="fa-brands fa-octopus-deploy"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Pre-installed">
+                    </i>
+                {% endif %}
+                </h4>
+            </div>
+        </div>
+        </h4>
+        <div class="text-center">
+            <img src="{{url_for('profile_media', path=profile.avatar_path) if profile.avatar_path else url_for('static', filename='img/default_profile.png')}}"
+                 class="img-fluid profile-overview-image" alt="{{profile.name}}">
+        </div>
+        <p class="pt-2 text-center">
+            {{ profile.description | safe }}
+        </p>
+        <div class="d-flex justify-content-between px-2 px-md-4">
+            <div>
+                <button class="btn btn-outline-primary btn-md"
+                        data-toggle="modal" data-target="#{{profile.profile_id}}Modal">
+                    <i class="fa fa-search"></i>
+                </button>
+                {{ profile_details_modal(profile, tentacles_details, strategy_config, evaluator_config,
+                                         get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
+                                         get_filtered_list, read_only=read_only) }}
+            </div>
+            <div>
+                {% if profile.profile_id != current_profile.profile_id %}
+                <button class="btn btn-primary btn-md activate-profile-button"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Use this profile and restart OctoBot"
+                        data-url="{{url_for('profile', select=profile.profile_id, next=url_for('onboarding'), reboot=True)}}">
+                    <i class="fa fa-check"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro profile_details_modal(profile, tentacles_details, strategy_config, evaluator_config,
+get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
+get_filtered_list, read_only=False) %}
+    <div class="modal fade" id="{{profile.profile_id}}Modal" tabindex="-1" role="dialog" aria-labelledby="#{{profile.profile_id}}ModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content modal-text bg-dark text-light mt-4">
+          <div class="modal-header primary-text">
+              <h5 class="modal-title" id="{{profile.profile_id}}ModalLabel">
+                  {{profile.name}}
+              </h5>
+            <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            {{ profile_details(profile, tentacles_details, strategy_config,
+              evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges,
+              get_enabled_trader, get_filtered_list, read_only=read_only) }}
+          </div>
+        </div>
+      </div>
+    </div>
+{% endmacro %}

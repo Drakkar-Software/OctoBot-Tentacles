@@ -19,15 +19,32 @@
 $(document).ready(function() {
 
     // for some reason this is not always working when leaving it to bootstrap
-    const ensure_modales = () => {
+    const ensureModales = () => {
         $('button[data-toggle="modal"]').each((_, element) => {
-            $(element).click((jsElement) => {
-                const element = $(jsElement.target);
+            $(element).click((event) => {
+                // TODO
+                const element = $(event.target);
                 element.parent().children(element.data("target")).modal();
+                return
+                const events = jQuery._data( event.target, "events" )
+                log("events", events)
+                if(events.click.length === 1){
+                    const element = $(event.target);
+                    element.parent().children(element.data("target")).modal();
+                }
+                // event.preventDefault();
             })
         })
     }
 
-    ensure_modales();
+    const onReconnected = () => {
+        const loader = $("#restart-loader");
+        if(loader.length){
+            // change current page when reconnected
+            window.location.href = loader.data("redirect-url");
+        }
+    }
 
+    ensureModales();
+    registerReconnectedCallback(onReconnected);
 });

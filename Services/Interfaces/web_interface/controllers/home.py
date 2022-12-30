@@ -25,17 +25,13 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route("/home")
 @login.login_required_when_activated
 def home():
-    first_display = False
-    if flask.request.args:
-        accepted = flask.request.args.get("accept_terms") == "True"
-        models.accept_terms(accepted)
-        first_display = True
+    display_tutorial = str(flask.request.args.get("display_tutorial", False)) == "True"
     if models.accepted_terms():
         in_backtesting = models.get_in_backtesting_mode()
         return flask.render_template('index.html',
                                      watched_symbols=models.get_watched_symbols(),
                                      backtesting_mode=in_backtesting,
-                                     display_tutorial_link=first_display,
+                                     display_tutorial_link=display_tutorial,
                                      startup_messages=models.get_startup_messages())
     else:
-        return flask.redirect("/terms")
+        return flask.redirect(flask.url_for("terms"))

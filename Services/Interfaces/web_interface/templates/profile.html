@@ -24,13 +24,21 @@
 <div class="row mt-md-4 mt-2">
     <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
         <div class="sidebar-sticky mt-0 pt-0">
-            <div class="px-1 px-md-4">
-                <a data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
-                    <h5>
-                        <span class="d-none d-md-block">Current profile</span>
-                        <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
-                    </h5>
-                </a>
+            <div class="px-1 px-md-4 d-flex">
+                <div>
+                    <a data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
+                        <h5>
+                            <span class="d-none d-md-block">Current profile</span>
+                            <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
+                        </h5>
+                    </a>
+                </div>
+                <div>
+                    <a class="btn btn-sm rounded-circle btn-primary waves-effect"
+                            href="{{url_for('onboarding')}}" data-toggle="tooltip" title="Select another profile">
+                        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                    </a>
+                </div>
             </div>
             <div class="nav flex-column pt-0 mt-0 mt-md-4" id="v-tab" role="tablist"
                  aria-orientation="vertical">
@@ -39,7 +47,7 @@
                        data-toggle="collapse"
                        href="#profilesSubmenu" role="tab" aria-expanded="false">
                         <span class="d-flex">
-                            <i class="fas fa-users"></i><span class="d-none d-md-block pl-3">Profiles</span>
+                            <i class="fas fa-users"></i><span class="d-none d-md-block pl-3">Edit profiles</span>
                         </span>
                     </a>
                     <ul class="collapse nav" id="profilesSubmenu">

@@ -29,6 +29,7 @@ def community():
     logged_in_email = None
     use_preview = not authenticator.can_authenticate()
     try:
+        models.wait_for_login_if_processing()
         logged_in_email = authenticator.get_logged_in_email()
     except (authentication.AuthenticationRequired, authentication.UnavailableError):
         pass

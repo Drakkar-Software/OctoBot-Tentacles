@@ -29,3 +29,13 @@ def terms():
     return flask.render_template("terms.html",
                                  disclaimer=disclaimer.DISCLAIMER,
                                  accepted_terms=models.accepted_terms())
+
+
+@web_interface.server_instance.route("/accept_terms")
+@login.login_required_when_activated
+def accept_terms():
+    next_url = flask.request.args.get("next", None)
+    if flask.request.args.get("accept_terms", None) == "True":
+        models.accept_terms(True)
+        return flask.redirect(next_url or flask.url_for("home"))
+    flask.redirect(flask.url_for("terms"))

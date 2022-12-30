@@ -18,6 +18,9 @@ import time
 
 import octobot_services.interfaces.util as interfaces_util
 
+_PENDING_COMMANDS = set()
+_REBOOT = "reboot"
+
 
 def schedule_delayed_command(command, *args, delay=0.5):
     def _delayed_command():
@@ -26,8 +29,18 @@ def schedule_delayed_command(command, *args, delay=0.5):
     threading.Thread(target=_delayed_command).start()
 
 
-def restart_bot():
+def restart_bot(delay=None):
+    _PENDING_COMMANDS.add(_REBOOT)
+    if delay:
+        # recall self with delay
+        schedule_delayed_command(restart_bot, delay=delay)
+        return
+    _PENDING_COMMANDS.remove(_REBOOT)
     interfaces_util.get_bot_api().restart_bot()
+
+
+def is_rebooting():
+    return _REBOOT in _PENDING_COMMANDS
 
 
 def stop_bot():

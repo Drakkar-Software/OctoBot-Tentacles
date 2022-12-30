@@ -27,6 +27,7 @@ import octobot_services.interfaces.util as interfaces_util
 @web_interface.server_instance.route("/onboarding")
 @login.login_required_when_activated
 def onboarding():
+    is_first_open = str(flask.request.args.get("first_open", False)) == "True"
 
     profiles = models.get_profiles()
     current_profile = models.get_current_profile()
@@ -42,17 +43,21 @@ def onboarding():
     media_url = flask.url_for("tentacle_media", _external=True)
     missing_tentacles = set()
 
-    authenticator = authentication.Authenticator.instance()
+    models.wait_for_login_if_processing()
     logged_in_email = None
     form = community_authentication.CommunityLoginForm(flask.request.form) \
         if flask.request.form else community_authentication.CommunityLoginForm()
     try:
+        authenticator = authentication.Authenticator.instance()
         logged_in_email = authenticator.get_logged_in_email()
     except (authentication.AuthenticationRequired, authentication.UnavailableError):
         pass
 
     return flask.render_template(
-        'onboarding.html',
+        'profiles.html',
+        read_only=True,
+        is_first_open=is_first_open,
+        waiting_reboot=models.is_rebooting(),
 
         current_logged_in_email=logged_in_email,
         selected_user_bot=models.get_selected_user_bot(),
