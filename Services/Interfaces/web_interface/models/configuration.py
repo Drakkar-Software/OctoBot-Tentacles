@@ -18,7 +18,6 @@ import os.path as path
 import ccxt
 import ccxt.async_support
 import copy
-import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 import octobot_commons.display as display
@@ -44,6 +43,7 @@ import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
+import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
@@ -639,7 +639,7 @@ def get_symbol_list(exchanges):
 
 
 def _get_filtered_exchange_symbols(symbols):
-    return [res for res in symbols if "/" in res]
+    return [res for res in symbols if octobot_commons.MARKET_SEPARATOR in res]
 
 
 async def _load_market(exchange, results):
