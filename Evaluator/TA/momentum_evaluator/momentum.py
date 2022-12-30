@@ -41,7 +41,7 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
-                                             inputs, min_val=0, title="RSI period length")
+                                                inputs, min_val=0, title="RSI period length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -122,36 +122,38 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         self.weights = []
 
     def _init_fast_threshold(self, inputs, indexes, fast_threshold, price_weight, volume_weight):
-        self.UI.user_input(self.WEIGHTS, enums.UserInputTypes.OBJECT, None, inputs, parent_input_name=self.FAST_THRESHOLDS,
-                        title="Price and volume weights of this interpretation.", array_indexes=indexes)
+        self.UI.user_input(self.WEIGHTS, enums.UserInputTypes.OBJECT, None, inputs,
+                           parent_input_name=self.FAST_THRESHOLDS,
+                           title="Price and volume weights of this interpretation.", array_indexes=indexes)
         return {
             self.FAST_THRESHOLD: self.UI.user_input(self.FAST_THRESHOLD, enums.UserInputTypes.INT, fast_threshold,
-                                                 inputs, min_val=0, parent_input_name=self.FAST_THRESHOLDS,
-                                                 title="Fast RSI threshold under which this interpretation will "
-                                                       "be triggered.", array_indexes=indexes),
+                                                    inputs, min_val=0, parent_input_name=self.FAST_THRESHOLDS,
+                                                    title="Fast RSI threshold under which this interpretation will "
+                                                          "be triggered.", array_indexes=indexes),
             self.WEIGHTS: {
                 self.PRICE: self.UI.user_input(self.PRICE, enums.UserInputTypes.OPTIONS, price_weight,
-                                            inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
-                                            editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
-                                            title="Price weight.", array_indexes=indexes),
+                                               inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
+                                               editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
+                                               title="Price weight.", array_indexes=indexes),
                 self.VOLUME: self.UI.user_input(self.VOLUME, enums.UserInputTypes.OPTIONS, volume_weight,
-                                             inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
-                                             editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
-                                             title="Volume weight.", array_indexes=indexes),
+                                                inputs, options=[1, 2, 3], parent_input_name=self.WEIGHTS,
+                                                editor_options={"enum_titles": ["Light", "Average", "Heavy"]},
+                                                title="Volume weight.", array_indexes=indexes),
             }
         }
 
     def _init_RSI_to_weight(self, inputs, slow_threshold, fast_thresholds):
         self.UI.user_input(self.FAST_THRESHOLDS, enums.UserInputTypes.OBJECT_ARRAY, fast_thresholds, inputs,
-                        item_title="Fast RSI interpretation",
-                        other_schema_values={"minItems": 1, "uniqueItems": True},
-                        parent_input_name=self.RSI_TO_WEIGHTS,
-                        title="Interpretations on this slow threshold trigger case."),
+                           item_title="Fast RSI interpretation",
+                           other_schema_values={"minItems": 1, "uniqueItems": True},
+                           parent_input_name=self.RSI_TO_WEIGHTS,
+                           title="Interpretations on this slow threshold trigger case."),
         return {
-            self.SLOW_THRESHOLD: self.UI.user_input(self.SLOW_THRESHOLD, enums.UserInputTypes.INT, slow_threshold, inputs,
-                                                 min_val=0, parent_input_name=self.RSI_TO_WEIGHTS,
-                                                 title="Slow RSI threshold under which this interpretation will "
-                                                       "be triggered.", array_indexes=[0]),
+            self.SLOW_THRESHOLD: self.UI.user_input(self.SLOW_THRESHOLD, enums.UserInputTypes.INT, slow_threshold,
+                                                    inputs,
+                                                    min_val=0, parent_input_name=self.RSI_TO_WEIGHTS,
+                                                    title="Slow RSI threshold under which this interpretation will "
+                                                          "be triggered.", array_indexes=[0]),
             self.FAST_THRESHOLDS: [
                 self._init_fast_threshold(inputs, [0, index], *fast_threshold)
                 for index, fast_threshold in enumerate(fast_thresholds)
@@ -164,22 +166,22 @@ class RSIWeightMomentumEvaluator(evaluators.TAEvaluator):
         those are defined somewhere else.
         """
         self.period_length = self.UI.user_input("period", enums.UserInputTypes.INT, self.period_length,
-                                             inputs, min_val=1,
-                                             title="Period: RSI period length.")
+                                                inputs, min_val=1,
+                                                title="Period: RSI period length.")
         self.slow_eval_count = self.UI.user_input("slow_eval_count", enums.UserInputTypes.INT, self.slow_eval_count,
-                                               inputs, min_val=1,
-                                               title="Number of recent RSI values to consider to get the current slow "
-                                                     "moving market sentiment.")
+                                                  inputs, min_val=1,
+                                                  title="Number of recent RSI values to consider to get the current slow "
+                                                        "moving market sentiment.")
         self.fast_eval_count = self.UI.user_input("fast_eval_count", enums.UserInputTypes.INT, self.fast_eval_count,
-                                               inputs, min_val=1,
-                                               title="Number of recent RSI values to consider to get the current fast "
-                                                     "moving market sentiment.")
+                                                  inputs, min_val=1,
+                                                  title="Number of recent RSI values to consider to get the current fast "
+                                                        "moving market sentiment.")
         weights = []
         self.weights = sorted(
             self.UI.user_input(self.RSI_TO_WEIGHTS, enums.UserInputTypes.OBJECT_ARRAY, weights, inputs,
-                            item_title="Slow RSI interpretation",
-                            other_schema_values={"minItems": 1, "uniqueItems": True},
-                            title="RSI values and interpretations."),
+                               item_title="Slow RSI interpretation",
+                               other_schema_values={"minItems": 1, "uniqueItems": True},
+                               title="RSI values and interpretations."),
             key=lambda a: a[self.SLOW_THRESHOLD]
         )
         # init one user input to generate user input schema and default values
@@ -266,8 +268,8 @@ class BBMomentumEvaluator(evaluators.TAEvaluator):
 
     def init_user_inputs(self, inputs: dict) -> None:
         self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
-                                             inputs, min_val=1,
-                                             title="Period: Bollinger bands period length.")
+                                                inputs, min_val=1,
+                                                title="Period: Bollinger bands period length.")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -334,8 +336,8 @@ class ADXMomentumEvaluator(evaluators.TAEvaluator):
 
     def init_user_inputs(self, inputs: dict) -> None:
         self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
-                                             inputs, min_val=1,
-                                             title="Period: ADX period length.")
+                                                inputs, min_val=1,
+                                                title="Period: ADX period length.")
 
     def _get_minimal_data(self):
         # 26 minimal_data length required for 14 period_length
@@ -518,15 +520,16 @@ class KlingerOscillatorMomentumEvaluator(evaluators.TAEvaluator):
 
     def init_user_inputs(self, inputs: dict) -> None:
         self.short_period = self.UI.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
-                                            inputs, min_val=1,
-                                            title="Short period: length of the short klinger period (standard is 35).")
+                                               inputs, min_val=1,
+                                               title="Short period: length of the short klinger period (standard is 35).")
         self.long_period = self.UI.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
-                                           inputs, min_val=1,
-                                           title="Long period: length of the long klinger period (standard is 55).")
-        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
-                                                 inputs, min_val=1,
-                                                 title="Long period: length of the exponential moving average used "
-                                                 "to apply on the klinger results (standard is 13).")
+                                              inputs, min_val=1,
+                                              title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT,
+                                                    self.ema_signal_period,
+                                                    inputs, min_val=1,
+                                                    title="Long period: length of the exponential moving average used "
+                                                          "to apply on the klinger results (standard is 13).")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -601,15 +604,16 @@ class KlingerOscillatorReversalConfirmationMomentumEvaluator(evaluators.TAEvalua
         those are defined somewhere else.
         """
         self.short_period = self.UI.user_input("short_period", enums.UserInputTypes.INT, self.short_period,
-                                            inputs, min_val=1,
-                                            title="Short period: length of the short klinger period (standard is 35).")
+                                               inputs, min_val=1,
+                                               title="Short period: length of the short klinger period (standard is 35).")
         self.long_period = self.UI.user_input("long_period", enums.UserInputTypes.INT, self.long_period,
-                                           inputs, min_val=1,
-                                           title="Long period: length of the long klinger period (standard is 55).")
-        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT, self.ema_signal_period,
-                                                 inputs, min_val=1,
-                                                 title="Long period: length of the exponential moving average used "
-                                                 "to apply on the klinger results (standard is 13).")
+                                              inputs, min_val=1,
+                                              title="Long period: length of the long klinger period (standard is 55).")
+        self.ema_signal_period = self.UI.user_input("ema_signal_period", enums.UserInputTypes.INT,
+                                                    self.ema_signal_period,
+                                                    inputs, min_val=1,
+                                                    title="Long period: length of the exponential moving average used "
+                                                          "to apply on the klinger results (standard is 13).")
 
     @staticmethod
     def get_eval_type():

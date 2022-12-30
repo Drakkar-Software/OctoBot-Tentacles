@@ -47,9 +47,9 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.factor = self.UI.user_input("factor", enums.UserInputTypes.FLOAT, self.factor,
-                                      inputs, min_val=0, title="Factor")
+                                         inputs, min_val=0, title="Factor")
         self.length = self.UI.user_input("length", enums.UserInputTypes.INT, self.length,
-                                      inputs, min_val=1, title="Length")
+                                         inputs, min_val=1, title="Length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str,
                              symbol: str, time_frame, candle, inc_in_construction_data):
@@ -129,13 +129,13 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.fast_length = self.UI.user_input(self.FAST_LENGTH, enums.UserInputTypes.INT, self.fast_length,
-                                           inputs, min_val=1, title="Fast MA length")
+                                              inputs, min_val=1, title="Fast MA length")
         self.slow_length = self.UI.user_input(self.SLOW_LENGTH, enums.UserInputTypes.INT, self.slow_length,
-                                           inputs, min_val=1, title="Fast MA length")
+                                              inputs, min_val=1, title="Slow MA length")
         self.fast_ma_type = self.UI.user_input(self.FAST_MA_TYPE, enums.UserInputTypes.OPTIONS, self.fast_ma_type,
-                                            inputs, options=self.MA_TYPES, title="Fast MA type").lower()
+                                               inputs, options=self.MA_TYPES, title="Fast MA type").lower()
         self.slow_ma_type = self.UI.user_input(self.SLOW_MA_TYPE, enums.UserInputTypes.OPTIONS, self.slow_ma_type,
-                                            inputs, options=self.MA_TYPES, title="Slow MA type").lower()
+                                               inputs, options=self.MA_TYPES, title="Slow MA type").lower()
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -187,11 +187,11 @@ class DoubleMovingAverageTrendEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.slow_period_length = self.UI.user_input("long_period_length", enums.UserInputTypes.INT,
-                                                  self.slow_period_length,
-                                                  inputs, min_val=1, title="Slow SMA length")
+                                                     self.slow_period_length,
+                                                     inputs, min_val=1, title="Slow SMA length")
         self.fast_period_length = self.UI.user_input("short_period_length", enums.UserInputTypes.INT,
-                                                  self.fast_period_length,
-                                                  inputs, min_val=1, title="Fast SMA length")
+                                                     self.fast_period_length,
+                                                     inputs, min_val=1, title="Fast SMA length")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -275,13 +275,13 @@ class EMADivergenceTrendEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.period = self.UI.user_input(self.EMA_SIZE, enums.UserInputTypes.INT, self.period,
-                                      inputs, min_val=1, title="EMA period length")
+                                         inputs, min_val=1, title="EMA period length")
         self.long_value = self.UI.user_input("long_value", enums.UserInputTypes.INT, self.long_value,
-                                          inputs, title="Long threshold: Minimum % price difference from EMA "
-                                                        "consider a long signal. Should be positive in most cases")
+                                             inputs, title="Long threshold: Minimum % price difference from EMA "
+                                                           "consider a long signal. Should be positive in most cases")
         self.short_value = self.UI.user_input("short_value", enums.UserInputTypes.INT, self.short_value,
-                                           inputs, title="Short threshold: Minimum % price difference from EMA "
-                                                         "consider a short signal. Should be negative in most cases")
+                                              inputs, title="Short threshold: Minimum % price difference from EMA "
+                                                            "consider a short signal. Should be negative in most cases")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
