@@ -17,22 +17,17 @@
  */
 
 $(document).ready(function() {
-
     // for some reason this is not always working when leaving it to bootstrap
-    const ensureModales = () => {
+    const ensureModals = () => {
         $('button[data-toggle="modal"]').each((_, element) => {
             $(element).click((event) => {
-                // TODO
-                const element = $(event.target);
-                element.parent().children(element.data("target")).modal();
-                return
-                const events = jQuery._data( event.target, "events" )
-                log("events", events)
-                if(events.click.length === 1){
-                    const element = $(event.target);
+                const events = jQuery._data(event.currentTarget, "events" )
+                // One event means bootstrap did not register this click event
+                if(typeof events !== "undefined" && typeof events.click !== "undefined"
+                    && events.click.length === 1){
+                    const element = $(event.currentTarget);
                     element.parent().children(element.data("target")).modal();
                 }
-                // event.preventDefault();
             })
         })
     }
@@ -45,6 +40,6 @@ $(document).ready(function() {
         }
     }
 
-    ensureModales();
+    ensureModals();
     registerReconnectedCallback(onReconnected);
 });
