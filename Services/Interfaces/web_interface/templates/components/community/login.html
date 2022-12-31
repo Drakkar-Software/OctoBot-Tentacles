@@ -1,7 +1,8 @@
 {% from "macros/forms.html" import render_field %}
 
-{% macro login_form(form, is_in_stating_community_env, after_login_url, after_login_action=None) -%}
-<div class="card text-center">
+{% macro login_form(form, is_in_stating_community_env, OCTOBOT_COMMUNITY_URL, after_login_url,
+                    after_login_action=None, details=None) -%}
+<div class="text-center">
     <div class="card-header">
         <h2>
             OctoBot community
@@ -28,8 +29,13 @@
                         Beta
                     </span>
                 {% endif %}
-                Astrolab account.
+                Octobot account.
             </h5>
+            {% if details %}
+            <p>
+                {{ details }}
+            </p>
+            {% endif %}
             <form method=post action="{{url_for('community_login', next=after_login_url, after_login_action=after_login_action)}}" name="community-login">
                 <div class="my-4">
                     {{ form.csrf_token }}

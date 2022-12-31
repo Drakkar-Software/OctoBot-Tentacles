@@ -9,44 +9,17 @@
 
 {% block body %}
 <br>
-<div class="card mb-1">
-    <div class="card-header">
-        <h2>Getting your OctoBot ready</h2>
-    </div>
-    <div class="card-body px-3">
-        {% if current_logged_in_email %}
-        <div class="alert alert-dark row py-0 my-1">
-            <div class="col-8 my-auto">
-                Logged in as {{current_logged_in_email}}
-                {% if selected_user_bot["name"] %}
-                    using bot <span class="badge badge-info">{{ selected_user_bot["name"] }}</span>
-                {% else %}
-                    <span class="badge badge-danger">without selected bot</span>
-                {% endif %}
-            </div>
-            {% if can_logout %}
-            <div class="col-4 text-right">
-                <a class="align-right btn btn-sm btn-outline-info waves-effect"
-                   href="{{ url_for('community_logout', next=url_for('onboarding'))}}">
-                    logout
-                </a>
-            </div>
-            {% endif %}
-        </div>
-        {{ m_flash_messages.flash_messages() }}
-        {% else %}
-        <div>
-            Login to your OctoBot Account to access your subscribed profiles as well as the additional profiles.
-
-            <div class="login_box mx-auto mt-1 mt-xl-5">
-                {{ login.login_form(form, is_in_stating_community_env, url_for("onboarding"), "sync_account") }}
-            </div>
-        </div>
-        {% endif %}
+{% if not current_logged_in_email %}
+<div class="login_box mx-auto mb-2">
+    <div class="card">
+    {{ login.login_form(form, is_in_stating_community_env, OCTOBOT_COMMUNITY_URL,
+                        url_for("profiles_selector"), after_login_action="sync_account",
+                        details="Access your subscribed profiles as well as additional profiles.") }}
     </div>
 </div>
+{% endif %}
 {% if waiting_reboot %}
-<div class="mt-1 mt-md-4" id="restart-loader"
+<div class="mb-2" id="restart-loader"
      data-redirect-url="{{url_for('home', display_tutorial=is_first_open)}}">
 {{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
                                              "You will be taken to your OctoBot dashbaord.") }}
@@ -66,7 +39,28 @@
             </button>
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body pt-0">
+        {% if current_logged_in_email %}
+        <div class="alert alert-dark row py-0 my-1">
+            <div class="col-8 my-auto">
+                Logged in as {{current_logged_in_email}}
+                {% if selected_user_bot["name"] %}
+                    using bot <span class="badge badge-info">{{ selected_user_bot["name"] }}</span>
+                {% else %}
+                    <span class="badge badge-danger">without selected bot</span>
+                {% endif %}
+            </div>
+            {% if can_logout %}
+            <div class="col-4 text-right">
+                <a class="align-right btn btn-sm btn-outline-info waves-effect"
+                   href="{{ url_for('community_logout', next=url_for('profiles_selector'))}}">
+                    logout
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {{ m_flash_messages.flash_messages() }}
+        {% endif %}
         <p>
             A profile is a ready-made configuration of OctoBot. You can change it at any time.
             You will be able to create and customize your own profiles from the <span class="font-weight-bold">Profile</span> tab.
@@ -86,7 +80,7 @@
 <br>
 
 <!-- Modals -->
-{{ profiles_macros.profile_import_modal(url_for('onboarding')) }}
+{{ profiles_macros.profile_import_modal(url_for('profiles_selector')) }}
 {% for trading_mode_name, info in strategy_config["trading-modes"].items() %}
     {{ m_config_evaluator_card.evaluator_card_modal(trading_mode_name, info, False, read_only) }}
 {% endfor %}
@@ -105,5 +99,5 @@
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/profile_management.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/community.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-<script src="{{ url_for('static', filename='js/components/profiles.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/profiles_selector.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

@@ -24,9 +24,9 @@ import tentacles.Services.Interfaces.web_interface.controllers.community_authent
 import octobot_services.interfaces.util as interfaces_util
 
 
-@web_interface.server_instance.route("/onboarding")
+@web_interface.server_instance.route("/profiles_selector")
 @login.login_required_when_activated
-def onboarding():
+def profiles_selector():
     is_first_open = str(flask.request.args.get("first_open", False)) == "True"
 
     profiles = models.get_profiles()
@@ -54,7 +54,7 @@ def onboarding():
         pass
 
     return flask.render_template(
-        'profiles.html',
+        'profiles_selector.html',
         read_only=True,
         is_first_open=is_first_open,
         waiting_reboot=models.is_rebooting(),
