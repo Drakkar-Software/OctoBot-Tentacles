@@ -29,7 +29,7 @@ from tentacles.Services.Interfaces.web_interface.controllers import logs
 from tentacles.Services.Interfaces.web_interface.controllers import medias
 from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
-from tentacles.Services.Interfaces.web_interface.controllers import onboarding
+from tentacles.Services.Interfaces.web_interface.controllers import profiles
 
 
 from tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication import (
@@ -90,8 +90,8 @@ from tentacles.Services.Interfaces.web_interface.controllers.trading import (
 from tentacles.Services.Interfaces.web_interface.controllers.tutorial import (
     tutorial,
 )
-from tentacles.Services.Interfaces.web_interface.controllers.onboarding import (
-    onboarding,
+from tentacles.Services.Interfaces.web_interface.controllers.profiles import (
+    profiles_selector,
 )
 
 
@@ -136,5 +136,5 @@ __all__ = [
     "tutorial",
     "trades",
     "utility_processor",
-    "onboarding",
+    "profiles_selector",
 ]

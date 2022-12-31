@@ -109,6 +109,7 @@ a.profile-overview-values {
 .profile-overview-selected {
     border-bottom: 2px solid #C62828;
     border-right: 2px solid #C62828;
+    background-color: #212121;
 }
 
 .profile-overview-image {

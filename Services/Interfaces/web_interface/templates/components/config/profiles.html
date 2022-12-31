@@ -347,7 +347,7 @@ get_filtered_list, read_only=False) %}
                 <button class="btn btn-primary btn-md activate-profile-button"
                         data-toggle="tooltip" data-placement="top"
                         title="Use this profile and restart OctoBot"
-                        data-url="{{url_for('profile', select=profile.profile_id, next=url_for('onboarding'), reboot=True)}}">
+                        data-url="{{url_for('profile', select=profile.profile_id, next=url_for('profiles_selector'), reboot=True)}}">
                     <i class="fa fa-check"></i>
                 </button>
                 {% endif %}

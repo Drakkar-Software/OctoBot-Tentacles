@@ -9,7 +9,10 @@
 {{ bots_stats.bots_stats_card(current_bots_stats) }}
 
 <div class="login_box mx-auto mt-1 mt-xl-5">
-    {{ login.login_form(form, is_in_stating_community_env, url_for("community")) }}
+    <div class="card">
+        {{ login.login_form(form, is_in_stating_community_env, OCTOBOT_COMMUNITY_URL,
+                            url_for("community")) }}
+    </div>
 </div>
 
 <br>
