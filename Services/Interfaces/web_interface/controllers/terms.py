@@ -37,5 +37,6 @@ def accept_terms():
     next_url = flask.request.args.get("next", None)
     if flask.request.args.get("accept_terms", None) == "True":
         models.accept_terms(True)
+        models.set_first_sessions(True)
         return flask.redirect(next_url or flask.url_for("home"))
     flask.redirect(flask.url_for("terms"))

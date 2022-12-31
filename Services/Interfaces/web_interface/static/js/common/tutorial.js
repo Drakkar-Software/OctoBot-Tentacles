@@ -59,6 +59,10 @@ _TUTORIALS = {
         return {
             steps: [
                 {
+                    title: 'Profile configuration',
+                    intro: 'From this tab, you can configure your OctoBot profile.'
+                },
+                {
                     title: 'Select another profile',
                     element: document.querySelector('#profile-selector-link'),
                     intro: 'You can change the profile used by your OctoBot at any time.'

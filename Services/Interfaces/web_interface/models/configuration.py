@@ -52,6 +52,12 @@ import octobot.enums as octobot_enums
 NAME_KEY = "name"
 SYMBOL_KEY = "symbol"
 ID_KEY = "id"
+HOME_SESSION = "home"
+PROFILE_SESSION = "profile"
+FIRST_SESSIONS = {
+    HOME_SESSION: False,
+    PROFILE_SESSION: False,
+}
 EXCLUDED_CURRENCY_SUBNAME = tuple(("X Long", "X Short"))
 DESCRIPTION_KEY = "description"
 REQUIREMENTS_KEY = "requirements"
@@ -445,6 +451,19 @@ def accepted_terms():
 
 def accept_terms(accepted):
     return interfaces_util.get_edited_config(dict_only=False).accept_terms(accepted)
+
+
+def set_first_session(key, first_session):
+    FIRST_SESSIONS[key] = first_session
+
+
+def set_first_sessions(first_session):
+    for key in FIRST_SESSIONS:
+        set_first_session(key, first_session)
+
+
+def is_first_session(key):
+    return FIRST_SESSIONS[key]
 
 
 def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
