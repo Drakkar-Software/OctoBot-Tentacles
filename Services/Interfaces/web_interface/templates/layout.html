@@ -83,7 +83,7 @@
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-        {% if IS_DEMO or IS_CLOUD %}
+        {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
         <script type="text/javascript">
             (function(c,l,a,r,i,t,y){
                 c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
