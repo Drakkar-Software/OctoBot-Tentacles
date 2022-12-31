@@ -510,3 +510,9 @@ table.dataTable tfoot th {
     background: #343a40;
     font-weight: normal;
 }
+
+/* introjs */
+
+.introjs-tooltip {
+  background-color: rgba(000, 0, 0, 0.9);
+}

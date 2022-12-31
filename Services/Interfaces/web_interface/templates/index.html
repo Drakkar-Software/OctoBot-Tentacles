@@ -61,11 +61,11 @@
             </div>
         </div>
         {% endif %}
-        <div class="card mt-2 mt-md-4">
+        <div class="card mt-2 mt-md-4" id="profitability-display">
             <div class="card-header"><h2>
                 Profitability
-                <a class="float-right blue-text" target="_blank" rel="noopener noreferrer" href="{{OCTOBOT_DOCS_URL}}/usage/understanding-profitability">
-                    <i class="fa fa-question"></i>
+                <a class="float-right blue-text" target="_blank" data-intro="profitability">
+                    <i class="fa-solid fa-question"></i>
                 </a>
                 </h2></div>
             <div class="card-body card-text" id="profitability_graph">
@@ -75,7 +75,7 @@
         </div>
         <br>
         <div class="card">
-            <div class="card-header"><h2>Watched markets</h2></div>
+            <div class="card-header" id="all-watched-markets"><h2>Watched markets</h2></div>
             <div class="card-body d-none text-center" id="loadingMarketsDiv">
                 <h2>
                     OctoBot is starting, markets will be refreshed when available.
@@ -106,36 +106,7 @@
         </div>
     </span>
     <br>
-    {% if display_tutorial_link %}
-        <div class="modal fade" id="tutorialModal" tabindex="-1" role="dialog" aria-labelledby="tutorialModalTitle" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="tutorialModalTitle">Welcome to OctoBot !</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="modal-body">
-                  <p>
-                      We prepared a quick tutorial on how to easily use OctoBot. Feel free to check it out if you haven't
-                      already.
-                  </p>
-                  <div class="my-4 text-center">
-                  <a class="btn btn-primary waves-effect" href="{{url_for('tutorial')}}">Checkout the tutorial</a>
-                  </div>
-                  <p>
-                      You can always find this tutorial later in the <span class="font-weight-bold">Help</span> tab.<br/>
-                      We hope you will enjoy OctoBot.
-                  </p>
-                  <p class="text-right">
-                      The OctoBot team
-                  </p>
-              </div>
-            </div>
-          </div>
-        </div>
-    {% endif %}
+    <span class="d-none" data-display-intro="{{display_tutorial_link}}"></span>
 {% endblock %}
 
 {% block additional_scripts %}

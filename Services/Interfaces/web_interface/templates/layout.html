@@ -22,7 +22,7 @@
 
         <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.0/themes/ui-lightness/jquery-ui.css" integrity="sha384-XgQGwtMpBAzdVt3enHfJp3btU0JUUlr8SkglEJbUTcNIiIBj9fovNuSxOMZLhete" crossorigin="anonymous">
         <!-- Bootstrap CSS -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
 
         <!-- Fontawesome CSS -->
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.1/css/all.css" integrity="sha384-twcuYPV86B3vvpwNhWJuaLdUSLF9+ttgM2A6M870UYXrOsxKfER2MKox5cirApyA" crossorigin="anonymous">
@@ -46,6 +46,9 @@
         <!-- W2UI -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/w2ui-dark-1.5.min.css', u=LAST_UPDATED_STATIC_FILES) }}">
 
+        <!-- introjs-->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@6.0.0/introjs.min.css" integrity="sha384-+SDYMC4R+DQ8kbACnF6xMHxQCjNNNTBOj4iEDaAGIbPaGzXp3/o2Pj8zqu2F9ZdJ" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@6.0.0/themes/introjs-modern.css" integrity="sha384-RP5n9cz00mKCFIzcN8B7dK41QSmmpc7Gtz1zxZeiaP+lxtpLXtCTYikHs9L/p2kU" crossorigin="anonymous">
         <!-- Own -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', u=LAST_UPDATED_STATIC_FILES) }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css', u=LAST_UPDATED_STATIC_FILES) }}">
@@ -61,7 +64,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js" integrity="sha384-VDls8ImYGI8SwVxpmjX2Bn27U2TcNodzTNROTusVEWO55+lmL+H9NczoQJk6mwZR" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js" integrity="sha384-FbwKLBNNjVSNRt5ofr/4WX4UOVqG2xcQwoOipC0xnFMB/BqfRaDsuyKay/hVaPE6" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" integrity="sha384-TTjj1KxpUMxMChPbgmSWLlfEep0/67X86v9lnJMkldzkQGHZNAhZRgE9owovIRyz" crossorigin="anonymous"></script>
         <script src="https://cdn.plot.ly/plotly-2.16.4.min.js" integrity="sha384-usWhKY7pv08CRNu9MTy71U22naQmWGaEKlJuYTlBuMCBWVy7UKwI+6MVgfZvKhhm" crossorigin="anonymous"></script>
@@ -69,8 +72,7 @@
         <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js" integrity="sha384-t11ZTRbO9om+k0pVXmc3c8SsIHonT3oUvoi3FxMm1c9DVQwl9VbTNv3+UjbUrI6Z" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js" integrity="sha384-SfMwgGnc3UiUUZF50PsPetXLqH2HSl/FmkMW/Ja3N2WaJ/fHLbCHPUsXzzrM6aet"  crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
-
-        <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/intro.js@6.0.0/intro.min.js" integrity="sha384-rVXzu9cNQ1u4yt4zkDRMny6cSE6taoKCuaGU0sdqvkcs4lzQd4kS+dJdrViRFSBU" crossorigin="anonymous"></script>        <script src="{{ url_for('static', filename='js/lib/bootstrap-editable.min.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
         {# docs in http://w2ui.com/web/demos/#/grid/1 #}
         <script src="{{ url_for('static', filename='js/lib/w2ui-1.5.min.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
@@ -80,6 +82,7 @@
         <script src="{{ url_for('static', filename='js/common/bot_connection.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         {% if IS_DEMO or IS_CLOUD %}
         <script type="text/javascript">
             (function(c,l,a,r,i,t,y){
@@ -96,7 +99,7 @@
         {% if show_nab_bar %}
             <nav class="navbar navbar-expand-md navbar-dark sticky-top py-0 py-md-2" id="main-nav-bar">
                 <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
-                    <ul class="navbar-nav mr-auto">
+                    <ul class="navbar-nav mr-auto" id="main-nav-left-part">
                         <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                         </li>
@@ -134,9 +137,9 @@
                     </button>
                 </div>
                 <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
-                    <ul class="navbar-nav ml-auto">
+                    <ul class="navbar-nav ml-auto" id="main-nav-right-part">
                         {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
-                        <li class="nav-item mx-1 px-0 my-auto">
+                        <li class="nav-item mx-1 px-0 my-auto" id="main-nav-trading-type">
                             <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
                                 {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
                             </a>
@@ -147,10 +150,12 @@
                             <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
                         </li>
                         {% endfor %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}">
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}"
+                            id="main-nav-backtesting">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'community' == active_page %} active{% endif %}">
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'community' == active_page %} active{% endif %}"
+                            id="main-nav-community">
                             <a class="nav-link" href="{{ url_for('community') }}">Community</a>
                         </li>
                         <li class="nav-item mx-1 px-0 my-auto {% if 'help' == active_page %} active{% endif %}">
@@ -183,6 +188,13 @@
 
             {% block body %}{% endblock %}
         </div>
+
+        <!-- urls to read in js -->
+        <span class="d-none" id="global-urls"
+              data-website-url="{{OCTOBOT_WEBSITE_URL}}"
+              data-docs-url="{{OCTOBOT_DOCS_URL}}"
+              data-exchanges-docs-url="{{EXCHANGES_DOCS_URL}}"
+        />
 
         <!-- Artificial padding to separate footer from the rest of the page -->
         <div class="pb-5"></div>
