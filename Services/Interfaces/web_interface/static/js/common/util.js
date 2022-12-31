@@ -309,3 +309,15 @@ function validateJSONEditor(editor) {
     }
     return errorsDesc;
 }
+
+function getWebsiteUrl() {
+    return $("#global-urls").data("website-url");
+}
+
+function getDocsUrl() {
+    return $("#global-urls").data("docs-url");
+}
+
+function getExchangesDocsUrl() {
+    return $("#global-urls").data("exchanges-docs-url");
+}

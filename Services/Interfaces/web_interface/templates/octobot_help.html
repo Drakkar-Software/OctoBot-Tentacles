@@ -10,17 +10,18 @@
     <div class="card-body pt-1">
         <p class="help-section">
             <h4>
-                Tutorial
+                Intro
             </h4>
-            To setup your OctoBot and understand it better, checkout the
-            <a class="btn btn-sm btn-primary waves-effect" href="{{url_for('tutorial')}}">getting started tutorial</a>
+            To understand how to use your OctoBot, checkout the
+            <a class="btn btn-sm btn-primary waves-effect" href="{{url_for('home', display_tutorial=True)}}">quick intro</a>
         </p>
         <p class="help-section">
             <h4>
-                Help buttons: <a class="blue-text" target="_blank"><i class="fa fa-question"></i></a>
+                Help buttons: <a class="blue-text" target="_blank"><i class="fa-solid fa-question"></i></a>
             </h4>
-            When using OctoBot, you will find these buttons: <a class="blue-text" target="_blank"><i class="fa fa-question"></i></a>.
-            They are links to the <a target="_blank" rel="noopener" href="{{OCTOBOT_WEBSITE_URL}}"> OctoBot website</a> or
+            When using OctoBot, you will find these buttons: <a class="blue-text" target="_blank"><i class="fa-solid fa-question"></i></a>.
+            They are triggering the in page help and contain links to the
+            <a target="_blank" rel="noopener" href="{{OCTOBOT_WEBSITE_URL}}"> OctoBot website</a> or
             <a target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}"> OctoBot documentation</a> article related
             to the associated element.
         </p>
