@@ -206,7 +206,7 @@ function historyGoBack() {
 
 function showModalIfAny(element){
     if(element){
-        element.modal("show");
+        element.modal();
     }
 }
 
