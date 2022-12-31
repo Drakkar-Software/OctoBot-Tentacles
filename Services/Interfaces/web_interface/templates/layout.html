@@ -194,7 +194,11 @@
               data-website-url="{{OCTOBOT_WEBSITE_URL}}"
               data-docs-url="{{OCTOBOT_DOCS_URL}}"
               data-exchanges-docs-url="{{EXCHANGES_DOCS_URL}}"
-        />
+        ></span>
+
+        <!-- Modals -->
+        {{ m_trading_state_modal.create_trading_state_modal(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
+        {{ m_generic_modal.create_generic_modal() }}
 
         <!-- Artificial padding to separate footer from the rest of the page -->
         <div class="pb-5"></div>
@@ -202,10 +206,6 @@
         <!-- Artificial padding  -->
 
         {% include "footer.html" %}
-
-        <!-- Modals -->
-        {{ m_trading_state_modal.create_trading_state_modal(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
-        {{ m_generic_modal.create_generic_modal() }}
 
         <!-- Resources urls -->
         <span class="d-none" id="resources-urls"
