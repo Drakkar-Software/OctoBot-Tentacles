@@ -20,7 +20,7 @@
 {% endif %}
 {% if waiting_reboot %}
 <div class="mb-2" id="restart-loader"
-     data-redirect-url="{{url_for('home', display_tutorial=is_first_open)}}">
+     data-redirect-url="{{url_for('home')}}">
 {{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
                                              "You will be taken to your OctoBot dashbaord.") }}
 </div>

@@ -27,8 +27,6 @@ import octobot_services.interfaces.util as interfaces_util
 @web_interface.server_instance.route("/profiles_selector")
 @login.login_required_when_activated
 def profiles_selector():
-    is_first_open = str(flask.request.args.get("first_open", False)) == "True"
-
     profiles = models.get_profiles()
     current_profile = models.get_current_profile()
     display_config = interfaces_util.get_edited_config()
@@ -56,7 +54,6 @@ def profiles_selector():
     return flask.render_template(
         'profiles_selector.html',
         read_only=True,
-        is_first_open=is_first_open,
         waiting_reboot=models.is_rebooting(),
 
         current_logged_in_email=logged_in_email,

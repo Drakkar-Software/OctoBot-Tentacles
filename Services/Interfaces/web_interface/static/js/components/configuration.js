@@ -921,4 +921,6 @@ $(document).ready(function() {
     check_evaluator_configuration();
 
     register_exchanges_checks(true);
+
+    startTutorialIfNecessary("profile");
 });
