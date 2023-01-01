@@ -37,8 +37,7 @@ def login():
                 form.password.data,
                 form
         ):
-            web_login.GENERIC_USER.is_authenticated = True
-            flask_login.login_user(web_login.GENERIC_USER, remember=form.remember_me.data)
+            web_interface.server_instance.login_manager.login_user(form.remember_me.data)
             web_login.reset_attempts(flask.request.remote_addr)
 
             return _get_next_url_or_home_redirect()

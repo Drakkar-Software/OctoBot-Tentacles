@@ -31,7 +31,6 @@ class WebService(services.AbstractService):
         super().__init__()
         self.web_app = None
         self.requires_password = None
-        self.session_secret_key = None
         self.password_hash = None
 
     def get_fields_description(self):
@@ -90,12 +89,6 @@ class WebService(services.AbstractService):
 
     def get_logo(self):
         return "static/img/svg/octobot.svg"
-
-    @staticmethod
-    def generate_session_secret_key():
-        # always generate a new unique session secret key
-        # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
-        return uuid.uuid4().hex
 
     async def prepare(self) -> None:
         try:
