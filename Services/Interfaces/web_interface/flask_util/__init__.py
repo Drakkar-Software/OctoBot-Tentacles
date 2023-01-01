@@ -44,6 +44,12 @@ from tentacles.Services.Interfaces.web_interface.flask_util.cors import (
     get_user_defined_cors_allowed_origins,
 )
 
+
+from tentacles.Services.Interfaces.web_interface.flask_util import browsing_data_provider
+from tentacles.Services.Interfaces.web_interface.flask_util.browsing_data_provider import (
+    BrowsingDataProvider,
+)
+
 __all__ = [
     "init_content_types",
     "context_processor_register",
@@ -51,4 +57,5 @@ __all__ = [
     "register_template_filters",
     "FloatDecimalJSONProvider",
     "get_user_defined_cors_allowed_origins",
+    "BrowsingDataProvider",
 ]
