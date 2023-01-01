@@ -62,13 +62,14 @@ def profile():
         for exchange, exchange_config in config_exchanges.items()
         if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
     ]
-    display_tuto = models.is_first_session(models.PROFILE_SESSION)
-    models.set_first_session(models.PROFILE_SESSION, False)
+    display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
+        flask_util.BrowsingDataProvider.PROFILE
+    )
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
                                  profiles_tentacles_details=models.get_profiles_tentacles_details(profiles),
-                                 display_tutorial_link=display_tuto,
+                                 display_intro=display_intro,
 
                                  config_exchanges=config_exchanges,
                                  config_trading=display_config[commons_constants.CONFIG_TRADING],

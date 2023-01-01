@@ -19,6 +19,7 @@ import flask
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 
 @web_interface.server_instance.route("/")
@@ -27,12 +28,13 @@ import tentacles.Services.Interfaces.web_interface.models as models
 def home():
     if models.accepted_terms():
         in_backtesting = models.get_in_backtesting_mode()
-        display_tuto = models.is_first_session(models.HOME_SESSION)
-        models.set_first_session(models.HOME_SESSION, False)
+        display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
+            flask_util.BrowsingDataProvider.HOME
+        )
         return flask.render_template('index.html',
                                      watched_symbols=models.get_watched_symbols(),
                                      backtesting_mode=in_backtesting,
-                                     display_tutorial_link=display_tuto,
+                                     display_intro=display_intro,
                                      startup_messages=models.get_startup_messages())
     else:
         return flask.redirect(flask.url_for("terms"))
