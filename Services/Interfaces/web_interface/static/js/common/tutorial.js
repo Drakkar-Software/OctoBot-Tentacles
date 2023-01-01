@@ -162,6 +162,10 @@ _TUTORIALS = {
     },
 }
 
+function registerTutorial(tutorialName, callback){
+    _TUTORIALS[tutorialName] = callback
+}
+
 function displayLocalTutorial(tutorialName){
     if(typeof _TUTORIALS[tutorialName] === "undefined"){
         console.error(`Tutorial not found ${tutorialName}`)
@@ -176,7 +180,7 @@ function displayLocalTutorial(tutorialName){
 }
 
 function startTutorialIfNecessary(tutorialName) {
-    if($(`span[data-display-intro="True"]`).length == 0){
+    if($(`span[data-display-intro="True"]`).length === 0){
         return
     }
     displayLocalTutorial(tutorialName);
