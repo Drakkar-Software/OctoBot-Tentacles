@@ -57,7 +57,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.logger = self.get_logger()
         self.host = None
         self.port = None
-        self.session_secret_key = None
         self.websocket_instance = None
         self.web_login_manger = None
         self.requires_password = False
@@ -84,7 +83,6 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
                                       [services_constants.CONFIG_WEB][services_constants.CONFIG_WEB_PORT]))
         except KeyError:
             self.port = int(os.getenv(services_constants.ENV_WEB_PORT, services_constants.DEFAULT_SERVER_PORT))
-        self.session_secret_key = Service_bases.WebService.generate_session_secret_key()
         try:
             self.requires_password = \
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEB] \
@@ -146,7 +144,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         if not WebInterface.IS_FLASK_APP_CONFIGURED:
             flask_util.register_template_filters()
             # register session secret key
-            server_instance.secret_key = self.session_secret_key
+            server_instance.secret_key = flask_util.BrowsingDataProvider.instance().get_or_create_session_secret_key()
             self._handle_login(server_instance)
 
             security.register_responses_extra_header(server_instance, True)

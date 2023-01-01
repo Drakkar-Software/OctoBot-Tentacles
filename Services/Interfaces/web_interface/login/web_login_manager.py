@@ -32,12 +32,19 @@ MAX_CONNECTION_ATTEMPTS = 50
 
 class WebLoginManager(flask_login.LoginManager):
     def __init__(self, flask_app, password_hash):
+        # force is_authenticated to save login state throughout server restart
+        GENERIC_USER.is_authenticated = True
         flask_login.LoginManager.__init__(self)
         self.init_app(flask_app)
         self.password_hash = password_hash
         # register login view to redirect to when login is required
         self.login_view = "/login"
         self._register_callbacks()
+
+    def login_user(self, remember=False, duration=None, **kwargs):
+        # still set is_authenticated to be sure it's True on login
+        GENERIC_USER.is_authenticated = True
+        flask_login.login_user(GENERIC_USER, remember=remember, duration=duration, **kwargs)
 
     def is_valid_password(self, ip, password, form):
         authenticator = authentication.Authenticator.instance()

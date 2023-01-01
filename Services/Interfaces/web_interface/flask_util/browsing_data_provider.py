@@ -15,32 +15,45 @@
 #  License along with this library.
 import os
 import json
+import secrets
 import octobot_commons.singleton as singleton
 import octobot_commons.logging as logging
 import octobot_commons.constants as constants
+import octobot_commons.configuration as commons_configuration
 
 
 class BrowsingDataProvider(singleton.Singleton):
-    SESSIONS = "sessions"
+    SESSION_SEC_KEY = "session_sec_key"
     FIRST_DISPLAY = "first_display"
     HOME = "home"
     PROFILE = "profile"
 
     def __init__(self):
-        self.browsing_data = self._get_default_data()
+        self.browsing_data = {}
         self.logger = logging.get_logger(self.__class__.__name__)
         self._load_saved_data()
 
-    def get_saved_sessions(self):
-        try:
-            return self.browsing_data[self.SESSIONS]
-        except KeyError:
-            return []
+    def _get_session_secret_key(self):
+        return commons_configuration.decrypt(self.browsing_data[self.SESSION_SEC_KEY]).encode()
 
-    def set_saved_sessions(self, sessions):
-        if sessions != self.browsing_data[self.SESSIONS]:
-            self.browsing_data[self.SESSIONS] = sessions
-            self._dump_saved_data()
+    def _create_session_secret_key(self):
+        # always generate a new unique session secret key, reuse it to save sessions after restart
+        # https://flask.palletsprojects.com/en/2.2.x/quickstart/#sessions
+        return commons_configuration.encrypt(secrets.token_hex()).decode()
+
+    def _generate_session_secret_key(self):
+        self.browsing_data[self.SESSION_SEC_KEY] = self._create_session_secret_key()
+        self._dump_saved_data()
+
+    def get_or_create_session_secret_key(self):
+        try:
+            return self._get_session_secret_key()
+        except KeyError:
+            self._generate_session_secret_key()
+        except Exception as err:
+            self.logger.exception(err, True, f"Unexpected error when reading session key: {err}")
+            self._generate_session_secret_key()
+        return self._get_session_secret_key()
 
     def get_and_unset_is_first_display(self, element):
         value = self.browsing_data[self.FIRST_DISPLAY][element]
@@ -59,19 +72,23 @@ class BrowsingDataProvider(singleton.Singleton):
         self._dump_saved_data()
 
     def _load_saved_data(self):
+        self.browsing_data = self._get_default_data()
+        read_data = {}
         try:
             with open(self._get_file()) as sessions_file:
-                self.browsing_data = json.load(sessions_file)
-                self.browsing_data.update(self._get_default_data())
+                read_data = json.load(sessions_file)
+                self.browsing_data.update(read_data)
         except FileNotFoundError:
             pass
         except Exception as err:
             self.logger.exception(err, True, f"Unexpected error when reading saved data: {err}")
-        self.browsing_data = self._get_default_data()
+        if any(key not in read_data for key in self.browsing_data):
+            # save fixed data
+            self._dump_saved_data()
 
     def _get_default_data(self):
         return {
-            self.SESSIONS: [],
+            self.SESSION_SEC_KEY: self._create_session_secret_key(),
             self.FIRST_DISPLAY: {
                 self.HOME: False,
                 self.PROFILE: False,
