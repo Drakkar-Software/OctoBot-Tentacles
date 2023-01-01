@@ -258,7 +258,7 @@ get_filtered_list, read_only=False) %}
                     action="{{ url_for('profiles_management', action='download', next=next) }}" method="POST">
                 <div class="form-group mx-sm-3 mb-2 w-75">
                   <label for="inputProfileLink" class="mr-2">Import from a profile link</label>
-                  <input type="text" class="form-control w-50" id="inputProfileLink" name="inputProfileLink"
+                  <input type="text" class="form-control w-100 w-md-50" id="inputProfileLink" name="inputProfileLink"
                          placeholder="https://profile-to-import-url.zip">
                 </div>
                 <button type="button" class="btn btn-primary waves-effect mb-2"

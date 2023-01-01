@@ -105,6 +105,32 @@ _TUTORIALS = {
         }
     },
 
+    profile_selector: () => {
+        return {
+            steps: [
+                {
+                    title: 'Welcome to OctoBot',
+                    intro: `To start with OctoBot, select the trading profile that you want to use at first.`
+                },
+                {
+                    title: 'Choosing your profile',
+                    element: document.querySelector('[data-target="#defaultModal"]'),
+                    intro: `Find more details on each profile using the details button.`
+                },
+                {
+                    title: 'Select your profile',
+                    element: document.querySelector('.activate-profile-button'),
+                    intro: `Once you found the right profile, just activate it.`
+                },
+                {
+                    title: 'Get more profiles',
+                    element: document.querySelector('.login_box'),
+                    intro: `Use OctoBot cloud to add profiles to your OctoBot.`
+                },
+            ]
+        }
+    },
+
     profitability: () => {
         return {
             steps: [

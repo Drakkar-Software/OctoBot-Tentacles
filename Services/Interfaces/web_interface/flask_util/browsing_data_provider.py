@@ -27,6 +27,10 @@ class BrowsingDataProvider(singleton.Singleton):
     FIRST_DISPLAY = "first_display"
     HOME = "home"
     PROFILE = "profile"
+    PROFILE_SELECTOR = "profile_selector"
+    DISPLAY_KEYS = [
+        HOME, PROFILE, PROFILE_SELECTOR
+    ]
 
     def __init__(self):
         self.browsing_data = {}
@@ -44,8 +48,11 @@ class BrowsingDataProvider(singleton.Singleton):
         return self._get_session_secret_key()
 
     def get_and_unset_is_first_display(self, element):
-        value = self.browsing_data[self.FIRST_DISPLAY][element]
-        if value := self.browsing_data[self.FIRST_DISPLAY][element]:
+        try:
+            value = self.browsing_data[self.FIRST_DISPLAY][element]
+        except KeyError:
+            value = False
+        if value:
             self.set_is_first_display(element, False)
         return value
 
@@ -55,7 +62,7 @@ class BrowsingDataProvider(singleton.Singleton):
             self._dump_saved_data()
 
     def set_first_displays(self, is_first_display):
-        for key in self.browsing_data[self.FIRST_DISPLAY]:
+        for key in self.DISPLAY_KEYS:
             self.browsing_data[self.FIRST_DISPLAY][key] = is_first_display
         self._dump_saved_data()
 
@@ -75,8 +82,8 @@ class BrowsingDataProvider(singleton.Singleton):
         return {
             self.SESSION_SEC_KEY: self._create_session_secret_key(),
             self.FIRST_DISPLAY: {
-                self.HOME: False,
-                self.PROFILE: False,
+                key: False
+                for key in self.DISPLAY_KEYS
             }
         }
 
