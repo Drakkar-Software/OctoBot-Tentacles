@@ -210,7 +210,7 @@ get_filtered_list, read_only=False) %}
                     {{ 'This is your current profile' if current_profile.profile_id == profile.profile_id else 'Use this profile' }}
                 </span>
             </button>
-            <div>
+            <div class="d-flex">
                 <button id="duplicate-profile"
                         data-url="{{url_for('profiles_management', action='duplicate', profile_id=profile.profile_id)}}"
                         class="btn btn-primary waves-effect duplicate-profile px-3">

@@ -25,10 +25,10 @@
 {%- endmacro %}
 
 {% macro col_elem_with_badge(title, badge, badge_color="unique-color-dark") -%}
-    <div class="col-6 col-md-2 my-1">
+    <div class="col-9 col-md-2 my-1">
         {{ title }}
     </div>
-    <div class="col-6 col-md-2 my-1">
+    <div class="col-3 col-md-2 my-1">
         <span class="badge {{ badge_color }} font-weight-bold">{{ badge }}</span>
     </div>
 {%- endmacro %}
@@ -40,7 +40,9 @@
         <div class="card-header">
             <h2>
                 OctoBot Community metrics
-                <a class="badge unique-color-dark float-right" href="https://t.me/joinchat/F9cyfxV97ZOaXQ47H5dRWw" target="_blank" rel="noopener"><i class="fab fa-telegram"></i> Community chat</a>
+                <a class="badge unique-color-dark float-right" href="https://t.me/joinchat/F9cyfxV97ZOaXQ47H5dRWw" target="_blank" rel="noopener">
+                    <i class="fab fa-telegram"></i> <span class="d-none d-md-inline-block">Community chat</span>
+                </a>
             </h2>
         </div>
     </div>

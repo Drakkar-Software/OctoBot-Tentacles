@@ -24,7 +24,7 @@
 <div class="row mt-md-4 mt-2">
     <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
         <div class="sidebar-sticky mt-0 pt-0">
-            <div class="px-1 px-md-4 d-flex">
+            <div class="px-1 px-md-4 d-md-flex">
                 <div>
                     <a data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
                         <h5>
@@ -34,7 +34,7 @@
                     </a>
                 </div>
                 <div>
-                    <a class="btn btn-sm rounded-circle btn-primary waves-effect"
+                    <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-0 mx-md-1"
                        href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
                        title="Select another profile"
                        id="profile-selector-link"
@@ -296,12 +296,12 @@
                                         <div class="d-flex justify-content-end">
                                             <button class="btn btn-outline-info btn-lg waves-effect" id="export-currencies-button"
                                                     update-url="{{ url_for('api.get_config_currency')}}">
-                                                <i class="fa fa-cloud-download-alt"></i> Export
+                                                <i class="fa fa-cloud-download-alt"></i> <span class="d-none d-md-inline-block">Export</span>
                                             </button>
                                             <input class="d-none" id="import-currencies-input" type="file" name="file" accept=".json"/>
                                             <button class="btn btn-outline-info btn-lg waves-effect" id="import-currencies-button"
                                                     update-url="{{ url_for('api.set_config_currency') }}">
-                                                <i class="fa fa-cloud-upload-alt"></i> Import
+                                                <i class="fa fa-cloud-upload-alt"></i> <span class="d-none d-md-inline-block">Import</span>
                                             </button>
                                         </div>
 
@@ -368,7 +368,7 @@
                         <h2>
                             Trading
                             <span class="float-right badge {{ 'badge-dark' if real_trader_activated else 'badge-primary' }} waves-effect">
-                        {{ 'Real trader currently activated' if real_trader_activated else 'Trader simulator currently activated' }}
+                        {{ 'Real trader' if real_trader_activated else 'Simulator' }}
                     </span>
                         </h2>
                     </div>
