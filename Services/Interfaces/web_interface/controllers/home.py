@@ -26,6 +26,8 @@ import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 @web_interface.server_instance.route("/home")
 @login.login_required_when_activated
 def home():
+    if flask.request.args.get("reset_tutorials", "False") == "True":
+        flask_util.BrowsingDataProvider.instance().set_first_displays(True)
     if models.accepted_terms():
         in_backtesting = models.get_in_backtesting_mode()
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
