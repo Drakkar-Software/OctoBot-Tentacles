@@ -40,4 +40,4 @@ def accept_terms():
         models.accept_terms(True)
         flask_util.BrowsingDataProvider.instance().set_first_displays(True)
         return flask.redirect(next_url or flask.url_for("home"))
-    flask.redirect(flask.url_for("terms"))
+    return flask.redirect(flask.url_for("terms"))

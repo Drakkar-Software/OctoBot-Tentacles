@@ -33,18 +33,6 @@ class BrowsingDataProvider(singleton.Singleton):
         self.logger = logging.get_logger(self.__class__.__name__)
         self._load_saved_data()
 
-    def _get_session_secret_key(self):
-        return commons_configuration.decrypt(self.browsing_data[self.SESSION_SEC_KEY]).encode()
-
-    def _create_session_secret_key(self):
-        # always generate a new unique session secret key, reuse it to save sessions after restart
-        # https://flask.palletsprojects.com/en/2.2.x/quickstart/#sessions
-        return commons_configuration.encrypt(secrets.token_hex()).decode()
-
-    def _generate_session_secret_key(self):
-        self.browsing_data[self.SESSION_SEC_KEY] = self._create_session_secret_key()
-        self._dump_saved_data()
-
     def get_or_create_session_secret_key(self):
         try:
             return self._get_session_secret_key()
@@ -71,6 +59,27 @@ class BrowsingDataProvider(singleton.Singleton):
             self.browsing_data[self.FIRST_DISPLAY][key] = is_first_display
         self._dump_saved_data()
 
+    def _get_session_secret_key(self):
+        return commons_configuration.decrypt(self.browsing_data[self.SESSION_SEC_KEY]).encode()
+
+    def _create_session_secret_key(self):
+        # always generate a new unique session secret key, reuse it to save sessions after restart
+        # https://flask.palletsprojects.com/en/2.2.x/quickstart/#sessions
+        return commons_configuration.encrypt(secrets.token_hex()).decode()
+
+    def _generate_session_secret_key(self):
+        self.browsing_data[self.SESSION_SEC_KEY] = self._create_session_secret_key()
+        self._dump_saved_data()
+
+    def _get_default_data(self):
+        return {
+            self.SESSION_SEC_KEY: self._create_session_secret_key(),
+            self.FIRST_DISPLAY: {
+                self.HOME: False,
+                self.PROFILE: False,
+            }
+        }
+
     def _load_saved_data(self):
         self.browsing_data = self._get_default_data()
         read_data = {}
@@ -86,19 +95,12 @@ class BrowsingDataProvider(singleton.Singleton):
             # save fixed data
             self._dump_saved_data()
 
-    def _get_default_data(self):
-        return {
-            self.SESSION_SEC_KEY: self._create_session_secret_key(),
-            self.FIRST_DISPLAY: {
-                self.HOME: False,
-                self.PROFILE: False,
-            }
-        }
-
     def _dump_saved_data(self):
-        with open(self._get_file(), "w") as sessions_file:
-            return json.dump(self.browsing_data, sessions_file)
+        try:
+            with open(self._get_file(), "w") as sessions_file:
+                return json.dump(self.browsing_data, sessions_file)
+        except Exception as err:
+            self.logger.exception(err, True, f"Unexpected error when reading saved data: {err}")
 
     def _get_file(self):
         return os.path.join(constants.USER_FOLDER, f"{self.__class__.__name__}_data.json")
-
