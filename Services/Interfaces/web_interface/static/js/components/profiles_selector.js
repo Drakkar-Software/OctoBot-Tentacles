@@ -42,4 +42,5 @@ $(document).ready(function() {
 
     ensureModals();
     registerReconnectedCallback(onReconnected);
+    startTutorialIfNecessary("profile_selector");
 });

@@ -21,6 +21,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.controllers.community_authentication as community_authentication
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot_services.interfaces.util as interfaces_util
 
 
@@ -51,10 +52,14 @@ def profiles_selector():
     except (authentication.AuthenticationRequired, authentication.UnavailableError):
         pass
 
+    display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
+        flask_util.BrowsingDataProvider.PROFILE_SELECTOR
+    )
     return flask.render_template(
         'profiles_selector.html',
         read_only=True,
         waiting_reboot=models.is_rebooting(),
+        display_intro=display_intro,
 
         current_logged_in_email=logged_in_email,
         selected_user_bot=models.get_selected_user_bot(),
