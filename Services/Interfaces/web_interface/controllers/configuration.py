@@ -36,19 +36,14 @@ import octobot_services.interfaces.util as interfaces_util
 def profile():
     selected_profile = flask.request.args.get("select", None)
     next_url = flask.request.args.get("next", None)
-    reboot = flask.request.args.get("reboot", False)
-    reboot_delay = 3
     if selected_profile is not None and selected_profile != models.get_current_profile().profile_id:
         models.select_profile(selected_profile)
         current_profile = models.get_current_profile()
-        if not reboot:
-            flask.flash(
-                f"Switched to {current_profile.name} profile", "success"
-            )
+        flask.flash(
+            f"Switched to {current_profile.name} profile", "success"
+        )
     else:
         current_profile = models.get_current_profile()
-    if reboot:
-        models.restart_bot(delay=reboot_delay)
     if next_url is not None:
         return flask.redirect(next_url)
     media_url = flask.url_for("tentacle_media", _external=True)

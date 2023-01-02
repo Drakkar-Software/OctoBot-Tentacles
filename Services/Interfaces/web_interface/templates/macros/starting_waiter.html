@@ -1,4 +1,4 @@
-{% macro display_loading_message(text=None, details=None) -%}
+{% macro display_loading_message(text=None, details=None, next_url=None) -%}
     <div class="card w-75 mx-auto">
         <div class="card-header"><h2>
             {{ text or "OctoBot is starting, please refresh this page in a few seconds." }}
@@ -14,7 +14,11 @@
             {% endif %}
         </div>
         <div class="card-footer text-right">
+        {% if next_url %}
+            <a type="button" href="{{next_url}}" class="btn btn-sm btn-outline-primary waves-effect">Proceed anyway</a>
+        {% else %}
             <button type="button" id="reload-button" class="btn btn-lg btn-primary waves-effect">Refresh</button>
+        {% endif %}
         </div>
     </div>
 {%- endmacro %}
