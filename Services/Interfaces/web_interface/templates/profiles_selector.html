@@ -9,6 +9,15 @@
 
 {% block body %}
 <br>
+{% if waiting_reboot %}
+{{ m_flash_messages.flash_messages() }}
+<div class="mb-2" id="restart-loader"
+     data-redirect-url="{{url_for('home')}}">
+{{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
+                                             "You will be taken to your OctoBot dashboard when it will be ready.",
+                                             next_url=url_for('home'))}}
+</div>
+{% else %}
 {% if not current_logged_in_email %}
 <div class="login_box mx-auto mb-2">
     <div class="card">
@@ -18,13 +27,6 @@
     </div>
 </div>
 {% endif %}
-{% if waiting_reboot %}
-<div class="mb-2" id="restart-loader"
-     data-redirect-url="{{url_for('home')}}">
-{{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
-                                             "You will be taken to your OctoBot dashbaord.") }}
-</div>
-{% else %}
 <div class="card">
     <div class="card-header d-flex justify-content-between">
         <div>
@@ -70,7 +72,7 @@
             {{ profiles_macros.profile_overview(profile, current_profile,
               profiles_tentacles_details[profile.profile_id], strategy_config,
               evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges,
-              get_enabled_trader, get_filtered_list, read_only) }}
+              get_enabled_trader, get_filtered_list, read_only, True) }}
             {% endfor %}
         </div>
     </div>
