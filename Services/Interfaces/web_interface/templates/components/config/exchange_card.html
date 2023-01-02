@@ -58,8 +58,8 @@
         </div>
 
         <!--Card content-->
-        <div class="card-body" name="{{exchange}}" config-key="exchanges_{{exchange}}">
-            <div data-role="account-warning-details-wrapper" class="alert alert-danger d-none">
+        <div class="card-body px-2 px-md-4" name="{{exchange}}" config-key="exchanges_{{exchange}}">
+            <div data-role="account-warning-details-wrapper" class="alert alert-danger d-none px-1 px-md-4">
                 <span data-role="account-warning-details">
                     OctoBot works with exchanges to remain free, please create a new exchange account to support the project.
                 </span>
@@ -76,7 +76,7 @@
                     <a target="_blank" rel="noopener" href="{{url_for('community')}}">logging in with your community account</a>.
                 </span>
             </div>
-            <div class="d-flex">
+            <div class="d-md-flex">
                 {% if full_config %}
                     <div class="flex-grow-1">
                     <p class="card-text api analytics-hidden">
@@ -109,7 +109,7 @@
                         {{keys_value}}</a><br>
 
                         <i>API Password</i>
-                        <i class="fa fa-question"
+                        <i class="fa-solid fa-question"
                            data-toggle="tooltip" data-placement="top"
                            title="An API password is required by some exchanges, leave as is otherwise.">
                         </i> : <a href="#"

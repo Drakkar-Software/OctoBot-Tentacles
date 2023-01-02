@@ -14,10 +14,16 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import flask
+import os
 
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+
+
+def _send_file(base_dir, file_path):
+    base_path, file_name = os.path.split(file_path)
+    return flask.send_from_directory(os.path.join(base_dir, base_path), file_name)
 
 
 @web_interface.server_instance.route('/tentacle_media')
@@ -27,7 +33,16 @@ def tentacle_media(path=None):
     # images
     if models.is_valid_tentacle_image_path(path):
         # reference point is the web interface directory: use OctoBot root folder as a reference
-        return flask.send_from_directory("../../../..", path)
+        return _send_file("../../../..", path)
+
+
+@web_interface.server_instance.route('/profile_media/<path:path>')
+@login.login_required_when_activated
+def profile_media(path):
+    # images
+    if models.is_valid_profile_image_path(path):
+        # reference point is the web interface directory: use OctoBot root folder as a reference
+        return _send_file("../../../..", path)
 
 
 @web_interface.server_instance.route('/exchange_logo/<name>')
@@ -41,4 +56,4 @@ def exchange_logo(name):
 def audio_media(name):
     if models.is_valid_audio_path(name):
         # reference point is the web interface directory: use OctoBot root folder as a reference
-        return flask.send_from_directory("static/audio", name)
+        return _send_file("static/audio", name)

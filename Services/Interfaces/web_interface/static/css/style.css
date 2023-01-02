@@ -69,6 +69,10 @@ body:before {
     max-width: 2.5rem;
 }
 
+pre code {
+    color: white;
+}
+
 .profile-overview-values {
     font-weight: bold;
 }
@@ -83,6 +87,34 @@ a.profile-overview-values {
 
 .profile-overview-explanation {
     font-weight: inherit;
+}
+
+.profile-overview {
+    border: 2px solid black;
+}
+
+.vertically-aligned {
+    justify-content: space-between;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.profile-overview:hover {
+    animation: all 0.2s ease-in forwards;
+    border-bottom: 2px solid white;
+    border-right: 2px solid white;
+}
+
+.profile-overview-selected {
+    border-bottom: 2px solid #C62828;
+    border-right: 2px solid #C62828;
+    background-color: #212121;
+}
+
+.profile-overview-image {
+    max-height: 120px;
+    max-width: 120px;
 }
 
 .navbar.navbar-dark, footer.page-footer .footer-copyright, .progress-bar {
@@ -398,6 +430,10 @@ a.nav-link.primary-tab-selector.active {
     font-size: 1.4em;
 }
 
+.fa.fa-spinner.fa-2xl {
+    font-size: 32px;
+}
+
 span.large-editable div.editable-input {
     width: 100%;
 }
@@ -473,4 +509,10 @@ table.dataTable thead th,
 table.dataTable tfoot th {
     background: #343a40;
     font-weight: normal;
+}
+
+/* introjs */
+
+.introjs-tooltip {
+  background-color: rgba(000, 0, 0, 0.9);
 }

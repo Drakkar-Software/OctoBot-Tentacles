@@ -21,6 +21,7 @@ import octobot.disclaimer as disclaimer
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 
 @web_interface.server_instance.route("/terms")
@@ -29,3 +30,14 @@ def terms():
     return flask.render_template("terms.html",
                                  disclaimer=disclaimer.DISCLAIMER,
                                  accepted_terms=models.accepted_terms())
+
+
+@web_interface.server_instance.route("/accept_terms")
+@login.login_required_when_activated
+def accept_terms():
+    next_url = flask.request.args.get("next", None)
+    if flask.request.args.get("accept_terms", None) == "True":
+        models.accept_terms(True)
+        flask_util.BrowsingDataProvider.instance().set_first_displays(True)
+        return flask.redirect(next_url or flask.url_for("home"))
+    return flask.redirect(flask.url_for("terms"))

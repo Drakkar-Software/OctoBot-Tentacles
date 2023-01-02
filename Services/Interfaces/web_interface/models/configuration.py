@@ -18,7 +18,6 @@ import os.path as path
 import ccxt
 import ccxt.async_support
 import copy
-import re
 import requests.adapters
 import requests.packages.urllib3.util.retry
 import octobot_commons.display as display
@@ -44,6 +43,7 @@ import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
+import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
@@ -638,12 +638,16 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def _get_filtered_exchange_symbols(symbols):
+    return [res for res in symbols if octobot_commons.MARKET_SEPARATOR in res]
+
+
 async def _load_market(exchange, results):
     try:
         async with getattr(ccxt.async_support, exchange)({'verbose': False}) as exchange_inst:
             await exchange_inst.load_markets()
             # filter symbols with a "." or no "/" because bot can't handle them for now
-            markets_by_exchanges[exchange] = [res for res in exchange_inst.symbols if "/" in res]
+            markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(exchange_inst.symbols)
             results.append(markets_by_exchanges[exchange])
     except Exception as e:
         _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
@@ -653,8 +657,19 @@ async def _load_markets(exchanges):
     result = []
     results = []
     fetch_coros = []
+    exchange_managers = trading_api.get_exchange_managers_from_exchange_ids(
+        trading_api.get_exchange_ids()
+    )
+    exchange_manager_by_exchange_name = {
+        trading_api.get_exchange_name(exchange_manager): exchange_manager
+        for exchange_manager in exchange_managers
+    }
     for exchange in exchanges:
         if exchange not in exchange_symbol_fetch_blacklist:
+            if exchange in exchange_manager_by_exchange_name and exchange not in markets_by_exchanges:
+                markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(
+                    trading_api.get_all_exchange_symbols(exchange_manager_by_exchange_name[exchange])
+                )
             if exchange in markets_by_exchanges:
                 result += markets_by_exchanges[exchange]
             else:

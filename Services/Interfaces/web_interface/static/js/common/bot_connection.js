@@ -57,24 +57,29 @@ function manage_alert(data){
 }
 
 function handle_route_button(){
-    $(".btn").click(function(){
-        const button = $(this);
-        if (button[0].hasAttribute('route')){
-            const command = button.attr('route');
-            const origin_val = button.text();
-            $.ajax({
-                url: command,
-                beforeSend: function() {
-                    button.html("<i class='fa fa-circle-notch fa-spin'></i>");
-                },
-                success: function() {
-                    create_alert("info", "OctoBot is stopping", "");
-                },
-                complete: function() {
-                   button.html(origin_val);
-                }
-            });
-         }
+    $(".btn").each((_, jsButton) => {
+        if(!jsButton.hasAttribute('route')){
+            return;
+        }
+        $(jsButton).click((event) => {
+            const button = $(event.currentTarget);
+            if (button[0].hasAttribute('route')){
+                const command = button.attr('route');
+                const origin_val = button.text();
+                $.ajax({
+                    url: command,
+                    beforeSend: function() {
+                        button.html("<i class='fa fa-circle-notch fa-spin'></i>");
+                    },
+                    success: function() {
+                        create_alert("info", "OctoBot is stopping", "");
+                    },
+                    complete: function() {
+                       button.html(origin_val);
+                    }
+                });
+             }
+        });
     });
 }
 

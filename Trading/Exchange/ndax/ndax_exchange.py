@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
 class Ndax(exchanges.SpotCCXTExchange):
@@ -37,3 +38,15 @@ class Ndax(exchanges.SpotCCXTExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
+    async def get_price_ticker(self, symbol: str, **kwargs: dict):
+        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+        for key in [
+            trading_enums.ExchangeConstantsTickersColumns.HIGH.value,
+            trading_enums.ExchangeConstantsTickersColumns.LOW.value,
+            trading_enums.ExchangeConstantsTickersColumns.OPEN.value,
+            trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value,
+        ]:
+            if ticker[key] == 0.0:
+                ticker[key] = None
+        return ticker

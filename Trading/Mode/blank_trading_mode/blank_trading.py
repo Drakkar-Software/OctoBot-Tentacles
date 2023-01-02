@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Interfaces
+#  Drakkar-Software OctoBot
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -13,13 +13,26 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import flask
 
-import tentacles.Services.Interfaces.web_interface as web_interface
-import tentacles.Services.Interfaces.web_interface.login as login
+import octobot_trading.enums as enums
+import octobot_trading.modes as trading_modes
 
 
-@web_interface.server_instance.route("/tutorial")
-@login.login_required_when_activated
-def tutorial():
-    return flask.render_template('tutorial.html')
+class BlankTradingMode(trading_modes.AbstractTradingMode):
+    """
+    This trading mode is doing nothing. It is to be selected when no trading is to be done.
+    """
+
+    @staticmethod
+    def is_backtestable():
+        return False
+
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            enums.ExchangeTypes.SPOT,
+            enums.ExchangeTypes.FUTURE
+        ]

@@ -53,7 +53,7 @@
     {% if followed_strategy_url %}
     <div class="alert alert-light" role="alert">
         <h4>
-            Subscribed to Astrolab trading signals
+            Subscribed to OctoBot trading signals
             {% if is_community_feed_connected %}
             <span class="badge badge-success">Connected</span>
             {% else %}
@@ -155,7 +155,7 @@
             <h2>Open orders
                 <button type="button" class="btn btn-outline-danger waves-effect float-right" id="cancel_all_orders" update-url="{{ url_for('api.orders', action='cancel_orders') }}"
                         {{ "disabled" if not(real_open_orders or simulated_open_orders) }}>
-                    <i id="cancel_all_icon" class="fas fa-ban"></i> Cancel all
+                <i id="cancel_all_icon" class="fas fa-ban"></i> <span class="d-none d-md-inline-block">Cancel all</span>
                 </button>
             </h2>
         </div>

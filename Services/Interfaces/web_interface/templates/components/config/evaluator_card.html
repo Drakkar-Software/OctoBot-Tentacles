@@ -48,26 +48,28 @@
     {{ evaluator_card_modal(evaluator_name, info, strategy) }}
 {% endmacro %}
 
-{% macro evaluator_card_modal(evaluator_name, info, strategy=False) %}
+{% macro evaluator_card_modal(evaluator_name, info, strategy=False, read_only=False) %}
     <div class="modal fade" id="{{evaluator_name}}Modal" tabindex="-1" role="dialog" aria-labelledby="#{{evaluator_name}}ModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content modal-text mt-4">
+      <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content modal-text bg-dark text-light mt-4">
           <div class="modal-header primary-text">
               <h5 class="modal-title" id="#{{evaluator_name}}ModalLabel">
                   {{evaluator_name}}
               </h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body">
-              {{ m_tentacles.tentacle_description(info, strategy, evaluator_name ) }}
+              {{ m_tentacles.tentacle_description(info, strategy, evaluator_name, read_only) }}
           </div>
+          {% if not read_only %}
           <div class="modal-footer">
             <a href="{{ url_for('config_tentacle', name=(evaluator_name)) }}"
                class="btn btn-primary waves-effect" role="button">Configure</a>
             <button class="btn btn-outline-primary waves-effect" data-dismiss="modal">Close</button>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>

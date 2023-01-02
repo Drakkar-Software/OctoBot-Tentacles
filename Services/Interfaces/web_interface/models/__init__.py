@@ -52,6 +52,7 @@ from tentacles.Services.Interfaces.web_interface.models.backtesting import (
 from tentacles.Services.Interfaces.web_interface.models.commands import (
     schedule_delayed_command,
     restart_bot,
+    is_rebooting,
     stop_bot,
     update_bot,
 )
@@ -70,6 +71,8 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     get_followed_strategy_url,
     is_community_feed_connected,
     get_last_signal_time,
+    sync_community_account,
+    wait_for_login_if_processing,
 )
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
@@ -149,6 +152,7 @@ from tentacles.Services.Interfaces.web_interface.models.logs import (
 )
 from tentacles.Services.Interfaces.web_interface.models.medias import (
     is_valid_tentacle_image_path,
+    is_valid_profile_image_path,
     is_valid_audio_path,
 )
 from tentacles.Services.Interfaces.web_interface.models.profiles import (
@@ -219,6 +223,7 @@ __all__ = [
     "save_data_file",
     "schedule_delayed_command",
     "restart_bot",
+    "is_rebooting",
     "stop_bot",
     "update_bot",
     "get_community_metrics_to_display",
@@ -235,6 +240,8 @@ __all__ = [
     "get_followed_strategy_url",
     "is_community_feed_connected",
     "get_last_signal_time",
+    "sync_community_account",
+    "wait_for_login_if_processing",
     "get_evaluators_tentacles_startup_activation",
     "get_trading_tentacles_startup_activation",
     "get_tentacle_documentation",
@@ -293,6 +300,7 @@ __all__ = [
     "LOG_EXPORT_FORMAT",
     "export_logs",
     "is_valid_tentacle_image_path",
+    "is_valid_profile_image_path",
     "is_valid_audio_path",
     "get_current_profile",
     "duplicate_and_select_profile",

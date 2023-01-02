@@ -1,10 +1,10 @@
 {% import 'macros/text.html' as m_text %}
 
-{% macro tentacle_description(info, strategy, name) %}
+{% macro tentacle_description(info, strategy, name, read_only=False) %}
       <span class="markdown-content">
             {{info['description']}}
       </span>
-      {% if info['default-config'] %}
+      {% if not read_only and info['default-config'] %}
             <p>
                 {{ default_config_with_apply(info['default-config'], strategy, name, info['requirements']) }}
             </p>

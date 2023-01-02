@@ -1,0 +1,107 @@
+{% extends "layout.html" %}
+{% set active_page = "profile" %}
+
+{% import "components/community/login.html" as login %}
+{% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
+{% import "components/config/profiles.html" as profiles_macros %}
+{% import 'macros/flash_messages.html' as m_flash_messages %}
+{% import 'macros/starting_waiter.html' as m_starting_waiter %}
+
+{% block body %}
+<br>
+{% if waiting_reboot %}
+{{ m_flash_messages.flash_messages() }}
+<div class="mb-2" id="restart-loader"
+     data-redirect-url="{{url_for('home')}}">
+{{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
+                                             "You will be taken to your OctoBot dashboard when it will be ready.",
+                                             next_url=url_for('home'))}}
+</div>
+{% else %}
+{% if not current_logged_in_email %}
+<div class="login_box mx-auto mb-2">
+    <div class="card">
+    {{ login.login_form(form, is_in_stating_community_env, OCTOBOT_COMMUNITY_URL,
+                        url_for("profiles_selector"), after_login_action="sync_account",
+                        details="Access your subscribed profiles as well as additional profiles.") }}
+    </div>
+</div>
+{% endif %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <div>
+            <h3>
+                Select the profile your OctoBot should use
+            </h3>
+        </div>
+        <div class="text-right">
+            <button class="btn btn-outline-primary waves-effect"
+                    data-toggle="modal" data-target="#importProfileModal">
+                Import a profile
+            </button>
+        </div>
+    </div>
+    <div class="card-body pt-0">
+        {% if current_logged_in_email %}
+        <div class="alert alert-dark row py-0 my-1">
+            <div class="col-8 my-auto">
+                Logged in as {{current_logged_in_email}}
+                {% if selected_user_bot["name"] %}
+                    using bot <span class="badge badge-info">{{ selected_user_bot["name"] }}</span>
+                {% else %}
+                    <span class="badge badge-danger">without selected bot</span>
+                {% endif %}
+            </div>
+            {% if can_logout %}
+            <div class="col-4 text-right">
+                <a class="align-right btn btn-sm btn-outline-info waves-effect"
+                   href="{{ url_for('community_logout', next=url_for('profiles_selector'))}}">
+                    logout
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {{ m_flash_messages.flash_messages() }}
+        {% endif %}
+        <p>
+            A profile is a ready-made configuration of OctoBot. You can change it at any time.
+            You will be able to create and customize your own profiles from the <span class="font-weight-bold">Profile</span> tab.
+        </p>
+        <div class="row mx-0 mt-1">
+            {% for profile in profiles %}
+            {{ profiles_macros.profile_overview(profile, current_profile,
+              profiles_tentacles_details[profile.profile_id], strategy_config,
+              evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges,
+              get_enabled_trader, get_filtered_list, read_only, True) }}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<span class="d-none" data-display-intro="{{display_intro}}"></span>
+
+<br>
+
+<!-- Modals -->
+{{ profiles_macros.profile_import_modal(url_for('profiles_selector')) }}
+{% for trading_mode_name, info in strategy_config["trading-modes"].items() %}
+    {{ m_config_evaluator_card.evaluator_card_modal(trading_mode_name, info, False, read_only) }}
+{% endfor %}
+{% for evaluator_name, info in strategy_config["strategies"].items() %}
+    {{ m_config_evaluator_card.evaluator_card_modal(evaluator_name, info, True, read_only) }}
+{% endfor %}
+{% for evaluator_type_items in ['ta', 'social', 'real-time'] %}
+    {% for evaluator_name, info in evaluator_config[evaluator_type_items].items() %}
+        {{ m_config_evaluator_card.evaluator_card_modal(evaluator_name, info, True, read_only) }}
+    {% endfor %}
+{% endfor %}
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/common/common_handlers.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/profile_management.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/community.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/profiles_selector.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

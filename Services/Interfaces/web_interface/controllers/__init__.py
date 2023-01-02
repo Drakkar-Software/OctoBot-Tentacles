@@ -29,6 +29,7 @@ from tentacles.Services.Interfaces.web_interface.controllers import logs
 from tentacles.Services.Interfaces.web_interface.controllers import medias
 from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
+from tentacles.Services.Interfaces.web_interface.controllers import profiles
 
 
 from tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication import (
@@ -77,6 +78,7 @@ from tentacles.Services.Interfaces.web_interface.controllers.interface_settings 
 )
 from tentacles.Services.Interfaces.web_interface.controllers.medias import (
     tentacle_media,
+    profile_media,
     exchange_logo,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
@@ -85,8 +87,8 @@ from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     trades,
     utility_processor,
 )
-from tentacles.Services.Interfaces.web_interface.controllers.tutorial import (
-    tutorial,
+from tentacles.Services.Interfaces.web_interface.controllers.profiles import (
+    profiles_selector,
 )
 
 
@@ -122,12 +124,13 @@ __all__ = [
     "logs",
     "export_logs",
     "tentacle_media",
+    "profile_media",
     "exchange_logo",
     "terms",
     "portfolio",
     "symbol_market_status",
     "trading",
-    "tutorial",
     "trades",
     "utility_processor",
+    "profiles_selector",
 ]

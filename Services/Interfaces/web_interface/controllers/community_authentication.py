@@ -28,8 +28,11 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route('/community_login', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def community_login():
+    next_url = flask.request.args.get("next", None)
+    after_login_action = flask.request.args.get("after_login_action", None)
     authenticator = authentication.Authenticator.instance()
-    logged_in_email = form = None
+    logged_in_email = None
+    form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
     try:
         logged_in_email = authenticator.get_logged_in_email()
     except authentication.AuthenticationRequired:
@@ -37,7 +40,6 @@ def community_login():
     except Exception as e:
         flask.flash(f"Error when contacting the community server: {e}", "error")
     if logged_in_email is None:
-        form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
         if form.validate_on_submit():
             try:
                 interfaces_util.run_in_bot_main_loop(
@@ -45,12 +47,18 @@ def community_login():
                     log_exceptions=False
                 )
                 logged_in_email = form.email.data
-                return flask.redirect('community')
+                if after_login_action == "sync_account":
+                    added_profiles = models.sync_community_account()
+                    if added_profiles:
+                        flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
+                                    f"from your OctoBot account.", "success")
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
                 logging.get_logger("CommunityAuthentication").exception(e, False)
                 flask.flash(f"Error during authentication: {e}", "error")
+    if next_url:
+        return flask.redirect(next_url)
     return flask.render_template('community_login.html',
                                  form=form,
                                  current_logged_in_email=logged_in_email,
@@ -60,13 +68,14 @@ def community_login():
 @web_interface.server_instance.route("/community_logout")
 @login.login_required_when_activated
 def community_logout():
+    next_url = flask.request.args.get("next", flask.url_for("community_login"))
     if not models.can_logout():
         return flask.redirect(flask.url_for('community'))
     authentication.Authenticator.instance().logout()
     interfaces_util.run_in_bot_main_loop(
         authentication.Authenticator.instance().stop_feeds()
     )
-    return flask.redirect(flask.url_for('community_login'))
+    return flask.redirect(next_url)
 
 
 class CommunityLoginForm(flask_wtf.FlaskForm):
