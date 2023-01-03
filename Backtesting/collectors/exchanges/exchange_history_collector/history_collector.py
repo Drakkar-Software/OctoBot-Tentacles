@@ -28,6 +28,7 @@ import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as ge
 try:
     import octobot_trading.api as trading_api
     import octobot_trading.enums as trading_enums
+    import octobot_trading.errors as trading_errors
 except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
@@ -181,12 +182,16 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                         multiple=True)
                     candles.clear()
         else:
-            candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
-            self.exchange.uniformize_candles_if_necessary(candles)
-            await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=cryptocurrency,
-                                  symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
-                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            try:
+                candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
+                self.exchange.uniformize_candles_if_necessary(candles)
+                await self.save_ohlcv(exchange=exchange,
+                                      cryptocurrency=cryptocurrency,
+                                      symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
+                                      timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            except trading_errors.FailedRequest as err:
+                self.logger.exception(err, False)
+                self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass
