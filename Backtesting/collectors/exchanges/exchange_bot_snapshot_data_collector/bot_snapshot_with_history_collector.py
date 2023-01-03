@@ -35,6 +35,7 @@ import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as ge
 
 try:
     import octobot_trading.api as trading_api
+    import octobot_trading.errors as trading_errors
 except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
@@ -314,6 +315,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 self.logger.error(f"Error when checking database integrity. "
                                   f"Delete this data file: {self.file_name} to reset it.")
             self.current_step_percent += 100 / self.total_steps - last_progress
+        except trading_errors.FailedRequest as err:
+            self.logger.exception(err, False)
+            self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")
         except Exception:
             raise
 
