@@ -24,25 +24,6 @@
 <div class="row mt-md-4 mt-2">
     <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
         <div class="sidebar-sticky mt-0 pt-0">
-            <div class="px-1 px-md-4 d-md-flex">
-                <div>
-                    <a data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
-                        <h5>
-                            <span class="d-none d-md-block">Current profile</span>
-                            <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
-                        </h5>
-                    </a>
-                </div>
-                <div>
-                    <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-0 mx-md-1"
-                       href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
-                       title="Select another profile"
-                       id="profile-selector-link"
-                    >
-                        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
-                    </a>
-                </div>
-            </div>
             <div class="nav flex-column pt-0 mt-0 mt-md-4" id="v-tab" role="tablist"
                  aria-orientation="vertical">
                 <span>
@@ -121,9 +102,24 @@
             {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_tentacles_details[profile_id], strategy_config, evaluator_config,
                                                get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
             {% endfor %}
-
+            <div class="card bg-dark text-light card-header ">
+                <a class="d-inline-block" data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
+                    <h2 class="">
+                        <span class="d-none d-md-inline-block">Current profile</span>
+                        <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
+                    </h2>
+                </a>
+                <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-1 mx-md-4 align-top"
+                   href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
+                   title="Select another profile"
+                   id="profile-selector-link"
+                >
+                    <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                </a>
+            </div>
             <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
+
                 {% if profiles_tentacles_details[current_profile.profile_id]["version"] != CURRENT_BOT_VERSION
                     and not profiles_tentacles_details[current_profile.profile_id]["imported"] %}
                     <div class="alert alert-warning" role="alert">
@@ -215,7 +211,7 @@
 
                                         <div class="card-body pb-0">
                                             <div class="row">
-                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy", True) }}
                                                 <div class="col">
                                                     <div class="alert alert-info" role="alert">
                                                         <h4 class="alert-heading">Trading modes</h4>
@@ -241,7 +237,7 @@
 
                                         <div class="card-body pb-0">
                                             <div class="row">
-                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy") }}
+                                                {{ m_tentacles.tentacle_horizontal_description_row_content(info, tentacle_type=="strategy", True) }}
                                                 <div class="col">
                                                     <div class="alert alert-info" role="alert">
                                                         <h4 class="alert-heading">Strategies</h4>
