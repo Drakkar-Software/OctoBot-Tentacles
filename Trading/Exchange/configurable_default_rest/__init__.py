@@ -13,4 +13,4 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from .default_spot_ccxt_exchange import *
+from .configurable_default_rest_exchange import *

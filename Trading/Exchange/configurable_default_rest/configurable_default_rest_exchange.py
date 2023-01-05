@@ -13,22 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class DefaultCCXTSpotExchange(exchanges.RestExchange):
-    @classmethod
-    def get_name(cls) -> str:
-        return cls.__name__
+class ConfigurableDefaultRestExchange(exchanges.DefaultRestExchange):
 
     @classmethod
-    def is_default_exchange(cls) -> bool:
-        return True
-
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return isinstance(exchange_candidate_name, str)
-
-    async def switch_to_account(self, account_type: trading_enums.AccountTypes):
-        # Currently not supported
-        pass
+    def load_user_inputs(cls, tentacles_setup_config, tentacle_config):
+        # bypass parent to use the real load_user_inputs and enable user inputs configuration
+        return exchanges.RestExchange.load_user_inputs(tentacles_setup_config, tentacle_config)
