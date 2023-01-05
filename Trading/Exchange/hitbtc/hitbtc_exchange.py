@@ -17,16 +17,12 @@
 import octobot_trading.exchanges as exchanges
 
 
-class Hitbtc(exchanges.SpotCCXTExchange):
+class Hitbtc(exchanges.RestExchange):
     DESCRIPTION = ""
 
     @classmethod
     def get_name(cls):
         return 'hitbtc'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, sort='DESC', **kwargs)

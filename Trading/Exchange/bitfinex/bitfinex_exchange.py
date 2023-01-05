@@ -16,7 +16,7 @@
 import octobot_trading.exchanges as exchanges
 
 
-class Bitfinex(exchanges.SpotCCXTExchange):
+class Bitfinex(exchanges.RestExchange):
 
     # bitfinex2 only supports 1, 25 and 100 size
     # https://docs.bitfinex.com/reference#rest-public-book
@@ -26,10 +26,6 @@ class Bitfinex(exchanges.SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'bitfinex2'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:

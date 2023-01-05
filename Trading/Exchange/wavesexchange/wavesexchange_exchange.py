@@ -18,18 +18,20 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
 
-class WavesExchange(exchanges.SpotCCXTExchange):
+class WavesExchange(exchanges.RestExchange):
     DESCRIPTION = ""
 
     @classmethod
     def get_name(cls):
         return 'wavesexchange'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return WavesCCXTAdapter
 
-    async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
-        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return ticker
+
+class WavesCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return fixed

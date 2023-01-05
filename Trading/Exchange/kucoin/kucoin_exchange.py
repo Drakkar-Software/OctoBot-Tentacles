@@ -40,17 +40,13 @@ def _kucoin_retrier(f):
     return wrapper
 
 
-class Kucoin(exchanges.SpotCCXTExchange):
+class Kucoin(exchanges.RestExchange):
     MAX_CANDLES_FETCH_INSTANT_RETRY = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
 
     @classmethod
     def get_name(cls):
         return 'kucoin'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,

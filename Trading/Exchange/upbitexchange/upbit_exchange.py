@@ -16,16 +16,12 @@
 import octobot_trading.exchanges as exchanges
 
 
-class UpbitExchange(exchanges.SpotCCXTExchange):
+class UpbitExchange(exchanges.RestExchange):
     DESCRIPTION = ""
 
     @classmethod
     def get_name(cls):
         return 'upbit'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

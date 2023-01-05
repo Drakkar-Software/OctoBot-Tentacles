@@ -18,16 +18,15 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class CoinbasePro(exchanges.SpotCCXTExchange):
+class CoinbasePro(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 100  # value from https://docs.pro.coinbase.com/#pagination
 
     @classmethod
     def get_name(cls):
         return 'coinbasepro'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return CoinbaseProCCXTAdapter
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
@@ -64,3 +63,16 @@ class CoinbasePro(exchanges.SpotCCXTExchange):
                 if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
                 else trading_enums.TradeOrderType.LIMIT.value
         return trades
+
+
+class CoinbaseProCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_trades(self, raw, **kwargs):
+        for trade in raw:
+            trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
+            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
+                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
+            trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
+                if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
+                else trading_enums.TradeOrderType.LIMIT.value
+        return raw

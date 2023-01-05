@@ -17,7 +17,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class DefaultCCXTSpotExchange(exchanges.SpotCCXTExchange):
+class DefaultCCXTSpotExchange(exchanges.RestExchange):
     @classmethod
     def get_name(cls) -> str:
         return cls.__name__
@@ -25,6 +25,9 @@ class DefaultCCXTSpotExchange(exchanges.SpotCCXTExchange):
     @classmethod
     def is_default_exchange(cls) -> bool:
         return True
+
+    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
+        return isinstance(exchange_candidate_name, str)
 
     async def switch_to_account(self, account_type: trading_enums.AccountTypes):
         # Currently not supported
