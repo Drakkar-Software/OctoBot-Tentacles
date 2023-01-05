@@ -19,6 +19,7 @@ import ccxt
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 
@@ -301,8 +302,8 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
         # CCXT standard funding_rate parsing logic
         funding_dict = fixed
-        if from_ticker and constants.CCXT_INFO in fixed:
-            funding_dict, old_funding_dict = fixed[constants.CCXT_INFO], fixed
+        if from_ticker and ccxt_constants.CCXT_INFO in fixed:
+            funding_dict, old_funding_dict = fixed[ccxt_constants.CCXT_INFO], fixed
 
         try:
             """
@@ -326,11 +327,11 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         return funding_dict
 
     def parse_mark_price(self, fixed, from_ticker=False, **kwargs) -> dict:
-        if from_ticker and constants.CCXT_INFO in fixed:
+        if from_ticker and ccxt_constants.CCXT_INFO in fixed:
             try:
                 return {
                     trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
-                        fixed[constants.CCXT_INFO][trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value]
+                        fixed[ccxt_constants.CCXT_INFO][trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value]
                 }
             except KeyError:
                 pass
