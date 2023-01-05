@@ -691,7 +691,7 @@ def get_timeframes_list(exchanges):
     for exchange in exchanges:
         if exchange not in exchange_symbol_fetch_blacklist:
             timeframes_list += interfaces_util.run_in_bot_async_executor(
-                    trading_api.get_exchange_available_time_frames(exchange))
+                    trading_api.get_ccxt_exchange_available_time_frames(exchange))
     return [commons_enums.TimeFrames(time_frame)
             for time_frame in list(set(timeframes_list))
             if time_frame in allowed_timeframes]
