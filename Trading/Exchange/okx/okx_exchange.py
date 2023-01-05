@@ -18,7 +18,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class Okx(exchanges.SpotCCXTExchange):
+class Okx(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
     DESCRIPTION = ""
 
@@ -34,10 +34,6 @@ class Okx(exchanges.SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'okx'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     @classmethod
     def is_supporting_sandbox(cls) -> bool:

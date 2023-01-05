@@ -19,7 +19,7 @@ import octobot_commons.enums as commons_enums
 import octobot_trading.exchanges as exchanges
 
 
-class hollaex(exchanges.SpotCCXTExchange):
+class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
 
     DEFAULT_MAX_LIMIT = 500
@@ -51,10 +51,6 @@ class hollaex(exchanges.SpotCCXTExchange):
     @classmethod
     def is_configurable(cls):
         return True
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit

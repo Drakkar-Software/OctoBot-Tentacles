@@ -21,7 +21,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class AscendEx(exchanges.SpotCCXTExchange):
+class AscendEx(exchanges.RestExchange):
     DESCRIPTION = ""
 
     BUY_STR = "Buy"
@@ -37,9 +37,8 @@ class AscendEx(exchanges.SpotCCXTExchange):
     def get_name(cls):
         return 'ascendex'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return AscendexCCXTAdapter
 
     async def switch_to_account(self, account_type):
         # TODO
@@ -50,11 +49,6 @@ class AscendEx(exchanges.SpotCCXTExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
-
-    async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
-        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return ticker
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On AscendEx, account recent trades is available under fetch_closed_orders
@@ -70,3 +64,11 @@ class AscendEx(exchanges.SpotCCXTExchange):
             options = self.connector.client.safe_value(self.connector.client.options, 'fetchOHLCV', {})
             limit = self.connector.client.safe_integer(options, 'limit', 500)
         return await super().get_symbol_prices(symbol, time_frame, limit, **kwargs)
+
+
+class AscendexCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return fixed

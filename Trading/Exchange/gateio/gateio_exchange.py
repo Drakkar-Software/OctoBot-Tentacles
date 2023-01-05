@@ -18,16 +18,15 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
 
-class GateIO(exchanges.SpotCCXTExchange):
+class GateIO(exchanges.RestExchange):
     ORDERS_LIMIT = 100
 
     @classmethod
     def get_name(cls):
         return 'gateio'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return exchange_candidate_name == cls.get_name()
+    def get_adapter_class(self):
+        return GateioCCXTAdapter
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,
@@ -40,7 +39,10 @@ class GateIO(exchanges.SpotCCXTExchange):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
                                             remove_price_limits=True)
 
-    async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
-        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return ticker
+
+class GateioCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return fixed

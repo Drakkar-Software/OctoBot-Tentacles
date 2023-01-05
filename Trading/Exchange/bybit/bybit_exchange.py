@@ -18,12 +18,12 @@ import ccxt
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
-import octobot_trading.errors
 
 
-class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
+class Bybit(exchanges.RestExchange):
     DESCRIPTION = ""
 
     # Bybit default take profits are market orders
@@ -38,40 +38,31 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
     }
 
+    MARK_PRICE_IN_TICKER = True
+    FUNDING_IN_TICKER = True
+
     BUY_STR = "Buy"
     SELL_STR = "Sell"
 
     LONG_STR = BUY_STR
     SHORT_STR = SELL_STR
 
-    MARK_PRICE_IN_TICKER = True
-    FUNDING_IN_TICKER = True
-
-    # Position
-    BYBIT_BANKRUPTCY_PRICE = "bustPrice"
-    BYBIT_CLOSING_FEE = "occClosingFee"
-    BYBIT_MODE = "positionIdx"
-    BYBIT_REALIZED_PNL = "RealisedPnl"
-    BYBIT_ONE_WAY = "MergedSingle"
-    BYBIT_ONE_WAY_DIGIT = "0"
-    BYBIT_HEDGE = "BothSide"
-    BYBIT_HEDGE_DIGITS = ["1", "2"]
-
-    # Funding
-    BYBIT_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
-
-    # Orders
-    BYBIT_REDUCE_ONLY = "reduceOnly"
-    BYBIT_TRIGGER_ABOVE_KEY = "triggerDirection"
-    BYBIT_TRIGGER_ABOVE_VALUE = "1"
+    def get_adapter_class(self):
+        return BybitCCXTAdapter
 
     @classmethod
     def get_name(cls) -> str:
         return 'bybit'
 
     @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
@@ -81,16 +72,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
         limit = min(limit, 200)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
-    async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
-        ticker[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return ticker
-
-    def get_default_type(self):
-        if self.exchange_manager.is_future:
-            return 'linear'
-        return 'spot'
-
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         params = {}
         raw_positions = []
@@ -98,17 +79,7 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params["settleCoin"] = settleCoin
             params["dataFilter"] = "full"
             raw_positions += await super().get_positions(symbols=symbols, **params)
-        return self.parse_positions(raw_positions)
-
-    async def get_position(self, symbol: str, **kwargs: dict) -> dict:
-        raw_positions = await super().get_position(symbol, **kwargs)
-        return self.parse_position(raw_positions)
-
-    def clean_order(self, order):
-        return super().clean_order(self._update_order_and_trade_data(order))
-
-    def clean_trade(self, trade):
-        return super().clean_trade(self._update_order_and_trade_data(trade))
+        return raw_positions
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         # /contract/v3/private/position/trading-stop ?
@@ -139,31 +110,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params["stop"] = True
         return await super()._verify_order(created_order, order_type, symbol, price, params=params)
 
-    def _update_order_and_trade_data(self, order):
-        order_info = order[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
-        # parse reduce_only if present
-        order[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
-            order_info.get(self.BYBIT_REDUCE_ONLY, False)
-
-        # market orders with stop price are stop loss
-        if order.get(trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value, None) is not None and \
-                order[
-                    trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == trading_enums.TradeOrderType.MARKET.value:
-            order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.STOP_LOSS.value
-            order[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
-                order_info[self.BYBIT_TRIGGER_ABOVE_KEY] == self.BYBIT_TRIGGER_ABOVE_VALUE
-
-        return order
-
-    async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> trading_enums.OrderStatus:
-        return await super().cancel_order(order_id, symbol=symbol, **kwargs)
-
-    async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs: dict):
-        # buy_leverage and sell_leverage are required on Bybit
-        kwargs["buy_leverage"] = kwargs.get("buy_leverage", float(leverage))
-        kwargs["sell_leverage"] = kwargs.get("sell_leverage", float(leverage))
-        return await self.connector.set_symbol_leverage(leverage=leverage, symbol=symbol, **kwargs)
-
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
         # /contract/v3/private/position/switch-tpsl-mode
@@ -187,36 +133,6 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             params["positionIdx"] = self._get_position_idx(contract)
             params["reduceOnly"] = order.reduce_only
         return params
-
-    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        order = await super().get_order(order_id, symbol=symbol, **kwargs)
-        if order is None or order[trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value] is None:
-            # order might just have been created / cancelled
-            orders = await self.get_open_orders(symbol, orderId=order_id)
-            if orders:
-
-                return self._adapt_order_type(orders[0])
-        return self._adapt_order_type(order)
-
-    async def get_open_orders(self, symbol: str = None, since: int = None, limit: int = None,
-                              **kwargs: dict) -> list:
-        orders = await self.connector.get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        for order in orders:
-            self._adapt_order_type(order)
-        return orders
-
-    def _adapt_order_type(self, order):
-        order_info = order[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
-        if "StopLoss" in order_info["stopOrderType"] or "Stop" in order_info["stopOrderType"]:
-            # stop loss are not tagged as such by ccxt, force it
-            order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                trading_enums.TradeOrderType.STOP_LOSS.value
-        elif "TakeProfit" in order_info["stopOrderType"]:
-            # take profit are not tagged as such by ccxt, force it
-            order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                trading_enums.TradeOrderType.TAKE_PROFIT.value
-        return order
-
 
     def get_bundled_order_parameters(self, stop_loss_price=None, take_profit_price=None) -> dict:
         """
@@ -254,91 +170,139 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             # else Buy side of both side mode:
             #     return 2
 
-    def parse_positions(self, positions) -> list:
-        """
-        CCXT is returning the position dict as {'data': {position data dict}}
-        """
-        try:
-            return [self.parse_position(position) for position in positions] if positions else []
-        except Exception as e:
-            self.logger.exception(e, False)
-            raise
 
-    def parse_position(self, position_dict) -> dict:
+class BybitCCXTAdapter(exchanges.CCXTAdapter):
+    # Position
+    BYBIT_BANKRUPTCY_PRICE = "bustPrice"
+    BYBIT_CLOSING_FEE = "occClosingFee"
+    BYBIT_MODE = "positionIdx"
+    BYBIT_REALIZED_PNL = "RealisedPnl"
+    BYBIT_ONE_WAY = "MergedSingle"
+    BYBIT_ONE_WAY_DIGIT = "0"
+    BYBIT_HEDGE = "BothSide"
+    BYBIT_HEDGE_DIGITS = ["1", "2"]
+
+    # Funding
+    BYBIT_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
+
+    # Orders
+    BYBIT_REDUCE_ONLY = "reduceOnly"
+    BYBIT_TRIGGER_ABOVE_KEY = "triggerDirection"
+    BYBIT_TRIGGER_ABOVE_VALUE = "1"
+
+    def fix_order(self, raw, **kwargs):
+        fixed = super().fix_order(raw)
+        order_info = raw[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+        # parse reduce_only if present
+        fixed[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
+            order_info.get(self.BYBIT_REDUCE_ONLY, False)
+        fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
+            order_info[self.BYBIT_TRIGGER_ABOVE_KEY] == self.BYBIT_TRIGGER_ABOVE_VALUE
+        self._adapt_order_type(fixed)
+
+        return fixed
+
+    def _adapt_order_type(self, fixed):
+        order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+        if "StopLoss" in order_info["stopOrderType"] or "Stop" in order_info["stopOrderType"]:
+            # stop loss are not tagged as such by ccxt, force it
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                trading_enums.TradeOrderType.STOP_LOSS.value
+        elif "TakeProfit" in order_info["stopOrderType"]:
+            # take profit are not tagged as such by ccxt, force it
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                trading_enums.TradeOrderType.TAKE_PROFIT.value
+        return fixed
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        return fixed
+    
+    def parse_position(self, fixed, **kwargs):
         try:
-            raw_position_info = position_dict.get(trading_enums.ExchangePositionCCXTColumns.INFO.value)
-            size = decimal.Decimal(str(position_dict.get(trading_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0)))
+            raw_position_info = fixed.get(ccxt_enums.ExchangePositionCCXTColumns.INFO.value)
+            size = decimal.Decimal(
+                str(fixed.get(ccxt_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0)))
             # if size == constants.ZERO:
             #     return {}  # Don't parse empty position
 
-            symbol = self.get_pair_from_exchange(
-                position_dict[trading_enums.ExchangePositionCCXTColumns.SYMBOL.value])
-            mode = self._parse_position_mode(raw_position_info.get(self.BYBIT_MODE))
-            original_side = position_dict.get(trading_enums.ExchangePositionCCXTColumns.SIDE.value)
-            side = self.parse_position_side(original_side, mode)
-            unrealized_pnl = self._safe_decimal(position_dict,
-                                                trading_enums.ExchangePositionCCXTColumns.UNREALISED_PNL.value,
-                                                constants.ZERO)
-            liquidation_price = self._safe_decimal(position_dict,
-                                                   trading_enums.ExchangePositionCCXTColumns.LIQUIDATION_PRICE.value,
-                                                   constants.ZERO)
-            entry_price = self._safe_decimal(position_dict,
-                                             trading_enums.ExchangePositionCCXTColumns.ENTRY_PRICE.value,
-                                             constants.ZERO)
+            symbol = self.connector.get_pair_from_exchange(
+                fixed[ccxt_enums.ExchangePositionCCXTColumns.SYMBOL.value])
+            raw_mode = raw_position_info.get(self.BYBIT_MODE)
+            mode = trading_enums.PositionMode.ONE_WAY
+            if raw_mode == self.BYBIT_HEDGE or raw_mode in self.BYBIT_HEDGE_DIGITS:
+                mode = trading_enums.PositionMode.HEDGE
+            original_side = fixed.get(ccxt_enums.ExchangePositionCCXTColumns.SIDE.value)
+
+            side = trading_enums.PositionSide.BOTH
+            # todo when handling cross positions
+            # side = fixed.get(ccxt_enums.ExchangePositionCCXTColumns.SIDE.value, enums.PositionSide.UNKNOWN.value)
+            # position_side = enums.PositionSide.LONG \
+            #     if side == enums.PositionSide.LONG.value else enums.PositionSide.SHORT
+
+            unrealized_pnl = self.safe_decimal(fixed,
+                                               ccxt_enums.ExchangePositionCCXTColumns.UNREALISED_PNL.value,
+                                               constants.ZERO)
+            liquidation_price = self.safe_decimal(fixed,
+                                                  ccxt_enums.ExchangePositionCCXTColumns.LIQUIDATION_PRICE.value,
+                                                  constants.ZERO)
+            entry_price = self.safe_decimal(fixed,
+                                            ccxt_enums.ExchangePositionCCXTColumns.ENTRY_PRICE.value,
+                                            constants.ZERO)
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
                 trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value:
-                    self.connector.client.safe_value(position_dict, trading_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
+                    self.connector.client.safe_value(fixed,
+                                                     ccxt_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
                     trading_enums.TraderPositionType(
-                        position_dict.get(trading_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
+                        fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
                     size if original_side == trading_enums.PositionSide.LONG.value else -size,
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:
-                    self._safe_decimal(
-                        position_dict, trading_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value, constants.ZERO
+                    self.safe_decimal(
+                        fixed, ccxt_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value,
+                        constants.ZERO
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value:
-                    self._safe_decimal(
-                        position_dict, trading_enums.ExchangePositionCCXTColumns.NOTIONAL.value, constants.ZERO
+                    self.safe_decimal(
+                        fixed, ccxt_enums.ExchangePositionCCXTColumns.NOTIONAL.value, constants.ZERO
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value:
-                    self._safe_decimal(
-                        position_dict, trading_enums.ExchangePositionCCXTColumns.LEVERAGE.value, constants.ONE
+                    self.safe_decimal(
+                        fixed, ccxt_enums.ExchangePositionCCXTColumns.LEVERAGE.value, constants.ONE
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value: unrealized_pnl,
                 trading_enums.ExchangeConstantsPositionColumns.REALISED_PNL.value:
-                    self._safe_decimal(
-                        position_dict, self.BYBIT_REALIZED_PNL, constants.ZERO
+                    self.safe_decimal(
+                        fixed, self.BYBIT_REALIZED_PNL, constants.ZERO
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.LIQUIDATION_PRICE.value: liquidation_price,
                 trading_enums.ExchangeConstantsPositionColumns.CLOSING_FEE.value:
-                    self._safe_decimal(
-                        position_dict, self.BYBIT_CLOSING_FEE, constants.ZERO
+                    self.safe_decimal(
+                        fixed, self.BYBIT_CLOSING_FEE, constants.ZERO
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.BANKRUPTCY_PRICE.value:
-                    self._safe_decimal(
-                        position_dict, self.BYBIT_BANKRUPTCY_PRICE, constants.ZERO
+                    self.safe_decimal(
+                        fixed, self.BYBIT_BANKRUPTCY_PRICE, constants.ZERO
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.ENTRY_PRICE.value: entry_price,
                 trading_enums.ExchangeConstantsPositionColumns.CONTRACT_TYPE.value:
-                    self._parse_position_contract_type(symbol),
+                    self.connector.exchange_manager.exchange.get_contract_type(symbol),
                 trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value: mode,
             }
         except KeyError as e:
             self.logger.error(f"Fail to parse position dict ({e})")
-        return position_dict
+        return fixed
 
-    def _safe_decimal(self, container, key, default):
-        if (val := container.get(key, default)) is not None:
-            return decimal.Decimal(str(val))
-        return default
-
-    def parse_funding(self, funding_dict, from_ticker=False):
-        if from_ticker and constants.CCXT_INFO in funding_dict:
-            funding_dict, old_funding_dict = funding_dict[constants.CCXT_INFO], funding_dict
+    def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
+        # CCXT standard funding_rate parsing logic
+        funding_dict = fixed
+        if from_ticker and constants.CCXT_INFO in fixed:
+            funding_dict, old_funding_dict = fixed[constants.CCXT_INFO], fixed
 
         try:
             """
@@ -347,13 +311,13 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
             """
             funding_next_timestamp = float(
-                funding_dict[trading_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value]
+                funding_dict[ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value]
             )
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                     funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
                 trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(trading_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0)),
+                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0)),
                 trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp,
                 trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: constants.NaN
             })
@@ -361,41 +325,17 @@ class Bybit(exchanges.SpotCCXTExchange, exchanges.FutureCCXTExchange):
             self.logger.error(f"Fail to parse funding dict ({e})")
         return funding_dict
 
-    def parse_mark_price(self, mark_price_dict, from_ticker=False) -> dict:
-        if from_ticker and constants.CCXT_INFO in mark_price_dict:
+    def parse_mark_price(self, fixed, from_ticker=False, **kwargs) -> dict:
+        if from_ticker and constants.CCXT_INFO in fixed:
             try:
                 return {
                     trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
-                        mark_price_dict[constants.CCXT_INFO][trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value]
+                        fixed[constants.CCXT_INFO][trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value]
                 }
             except KeyError:
                 pass
-        try:
-            mark_price_dict = {
-                trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
-                    decimal.Decimal(mark_price_dict[
-                        trading_enums.ExchangeConstantsTickersColumns.CLOSE.value])
-            }
-        except KeyError as e:
-            # do not fill mark price with 0 when missing as might liquidate positions
-            self.logger.error(f"Fail to parse mark price dict ({e})")
-
-        return mark_price_dict
-
-    def parse_position_status(self, status):
-        statuses = {
-            'Normal': 'open',
-            'Liq': 'liquidating',
-            'Adl': 'auto_deleveraging',
+        return {
+            trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value:
+                decimal.Decimal(fixed[
+                    trading_enums.ExchangeConstantsTickersColumns.CLOSE.value])
         }
-        return trading_enums.PositionStatus(self.connector.client.safe_string(statuses, status, status))
-
-    def _parse_position_contract_type(self, position_pair):
-        return self.get_contract_type(position_pair)
-
-    def _parse_position_mode(self, raw_mode):
-        if raw_mode == self.BYBIT_ONE_WAY or raw_mode == self.BYBIT_ONE_WAY_DIGIT:
-            return trading_enums.PositionMode.ONE_WAY
-        if raw_mode == self.BYBIT_HEDGE or raw_mode in self.BYBIT_HEDGE_DIGITS:
-            return trading_enums.PositionMode.HEDGE
-        return None

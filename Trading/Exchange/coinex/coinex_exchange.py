@@ -20,7 +20,8 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 
-class Coinex(exchanges.SpotCCXTExchange):
+
+class Coinex(exchanges.RestExchange):
     DESCRIPTION = ""
     MAX_PAGINATION_LIMIT: int = 100
 
@@ -28,30 +29,23 @@ class Coinex(exchanges.SpotCCXTExchange):
     def get_name(cls):
         return 'coinex'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return CoinexCCXTAdapter
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
-        return [
-            self._ensure_order_quantity(order)
-            for order in await super().get_open_orders(symbol=symbol,
-                                                       since=since,
-                                                       limit=self._fix_limit(limit),
-                                                       **kwargs)
-        ]
+        return await super().get_open_orders(symbol=symbol,
+                                             since=since,
+                                             limit=self._fix_limit(limit),
+                                             **kwargs)
 
     async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
-        return [
-            self._ensure_order_quantity(order)
-            for order in await super().get_closed_orders(symbol=symbol,
-                                                         since=since,
-                                                         limit=self._fix_limit(limit),
-                                                         **kwargs)
-        ]
+        return await super().get_closed_orders(symbol=symbol,
+                                               since=since,
+                                               limit=self._fix_limit(limit),
+                                               **kwargs)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -66,30 +60,27 @@ class Coinex(exchanges.SpotCCXTExchange):
                 raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
                                                           f"market orders as quantity is in quote currency")
             quantity = quantity * price
-        if created_order := await super().create_order(order_type, symbol, quantity,
-                                                       price=price, stop_price=stop_price,
-                                                       side=side, current_price=current_price,
-                                                       params=params):
-            self._ensure_order_quantity(created_order)
-        return created_order
-
-    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        if order := await super().get_order(order_id, symbol=symbol, **kwargs):
-            self._ensure_order_quantity(order)
-        return order
-
-    def _ensure_order_quantity(self, order):
-        try:
-            if order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
-                    == trading_enums.TradeOrderType.MARKET.value and \
-                    order[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == \
-                    trading_enums.TradeOrderSide.BUY.value:
-                # convert amount to have the same units as evert other exchange: use FILLED for accuracy
-                order[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                    order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
-        except KeyError:
-            pass
-        return order
+        return await super().create_order(order_type, symbol, quantity,
+                                         price=price, stop_price=stop_price,
+                                         side=side, current_price=current_price,
+                                         params=params)
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit)
+
+
+class CoinexCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_order(self, raw, **kwargs):
+        fixed = super().fix_order(raw)
+        try:
+            if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
+                    == trading_enums.TradeOrderType.MARKET.value and \
+                    fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
+                    == trading_enums.TradeOrderSide.BUY.value:
+                # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                    fixed[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+        except KeyError:
+            pass
+        return fixed

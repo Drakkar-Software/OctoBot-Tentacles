@@ -14,9 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
-class Bitmex(exchanges.SpotCCXTExchange, exchanges.FutureExchange):
+class Bitmex(exchanges.RestExchange):
     DESCRIPTION = ""
 
     BUY_STR = "Buy"
@@ -30,8 +31,13 @@ class Bitmex(exchanges.SpotCCXTExchange, exchanges.FutureExchange):
         return 'bitmex'
 
     @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
 
     async def get_recent_trades(self, symbol, limit=50, **kwargs):
         kwargs.update({"reverse": True})

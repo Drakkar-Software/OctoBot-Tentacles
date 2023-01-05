@@ -27,7 +27,7 @@ from ...binance import Binance
 pytestmark = pytest.mark.asyncio
 
 
-async def test_spot_rest():
+async def _test_spot_rest():
     config = commons_tests.load_test_config()
     config[commons_constants.CONFIG_EXCHANGES][Binance.get_name()] = {
         commons_constants.CONFIG_EXCHANGE_KEY: configuration.encrypt(

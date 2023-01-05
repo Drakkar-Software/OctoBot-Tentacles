@@ -19,47 +19,25 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 
 
-class Binance(exchanges.SpotCCXTExchange):
+class Binance(exchanges.RestExchange):
     DESCRIPTION = ""
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
 
-    ACCOUNTS = {
+    ACCOUNTS = {    # useless ?
         trading_enums.AccountTypes.CASH: 'cash'
     }
-
-    BINANCE_MARK_PRICE = "markPrice"
-
-    def __init__(self, config, exchange_manager):
-        exchanges.SpotCCXTExchange.__init__(self, config, exchange_manager)
 
     @classmethod
     def get_name(cls):
         return 'binance'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return BinanceCCXTAdapter
 
     async def get_balance(self, **kwargs):
-        return await exchanges.SpotCCXTExchange.get_balance(self, **self._get_params(kwargs))
-
-    async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
-        return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
-                                                                          since=since,
-                                                                          limit=limit,
-                                                                          **kwargs))
-
-    def _uniformize_trades(self, trades):
-        for trade in trades:
-            trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
-            trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
-                if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
-                else trading_enums.TradeOrderType.LIMIT.value
-        return trades
+        return await exchanges.RestExchange.get_balance(self, **self._get_params(kwargs))
 
     def _get_params(self, params):
         if params is None:
@@ -69,7 +47,9 @@ class Binance(exchanges.SpotCCXTExchange):
 
     async def get_order(self, order_id, symbol=None, **kwargs):
         return await self._ensure_order_completeness(
-            await super().get_order(order_id=order_id, symbol=symbol, **kwargs), symbol, **kwargs)
+            await super().get_order(order_id=order_id, symbol=symbol, **kwargs),
+            symbol, **kwargs
+        )
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -80,7 +60,8 @@ class Binance(exchanges.SpotCCXTExchange):
                                        price=price, stop_price=stop_price,
                                        side=side, current_price=current_price,
                                        params=params),
-            symbol)
+            symbol
+        )
 
     async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs):
         orders = await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
@@ -109,3 +90,16 @@ class Binance(exchanges.SpotCCXTExchange):
         if not order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] and order_id in trades:
             order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] = \
                 trades[order_id][trading_enums.ExchangeConstantsOrderColumns.FEE.value]
+
+
+class BinanceCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_trades(self, raw, **kwargs):
+        for trade in raw:
+            trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
+            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
+                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
+            trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
+                if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
+                else trading_enums.TradeOrderType.LIMIT.value
+        return raw
