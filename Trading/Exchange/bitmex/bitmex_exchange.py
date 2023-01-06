@@ -41,4 +41,4 @@ class Bitmex(exchanges.RestExchange):
 
     async def get_recent_trades(self, symbol, limit=50, **kwargs):
         kwargs.update({"reverse": True})
-        return await exchanges.FutureExchange.get_recent_trades(self, symbol=symbol, limit=limit, **kwargs)
+        return await super().get_recent_trades(self, symbol=symbol, limit=limit, **kwargs)

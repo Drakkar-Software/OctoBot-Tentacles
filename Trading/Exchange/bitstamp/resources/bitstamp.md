@@ -1,1 +1,1 @@
-Bitstamp is a basic SpotExchange adaptation for Bitstamp exchange. 
+Bitstamp is a basic RestExchange adaptation for Bitstamp exchange. 

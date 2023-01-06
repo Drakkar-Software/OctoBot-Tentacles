@@ -1,1 +1,1 @@
-Bybit is a basic SpotExchange adaptation for Bybit exchange.
+Bybit is a basic RestExchange adaptation for Bybit exchange.

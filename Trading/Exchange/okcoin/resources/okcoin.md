@@ -1,1 +1,1 @@
-Okcoin is a basic SpotExchange adaptation for Okcoin exchange. 
+Okcoin is a basic RestExchange adaptation for Okcoin exchange. 

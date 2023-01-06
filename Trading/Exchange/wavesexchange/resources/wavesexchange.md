@@ -1,1 +1,1 @@
-WavesExchange is a basic SpotExchange adaptation for WavesExchange exchange. 
+WavesExchange is a basic RestExchange adaptation for WavesExchange exchange. 
