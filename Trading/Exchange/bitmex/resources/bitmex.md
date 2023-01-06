@@ -1,1 +1,1 @@
-Bitmex is a basic FutureExchange adaptation for Bitmex exchange. 
+Bitmex is a basic RestExchange adaptation for Bitmex exchange. 

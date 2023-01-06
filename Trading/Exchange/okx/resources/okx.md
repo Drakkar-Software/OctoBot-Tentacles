@@ -1,1 +1,1 @@
-Okx is a basic SpotExchange adaptation for OKX exchange. 
+Okx is a basic RestExchange adaptation for OKX exchange. 

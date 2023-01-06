@@ -1,1 +1,1 @@
-Bittrex is a basic SpotExchange adaptation for Bittrex exchange. 
+Bittrex is a basic RestExchange adaptation for Bittrex exchange. 

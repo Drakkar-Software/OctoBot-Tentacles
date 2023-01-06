@@ -1,1 +1,1 @@
-Bithumb is a basic SpotExchange adaptation for Bithumb exchange. 
+Bithumb is a basic RestExchange adaptation for Bithumb exchange. 

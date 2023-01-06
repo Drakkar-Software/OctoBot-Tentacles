@@ -1,1 +1,1 @@
-GateIO is a basic SpotExchange adaptation for GateIO exchange. 
+GateIO is a basic RestExchange adaptation for GateIO exchange. 

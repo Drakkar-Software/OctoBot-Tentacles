@@ -1,1 +1,1 @@
-UpbitExchange is a basic SpotExchange adaptation for WavesExchange exchange. 
+UpbitExchange is a basic RestExchange adaptation for WavesExchange exchange. 

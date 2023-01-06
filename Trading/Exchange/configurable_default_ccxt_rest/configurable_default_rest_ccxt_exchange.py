@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Private-Tentacles
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -13,4 +13,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from .configurable_default_rest_exchange import *
+import octobot_trading.exchanges as exchanges
+
+
+class ConfigurableDefaultCCXTRestExchange(exchanges.DefaultRestExchange):
+
+    @classmethod
+    def load_user_inputs(cls, tentacles_setup_config, tentacle_config):
+        # bypass parent to use the real load_user_inputs and enable user inputs configuration
+        return exchanges.RestExchange.load_user_inputs(tentacles_setup_config, tentacle_config)

@@ -1,1 +1,1 @@
-Hitbtc is a basic SpotExchange adaptation for Hitbtc exchange. 
+Hitbtc is a basic RestExchange adaptation for Hitbtc exchange. 

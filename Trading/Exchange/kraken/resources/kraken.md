@@ -1,1 +1,1 @@
-Kraken is a basic SpotExchange adaptation for Kraken exchange. 
+Kraken is a basic RestExchange adaptation for Kraken exchange. 

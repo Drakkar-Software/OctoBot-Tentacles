@@ -1,1 +1,1 @@
-coinex is a basic SpotExchange adaptation for coinex exchange. 
+coinex is a basic RestExchange adaptation for coinex exchange. 
