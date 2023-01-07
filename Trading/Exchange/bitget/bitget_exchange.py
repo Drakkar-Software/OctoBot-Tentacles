@@ -71,6 +71,7 @@ class BitgetCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def fix_trades(self, raw, **kwargs):
+        raw = super().fix_trades(raw)
         for trade in raw:
             # fees example for paid fees in USDT:
             # {'code': 'USDT', 'cost': -0.015922}

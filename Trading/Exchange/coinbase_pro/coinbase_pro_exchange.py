@@ -68,6 +68,7 @@ class CoinbasePro(exchanges.RestExchange):
 class CoinbaseProCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_trades(self, raw, **kwargs):
+        raw = super().fix_trades(raw)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
             trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
