@@ -95,7 +95,7 @@ class Binance(exchanges.RestExchange):
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_trades(self, raw, **kwargs):
-        raw = super().fix_trades(raw)
+        raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
             trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[

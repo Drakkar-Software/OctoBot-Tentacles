@@ -42,7 +42,7 @@ class Ndax(exchanges.RestExchange):
 class NdaxCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw)
+        fixed = super().fix_ticker(raw, **kwargs)
         for key in [
             trading_enums.ExchangeConstantsTickersColumns.HIGH.value,
             trading_enums.ExchangeConstantsTickersColumns.LOW.value,
