@@ -69,6 +69,6 @@ class AscendEx(exchanges.RestExchange):
 class AscendexCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw)
+        fixed = super().fix_ticker(raw, **kwargs)
         fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
         return fixed

@@ -192,7 +192,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     BYBIT_TRIGGER_ABOVE_VALUE = "1"
 
     def fix_order(self, raw, **kwargs):
-        fixed = super().fix_order(raw)
+        fixed = super().fix_order(raw, **kwargs)
         order_info = raw[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
         # parse reduce_only if present
         fixed[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
@@ -216,7 +216,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw)
+        fixed = super().fix_ticker(raw, **kwargs)
         fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
         return fixed
     

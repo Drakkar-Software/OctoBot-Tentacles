@@ -57,7 +57,7 @@ class Bitget(exchanges.RestExchange):
 class BitgetCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, **kwargs):
-        fixed = super().fix_order(raw)
+        fixed = super().fix_order(raw, **kwargs)
         try:
             if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
                     == trading_enums.TradeOrderType.MARKET.value and \
@@ -71,7 +71,7 @@ class BitgetCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def fix_trades(self, raw, **kwargs):
-        raw = super().fix_trades(raw)
+        raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             # fees example for paid fees in USDT:
             # {'code': 'USDT', 'cost': -0.015922}

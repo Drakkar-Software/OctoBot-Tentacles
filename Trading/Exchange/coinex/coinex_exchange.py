@@ -72,7 +72,7 @@ class Coinex(exchanges.RestExchange):
 class CoinexCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, **kwargs):
-        fixed = super().fix_order(raw)
+        fixed = super().fix_order(raw, **kwargs)
         try:
             if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
                     == trading_enums.TradeOrderType.MARKET.value and \
