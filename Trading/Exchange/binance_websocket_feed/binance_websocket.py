@@ -19,18 +19,16 @@ import tentacles.Trading.Exchange.binance.binance_exchange as binance_exchange
 
 
 class BinanceCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
     EXCHANGE_FEEDS = {
         Feeds.TRADES: True,
         Feeds.KLINE: True,
         Feeds.TICKER: True,
         Feeds.CANDLE: True,
-        Feeds.L1_BOOK: True,
     }
 
     @classmethod
     def get_name(cls):
-        return 'binance'
+        return binance_exchange.Binance.get_name()
 
     def get_adapter_class(self, adapter_class):
         return binance_exchange.BinanceCCXTAdapter

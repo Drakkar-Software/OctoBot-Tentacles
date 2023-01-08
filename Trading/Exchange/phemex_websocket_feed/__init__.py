@@ -1,1 +1,1 @@
-from .phemex_websocket import PhemexCryptofeedWebsocketConnector
+from .phemex_websocket import PhemexCCXTWebsocketConnector

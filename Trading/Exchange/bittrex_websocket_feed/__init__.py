@@ -1,1 +1,1 @@
-from .bittrex_websocket import BittrexCryptofeedWebsocketConnector
+from .bittrex_websocket import BittrexCCXTWebsocketConnector

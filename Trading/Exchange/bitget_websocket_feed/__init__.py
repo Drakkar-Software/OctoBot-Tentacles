@@ -1,1 +1,1 @@
-from .bitget_websocket import BitgetCryptofeedWebsocketConnector
+from .bitget_websocket import BitgetCCXTWebsocketConnector

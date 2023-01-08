@@ -14,25 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.coinbase_pro.coinbase_pro_exchange as coinbase_pro_exchange
 
 
-class CoinbaseProCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
+class CoinbaseProCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
+        Feeds.TRADES: True,
+        Feeds.KLINE: Feeds.UNSUPPORTED.value,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: Feeds.UNSUPPORTED.value,
     }
 
     @classmethod
     def get_name(cls):
-        return 'coinbasepro'
+        return coinbase_pro_exchange.CoinbasePro.get_name()
 
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.COINBASE
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+    def get_adapter_class(self, adapter_class):
+        return coinbase_pro_exchange.CoinbaseProCCXTAdapter
