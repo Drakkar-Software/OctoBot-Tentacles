@@ -1,1 +1,1 @@
-from .bitfinex_websocket import BitfinexCryptofeedWebsocketConnector
+from .bitfinex_websocket import BitfinexCCXTWebsocketConnector

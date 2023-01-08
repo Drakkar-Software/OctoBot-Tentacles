@@ -14,24 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.ascendex.ascendex_exchange as ascendex_exchange
 
 
-class AscendexCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
+class AscendexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: Feeds.UNSUPPORTED.value,
+        Feeds.CANDLE: True,
     }
 
     @classmethod
     def get_name(cls):
-        return 'ascendex'
+        return ascendex_exchange.AscendEx.get_name()
 
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.ASCENDEX
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+    def get_adapter_class(self, adapter_class):
+        return ascendex_exchange.AscendexCCXTAdapter

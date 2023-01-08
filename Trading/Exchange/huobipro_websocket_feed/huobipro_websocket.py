@@ -13,22 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.exchanges as exchanges
-from octobot_trading.enums import WebsocketFeeds as Feeds
-import tentacles.Trading.Exchange.gateio.gateio_exchange as gateio_exchange
+import tentacles.Trading.Exchange.huobipro.huobipro_exchange as huobipro_exchange
+import tentacles.Trading.Exchange.huobi_websocket_feed.huobi_websocket as huobi_websocket
 
 
-class GateIOCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
-    EXCHANGE_FEEDS = {
-        Feeds.TRADES: True,
-        Feeds.KLINE: True,
-        Feeds.TICKER: True,
-        Feeds.CANDLE: True,
-    }
-
+class HuobiProCCXTWebsocketConnector(huobi_websocket.HuobiCCXTWebsocketConnector):
     @classmethod
     def get_name(cls):
-        return gateio_exchange.GateIO.get_name()
-
-    def get_adapter_class(self, adapter_class):
-        return gateio_exchange.GateioCCXTAdapter
+        return huobipro_exchange.HuobiPro.get_name()

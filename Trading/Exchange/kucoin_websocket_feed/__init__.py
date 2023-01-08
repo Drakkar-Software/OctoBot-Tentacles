@@ -1,1 +1,1 @@
-from .kucoin_websocket import KucoinCryptofeedWebsocketConnector
+from .kucoin_websocket import KucoinCCXTWebsocketConnector

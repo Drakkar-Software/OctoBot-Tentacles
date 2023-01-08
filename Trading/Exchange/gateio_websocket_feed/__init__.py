@@ -1,1 +1,1 @@
-from .gateio_websocket import GateIOCryptofeedWebsocketConnector
+from .gateio_websocket import GateIOCCXTWebsocketConnector

@@ -1,1 +1,1 @@
-from .kraken_websocket import KrakenCryptofeedWebsocketConnector
+from .kraken_websocket import KrakenCCXTWebsocketConnector
