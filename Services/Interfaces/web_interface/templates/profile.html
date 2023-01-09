@@ -98,10 +98,6 @@
     <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
         {{ m_flash_messages.flash_messages() }}
         <div class="tab-content" id="super-container">
-            {% for profile_id, profile in profiles.items() %}
-            {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_tentacles_details[profile_id], strategy_config, evaluator_config,
-                                               get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
-            {% endfor %}
             <div class="card bg-dark text-light card-header ">
                 <a class="d-inline-block" data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
                     <h2 class="">
@@ -117,6 +113,10 @@
                     <i class="fas fa-exchange-alt" aria-hidden="true"></i>
                 </a>
             </div>
+            {% for profile_id, profile in profiles.items() %}
+            {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_tentacles_details[profile_id], strategy_config, evaluator_config,
+                                               get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL)}}
+            {% endfor %}
             <div class="tab-pane fade config-root show" id="panelStrategies" role="tabpanel"
                  aria-labelledby="panelStrategies-tab">
 
