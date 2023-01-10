@@ -105,11 +105,11 @@ class Bybit(exchanges.RestExchange):
                                          price=price, stop_price=stop_price, side=side,
                                          current_price=current_price, params=params)
 
-    async def _verify_order(self, created_order, order_type, symbol, price, params=None):
+    async def _verify_order(self, created_order, order_type, symbol, price, side, params=None):
         if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
             params = params or {}
             params["stop"] = True
-        return await super()._verify_order(created_order, order_type, symbol, price, params=params)
+        return await super()._verify_order(created_order, order_type, symbol, price, side, params=params)
 
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
@@ -191,28 +191,34 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     BYBIT_TRIGGER_ABOVE_KEY = "triggerDirection"
     BYBIT_TRIGGER_ABOVE_VALUE = "1"
 
+    # Trades
+    EXEC_TYPE = "execType"
+    TRADE_TYPE = "Trade"
+
     def fix_order(self, raw, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         order_info = raw[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
         # parse reduce_only if present
         fixed[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value] = \
             order_info.get(self.BYBIT_REDUCE_ONLY, False)
-        fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
-            order_info[self.BYBIT_TRIGGER_ABOVE_KEY] == self.BYBIT_TRIGGER_ABOVE_VALUE
+        if tigger_above := order_info.get(trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value):
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
+                tigger_above == self.BYBIT_TRIGGER_ABOVE_VALUE
         self._adapt_order_type(fixed)
 
         return fixed
 
     def _adapt_order_type(self, fixed):
         order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
-        if "StopLoss" in order_info["stopOrderType"] or "Stop" in order_info["stopOrderType"]:
-            # stop loss are not tagged as such by ccxt, force it
-            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                trading_enums.TradeOrderType.STOP_LOSS.value
-        elif "TakeProfit" in order_info["stopOrderType"]:
-            # take profit are not tagged as such by ccxt, force it
-            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                trading_enums.TradeOrderType.TAKE_PROFIT.value
+        if stop_order_type := order_info.get("stopOrderType", None):
+            if "StopLoss" in stop_order_type or "Stop" in stop_order_type:
+                # stop loss are not tagged as such by ccxt, force it
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                    trading_enums.TradeOrderType.STOP_LOSS.value
+            elif "TakeProfit" in stop_order_type:
+                # take profit are not tagged as such by ccxt, force it
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                    trading_enums.TradeOrderType.TAKE_PROFIT.value
         return fixed
 
     def fix_ticker(self, raw, **kwargs):
@@ -340,3 +346,12 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 decimal.Decimal(fixed[
                     trading_enums.ExchangeConstantsTickersColumns.CLOSE.value])
         }
+
+    def fix_trades(self, raw, **kwargs):
+        raw = [
+            trade
+            for trade in raw
+            if trade[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get(
+                self.EXEC_TYPE, None) == self.TRADE_TYPE    # ignore non-trade elements (such as funding)
+        ]
+        return super().fix_trades(raw, **kwargs)
