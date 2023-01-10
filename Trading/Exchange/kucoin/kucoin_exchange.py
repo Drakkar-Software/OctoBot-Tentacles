@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import time
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
@@ -54,6 +55,9 @@ class Kucoin(exchanges.RestExchange):
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
+        if "since" in kwargs:
+            # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
+            kwargs["endAt"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     async def get_recent_trades(self, symbol, limit=50, **kwargs):

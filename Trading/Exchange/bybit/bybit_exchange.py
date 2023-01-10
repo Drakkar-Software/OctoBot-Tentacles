@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+import time
+
 import ccxt
 
 import octobot_trading.enums as trading_enums
@@ -71,6 +73,9 @@ class Bybit(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         # never fetch more than 200 candles or get candles from the past
         limit = min(limit, 200)
+        if "since" in kwargs:
+            # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
+            kwargs["end"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
