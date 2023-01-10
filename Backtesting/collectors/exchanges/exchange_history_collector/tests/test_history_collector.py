@@ -21,6 +21,7 @@ import asyncio
 
 import octobot_commons.databases as databases
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.enums as commons_enums
 import octobot_backtesting.enums as enums
 import octobot_backtesting.errors as errors
 import octobot_trading.enums as trading_enums
@@ -108,7 +109,9 @@ async def test_collect_invalid_data():
 async def test_collect_valid_date_range():
     tentacles_setup_config = test_utils_config.load_test_tentacles_config()
     symbols = ["ETH/BTC"]
-    async with data_collector(BINANCEUS, tentacles_setup_config, symbols, None, True, 1569413160000, 1569914160000) as collector:
+    start_time = 1569413160000
+    end_time = 1569914160000
+    async with data_collector(BINANCEUS, tentacles_setup_config, symbols, None, True, start_time, end_time) as collector:
         assert collector.start_timestamp is not None
         assert collector.end_timestamp is not None
         await collector.start()
@@ -121,16 +124,19 @@ async def test_collect_valid_date_range():
         assert not os.path.isfile(collector.temp_file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
-            assert len(ohlcv) == 13941
+            assert len(ohlcv) == 13943
+            for index, candle in enumerate(ohlcv):
+                candle_open_time = json.loads(candle[-1])[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                assert start_time <= candle_open_time * 1000 <= end_time
             h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="1h")
             assert len(h_ohlcv) == 139
             eth_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="ETH/BTC")
             assert len(eth_btc_ohlcv) == len(ohlcv)
             min_timestamp = (await database.select_min(enums.ExchangeDataTables.OHLCV, ["timestamp"],
                                                        time_frame="1m"))[0][0]*1000
-            assert min_timestamp <= 1569413160000 + (60 * 1000)
+            assert start_time <= min_timestamp <= start_time + (60 * 1000)
             max_timestamp = (await database.select_max(enums.ExchangeDataTables.OHLCV, ["timestamp"]))[0][0]*1000
-            assert max_timestamp <= 1569914160000 + (7 * 24 * 60 * 60 * 1000)
+            assert end_time <= max_timestamp <= end_time + (31 * 24 * 60 * 60 * 1000)
 
 
 async def test_collect_invalid_date_range():
