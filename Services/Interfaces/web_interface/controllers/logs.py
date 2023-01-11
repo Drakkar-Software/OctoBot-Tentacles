@@ -16,6 +16,7 @@
 import flask
 import os
 
+import octobot_commons.constants as commons_constants
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -33,7 +34,8 @@ def logs():
 @web_interface.server_instance.route("/export_logs")
 @login.login_required_when_activated
 def export_logs():
-    temp_file = os.path.abspath("exported_logs")
+    # use user folder as the bot always has the right to use it
+    temp_file = os.path.abspath(os.path.join(os.getcwd(), commons_constants.USER_FOLDER, "exported_logs"))
     temp_file_with_ext = f"{temp_file}.{models.LOG_EXPORT_FORMAT}"
     if os.path.isdir(temp_file_with_ext):
         raise RuntimeError(f"To be able to export logs, please remove or rename the {temp_file_with_ext} directory")

@@ -29,4 +29,4 @@ def send_and_remove_file(file_path, download_name):
             except Exception:
                 pass
 
-        models.schedule_delayed_command(remove_file, file_path, delay=2)
+        models.schedule_delayed_command(remove_file, file_path, delay=10)
