@@ -57,3 +57,10 @@ def audio_media(name):
     if models.is_valid_audio_path(name):
         # reference point is the web interface directory: use OctoBot root folder as a reference
         return _send_file("static/audio", name)
+
+
+@web_interface.server_instance.route('/currency_logos', methods=['POST'])
+@login.login_required_when_activated
+def cryptocurrency_logos():
+    request_data = flask.request.get_json()
+    return flask.jsonify(models.get_currency_logo_urls(request_data["currency_ids"]))

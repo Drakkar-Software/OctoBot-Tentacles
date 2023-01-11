@@ -20,7 +20,7 @@ import ccxt.async_support
 import copy
 import requests.adapters
 import requests.packages.urllib3.util.retry
-import octobot_commons.display as display
+import aiohttp
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -43,6 +43,7 @@ import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.display as display
 import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
@@ -101,6 +102,7 @@ FORCED_CURRENCIES_DICT = {
 # buffers to faster config page loading
 markets_by_exchanges = {}
 all_symbols_dict = {}
+currency_logo_by_id = {}
 exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
@@ -714,7 +716,7 @@ def _is_legit_currency(currency):
 
 
 def get_all_symbols_dict():
-    if not all_symbols_dict:
+    if len(all_symbols_dict) <= len(FORCED_CURRENCIES_DICT):
         request_response = None
         base_error = "Failed to get currencies list from coingecko.com (this is a display only issue): "
         try:
@@ -764,6 +766,59 @@ def get_exchange_logo(exchange_name):
         except KeyError:
             pass
     return exchange_logos[exchange_name]
+
+
+def _get_currency_logo_url(currency_id):
+    return f"https://api.coingecko.com/api/v3/coins/{currency_id}?localization=false&tickers=false&market_data=" \
+           f"false&community_data=false&developer_data=false&sparkline=false"
+
+
+async def _fetch_currency_logo(session, currency_id):
+    async with session.get(_get_currency_logo_url(currency_id)) as resp:
+        logo = None
+        try:
+            logo = (await resp.json())["image"]["large"]
+        except KeyError:
+            if resp.status == 429:
+                _get_logger().debug(f"Rate limitted when trying to fetch logo for {currency_id}. Will retry later")
+            else:
+                # not rate limit: problem
+                _get_logger().error(f"Unexpected error when fetching currency logos: "
+                                    f"status: {resp.status} text: {resp.text()}")
+        # can't fetch image for some reason, use default
+        currency_logo_by_id[currency_id] = logo
+
+
+async def _fetch_missing_currency_logos(currency_ids):
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(
+            *(
+                _fetch_currency_logo(session, currency_id)
+                for currency_id in currency_ids
+                if currency_id not in currency_logo_by_id or currency_logo_by_id[currency_id] is None
+            )
+        )
+
+
+def _apply_forced_currency_ids(currency_ids):
+    for currency_dict in FORCED_CURRENCIES_DICT.values():
+        currency_ids.append(currency_dict[ID_KEY])
+
+
+def get_currency_logo_urls(currency_ids):
+    _apply_forced_currency_ids(currency_ids)
+    if not all(
+        currency_id in currency_logo_by_id and currency_logo_by_id[currency_id] is not None
+        for currency_id in currency_ids
+    ):
+        interfaces_util.run_in_bot_async_executor(_fetch_missing_currency_logos(currency_ids))
+    return [
+        {
+            "id": currency_id,
+            "logo": currency_logo_by_id[currency_id]
+        }
+        for currency_id in currency_ids
+    ]
 
 
 def get_traded_time_frames(exchange_manager):

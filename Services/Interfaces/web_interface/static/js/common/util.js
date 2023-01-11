@@ -23,8 +23,8 @@ function get_websocket(namespace){
     return io(
         namespace,
         {
-            // Prevent unexpected disconnection on slow loading pages (ex: first config load)
-            reconnectionDelay: 2000
+            reconnectionDelay: 2000, // Prevent unexpected disconnection on slow loading pages (ex: first config load)
+            transports: ["websocket", "polling"], // use WebSocket first, if available
         });
 }
 

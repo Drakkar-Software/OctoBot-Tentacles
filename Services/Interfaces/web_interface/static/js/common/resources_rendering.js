@@ -17,6 +17,7 @@
  */
 
 const mardownConverter = new showdown.Converter();
+const currentURL = `${window.location.protocol}//${window.location.host}`;
 
 function markdown_to_html(text) {
     return mardownConverter.makeHtml(text)
@@ -26,7 +27,7 @@ function fetch_images() {
     $(".product-logo").each(function () {
         const element = $(this);
         if(element.attr("src") === ""){
-            $.get(element.attr("url"), function(data) {
+            $.get(`${currentURL}/${element.attr("url")}`, function(data) {
                 element.attr("src", data["image"]);
                 element.removeClass(hidden_class)
                 const parentLink = element.parent("a");
@@ -50,58 +51,15 @@ function handleDefaultImage(element, url){
     }
 }
 
-const fetchingCurrencies = [];
 let currencyIdBySymbol = undefined;
+let currencyLogoById = {};
 let fetchedCurrencyIds = false;
 
+const currencyLoadingImageName = "loading_currency.svg";
+const currencyDefaultImage = `${currentURL}/static/img/svg/default_currency.svg`;
+const currencyListURL = `${currentURL}/api/currency_list`;
+const currencyLogoURL = `${currentURL}/currency_logos`;
 
-function _useDefaultImage(element, currencyId){
-    handleDefaultImage(element, currencyDefaultImage);
-    fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
-}
-
-
-function fetchCurrencyImage(element, currencyId){
-    if(element.parents("#AddCurrency-template-default").length > 0){
-        // do not fetch images for default elements
-        return;
-    }
-    if (fetchingCurrencies.indexOf(currencyId) === -1){
-        fetchingCurrencies.push(currencyId);
-        $.get({
-            url: `https://api.coingecko.com/api/v3/coins/${currencyId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false`,
-            dataType: "json",
-            context: {element: element},
-            success: function(data){
-                if(isDefined(data["image"])){
-                    const symbol = this.element.attr('symbol');
-                    if(typeof symbol !== 'undefined'){
-                        $(`img[symbol='${symbol.toLowerCase()}']`).each(function (){
-                            if(!$(this).hasClass("default")){
-                                $(this).attr("src", data["image"]["large"]);
-                            }
-                        });
-                    }
-                    const currencyId = this.element.attr('data-currency-id');
-                    if(typeof currencyId !== 'undefined'){
-                        $(`img[data-currency-id='${currencyId.toLowerCase()}']`).each(function (){
-                            if(!$(this).hasClass("default")) {
-                                $(this).attr("src", data["image"]["large"]);
-                            }
-                        });
-                    }
-                    fetchingCurrencies.splice(fetchingCurrencies.indexOf(currencyId), 1);
-                }else{
-                    _useDefaultImage(element, currencyId);
-                }
-            },
-            error: function(result, status){
-                window.console&&console.error(`Impossible to get the currency image for ${currencyId}: ${result.responseText} (${status})`);
-                _useDefaultImage(element, currencyId);
-            }
-        });
-    }
-}
 
 function fetchCurrencyIds(){
     currencyIdBySymbol = {};
@@ -123,36 +81,79 @@ function fetchCurrencyIds(){
 }
 
 function handleDefaultImages(){
-    $(".currency-image").each(function () {
-        const element = $(this);
-        const imgSrc = element.attr("src");
-        if (imgSrc === "" || imgSrc.endsWith(currencyLoadingImageName)) {
-            if (element[0].hasAttribute("data-currency-id")) {
-                fetchCurrencyImage(element, element.attr("data-currency-id").toLowerCase());
-            }else if (element[0].hasAttribute("symbol")){
-                const symbol = element.attr("symbol").toLowerCase();
-                if (typeof currencyIdBySymbol === "undefined"){
-                    fetchCurrencyIds();
-                }else if (fetchedCurrencyIds){
-                    if (currencyIdBySymbol.hasOwnProperty(symbol)){
-                        fetchCurrencyImage(element, currencyIdBySymbol[symbol]);
-                    }else{
-                        handleDefaultImage(element, currencyDefaultImage);
+    const applyImage = (element, logoUrl) => {
+        if(!element.hasClass("default")){
+            element.attr("src", logoUrl);
+        }
+    }
+    const useLogo = (element, currencyId) => {
+        let logoUrl = currencyLogoById[currencyId]
+        if (logoUrl === null){
+            logoUrl = currencyDefaultImage;
+        }
+        applyImage(element, logoUrl);
+    }
+    const fetchLogos = (currencyIds) => {
+        const successcb = (updated_data, update_url, dom_root_element, msg, status) => {
+            msg.forEach((dataElement) => {
+                currencyLogoById[dataElement.id] = dataElement.logo;
+            })
+            displayImages(false);
+        }
+        const errorcb = (result, status, error) => {
+            window.console && console.error(`Impossible to get currency logos: ${result.responseText} (${status})`);
+        }
+        send_and_interpret_bot_update({currency_ids: [... currencyIds]}, currencyLogoURL,
+            null, successcb, errorcb);
+    }
+    const displayImages = (shouldFetch) => {
+        try {
+            const currencyIds = new Set();
+            $(".currency-image").each((_, jselement) => {
+                const element = $(jselement);
+                const imgSrc = element.attr("src");
+                if (imgSrc === "" || imgSrc.endsWith(currencyLoadingImageName)) {
+                    if (jselement.hasAttribute("data-currency-id")) {
+                        const currencyId = element.attr("data-currency-id").toLowerCase();
+                        if(currencyLogoById.hasOwnProperty(currencyId)){
+                            useLogo(element, currencyId);
+                        }else{
+                            currencyIds.add(currencyId);
+                        }
+                    } else if (jselement.hasAttribute("symbol")) {
+                        const symbol = element.attr("symbol").toLowerCase();
+                        if (typeof currencyIdBySymbol === "undefined") {
+                            fetchCurrencyIds();
+                            throw "fetching currency ids"
+                        } else if (fetchedCurrencyIds) {
+                            if (currencyIdBySymbol.hasOwnProperty(symbol)) {
+                                const currencyId = currencyIdBySymbol[symbol];
+                                if(currencyLogoById.hasOwnProperty(currencyId)){
+                                    useLogo(element, currencyId);
+                                }else{
+                                    currencyIds.add(currencyId);
+                                }
+                            } else {
+                                handleDefaultImage(element, currencyDefaultImage);
+                            }
+                        }
                     }
                 }
+            });
+            if(shouldFetch && currencyIds.size){
+                fetchLogos(currencyIds);
             }
+        } catch {
+            // fetching currency ids
         }
-    });
+    }
+    displayImages(true);
 }
 
-const currencyLoadingImageName = "loading_currency.svg";
-const currencyDefaultImage = `${window.location.protocol}//${window.location.host}/static/img/svg/default_currency.svg`;
-const currencyListURL = `${window.location.protocol}//${window.location.host}/api/currency_list`;
-
-// register error listeners as soon as possible
-handleDefaultImages();
 
 $(document).ready(function() {
+    // register error listeners as soon as possible
+    handleDefaultImages();
     $(".markdown-content").each(function () {
         const element = $(this);
         element.html(markdown_to_html(element.text().trim()))
