@@ -19,6 +19,7 @@ import os
 import json
 import time
 import shutil
+import collections
 
 import octobot_backtesting.collectors as collector
 import octobot_backtesting.importers as importers
@@ -263,11 +264,17 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     async def _check_ohlcv_integrity(self, exchange, symbol, time_frame):
         database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
         # ensure no timestamp is here twice
-        timestamps = set(candle[0] for candle in database_candles)
-        if len(timestamps) != len(database_candles):
+        all_timestamps = [candle[-1][0] for candle in database_candles]
+        unique_timestamps = set(all_timestamps)
+        if len(unique_timestamps) != len(database_candles):
+            counters = {
+                timestamp: counter
+                for timestamp, counter in collections.Counter(all_timestamps).items()
+                if counter > 1
+            }
             self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol.symbol_str} on {time_frame}: "
-                                f"{len(timestamps)} different timestamps for {len(database_candles)} "
-                                f"different candles.")
+                                f"{len(unique_timestamps)} different timestamps for {len(database_candles)} "
+                                f"different candles. Problematic timestamps: {counters}")
             return False
         return True
 
@@ -279,10 +286,12 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             bot_first_data_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
             current_bot_candles = self.get_ohlcv_snapshot(symbol, time_frame)
             if self.is_creating_database:
-                if self.start_timestamp and self.start_timestamp < bot_first_data_timestamp:
+                # don't include the bot last candle twice
+                history_end_time = bot_first_data_timestamp - 1
+                if self.start_timestamp and self.start_timestamp < history_end_time:
                     # fetch missing data
                     last_progress = await self.collect_historical_ohlcv(
-                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, bot_first_data_timestamp)
+                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, history_end_time)
                 await self.save_ohlcv(
                         exchange=exchange,
                         cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(str(symbol)),
