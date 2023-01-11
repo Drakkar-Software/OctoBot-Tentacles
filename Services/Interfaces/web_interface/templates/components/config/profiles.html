@@ -86,7 +86,7 @@ get_filtered_list, read_only=False) %}
                     {% for exchange in get_profile_exchanges(profile) %}
                     <div class="p-1 p-md-3">
                         <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
-                            <img class="img-fluid product-logo" src="" alt="{{exchange}}" url="{{url_for('exchange_logo', name=exchange, _external=True)}}">
+                            <img class="img-fluid product-logo" src="" alt="{{exchange}}" url="{{url_for('exchange_logo', name=exchange)}}">
                         </a>
                     </div>
                     {% endfor %}
