@@ -157,17 +157,13 @@ function handleCardDecksAddButtons(){
         let select_value = select_input.val();
 
         // currencies
-        const data_token = select_input.children("[data-tokens='"+select_value+"']");
-        const symbol_attr = data_token.attr("symbol");
-        const select_symbol = isDefined(symbol_attr) ? symbol_attr.toUpperCase(): "";
+        const currencyDetails = currencyDetailsById[select_value];
+        let select_symbol = "";
         let currency_id = undefined;
-        if(isDefined(data_token[0])){
-            if (data_token[0].hasAttribute("data-model")) {
-                select_value = data_token.attr("data-model");
-            }
-            if (data_token[0].hasAttribute("data-currency-id")) {
-                currency_id = data_token.attr("data-currency-id");
-            }
+        if(isDefined(currencyDetails)){
+            currency_id = select_value;
+            select_value = currencyDetails.n;
+            select_symbol = currencyDetails.s
         }
 
         // exchanges
@@ -204,7 +200,10 @@ function handleCardDecksAddButtons(){
 
             // select options with reference market if any
             $(editable_selector).each(function () {
-                if ($(this).siblings('.select2').length === 0 && !$(this).parent().hasClass('default')){
+                if (
+                    $(this).siblings('.select2').length === 0
+                    && !$(this).parent().hasClass('default')
+                ){
                     $(this).children("option").each(function () {
                         const option = $(this);
                         const symbols = option.attr("value").split("/");
@@ -230,11 +229,14 @@ function handleCardDecksAddButtons(){
 
             // add select2 selector
             $(editable_selector).each(function () {
-                if ($(this).siblings('.select2').length === 0 && !$(this).parent().hasClass('default')){
+                if (
+                    $(this).siblings('.select2').length === 0
+                    && !$(this).parent().hasClass('default')
+                ) {
                     $(this).select2({
                         width: 'resolve', // need to override the changed default
                         tags: true,
-                        placeholder: placeholder
+                        placeholder: placeholder,
                     });
                 }
             });
@@ -887,8 +889,40 @@ function register_exchanges_checks(check_existing_accounts){
     }
 }
 
+function fetch_currencies(){
+    const getCurrencyOption = (addCurrencySelect, details) => {
+        return new Option(`${details.n} - ${details.s}`, details.i, false, false);
+    }
+    if(!$("#AddCurrencySelect").length){
+        return
+    }
+    $.get({
+        url: $("#AddCurrencySelect").data("fetch-url"),
+        dataType: "json",
+        success: function (data) {
+            const addCurrencySelect = $("#AddCurrencySelect");
+            const options = [];
+            data.forEach((element) => {
+                if(!currencyDetailsById.hasOwnProperty(element.i)){
+                    currencyDetailsById[element.i] = element
+                }
+                options.push(getCurrencyOption(addCurrencySelect, element))
+            });
+            addCurrencySelect.append(...options);
+            // add selectpicker class at the last moment to avoid refreshing any existing one (slow)
+            addCurrencySelect.addClass("selectpicker")
+            addCurrencySelect.selectpicker('render');
+            // paginatedSelect2(addCurrencySelect, options, pageSize)
+        },
+        error: function (result, status) {
+            window.console && console.error(`Impossible to get currency list: ${result.responseText} (${status})`);
+        }
+    });
+}
+
 let validated_updated_global_config = {};
 let deleted_global_config_elements = [];
+let currencyDetailsById = {}
 
 const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");
@@ -897,6 +931,8 @@ const tradingReferenceMarket = $("#trading_reference-market");
 $(document).ready(function() {
     handle_nested_sidenav();
     select_first_tab();
+
+    fetch_currencies();
 
     setup_editable();
     handle_editable();

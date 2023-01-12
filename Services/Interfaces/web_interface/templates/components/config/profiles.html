@@ -54,17 +54,17 @@ get_filtered_list, read_only=False) %}
                 </div>
                 <div class="card-body py-0 d-flex flex-wrap">
                     {% for currency, pairs in get_profile_traded_pairs_by_currency(profile).items() %}
-                    <div class="d-flex flex-wrap align-items-center p-1">
-<!--                        <div>-->
-<!--                            <div class="animated fadeIn img-fluid very-small-size">-->
-<!--                                <img class="card-img-top currency-image"-->
-<!--                                     src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"-->
-<!--                                     alt="{{ currency }}"-->
-<!--                                     data-currency-id="{{currency.lower()}}">-->
-<!--                                <div class="mask rgba-white-slight waves-effect waves-light"></div>-->
-<!--                            </div>-->
-<!--                        </div>-->
-                        <div class="flex-grow-1 profile-overview-values px-2">
+                    <div class="row w-100 p-1">
+                        <div class="col-3">
+                            <div class="animated fadeIn img-fluid very-small-size">
+                                <img class="card-img-top currency-image"
+                                     src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                                     alt="{{ currency }}"
+                                     data-name="{{currency.lower()}}">
+                                <div class="mask rgba-white-slight waves-effect waves-light"></div>
+                            </div>
+                        </div>
+                        <div class="col-9 my-auto profile-overview-values px-2">
                             {{pairs | join(', ')}}
                         </div>
                     </div>

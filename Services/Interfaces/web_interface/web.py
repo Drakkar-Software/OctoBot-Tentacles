@@ -132,7 +132,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")
 
-    def init_flask_plugins(self, server_instance):
+    def init_flask_plugins_and_config(self, server_instance):
         # Only setup flask plugins once per flask app (can't call flask setup methods after the 1st request
         # has been received).
         if self.dev_mode:
@@ -187,7 +187,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             self.registered_plugins = web_interface_plugins.register_all_plugins(server_instance,
                                                                                  web_interface_root.registered_plugins)
             web_interface_root.update_registered_plugins(self.registered_plugins)
-            self.init_flask_plugins(server_instance)
+            self.init_flask_plugins_and_config(server_instance)
             self.websocket_instance = self._prepare_websocket()
 
             if self.should_open_web_interface:
