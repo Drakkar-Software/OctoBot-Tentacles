@@ -1,5 +1,5 @@
 {% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_currency_card(config_symbols, crypto_currency, symbol_list, full_symbol_list, add_class='', no_select=False, additional_classes="", symbol="") -%}
+{% macro config_currency_card(config_symbols, crypto_currency, symbol_list, full_symbol_list, get_currency_id, add_class='', no_select=False, additional_classes="", symbol="") -%}
     <!-- Card -->
     <div class="card {{add_class}} mb-3 medium-size config-card">
 
@@ -10,8 +10,8 @@
         <div class="view overlay animated fadeIn">
             <img class="card-img-top currency-image {{additional_classes}}"
                  src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
-                 alt="Can't find image for {{ crypto_currency }} :("
-                 data-currency-id="{{full_symbol_list[crypto_currency]['id'] if crypto_currency in full_symbol_list else crypto_currency}}"
+                 alt="{{ crypto_currency }}"
+                 data-currency-id="{{get_currency_id(full_symbol_list, crypto_currency)}}"
                  style="height:100%">
         </div>
 

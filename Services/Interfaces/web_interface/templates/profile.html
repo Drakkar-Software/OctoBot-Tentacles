@@ -270,25 +270,16 @@
                                 <div class="container-fluid row col-12">
                                     <div class="col-md-6">
                                         <label for="AddCurrencySelect">Add a cryptocurrency to trade:</label>
-                                        <select id="AddCurrencySelect" class="selectpicker" data-live-search="true"
-                                                reference_market="{{ config_reference_market }}">
-                                            {% for currency in full_symbol_list %}
-                                            {% if currency not in config_symbols %}
-                                            <option data-tokens="{{ full_symbol_list[currency]['symbol'] }} - {{ currency }}"
-                                                    data-currency-id="{{ full_symbol_list[currency]['id'] }}"
-                                                    symbol="{{ full_symbol_list[currency]['symbol'] }}"
-                                                    data-model="{{ currency }}">{{ full_symbol_list[currency]['symbol']}} - {{
-                                                currency }}
-                                            </option>
-                                            {% endif %}
-                                            {% endfor %}
+                                        <select id="AddCurrencySelect" data-live-search="true"
+                                                reference_market="{{ config_reference_market }}" data-fetch-url="{{ url_for('api.currency_list') }}">
+
                                         </select>
                                         <button type="button" id="AddCurrency"
                                                 class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2"
                                                                                                      aria-hidden="true"></i> Add
                                         </button>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="d-none d-md-inline-block col-md-6">
                                         <div class="d-flex justify-content-end">
                                             <button class="btn btn-outline-info btn-lg waves-effect" id="export-currencies-button"
                                                     update-url="{{ url_for('api.get_config_currency')}}">
@@ -316,7 +307,8 @@
                         <div class="card-deck config-container" update-url="{{ url_for('config') }}">
                             {% for crypto_currency in config_symbols %}
                             {{ m_config_currency_card.config_currency_card(config_symbols, crypto_currency,
-                            filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list, config_symbols), full_symbol_list,
+                            filter_currency_pairs(crypto_currency, symbol_list, full_symbol_list, config_symbols),
+                            full_symbol_list, get_currency_id,
                             symbol=config_symbols[crypto_currency]['pairs'][0].split('/')[0].lower() if
                             config_symbols[crypto_currency]['pairs'])}}
                             {% endfor %}
@@ -325,6 +317,7 @@
                     <div class="card-footer">
                         <i class="fab fa-octopus-deploy"></i> Pro tip: a pair you want to trade is not in the
                         selector and your exchange is supporting it ? Just type it in and press enter.
+                        Data provided by <a href="https://www.coingecko.com/" target="_blank">CoinGecko</a>.
                     </div>
                 </div>
             </div>
@@ -431,6 +424,7 @@
         crypto_currency=config_default_value,
         symbol_list=symbol_list,
         full_symbol_list=full_symbol_list,
+        get_currency_id=get_currency_id,
         add_class=added_class,
         no_select=True,
         additional_classes="default",

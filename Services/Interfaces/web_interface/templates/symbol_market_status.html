@@ -19,7 +19,7 @@
         <div class="animated fadeIn img-fluid very-small-size">
             <img class="card-img-top currency-image"
                  src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
-                 alt="Can't find image for {{ symbol.split('/')[0] }} :("
+                 alt="{{currency}}"
                  symbol="{{symbol.split('/')[0].lower()}}">
             <div class="mask rgba-white-slight waves-effect waves-light"></div>
         </div>

@@ -34,7 +34,6 @@ import octobot_trading.api as trading_api
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchanges as trading_exchanges
-import tentacles.Services.Interfaces.web_interface.constants as constants
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
@@ -49,10 +48,12 @@ import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
 import octobot.enums as octobot_enums
+import tentacles.Services.Interfaces.web_interface.constants as constants
 
 NAME_KEY = "name"
-SYMBOL_KEY = "symbol"
-ID_KEY = "id"
+SHORT_NAME_KEY = "n"
+SYMBOL_KEY = "s"
+ID_KEY = "i"
 EXCLUDED_CURRENCY_SUBNAME = tuple(("X Long", "X Short"))
 DESCRIPTION_KEY = "description"
 REQUIREMENTS_KEY = "requirements"
@@ -87,22 +88,16 @@ NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_
 DEFAULT_EXCHANGE = "binance"
 
 
-def _get_currency_dict(symbol, identifier):
+def _get_currency_dict(name, symbol, identifier):
     return {
+        SHORT_NAME_KEY: name,
         SYMBOL_KEY: symbol.upper(),
         ID_KEY: identifier
     }
 
-
-# forced cryptocurrencies to be displayed in currency selector
-FORCED_CURRENCIES_DICT = {
-    "HollaEx": _get_currency_dict("XHT", "hollaex-token")
-}
-
 # buffers to faster config page loading
 markets_by_exchanges = {}
 all_symbols_dict = {}
-currency_logo_by_id = {}
 exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
@@ -715,8 +710,12 @@ def _is_legit_currency(currency):
     return not any(sub_name in currency for sub_name in EXCLUDED_CURRENCY_SUBNAME) and len(currency) < 30
 
 
-def get_all_symbols_dict():
-    if len(all_symbols_dict) <= len(FORCED_CURRENCIES_DICT):
+def get_all_symbols_list():
+    import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+    data_provider = flask_util.BrowsingDataProvider.instance()
+    all_currencies = copy.copy(data_provider.get_all_currencies())
+    if not all_currencies:
+        added_is = set()
         request_response = None
         base_error = "Failed to get currencies list from coingecko.com (this is a display only issue): "
         try:
@@ -725,32 +724,32 @@ def get_all_symbols_dict():
             retries = requests.packages.urllib3.util.retry.Retry(total=3, backoff_factor=0.5,
                                                                  status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
-            # get top 500 coins (2 * 250)
-            for i in range(1, 3):
-                request_response = session.get(f"{constants.CURRENCIES_LIST_URL}{i}")
+            # first fetch top 250 currencies then add all currencies and their ids
+            for url in (f"{constants.CURRENCIES_LIST_URL}1", constants.ALL_SYMBOLS_URL):
+                request_response = session.get(url)
                 if request_response.status_code == 429:
                     # rate limit issue
-                    all_symbols_dict.clear()
                     _get_logger().warning(f"{base_error}Too many requests, retry in a few seconds")
                     break
                 for currency_data in request_response.json():
                     if _is_legit_currency(currency_data[NAME_KEY]):
-                        all_symbols_dict[currency_data[NAME_KEY]] = _get_currency_dict(
-                            currency_data[SYMBOL_KEY],
-                            currency_data[ID_KEY]
-                        )
-            _add_forced_currencies(all_symbols_dict)
+                        currency_id = currency_data["id"]
+                        if currency_id not in added_is:
+                            added_is.add(currency_id)
+                            all_currencies.append(_get_currency_dict(
+                                currency_data[NAME_KEY],
+                                currency_data["symbol"],
+                                currency_id
+                            ))
+            # fetched_all: save it
+            data_provider.set_all_currencies(all_currencies)
         except Exception as e:
             details = f"code: {request_response.status_code}, body: {request_response.text}" \
                 if request_response else {request_response}
             _get_logger().exception(e, True, f"{base_error}{e}")
             _get_logger().debug(f"coingecko.com response {details}")
             return {}
-    return all_symbols_dict
-
-
-def _add_forced_currencies(symbols_dict):
-    symbols_dict.update(FORCED_CURRENCIES_DICT)
+    return all_currencies
 
 
 def get_exchange_logo(exchange_name):
@@ -773,49 +772,49 @@ def _get_currency_logo_url(currency_id):
            f"false&community_data=false&developer_data=false&sparkline=false"
 
 
-async def _fetch_currency_logo(session, currency_id):
+async def _fetch_currency_logo(session, data_provider, currency_id):
+    if not currency_id:
+        return
     async with session.get(_get_currency_logo_url(currency_id)) as resp:
         logo = None
         try:
-            logo = (await resp.json())["image"]["large"]
+            json_resp = await resp.json()
+            logo = json_resp["image"]["large"]
         except KeyError:
             if resp.status == 429:
                 _get_logger().debug(f"Rate limitted when trying to fetch logo for {currency_id}. Will retry later")
             else:
                 # not rate limit: problem
-                _get_logger().error(f"Unexpected error when fetching currency logos: "
-                                    f"status: {resp.status} text: {resp.text()}")
+                _get_logger().warning(f"Unexpected error when fetching {currency_id} currency logos: "
+                                      f"status: {resp.status} text: {await resp.text()}")
         # can't fetch image for some reason, use default
-        currency_logo_by_id[currency_id] = logo
+        data_provider.set_currency_logo_url(currency_id, logo, dump=False)
 
 
-async def _fetch_missing_currency_logos(currency_ids):
+async def _fetch_missing_currency_logos(data_provider, currency_ids):
     async with aiohttp.ClientSession() as session:
         await asyncio.gather(
             *(
-                _fetch_currency_logo(session, currency_id)
+                _fetch_currency_logo(session, data_provider, currency_id)
                 for currency_id in currency_ids
-                if currency_id not in currency_logo_by_id or currency_logo_by_id[currency_id] is None
+                if data_provider.get_currency_logo_url(currency_id) is None
             )
         )
-
-
-def _apply_forced_currency_ids(currency_ids):
-    for currency_dict in FORCED_CURRENCIES_DICT.values():
-        currency_ids.append(currency_dict[ID_KEY])
+    data_provider.dump_saved_data()
 
 
 def get_currency_logo_urls(currency_ids):
-    _apply_forced_currency_ids(currency_ids)
-    if not all(
-        currency_id in currency_logo_by_id and currency_logo_by_id[currency_id] is not None
+    import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+    data_provider = flask_util.BrowsingDataProvider.instance()
+    if any(
+        data_provider.get_currency_logo_url(currency_id) is None
         for currency_id in currency_ids
     ):
-        interfaces_util.run_in_bot_async_executor(_fetch_missing_currency_logos(currency_ids))
+        interfaces_util.run_in_bot_async_executor(_fetch_missing_currency_logos(data_provider, currency_ids))
     return [
         {
             "id": currency_id,
-            "logo": currency_logo_by_id[currency_id]
+            "logo": data_provider.get_currency_logo_url(currency_id)
         }
         for currency_id in currency_ids
     ]

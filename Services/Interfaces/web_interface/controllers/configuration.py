@@ -77,7 +77,7 @@ def profile():
                                  real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
                                  symbol_list=sorted(models.get_symbol_list(enabled_exchanges or config_exchanges)),
-                                 full_symbol_list=models.get_all_symbols_dict(),
+                                 full_symbol_list=models.get_all_symbols_list(),
                                  evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
                                  strategy_config=models.get_strategy_config(media_url, missing_tentacles),
                                  evaluator_startup_config=models.get_evaluators_tentacles_startup_activation(),

@@ -26,8 +26,8 @@
                 <div class="col col-md-5 animated px-2 fadeIn img-fluid very-small-size">
                     <img class="card-img-top currency-image"
                          src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
-                         alt="Can't find image for {{ currency }} :("
-                         symbol="{{currency.lower()}}">
+                         alt="{{currency}}"
+                         data-symbol="{{currency.lower()}}">
                 </div>
                 <div class="d-none d-md-inline col-7 my-auto">
                     <span class="symbol">{{currency}}</span></div>

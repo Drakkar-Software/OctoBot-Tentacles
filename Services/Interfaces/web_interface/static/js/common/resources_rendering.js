@@ -51,7 +51,9 @@ function handleDefaultImage(element, url){
     }
 }
 
+let currencyIdByName = undefined;
 let currencyIdBySymbol = undefined;
+let currencyDetails = []
 let currencyLogoById = {};
 let fetchedCurrencyIds = false;
 
@@ -62,14 +64,25 @@ const currencyLogoURL = `${currentURL}/currency_logos`;
 
 
 function fetchCurrencyIds(){
+    currencyIdByName = {};
     currencyIdBySymbol = {};
     $.get({
         url: currencyListURL,
         dataType: "json",
         success: function (data) {
-            $.each(data, function (_, element){
-                currencyIdBySymbol[element["symbol"].toLowerCase()] = element["id"];
+            data.forEach((element) => {
+                const name = element["n"].toLowerCase();
+                if(!currencyIdByName.hasOwnProperty(name)){
+                    // in case of conflicts, keep the first one as top 250 is first in list
+                    currencyIdByName[name] = element["i"];
+                }
+                const symbol = element["s"].toLowerCase();
+                if(!currencyIdBySymbol.hasOwnProperty(symbol)){
+                    // in case of conflicts, keep the first one as top 250 is first in list
+                    currencyIdBySymbol[symbol] = element["i"];
+                }
             });
+            currencyDetails = data;
             fetchedCurrencyIds = true;
             // refresh images
             handleDefaultImages();
@@ -120,11 +133,26 @@ function handleDefaultImages(){
                         }else{
                             currencyIds.add(currencyId);
                         }
-                    } else if (jselement.hasAttribute("symbol")) {
-                        const symbol = element.attr("symbol").toLowerCase();
+                    } else if (jselement.hasAttribute("data-name")) {
+                        const name = element.attr("data-name").toLowerCase();
+                        if (typeof currencyIdByName === "undefined") {
+                            fetchCurrencyIds();
+                        } else if (fetchedCurrencyIds) {
+                            if (currencyIdByName.hasOwnProperty(name)) {
+                                const currencyId = currencyIdByName[name];
+                                if(currencyLogoById.hasOwnProperty(currencyId)){
+                                    useLogo(element, currencyId);
+                                }else{
+                                    currencyIds.add(currencyId);
+                                }
+                            } else {
+                                handleDefaultImage(element, currencyDefaultImage);
+                            }
+                        }
+                    } else if (jselement.hasAttribute("data-symbol")) {
+                        const symbol = element.attr("data-symbol").toLowerCase();
                         if (typeof currencyIdBySymbol === "undefined") {
                             fetchCurrencyIds();
-                            throw "fetching currency ids"
                         } else if (fetchedCurrencyIds) {
                             if (currencyIdBySymbol.hasOwnProperty(symbol)) {
                                 const currencyId = currencyIdBySymbol[symbol];
