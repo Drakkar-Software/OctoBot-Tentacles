@@ -48,11 +48,11 @@ def context_processor_register():
         raise KeyError(currency_name)
 
     def get_currency_id(full_symbol_list, currency_name):
-        to_find = currency_name.lower()
+        currency_key = currency_name.lower()
         try:
-            return _get_details_from_full_symbol_list(full_symbol_list, currency_name)
+            return _get_details_from_full_symbol_list(full_symbol_list, currency_key)[configuration_model.ID_KEY]
         except KeyError:
-            return to_find
+            return currency_key
 
     def filter_currency_pairs(currency, symbol_list, full_symbol_list, config_symbols):
         currency_key = currency.lower()
