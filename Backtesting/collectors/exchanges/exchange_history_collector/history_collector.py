@@ -28,6 +28,7 @@ import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as ge
 try:
     import octobot_trading.api as trading_api
     import octobot_trading.enums as trading_enums
+    import octobot_trading.errors as trading_errors
 except ImportError:
     logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
@@ -133,60 +134,36 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
         symbol_id = str(symbol)
         cryptocurrency = self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id)
-
         if self.start_timestamp is not None:
-            first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
-            since = self.start_timestamp
+            start_time = self.start_timestamp
+            end_time = self.end_timestamp or time.time() * 1000
+            first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame) * 1000
             if self.start_timestamp < first_candle_timestamp:
-                since = first_candle_timestamp
-
-            if ((self.end_timestamp or time.time()*1000) - since) < (time_frame_sec * 1000):
-                return
-
-            candles = await self.exchange.get_symbol_prices(symbol_id, time_frame, since=since)
-            last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-            total_interval = (self.end_timestamp or (time.time()*1000)) - last_candle_timestamp
-            start_fetch_time = last_candle_timestamp
-
-            if self.end_timestamp is not None:
-                while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
-                    candles.pop(-1)
-
-            self.exchange.uniformize_candles_if_necessary(candles)
-            await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=cryptocurrency,
-                                  symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
-                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
-            candles.clear()
-
-            while since < last_candle_timestamp if not self.end_timestamp \
-                    else (last_candle_timestamp < self.end_timestamp - (time_frame_sec * 1000)):
-                since = last_candle_timestamp
-                self.current_step_percent = round((since-start_fetch_time) / total_interval * 100)
-                self.logger.info(f"[{self.current_step_percent}%] historical data fetched for {symbol} {time_frame}")
-                candles += await self.exchange.get_symbol_prices(symbol_id, time_frame,
-                                                                 since=(since + (time_frame_sec * 1000)))
-                if candles:
-                    last_candle_timestamp = candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                    if self.end_timestamp is not None:
-                        while candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] > self.end_timestamp:
-                            candles.pop(-1)
-                    self.exchange.uniformize_candles_if_necessary(candles)
+                start_time = first_candle_timestamp
+            async for hist_candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol_id, time_frame,
+                                                                       start_time, end_time):
+                if hist_candles:
+                    self.current_step_percent = \
+                        (hist_candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
+                        ((end_time - start_time) / 1000) * 100
+                    self.logger.info(f"[{self.current_step_percent}%] historical data fetched for {symbol} {time_frame}")
                     await self.save_ohlcv(
                         exchange=exchange,
                         cryptocurrency=cryptocurrency,
-                        symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
+                        symbol=symbol.symbol_str, time_frame=time_frame, candle=hist_candles,
                         timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
-                                   for candle in candles],
+                                   for candle in hist_candles],
                         multiple=True)
-                    candles.clear()
         else:
-            candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
-            self.exchange.uniformize_candles_if_necessary(candles)
-            await self.save_ohlcv(exchange=exchange,
-                                  cryptocurrency=cryptocurrency,
-                                  symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
-                                  timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            try:
+                candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
+                await self.save_ohlcv(exchange=exchange,
+                                      cryptocurrency=cryptocurrency,
+                                      symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
+                                      timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+            except trading_errors.FailedRequest as err:
+                self.logger.exception(err, False)
+                self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")
 
     async def get_kline_history(self, exchange, symbol, time_frame):
         pass

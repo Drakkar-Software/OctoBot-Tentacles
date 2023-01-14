@@ -14,27 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.bittrex.bittrex_exchange as bittrex_exchange
 
 
-class BittrexCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
+class BittrexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.KLINE: cryptofeed_constants.CANDLES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
-        Feeds.CANDLE: cryptofeed_constants.CANDLES,
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
     }
 
     @classmethod
     def get_name(cls):
-        return 'bittrex'
-
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.BITTREX
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+        return bittrex_exchange.Bittrex.get_name()

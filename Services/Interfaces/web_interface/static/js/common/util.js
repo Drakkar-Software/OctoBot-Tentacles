@@ -23,8 +23,8 @@ function get_websocket(namespace){
     return io(
         namespace,
         {
-            // Prevent unexpected disconnection on slow loading pages (ex: first config load)
-            reconnectionDelay: 2000
+            reconnectionDelay: 2000, // Prevent unexpected disconnection on slow loading pages (ex: first config load)
+            transports: ["websocket", "polling"], // use WebSocket first, if available
         });
 }
 
@@ -320,4 +320,46 @@ function getDocsUrl() {
 
 function getExchangesDocsUrl() {
     return $("#global-urls").data("exchanges-docs-url");
+}
+
+function paginatedSelect2(selectElement, options, pageSize){
+    // WIP: issue: focus not working on options
+    jQuery.fn.select2.amd.require(
+        ["select2/data/array", "select2/utils"],
+        (ArrayData, Utils) => {
+            function CustomData($element, options) {
+                CustomData.__super__.constructor.call(this, $element, options);
+            }
+
+            Utils.Extend(CustomData, ArrayData);
+
+            CustomData.prototype.query = function (params, callback) {
+                let results = [];
+                if (typeof params.term !== "undefined" && params.term !== '') {
+                    const toSearch = params.term.toUpperCase()
+                    results = options.filter((option) => {
+                        return option.text.toUpperCase().indexOf(toSearch) !== -1;
+                    });
+                } else {
+                    results = options;
+                }
+
+                if (!("page" in params)) {
+                    params.page = 1;
+                }
+                const data = {};
+                data.results = results.slice((params.page - 1) * pageSize, params.page * pageSize);
+                data.pagination = {};
+                data.pagination.more = params.page * pageSize < results.length;
+                callback(data);
+            };
+            // add select2 selector
+            selectElement.select2({
+                ajax: {},
+                width: '200', // need to override the changed default
+                tags: true,
+                dataAdapter: CustomData
+            });
+        }
+    );
 }

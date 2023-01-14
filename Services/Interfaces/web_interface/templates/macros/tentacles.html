@@ -13,7 +13,7 @@
 
 {% macro tentacle_horizontal_description(info, strategy) %}
     <div class="row">
-    {{ tentacle_horizontal_description_row_content(info, strategy) }}
+    {{ tentacle_horizontal_description_row_content(info, strategy, not info['requirements']) }}
     {% if info['requirements'] %}
         <div class="col border-left border-dark">
             {{ requirements_and_default_config(info['requirements'], info['default-config'], strategy, info['name']) }}
@@ -22,8 +22,8 @@
     </div>
 {% endmacro %}
 
-{% macro tentacle_horizontal_description_row_content(info, strategy) %}
-    <div class="col{{'-8' if info['requirements'] else ''}} markdown-content">
+{% macro tentacle_horizontal_description_row_content(info, strategy, use_all_cols) %}
+    <div class="col{{'' if use_all_cols else '-md-8'}} markdown-content">
         {{info['description']}}
     </div>
 {% endmacro %}

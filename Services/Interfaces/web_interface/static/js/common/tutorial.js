@@ -19,8 +19,9 @@ _TUTORIALS = {
                     intro: 'If this is your first time on OctoBot, we suggest you have a look at this quick intro.'
                 },
                 {
+                    title: 'Quickly navigate through your OctoBot',
                     element: document.querySelector('#main-nav-bar'),
-                    intro: 'Quickly navigate through your OctoBot.'
+                    intro: ''
                 },
                 {
                     title: 'Your live OctoBot',

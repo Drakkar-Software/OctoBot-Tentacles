@@ -1,1 +1,1 @@
-from .huobi_websocket import HuobiCryptofeedWebsocketConnector
+from .huobi_websocket import HuobiCCXTWebsocketConnector

@@ -1,1 +1,1 @@
-Ndax is a basic SpotExchange adaptation for Ndax exchange. 
+Ndax is a basic RestExchange adaptation for Ndax exchange. 

@@ -14,25 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.bitfinex.bitfinex_exchange as bitfinex_exchange
 
 
-class BitfinexCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
+class BitfinexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
+        Feeds.TRADES: True,
+        Feeds.KLINE: Feeds.UNSUPPORTED.value,   # ohlcv is getting closed candles after new ones, this it not yet supported
+        Feeds.TICKER: True,
+        Feeds.CANDLE: Feeds.UNSUPPORTED.value,  # ohlcv is getting closed candles after new ones, this it not yet supported
     }
 
     @classmethod
     def get_name(cls):
-        return 'bitfinex2'
-
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.BITFINEX
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+        return bitfinex_exchange.Bitfinex.get_name()

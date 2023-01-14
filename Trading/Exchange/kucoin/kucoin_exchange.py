@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import time
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
@@ -40,7 +41,7 @@ def _kucoin_retrier(f):
     return wrapper
 
 
-class Kucoin(exchanges.SpotCCXTExchange):
+class Kucoin(exchanges.RestExchange):
     MAX_CANDLES_FETCH_INSTANT_RETRY = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
 
@@ -48,16 +49,15 @@ class Kucoin(exchanges.SpotCCXTExchange):
     def get_name(cls):
         return 'kucoin'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
-
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
                                             remove_price_limits=True)
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
+        if "since" in kwargs:
+            # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
+            kwargs["endAt"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     async def get_recent_trades(self, symbol, limit=50, **kwargs):

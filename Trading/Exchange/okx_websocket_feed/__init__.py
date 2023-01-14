@@ -1,1 +1,1 @@
-from .okx_websocket import OKXCryptofeedWebsocketConnector
+from .okx_websocket import OKXCCXTWebsocketConnector

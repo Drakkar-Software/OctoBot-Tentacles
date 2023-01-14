@@ -1,1 +1,1 @@
-Phemex is a basic SpotExchange adaptation for Phemex exchange. 
+Phemex is a basic RestExchange adaptation for Phemex exchange. 

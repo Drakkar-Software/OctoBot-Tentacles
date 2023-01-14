@@ -18,16 +18,12 @@ import asyncio
 import octobot_trading.exchanges as exchanges
 
 
-class Phemex(exchanges.SpotCCXTExchange):
+class Phemex(exchanges.RestExchange):
     DESCRIPTION = ""
 
     @classmethod
     def get_name(cls):
         return 'phemex'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, order_id=order_id, **kwargs):

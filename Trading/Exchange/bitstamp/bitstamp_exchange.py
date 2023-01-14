@@ -16,7 +16,7 @@
 import octobot_trading.exchanges as exchanges
 
 
-class Bitstamp(exchanges.SpotCCXTExchange):
+class Bitstamp(exchanges.RestExchange):
     DESCRIPTION = ""
 
     DEFAULT_MAX_LIMIT = 500
@@ -24,10 +24,6 @@ class Bitstamp(exchanges.SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'bitstamp'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit

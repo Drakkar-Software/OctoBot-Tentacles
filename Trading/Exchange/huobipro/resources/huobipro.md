@@ -1,1 +1,1 @@
-HuobiPro is a basic SpotExchange adaptation for HuobiPro exchange. 
+HuobiPro is a basic RestExchange adaptation for HuobiPro exchange. 

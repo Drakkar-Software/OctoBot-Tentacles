@@ -14,27 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.kucoin.kucoin_exchange as kucoin_exchange
 
 
-class KucoinCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    REQUIRED_ACTIVATED_TENTACLES = []
+class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        Feeds.KLINE: cryptofeed_constants.CANDLES,
-        Feeds.TICKER: cryptofeed_constants.TICKER,
-        Feeds.CANDLE: cryptofeed_constants.CANDLES,
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
     }
 
     @classmethod
     def get_name(cls):
-        return 'kucoin'
-
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.KUCOIN
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+        return kucoin_exchange.Kucoin.get_name()

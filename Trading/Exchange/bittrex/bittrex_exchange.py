@@ -17,7 +17,7 @@
 import octobot_trading.exchanges as exchanges
 
 
-class Bittrex(exchanges.SpotCCXTExchange):
+class Bittrex(exchanges.RestExchange):
     DESCRIPTION = ""
 
     SUPPORTED_ORDER_BOOK_LIMITS = [1, 25, 500]
@@ -26,10 +26,6 @@ class Bittrex(exchanges.SpotCCXTExchange):
     @classmethod
     def get_name(cls):
         return 'bittrex'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

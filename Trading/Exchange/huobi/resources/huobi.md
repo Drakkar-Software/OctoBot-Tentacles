@@ -1,1 +1,1 @@
-Huobi is a basic SpotExchange adaptation for Huobi exchange. 
+Huobi is a basic RestExchange adaptation for Huobi exchange. 

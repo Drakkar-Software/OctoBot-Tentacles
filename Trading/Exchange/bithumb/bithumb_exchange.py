@@ -16,16 +16,12 @@
 import octobot_trading.exchanges as exchanges
 
 
-class Bithumb(exchanges.SpotCCXTExchange):
+class Bithumb(exchanges.RestExchange):
     DESCRIPTION = ""
 
     @classmethod
     def get_name(cls):
         return 'bithumb'
-
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv limit is not working as expected, limit is doing [:-limit] but we want [-limit:]

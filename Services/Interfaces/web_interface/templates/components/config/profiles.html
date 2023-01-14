@@ -54,17 +54,17 @@ get_filtered_list, read_only=False) %}
                 </div>
                 <div class="card-body py-0 d-flex flex-wrap">
                     {% for currency, pairs in get_profile_traded_pairs_by_currency(profile).items() %}
-                    <div class="d-flex flex-wrap align-items-center p-1">
-<!--                        <div>-->
-<!--                            <div class="animated fadeIn img-fluid very-small-size">-->
-<!--                                <img class="card-img-top currency-image"-->
-<!--                                     src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"-->
-<!--                                     alt="{{ currency }}"-->
-<!--                                     data-currency-id="{{currency.lower()}}">-->
-<!--                                <div class="mask rgba-white-slight waves-effect waves-light"></div>-->
-<!--                            </div>-->
-<!--                        </div>-->
-                        <div class="flex-grow-1 profile-overview-values px-2">
+                    <div class="row w-100 p-1">
+                        <div class="col-3">
+                            <div class="animated fadeIn img-fluid very-small-size">
+                                <img class="card-img-top currency-image"
+                                     src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                                     alt="{{ currency }}"
+                                     data-name="{{currency.lower()}}">
+                                <div class="mask rgba-white-slight waves-effect waves-light"></div>
+                            </div>
+                        </div>
+                        <div class="col-9 my-auto profile-overview-values px-2">
                             {{pairs | join(', ')}}
                         </div>
                     </div>
@@ -86,7 +86,7 @@ get_filtered_list, read_only=False) %}
                     {% for exchange in get_profile_exchanges(profile) %}
                     <div class="p-1 p-md-3">
                         <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
-                            <img class="img-fluid product-logo" src="" alt="{{exchange}}" url="{{url_for('exchange_logo', name=exchange, _external=True)}}">
+                            <img class="img-fluid product-logo" src="" alt="{{exchange}}" url="{{url_for('exchange_logo', name=exchange)}}">
                         </a>
                     </div>
                     {% endfor %}
@@ -183,7 +183,7 @@ get_filtered_list, read_only=False) %}
                         data-url="{{url_for('profile', select=profile.profile_id)}}"
                         {{ 'disabled' if current_profile.profile_id == profile.profile_id else '' }}
                         data-toggle="tooltip" title="Use this profile">
-                    <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                    <i class="fas fa-check" aria-hidden="true"></i>
                 </button>
                 <a class="float-right blue-text" target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}/configuration/profiles">
                     &nbsp <i class="fa-solid fa-question"></i>
@@ -206,7 +206,7 @@ get_filtered_list, read_only=False) %}
             <button class="btn btn{{ '-outline' if current_profile.profile_id == profile.profile_id else '' }}-primary waves-effect activate-profile-button"
                     data-url="{{url_for('profile', select=profile.profile_id)}}"
                     {{ 'disabled' if current_profile.profile_id == profile.profile_id else '' }}>
-                <i class="fa fa-exchange-alt" aria-hidden="true"></i> <span class="d-none d-md-inline">
+                <i class="fas fa-check" aria-hidden="true"></i> <span class="d-none d-md-inline">
                     {{ 'This is your current profile' if current_profile.profile_id == profile.profile_id else 'Use this profile' }}
                 </span>
             </button>
@@ -232,7 +232,7 @@ get_filtered_list, read_only=False) %}
             {% endif %}
         </div>
     </div>
-    <div class="float-right">
+    <div class="text-right">
         <button class="btn btn-outline-primary waves-effect"
                 data-toggle="modal" data-target="#importProfileModal">
             Import a profile
@@ -296,7 +296,7 @@ get_filtered_list, read_only=False) %}
                 {% if profile.profile_id == current_profile.profile_id %}
                 <h4>
                     <span class="badge badge-danger float-right d-none d-md-block">active</span>
-                    <i class="fa-solid fa-check d-md-none"
+                    <i class="fas fa-check d-md-none"
                         data-toggle="tooltip" data-placement="top"
                         title="Active"
                     ></i>
@@ -345,7 +345,7 @@ get_filtered_list, read_only=False) %}
                         data-toggle="tooltip" data-placement="top"
                         title="Use this profile and restart OctoBot"
                         data-url="{{url_for('profile', select=profile.profile_id, next=url_for('profiles_selector', reboot=reboot))}}">
-                    <i class="fa fa-check"></i>
+                    <i class="fas fa-check"></i>
                 </button>
                 {% endif %}
             </div>

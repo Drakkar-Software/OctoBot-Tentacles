@@ -17,7 +17,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
 
-class Ndax(exchanges.SpotCCXTExchange):
+class Ndax(exchanges.RestExchange):
     DESCRIPTION = ""
 
     DEFAULT_MAX_LIMIT = 500
@@ -26,9 +26,8 @@ class Ndax(exchanges.SpotCCXTExchange):
     def get_name(cls):
         return 'ndax'
 
-    @classmethod
-    def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
-        return cls.get_name() == exchange_candidate_name
+    def get_adapter_class(self):
+        return NdaxCCXTAdapter
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit
@@ -39,14 +38,17 @@ class Ndax(exchanges.SpotCCXTExchange):
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
-    async def get_price_ticker(self, symbol: str, **kwargs: dict):
-        ticker = await super().get_price_ticker(symbol=symbol, **kwargs)
+
+class NdaxCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
         for key in [
             trading_enums.ExchangeConstantsTickersColumns.HIGH.value,
             trading_enums.ExchangeConstantsTickersColumns.LOW.value,
             trading_enums.ExchangeConstantsTickersColumns.OPEN.value,
             trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value,
         ]:
-            if ticker[key] == 0.0:
-                ticker[key] = None
-        return ticker
+            if fixed[key] == 0.0:
+                fixed[key] = None
+        return fixed

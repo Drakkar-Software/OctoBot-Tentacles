@@ -1,1 +1,1 @@
-Poloniex is a basic SpotExchange adaptation for Poloniex exchange. 
+Poloniex is a basic RestExchange adaptation for Poloniex exchange. 

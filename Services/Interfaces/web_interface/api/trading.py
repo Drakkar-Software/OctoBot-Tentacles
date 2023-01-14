@@ -77,7 +77,7 @@ def refresh_portfolio():
 @api.api.route("/currency_list", methods=['GET'])
 @login.login_required_when_activated
 def currency_list():
-    return flask.jsonify(models.get_all_symbols_dict())
+    return flask.jsonify(models.get_all_symbols_list())
 
 
 @api.api.route("/historical_portfolio_value", methods=['GET'])

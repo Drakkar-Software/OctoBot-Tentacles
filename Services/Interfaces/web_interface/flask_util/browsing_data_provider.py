@@ -25,6 +25,8 @@ import octobot_commons.configuration as commons_configuration
 class BrowsingDataProvider(singleton.Singleton):
     SESSION_SEC_KEY = "session_sec_key"
     FIRST_DISPLAY = "first_display"
+    CURRENCY_LOGO = "currency_logo"
+    ALL_CURRENCIES = "all_currencies"
     HOME = "home"
     PROFILE = "profile"
     PROFILE_SELECTOR = "profile_selector"
@@ -59,12 +61,33 @@ class BrowsingDataProvider(singleton.Singleton):
     def set_is_first_display(self, element, is_first_display):
         if self.browsing_data[self.FIRST_DISPLAY][element] != is_first_display:
             self.browsing_data[self.FIRST_DISPLAY][element] = is_first_display
-            self._dump_saved_data()
+            self.dump_saved_data()
 
     def set_first_displays(self, is_first_display):
         for key in self.DISPLAY_KEYS:
             self.browsing_data[self.FIRST_DISPLAY][key] = is_first_display
-        self._dump_saved_data()
+        self.dump_saved_data()
+
+    def get_currency_logo_url(self, currency_id):
+        try:
+            return self.browsing_data[self.CURRENCY_LOGO][currency_id]
+        except KeyError:
+            return None
+
+    def set_currency_logo_url(self, currency_id, url, dump=True):
+        if url is None:
+            # do not save None as an url
+            return
+        self.browsing_data[self.CURRENCY_LOGO][currency_id] = url
+        if dump:
+            self.dump_saved_data()
+
+    def get_all_currencies(self):
+        return self.browsing_data[self.ALL_CURRENCIES]
+
+    def set_all_currencies(self, all_currencies):
+        self.browsing_data[self.ALL_CURRENCIES] = all_currencies
+        self.dump_saved_data()
 
     def _get_session_secret_key(self):
         return commons_configuration.decrypt(self.browsing_data[self.SESSION_SEC_KEY]).encode()
@@ -76,7 +99,7 @@ class BrowsingDataProvider(singleton.Singleton):
 
     def _generate_session_secret_key(self):
         self.browsing_data[self.SESSION_SEC_KEY] = self._create_session_secret_key()
-        self._dump_saved_data()
+        self.dump_saved_data()
 
     def _get_default_data(self):
         return {
@@ -84,7 +107,9 @@ class BrowsingDataProvider(singleton.Singleton):
             self.FIRST_DISPLAY: {
                 key: False
                 for key in self.DISPLAY_KEYS
-            }
+            },
+            self.CURRENCY_LOGO: {},
+            self.ALL_CURRENCIES: []
         }
 
     def _load_saved_data(self):
@@ -100,9 +125,9 @@ class BrowsingDataProvider(singleton.Singleton):
             self.logger.exception(err, True, f"Unexpected error when reading saved data: {err}")
         if any(key not in read_data for key in self.browsing_data):
             # save fixed data
-            self._dump_saved_data()
+            self.dump_saved_data()
 
-    def _dump_saved_data(self):
+    def dump_saved_data(self):
         try:
             with open(self._get_file(), "w") as sessions_file:
                 return json.dump(self.browsing_data, sessions_file)

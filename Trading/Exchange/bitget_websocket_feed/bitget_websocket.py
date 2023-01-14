@@ -14,33 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
-import cryptofeed.defines as cryptofeed_constants
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.bitget.bitget_exchange as bitget_exchange
 
 
-class BitgetCryptofeedWebsocketConnector(exchanges.CryptofeedWebsocketConnector):
-    """
-    DISABLED FOR NOW
-    issue:
-        bitget ws is not stable (disconnected every few seconds)
-        and it pushes historical values at each connection
-    """
-    REQUIRED_ACTIVATED_TENTACLES = []
+class BitgetCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: cryptofeed_constants.TRADES,
-        # Feeds.TICKER: cryptofeed_constants.TICKER,
-        Feeds.CANDLE: cryptofeed_constants.CANDLES,
+        Feeds.TRADES: True,
+        Feeds.KLINE: Feeds.UNSUPPORTED.value,   # missing volume in candle
+        Feeds.TICKER: True,
+        Feeds.CANDLE: Feeds.UNSUPPORTED.value,  # missing volume in candle
     }
 
     @classmethod
     def get_name(cls):
-        # return 'bitget'
-        return "disabled for now"
+        return bitget_exchange.Bitget.get_name()
 
-    @classmethod
-    def get_feed_name(cls):
-        return cryptofeed_constants.BITGET
-
-    @classmethod
-    def is_handling_spot(cls) -> bool:
-        return True
+    def get_adapter_class(self, adapter_class):
+        return bitget_exchange.BitgetCCXTAdapter

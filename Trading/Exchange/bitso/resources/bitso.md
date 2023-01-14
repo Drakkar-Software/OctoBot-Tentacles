@@ -1,1 +1,1 @@
-Bitso is a basic SpotExchange adaptation for Bitso exchange. 
+Bitso is a basic RestExchange adaptation for Bitso exchange. 

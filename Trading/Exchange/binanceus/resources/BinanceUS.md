@@ -1,1 +1,1 @@
-BinanceUS is a SpotExchange adaptation for Binance US exchange using the REST API. 
+BinanceUS is a RestExchange adaptation for Binance US exchange using the REST API. 
