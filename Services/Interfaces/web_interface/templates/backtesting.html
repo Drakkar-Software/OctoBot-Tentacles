@@ -90,7 +90,8 @@
                 <div class="alert alert-warning mt-1 text-center" role="alert">
                     <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                         {{ activated_trading_mode.get_name() }}</a>
-                    can't be used in backtesting for now.
+                    can't be used in backtesting.
+                    <a href="{{ url_for('profile')}}">Select another profile or trading mode</a> to run a backtesting.
                 </div>
             {% endif %}
             <span id='backtesting_progress_bar' style='display: none;'>
