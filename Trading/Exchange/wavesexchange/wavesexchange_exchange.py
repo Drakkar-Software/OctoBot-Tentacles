@@ -34,4 +34,14 @@ class WavesCCXTAdapter(exchanges.CCXTAdapter):
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
         fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        for key in [
+            trading_enums.ExchangeConstantsTickersColumns.HIGH.value,
+            trading_enums.ExchangeConstantsTickersColumns.LOW.value,
+            trading_enums.ExchangeConstantsTickersColumns.CLOSE.value,
+            trading_enums.ExchangeConstantsTickersColumns.OPEN.value,
+            trading_enums.ExchangeConstantsTickersColumns.LAST.value,
+            trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value,
+        ]:
+            if fixed[key] == 0.0:
+                fixed[key] = None
         return fixed
