@@ -26,9 +26,6 @@ class Ndax(exchanges.RestExchange):
     def get_name(cls):
         return 'ndax'
 
-    def get_adapter_class(self):
-        return NdaxCCXTAdapter
-
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit
         if limit is None:
@@ -38,17 +35,3 @@ class Ndax(exchanges.RestExchange):
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
-
-class NdaxCCXTAdapter(exchanges.CCXTAdapter):
-
-    def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw, **kwargs)
-        for key in [
-            trading_enums.ExchangeConstantsTickersColumns.HIGH.value,
-            trading_enums.ExchangeConstantsTickersColumns.LOW.value,
-            trading_enums.ExchangeConstantsTickersColumns.OPEN.value,
-            trading_enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value,
-        ]:
-            if fixed[key] == 0.0:
-                fixed[key] = None
-        return fixed
