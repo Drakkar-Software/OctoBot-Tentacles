@@ -48,12 +48,30 @@ class BinanceUsdM(exchanges.RestExchange):
     async def _create_market_stop_loss_order(
         self, symbol, quantity, price, side, current_price, params=None
     ) -> dict:
-        raise NotImplementedError("_create_market_stop_loss_order is not implemented")
+        params = params or {}
+        params["reduceOnly"] = True
+        return await super()._create_market_stop_loss_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            side=side,
+            current_price=current_price,
+            params=params,
+        )
 
     async def _create_limit_stop_loss_order(
-        self, symbol, quantity, price=None, side=None, params=None
+        self, symbol, quantity, price, stop_price, side, params=None
     ) -> dict:
-        raise NotImplementedError("_create_limit_stop_loss_order is not implemented")
+        params = params or {}
+        params["reduceOnly"] = True
+        return await super()._create_limit_stop_loss_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            stop_price=stop_price,
+            side=side,
+            params=params,
+        )
 
     async def _create_market_take_profit_order(
         self, symbol, quantity, price=None, side=None, params=None
@@ -170,4 +188,36 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
             }
         except KeyError as e:
             self.logger.error(f"Fail to parse position dict ({e})")
+        return fixed
+
+    BINANCE_REDUCE_ONLY = "reduceOnly"
+    BINANCE_TRIGGER_PRICE = "triggerPrice"
+
+    def fix_order(self, raw, **kwargs):
+        fixed = super().fix_order(raw, **kwargs)
+        order_info = raw[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+        # parse reduce_only if present
+        fixed[
+            trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value
+        ] = order_info.get(self.BINANCE_REDUCE_ONLY, False)
+        # stop orders ise triggerPrice
+        if not fixed.get(trading_enums.ExchangeConstantsOrderColumns.PRICE.value):
+            fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = fixed.get(
+                self.BINANCE_TRIGGER_PRICE
+            )
+        self._adapt_order_type(fixed)
+
+        return fixed
+
+    def _adapt_order_type(self, fixed):
+        if (
+            fixed[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value]
+            and trading_enums.TradeOrderType.STOP_MARKET.value
+            == fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value]
+        ):
+            # stop loss are not tagged as such by ccxt, force it
+            fixed[
+                trading_enums.ExchangeConstantsOrderColumns.TYPE.value
+            ] = trading_enums.TradeOrderType.STOP_LOSS.value
+
         return fixed
