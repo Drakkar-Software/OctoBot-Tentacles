@@ -310,13 +310,13 @@ get_filtered_list, read_only=False) %}
                         data-toggle="tooltip" data-placement="top"
                         title="Downloaded"></i>
                 {% elif profile.read_only %}
-                    <i class="fa-solid fa-user"
-                        data-toggle="tooltip" data-placement="top"
-                        title="Custom"></i>
-                {% else %}
                     <i class="fa-brands fa-octopus-deploy"
                         data-toggle="tooltip" data-placement="top"
                         title="Pre-installed"></i>
+                {% else %}
+                    <i class="fa-solid fa-user"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Custom"></i>
                 {% endif %}
                 </h4>
             </div>
