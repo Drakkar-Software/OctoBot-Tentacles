@@ -82,7 +82,7 @@
         {{ login_form_content(form, 'community_register', after_login_url, after_login_action, "Register") }}
     </div>
     <div class="card-footer">
-        Already have an OctoBot account ? <a href="{{ url_for('community_login') }}" class="text-white font-weight-bold">Login here.</a>
+        Already have an OctoBot account ? <a href="{{ url_for('community_login', next=after_login_url) }}" class="text-white font-weight-bold">Login here.</a>
     </div>
 </div>
 {%- endmacro %}

@@ -57,12 +57,13 @@ def community_login():
             except Exception as e:
                 logging.get_logger("CommunityAuthentication").exception(e, False)
                 flask.flash(f"Error during authentication: {e}", "error")
-    if next_url:
+    if flask.request.method == 'POST' and next_url:
         return flask.redirect(next_url)
     return flask.render_template('community_login.html',
                                  form=form,
                                  current_logged_in_email=logged_in_email,
-                                 current_bots_stats=models.get_current_octobots_stats())
+                                 current_bots_stats=models.get_current_octobots_stats(),
+                                 next_url=next_url or flask.url_for('community'))
 
 
 @web_interface.server_instance.route('/community_register', methods=['GET', 'POST'])
