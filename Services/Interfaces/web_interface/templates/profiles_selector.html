@@ -21,7 +21,7 @@
 {% if not current_logged_in_email %}
 <div class="login_box mx-auto mb-2">
     <div class="card">
-    {{ login.login_form(form, is_in_stating_community_env, OCTOBOT_COMMUNITY_URL,
+    {{ login.login_form(form, is_in_stating_community_env,
                         url_for("profiles_selector"), after_login_action="sync_account",
                         details="Access your subscribed profiles as well as additional profiles.") }}
     </div>
