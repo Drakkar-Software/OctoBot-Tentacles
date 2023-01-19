@@ -110,7 +110,8 @@ function botOperationErrorCallback(updated_data, update_url, dom_root_element, r
 
 function initLoginSubmit(){
     $("form[name=community-login]").on("submit", () => {
-        $("input[value=Login]").attr("disabled", true);
+        $("input[type=submit]").addClass(hidden_class).attr("disabled", true);
+        $("#login-waiter").removeClass(hidden_class);
     });
 }
 
