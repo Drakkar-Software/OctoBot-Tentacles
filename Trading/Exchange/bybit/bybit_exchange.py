@@ -323,7 +323,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
             => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
             """
             funding_next_timestamp = float(
-                funding_dict[ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value]
+                funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0)
             )
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
