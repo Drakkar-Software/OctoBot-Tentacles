@@ -232,6 +232,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     
     def parse_position(self, fixed, **kwargs):
         try:
+            # x contract value ?
             raw_position_info = fixed.get(ccxt_enums.ExchangePositionCCXTColumns.INFO.value)
             size = decimal.Decimal(
                 str(fixed.get(ccxt_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0)))
