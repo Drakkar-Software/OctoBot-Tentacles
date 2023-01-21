@@ -20,6 +20,7 @@ import octobot_commons.singleton as singleton
 import octobot_commons.logging as logging
 import octobot_commons.constants as constants
 import octobot_commons.configuration as commons_configuration
+import octobot_commons.authentication as commons_authentication
 
 
 class BrowsingDataProvider(singleton.Singleton):
@@ -90,6 +91,11 @@ class BrowsingDataProvider(singleton.Singleton):
         self.dump_saved_data()
 
     def _get_session_secret_key(self):
+        authenticator = commons_authentication.Authenticator.instance()
+        if authenticator.must_be_authenticated_through_authenticator() and not authenticator.has_login_info():
+            # reset session key to force login
+            self.logger.debug("Regenerating session key as user is required but not connected.  ")
+            self._generate_session_secret_key()
         return commons_configuration.decrypt(self.browsing_data[self.SESSION_SEC_KEY]).encode()
 
     def _create_session_secret_key(self):
