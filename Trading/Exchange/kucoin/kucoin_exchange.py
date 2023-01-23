@@ -15,6 +15,7 @@
 #  License along with this library.
 import time
 import decimal
+import typing
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
@@ -76,8 +77,10 @@ class Kucoin(exchanges.RestExchange):
         ]
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        # on futures, market status gives limits in contracts, convert it to currency units
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
+                                            remove_price_limits=True,
+                                            adapt_for_contract_size=True)
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
@@ -102,11 +105,34 @@ class Kucoin(exchanges.RestExchange):
         """
         return Kucoin.INSTANT_RETRY_ERROR_CODE not in str(exception)
 
+    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        params = params or {}
+        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+        order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
+        return order
+
     """
     Margin and leverage
-    todo:
-        fetch position (get closed positions)
     """
+
+    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        # add untriggered stop orders (different api endpoint)
+        kwargs["stop"] = True
+        stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        return regular_orders + stop_orders
+
+    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
+                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
+                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                           params: dict = None) -> typing.Optional[dict]:
+        if self.exchange_manager.is_future:
+            # on futures exchange expects, quantity in contracts: convert quantity into contracts
+            quantity = quantity / self.get_contract_size(symbol)
+        return await super().create_order(order_type, symbol, quantity,
+                                          price=price, stop_price=stop_price,
+                                          side=side, current_price=current_price,
+                                          params=params)
 
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
@@ -186,6 +212,11 @@ class Kucoin(exchanges.RestExchange):
             for symbol in symbols
         ]
 
+    async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
+                                                       tp_sl_mode: trading_enums.TakeProfitStopLossMode):
+        """
+        take profit / stop loss mode does not exist on kucoin
+        """
 
 
 class KucoinCCXTAdapter(exchanges.CCXTAdapter):
@@ -198,17 +229,43 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     # ORDER
     KUCOIN_LEVERAGE = "leverage"
 
-    def fix_order(self, raw, **kwargs):
+    def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, **kwargs)
-        # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-        symbol = fixed[trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
-        contract_size = ccxt_client_util.get_contract_size(self.connector.client, symbol)
-        fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * contract_size
-        fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
-            fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
-            float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
+        if fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
+            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
+            contract_size = self.connector.get_contract_size(symbol)
+            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
+        if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+            fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
+                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
+                float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
+        self._adapt_order_type(fixed)
+        return fixed
+
+    def _adapt_order_type(self, fixed):
+        order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+        if trigger_direction := order_info.get("stop", None):
+            updated_type = trading_enums.TradeOrderType.UNKNOWN.value
+            """
+            Stop Order Types (https://docs.kucoin.com/futures/#stop-orders)
+            down: Triggers when the price reaches or goes below the stopPrice.
+            up: Triggers when the price reaches or goes above the stopPrice.
+            """
+            side = fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+            if side == trading_enums.TradeOrderSide.BUY.value:
+                if trigger_direction == "up":
+                    updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                elif trigger_direction == "down":
+                    updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+            else:
+                if trigger_direction == "up":
+                    updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+                elif trigger_direction == "down":
+                    updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            # stop loss are not tagged as such by ccxt, force it
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
