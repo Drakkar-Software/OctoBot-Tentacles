@@ -88,7 +88,6 @@ class Bybit(exchanges.RestExchange):
         return raw_positions
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        # /contract/v3/private/position/trading-stop ?
         params = params or {}
         params["triggerPrice"] = price
         # Trigger the order when market price rises to triggerPrice or falls to triggerPrice. 1: rise; 2: fall

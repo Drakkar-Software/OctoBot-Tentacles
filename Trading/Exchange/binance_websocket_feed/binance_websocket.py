@@ -15,6 +15,7 @@
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import octobot_commons.constants as commons_constants
 import tentacles.Trading.Exchange.binance.binance_exchange as binance_exchange
 
 
@@ -25,6 +26,7 @@ class BinanceCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.TICKER: True,
         Feeds.CANDLE: True,
     }
+    EXCHANGE_RECONNECT_INTERVAL = 12 * commons_constants.HOURS_TO_SECONDS
 
     @classmethod
     def get_name(cls):
