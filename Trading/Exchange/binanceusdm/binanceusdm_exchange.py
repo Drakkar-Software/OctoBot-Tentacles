@@ -15,22 +15,25 @@
 #  License along with this library.
 
 import decimal
-import octobot_trading.enums as enums
+import typing
+import ccxt as ccxt
+
+import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.constants as constants
+import octobot_commons.constants as commons_constants
 
 
 class BinanceUsdM(exchanges.RestExchange):
     DESCRIPTION = ""
-
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
-        return [enums.ExchangeTypes.FUTURE]
+        return [trading_enums.ExchangeTypes.FUTURE]
 
     def get_adapter_class(self):
         return BinanceUsdMAdapter
@@ -39,8 +42,32 @@ class BinanceUsdM(exchanges.RestExchange):
     def get_name(cls):
         return "binanceusdm"
 
+    async def get_price_ticker(
+        self, symbol: str, **kwargs: dict
+    ) -> typing.Optional[dict]:
+        try:
+            with self.connector.error_describer():
+                return self.connector.adapter.adapt_ticker(
+                    {
+                        **await self.connector.client.fetch_ticker(
+                            symbol, params=kwargs
+                        ),
+                        # fetch_funding_rate to get mark price with funding
+                        **await self.connector.client.fetch_funding_rate(
+                            symbol, params={}
+                        ),
+                    }
+                )
+        except ccxt.NotSupported:
+            raise trading_errors.NotSupported
+        except ccxt.BaseError as e:
+            raise trading_errors.FailedRequest(f"Failed to get_price_ticker {e}")
+
     async def set_symbol_partial_take_profit_stop_loss(
-        self, symbol: str, inverse: bool, tp_sl_mode: enums.TakeProfitStopLossMode
+        self,
+        symbol: str,
+        inverse: bool,
+        tp_sl_mode: trading_enums.TakeProfitStopLossMode,
     ):
         # no partial tp / sl - use limit and stop market instead
         pass
@@ -148,9 +175,6 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
             )
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
-                trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value: self.connector.client.safe_value(
-                    fixed, ccxt_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0
-                ),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value: trading_enums.TraderPositionType(
                     fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
@@ -220,4 +244,25 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
                 trading_enums.ExchangeConstantsOrderColumns.TYPE.value
             ] = trading_enums.TradeOrderType.STOP_LOSS.value
 
+        return fixed
+
+    # Funding
+    NEXT_FUNDING_TIME = "fundingTimestamp"
+    DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
+    MARK_PRICE = "markPrice"
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
+        fixed[
+            trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value
+        ] = fixed[self.NEXT_FUNDING_TIME]
+        fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value] = (
+            fixed[self.NEXT_FUNDING_TIME] - self.DEFAULT_FUNDING_TIME
+        )
+        fixed[trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value] = fixed[
+            ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value
+        ]
+        fixed[trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value] = fixed[
+            self.MARK_PRICE
+        ]
         return fixed
