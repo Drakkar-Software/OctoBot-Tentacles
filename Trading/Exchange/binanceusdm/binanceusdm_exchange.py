@@ -72,8 +72,42 @@ class BinanceUsdM(exchanges.RestExchange):
         # no partial tp / sl - use limit and stop market instead
         pass
 
+    async def _create_limit_buy_order(
+        self, symbol, quantity, price=None, reduce_only: bool = False, params=None
+    ) -> dict:
+        if reduce_only:
+            params = params or {}
+            params["reduceOnly"] = True
+        return await super()._create_limit_buy_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            reduce_only=reduce_only,
+            params=params,
+        )
+
+    async def _create_limit_sell_order(
+        self, symbol, quantity, price=None, reduce_only: bool = False, params=None
+    ) -> dict:
+        if reduce_only:
+            params = params or {}
+            params["reduceOnly"] = True
+        return await super()._create_limit_sell_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            reduce_only=reduce_only,
+            params=params,
+        )
+
     async def _create_market_stop_loss_order(
-        self, symbol, quantity, price, side, current_price, params=None
+        self,
+        symbol,
+        quantity,
+        price,
+        side,
+        current_price,
+        params=None,
     ) -> dict:
         params = params or {}
         params["reduceOnly"] = True
@@ -87,7 +121,13 @@ class BinanceUsdM(exchanges.RestExchange):
         )
 
     async def _create_limit_stop_loss_order(
-        self, symbol, quantity, price, stop_price, side, params=None
+        self,
+        symbol,
+        quantity,
+        price,
+        stop_price,
+        side,
+        params=None,
     ) -> dict:
         params = params or {}
         params["reduceOnly"] = True
@@ -101,24 +141,46 @@ class BinanceUsdM(exchanges.RestExchange):
         )
 
     async def _create_market_take_profit_order(
-        self, symbol, quantity, price=None, side=None, params=None
+        self,
+        symbol,
+        quantity,
+        price=None,
+        side=None,
+        params=None,
     ) -> dict:
         raise NotImplementedError("_create_market_take_profit_order is not implemented")
 
     async def _create_limit_take_profit_order(
-        self, symbol, quantity, price=None, side=None, params=None
+        self,
+        symbol,
+        quantity,
+        price=None,
+        side=None,
+        params=None,
     ) -> dict:
         raise NotImplementedError("_create_limit_take_profit_order is not implemented")
 
     async def _create_market_trailing_stop_order(
-        self, symbol, quantity, price=None, side=None, params=None
+        self,
+        symbol,
+        quantity,
+        price=None,
+        side=None,
+        reduce_only: bool = False,
+        params=None,
     ) -> dict:
         raise NotImplementedError(
             "_create_market_trailing_stop_order is not implemented"
         )
 
     async def _create_limit_trailing_stop_order(
-        self, symbol, quantity, price=None, side=None, params=None
+        self,
+        symbol,
+        quantity,
+        price=None,
+        side=None,
+        reduce_only: bool = False,
+        params=None,
     ) -> dict:
         raise NotImplementedError(
             "_create_limit_trailing_stop_order is not implemented"
