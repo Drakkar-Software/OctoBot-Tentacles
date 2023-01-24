@@ -102,6 +102,34 @@ class BinanceUsdM(exchanges.RestExchange):
             params=params,
         )
 
+    async def _create_limit_buy_order(
+        self, symbol, quantity, price=None, reduce_only: bool = False, params=None
+    ) -> dict:
+        if reduce_only:
+            params = params or {}
+            params["reduceOnly"] = True
+        return await super()._create_limit_buy_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            reduce_only=reduce_only,
+            params=params,
+        )
+
+    async def _create_limit_sell_order(
+        self, symbol, quantity, price=None, reduce_only: bool = False, params=None
+    ) -> dict:
+        if reduce_only:
+            params = params or {}
+            params["reduceOnly"] = True
+        return await super()._create_limit_sell_order(
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            reduce_only=reduce_only,
+            params=params,
+        )
+
     async def _create_market_stop_loss_order(
         self,
         symbol,
