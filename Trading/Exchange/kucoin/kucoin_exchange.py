@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 import time
 import decimal
 import typing
@@ -86,7 +87,8 @@ class Kucoin(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
-            kwargs["endAt"] = int(time.time() * 1000)
+            to_param = "to" if self.exchange_manager.is_future else "endAt"
+            kwargs[to_param] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     async def get_recent_trades(self, symbol, limit=50, **kwargs):
@@ -105,15 +107,47 @@ class Kucoin(exchanges.RestExchange):
         """
         return Kucoin.INSTANT_RETRY_ERROR_CODE not in str(exception)
 
+    def get_order_additional_params(self, order) -> dict:
+        params = {}
+        if self.exchange_manager.is_future:
+            contract = self.exchange_manager.exchange.get_pair_future_contract(order.symbol)
+            params["leverage"] = float(contract.current_leverage)
+        return params
+
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
         order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
         return order
 
+    async def _update_balance(self, balance, currency, **kwargs):
+        balance.update(await super().get_balance(code=currency, **kwargs))
+
+    async def get_balance(self, **kwargs: dict):
+        balance = {}
+        if self.exchange_manager.is_future:
+            # on futures, balance has to be fetched per currency
+            # use gather to fetch everything at once (and not allow other requests to get in between)
+            await asyncio.gather(*(
+                self._update_balance(balance, currency, **kwargs)
+                for currency in self.exchange_manager.exchange_config.get_all_traded_currencies()
+            ))
+            return balance
+        return await super().get_balance(**kwargs)
+
     """
     Margin and leverage
     """
+
+    async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs):
+        """
+        Set the symbol leverage
+        :param symbol: the symbol
+        :param leverage: the leverage
+        :return: the update result
+        """
+        # leverage is set via orders on kucoin
+        return None
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
@@ -301,4 +335,17 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
         parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
             trading_enums.PositionMode.HEDGE if raw_position_info[self.KUCOIN_AUTO_DEPOSIT] \
             else trading_enums.PositionMode.ONE_WAY
+        parsed_leverage = self.safe_decimal(
+            parsed, trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value, constants.ZERO
+        )
+        if parsed_leverage == constants.ZERO:
+            # on kucoin, fetched empty position don't have a leverage value. Since it's required within OctoBot,
+            # add it manually
+            symbol = parsed[trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value]
+            if self.connector.exchange_manager.exchange.has_pair_future_contract(symbol):
+                parsed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
+                    self.connector.exchange_manager.exchange.get_pair_future_contract(symbol).current_leverage
+            else:
+                parsed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
+                    constants.DEFAULT_SYMBOL_LEVERAGE
         return parsed

@@ -32,6 +32,15 @@ class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.CANDLE: Feeds.UNSUPPORTED.value,  # not supported in futures
     }
 
+    IGNORED_FEED_PAIRS = {
+        # When ticker or future index is available : no need to calculate mark price from recent trades
+        # On kucoin, ticker feed is not containing close price: recent trades are required
+        # Feeds.TRADES: [Feeds.TICKER, Feeds.FUTURES_INDEX],
+        Feeds.TRADES: [Feeds.FUTURES_INDEX],
+        # When candles are available : use min timeframe kline to push ticker
+        Feeds.TICKER: [Feeds.KLINE]
+    }
+
     @classmethod
     def get_name(cls):
         return kucoin_exchange.Kucoin.get_name()
