@@ -35,7 +35,7 @@ except ImportError:
 
 class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     IMPORTER = generic_exchange_importer.GenericExchangeDataImporter
-    DEFAULT_START_TIMESTAMP = 631152000    # 01/01/1990
+    DEFAULT_START_TIMESTAMP = 1325376000    # 1 January 2012 00:00:00
 
     def __init__(self, config, exchange_name, exchange_type, tentacles_setup_config, symbols, time_frames,
                  use_all_available_timeframes=False,
