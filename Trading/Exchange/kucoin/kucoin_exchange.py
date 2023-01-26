@@ -112,6 +112,8 @@ class Kucoin(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             contract = self.exchange_manager.exchange.get_pair_future_contract(order.symbol)
             params["leverage"] = float(contract.current_leverage)
+            params["reduceOnly"] = order.close_position
+            params["closeOrder"] = order.reduce_only
         return params
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
