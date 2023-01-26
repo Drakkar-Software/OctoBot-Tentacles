@@ -215,9 +215,10 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
                 mode = trading_enums.PositionMode.HEDGE
             else:
                 raise ValueError("cant detect the PositionMode")
-            original_side = raw_position_info.get(self.POSITION_SIDE)
+            original_side = fixed[trading_enums.ExchangeConstantsPositionColumns.SIDE.value]
+            side = raw_position_info.get(self.POSITION_SIDE)
             try:
-                side = trading_enums.PositionSide(original_side.lower())
+                side = trading_enums.PositionSide(side.lower())
             except ValueError:
                 side = trading_enums.PositionSide.UNKNOWN
             unrealized_pnl = self.safe_decimal(
