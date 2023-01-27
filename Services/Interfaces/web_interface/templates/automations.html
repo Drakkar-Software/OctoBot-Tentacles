@@ -117,9 +117,12 @@
   </div>
 </div>
 
+<span class="d-none" data-display-intro="{{display_intro}}"></span>
+
 {% endblock %}
 
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/config_tentacle.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/automations.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
