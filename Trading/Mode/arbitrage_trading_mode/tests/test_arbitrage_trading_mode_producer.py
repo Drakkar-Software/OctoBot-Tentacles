@@ -484,6 +484,7 @@ def get_order_dict(order_id, symbol, price, quantity, status, order_type, fees_a
         trading_enums.ExchangeConstantsOrderColumns.TYPE.value: order_type,
         trading_enums.ExchangeConstantsOrderColumns.FEE.value: {
             trading_enums.FeePropertyColumns.CURRENCY.value: fees_currency,
-            trading_enums.FeePropertyColumns.COST.value: fees_amount
+            trading_enums.FeePropertyColumns.COST.value: fees_amount,
+            trading_enums.FeePropertyColumns.IS_FROM_EXCHANGE.value: True
         },
     }
