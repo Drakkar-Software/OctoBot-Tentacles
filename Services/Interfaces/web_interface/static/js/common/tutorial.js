@@ -152,7 +152,7 @@ _TUTORIALS = {
                 {
                     title: 'Example 2/2',
                     element: document.querySelector('#configEditor'),
-                    intro: `Cancel all open orders if the price of BTC/UDST drops by 1% within 10s.`
+                    intro: `Cancel all open orders if the price of BTC/USDT crosses 70.000 USDT.`
                 },
                 {
                     title: 'Automations are saved in your profile',

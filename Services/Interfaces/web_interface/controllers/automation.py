@@ -20,6 +20,7 @@ import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot.automation as bot_automation
 
 
@@ -50,6 +51,10 @@ def automations():
             return util.get_rest_reply(flask.jsonify(response))
         else:
             return util.get_rest_reply(response, 500)
+
+    display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
+        flask_util.BrowsingDataProvider.AUTOMATIONS
+    )
     all_events, all_conditions, all_actions = models.get_all_automation_steps()
     return flask.render_template(
         'automations.html',
@@ -57,6 +62,7 @@ def automations():
         events=all_events,
         conditions=all_conditions,
         actions=all_actions,
+        display_intro=display_intro,
     )
 
 

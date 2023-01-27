@@ -30,9 +30,10 @@ class BrowsingDataProvider(singleton.Singleton):
     ALL_CURRENCIES = "all_currencies"
     HOME = "home"
     PROFILE = "profile"
+    AUTOMATIONS = "automations"
     PROFILE_SELECTOR = "profile_selector"
     DISPLAY_KEYS = [
-        HOME, PROFILE, PROFILE_SELECTOR
+        HOME, PROFILE, PROFILE_SELECTOR, AUTOMATIONS
     ]
 
     def __init__(self):
