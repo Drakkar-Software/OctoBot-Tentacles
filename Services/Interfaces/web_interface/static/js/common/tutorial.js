@@ -132,6 +132,17 @@ _TUTORIALS = {
         }
     },
 
+    automations: () => {
+        return {
+            steps: [ // todo
+                {
+                    title: 'Welcome to automations',
+                    intro: `Automate any action directly form your OctoBot.`
+                },
+            ]
+        }
+    },
+
     profitability: () => {
         return {
             steps: [
