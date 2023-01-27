@@ -572,10 +572,10 @@ def update_global_config(new_config, delete=False):
                                                    backtesting_api.is_backtesting_enabled(current_edited_config.config),
                                                    constants.UPDATED_CONFIG_SEPARATOR,
                                                    delete=delete)
-        return True
+        return True, ""
     except Exception as e:
         _get_logger().exception(e, True, f"Error when updating global config {e}")
-        return False
+        return False, str(e)
 
 
 def activate_metrics(enable_metrics):

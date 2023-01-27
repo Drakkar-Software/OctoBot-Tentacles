@@ -103,7 +103,7 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
         error: function(result, status, error){
             window.console&&console.error(result, status, error);
             if(typeof error_callback === "undefined") {
-                let error_text = result.responseText.length > 100 ? status : result.responseText;
+                let error_text = result.responseText.length > 1000 ? status : result.responseText;
                 create_alert("error", "Error when handling action: "+error_text+".", "");
             }
             else{
