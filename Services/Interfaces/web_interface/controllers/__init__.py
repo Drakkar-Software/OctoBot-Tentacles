@@ -30,6 +30,7 @@ from tentacles.Services.Interfaces.web_interface.controllers import medias
 from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
 from tentacles.Services.Interfaces.web_interface.controllers import profiles
+from tentacles.Services.Interfaces.web_interface.controllers import automation
 
 
 from tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication import (
@@ -90,6 +91,9 @@ from tentacles.Services.Interfaces.web_interface.controllers.trading import (
 from tentacles.Services.Interfaces.web_interface.controllers.profiles import (
     profiles_selector,
 )
+from tentacles.Services.Interfaces.web_interface.controllers.automation import (
+    automations,
+)
 
 
 __all__ = [
@@ -133,4 +137,5 @@ __all__ = [
     "trades",
     "utility_processor",
     "profiles_selector",
+    "automations",
 ]
