@@ -172,6 +172,7 @@ def config():
     request_data = flask.request.get_json()
     success = True
     response = ""
+    err_message = ""
 
     if request_data:
 
@@ -203,13 +204,14 @@ def config():
         # remove elements from global config if any to remove
         removed_elements_key = "removed_elements"
         if removed_elements_key in request_data and request_data[removed_elements_key]:
-            success = success and models.update_global_config(request_data[removed_elements_key], delete=True)
+            update_success, err_message = models.update_global_config(request_data[removed_elements_key], delete=True)
+            success = success and update_success
         else:
             request_data[removed_elements_key] = ""
 
         # update global config if required
         if constants.GLOBAL_CONFIG_KEY in request_data and request_data[constants.GLOBAL_CONFIG_KEY]:
-            success = models.update_global_config(request_data[constants.GLOBAL_CONFIG_KEY])
+            success, err_message = models.update_global_config(request_data[constants.GLOBAL_CONFIG_KEY])
         else:
             request_data[constants.GLOBAL_CONFIG_KEY] = ""
 
@@ -226,7 +228,7 @@ def config():
             models.schedule_delayed_command(models.restart_bot)
         return util.get_rest_reply(flask.jsonify(response))
     else:
-        return util.get_rest_reply('{"update": "ko"}', 500)
+        return util.get_rest_reply(flask.jsonify(err_message), 500)
 
 
 @web_interface.server_instance.route('/config_tentacle', methods=['GET', 'POST'])
