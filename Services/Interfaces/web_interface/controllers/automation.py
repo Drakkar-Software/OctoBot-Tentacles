@@ -42,8 +42,7 @@ def automations():
             )
             restart = True
         elif action == "factory_reset":
-            # todo
-            success, response = models.reset_config_to_default(tentacle_name, tentacle_class=tentacle_class)
+            success, response = models.reset_automation_config_to_default()
             restart = True
         if restart:
             models.restart_global_automations()
@@ -51,7 +50,14 @@ def automations():
             return util.get_rest_reply(flask.jsonify(response))
         else:
             return util.get_rest_reply(response, 500)
-    return flask.render_template('automations.html')
+    all_events, all_conditions, all_actions = models.get_all_automation_steps()
+    return flask.render_template(
+        'automations.html',
+        profile_name=models.get_current_profile().name,
+        events=all_events,
+        conditions=all_conditions,
+        actions=all_actions,
+    )
 
 
 @web_interface.server_instance.route('/automations_edit_details')

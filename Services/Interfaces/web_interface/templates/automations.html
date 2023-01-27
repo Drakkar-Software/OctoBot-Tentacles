@@ -1,17 +1,31 @@
 {% extends "layout.html" %}
 {% set active_page = "automations" %}
 
+{% macro automation_details(automations) %}
+    <ul>
+    {% for automation in automations %}
+        <li>
+            <span class="font-weight-bold">{{automation.get_name()}}</span>: {{automation.get_description() }}
+        </li>
+    {% endfor %}
+    </ul>
+{% endmacro %}
+
 {% block body %}
 <br>
 <div class="card">
     <div class="card-header">
-        <h2>Configuration
-            <button data-role='saveConfig'
-                    class="btn btn-success rounded-circle waves-effect px-3 d-none"
-                    update-url="{{ url_for('automations', action='update') }}"
-                    role="button" data-toggle="tooltip" title="Save">
-                <i class="fas fa-save" aria-hidden="true"></i>
-            </button>
+        <h2 id="page-title">Automations
+            <span class="d-none d-md-inline">
+                configuration of the <span class="font-weight-bold">{{ profile_name }}</span> profile
+                <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-1 mx-md-4 align-top"
+                   href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
+                   title="Select another profile"
+                   id="profile-selector-link"
+                >
+                    <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                </a>
+            </span>
             <a class="float-right blue-text" target="_blank" data-intro="automations" >
                 <i class="fa-solid fa-question"></i>
             </a>
@@ -19,6 +33,21 @@
     </div>
     <div class="card-body" id="configEditorBody"
          data-edit-details-url="{{ url_for('automations_edit_details') }}">
+        <div class="row">
+            <div class="col-12 col-md-10">
+                <p>
+                    Automations are actions that will be triggered automatically when something happens.
+                    You can have as many automations as you want. Automation are started automatically when your OctoBot starts
+                    and when changing their configuration.
+                </p>
+            </div>
+            <div class="col col-md-2">
+                <button class="btn btn-outline-primary btn-md waves-effect"
+                        data-toggle="modal" data-target="#AutomationDetailsModal">
+                    Automation details
+                </button>
+            </div>
+        </div>
         <div id="configEditor"></div>
         <div id="editor-waiter" class="text-center my-4">
             <div>
@@ -45,6 +74,49 @@
     </div>
 </div>
 <br>
+
+
+<div class="modal fade" id="AutomationDetailsModal" tabindex="-1" role="dialog" aria-labelledby="#AutomationDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+    <div class="modal-content modal-text bg-dark text-light mt-4">
+      <div class="modal-header primary-text">
+          <h5 class="modal-title" id="AutomationDetailsModalLabel">
+              Available automations
+          </h5>
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+          <div>
+              <h5>Triggers</h5>
+              <p>
+                  When your automation should be executed.
+              </p>
+              {{ automation_details(events.values()) }}
+          </div>
+          <div>
+              <h5>Conditions</h5>
+              <p>
+                  Checks to perform when a trigger occurs to know if actions should be executed.
+              </p>
+              {{ automation_details(conditions.values()) }}
+          </div>
+          <div>
+              <h5>Actions</h5>
+              <p>
+                  What to do when triggered and passing conditions.
+              </p>
+              {{ automation_details(actions.values()) }}
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-primary waves-effect" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block additional_scripts %}
