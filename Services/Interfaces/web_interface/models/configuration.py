@@ -282,6 +282,18 @@ def restart_global_automations():
     )
 
 
+def get_all_automation_steps():
+    return interfaces_util.get_bot_api().get_automation().get_all_steps()
+
+
+def reset_automation_config_to_default():
+    try:
+        interfaces_util.get_bot_api().get_automation().reset_config()
+        return True, f"{interfaces_util.get_bot_api().get_automation().get_name()} configuration reset to default values"
+    except Exception as err:
+        return False, str(err)
+
+
 def get_tentacle_config(klass):
     return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 
