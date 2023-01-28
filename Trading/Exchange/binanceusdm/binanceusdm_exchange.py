@@ -215,7 +215,9 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
                 mode = trading_enums.PositionMode.HEDGE
             else:
                 raise ValueError("cant detect the PositionMode")
-            original_side = fixed[trading_enums.ExchangeConstantsPositionColumns.SIDE.value]
+            original_side = fixed[
+                trading_enums.ExchangeConstantsPositionColumns.SIDE.value
+            ]
             side = raw_position_info.get(self.POSITION_SIDE)
             try:
                 side = trading_enums.PositionSide(side.lower())
@@ -279,6 +281,7 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
 
     BINANCE_REDUCE_ONLY = "reduceOnly"
     BINANCE_TRIGGER_PRICE = "triggerPrice"
+    BINANCE_UPDATE_TIME = "updateTime"
 
     def fix_order(self, raw, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
@@ -293,7 +296,15 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
                 self.BINANCE_TRIGGER_PRICE
             )
         self._adapt_order_type(fixed)
-
+        if not fixed[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value]:
+            if fixed["info"].get(self.BINANCE_UPDATE_TIME):
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] = (
+                    int(fixed["info"][self.BINANCE_UPDATE_TIME]) / 1000
+                )
+            elif fixed["info"].get(self.BINANCE_TIME):
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] = (
+                    int(fixed["info"][self.BINANCE_TIME]) / 1000
+                )
         return fixed
 
     def _adapt_order_type(self, fixed):
