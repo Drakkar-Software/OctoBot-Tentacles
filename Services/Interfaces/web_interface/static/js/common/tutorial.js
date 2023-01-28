@@ -155,6 +155,11 @@ _TUTORIALS = {
                     intro: `Cancel all open orders if the price of BTC/USDT crosses 70.000 USDT.`
                 },
                 {
+                    title: 'Launch automations',
+                    element: document.querySelector('#applyAutomations'),
+                    intro: `Automations are started with your OctoBot and when hitting the "apply automations" button.`
+                },
+                {
                     title: 'Automations are saved in your profile',
                     element: document.querySelector('#page-title'),
                     intro: `You can quickly switch automations by switching profiles.`

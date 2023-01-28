@@ -26,8 +26,20 @@ $(document).ready(function() {
                 feedbackFormData.data("on-submit-url"),
             );
         }
+    };
+    const onEditorChange = (newValue) => {
+        updateTentacleConfig(newValue);
+    };
+    const startAutomations = () => {
+        const successCallback = (updated_data, update_url, dom_root_element, msg, status) => {
+            create_alert("success", "Automations started");
+        }
+        const update_url = $("button[data-role='startAutomations']").attr(update_url_attr);
+        send_and_interpret_bot_update(null, update_url, null, successCallback);
     }
     if (!startTutorialIfNecessary("automations")){
         displayFeedbackFormIfNecessary();
     }
+    addEditorChangeEventCallback(onEditorChange);
+    $("button[data-role='startAutomations']").on("click", startAutomations);
 });

@@ -36,13 +36,14 @@ def automations():
         tentacle_name = bot_automation.Automation.get_name()
         tentacle_class = bot_automation.Automation
         restart = False
-        if action == "update":
+        if action == "save":
             request_data = flask.request.get_json()
             success, response = models.update_tentacle_config(
                 tentacle_name,
                 request_data,
                 tentacle_class=tentacle_class
             )
+        if action == "start":
             restart = True
         elif action == "factory_reset":
             success, response = models.reset_automation_config_to_default()
