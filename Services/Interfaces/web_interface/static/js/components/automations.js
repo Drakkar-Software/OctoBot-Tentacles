@@ -17,5 +17,17 @@
  */
 
 $(document).ready(function() {
-    startTutorialIfNecessary("automations");
+    const displayFeedbackFormIfNecessary = () => {
+        const feedbackFormData = $("#feedback-form-data");
+        if(feedbackFormData.data("display-form") === "True") {
+            displayFeedbackForm(
+                feedbackFormData.data("form-to-display"),
+                feedbackFormData.data("user-id"),
+                feedbackFormData.data("on-submit-url"),
+            );
+        }
+    }
+    if (!startTutorialIfNecessary("automations")){
+        displayFeedbackFormIfNecessary();
+    }
 });

@@ -83,6 +83,7 @@
         <script src="{{ url_for('static', filename='js/common/dom_updater.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        <script src="{{ url_for('static', filename='js/common/feedback.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
         <script type="text/javascript">
             (function(c,l,a,r,i,t,y){
@@ -92,6 +93,7 @@
             })(window, document, "clarity", "script", "{{ TRACKING_ID }}");
         </script>
         {% endif %}
+        <script async src="https://tally.so/widgets/embed.js"></script>
         <script src="{{ url_for('static', filename='js/components/navbar.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
         {% set show_nab_bar = show_nab_bar|default(True) -%}

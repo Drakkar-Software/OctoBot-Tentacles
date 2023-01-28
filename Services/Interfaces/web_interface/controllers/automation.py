@@ -16,12 +16,14 @@
 import flask
 
 import octobot_commons.logging as commons_logging
+import octobot_commons.authentication as authentication
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot.automation as bot_automation
+import octobot.constants as constants
 
 
 @web_interface.server_instance.route("/automations", methods=["POST", "GET"])
@@ -56,6 +58,14 @@ def automations():
         flask_util.BrowsingDataProvider.AUTOMATIONS
     )
     all_events, all_conditions, all_actions = models.get_all_automation_steps()
+    form_to_display = constants.AUTOMATION_FEEDBACK_FORM_ID
+    try:
+        user_id = models.get_user_account_id()
+        display_feedback_form = models.has_at_least_one_running_automation() and not models.has_filled_form(form_to_display)
+    except authentication.AuthenticationRequired:
+        # no authenticated user: don't display form
+        user_id = None
+        display_feedback_form = False
     return flask.render_template(
         'automations.html',
         profile_name=models.get_current_profile().name,
@@ -63,6 +73,9 @@ def automations():
         conditions=all_conditions,
         actions=all_actions,
         display_intro=display_intro,
+        user_id=user_id,
+        form_to_display=form_to_display,
+        display_feedback_form=display_feedback_form,
     )
 
 
