@@ -58,6 +58,13 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
                   "sold, otherwise a small part will be kept to cover exchange fees."
         )
         self.UI.user_input(
+            DipAnalyserTradingModeConsumer.STOP_LOSS_MULTIPLIER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            min_val=0, max_val=1,
+            title="Stop loss price multiplier: ratio to compute the stop loss price. "
+                  "Example: a 0.7 multiplier on a 2000 USDT buy would create a "
+                  "stop price at 2000*0.7 = 1400 USDT. Leave at 0 to disable stop losses."
+        )
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.4, inputs,
             min_val=0, max_val=1,
             title="Volume multiplier for a buy order on a light price weight signal.",
@@ -131,6 +138,8 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
 
 class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
+    STOP_LOSS_MULTIPLIER = "stop_loss_multiplier"
+    STOP_LOSS_PRICE_MULTIPLIER = decimal.Decimal(0)
     LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.995")
     SOFT_MAX_CURRENCY_RATIO = decimal.Decimal("0.33")
     # consider a high ratio not to take too much risk and not to prevent order creation either
@@ -167,6 +176,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         Called at constructor and after the associated trading mode's reload_config.
         Implement if necessary
         """
+        self.STOP_LOSS_PRICE_MULTIPLIER = \
+            decimal.Decimal(f"{self.trading_mode.trading_config.get(self.STOP_LOSS_MULTIPLIER, 0)}")
         self.PRICE_WEIGH_TO_PRICE_PERCENT = {}
         self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
             decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
@@ -269,6 +280,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 created_order = await self.trading_mode.create_order(current_order)
                 created_orders.append(created_order)
+                if stop_order := await self._create_stop_loss_if_enabled(created_order, sell_base, symbol_market):
+                    created_orders.append(stop_order)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -284,6 +297,26 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                               f"{current_order if current_order else None}")
             self.logger.exception(e, False)
             return []
+
+    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market):
+        if not self.STOP_LOSS_PRICE_MULTIPLIER:
+            return None
+        stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
+        oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+            .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+        sell_order.add_to_order_group(oco_group)
+        current_order = trading_personal_data.create_order_instance(
+            trader=self.exchange_manager.trader,
+            order_type=trading_enums.TraderOrderType.STOP_LOSS,
+            symbol=sell_order.symbol,
+            current_price=trading_personal_data.adapt_price(symbol_market, stop_price),
+            quantity=sell_order.origin_quantity,
+            price=stop_price,
+            side=trading_enums.TradeOrderSide.SELL,
+            reduce_only=True,
+            group=oco_group,
+        )
+        return await self.trading_mode.create_order(current_order)
 
     def _register_buy_order(self, order_id, price_weight):
         self.sell_targets_by_order_id[order_id] = price_weight
