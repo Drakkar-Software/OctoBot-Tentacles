@@ -244,9 +244,10 @@ function displayLocalTutorial(tutorialName){
 
 function startTutorialIfNecessary(tutorialName) {
     if($(`span[data-display-intro="True"]`).length === 0){
-        return
+        return false;
     }
     displayLocalTutorial(tutorialName);
+    return true;
 }
 
 

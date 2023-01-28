@@ -98,6 +98,26 @@ def can_logout():
     return not authentication.Authenticator.instance().must_be_authenticated_through_authenticator()
 
 
+def get_user_account_id():
+    return authentication.Authenticator.instance().get_user_id()
+
+
+def has_filled_form(form_id):
+    return authentication.Authenticator.instance().has_filled_form(form_id)
+
+
+def register_user_submitted_form(user_id, form_id):
+    try:
+        if get_user_account_id() != user_id:
+            return False, "Invalid user id"
+        interfaces_util.run_in_bot_main_loop(
+            authentication.Authenticator.instance().register_filled_form(form_id)
+        )
+    except Exception as e:
+        return False, f"Error when registering filled form {e}"
+    return True, "Thank you for your feedback !"
+
+
 def get_followed_strategy_url():
     trading_mode = interfaces_util.get_bot_api().get_trading_mode()
     if trading_mode is None:
