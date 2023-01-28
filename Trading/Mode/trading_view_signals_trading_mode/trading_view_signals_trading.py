@@ -227,7 +227,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                                                                                 target_price),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
-            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY: parsed_data[TradingViewSignalsTradingMode.REDUCE_ONLY_KEY],
+            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
+                parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
