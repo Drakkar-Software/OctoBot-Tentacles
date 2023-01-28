@@ -229,9 +229,11 @@ function canEditConfig() {
 }
 
 let configEditor = null;
+let configEditorChangeEventCallbacks = [];
 let savedConfig = null;
 let parsedConfigSchema = null;
 let parsedConfigValue = null;
+let startingConfigValue = null;
 
 function _addGridDisplayOptions(schema){
     if(typeof schema.properties === "undefined" && typeof schema.items === "undefined"){
@@ -292,6 +294,9 @@ function initConfigEditor(showWaiter) {
             closeOnSelect: false,
             placeholder: "Select values to use"
         });
+        if(configEditor !== null){
+            configEditor.on("change", editorChangeCallback);
+        }
         handleConfigDisplay(true);
     }
 
@@ -305,14 +310,30 @@ function initConfigEditor(showWaiter) {
         editDetailsSuccess, editDetailsFailure, "GET");
 }
 
+function editorChangeCallback(){
+    if(validateJSONEditor(configEditor) === "" && something_is_unsaved()){
+        configEditorChangeEventCallbacks.forEach((callback) => {
+            callback(configEditor.getValue());
+        });
+    }
+}
+
+function addEditorChangeEventCallback(callback){
+    configEditorChangeEventCallbacks.push(callback)
+}
+
 $(document).ready(function() {
     initConfigEditor(true);
     handleButtons();
-    lock_interface(false);
+    if(typeof lock_interface !== "undefined"){
+        lock_interface(false);
+    }
 
     handle_evaluator_configuration_editor();
 
-    init_backtesting_status_websocket();
+    if(typeof init_backtesting_status_websocket !== "undefined"){
+        init_backtesting_status_websocket();
+    }
 
     register_exit_confirm_function(something_is_unsaved);
 });
