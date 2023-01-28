@@ -1,0 +1,3 @@
+{
+  "default_analysis_evaluators": ["unrealized_portfolio"] 
+}

@@ -13,19 +13,24 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+from tentacles.RunAnalysis.BaseDataProvider.default_base_data_provider import (
+    base_data_provider,
+)
 
-from .data import *
-from .UI import *
-from .orders import *
-from .TA import *
-from .settings import *
-from .backtesting import *
-from .alerts import *
-from .run_analysis import *
 
-# shortcut to octobot-trading keywords
-from octobot_trading.modes.script_keywords.basic_keywords import *
-from octobot_trading.modes.script_keywords.dsl import *
-from octobot_trading.modes.script_keywords.context_management import Context
-from octobot_trading.enums import *
-from octobot_commons.enums import BacktestingMetadata, DBTables, DBRows
+def plot_historical_wins_and_losses(
+    run_data: base_data_provider.RunAnalysisBaseDataGenerator,
+    plotted_element,
+    x_as_trade_count: bool = False,
+    own_yaxis: bool = True,
+):
+    run_data.generate_wins_and_losses(x_as_trade_count)
+    plotted_element.plot(
+        mode="scatter",
+        x=run_data.wins_and_losses_x_data,
+        y=run_data.wins_and_losses_data,
+        x_type="tick0" if x_as_trade_count else "date",
+        title="wins and losses count",
+        own_yaxis=own_yaxis,
+        line_shape="hv",
+    )

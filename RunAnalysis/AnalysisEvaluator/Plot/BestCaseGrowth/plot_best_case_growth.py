@@ -13,19 +13,26 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+from tentacles.RunAnalysis.BaseDataProvider.default_base_data_provider import (
+    base_data_provider,
+)
 
-from .data import *
-from .UI import *
-from .orders import *
-from .TA import *
-from .settings import *
-from .backtesting import *
-from .alerts import *
-from .run_analysis import *
 
-# shortcut to octobot-trading keywords
-from octobot_trading.modes.script_keywords.basic_keywords import *
-from octobot_trading.modes.script_keywords.dsl import *
-from octobot_trading.modes.script_keywords.context_management import Context
-from octobot_trading.enums import *
-from octobot_commons.enums import BacktestingMetadata, DBTables, DBRows
+async def plot_best_case_growth(
+    run_data: base_data_provider.RunAnalysisBaseDataGenerator,
+    plotted_element,
+    x_as_trade_count: bool = False,
+    own_yaxis: bool = False,
+):
+    await run_data.get_best_case_growth_from_transactions(
+        x_as_trade_count,
+    )
+    plotted_element.plot(
+        mode="scatter",
+        x=run_data.best_case_growth_x_data,
+        y=run_data.best_case_growth_data,
+        x_type="tick0" if x_as_trade_count else "date",
+        title="best case growth",
+        own_yaxis=own_yaxis,
+        line_shape="hv",
+    )

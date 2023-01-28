@@ -13,19 +13,4 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
-from .data import *
-from .UI import *
-from .orders import *
-from .TA import *
-from .settings import *
-from .backtesting import *
-from .alerts import *
-from .run_analysis import *
-
-# shortcut to octobot-trading keywords
-from octobot_trading.modes.script_keywords.basic_keywords import *
-from octobot_trading.modes.script_keywords.dsl import *
-from octobot_trading.modes.script_keywords.context_management import Context
-from octobot_trading.enums import *
-from octobot_commons.enums import BacktestingMetadata, DBTables, DBRows
+from .plot_historical_fees import plot_historical_fees

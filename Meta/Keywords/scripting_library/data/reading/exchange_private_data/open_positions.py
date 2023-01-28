@@ -16,12 +16,8 @@
 
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
-import octobot_trading.personal_data as personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
-import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
-import tentacles.Meta.Keywords.scripting_library.orders.offsets.offset as offsets
-import tentacles.Meta.Keywords.scripting_library.orders.position_size.amount as amounts
 
 
 def is_current_contract_inverse(context, symbol=None, side=trading_enums.PositionSide.BOTH.value):
