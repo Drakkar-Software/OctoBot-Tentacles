@@ -86,6 +86,17 @@ NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_
                                           tentacles_manager_constants.TENTACLES_TRADING_PATH]
 
 DEFAULT_EXCHANGE = "binance"
+REMOVED_CCXT_EXCHANGES = [
+    exchange.__name__
+    for exchange in (
+        ccxt.kucoinfutures,
+    )
+]
+FULL_EXCHANGE_LIST = [
+    exchange
+    for exchange in set(ccxt.async_support.exchanges)
+    if exchange not in REMOVED_CCXT_EXCHANGES
+]
 
 
 def _get_currency_dict(name, symbol, identifier):
@@ -850,21 +861,19 @@ def get_full_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
     if remove_config_exchanges:
         user_exchanges = [e for e in g_config[commons_constants.CONFIG_EXCHANGES]]
-        full_exchange_list = list(set(ccxt.exchanges) - set(user_exchanges))
+        full_exchange_list = list(set(FULL_EXCHANGE_LIST) - set(user_exchanges))
     else:
-        full_exchange_list = list(set(ccxt.exchanges))
+        full_exchange_list = FULL_EXCHANGE_LIST
     # can't handle exchanges containing UPDATED_CONFIG_SEPARATOR character in their name
     return [exchange for exchange in full_exchange_list if constants.UPDATED_CONFIG_SEPARATOR not in exchange]
 
 
 def get_tested_exchange_list():
-    full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in trading_constants.TESTED_EXCHANGES if exchange in full_exchange_list]
+    return [exchange for exchange in trading_constants.TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
 
 
 def get_simulated_exchange_list():
-    full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES if exchange in full_exchange_list]
+    return [exchange for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
 
 
 def get_other_exchange_list(remove_config_exchanges=False):
