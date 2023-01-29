@@ -38,12 +38,11 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
+    PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
     MARKET_SIGNAL = "market"
     LIMIT_SIGNAL = "limit"
-    TRUE_SIGNAL = "true"
-    FALSE_SIGNAL = "false"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -126,7 +125,12 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         for line in signal_data.split("\n"):
             values = line.split("=")
             try:
-                parsed_data[values[0].strip()] = values[1].strip()
+                value = values[1].strip()
+                # restore booleans
+                lower_val = value.lower()
+                if lower_val in ("true", "false"):
+                    value = lower_val == "true"
+                parsed_data[values[0].strip()] = value
             except IndexError:
                 self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
@@ -187,6 +191,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
     async def _parse_order_details(self, ctx, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
         order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None).casefold()
+
+        order_exchange_creation_params = {
+            param_name.split(TradingViewSignalsTradingMode.PARAM_PREFIX_KEY)[1]: param_value
+            for param_name, param_value in parsed_data.items()
+            if param_name.startswith(TradingViewSignalsTradingMode.PARAM_PREFIX_KEY)
+        }
+        parsed_side = None
         if side == TradingViewSignalsTradingMode.SELL_SIGNAL:
             parsed_side = trading_enums.TradeOrderSide.SELL.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
@@ -217,8 +228,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
-                bool(parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY,
-                                     TradingViewSignalsTradingMode.FALSE_SIGNAL).lower() == "true")
+                parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
+            TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
 

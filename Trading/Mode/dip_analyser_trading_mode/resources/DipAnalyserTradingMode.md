@@ -10,5 +10,6 @@ A higher risk will make larger buy orders.
 
 Warning: Ensure **enough funds are available in your portfolio** for OctoBot to place the **initial buy orders**.
 
-Sell orders are never cancelled by this strategy, therefore it is not advised to use it on
-continued downtrends: funds might get locked in open sell orders.
+Sell orders are never cancelled by this strategy unless stop losses are enabled, 
+therefore it is not advised to use it on
+continued downtrends without using stop losses: funds might get locked in open sell orders.

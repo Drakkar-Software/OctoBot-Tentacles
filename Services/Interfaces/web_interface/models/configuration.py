@@ -258,8 +258,8 @@ def get_tentacle_user_commands(klass):
     return klass.get_user_commands() if klass is not None and hasattr(klass, "get_user_commands") else {}
 
 
-def get_tentacle_config_and_edit_display(tentacle):
-    tentacle_class = tentacles_manager_api.get_tentacle_class_from_string(tentacle)
+def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None):
+    tentacle_class = tentacle_class or tentacles_manager_api.get_tentacle_class_from_string(tentacle)
     config, user_inputs = interfaces_util.run_in_bot_main_loop(
         tentacle_class.get_raw_config_and_user_inputs(
             interfaces_util.get_edited_config(),
@@ -274,6 +274,28 @@ def get_tentacle_config_and_edit_display(tentacle):
         CONFIG_KEY: config or {},
         DISPLAYED_ELEMENTS_KEY: display_elements.to_json()
     }
+
+
+def restart_global_automations():
+    interfaces_util.run_in_bot_main_loop(
+        interfaces_util.get_bot_api().get_automation().restart()
+    )
+
+
+def get_all_automation_steps():
+    return interfaces_util.get_bot_api().get_automation().get_all_steps()
+
+
+def has_at_least_one_running_automation():
+    return bool(interfaces_util.get_bot_api().get_automation().automation_details)
+
+
+def reset_automation_config_to_default():
+    try:
+        interfaces_util.get_bot_api().get_automation().reset_config()
+        return True, f"{interfaces_util.get_bot_api().get_automation().get_name()} configuration reset to default values"
+    except Exception as err:
+        return False, str(err)
 
 
 def get_tentacle_config(klass):
@@ -330,13 +352,13 @@ def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
             if len(tentacles) > 1}
 
 
-def update_tentacle_config(tentacle_name, config_update):
+def update_tentacle_config(tentacle_name, config_update, tentacle_class=None):
     try:
-        klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
-        if klass is None:
+        tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
+        if tentacle_class is None:
             return False, f"Can't find {tentacle_name} class"
         tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
-                                                     klass,
+                                                     tentacle_class,
                                                      config_update)
         return True, f"{tentacle_name} updated"
     except Exception as e:
@@ -354,11 +376,11 @@ def update_copied_trading_id(copy_id):
     )
 
 
-def reset_config_to_default(tentacle_name):
+def reset_config_to_default(tentacle_name, tentacle_class):
     try:
-        klass, _, _ = get_tentacle_from_string(tentacle_name, None, with_info=False)
+        tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
         tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
-                                                            klass)
+                                                            tentacle_class)
         return True, f"{tentacle_name} configuration reset to default values"
     except FileNotFoundError as e:
         error_message = f"Error when resetting factory tentacle config: no default values file at {e.filename}"
@@ -566,10 +588,10 @@ def update_global_config(new_config, delete=False):
                                                    backtesting_api.is_backtesting_enabled(current_edited_config.config),
                                                    constants.UPDATED_CONFIG_SEPARATOR,
                                                    delete=delete)
-        return True
+        return True, ""
     except Exception as e:
         _get_logger().exception(e, True, f"Error when updating global config {e}")
-        return False
+        return False, str(e)
 
 
 def activate_metrics(enable_metrics):

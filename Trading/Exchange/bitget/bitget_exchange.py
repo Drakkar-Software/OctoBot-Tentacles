@@ -84,7 +84,8 @@ class BitgetCCXTAdapter(exchanges.CCXTAdapter):
             # fees example for paid fees in USDT:
             # {'code': 'USDT', 'cost': -0.015922}
             fee = trade[trading_enums.ExchangeConstantsOrderColumns.FEE.value]
-            if trading_enums.ExchangeConstantsFeesColumns.CURRENCY.value not in fee:
-                fee[trading_enums.ExchangeConstantsFeesColumns.CURRENCY.value] = fee.get("code")
-            fee[trading_enums.ExchangeConstantsFeesColumns.COST.value] *= -1
+            if trading_enums.FeePropertyColumns.CURRENCY.value not in fee:
+                fee[trading_enums.FeePropertyColumns.CURRENCY.value] = fee.get("code")
+            if fee[trading_enums.FeePropertyColumns.COST.value]:
+                fee[trading_enums.FeePropertyColumns.COST.value] *= -1
         return raw

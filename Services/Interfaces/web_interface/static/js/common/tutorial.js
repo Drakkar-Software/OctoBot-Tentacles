@@ -132,6 +132,47 @@ _TUTORIALS = {
         }
     },
 
+    automations: () => {
+        return {
+            steps: [
+                {
+                    title: 'Welcome to automations',
+                    intro: `Here you can automate any action directly form your OctoBot.`
+                },
+                {
+                    title: 'What are automations ?',
+                    element: document.querySelector('#configEditor'),
+                    intro: `Automations are actions your OctoBot can process on a given event or frequency.`
+                },
+                {
+                    title: 'Example 1/2',
+                    element: document.querySelector('#configEditor'),
+                    intro: `Make your OctoBot send you a notification if your profitability increased by 10% in a day.`
+                },
+                {
+                    title: 'Example 2/2',
+                    element: document.querySelector('#configEditor'),
+                    intro: `Cancel all open orders if the price of BTC/USDT crosses 70.000 USDT.`
+                },
+                {
+                    title: 'Launch automations',
+                    element: document.querySelector('#applyAutomations'),
+                    intro: `Automations are started with your OctoBot and when hitting the "apply automations" button.`
+                },
+                {
+                    title: 'Automations are saved in your profile',
+                    element: document.querySelector('#page-title'),
+                    intro: `You can quickly switch automations by switching profiles.`
+                },
+                {
+                    title: 'Share automations',
+                    element: document.querySelector('#page-title'),
+                    intro: `As they are linked to a profile, you can share them with your profile.`
+                },
+            ]
+        }
+    },
+
     profitability: () => {
         return {
             steps: [
@@ -208,9 +249,10 @@ function displayLocalTutorial(tutorialName){
 
 function startTutorialIfNecessary(tutorialName) {
     if($(`span[data-display-intro="True"]`).length === 0){
-        return
+        return false;
     }
     displayLocalTutorial(tutorialName);
+    return true;
 }
 
 

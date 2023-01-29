@@ -114,6 +114,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     VOLUME_KEY = "VOLUME"
     STOP_PRICE_KEY = "STOP_PRICE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
+    ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -371,6 +372,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
         user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
         user_stop_price = data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
+        exchange_creation_params = data.get(self.ORDER_EXCHANGE_CREATION_PARAMS, {})
         current_order = None
         orders_should_have_been_created = False
         timeout = kwargs.pop("timeout", trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
@@ -405,20 +407,24 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price,
                         symbol_market):
                     orders_should_have_been_created = True
-                    current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                order_type=trading_enums.TraderOrderType.SELL_MARKET,
-                                                                                symbol=symbol,
-                                                                                current_price=order_price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price,
-                                                                                reduce_only=user_reduce_only)
+                    current_order = trading_personal_data.create_order_instance(
+                        trader=self.trader,
+                        order_type=trading_enums.TraderOrderType.SELL_MARKET,
+                        symbol=symbol,
+                        current_price=order_price,
+                        quantity=order_quantity,
+                        price=order_price,
+                        reduce_only=user_reduce_only,
+                        exchange_creation_params=exchange_creation_params,
+                    )
                     if current_order := await self.trading_mode.create_order(current_order):
                         created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume or \
                            await self._get_sell_limit_quantity_from_risk(ctx, final_note, max_sell_size, base)
-                quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
+                quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
+                                                                                            symbol_market,
                                                                                             max_sell_size)
                 limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
                                                                         user_price or
@@ -429,13 +435,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         limit_price,
                         symbol_market):
                     orders_should_have_been_created = True
-                    current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                order_type=trading_enums.TraderOrderType.SELL_LIMIT,
-                                                                                symbol=symbol,
-                                                                                current_price=price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price,
-                                                                                reduce_only=user_reduce_only)
+                    current_order = trading_personal_data.create_order_instance(
+                        trader=self.trader,
+                        order_type=trading_enums.TraderOrderType.SELL_LIMIT,
+                        symbol=symbol,
+                        current_price=price,
+                        quantity=order_quantity,
+                        price=order_price,
+                        reduce_only=user_reduce_only,
+                        exchange_creation_params=exchange_creation_params,
+                    )
                     if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
                         # ensure stop orders are enabled and limit order was not instantly filled
@@ -446,15 +455,18 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(True)
                             ) if user_stop_price.is_nan() else user_stop_price
-                            current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                        order_type=trading_enums.TraderOrderType.STOP_LOSS,
-                                                                                        symbol=symbol,
-                                                                                        current_price=price,
-                                                                                        quantity=order_quantity,
-                                                                                        price=stop_price,
-                                                                                        side=trading_enums.TradeOrderSide.SELL,
-                                                                                        reduce_only=True,
-                                                                                        group=oco_group)
+                            current_order = trading_personal_data.create_order_instance(
+                                trader=self.trader,
+                                order_type=trading_enums.TraderOrderType.STOP_LOSS,
+                                symbol=symbol,
+                                current_price=price,
+                                quantity=order_quantity,
+                                price=stop_price,
+                                side=trading_enums.TradeOrderSide.SELL,
+                                reduce_only=True,
+                                group=oco_group,
+                                exchange_creation_params=exchange_creation_params,
+                            )
                             await self.trading_mode.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.NEUTRAL.value:
@@ -473,13 +485,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         limit_price,
                         symbol_market):
                     orders_should_have_been_created = True
-                    current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                order_type=trading_enums.TraderOrderType.BUY_LIMIT,
-                                                                                symbol=symbol,
-                                                                                current_price=price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price,
-                                                                                reduce_only=user_reduce_only)
+                    current_order = trading_personal_data.create_order_instance(
+                        trader=self.trader,
+                        order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                        symbol=symbol,
+                        current_price=price,
+                        quantity=order_quantity,
+                        price=order_price,
+                        reduce_only=user_reduce_only,
+                        exchange_creation_params=exchange_creation_params,
+                    )
                     if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
                         # ensure future trading and stop orders are enabled and limit order was not instantly filled
@@ -491,15 +506,18 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(False)
                             ) if user_stop_price.is_nan() else user_stop_price
-                            current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                        order_type=trading_enums.TraderOrderType.STOP_LOSS,
-                                                                                        symbol=symbol,
-                                                                                        current_price=price,
-                                                                                        quantity=order_quantity,
-                                                                                        price=stop_price,
-                                                                                        side=trading_enums.TradeOrderSide.BUY,
-                                                                                        reduce_only=True,
-                                                                                        group=oco_group)
+                            current_order = trading_personal_data.create_order_instance(
+                                trader=self.trader,
+                                order_type=trading_enums.TraderOrderType.STOP_LOSS,
+                                symbol=symbol,
+                                current_price=price,
+                                quantity=order_quantity,
+                                price=stop_price,
+                                side=trading_enums.TradeOrderSide.BUY,
+                                reduce_only=True,
+                                group=oco_group,
+                                exchange_creation_params=exchange_creation_params,
+                            )
                             await self.trading_mode.create_order(current_order)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
@@ -510,13 +528,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price,
                         symbol_market):
                     orders_should_have_been_created = True
-                    current_order = trading_personal_data.create_order_instance(trader=self.trader,
-                                                                                order_type=trading_enums.TraderOrderType.BUY_MARKET,
-                                                                                symbol=symbol,
-                                                                                current_price=order_price,
-                                                                                quantity=order_quantity,
-                                                                                price=order_price,
-                                                                                reduce_only=user_reduce_only)
+                    current_order = trading_personal_data.create_order_instance(
+                        trader=self.trader,
+                        order_type=trading_enums.TraderOrderType.BUY_MARKET,
+                        symbol=symbol,
+                        current_price=order_price,
+                        quantity=order_quantity,
+                        price=order_price,
+                        reduce_only=user_reduce_only,
+                        exchange_creation_params=exchange_creation_params,
+                    )
                     if current_order := await self.trading_mode.create_order(current_order):
                         created_orders.append(current_order)
             if created_orders:
