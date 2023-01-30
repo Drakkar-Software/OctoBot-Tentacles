@@ -86,12 +86,13 @@ NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_
                                           tentacles_manager_constants.TENTACLES_TRADING_PATH]
 
 DEFAULT_EXCHANGE = "binance"
-REMOVED_CCXT_EXCHANGES = [
-    exchange.__name__
-    for exchange in (
-        ccxt.kucoinfutures,
+MERGED_CCXT_EXCHANGES = {
+    result.__name__: merged.__name__
+    for result, merged in (
+        (ccxt.async_support.kucoin, ccxt.async_support.kucoinfutures),
     )
-]
+}
+REMOVED_CCXT_EXCHANGES = set(MERGED_CCXT_EXCHANGES.values())
 FULL_EXCHANGE_LIST = [
     exchange
     for exchange in set(ccxt.async_support.exchanges)
@@ -683,6 +684,14 @@ async def _load_market(exchange, results):
         _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
 
 
+def _add_merged_exchanges(exchanges):
+    extended = copy.copy(exchanges)
+    for exchange in exchanges:
+        if exchange in MERGED_CCXT_EXCHANGES:
+            extended.append(MERGED_CCXT_EXCHANGES[exchange])
+    return extended
+
+
 async def _load_markets(exchanges):
     result = []
     results = []
@@ -694,7 +703,7 @@ async def _load_markets(exchanges):
         trading_api.get_exchange_name(exchange_manager): exchange_manager
         for exchange_manager in exchange_managers
     }
-    for exchange in exchanges:
+    for exchange in _add_merged_exchanges(exchanges):
         if exchange not in exchange_symbol_fetch_blacklist:
             if exchange in exchange_manager_by_exchange_name and exchange not in markets_by_exchanges:
                 markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(
