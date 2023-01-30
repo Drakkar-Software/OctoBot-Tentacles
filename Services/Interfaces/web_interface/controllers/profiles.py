@@ -28,7 +28,8 @@ import octobot_services.interfaces.util as interfaces_util
 @web_interface.server_instance.route("/profiles_selector")
 @login.login_required_when_activated
 def profiles_selector():
-    reboot = flask.request.args.get("reboot", False)
+    reboot = flask.request.args.get("reboot", "false").lower() == "true"
+    show_nav_bar = flask.request.args.get("show_nav_bar", 'true').lower() != "false"
     reboot_delay = 2
     profiles = models.get_profiles()
     current_profile = models.get_current_profile()
@@ -59,6 +60,7 @@ def profiles_selector():
     )
     return_val = flask.render_template(
         'profiles_selector.html',
+        show_nab_bar=show_nav_bar,
         read_only=True,
         waiting_reboot=reboot,
         display_intro=display_intro,
