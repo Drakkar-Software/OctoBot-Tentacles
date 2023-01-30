@@ -67,7 +67,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Increment: price difference between two orders of the same side in the base currency (USDT for "
+            title="Increment: price difference between two orders of the same side in the quote currency (USDT for "
                   "BTC/USDT). WARNING: this should be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
@@ -113,7 +113,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all "
-                  "available base funds in portfolio (or total buy funds if set) to create orders with constant "
+                  "available funds in portfolio (or total buy funds if set) to create orders with constant "
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
@@ -121,7 +121,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all "
-                  "available quote funds in portfolio (or total sell funds if set) to create orders with constant "
+                  "available funds in portfolio (or total sell funds if set) to create orders with constant "
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
