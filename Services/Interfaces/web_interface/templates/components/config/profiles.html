@@ -347,6 +347,13 @@ get_filtered_list, read_only=False) %}
                         data-url="{{url_for('profile', select=profile.profile_id, next=url_for('profiles_selector', reboot=reboot))}}">
                     <i class="fas fa-check"></i>
                 </button>
+                {% else %}
+                <button class="btn btn-outline-primary btn-md activate-profile-button"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Proceed with this profile"
+                        data-url="{{url_for('profile', select=profile.profile_id, next=url_for('home'))}}">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
                 {% endif %}
             </div>
         </div>
