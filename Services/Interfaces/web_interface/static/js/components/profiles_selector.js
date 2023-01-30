@@ -32,15 +32,6 @@ $(document).ready(function() {
         })
     }
 
-    const onReconnected = () => {
-        const loader = $("#restart-loader");
-        if(loader.length){
-            // change current page when reconnected
-            window.location.href = loader.data("redirect-url");
-        }
-    }
-
     ensureModals();
-    registerReconnectedCallback(onReconnected);
     startTutorialIfNecessary("profile_selector");
 });
