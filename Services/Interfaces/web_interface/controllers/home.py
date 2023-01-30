@@ -33,10 +33,13 @@ def home():
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
             flask_util.BrowsingDataProvider.HOME
         )
-        return flask.render_template('index.html',
-                                     watched_symbols=models.get_watched_symbols(),
-                                     backtesting_mode=in_backtesting,
-                                     display_intro=display_intro,
-                                     startup_messages=models.get_startup_messages())
+        return flask.render_template(
+            'index.html',
+             watched_symbols=models.get_watched_symbols(),
+             backtesting_mode=in_backtesting,
+             display_intro=display_intro,
+             startup_messages=models.get_startup_messages(),
+            selected_profile=models.get_current_profile().name,
+        )
     else:
         return flask.redirect(flask.url_for("terms"))
