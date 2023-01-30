@@ -105,10 +105,10 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'trading' == active_page %} active{% endif %}">
+                        <li id="main-nav-trading" class="nav-item mx-1 px-0 my-auto {% if 'trading' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('trading') }}">Trading</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'portfolio' == active_page %} active{% endif %}">
+                        <li id="main-nav-portfolio" class="nav-item mx-1 px-0 my-auto {% if 'portfolio' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('portfolio') }}">Portfolio</a>
                         </li>
                         <li class="nav-item mx-1 px-0 my-auto {% if 'profile' == active_page %} active{% endif %}">
