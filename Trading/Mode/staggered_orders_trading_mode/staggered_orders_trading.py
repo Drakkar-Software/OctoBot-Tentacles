@@ -586,7 +586,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if interfering_orders_pairs:
             self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} with "
                               f"interfering orders using pair(s): {interfering_orders_pairs}. "
-                              f"{self.ORDERS_DESC.capitalize()} orders require no other orders in both quote and base.")
+                              f"{self.ORDERS_DESC.capitalize()} orders require no other orders in both base and quote.")
             return [], []
         existing_orders = order_manager.get_open_orders(self.symbol)
 
