@@ -299,7 +299,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market):
-        if not self.STOP_LOSS_PRICE_MULTIPLIER:
+        if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
             return None
         stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
         oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
@@ -316,7 +316,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             reduce_only=True,
             group=oco_group,
         )
-        return await self.trading_mode.create_order(current_order)
+        stop_order = await self.trading_mode.create_order(current_order)
+        self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")
+        return stop_order
 
     def _register_buy_order(self, order_id, price_weight):
         self.sell_targets_by_order_id[order_id] = price_weight
