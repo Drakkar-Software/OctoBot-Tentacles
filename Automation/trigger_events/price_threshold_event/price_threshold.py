@@ -29,6 +29,7 @@ class PriceThreshold(abstract_trigger_event.AbstractTriggerEvent):
     TARGET_PRICE = "target_price"
     SYMBOL = "symbol"
     TRIGGER_ONLY_ONCE = "trigger_only_once"
+    MAX_TRIGGER_FREQUENCY = "max_trigger_frequency"
 
     def __init__(self):
         super().__init__()
@@ -98,12 +99,18 @@ class PriceThreshold(abstract_trigger_event.AbstractTriggerEvent):
         return {
             self.SYMBOL: UI.user_input(
                 self.SYMBOL, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
-                title="Symbol: symbol to watch price on. Example: ETH/BTC, BTC/USDT:USDT",
+                title="Symbol: symbol to watch price on. Example: ETH/BTC or BTC/USDT:USDT",
                 parent_input_name=step_name,
             ),
             self.TARGET_PRICE: UI.user_input(
                 self.TARGET_PRICE, commons_enums.UserInputTypes.FLOAT, 300, inputs,
                 title="Target price: price triggering the event.",
+                parent_input_name=step_name,
+            ),
+            self.MAX_TRIGGER_FREQUENCY: UI.user_input(
+                self.MAX_TRIGGER_FREQUENCY, commons_enums.UserInputTypes.FLOAT, 0.0, inputs,
+                title="Maximum trigger frequency: required time between each trigger. In seconds. "
+                      "Useful to avoid spamming in certain situations.",
                 parent_input_name=step_name,
             ),
             self.TRIGGER_ONLY_ONCE: UI.user_input(
@@ -120,3 +127,4 @@ class PriceThreshold(abstract_trigger_event.AbstractTriggerEvent):
         self.symbol = config[self.SYMBOL]
         self.target_price = decimal.Decimal(str(config[self.TARGET_PRICE]))
         self.trigger_only_once = config[self.TRIGGER_ONLY_ONCE]
+        self.max_trigger_frequency = config[self.MAX_TRIGGER_FREQUENCY]
