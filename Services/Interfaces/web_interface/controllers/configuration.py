@@ -169,6 +169,7 @@ def accounts():
 @web_interface.server_instance.route('/config', methods=['POST'])
 @login.login_required_when_activated
 def config():
+    next_url = flask.request.args.get("next", None)
     request_data = flask.request.get_json()
     success = True
     response = ""
@@ -226,6 +227,8 @@ def config():
     if success:
         if request_data.get("restart_after_save", False):
             models.schedule_delayed_command(models.restart_bot)
+        if next_url is not None:
+            return flask.redirect(next_url)
         return util.get_rest_reply(flask.jsonify(response))
     else:
         return util.get_rest_reply(flask.jsonify(err_message), 500)

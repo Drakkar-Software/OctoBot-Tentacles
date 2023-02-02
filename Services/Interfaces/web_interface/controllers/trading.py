@@ -108,24 +108,30 @@ def trading_type_selector():
     onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
     display_config = interfaces_util.get_edited_config()
 
+    config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
+    enabled_exchanges = [
+        exchange
+        for exchange, exchange_config in config_exchanges.items()
+        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+    ] or [models.get_default_exchange()]
+
     return_val = flask.render_template(
         'trading_type_selector.html',
         show_nab_bar=not onboarding,
         onboarding=onboarding,
-        waiting_reboot=reboot,
 
-        config_exchanges=display_config[commons_constants.CONFIG_EXCHANGES],
+        current_profile_name=models.get_current_profile().name,
+        config_exchanges=config_exchanges,
+        enabled_exchanges=enabled_exchanges,
+        exchanges_details=models.get_exchanges_details(config_exchanges),
         ccxt_tested_exchanges=models.get_tested_exchange_list(),
         ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
         ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
 
-        config_trader=display_config[commons_constants.CONFIG_TRADER],
-        config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
+        simulated_portfolio=models.get_json_simulated_portfolio(display_config),
+        portfolio_schema=models.JSON_PORTFOLIO_SCHEMA,
+        real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
     )
-    if reboot and not models.is_rebooting():
-        reboot_delay = 2
-        # schedule reboot now that the page render has been computed
-        models.restart_bot(delay=reboot_delay)
     return return_val
 
 

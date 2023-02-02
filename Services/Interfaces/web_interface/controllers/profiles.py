@@ -30,6 +30,12 @@ import octobot_services.interfaces.util as interfaces_util
 def profiles_selector():
     reboot = flask.request.args.get("reboot", "false").lower() == "true"
     onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
+    models.wait_for_login_if_processing()
+
+    # skip profile selector when forced profile
+    if onboarding and models.get_forced_profile() is not None:
+        return flask.redirect(flask.url_for("trading_type_selector", reboot=reboot, onboarding=onboarding))
+
     profiles = models.get_profiles()
     current_profile = models.get_current_profile()
     display_config = interfaces_util.get_edited_config()
@@ -44,7 +50,6 @@ def profiles_selector():
     media_url = flask.url_for("tentacle_media", _external=True)
     missing_tentacles = set()
 
-    models.wait_for_login_if_processing()
     logged_in_email = None
     form = community_authentication.CommunityLoginForm(flask.request.form) \
         if flask.request.form else community_authentication.CommunityLoginForm()
