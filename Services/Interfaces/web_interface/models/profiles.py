@@ -19,6 +19,7 @@ import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
 import octobot_commons.authentication as authentication
+import octobot_trading.util as trading_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot.constants as constants
 import octobot.community as community
@@ -149,3 +150,9 @@ def get_forced_profile() -> profiles.Profile:
     except community.BotError:
         pass
     return None
+
+
+def is_real_trading(profile):
+    if trading_util.is_trader_enabled(profile.config):
+        return True
+    return False
