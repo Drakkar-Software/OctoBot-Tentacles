@@ -7,18 +7,19 @@
 
 {% block body %}
 <br>
-<div class="card w-75 mx-auto">
-    <div class="card-header d-none d-md-flex justify-content-between">
+<div class="card w-100 w-md-75 mx-auto">
+    <div class="card-header d-flex justify-content-between">
         <div>
             <h3>
-                Final step: select how to trade on using {{current_profile_name}}
+                <span class="d-none d-md-inline">Final step: select how to trade using </span>
+                {{current_profile_name}}
             </h3>
         </div>
     </div>
     <div class="card-body pt-0 text-center">
         {{ m_flash_messages.flash_messages() }}
         <div class="text-center my-2">
-            Select the exchange you want to use :
+            Select the exchange to use :
             <select id="AddExchangeSelect" class="selectpicker" data-live-search="true">
                 <optgroup label="OctoBot fully tested">
                    {% for exchange in ccxt_tested_exchanges %}
@@ -45,14 +46,14 @@
                     <a class="nav-link primary-tab-selector {{'' if real_trader_activated else 'active show'}}" id="simulated-tab" data-toggle="tab" href="#simulated" role="tab"
                        aria-controls="simulated"
                        aria-selected="true">
-                        <h5><i class="fa fa-robot"></i> Trade using paper money</h5>
+                        <h5><i class="fa fa-robot"></i> <span class="d-none d-md-inline">Trade using</span> paper <span class="d-none d-md-inline">money</span></h5>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link primary-tab-selector {{'active show' if real_trader_activated else ''}}" id="real-tab" data-toggle="tab" href="#real" role="tab"
                        aria-controls="real"
                        aria-selected="false">
-                        <h5><i class="fa fa-coins"></i> Trade using exchange funds</h5>
+                        <h5><i class="fa fa-coins"></i> <span class="d-none d-md-inline">Trade using</span> real <span class="d-none d-md-inline">money</span></h5>
                     </a>
                 </li>
             </ul>
@@ -60,16 +61,16 @@
         <div class="tab-content my-2" id="exchanges-tab-content"
              data-exchange-name="{{enabled_exchanges[0]}}" data-has-real-trader="{{real_trader_activated}}">
             <div class="tab-pane fade {{'' if real_trader_activated else 'active show'}}" id="simulated" role="tabsimulated" aria-labelledby="simulated-tab">
-                <div>
-                    <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
+                <div class="text-left">
+                    <div data-role="exchange" class="card mb-4 config-card">
 
                         <div class="card-header row" id="simulated-config-header">
-                            <div class="col-sm-7 col-lg-5">
+                            <div class="col-7 col-lg-5">
                                 <h4 class="text-capitalize">
                                     {{enabled_exchanges[0]}}
                                 </h4>
                             </div>
-                            <div class="col-sm-5 col-lg-5">
+                            <div class="col-5 col-lg-5">
                                 <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
                                     <img class="img-fluid product-logo d-none" src="" alt="{{enabled_exchanges[0]}}-logo" url="{{url_for('exchange_logo', name=enabled_exchanges[0])}}">
                                 </a>

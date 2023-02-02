@@ -134,6 +134,7 @@ JSON_PORTFOLIO_SCHEMA = {
             VALUE: {
                 "title": "Holding",
                 "type": "number",
+                "minimum": 0,
             },
         }
     }

@@ -42,6 +42,12 @@ html, body {
     min-height: 100%;
 }
 
+@media screen and (min-width: 768px) {  /*equivalent of bootstrap -md filter*/
+    .w-md-75 {
+        width: 75% !important;
+    }
+}
+
 body:before {
     content: "";
     position: fixed;
