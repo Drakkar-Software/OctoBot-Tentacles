@@ -186,6 +186,29 @@ class BinanceUsdM(exchanges.RestExchange):
             "_create_limit_trailing_stop_order is not implemented"
         )
 
+    async def edit_order(
+        self,
+        order_id: str,
+        order_type: trading_enums.TraderOrderType,
+        symbol: str,
+        quantity: decimal.Decimal,
+        price: decimal.Decimal,
+        stop_price: decimal.Decimal = None,
+        side: trading_enums.TradeOrderSide = None,
+        current_price: decimal.Decimal = None,
+        params: dict = None,
+    ):
+        # Binance futures doesnt have a api for editing orders
+        return await self.edit_order_by_replacing(
+            order_id=order_id,
+            order_type=order_type,
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            stop_price=stop_price,
+            side=side,
+        )
+
 
 class BinanceUsdMAdapter(exchanges.CCXTAdapter):
     BINANCE_MODE = "hedged"
@@ -300,10 +323,6 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
             if fixed["info"].get(self.BINANCE_UPDATE_TIME):
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] = (
                     int(fixed["info"][self.BINANCE_UPDATE_TIME]) / 1000
-                )
-            elif fixed["info"].get(self.BINANCE_TIME):
-                fixed[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] = (
-                    int(fixed["info"][self.BINANCE_TIME]) / 1000
                 )
         return fixed
 
