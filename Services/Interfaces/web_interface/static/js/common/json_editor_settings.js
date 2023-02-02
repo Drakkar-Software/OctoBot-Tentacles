@@ -23,7 +23,7 @@ class OctoBotTheme extends JSONEditor.defaults.themes.bootstrap4 {
   getButton(text, icon, title) {
     const el = super.getButton(text, icon, title);
     el.classList.remove("btn-secondary");
-    el.classList.add("btn-sm", "btn-primary", "waves-effect");
+    el.classList.add("btn-sm", "btn-primary", "waves-effect", "px-2", "px-md-4");
     return el;
   }
   getCheckbox() {
@@ -55,6 +55,22 @@ class OctoBotTheme extends JSONEditor.defaults.themes.bootstrap4 {
     if (description) group.appendChild(description);
 
     return group;
+  }
+  getIndentedPanel () {
+    const el = document.createElement('div')
+    el.classList.add('card', 'card-body', 'mb-3', "px-1", "px-md-3")
+
+    if (this.options.object_background) {
+      el.classList.add(this.options.object_background)
+    }
+
+    if (this.options.object_text) {
+      el.classList.add(this.options.object_text)
+    }
+
+    /* for better twbs card styling we should be able to return a nested div */
+
+    return el
   }
 }
 
