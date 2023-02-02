@@ -43,6 +43,11 @@ _TUTORIALS = {
                     intro: `Quickly checkout your funds at any given time, on every exchange.`
                 },
                 {
+                    title: 'Profile',
+                    element: document.querySelector('#main-nav-profile'),
+                    intro: `Change any setting about your profile (traded cryptocurrencies, exchanges, strategies, ...).`
+                },
+                {
                     title: 'Trading type',
                     element: document.querySelector('#main-nav-trading-type'),
                     intro: 'See if your Octobot is trading simulated or real funds.'
