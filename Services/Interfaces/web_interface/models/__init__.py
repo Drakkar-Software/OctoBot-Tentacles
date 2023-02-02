@@ -180,6 +180,7 @@ from tentacles.Services.Interfaces.web_interface.models.profiles import (
     download_and_import_profile,
     get_profile_name,
     get_forced_profile,
+    is_real_trading,
 )
 from tentacles.Services.Interfaces.web_interface.models.strategy_optimizer import (
     get_strategies_list,
@@ -338,6 +339,7 @@ __all__ = [
     "download_and_import_profile",
     "get_profile_name",
     "get_forced_profile",
+    "is_real_trading",
     "get_strategies_list",
     "get_time_frames_list",
     "get_evaluators_list",

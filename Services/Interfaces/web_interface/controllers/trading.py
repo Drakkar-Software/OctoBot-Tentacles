@@ -115,12 +115,14 @@ def trading_type_selector():
         if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
     ] or [models.get_default_exchange()]
 
+    current_profile = models.get_current_profile()
+
     return_val = flask.render_template(
         'trading_type_selector.html',
         show_nab_bar=not onboarding,
         onboarding=onboarding,
 
-        current_profile_name=models.get_current_profile().name,
+        current_profile_name=current_profile.name,
         config_exchanges=config_exchanges,
         enabled_exchanges=enabled_exchanges,
         exchanges_details=models.get_exchanges_details(config_exchanges),
@@ -130,7 +132,7 @@ def trading_type_selector():
 
         simulated_portfolio=models.get_json_simulated_portfolio(display_config),
         portfolio_schema=models.JSON_PORTFOLIO_SCHEMA,
-        real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
+        real_trader_activated=models.is_real_trading(current_profile),
     )
     return return_val
 
