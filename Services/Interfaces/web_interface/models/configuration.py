@@ -120,7 +120,7 @@ _LOGGER = None
 JSON_PORTFOLIO_SCHEMA = {
     "type": "array",
     "uniqueItems": True,
-    "title": "Portfolio",
+    "title": "Simulated portfolio",
     "format": "table",
     "items": {
         "type": "object",
