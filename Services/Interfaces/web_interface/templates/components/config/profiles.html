@@ -343,7 +343,7 @@ get_filtered_list, read_only=False) %}
                 {% if profile.profile_id != current_profile.profile_id %}
                 <button class="btn btn-primary btn-md activate-profile-button"
                         data-toggle="tooltip" data-placement="top"
-                        title="Use this profile and restart OctoBot"
+                        title="Select this profile"
                         data-url="{{url_for('profile', select=profile.profile_id,
                                     next=url_for('trading_type_selector', reboot=reboot, onboarding=onboarding))}}">
                     <i class="fas fa-check"></i>

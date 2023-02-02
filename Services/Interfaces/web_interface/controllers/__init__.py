@@ -31,6 +31,7 @@ from tentacles.Services.Interfaces.web_interface.controllers import terms
 from tentacles.Services.Interfaces.web_interface.controllers import trading
 from tentacles.Services.Interfaces.web_interface.controllers import profiles
 from tentacles.Services.Interfaces.web_interface.controllers import automation
+from tentacles.Services.Interfaces.web_interface.controllers import reboot
 
 
 from tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication import (
@@ -95,6 +96,10 @@ from tentacles.Services.Interfaces.web_interface.controllers.automation import (
     automations,
 )
 
+from tentacles.Services.Interfaces.web_interface.controllers.reboot import (
+    wait_reboot,
+)
+
 
 __all__ = [
     "CommunityLoginForm",
@@ -138,4 +143,5 @@ __all__ = [
     "utility_processor",
     "profiles_selector",
     "automations",
+    "wait_reboot",
 ]
