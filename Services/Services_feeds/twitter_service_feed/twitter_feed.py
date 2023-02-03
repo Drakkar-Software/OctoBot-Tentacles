@@ -14,7 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import threading
-import twitter
+# comment imports to remove twitter from dependencies when tentacle is disabled
+# import twitter
 
 import octobot_services.channel as services_channel
 import octobot_services.constants as services_constants
@@ -22,11 +23,15 @@ import octobot_services.service_feeds as service_feeds
 import tentacles.Services.Services_bases as Services_bases
 
 
-class TwitterServiceFeedChannel(services_channel.AbstractServiceFeedChannel):
+# disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
+# class TwitterServiceFeedChannel(services_channel.AbstractServiceFeedChannel):
+class TwitterServiceFeedChannel:
     pass
 
 
-class TwitterServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
+# disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
+# class TwitterServiceFeed(service_feeds.AbstractServiceFeed, threading.Thread):
+class TwitterServiceFeed:
     FEED_CHANNEL = TwitterServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.TwitterService]
 

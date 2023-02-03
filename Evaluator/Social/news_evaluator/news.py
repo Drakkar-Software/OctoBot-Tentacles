@@ -24,7 +24,9 @@ from tentacles.Evaluator.Util.text_analysis import TextAnalysis
 import tentacles.Services.Services_feeds as Services_feeds
 
 
-class TwitterNewsEvaluator(evaluators.SocialEvaluator):
+# disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
+# class TwitterNewsEvaluator(evaluators.SocialEvaluator):
+class TwitterNewsEvaluator:
     SERVICE_FEED_CLASS = Services_feeds.TwitterServiceFeed
 
     # max time to live for a pulse is 10min
