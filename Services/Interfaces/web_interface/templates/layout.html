@@ -191,6 +191,18 @@
                 </div>
             </noscript>
 
+            {% if startup_messages %}
+            <div class="mt-2 mt-md-4">
+                    <div class="alert alert-warning text-center my-0" role="alert">
+                    {% for startup_message in startup_messages %}
+                        <div>
+                            {{ startup_message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {% block body %}{% endblock %}
         </div>
 
