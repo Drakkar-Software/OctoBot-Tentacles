@@ -29,6 +29,8 @@ import octobot.constants as constants
 @web_interface.server_instance.route("/automations", methods=["POST", "GET"])
 @login.login_required_when_activated
 def automations():
+    if not models.are_automations_enabled():
+        return flask.redirect(flask.url_for("home"))
     if flask.request.method == 'POST':
         action = flask.request.args.get("action")
         success = True
@@ -83,6 +85,8 @@ def automations():
 @web_interface.server_instance.route('/automations_edit_details')
 @login.login_required_when_activated
 def automations_edit_details():
+    if not models.are_automations_enabled():
+        return flask.redirect(flask.url_for("home"))
     try:
         return util.get_rest_reply(
             models.get_tentacle_config_and_edit_display(

@@ -313,9 +313,14 @@ def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None):
     }
 
 
+def are_automations_enabled():
+    return octobot_constants.ENABLE_AUTOMATIONS
+
+
 def restart_global_automations():
     interfaces_util.run_in_bot_main_loop(
-        interfaces_util.get_bot_api().get_automation().restart()
+        interfaces_util.get_bot_api().get_automation().restart(),
+        log_exceptions=False
     )
 
 

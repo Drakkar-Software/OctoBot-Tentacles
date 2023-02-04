@@ -19,14 +19,15 @@ import ccxt
 import threading
 
 import octobot.strategy_optimizer
+import octobot.api as octobot_api
+import octobot.limits as octobot_limits
+import octobot.constants as octobot_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.databases as databases
 import octobot_commons.constants as commons_constants
-import octobot.api as octobot_api
-import octobot.limits as octobot_limits
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
@@ -121,6 +122,10 @@ def stop_previous_backtesting():
             octobot_api.stop_independent_backtesting(previous_independent_backtesting))
         return True, "Backtesting is stopping"
     return True, "No backtesting to stop"
+
+
+def is_backtesting_enabled():
+    return octobot_constants.ENABLE_BACKTESTING
 
 
 def _parse_trading_type(trading_type):
@@ -362,6 +367,8 @@ def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp,
 
 
 def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):
+    if not is_backtesting_enabled():
+        return False, "Backtesting is disabled."
     if not exchange:
         return False, "Please select an exchange."
     if not symbols:
