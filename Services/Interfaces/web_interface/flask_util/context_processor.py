@@ -148,4 +148,5 @@ def context_processor_register():
         is_authenticated=web_interface_login.is_authenticated,
         is_in_stating_community_env=is_in_stating_community_env,
         get_plugin_tabs=get_plugin_tabs,
+        startup_messages=models.get_startup_messages(),
     )

@@ -43,24 +43,6 @@
             </div>
         </div>
         {% endif %}
-        {% if startup_messages %}
-        <div class="card mt-2 mt-md-4">
-            <div class="card-header">
-                <h2>
-                    Warning
-                </h2>
-            </div>
-            <div class="card-body card-text">
-                <div class="alert alert-warning text-center my-0" role="alert">
-                {% for startup_message in startup_messages %}
-                    <div>
-                        {{ startup_message }}
-                    </div>
-                {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
         <div class="card mt-2 mt-md-4" id="profitability-display">
             <div class="card-header"><h2>
                 Profitability
