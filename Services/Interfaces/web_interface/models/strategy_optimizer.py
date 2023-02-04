@@ -17,6 +17,7 @@
 import threading
 
 import octobot.api as octobot_api
+import octobot.constants as octobot_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
@@ -75,6 +76,8 @@ def cancel_optimizer():
 
 
 def start_optimizer(strategy, time_frames, evaluators, risks):
+    if not octobot_constants.ENABLE_BACKTESTING:
+        return False, "Backtesting is disabled"
     try:
         tools = web_interface_root.WebInterface.tools
         optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
