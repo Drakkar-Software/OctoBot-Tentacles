@@ -26,6 +26,8 @@ import tentacles.Services.Interfaces.web_interface.login as login
 @advanced_controllers.advanced.route('/strategy-optimizer', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def strategy_optimizer():
+    if not models.is_backtesting_enabled():
+        return flask.redirect(flask.url_for("home"))
     if flask.request.method == 'POST':
         update_type = flask.request.args["update_type"]
         request_data = flask.request.get_json()
