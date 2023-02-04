@@ -35,10 +35,9 @@ def home():
         )
         return flask.render_template(
             'index.html',
-             watched_symbols=models.get_watched_symbols(),
-             backtesting_mode=in_backtesting,
-             display_intro=display_intro,
-             startup_messages=models.get_startup_messages(),
+            watched_symbols=models.get_watched_symbols(),
+            backtesting_mode=in_backtesting,
+            display_intro=display_intro,
             selected_profile=models.get_current_profile().name,
         )
     else:
