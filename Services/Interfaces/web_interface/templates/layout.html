@@ -117,9 +117,11 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
                         </li>
+                        {% if are_automations_enabled %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'automations' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('automations') }}">Automations</a>
                         </li>
+                        {% endif %}
                         {% for plugin_tab in get_plugin_tabs(TAB_START) %}
                         <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
@@ -155,10 +157,12 @@
                             <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
                         </li>
                         {% endfor %}
+                        {% if is_backtesting_enabled %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}"
                             id="main-nav-backtesting">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>
+                        {% endif %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'community' == active_page %} active{% endif %}"
                             id="main-nav-community">
                             <a class="nav-link" href="{{ url_for('community') }}">Community</a>

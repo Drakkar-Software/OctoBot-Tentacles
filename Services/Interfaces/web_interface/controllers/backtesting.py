@@ -31,6 +31,8 @@ import tentacles.Services.Interfaces.web_interface.errors as errors
 @web_interface.server_instance.route('/backtesting', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def backtesting():
+    if not models.is_backtesting_enabled():
+        return flask.redirect(flask.url_for("home"))
     if flask.request.method == 'POST':
         try:
             action_type = flask.request.args["action_type"]
@@ -109,6 +111,8 @@ def backtesting_run_id():
 @web_interface.server_instance.route('/data_collector', methods=['GET', 'POST'])
 @login.login_required_when_activated
 def data_collector():
+    if not models.is_backtesting_enabled():
+        return flask.redirect(flask.url_for("home"))
     if flask.request.method == 'POST':
         action_type = flask.request.args["action_type"]
         success = False

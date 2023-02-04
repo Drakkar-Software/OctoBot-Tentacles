@@ -149,4 +149,6 @@ def context_processor_register():
         is_in_stating_community_env=is_in_stating_community_env,
         get_plugin_tabs=get_plugin_tabs,
         startup_messages=models.get_startup_messages(),
+        are_automations_enabled=models.are_automations_enabled(),
+        is_backtesting_enabled=models.is_backtesting_enabled(),
     )
