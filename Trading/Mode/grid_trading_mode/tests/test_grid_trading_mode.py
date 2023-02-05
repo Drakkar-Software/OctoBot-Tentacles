@@ -92,7 +92,8 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
     producer.flat_spread = decimal.Decimal(10)
     producer.flat_increment = decimal.Decimal(5)
     producer.buy_orders_count = 25
-    producer.sell_orders_count = 25
+    with producer._starter():
+        producer.sell_orders_count = 25
 
     return producer, mode.get_trading_mode_consumers()[0], exchange_manager
 
