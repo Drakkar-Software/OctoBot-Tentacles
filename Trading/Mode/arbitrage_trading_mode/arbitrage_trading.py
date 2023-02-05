@@ -272,33 +272,32 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.inf_triggering_price_delta_ratio: decimal.Decimal = \
             1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
 
-    async def start(self) -> None:
+    async def inner_start(self) -> None:
         """
         Start trading mode channels subscriptions
         """
-        with self._starter():
-            try:
-                self.logger.info(f"Starting on listening for {self.trading_mode.symbol} arbitrage opportunities on "
-                                 f"{self.exchange_name} based on other exchanges prices.")
-                for exchange_id in trading_api.get_all_exchange_ids_with_same_matrix_id(self.exchange_manager.exchange_name,
-                                                                                        self.exchange_manager.id):
-                    # subscribe on existing exchanges
-                    if exchange_id != self.exchange_manager.id:
-                        await self._subscribe_exchange_id_mark_price(exchange_id)
-                await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id). \
-                    new_consumer(
-                    self._own_exchange_mark_price_callback,
-                    symbol=self.trading_mode.symbol
-                )
-                await channel_instances.get_chan_at_id(octobot_constants.OCTOBOT_CHANNEL, self.trading_mode.bot_id). \
-                    new_consumer(
-                    # listen for new available exchange
-                    self._exchange_added_callback,
-                    subject=commons_enums.OctoBotChannelSubjects.NOTIFICATION.value,
-                    action=octobot_channel_consumer.OctoBotChannelTradingActions.EXCHANGE.value
-                )
-            except Exception as e:
-                self.logger.exception(e, True, f"Error when starting arbitrage trading on {self.exchange_name}: {e}")
+        try:
+            self.logger.info(f"Starting on listening for {self.trading_mode.symbol} arbitrage opportunities on "
+                             f"{self.exchange_name} based on other exchanges prices.")
+            for exchange_id in trading_api.get_all_exchange_ids_with_same_matrix_id(self.exchange_manager.exchange_name,
+                                                                                    self.exchange_manager.id):
+                # subscribe on existing exchanges
+                if exchange_id != self.exchange_manager.id:
+                    await self._subscribe_exchange_id_mark_price(exchange_id)
+            await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id). \
+                new_consumer(
+                self._own_exchange_mark_price_callback,
+                symbol=self.trading_mode.symbol
+            )
+            await channel_instances.get_chan_at_id(octobot_constants.OCTOBOT_CHANNEL, self.trading_mode.bot_id). \
+                new_consumer(
+                # listen for new available exchange
+                self._exchange_added_callback,
+                subject=commons_enums.OctoBotChannelSubjects.NOTIFICATION.value,
+                action=octobot_channel_consumer.OctoBotChannelTradingActions.EXCHANGE.value
+            )
+        except Exception as e:
+            self.logger.exception(e, True, f"Error when starting arbitrage trading on {self.exchange_name}: {e}")
 
     async def order_filled_callback(self, filled_order):
         """
