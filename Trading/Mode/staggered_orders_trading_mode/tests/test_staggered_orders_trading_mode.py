@@ -37,6 +37,7 @@ import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_tra
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.test_exchanges as test_exchanges
+import tests.test_utils.trading_modes as test_trading_modes
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -50,8 +51,8 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     await mode.initialize()
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
-    with mode.producers[0]._starter():
-        mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    test_trading_modes.set_ready_to_start(mode.producers[0])
     return mode, mode.producers[0]
 
 
