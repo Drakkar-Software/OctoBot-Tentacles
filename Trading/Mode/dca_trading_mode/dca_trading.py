@@ -127,7 +127,8 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.error(f"An error happened during DCA task : {e}")
 
     async def start(self) -> None:
-        self.task = await asyncio.create_task(self.delayed_start())
+        with self._starter():
+            self.task = await asyncio.create_task(self.delayed_start())
 
     async def delayed_start(self):
         # wait for portfolio to be fetched

@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 import contextlib
 import os.path
 import decimal
@@ -75,8 +76,9 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
             trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
             # force triggering_price_delta_ratio equivalent to a 0.2% setting in minimal_price_delta_percent
             delta_percent = 2
-            mode.producers[0].inf_triggering_price_delta_ratio = decimal.Decimal(str(1 - delta_percent / 100))
-            mode.producers[0].sup_triggering_price_delta_ratio = decimal.Decimal(str(1 + delta_percent / 100))
+            with mode.producers[0]._starter():
+                mode.producers[0].inf_triggering_price_delta_ratio = decimal.Decimal(str(1 - delta_percent / 100))
+                mode.producers[0].sup_triggering_price_delta_ratio = decimal.Decimal(str(1 + delta_percent / 100))
             # let trading modes start
             await asyncio_tools.wait_asyncio_next_cycle()
             start_mock.assert_called_once()

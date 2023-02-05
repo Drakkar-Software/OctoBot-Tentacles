@@ -50,7 +50,8 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     await mode.initialize()
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
-    mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    with mode.producers[0]._starter():
+        mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
     return mode, mode.producers[0]
 
 
