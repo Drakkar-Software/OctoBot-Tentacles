@@ -216,6 +216,10 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
     get_exchange_holdings_per_symbol,
     get_symbols_values,
     get_portfolio_historical_values,
+    clear_exchanges_orders_history,
+    clear_exchanges_trades_history,
+    clear_exchanges_transactions_history,
+    clear_exchanges_portfolio_history,
 )
 from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import (
     WebInterfaceTab,
