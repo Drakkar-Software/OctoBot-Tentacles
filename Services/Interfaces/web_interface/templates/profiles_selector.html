@@ -9,20 +9,11 @@
 
 {% block body %}
 <br>
-{% if waiting_reboot %}
-{{ m_flash_messages.flash_messages() }}
-<div class="mb-2" id="restart-loader"
-     data-redirect-url="{{url_for('home')}}">
-{{ m_starting_waiter.display_loading_message("Your OctoBot is restarting using the " + current_profile.name + " profile.",
-                                             "You will be taken to your OctoBot dashboard when it will be ready.",
-                                             next_url=url_for('home'))}}
-</div>
-{% else %}
 {% if not current_logged_in_email %}
 <div class="login_box mx-auto mb-2">
     <div class="card">
     {{ login.register_form(form, is_in_stating_community_env,
-                           url_for("profiles_selector"), after_login_action="sync_account",
+                           url_for("profiles_selector", onboarding=onboarding), after_login_action="sync_account",
                            details="Access your subscribed profiles as well as additional profiles.") }}
     </div>
 </div>
@@ -55,7 +46,7 @@
             {% if can_logout %}
             <div class="col-4 text-right">
                 <a class="align-right btn btn-sm btn-outline-info waves-effect"
-                   href="{{ url_for('community_logout', next=url_for('profiles_selector'))}}">
+                   href="{{ url_for('community_logout', next=url_for('profiles_selector', onboarding=onboarding))}}">
                     logout
                 </a>
             </div>
@@ -72,12 +63,11 @@
             {{ profiles_macros.profile_overview(profile, current_profile,
               profiles_tentacles_details[profile.profile_id], strategy_config,
               evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges,
-              get_enabled_trader, get_filtered_list, read_only, True) }}
+              get_enabled_trader, get_filtered_list, read_only, True, onboarding) }}
             {% endfor %}
         </div>
     </div>
 </div>
-{% endif %}
 
 <span class="d-none" data-display-intro="{{display_intro}}"></span>
 

@@ -18,7 +18,11 @@ import os
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
+import octobot_commons.authentication as authentication
+import octobot_trading.util as trading_util
 import octobot_tentacles_manager.api as tentacles_manager_api
+import octobot.constants as constants
+import octobot.community as community
 
 
 ACTIVATION = "activation"
@@ -130,3 +134,25 @@ def download_and_import_profile(profile_url):
 
 def get_profile_name(profile_id) -> str:
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id].name
+
+
+def get_forced_profile() -> profiles.Profile:
+    if constants.FORCED_PROFILE:
+        # env variables are priority 1
+        return get_current_profile()
+    try:
+        startup_info = interfaces_util.run_in_bot_main_loop(
+            authentication.Authenticator.instance().get_startup_info(),
+            log_exceptions=False
+        )
+        if startup_info.forced_profile:
+            return get_current_profile()
+    except community.BotError:
+        pass
+    return None
+
+
+def is_real_trading(profile):
+    if trading_util.is_trader_enabled(profile.config):
+        return True
+    return False

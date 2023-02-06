@@ -12,11 +12,15 @@ function getExchangesDocsLink(route, name) {
 
 _TUTORIALS = {
     home: () => {
+        let profileName = "selected";
+        if($(`span[data-selected-profile]`).length){
+            profileName = $(`span[data-selected-profile]`).data("selected-profile");
+        }
         return {
             steps: [
                 {
                     title: 'Welcome to OctoBot',
-                    intro: 'If this is your first time on OctoBot, we suggest you have a look at this quick intro.'
+                    intro: `Your OctoBot is now trading using the ${profileName} profile.`
                 },
                 {
                     title: 'Quickly navigate through your OctoBot',
@@ -27,6 +31,21 @@ _TUTORIALS = {
                     title: 'Your live OctoBot',
                     element: document.querySelector('#main-nav-left-part'),
                     intro: 'See and configure your live OctoBot.'
+                },
+                {
+                    title: 'Trading activity',
+                    element: document.querySelector('#main-nav-trading'),
+                    intro: `View your OctoBot's current open orders and trades history.`
+                },
+                {
+                    title: 'Portfolio',
+                    element: document.querySelector('#main-nav-portfolio'),
+                    intro: `Quickly checkout your funds at any given time, on every exchange.`
+                },
+                {
+                    title: 'Profile',
+                    element: document.querySelector('#main-nav-profile'),
+                    intro: `Change any setting about your profile (traded cryptocurrencies, exchanges, strategies, ...).`
                 },
                 {
                     title: 'Trading type',

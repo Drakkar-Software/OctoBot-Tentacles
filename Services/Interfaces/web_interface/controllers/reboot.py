@@ -13,32 +13,33 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
-import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 
 
-@web_interface.server_instance.route("/")
-@web_interface.server_instance.route("/home")
+@web_interface.server_instance.route("/wait_reboot")
 @login.login_required_when_activated
-def home():
-    if flask.request.args.get("reset_tutorials", "False") == "True":
-        flask_util.BrowsingDataProvider.instance().set_first_displays(True)
-    if models.accepted_terms():
-        in_backtesting = models.get_in_backtesting_mode()
-        display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
-            flask_util.BrowsingDataProvider.HOME
+def wait_reboot():
+    next_url = flask.request.args.get("next", flask.url_for("home"))
+    reboot = flask.request.args.get("reboot", "false").lower() == "true"
+    onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
+
+    if reboot:
+        return_val = flask.render_template(
+            'wait_reboot.html',
+            show_nab_bar=not onboarding,
+            onboarding=onboarding,
+            next_url=next_url,
+
+            current_profile_name=models.get_current_profile().name,
         )
-        return flask.render_template(
-            'index.html',
-            watched_symbols=models.get_watched_symbols(),
-            backtesting_mode=in_backtesting,
-            display_intro=display_intro,
-            selected_profile=models.get_current_profile().name,
-        )
+        if not models.is_rebooting():
+            reboot_delay = 2
+            # schedule reboot now that the page render has been computed
+            models.restart_bot(delay=reboot_delay)
     else:
-        return flask.redirect(flask.url_for("terms"))
+        return_val = flask.redirect(next_url)
+    return return_val

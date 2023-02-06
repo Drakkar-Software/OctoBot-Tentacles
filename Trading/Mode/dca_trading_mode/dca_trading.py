@@ -126,7 +126,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
-    async def start(self) -> None:
+    async def inner_start(self) -> None:
         self.task = await asyncio.create_task(self.delayed_start())
 
     async def delayed_start(self):

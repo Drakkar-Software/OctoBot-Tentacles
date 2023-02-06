@@ -48,9 +48,18 @@ function get_dark_color(index){
 }
 
 function handle_editable(){
+    const elements = []
     $(".editable").each(function(){
-        $(this).editable();
+        elements.push($(this).editable());
     });
+    return elements
+}
+
+function hide_editables(elements){
+    elements.forEach((element) => {
+        element.editable('hide');
+        // element.destroy();
+    })
 }
 
 function trigger_file_downloader_on_click(element){

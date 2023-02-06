@@ -28,8 +28,14 @@ import octobot_services.interfaces.util as interfaces_util
 @web_interface.server_instance.route("/profiles_selector")
 @login.login_required_when_activated
 def profiles_selector():
-    reboot = flask.request.args.get("reboot", False)
-    reboot_delay = 2
+    reboot = flask.request.args.get("reboot", "false").lower() == "true"
+    onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
+    models.wait_for_login_if_processing()
+
+    # skip profile selector when forced profile
+    if onboarding and models.get_forced_profile() is not None:
+        return flask.redirect(flask.url_for("trading_type_selector", reboot=reboot, onboarding=onboarding))
+
     profiles = models.get_profiles()
     current_profile = models.get_current_profile()
     display_config = interfaces_util.get_edited_config()
@@ -44,7 +50,6 @@ def profiles_selector():
     media_url = flask.url_for("tentacle_media", _external=True)
     missing_tentacles = set()
 
-    models.wait_for_login_if_processing()
     logged_in_email = None
     form = community_authentication.CommunityLoginForm(flask.request.form) \
         if flask.request.form else community_authentication.CommunityLoginForm()
@@ -57,10 +62,12 @@ def profiles_selector():
     display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
         flask_util.BrowsingDataProvider.PROFILE_SELECTOR
     )
-    return_val = flask.render_template(
+    return flask.render_template(
         'profiles_selector.html',
+        show_nab_bar=not onboarding,
+        onboarding=onboarding,
         read_only=True,
-        waiting_reboot=reboot,
+        reboot=reboot,
         display_intro=display_intro,
 
         current_logged_in_email=logged_in_email,
@@ -79,7 +86,3 @@ def profiles_selector():
 
         symbol_list=sorted(models.get_symbol_list(enabled_exchanges or config_exchanges)),
     )
-    if reboot and not models.is_rebooting():
-        # schedule reboot now that the page render has been computed
-        models.restart_bot(delay=reboot_delay)
-    return return_val

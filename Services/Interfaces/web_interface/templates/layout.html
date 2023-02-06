@@ -105,21 +105,23 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'trading' == active_page %} active{% endif %}">
+                        <li id="main-nav-trading" class="nav-item mx-1 px-0 my-auto {% if 'trading' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('trading') }}">Trading</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'portfolio' == active_page %} active{% endif %}">
+                        <li id="main-nav-portfolio" class="nav-item mx-1 px-0 my-auto {% if 'portfolio' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('portfolio') }}">Portfolio</a>
                         </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'profile' == active_page %} active{% endif %}">
+                        <li id="main-nav-profile" class="nav-item mx-1 px-0 my-auto {% if 'profile' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
                         </li>
                         <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
                         </li>
+                        {% if are_automations_enabled %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'automations' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('automations') }}">Automations</a>
                         </li>
+                        {% endif %}
                         {% for plugin_tab in get_plugin_tabs(TAB_START) %}
                         <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
@@ -155,10 +157,12 @@
                             <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
                         </li>
                         {% endfor %}
+                        {% if is_backtesting_enabled %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}"
                             id="main-nav-backtesting">
                             <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                         </li>
+                        {% endif %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'community' == active_page %} active{% endif %}"
                             id="main-nav-community">
                             <a class="nav-link" href="{{ url_for('community') }}">Community</a>
@@ -190,6 +194,18 @@
                     <p>Your browser doesn't allow javascript to be executed. To use the OctoBot web interface, please enable javascript and reload this page.</p>
                 </div>
             </noscript>
+
+            {% if startup_messages %}
+            <div class="mt-2 mt-md-4">
+                    <div class="alert alert-warning text-center my-0" role="alert">
+                    {% for startup_message in startup_messages %}
+                        <div>
+                            {{ startup_message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             {% block body %}{% endblock %}
         </div>

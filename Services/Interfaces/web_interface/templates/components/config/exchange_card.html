@@ -1,13 +1,13 @@
- {% import 'components/config/editable_config.html' as m_editable_config %}
+{% import 'components/config/editable_config.html' as m_editable_config %}
 {% macro config_exchange_card(config, exchange, exchanges_details, is_supporting_future_trading,
                               keys_value="*********", enabled=True,
                               sandboxed=False, selected_exchange_type='spot', add_class='', config_values=None,
-                              full_config=True, exchange_docs_url="", donation_url="") -%}
+                              full_config=True, exchange_docs_url="", donation_url="", lite_config=False) -%}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
         <div class="card-header row">
-            <div class="col-sm-7 col-lg-5">
+            <div class="col-7 col-lg-5">
                 <h4 class="text-capitalize">
                     {{exchange}}
                     <span data-role="supporting-exchange" class="mx-md-4 d-none">
@@ -29,11 +29,12 @@
                     </span>
                 </h4>
             </div>
-            <div class="col-sm-5 col-lg-5">
+            <div class="col-5 col-lg-5">
                 <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
                     <img class="img-fluid product-logo d-none" src="" alt="{{exchange}}-logo" url="{{url_for('exchange_logo', name=exchange)}}">
                 </a>
             </div>
+            {% if not lite_config %}
             <div class="col-sm-5 col-lg-2 row">
                 <div data-role="websocket-mark" class="{{'' if exchanges_details['has_websockets'] else 'd-none'}} col">
                     <div class="d-lg-flex justify-content-end">
@@ -46,10 +47,10 @@
                         <a href="{{ url_for('config_tentacle', name=(exchange)) }}" class="text-light">
                             <i class="fas fa-cog" data-toggle="tooltip" data-placement="top" title="Configure"></i>
                         </a>
-
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!--Card image-->
@@ -128,6 +129,7 @@
                     </p>
                 </div>
                 {% endif %}
+                {% if not lite_config %}
                 <div class="">
                     <div
                             class="custom-control custom-switch"
@@ -187,8 +189,9 @@
                     </span>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
-            {% if full_config %}
+            {% if full_config and not lite_config %}
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
             {% endif %}
         </div>

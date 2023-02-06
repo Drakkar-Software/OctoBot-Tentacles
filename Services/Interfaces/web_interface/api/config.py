@@ -29,6 +29,12 @@ def get_config_currency():
     return flask.jsonify(models.format_config_symbols(interfaces_util.get_edited_config()))
 
 
+@api.api.route('/get_all_currencies<exchange>', methods=["GET"])
+@login.login_required_when_activated
+def get_all_currencies(exchange):
+    return flask.jsonify(models.get_all_currencies([exchange]))
+
+
 @api.api.route('/set_config_currency', methods=["POST"])
 @login.login_required_when_activated
 def set_config_currency():

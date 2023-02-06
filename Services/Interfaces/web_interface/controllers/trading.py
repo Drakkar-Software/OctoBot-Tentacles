@@ -18,6 +18,7 @@ import datetime
 import flask
 
 import octobot_services.interfaces.util as interfaces_util
+import octobot_commons.constants as commons_constants
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -98,6 +99,42 @@ def trades():
     return flask.render_template('trades.html',
                                  real_trades_history=real_trades_history,
                                  simulated_trades_history=simulated_trades_history)
+
+
+@web_interface.server_instance.route("/trading_type_selector")
+@login.login_required_when_activated
+def trading_type_selector():
+    reboot = flask.request.args.get("reboot", "false").lower() == "true"
+    onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
+    display_config = interfaces_util.get_edited_config()
+
+    config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
+    enabled_exchanges = [
+        exchange
+        for exchange, exchange_config in config_exchanges.items()
+        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+    ] or [models.get_default_exchange()]
+
+    current_profile = models.get_current_profile()
+
+    return_val = flask.render_template(
+        'trading_type_selector.html',
+        show_nab_bar=not onboarding,
+        onboarding=onboarding,
+
+        current_profile_name=current_profile.name,
+        config_exchanges=config_exchanges,
+        enabled_exchanges=enabled_exchanges,
+        exchanges_details=models.get_exchanges_details(config_exchanges),
+        ccxt_tested_exchanges=models.get_tested_exchange_list(),
+        ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
+        ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
+
+        simulated_portfolio=models.get_json_simulated_portfolio(display_config),
+        portfolio_schema=models.JSON_PORTFOLIO_SCHEMA,
+        real_trader_activated=models.is_real_trading(current_profile),
+    )
+    return return_val
 
 
 @web_interface.server_instance.context_processor

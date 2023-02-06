@@ -54,6 +54,18 @@ class Kucoin(exchanges.RestExchange):
     MAX_CANDLES_FETCH_INSTANT_RETRY = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
+    MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = decimal.Decimal("0.95")
+
+    # order that should be self-managed by OctoBot
+    # can be overridden locally to match exchange support
+    UNSUPPORTED_ORDERS = [
+        trading_enums.TraderOrderType.STOP_LOSS,  # supported
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT,  # supported
+        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+        trading_enums.TraderOrderType.TRAILING_STOP,
+        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+    ]
 
     @classmethod
     def get_name(cls):

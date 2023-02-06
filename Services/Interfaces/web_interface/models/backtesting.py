@@ -19,13 +19,15 @@ import ccxt
 import threading
 
 import octobot.strategy_optimizer
+import octobot.api as octobot_api
+import octobot.limits as octobot_limits
+import octobot.constants as octobot_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.databases as databases
 import octobot_commons.constants as commons_constants
-import octobot.api as octobot_api
 import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
@@ -120,6 +122,10 @@ def stop_previous_backtesting():
             octobot_api.stop_independent_backtesting(previous_independent_backtesting))
         return True, "Backtesting is stopping"
     return True, "No backtesting to stop"
+
+
+def is_backtesting_enabled():
+    return octobot_constants.ENABLE_BACKTESTING
 
 
 def _parse_trading_type(trading_type):
@@ -247,11 +253,13 @@ async def _collect_initialize_and_run_independent_backtesting(
         if files is not None:
             if start_callback:
                 start_callback()
-            await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting)
+            await octobot_api.initialize_and_run_independent_backtesting(independent_backtesting, log_errors=False)
         else:
             logger.error(f"Data files is None when initializing backtesting: impossible to start")
     except Exception as e:
-        logger.exception(e, True, f"Error when running backtesting: {e}")
+        message = f"Error when running backtesting: {e}"
+        logger.exception(e, True, message)
+        await web_interface_root.add_notification(services_enums.NotificationLevel.ERROR, "Backtesting", message)
         try:
             await octobot_api.stop_independent_backtesting(independent_backtesting)
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] = None
@@ -359,10 +367,16 @@ def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp,
 
 
 def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None, end_timestamp=None):
+    if not is_backtesting_enabled():
+        return False, "Backtesting is disabled."
     if not exchange:
         return False, "Please select an exchange."
     if not symbols:
         return False, "Please select a trading pair."
+    if message := _ensure_backtesting_limits(
+        exchange, symbols, time_frames, start_timestamp, end_timestamp, "collect data"
+    ):
+        return False, message
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is None or \
             backtesting_api.is_data_collector_finished(
                 web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]):
@@ -389,7 +403,7 @@ async def _start_collect_and_notify(data_collector_instance):
         success = True
     except Exception as e:
         message = f"error: {e}"
-    notification_level = services_enums.NotificationLevel.SUCCESS if success else services_enums.NotificationLevel.DANGER
+    notification_level = services_enums.NotificationLevel.SUCCESS if success else services_enums.NotificationLevel.ERROR
     await web_interface_root.add_notification(notification_level, f"Data collection", message)
 
 
@@ -441,3 +455,15 @@ def save_data_file(name, file):
         message = f"Error when saving file: {e}. File can't be saved."
         bot_logging.get_logger("DataCollectorWebInterfaceModel").error(message)
         return False, message
+
+
+def _ensure_backtesting_limits(exchange, symbols, time_frames, start_timestamp, end_timestamp, action):
+    message = ""
+    try:
+        start_timestamp = start_timestamp / commons_constants.MSECONDS_TO_SECONDS if start_timestamp else start_timestamp
+        end_timestamp = end_timestamp / commons_constants.MSECONDS_TO_SECONDS if end_timestamp else end_timestamp
+        octobot_limits.ensure_backtesting_limits([exchange], symbols, time_frames, start_timestamp, end_timestamp)
+    except octobot_limits.ReachedLimitError as err:
+        message = f"Can't {action} for {symbols} on {exchange}: {err}"
+        bot_logging.get_logger("BacktestingModel").error(message)
+    return message

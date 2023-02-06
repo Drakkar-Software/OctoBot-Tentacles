@@ -18,7 +18,9 @@ import octobot_services.notifier as notifier
 import tentacles.Services.Services_bases as Services_bases
 
 
-class TwitterNotifier(notifier.AbstractNotifier):
+# disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
+# class TwitterNotifier(notifier.AbstractNotifier):
+class TwitterNotifier:
     REQUIRED_SERVICES = [Services_bases.TwitterService]
     NOTIFICATION_TYPE_KEY = "twitter"
 

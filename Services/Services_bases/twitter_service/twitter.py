@@ -16,16 +16,19 @@
 
 import requests
 
-import twitter
-import twitter.api
-import twitter.twitter_utils
+# comment imports to remove twitter from dependencies when tentacle is disabled
+# import twitter
+# import twitter.api
+# import twitter.twitter_utils
 
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
 
 
-class TwitterService(services.AbstractService):
+# disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
+# class TwitterService(services.AbstractService):
+class TwitterService:
     API_KEY = "api-key"
     API_SECRET = "api-secret"
     ACCESS_TOKEN = "access-token"

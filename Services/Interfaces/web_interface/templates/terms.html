@@ -11,7 +11,7 @@
     <div class="card-body">
         {{ m_text.text_lines(disclaimer) }}
         <div>
-            <a href="{{ url_for('accept_terms', accept_terms=True, next=url_for('profiles_selector')) }}" class="button btn btn-primary waves-effect">
+            <a href="{{ url_for('accept_terms', accept_terms=True, next=url_for('profiles_selector', onboarding=True)) }}" class="button btn btn-primary waves-effect">
                 Accept and go to OctoBot
             </a>
             <button route="{{ url_for('commands', cmd='stop') }}" type="button" class="btn btn-danger waves-effect">

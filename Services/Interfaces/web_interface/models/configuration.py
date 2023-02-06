@@ -79,6 +79,8 @@ BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
 CONFIG_KEY = "config"
 DISPLAYED_ELEMENTS_KEY = "displayed_elements"
+ASSET = "asset"
+VALUE = "value"
 
 # tentacles from which configuration is not handled in strategies / evaluators configuration
 NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
@@ -114,6 +116,29 @@ exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 _LOGGER = None
+
+JSON_PORTFOLIO_SCHEMA = {
+    "type": "array",
+    "uniqueItems": True,
+    "title": "Simulated portfolio",
+    "format": "table",
+    "items": {
+        "type": "object",
+        "title": "Asset",
+        "properties": {
+            ASSET: {
+                "title": "Asset",
+                "type": "string",
+                "enum": [],
+            },
+            VALUE: {
+                "title": "Holding",
+                "type": "number",
+                "minimum": 0,
+            },
+        }
+    }
+}
 
 
 def _get_logger():
@@ -288,9 +313,14 @@ def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None):
     }
 
 
+def are_automations_enabled():
+    return octobot_constants.ENABLE_AUTOMATIONS
+
+
 def restart_global_automations():
     interfaces_util.run_in_bot_main_loop(
-        interfaces_util.get_bot_api().get_automation().restart()
+        interfaces_util.get_bot_api().get_automation().restart(),
+        log_exceptions=False
     )
 
 
@@ -669,6 +699,16 @@ def get_symbol_list(exchanges):
     return list(set(result))
 
 
+def get_all_currencies(exchanges):
+    symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in get_symbol_list(exchanges)
+    ]
+    return list(
+        set(symbol.base for symbol in symbols).union(set(symbol.quote for symbol in symbols))
+    )
+
+
 def _get_filtered_exchange_symbols(symbols):
     return [res for res in symbols if octobot_commons.MARKET_SEPARATOR in res]
 
@@ -862,6 +902,17 @@ def get_currency_logo_urls(currency_ids):
     ]
 
 
+def get_json_simulated_portfolio(user_config):
+    config_portfolio = user_config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]
+    return [
+        {
+            ASSET: asset,
+            VALUE: value,
+        }
+        for asset, value in config_portfolio.items()
+    ]
+
+
 def get_traded_time_frames(exchange_manager):
     return trading_api.get_relevant_time_frames(exchange_manager)
 
@@ -875,6 +926,10 @@ def get_full_exchange_list(remove_config_exchanges=False):
         full_exchange_list = FULL_EXCHANGE_LIST
     # can't handle exchanges containing UPDATED_CONFIG_SEPARATOR character in their name
     return [exchange for exchange in full_exchange_list if constants.UPDATED_CONFIG_SEPARATOR not in exchange]
+
+
+def get_default_exchange():
+    return ccxt.async_support.binance.__name__
 
 
 def get_tested_exchange_list():

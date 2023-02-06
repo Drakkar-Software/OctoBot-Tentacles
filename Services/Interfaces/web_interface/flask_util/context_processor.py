@@ -90,16 +90,11 @@ def context_processor_register():
                 commons_constants.CONFIG_ENABLED_OPTION, True)
         ]
 
-    def is_real_trading(profile):
-        if trading_util.is_trader_enabled(profile.config):
-            return True
-        return False
-
     def is_supporting_future_trading(supported_exchange_types):
         return trading_enums.ExchangeTypes.FUTURE in supported_exchange_types
 
     def get_enabled_trader(profile):
-        if is_real_trading(profile):
+        if models.is_real_trading(profile):
             return "Real trading"
         if trading_util.is_trader_simulator_enabled(profile.config):
             return "Simulated trading"
@@ -147,10 +142,13 @@ def context_processor_register():
         get_enabled_trader=get_enabled_trader,
         get_filtered_list=get_filtered_list,
         get_current_profile=models.get_current_profile,
-        is_real_trading=is_real_trading,
+        is_real_trading=models.is_real_trading,
         is_supporting_future_trading=is_supporting_future_trading,
         is_login_required=web_interface_login.is_login_required,
         is_authenticated=web_interface_login.is_authenticated,
         is_in_stating_community_env=is_in_stating_community_env,
         get_plugin_tabs=get_plugin_tabs,
+        startup_messages=models.get_startup_messages(),
+        are_automations_enabled=models.are_automations_enabled(),
+        is_backtesting_enabled=models.is_backtesting_enabled(),
     )

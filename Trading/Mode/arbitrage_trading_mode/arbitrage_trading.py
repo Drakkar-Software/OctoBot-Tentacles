@@ -272,7 +272,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.inf_triggering_price_delta_ratio: decimal.Decimal = \
             1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
 
-    async def start(self) -> None:
+    async def inner_start(self) -> None:
         """
         Start trading mode channels subscriptions
         """

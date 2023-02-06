@@ -33,6 +33,7 @@ import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_tra
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.test_exchanges as test_exchanges
+import tests.test_utils.trading_modes as test_trading_modes
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
@@ -93,6 +94,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
     producer.flat_increment = decimal.Decimal(5)
     producer.buy_orders_count = 25
     producer.sell_orders_count = 25
+    test_trading_modes.set_ready_to_start(producer)
 
     return producer, mode.get_trading_mode_consumers()[0], exchange_manager
 

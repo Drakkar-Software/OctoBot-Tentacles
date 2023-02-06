@@ -285,7 +285,7 @@ get_filtered_list, read_only=False) %}
 
 {% macro profile_overview(profile, current_profile, tentacles_details, strategy_config, evaluator_config,
                           get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
-                          get_filtered_list, read_only=False, reboot=False) -%}
+                          get_filtered_list, read_only=False, reboot=False, onboarding=False) -%}
 <div class="col col-md-4 px-1 profile-overview {{'profile-overview-selected' if profile.profile_id == current_profile.profile_id}}">
     <div class="p-2 vertically-aligned">
         <div class="row mx-0">
@@ -333,7 +333,7 @@ get_filtered_list, read_only=False) %}
             <div>
                 <button class="btn btn-outline-primary btn-md"
                         data-toggle="modal" data-target="#{{profile.profile_id}}Modal">
-                    <i class="fa fa-search"></i>
+                    <i class="fas fa-ellipsis"></i>
                 </button>
                 {{ profile_details_modal(profile, tentacles_details, strategy_config, evaluator_config,
                                          get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
@@ -343,9 +343,18 @@ get_filtered_list, read_only=False) %}
                 {% if profile.profile_id != current_profile.profile_id %}
                 <button class="btn btn-primary btn-md activate-profile-button"
                         data-toggle="tooltip" data-placement="top"
-                        title="Use this profile and restart OctoBot"
-                        data-url="{{url_for('profile', select=profile.profile_id, next=url_for('profiles_selector', reboot=reboot))}}">
+                        title="Select this profile"
+                        data-url="{{url_for('profile', select=profile.profile_id,
+                                    next=url_for('trading_type_selector', reboot=reboot, onboarding=onboarding))}}">
                     <i class="fas fa-check"></i>
+                </button>
+                {% else %}
+                <button class="btn btn-outline-primary btn-md activate-profile-button"
+                        data-toggle="tooltip" data-placement="top"
+                        title="Proceed with this profile"
+                        data-url="{{url_for('profile', select=profile.profile_id,
+                                    next=url_for('trading_type_selector', reboot=False, onboarding=onboarding))}}">
+                    <i class="fas fa-arrow-right"></i>
                 </button>
                 {% endif %}
             </div>

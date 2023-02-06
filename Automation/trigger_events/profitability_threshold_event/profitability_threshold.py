@@ -33,6 +33,7 @@ class ProfitabilityThreshold(abstract_trigger_event.AbstractTriggerEvent):
     PERCENT_CHANGE = "percent_change"
     TIME_PERIOD = "time_period"
     TRIGGER_ONLY_ONCE = "trigger_only_once"
+    MAX_TRIGGER_FREQUENCY = "max_trigger_frequency"
 
     def __init__(self):
         super().__init__()
@@ -124,6 +125,12 @@ class ProfitabilityThreshold(abstract_trigger_event.AbstractTriggerEvent):
                 title="Time period: maximum time to consider to compute profitability changes. In minutes.",
                 parent_input_name=step_name,
             ),
+            self.MAX_TRIGGER_FREQUENCY: UI.user_input(
+                self.MAX_TRIGGER_FREQUENCY, commons_enums.UserInputTypes.FLOAT, 0.0, inputs,
+                title="Maximum trigger frequency: required time between each trigger. In seconds. "
+                      "Useful to avoid spamming in certain situations.",
+                parent_input_name=step_name,
+            ),
             self.TRIGGER_ONLY_ONCE: UI.user_input(
                 self.TRIGGER_ONLY_ONCE, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
                 title="Trigger only once: can only trigger once until OctoBot restart or "
@@ -138,3 +145,4 @@ class ProfitabilityThreshold(abstract_trigger_event.AbstractTriggerEvent):
         self.percent_change = decimal.Decimal(str(config[self.PERCENT_CHANGE]))
         self.time_period = config[self.TIME_PERIOD] * commons_constants.MINUTE_TO_SECONDS
         self.trigger_only_once = config[self.TRIGGER_ONLY_ONCE]
+        self.max_trigger_frequency = config[self.MAX_TRIGGER_FREQUENCY]

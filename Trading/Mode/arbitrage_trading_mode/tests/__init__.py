@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 import contextlib
 import os.path
 import decimal
@@ -29,6 +30,7 @@ import octobot_trading.exchanges as exchanges
 import tentacles.Trading.Mode as modes
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.test_exchanges as test_exchanges
+import tests.test_utils.trading_modes as test_trading_modes
 from tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_trading import ArbitrageModeProducer
 
 
@@ -75,6 +77,7 @@ async def exchange(exchange_name, backtesting=None, symbol="BTC/USDT"):
             trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
             # force triggering_price_delta_ratio equivalent to a 0.2% setting in minimal_price_delta_percent
             delta_percent = 2
+            test_trading_modes.set_ready_to_start(mode.producers[0])
             mode.producers[0].inf_triggering_price_delta_ratio = decimal.Decimal(str(1 - delta_percent / 100))
             mode.producers[0].sup_triggering_price_delta_ratio = decimal.Decimal(str(1 + delta_percent / 100))
             # let trading modes start
