@@ -120,3 +120,34 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     exchange_manager = dashboard.get_first_exchange_data(exchange)[0]
     return trading_api.get_portfolio_historical_values(exchange_manager, currency, time_frame,
                                                        from_timestamp=from_timestamp, to_timestamp=to_timestamp)
+
+
+def clear_exchanges_orders_history():
+    _run_on_exchange_ids(trading_api.clear_orders_storage_history)
+    return {"title": "Cleared orders history"}
+
+
+def clear_exchanges_trades_history():
+    _run_on_exchange_ids(trading_api.clear_trades_storage_history)
+    return {"title": "Cleared trades history"}
+
+
+def clear_exchanges_transactions_history():
+    _run_on_exchange_ids(trading_api.clear_transactions_storage_history)
+    return {"title": "Cleared transactions history"}
+
+
+def clear_exchanges_portfolio_history():
+    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history)
+    return {"title": "Cleared portfolio history"}
+
+
+async def _async_run_on_exchange_ids(coro, exchange_ids):
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(exchange_ids):
+        await coro(exchange_manager)
+
+
+def _run_on_exchange_ids(coro):
+    interfaces_util.run_in_bot_main_loop(
+        _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids())
+    )
