@@ -4,6 +4,9 @@
 <!doctype html>
 <html lang="en">
     {% set active_page = active_page|default('home') -%}
+    {% set startup_messages_added_classes = startup_messages_added_classes|default('') -%}
+    {% set inner_startup_messages_added_classes = inner_startup_messages_added_classes|default('col-12') -%}
+
     <head>
         <title>{{ active_page | replace("_", " ") | capitalize }} - OctoBot</title>
 
@@ -196,13 +199,28 @@
             </noscript>
 
             {% if startup_messages %}
-            <div class="mt-2 mt-md-4">
-                    <div class="alert alert-warning text-center my-0" role="alert">
-                    {% for startup_message in startup_messages %}
-                        <div>
-                            {{ startup_message }}
+            <div class="row text-center {{startup_messages_added_classes}}">
+                <div class="alert alert-warning w-100 {{inner_startup_messages_added_classes}} mt-2 mb-0 my-md-4">
+                    <a class="d-block d-md-none"
+                       id="startup-messages-collapse-control"
+                       data-toggle="collapse" href="#startup-messages-collapse"
+                       aria-expanded="false" aria-controls="collapseOne">
+                        <div role="tab" id="startup-messages-heading">
+                          <h5 class="mb-0">
+                                {{startup_messages | length }} important message{{'s' if startup_messages | length > 1 else '' }}
+                          </h5>
                         </div>
-                    {% endfor %}
+                    </a>
+
+                    <div id="startup-messages-collapse" class="collapse" role="tabpanel" aria-labelledby="startup-messages-heading">
+                      <div>
+                        {% for startup_message in startup_messages %}
+                            <div>
+                                {{ startup_message }}
+                            </div>
+                        {% endfor %}
+                       </div>
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -235,5 +253,6 @@
 
         {% block additional_scripts %}
         {% endblock additional_scripts %}
+        <script src="{{ url_for('static', filename='js/common/on_load.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     </body>
 </html>
