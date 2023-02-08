@@ -47,7 +47,7 @@ def portfolio():
                                  symbols_values=symbols_values,
                                  displayed_portfolio_value=round(displayed_portfolio_value, 8),
                                  reference_unit=reference_market,
-                                 initializing_currencies_prices=initializing_currencies_prices_set
+                                 initializing_currencies_prices=initializing_currencies_prices_set,
                                  )
 
 

@@ -48,7 +48,7 @@
             <div class="card-header"><h2>Portfolio: <span class="rounded-number">{{displayed_portfolio_value}}</span> {{reference_unit}}</h2></div>
             <div class="card-body row mx-0 justify-content-center">
                 {% if displayed_portfolio %}
-                    <div class="col col-md-6 mb-2 mb-md-4">
+                    <div class="col-12 col-md-6 mb-2 mb-md-4">
                         <canvas id="portfolio_doughnutChart"
                                 data-md-height="150"
                                 data-sm-height="200"></canvas>
@@ -91,6 +91,14 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+        <div class="d-flex justify-content-end">
+            <button
+                data-url="{{ url_for('api.clear_portfolio_history') }}"
+                id="clear-portfolio-history-button"
+                class="btn btn-outline-warning waves-effect">
+                <i class="fas fa-trash"></i> Reset profitability & portfolio history
+            </button>
         </div>
     {% endif %}
     <br>

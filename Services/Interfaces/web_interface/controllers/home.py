@@ -16,6 +16,7 @@
 
 import flask
 
+import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -39,6 +40,7 @@ def home():
             backtesting_mode=in_backtesting,
             display_intro=display_intro,
             selected_profile=models.get_current_profile().name,
+            reference_unit=interfaces_util.get_reference_market(),
         )
     else:
         return flask.redirect(flask.url_for("terms"))

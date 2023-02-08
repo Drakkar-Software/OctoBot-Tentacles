@@ -89,8 +89,50 @@ function create_doughnut_chart(element, data, title, fontColor='white', animate=
                     fontColor: fontColor
                 }
             }
-        }
+        },
     });
+}
+
+function create_line_chart(element, data, title, fontColor='white', update=true){
+    const trace = {
+      x: data.map((e) => new Date(e.time*1000)),
+      y: data.map((e) => e.value),
+      fill: "tonexty",
+      type: 'scatter'
+    };
+    const layout = {
+        title: title,
+        xaxis: {
+            autorange: true,
+            showgrid: false,
+            domain: [0, 1],
+            type: 'date',
+            rangeslider: {
+                visible: false,
+            }
+        },
+        yaxis1: {
+            autorange: true,
+            showgrid: false,
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {
+            color: fontColor
+        }
+    };
+    const plotlyConfig = {
+        scrollZoom: false,
+        modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
+        responsive: true,
+        showEditInChartStudio: false,
+        displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
+    };
+    if(update){
+        Plotly.restyle(element, {x: [trace.x], y: [trace.y]}, 0);
+    } else {
+        Plotly.newPlot(element, [trace], layout, plotlyConfig);
+    }
 }
 
 function update_circular_progress_doughnut(chart, done, remaining){

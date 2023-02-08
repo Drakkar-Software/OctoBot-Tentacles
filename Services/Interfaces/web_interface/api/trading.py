@@ -85,8 +85,8 @@ def currency_list():
 def historical_portfolio_value():
     currency = flask.request.args.get("currency", "USDT")
     time_frame = flask.request.args.get("time_frame")
-    from_timestamp = flask.request.args.get("time_frame")
-    to_timestamp = flask.request.args.get("time_frame")
+    from_timestamp = flask.request.args.get("from_timestamp")
+    to_timestamp = flask.request.args.get("to_timestamp")
     exchange = flask.request.args.get("exchange")
     try:
         return flask.jsonify(models.get_portfolio_historical_values(currency, time_frame,

@@ -46,13 +46,16 @@
         <div class="card mt-2 mt-md-4" id="profitability-display">
             <div class="card-header"><h2>
                 Profitability
-                <a class="float-right blue-text" target="_blank" data-intro="profitability">
-                    <i class="fa-solid fa-question"></i>
-                </a>
+                <span class="badge d-none" id="profitability-badge"><span id="profitability-value"></span>%</span>
                 </h2></div>
             <div class="card-body card-text" id="profitability_graph">
-                <div id="graph-profitability-description"></div>
-                <canvas id="graph-profitability" height="30%"></canvas>
+                <div class="w-100">
+                    <div id="portfolio_historyChart"
+                         data-url="{{url_for('api.historical_portfolio_value', currency=reference_unit, time_frame='')}}"
+                         data-reference-market="{{reference_unit}}"
+                         class="h-100 w-100">
+                    </div>
+                </div>
             </div>
         </div>
         <br>
@@ -97,6 +100,7 @@
 {% block additional_scripts %}
     <script src="{{ url_for('static', filename='js/common/custom_elements.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/common/candlesticks.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+    <script src="{{ url_for('static', filename='js/common/portfolio_history.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/components/dashboard.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/components/tentacles_configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
