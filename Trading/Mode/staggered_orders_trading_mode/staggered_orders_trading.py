@@ -112,6 +112,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
+    CONFIG_DEFAULT_SPREAD_PERCENT = 4
+    CONFIG_DEFAULT_INCREMENT_PERCENT = 1
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -134,14 +136,16 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             title="Mode: way to allocate funds in created orders.",
         )
         self.UI.user_input(
-            self.CONFIG_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_SPREAD, commons_enums.UserInputTypes.FLOAT,
+            self.CONFIG_DEFAULT_SPREAD_PERCENT, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between buy and sell orders: percent of the current price to use as "
                   "spread (difference between highest buy and lowest sell).",
         )
         self.UI.user_input(
-            self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT,
+            self.CONFIG_DEFAULT_INCREMENT_PERCENT, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Increment: price difference between grid orders: percent of the current price to use as increment "
@@ -381,10 +385,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         self.healthy = True
 
-    def _load_symbol_trading_config(self):
+    def _load_symbol_trading_config(self) -> bool:
         for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
             if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
                 self.symbol_trading_config = config
+                return True
+        return False
 
     def read_config(self):
         mode = ""
@@ -615,16 +621,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return buy_orders, sell_orders
 
     def _set_increment_and_spread(self, current_price, candidate_flat_increment=None):
+        origin_flat_increment = self.flat_increment
         if self.flat_increment is None and candidate_flat_increment is not None:
             self.flat_increment = decimal.Decimal(str(candidate_flat_increment))
         elif self.flat_increment is None:
             self.flat_increment = trading_personal_data.decimal_adapt_price(self.symbol_market,
                                                                             current_price * self.increment)
+        if origin_flat_increment is not self.flat_increment:
+            self.flat_increment = trading_personal_data.decimal_adapt_price(self.symbol_market, self.flat_increment)
         if self.flat_spread is None and self.flat_increment is not None:
-            self.flat_spread = trading_personal_data.decimal_adapt_price(self.symbol_market,
-                                                                         self.spread * self.flat_increment / self.increment)
-
-        self.flat_increment = trading_personal_data.decimal_adapt_price(self.symbol_market, self.flat_increment)
+            self.flat_spread = trading_personal_data.decimal_adapt_price(
+                self.symbol_market, self.spread * self.flat_increment / self.increment
+            )
 
     def _get_interfering_orders_pairs(self, orders):
         # Not a problem if allowed funds are set
