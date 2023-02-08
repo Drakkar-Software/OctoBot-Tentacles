@@ -47,24 +47,28 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
+        default_config = self.get_default_pair_config("BTC/USDT", 0.05, 0.005)
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                            self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
                            item_title="Pair configuration",
                            other_schema_values={"minItems": 1, "uniqueItems": True},
                            title="Configuration for each traded pairs.")
-        self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
+        self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT,
+                           default_config[self.CONFIG_PAIR], inputs,
                            other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
                            parent_input_name=self.CONFIG_PAIR_SETTINGS,
                            title="Name of the traded pair."),
         self.UI.user_input(
-            self.CONFIG_FLAT_SPREAD, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_FLAT_SPREAD, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_FLAT_SPREAD], inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between the closest buy and sell orders in the quote currency "
                   "(USDT for BTC/USDT).",
         )
         self.UI.user_input(
-            self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
+            self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_FLAT_INCREMENT], inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Increment: price difference between two orders of the same side in the quote currency (USDT for "
@@ -72,21 +76,24 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "Spread-Increment.",
         )
         self.UI.user_input(
-            self.CONFIG_BUY_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
+            self.CONFIG_BUY_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
+            default_config[self.CONFIG_BUY_ORDERS_COUNT], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Buy orders count: number of initial buy orders to create. Make sure to have enough funds "
                   "to create that many orders.",
         )
         self.UI.user_input(
-            self.CONFIG_SELL_ORDERS_COUNT, commons_enums.UserInputTypes.INT, 10, inputs,
+            self.CONFIG_SELL_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
+            default_config[self.CONFIG_SELL_ORDERS_COUNT], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Sell orders count: Number of initial sell orders to create. Make sure to have enough funds "
                   "to create that many orders.",
         )
         self.UI.user_input(
-            self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            self.CONFIG_BUY_FUNDS, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_BUY_FUNDS], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT "
@@ -94,7 +101,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
-            self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_SELL_FUNDS], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: "
@@ -102,14 +110,16 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "currency simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
-            self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_STARTING_PRICE], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Starting price: price to compute initial orders from. Set 0 to use current "
                   "exchange price during initial grid orders creation.",
         )
         self.UI.user_input(
-            self.CONFIG_BUY_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            self.CONFIG_BUY_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_BUY_VOLUME_PER_ORDER], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all "
@@ -117,7 +127,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
-            self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
+            self.CONFIG_SELL_VOLUME_PER_ORDER, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_SELL_VOLUME_PER_ORDER], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all "
@@ -125,32 +136,54 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
-            self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT, 0, inputs,
-            min_val=0,
-            parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
-                  "is filled. This can generate extra profits on quick market moves.",
-        )
-        self.UI.user_input(
-            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_REINVEST_PROFITS], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
                   "size mirror orders. When unchecked, a part of the total volume will be reduced to take "
                   "exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
         )
         self.UI.user_input(
-            self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_MIRROR_ORDER_DELAY], inputs,
+            min_val=0,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="[Optional] Mirror order delay: Seconds to wait for before creating a mirror order when an order "
+                  "is filled. This can generate extra profits on quick market moves.",
+        )
+        self.UI.user_input(
+            self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for "
                   "mirror orders. WARNING: incompatible with profits reinvesting.",
         )
         self.UI.user_input(
-            self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_USE_EXISTING_ORDERS_ONLY], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Use existing orders only: when checked, new orders will only be created upon pre-existing orders "
                   "fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. "
                   "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
         )
+
+    def get_default_pair_config(self, symbol, flat_spread, flat_increment) -> dict:
+        return {
+          self.CONFIG_PAIR: symbol,
+          self.CONFIG_FLAT_SPREAD: flat_spread,
+          self.CONFIG_FLAT_INCREMENT: flat_increment,
+          self.CONFIG_BUY_ORDERS_COUNT: 10,
+          self.CONFIG_SELL_ORDERS_COUNT: 10,
+          self.CONFIG_SELL_FUNDS: 0,
+          self.CONFIG_BUY_FUNDS: 0,
+          self.CONFIG_STARTING_PRICE: 0,
+          self.CONFIG_BUY_VOLUME_PER_ORDER: 0,
+          self.CONFIG_SELL_VOLUME_PER_ORDER: 0,
+          self.CONFIG_REINVEST_PROFITS: False,
+          self.CONFIG_MIRROR_ORDER_DELAY: 0,
+          self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
+          self.CONFIG_USE_EXISTING_ORDERS_ONLY: False
+        }
 
     def get_mode_producer_classes(self) -> list:
         return [GridTradingModeProducer]
@@ -208,8 +241,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
     def read_config(self):
         self.mode = staggered_orders_trading.StrategyModes.FLAT
         # init decimals from str to remove native float rounding
-        self.flat_spread = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_SPREAD]))
-        self.flat_increment = decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]))
+        self.flat_spread = None if self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_SPREAD] is None \
+            else decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_SPREAD]))
+        self.flat_increment = None if self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT] is None \
+            else decimal.Decimal(str(self.symbol_trading_config[self.trading_mode.CONFIG_FLAT_INCREMENT]))
         # decimal.Decimal operations are supporting int values, no need to convert these into decimal.Decimal
         self.buy_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_BUY_ORDERS_COUNT]
         self.sell_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_SELL_ORDERS_COUNT]
@@ -254,6 +289,24 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         else:
             self.logger.error(f"No configuration for {self.symbol}")
 
+    def _load_symbol_trading_config(self) -> bool:
+        if not super()._load_symbol_trading_config():
+            return self._apply_default_symbol_config()
+        return True
+
+    def _apply_default_symbol_config(self) -> bool:
+        self.logger.info(f"Using default configuration for {self.symbol} as no configuration "
+                         f"is specified for this pair.")
+        # set spread and increment as multipliers of the current price
+        self.spread = decimal.Decimal(str(self.trading_mode.CONFIG_DEFAULT_SPREAD_PERCENT / 100))
+        self.increment = decimal.Decimal(str(self.trading_mode.CONFIG_DEFAULT_INCREMENT_PERCENT / 100))
+        self.symbol_trading_config = self.trading_mode.get_default_pair_config(
+            self.symbol,
+            None,   # will compute flat_spread from self.spread
+            None,   # will compute flat_increment from self.increment
+        )
+        return True
+
     async def _generate_staggered_orders(self, current_price, ignore_available_funds):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         if not self.single_pair_setup:
@@ -280,6 +333,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         return buy_orders, sell_orders
 
     def _init_allowed_price_ranges(self, current_price):
+        self._set_increment_and_spread(current_price)
         first_sell_price = current_price + (self.flat_spread / 2)
         self.sell_price_range.higher_bound = first_sell_price + (self.flat_increment * (self.sell_orders_count - 1))
         self.sell_price_range.lower_bound = max(current_price, first_sell_price)
@@ -288,7 +342,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.buy_price_range.lower_bound = first_buy_price - (self.flat_increment * (self.buy_orders_count - 1))
 
     def _check_params(self):
-        if self.flat_increment >= self.flat_spread:
+        if None not in (self.flat_increment, self.flat_spread) and self.flat_increment >= self.flat_spread:
             self.logger.error(f"Your flat_spread parameter should always be higher than your flat_increment"
                               f" parameter: average profit is spread-increment. ({self.symbol})")
 
