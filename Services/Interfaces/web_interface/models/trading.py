@@ -13,9 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import sortedcontainers
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
+import octobot_trading.enums as trading_enums
 import octobot_commons.enums as commons_enums
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
@@ -115,11 +116,40 @@ def get_symbols_values(symbols, has_real_trader, has_simulated_trader):
     return value_per_symbols
 
 
-def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=None, to_timestamp=None, exchange=None):
-    time_frame = commons_enums.TimeFrames(time_frame) if time_frame else commons_enums.TimeFrames.ONE_DAY
-    exchange_manager = dashboard.get_first_exchange_data(exchange)[0]
+def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, from_timestamp, to_timestamp):
     return trading_api.get_portfolio_historical_values(exchange_manager, currency, time_frame,
                                                        from_timestamp=from_timestamp, to_timestamp=to_timestamp)
+
+
+def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp):
+    merged_result = sortedcontainers.SortedDict()
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        for value in _get_exchange_historical_portfolio(
+                exchange_manager, currency, time_frame, from_timestamp, to_timestamp
+        ):
+            if value[trading_enums.HistoricalPortfolioValue.TIME.value] not in merged_result:
+                merged_result[value[trading_enums.HistoricalPortfolioValue.TIME.value]] = \
+                    value[trading_enums.HistoricalPortfolioValue.VALUE.value]
+            else:
+                merged_result[value[trading_enums.HistoricalPortfolioValue.TIME.value]] += \
+                    value[trading_enums.HistoricalPortfolioValue.VALUE.value]
+    return [
+        {
+            trading_enums.HistoricalPortfolioValue.TIME.value: key,
+            trading_enums.HistoricalPortfolioValue.VALUE.value: val,
+        }
+        for key, val in merged_result.items()
+    ]
+
+
+def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=None, to_timestamp=None, exchange=None):
+    time_frame = commons_enums.TimeFrames(time_frame) if time_frame else commons_enums.TimeFrames.ONE_DAY
+    if exchange is None:
+        return _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp)
+    return _get_exchange_historical_portfolio(
+        dashboard.get_first_exchange_data(exchange)[0],
+        currency, time_frame, from_timestamp, to_timestamp
+    )
 
 
 def clear_exchanges_orders_history():
