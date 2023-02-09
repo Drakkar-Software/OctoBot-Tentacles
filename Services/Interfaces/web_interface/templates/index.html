@@ -47,6 +47,12 @@
             <div class="card-header"><h2>
                 Profitability
                 <span class="badge d-none" id="profitability-badge"><span id="profitability-value"></span>%</span>
+                <a class="float-right blue-text"
+                   href="{{url_for('portfolio')}}"
+                   data-toggle="tooltip"
+                   title="Portfolio details">
+                    <i class="fas fa-ellipsis"></i>
+                </a>
                 </h2></div>
             <div class="card-body card-text" id="profitability_graph">
                 <div class="w-100">
@@ -56,6 +62,9 @@
                          class="h-100 w-100">
                     </div>
                 </div>
+            </div>
+            <div class="card-body card-text d-none" id="no_profitability_graph">
+                Your daily portfolio value history will be displayed here.
             </div>
         </div>
         <br>

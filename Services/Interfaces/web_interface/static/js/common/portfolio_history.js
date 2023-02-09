@@ -22,7 +22,16 @@ $(document).ready(function() {
         const selectedTimeFrame = "1d"; // todo add timeframe selector
         const url = `${element.data("url")}${selectedTimeFrame}`;
         const success = (updated_data, update_url, dom_root_element, msg, status) => {
-            create_line_chart(document.getElementById(element_id), msg, title, 'white', update);
+            const graphDiv = $(`#profitability_graph`);
+            const defaultDiv = $(`#no_profitability_graph`);
+            if(msg.length > 1){
+                graphDiv.removeClass(hidden_class);
+                defaultDiv.addClass(hidden_class);
+                create_line_chart(document.getElementById(element_id), msg, title, 'white', update);
+            }else{
+                graphDiv.addClass(hidden_class);
+                defaultDiv.removeClass(hidden_class);
+            }
         }
         send_and_interpret_bot_update(null, url, null, success, generic_request_failure_callback, "GET");
     }
