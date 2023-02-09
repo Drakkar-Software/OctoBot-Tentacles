@@ -34,9 +34,12 @@ import octobot_trading.api as trading_api
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchanges as trading_exchanges
+import octobot_trading.storage as trading_storage
+import octobot_trading.enums as trading_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as bot_logging
 import octobot_commons.enums as commons_enums
+import octobot_commons.databases as commons_databases
 import octobot_commons.configuration as configuration
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.time_frame_manager as time_frame_manager
@@ -48,7 +51,9 @@ import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
 import octobot.enums as octobot_enums
+import octobot.databases_util as octobot_databases_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
+import tentacles.Services.Interfaces.web_interface.models as models
 
 NAME_KEY = "name"
 SHORT_NAME_KEY = "n"
@@ -599,7 +604,39 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
         return False
 
 
-def _handle_special_fields(config, new_config):
+async def _reset_profile_portfolio_history(current_edited_config):
+    models.clear_exchanges_portfolio_history(simulated_only=True)
+    if not trading_api.is_trader_simulator_enabled_in_config(current_edited_config.config):
+        return
+    # also reset portfolio history for exchanges enabled in config that are not enabled in the current instance
+    already_reset_exchanges = {
+        trading_api.get_exchange_name(exchange_manager): exchange_manager
+        for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids())
+    }
+    run_dbs_identifier = octobot_databases_util.get_run_databases_identifier(
+        current_edited_config.config,
+        interfaces_util.get_edited_tentacles_config()
+    )
+    enabled_exchanges = trading_api.get_enabled_exchanges_names(current_edited_config.config)
+    _get_logger().info(f"Resetting simulated portfolio history for {enabled_exchanges}.")
+    for exchange in enabled_exchanges:
+        for is_future in (True, False):
+            # force reset future and non future historical portfolio
+            if exchange not in already_reset_exchanges \
+                    or ((trading_api.get_exchange_type(already_reset_exchanges[exchange])
+                        == trading_enums.ExchangeTypes.FUTURE) != is_future):
+                metadb = commons_databases.MetaDatabase(run_dbs_identifier)
+                portfolio_db = metadb.get_historical_portfolio_value_db(
+                    trading_api.get_account_type(is_future, False, False, True), exchange
+                )
+                await trading_api.clear_database_storage_history(
+                    trading_storage.PortfolioStorage, portfolio_db, False
+                )
+                await metadb.close()
+
+
+def _handle_special_fields(current_edited_config, new_config):
+    config = current_edited_config.config
     try:
         # replace web interface password by its hash before storage
         web_password_key = constants.UPDATED_CONFIG_SEPARATOR.join([services_constants.CONFIG_CATEGORY_SERVICES,
@@ -621,15 +658,31 @@ def _handle_special_fields(config, new_config):
         pass
 
 
+def _handle_simulated_portfolio(current_edited_config, new_config):
+    # reset portfolio history if simulated portfolio has changed
+    if any(
+            f"{commons_constants.CONFIG_SIMULATOR}{constants.UPDATED_CONFIG_SEPARATOR}" \
+            f"{commons_constants.CONFIG_STARTING_PORTFOLIO}" in key
+            for key in new_config
+    ):
+        try:
+            interfaces_util.run_in_bot_async_executor(
+                _reset_profile_portfolio_history(current_edited_config)
+            )
+        except Exception as err:
+            _get_logger().exception(err, True, f"Error when resetting portfolio simulator history {err}")
+
+
 def update_global_config(new_config, delete=False):
     try:
         current_edited_config = interfaces_util.get_edited_config(dict_only=False)
         if not delete:
-            _handle_special_fields(current_edited_config.config, new_config)
+            _handle_special_fields(current_edited_config, new_config)
         current_edited_config.update_config_fields(new_config,
                                                    backtesting_api.is_backtesting_enabled(current_edited_config.config),
                                                    constants.UPDATED_CONFIG_SEPARATOR,
                                                    delete=delete)
+        _handle_simulated_portfolio(current_edited_config, new_config)
         return True, ""
     except Exception as e:
         _get_logger().exception(e, True, f"Error when updating global config {e}")

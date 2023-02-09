@@ -23,6 +23,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.controllers.community_authentication as community_authentication
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot_services.interfaces.util as interfaces_util
+import octobot_trading.api as trading_api
 
 
 @web_interface.server_instance.route("/profiles_selector")
@@ -42,11 +43,7 @@ def profiles_selector():
 
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
 
-    enabled_exchanges = [
-        exchange
-        for exchange, exchange_config in config_exchanges.items()
-        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
-    ]
+    enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
     media_url = flask.url_for("tentacle_media", _external=True)
     missing_tentacles = set()
 

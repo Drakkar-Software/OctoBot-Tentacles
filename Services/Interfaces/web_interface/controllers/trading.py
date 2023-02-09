@@ -22,6 +22,7 @@ import octobot_commons.constants as commons_constants
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import octobot_trading.api as trading_api
 
 
 @web_interface.server_instance.route("/portfolio")
@@ -104,16 +105,11 @@ def trades():
 @web_interface.server_instance.route("/trading_type_selector")
 @login.login_required_when_activated
 def trading_type_selector():
-    reboot = flask.request.args.get("reboot", "false").lower() == "true"
     onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
     display_config = interfaces_util.get_edited_config()
 
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
-    enabled_exchanges = [
-        exchange
-        for exchange, exchange_config in config_exchanges.items()
-        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
-    ] or [models.get_default_exchange()]
+    enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config) or [models.get_default_exchange()]
 
     current_profile = models.get_current_profile()
 
