@@ -28,6 +28,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import octobot_backtesting.api as backtesting_api
+import octobot_trading.api as trading_api
 import octobot_services.interfaces.util as interfaces_util
 
 
@@ -52,11 +53,7 @@ def profile():
     missing_tentacles = set()
     profiles = models.get_profiles()
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
-    enabled_exchanges = [
-        exchange
-        for exchange, exchange_config in config_exchanges.items()
-        if exchange_config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
-    ]
+    enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
     display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
         flask_util.BrowsingDataProvider.PROFILE
     )

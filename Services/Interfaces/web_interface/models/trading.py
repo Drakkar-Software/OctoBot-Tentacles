@@ -152,32 +152,33 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
-def clear_exchanges_orders_history():
-    _run_on_exchange_ids(trading_api.clear_orders_storage_history)
+def clear_exchanges_orders_history(simulated_only=False):
+    _run_on_exchange_ids(trading_api.clear_orders_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared orders history"}
 
 
-def clear_exchanges_trades_history():
-    _run_on_exchange_ids(trading_api.clear_trades_storage_history)
+def clear_exchanges_trades_history(simulated_only=False):
+    _run_on_exchange_ids(trading_api.clear_trades_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared trades history"}
 
 
-def clear_exchanges_transactions_history():
-    _run_on_exchange_ids(trading_api.clear_transactions_storage_history)
+def clear_exchanges_transactions_history(simulated_only=False):
+    _run_on_exchange_ids(trading_api.clear_transactions_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared transactions history"}
 
 
-def clear_exchanges_portfolio_history():
-    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history)
+def clear_exchanges_portfolio_history(simulated_only=False):
+    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared portfolio history"}
 
 
-async def _async_run_on_exchange_ids(coro, exchange_ids):
+async def _async_run_on_exchange_ids(coro, exchange_ids, simulated_only):
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(exchange_ids):
-        await coro(exchange_manager)
+        if not simulated_only or trading_api.is_trader_simulated(exchange_manager):
+            await coro(exchange_manager)
 
 
-def _run_on_exchange_ids(coro):
+def _run_on_exchange_ids(coro, simulated_only=False):
     interfaces_util.run_in_bot_main_loop(
-        _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids())
+        _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids(), simulated_only)
     )

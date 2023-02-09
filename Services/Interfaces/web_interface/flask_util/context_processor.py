@@ -26,6 +26,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as web_interface_login
 import octobot_services.interfaces as interfaces
 import octobot_trading.util as trading_util
+import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 
 
@@ -83,12 +84,7 @@ def context_processor_register():
         }
 
     def get_profile_exchanges(profile):
-        return [
-            exchange_name
-            for exchange_name in profile.config[commons_constants.CONFIG_EXCHANGES]
-            if profile.config[commons_constants.CONFIG_EXCHANGES][exchange_name].get(
-                commons_constants.CONFIG_ENABLED_OPTION, True)
-        ]
+        return trading_api.get_enabled_exchanges_names(profile.config)
 
     def is_supporting_future_trading(supported_exchange_types):
         return trading_enums.ExchangeTypes.FUTURE in supported_exchange_types
