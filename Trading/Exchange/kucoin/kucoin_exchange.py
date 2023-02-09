@@ -31,7 +31,7 @@ import octobot_trading.enums as trading_enums
 
 def _kucoin_retrier(f):
     async def wrapper(*args, **kwargs):
-        for i in range(0, Kucoin.MAX_CANDLES_FETCH_INSTANT_RETRY):
+        for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
             except octobot_trading.errors.FailedRequest as e:
@@ -40,18 +40,18 @@ def _kucoin_retrier(f):
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
                         f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on request, retrying now "
-                        f"(attempt {i+1} / {Kucoin.MAX_CANDLES_FETCH_INSTANT_RETRY}).")
+                        f"(attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}).")
                 else:
                     raise
         raise octobot_trading.errors.FailedRequest(
-            f"Failed request after {Kucoin.MAX_CANDLES_FETCH_INSTANT_RETRY} retries due "
+            f"Failed request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} retries due "
             f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code"
         )
     return wrapper
 
 
 class Kucoin(exchanges.RestExchange):
-    MAX_CANDLES_FETCH_INSTANT_RETRY = 5
+    FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = decimal.Decimal("0.95")
@@ -103,12 +103,14 @@ class Kucoin(exchanges.RestExchange):
             kwargs[to_param] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
+    @_kucoin_retrier
     async def get_recent_trades(self, symbol, limit=50, **kwargs):
         # on ccxt kucoin recent trades are received in reverse order from exchange and therefore should never be
         # filtered by limit before reversing (or most recent trades are lost)
         recent_trades = await super().get_recent_trades(symbol, limit=None, **kwargs)
         return recent_trades[::-1][:limit] if recent_trades else []
 
+    @_kucoin_retrier
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
@@ -137,6 +139,7 @@ class Kucoin(exchanges.RestExchange):
     async def _update_balance(self, balance, currency, **kwargs):
         balance.update(await super().get_balance(code=currency, **kwargs))
 
+    @_kucoin_retrier
     async def get_balance(self, **kwargs: dict):
         balance = {}
         if self.exchange_manager.is_future:
@@ -163,6 +166,7 @@ class Kucoin(exchanges.RestExchange):
         # leverage is set via orders on kucoin
         return None
 
+    @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         # add untriggered stop orders (different api endpoint)
@@ -170,6 +174,11 @@ class Kucoin(exchanges.RestExchange):
         stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + stop_orders
 
+    @_kucoin_retrier
+    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        return await super().get_order(order_id, symbol=symbol, **kwargs)
+
+    @_kucoin_retrier
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -182,6 +191,7 @@ class Kucoin(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           params=params)
 
+    @_kucoin_retrier
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
         Get the current user symbol position list
