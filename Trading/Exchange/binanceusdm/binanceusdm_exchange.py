@@ -313,7 +313,7 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
         fixed[
             trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value
         ] = order_info.get(self.BINANCE_REDUCE_ONLY, False)
-        # stop orders ise triggerPrice
+        # stop orders use triggerPrice
         if not fixed.get(trading_enums.ExchangeConstantsOrderColumns.PRICE.value):
             fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = fixed.get(
                 self.BINANCE_TRIGGER_PRICE
@@ -329,7 +329,7 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
     def _adapt_order_type(self, fixed):
         if (
             fixed[trading_enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value]
-            and trading_enums.TradeOrderType.STOP_MARKET.value
+            and trading_enums.TradeOrderType.CONDITIONAL_MARKET.value
             == fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value]
         ):
             # stop loss are not tagged as such by ccxt, force it
