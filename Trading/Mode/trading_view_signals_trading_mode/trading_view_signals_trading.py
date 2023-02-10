@@ -184,7 +184,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             trading_enums.EvaluatorStates.NEUTRAL: 0,
         }
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
+    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Ignore matrix calls
         pass
 

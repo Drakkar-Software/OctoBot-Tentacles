@@ -25,6 +25,7 @@ import async_channel.util as channel_util
 import octobot_backtesting.api as backtesting_api
 import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.tests.test_config as test_config
 import octobot_evaluators.api as evaluators_api
 import octobot_trading.api as trading_api
@@ -204,7 +205,8 @@ async def test_set_final_eval(tools):
     await asyncio_tools.wait_asyncio_next_cycle()
     await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
     producer.final_eval = "val"
-    await producer.set_final_eval(matrix_id, currency, symbol, time_frame)
+    await producer.set_final_eval(matrix_id, currency, symbol, time_frame,
+                                  commons_enums.TriggerSource.EVALUATION_MATRIX.value)
     assert producer.state == trading_enums.EvaluatorStates.SHORT  # ensure did not change trading_enums.EvaluatorStates
     assert producer.final_eval == "val"  # ensure did not change trading_enums.EvaluatorStates
     await asyncio.create_task(_check_open_orders_count(trader, 2))  # ensure did not change orders

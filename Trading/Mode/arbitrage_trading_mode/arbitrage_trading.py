@@ -540,7 +540,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{registered_exchange_name} exchange as price data feed reference to identify arbitrage opportunities."
         )
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
+    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Ignore matrix calls
         pass
 

@@ -498,7 +498,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
+    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Strategies analysis
         for evaluated_strategy_node in matrix.get_tentacles_value_nodes(
                 matrix_id,
