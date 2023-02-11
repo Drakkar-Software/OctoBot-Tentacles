@@ -39,8 +39,9 @@ def _kucoin_retrier(f):
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
-                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on request, retrying now "
-                        f"(attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}).")
+                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args} kwargs={kwargs}) "
+                        f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}."
+                    )
                 else:
                     raise
         raise octobot_trading.errors.FailedRequest(
@@ -191,7 +192,6 @@ class Kucoin(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           params=params)
 
-    @_kucoin_retrier
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
         Get the current user symbol position list
@@ -200,6 +200,7 @@ class Kucoin(exchanges.RestExchange):
         """
 
         # todo remove when supported by ccxt
+        @_kucoin_retrier
         async def fetch_position(client, symbol, params={}):
             market = client.market(symbol)
             market_id = market['id']
