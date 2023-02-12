@@ -85,8 +85,8 @@ def currency_list():
 def historical_portfolio_value():
     currency = flask.request.args.get("currency", "USDT")
     time_frame = flask.request.args.get("time_frame")
-    from_timestamp = flask.request.args.get("time_frame")
-    to_timestamp = flask.request.args.get("time_frame")
+    from_timestamp = flask.request.args.get("from_timestamp")
+    to_timestamp = flask.request.args.get("to_timestamp")
     exchange = flask.request.args.get("exchange")
     try:
         return flask.jsonify(models.get_portfolio_historical_values(currency, time_frame,
@@ -94,3 +94,27 @@ def historical_portfolio_value():
                                                                     exchange))
     except KeyError:
         return util.get_rest_reply("No exchange portfolio", 404)
+
+
+@api.api.route("/clear_orders_history", methods=['POST'])
+@login.login_required_when_activated
+def clear_orders_history():
+    return util.get_rest_reply(models.clear_exchanges_orders_history())
+
+
+@api.api.route("/clear_trades_history", methods=['POST'])
+@login.login_required_when_activated
+def clear_trades_history():
+    return util.get_rest_reply(models.clear_exchanges_trades_history())
+
+
+@api.api.route("/clear_portfolio_history", methods=['POST'])
+@login.login_required_when_activated
+def clear_portfolio_history():
+    return flask.jsonify(models.clear_exchanges_portfolio_history())
+
+
+@api.api.route("/clear_transactions_history", methods=['POST'])
+@login.login_required_when_activated
+def clear_transactions_history():
+    return flask.jsonify(models.clear_exchanges_transactions_history())

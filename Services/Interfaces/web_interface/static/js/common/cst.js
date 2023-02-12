@@ -66,7 +66,7 @@ const tentacles_config_type = "tentacle_config";
 const max_attempts = 20;
 
 const price_graph_update_interval = 3000;
-const profitability_graph_update_interval = 30000;
+const profitability_update_interval = 5000;
 const portfolio_update_interval = 60000;
 
 const mobile_width_breakpoint = 1024;

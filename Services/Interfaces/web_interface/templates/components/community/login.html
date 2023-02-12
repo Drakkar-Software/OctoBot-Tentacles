@@ -1,6 +1,6 @@
 {% from "macros/forms.html" import render_field %}
 
-{% macro login_form(form, is_in_stating_community_env, after_login_url,
+{% macro login_form(form, is_in_stating_community_env, after_login_url, recover_password_url,
                     after_login_action=None, details=None) -%}
 <div class="text-center">
     <div class="card-header">
@@ -37,6 +37,9 @@
             </p>
             {% endif %}
             {{ login_form_content(form, 'community_login', after_login_url, after_login_action, "Login") }}
+            <div class="mt-2">
+                <a href="{{ recover_password_url }}" class="text-white font-weight-bold">Forgot your password ?</a>
+            </div>
         {% endif %}
     </div>
     {% if not current_logged_in_email %}

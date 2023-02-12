@@ -391,6 +391,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
+            self.logger.debug(
+                f"Order creation inputs: "
+                f"current_symbol_holding: {current_symbol_holding}, "
+                f"current_market_holding: {current_market_holding}, "
+                f"market_quantity: {market_quantity}, "
+                f"price: {price}."
+            )
             max_buy_size = market_quantity
             max_sell_size = current_symbol_holding
             increasing_position = state in (trading_enums.EvaluatorStates.VERY_LONG.value,
@@ -407,7 +414,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
-
+            # use stop loss when reducing the position and stop are enabled or when the user explicitly asks for one
+            use_stop_orders = (not increasing_position and self.USE_STOP_ORDERS) or not user_stop_price.is_nan()
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume \
                            or await self._get_market_quantity_from_risk(
@@ -464,8 +472,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                     if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
-                        # ensure stop orders are enabled and limit order was not instantly filled
-                        if (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) and updated_limit.is_open():
+                        # ensure limit order was not instantly filled
+                        if use_stop_orders and updated_limit.is_open():
                             oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
                                 .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
                             updated_limit.add_to_order_group(oco_group)
@@ -516,9 +524,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                     if updated_limit := await self.trading_mode.create_order(current_order):
                         created_orders.append(updated_limit)
-                        # ensure future trading and stop orders are enabled and limit order was not instantly filled
-                        if self.exchange_manager.is_future and (self.USE_STOP_ORDERS or not user_stop_price.is_nan()) \
-                                and updated_limit.is_open():
+                        # ensure limit order was not instantly filled
+                        if use_stop_orders and updated_limit.is_open():
                             oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
                                 .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
                             updated_limit.add_to_order_group(oco_group)
@@ -599,7 +606,7 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame):
+    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         strategies_analysis_note_counter = 0
         evaluation = commons_constants.INIT_EVAL_NOTE
         # Strategies analysis

@@ -49,11 +49,14 @@ class DisplayedElements(display.DisplayTranslator):
             if trading_mode.is_backtestable():
                 exchange_name, symbol, time_frame = \
                     await self._adapt_inputs_for_backtesting_results(meta_db, exchange_name, symbol, time_frame)
+            run_db = meta_db.get_run_db()
+            metadata = (await run_db.all(commons_enums.DBTables.METADATA.value))[0]
+            account_type = trading_api.get_account_type_from_run_metadata(metadata)
             dbs = [
-                meta_db.get_run_db(),
-                meta_db.get_transactions_db(exchange_name),
-                meta_db.get_orders_db(exchange_name),
-                meta_db.get_trades_db(exchange_name),
+                run_db,
+                meta_db.get_transactions_db(account_type, exchange_name),
+                meta_db.get_orders_db(account_type, exchange_name),
+                meta_db.get_trades_db(account_type, exchange_name),
                 meta_db.get_symbol_db(exchange_name, symbol)
             ]
             for db in dbs:

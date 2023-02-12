@@ -28,6 +28,7 @@ import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
+import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
@@ -52,6 +53,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
 
 
 async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=None):
+    tentacles_manager_api.reload_tentacle_info()
     config = test_config.load_test_config()
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 1000
     config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
@@ -120,7 +122,7 @@ async def test_run_independent_backtestings_with_memory_check():
                                                                            tentacles_setup_config)
 
 
-async def test_init_allowed_price_ranges():
+async def test_init_allowed_price_ranges_with_flat_values():
     exchange_manager = None
     try:
         symbol = "BTC/USDT"
@@ -138,6 +140,102 @@ async def test_init_allowed_price_ranges():
         assert producer.buy_price_range.higher_bound == 100 - 12/2
         # price - half spread - increment for each order to create after 1st one
         assert producer.buy_price_range.lower_bound == 100 - 12/2 - 5*(5-1)
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_init_allowed_price_ranges_with_percent_values():
+    exchange_manager = None
+    try:
+        symbol = "BTC/USDT"
+        producer, _, exchange_manager = await _get_tools(symbol)
+        producer.sell_price_range = grid_trading.AllowedPriceRange()
+        producer.buy_price_range = grid_trading.AllowedPriceRange()
+        # used with default configuration
+        producer.spread = decimal.Decimal("0.05")   # 5%
+        producer.increment = decimal.Decimal("0.02")   # 2%
+        producer.flat_spread = None
+        producer.flat_increment = None
+        producer.sell_orders_count = 20
+        producer.buy_orders_count = 5
+        _, _, _, _, symbol_market = await trading_personal_data.get_pre_order_data(exchange_manager,
+                                                                                   symbol=producer.symbol,
+                                                                                   timeout=1)
+        producer.symbol_market = symbol_market
+        producer._init_allowed_price_ranges(100)
+        # price + half spread + increment for each order to create after 1st one
+        assert producer.flat_spread == 5
+        assert producer.flat_increment == 2
+        assert producer.sell_price_range.higher_bound == decimal.Decimal(str(100 + 5/2 + 2*(20-1)))
+        assert producer.sell_price_range.lower_bound == decimal.Decimal(str(100 + 5/2))
+        assert producer.buy_price_range.higher_bound == decimal.Decimal(str(100 - 5/2))
+        # price - half spread - increment for each order to create after 1st one
+        assert producer.buy_price_range.lower_bound == decimal.Decimal(str(100 - 5/2 - 2*(5-1)))
+    finally:
+        await _stop(exchange_manager)
+
+
+async def test_create_orders_with_default_config():
+    exchange_manager = None
+    try:
+        symbol = "BTC/USDT"
+        producer, _, exchange_manager = await _get_tools(symbol)
+        producer.spread = producer.increment = producer.flat_spread = producer.flat_increment = \
+            producer.buy_orders_count = producer.sell_orders_count = None
+        producer.trading_mode.trading_config[producer.trading_mode.CONFIG_PAIR_SETTINGS] = []
+
+        assert producer._load_symbol_trading_config() is True
+        producer.read_config()
+
+        assert producer.spread is not None
+        assert producer.increment is not None
+        assert producer.flat_spread is None
+        assert producer.flat_increment is None
+        assert producer.buy_orders_count is not None
+        assert producer.sell_orders_count is not None
+
+        producer.sell_funds = decimal.Decimal("0.00006")  # 5 orders
+        producer.buy_funds = decimal.Decimal("0.5")  # 12 orders
+
+        # set BTC/USD price at 4000 USD
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        await producer._ensure_staggered_orders()
+        # create orders as with normal config (except that it's the default one)
+        btc_available_funds = producer._get_available_funds("BTC")
+        usd_available_funds = producer._get_available_funds("USDT")
+
+        used_btc = 10 - btc_available_funds
+        used_usd = 1000 - usd_available_funds
+
+        assert producer.buy_funds * decimal.Decimal(0.95) <= used_usd <= producer.buy_funds
+        assert producer.sell_funds * decimal.Decimal(0.95) <= used_btc <= producer.sell_funds
+
+        # btc_available_funds for reduced because orders are not created
+        assert 10 - 0.001 <= btc_available_funds < 10
+        assert 1000 - 100 <= usd_available_funds < 1000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + 10))
+        created_orders = trading_api.get_open_orders(exchange_manager)
+        created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
+        created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
+        assert len(created_buy_orders) == producer.buy_orders_count == 10
+        assert len(created_sell_orders) < producer.sell_orders_count
+        assert len(created_sell_orders) == 5
+        # ensure only orders closest to the current price have been created
+        min_buy_price = 4000 - (producer.flat_spread / 2) - (producer.flat_increment * (len(created_buy_orders) - 1))
+        assert all(
+            o.origin_price >= min_buy_price for o in created_buy_orders
+        )
+        max_sell_price = 4000 + (producer.flat_spread / 2) + (producer.flat_increment * (len(created_sell_orders) - 1))
+        assert all(
+            o.origin_price <= max_sell_price for o in created_sell_orders
+        )
+        pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert pf_btc_available_funds >= 10 - 0.00006
+        assert pf_usd_available_funds >= 1000 - 0.5
+
+        assert pf_btc_available_funds >= btc_available_funds
+        assert pf_usd_available_funds >= usd_available_funds
     finally:
         await _stop(exchange_manager)
 

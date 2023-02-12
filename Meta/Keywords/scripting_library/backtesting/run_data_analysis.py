@@ -43,9 +43,12 @@ async def get_candles(candles_sources, exchange, symbol, time_frame, metadata):
                                                 superior_timestamp=metadata[commons_enums.DBRows.END_TIME.value])
 
 
-async def get_trades(meta_database, symbol):
-    return await meta_database.get_trades_db().select(commons_enums.DBTables.TRADES.value,
-                                                      (await meta_database.get_orders_db().search()).symbol == symbol)
+async def get_trades(meta_database, metadata, symbol):
+    account_type = trading_api.get_account_type_from_run_metadata(metadata)
+    return await meta_database.get_trades_db(account_type).select(
+        commons_enums.DBTables.TRADES.value,
+        (await meta_database.get_orders_db(account_type).search()).symbol == symbol
+    )
 
 
 async def get_metadata(meta_database):
@@ -53,13 +56,15 @@ async def get_metadata(meta_database):
 
 
 async def get_transactions(meta_database, transaction_type=None, transaction_types=None):
+    account_type = trading_api.get_account_type_from_run_metadata(await get_metadata(meta_database))
     if transaction_type is not None:
-        query = (await meta_database.get_transactions_db().search()).type == transaction_type
+        query = (await meta_database.get_transactions_db(account_type).search()).type == transaction_type
     elif transaction_types is not None:
-        query = (await meta_database.get_transactions_db().search()).type.one_of(transaction_types)
+        query = (await meta_database.get_transactions_db(account_type).search()).type.one_of(transaction_types)
     else:
-        return await meta_database.get_transactions_db().all(commons_enums.DBTables.TRANSACTIONS.value)
-    return await meta_database.get_transactions_db().select(commons_enums.DBTables.TRANSACTIONS.value, query)
+        return await meta_database.get_transactions_db(account_type).all(commons_enums.DBTables.TRANSACTIONS.value)
+    return await meta_database.get_transactions_db(account_type).select(commons_enums.DBTables.TRANSACTIONS.value,
+                                                                        query)
 
 
 async def get_starting_portfolio(meta_database) -> dict:
@@ -106,7 +111,7 @@ async def _load_historical_values(meta_database, exchange, with_candles=True,
                             candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
                     price_data[pair] = raw_candles
                 if with_trades and pair not in trades_data:
-                    trades_data[pair] = await get_trades(meta_database, pair)
+                    trades_data[pair] = await get_trades(meta_database, metadata, pair)
             if with_portfolio:
                 try:
                     moving_portfolio_data[symbol] = starting_portfolio[symbol][
@@ -128,7 +133,8 @@ async def backtesting_data(meta_database, data_label):
     for key, value in metadata_from_run.items():
         if key == data_label:
             return value
-    for reader in meta_database.all_basic_run_db():
+    account_type = trading_api.get_account_type_from_run_metadata(metadata_from_run)
+    for reader in meta_database.all_basic_run_db(account_type):
         for table in await reader.tables():
             if table == data_label:
                 return await reader.all(table)
@@ -497,7 +503,8 @@ def _plot_table_data(data, plotted_element, data_name, additional_key_to_label, 
 
 
 async def plot_trades(meta_database, plotted_element):
-    data = await meta_database.get_trades_db().all(commons_enums.DBTables.TRADES.value)
+    account_type = trading_api.get_account_type_from_run_metadata(await get_metadata(meta_database))
+    data = await meta_database.get_trades_db(account_type).all(commons_enums.DBTables.TRADES.value)
     key_to_label = {
         "y": "Price",
         "type": "Type",
@@ -572,10 +579,12 @@ async def display_html(plotted_element, html):
 async def plot_table(meta_database, plotted_element, data_source, columns=None, rows=None,
                      searches=None, column_render=None, types=None, cache_value=None):
     data = []
+    metadata = await get_metadata(meta_database)
+    account_type = trading_api.get_account_type_from_run_metadata(metadata)
     if data_source == commons_enums.DBTables.TRADES.value:
-        data = await meta_database.get_trades_db().all(commons_enums.DBTables.TRADES.value)
+        data = await meta_database.get_trades_db(account_type).all(commons_enums.DBTables.TRADES.value)
     elif data_source == commons_enums.DBTables.ORDERS.value:
-        data = await meta_database.get_orders_db().all(commons_enums.DBTables.ORDERS.value)
+        data = await meta_database.get_orders_db(account_type).all(commons_enums.DBTables.ORDERS.value)
     else:
         exchange = meta_database.run_dbs_identifier.context.exchange_name
         symbol = meta_database.run_dbs_identifier.context.symbol
