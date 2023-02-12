@@ -21,6 +21,7 @@ import copy
 import requests.adapters
 import requests.packages.urllib3.util.retry
 import aiohttp
+import gc
 
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
@@ -1092,6 +1093,8 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
         interfaces_util.run_in_bot_async_executor(
             gather_wrapper(check_coro)
         )
+        # trigger garbage collector as ccxt exchange can be heavy in RAM (20MB+)
+        gc.collect()
     return compatibility_results
 
 
