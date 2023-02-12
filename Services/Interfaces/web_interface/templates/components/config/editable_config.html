@@ -193,14 +193,6 @@
             </option>
             {% endif %}
         {% endfor %}
-        {% if not suggestions and not no_select and config[key]%}
-            {% for name in config[key] %}
-                <option value="{{ name }}"
-                        selected="selected">
-                    {{ name }}
-                </option>
-            {% endfor %}
-        {% endif %}
     </select>
     {% if not no_select %}
     <br>
