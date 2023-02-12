@@ -44,6 +44,11 @@
                     </div>
                 </div>
             <input type=submit value=Login class="btn btn-primary waves-effect mt-2">
+            {% if is_remote_login %}
+            <div class="mt-2">
+                <a href="{{ OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL }}" class="text-white font-weight-bold">Forgot your password ?</a>
+            </div>
+            {% endif %}
             </form>
         </div>
     </div>
