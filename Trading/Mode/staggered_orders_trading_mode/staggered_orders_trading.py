@@ -383,6 +383,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.read_config()
         self._check_params()
 
+        self.logger.debug(f"Loaded healthy config for {self.symbol}")
         self.healthy = True
 
     def _load_symbol_trading_config(self) -> bool:
@@ -421,6 +422,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def start(self) -> None:
         await super().start()
         if StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START and self.healthy:
+            self.logger.debug(f"Initializing orders creation")
             await self._ensure_staggered_orders_and_reschedule()
 
     async def stop(self):
@@ -446,20 +448,31 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         asyncio.create_task(self._ensure_staggered_orders_and_reschedule())
 
     async def _ensure_staggered_orders_and_reschedule(self):
-        can_create_orders = (not trading_api.get_is_backtesting(self.exchange_manager) \
-                             or trading_api.is_mark_price_initialized(self.exchange_manager, symbol=self.symbol)) and \
-            (trading_api.get_portfolio(self.exchange_manager) != {}
-             or trading_api.is_trader_simulated(self.exchange_manager))
+        can_create_orders = (
+            not trading_api.get_is_backtesting(self.exchange_manager)
+            or trading_api.is_mark_price_initialized(self.exchange_manager, symbol=self.symbol)
+        ) and (
+            trading_api.get_portfolio(self.exchange_manager) != {}
+            or trading_api.is_trader_simulated(self.exchange_manager)
+        )
         if can_create_orders:
-            await self._ensure_staggered_orders()
+            try:
+                await self._ensure_staggered_orders()
+            except asyncio.TimeoutError:
+                can_create_orders = False
         if not self.should_stop:
             if can_create_orders:
                 # a None self.HEALTH_CHECK_INTERVAL_SECS disables health check
                 if self.HEALTH_CHECK_INTERVAL_SECS is not None:
-                    self.scheduled_health_check = asyncio.get_event_loop().call_later(self.HEALTH_CHECK_INTERVAL_SECS,
-                                                                                      self._schedule_order_refresh)
+                    self.scheduled_health_check = asyncio.get_event_loop().call_later(
+                        self.HEALTH_CHECK_INTERVAL_SECS,
+                        self._schedule_order_refresh
+                    )
             else:
-                self.scheduled_health_check = asyncio.get_event_loop().call_soon(self._schedule_order_refresh)
+                self.logger.debug(f"Can't yet create initialize orders for {self.symbol}")
+                self.scheduled_health_check = asyncio.get_event_loop().call_soon(
+                    self._schedule_order_refresh
+                )
 
     async def trigger_staggered_orders_creation(self):
         if self.symbol_trading_config:
@@ -486,7 +499,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         _, _, _, self.current_price, self.symbol_market = await trading_personal_data.get_pre_order_data(
             self.exchange_manager,
             symbol=self.symbol,
-            timeout=self.PRICE_FETCHING_TIMEOUT)
+            timeout=self.PRICE_FETCHING_TIMEOUT
+        )
+        self.logger.debug(f"{self.symbol} symbol_market initialized")
         await self.create_state(self._get_new_state_price(), ignore_mirror_orders_only, ignore_available_funds)
 
     def _get_new_state_price(self):
@@ -502,11 +517,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def order_filled_callback(self, filled_order):
         # create order on the order side
         now_selling = filled_order[
-                          trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value
+          trading_enums.ExchangeConstantsOrderColumns.SIDE.value
+        ] == trading_enums.TradeOrderSide.BUY.value
         new_side = trading_enums.TradeOrderSide.SELL if now_selling else trading_enums.TradeOrderSide.BUY
         if self.flat_increment is None:
+            details = "self.flat_increment is unset"
+            if self.symbol_market is None:
+                details = "self.symbol_market is unset. Symbol mark price has not yet been initialized"
             self.logger.error(f"Impossible to create symmetrical order for {self.symbol}: "
-                              f"self.flat_increment is unset.")
+                              f"{details}.")
             return
         if self.flat_spread is None:
             self.flat_spread = trading_personal_data.decimal_adapt_price(
@@ -633,6 +652,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.flat_spread = trading_personal_data.decimal_adapt_price(
                 self.symbol_market, self.spread * self.flat_increment / self.increment
             )
+        self.logger.debug(f"{self.symbol} flat spread and increment initialized")
 
     def _get_interfering_orders_pairs(self, orders):
         # Not a problem if allowed funds are set
