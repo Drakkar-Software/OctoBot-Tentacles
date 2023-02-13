@@ -46,7 +46,11 @@
         <div class="card mt-2 mt-md-4" id="profitability-display">
             <div class="card-header"><h2>
                 Profitability
-                <span class="badge d-none" id="profitability-badge"><span id="profitability-value"></span>%</span>
+                <span class="badge d-none"
+                      id="profitability-badge"
+                      data-toggle="tooltip"
+                      title="Portfolio total value change since the first valuation. You can reset it from the portfolio tab."
+                ><span id="profitability-value"></span>%</span>
                 <a class="float-right blue-text"
                    href="{{url_for('portfolio')}}"
                    data-toggle="tooltip"
