@@ -424,7 +424,7 @@ def update_copied_trading_id(copy_id):
     )
 
 
-def reset_config_to_default(tentacle_name, tentacle_class):
+def reset_config_to_default(tentacle_name, tentacle_class=None):
     try:
         tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
         tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
