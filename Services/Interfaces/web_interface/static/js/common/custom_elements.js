@@ -100,6 +100,9 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
       fill: "tonexty",
       type: 'scatter'
     };
+    const minY = Math.min.apply(null, trace.y);
+    const maxDisplayY = Math.max.apply(null, trace.y);
+    const minDisplayY = Math.max(0, minY - (maxDisplayY - minY));
     const layout = {
         title: title,
         xaxis: {
@@ -112,8 +115,8 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
             }
         },
         yaxis1: {
-            autorange: true,
             showgrid: false,
+            range: [minDisplayY, maxDisplayY]
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
