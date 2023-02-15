@@ -57,6 +57,9 @@ class Kucoin(exchanges.RestExchange):
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = decimal.Decimal("0.95")
 
+    # get_my_recent_trades only covers the last 24h on kucoin
+    ALLOW_TRADES_FROM_CLOSED_ORDERS = True  # set True when get_my_recent_trades should use get_closed_orders
+
     # order that should be self-managed by OctoBot
     # can be overridden locally to match exchange support
     UNSUPPORTED_ORDERS = [
@@ -157,7 +160,7 @@ class Kucoin(exchanges.RestExchange):
     Margin and leverage
     """
 
-    async def set_symbol_leverage(self, symbol: str, leverage: int, **kwargs):
+    async def set_symbol_leverage(self, symbol: str, leverage: float, **kwargs):
         """
         Set the symbol leverage
         :param symbol: the symbol
