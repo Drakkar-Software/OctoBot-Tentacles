@@ -173,8 +173,10 @@ def clear_exchanges_portfolio_history(simulated_only=False, simulated_portfolio=
     simulated_portfolio = simulated_portfolio or \
         interfaces_util.get_edited_config(dict_only=True).get(commons_constants.CONFIG_SIMULATOR, {}).get(
             commons_constants.CONFIG_STARTING_PORTFOLIO, None)
-    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history, simulated_only=simulated_only,
-                         simulated_portfolio=simulated_portfolio)
+    if simulated_portfolio:
+        _sync_run_on_exchange_ids(trading_api.set_simulated_portfolio_initial_config, simulated_only=simulated_only,
+                                  portfolio_content=simulated_portfolio)
+    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared portfolio history"}
 
 
@@ -188,3 +190,9 @@ def _run_on_exchange_ids(coro, simulated_only=False, **kwargs):
     interfaces_util.run_in_bot_main_loop(
         _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids(), simulated_only, **kwargs)
     )
+
+
+def _sync_run_on_exchange_ids(func, simulated_only=False, **kwargs):
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        if not simulated_only or trading_api.is_trader_simulated(exchange_manager):
+            func(exchange_manager, **kwargs)
