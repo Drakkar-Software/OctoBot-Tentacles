@@ -24,7 +24,10 @@ $(document).ready(function () {
 
     function handle_profitability(socket) {
         socket.on("profitability", function (data) {
-            updateProfitabilityDisplay(data["bot_real_profitability"], data["bot_simulated_profitability"]);
+            updateProfitabilityDisplay(
+                data["bot_real_profitability"], data["bot_real_flat_profitability"],
+                data["bot_simulated_profitability"], data["bot_simulated_flat_profitability"],
+            );
             if (!waiting_profitability_update) {
                 // re-schedule profitability refresh
                 waiting_profitability_update = true;
@@ -35,26 +38,32 @@ $(document).ready(function () {
         })
     }
 
-    const updateProfitabilityDisplay = (bot_real_profitability, bot_simulated_profitability) => {
+    const updateProfitabilityDisplay = (bot_real_profitability, bot_real_flat_profitability,
+                                        bot_simulated_profitability, bot_simulated_flat_profitability) => {
         if(isDefined(bot_real_profitability)){
-            displayProfitability(bot_real_profitability);
+            displayProfitability(bot_real_profitability, bot_real_flat_profitability);
         }
         else if(isDefined(bot_simulated_profitability)){
-            displayProfitability(bot_simulated_profitability);
+            displayProfitability(bot_simulated_profitability, bot_simulated_flat_profitability);
         }
     }
 
-    const displayProfitability = (value) => {
+    const displayProfitability = (value, flatValue) => {
         const displayedValue = parseFloat(value.toFixed(2));
         const badge = $("#profitability-badge");
+        const flatValueSpan = $("#flat-profitability");
+        const flatValueText = $("#flat-profitability-text");
         const displayValue = $("#profitability-value");
         badge.removeClass(hidden_class);
+        flatValueSpan.removeClass(hidden_class);
         if(value < 0){
             displayValue.text(displayedValue);
+            flatValueText.text(flatValue);
             badge.addClass("badge-warning");
             badge.removeClass("badge-success");
         } else {
             displayValue.text(`+${displayedValue}`);
+            flatValueText.text(`+${flatValue}`);
             badge.removeClass("badge-warning");
             badge.addClass("badge-success");
         }
@@ -180,6 +189,7 @@ $(document).ready(function () {
     let waiting_profitability_update = false;
 
     let socket = undefined;
+
     get_version_upgrade();
     init_dashboard_websocket();
     init_graphs();
