@@ -18,6 +18,7 @@ import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 
@@ -167,18 +168,23 @@ def clear_exchanges_transactions_history(simulated_only=False):
     return {"title": "Cleared transactions history"}
 
 
-def clear_exchanges_portfolio_history(simulated_only=False):
-    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history, simulated_only=simulated_only)
+def clear_exchanges_portfolio_history(simulated_only=False, simulated_portfolio=None):
+    # apply updated simulated portfolio to init new historical values on this new portfolio
+    simulated_portfolio = simulated_portfolio or \
+        interfaces_util.get_edited_config(dict_only=True).get(commons_constants.CONFIG_SIMULATOR, {}).get(
+            commons_constants.CONFIG_STARTING_PORTFOLIO, None)
+    _run_on_exchange_ids(trading_api.clear_portfolio_storage_history, simulated_only=simulated_only,
+                         simulated_portfolio=simulated_portfolio)
     return {"title": "Cleared portfolio history"}
 
 
-async def _async_run_on_exchange_ids(coro, exchange_ids, simulated_only):
+async def _async_run_on_exchange_ids(coro, exchange_ids, simulated_only, **kwargs):
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(exchange_ids):
         if not simulated_only or trading_api.is_trader_simulated(exchange_manager):
-            await coro(exchange_manager)
+            await coro(exchange_manager, **kwargs)
 
 
-def _run_on_exchange_ids(coro, simulated_only=False):
+def _run_on_exchange_ids(coro, simulated_only=False, **kwargs):
     interfaces_util.run_in_bot_main_loop(
-        _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids(), simulated_only)
+        _async_run_on_exchange_ids(coro, trading_api.get_exchange_ids(), simulated_only, **kwargs)
     )
