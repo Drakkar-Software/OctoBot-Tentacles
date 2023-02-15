@@ -44,20 +44,36 @@
         </div>
         {% endif %}
         <div class="card mt-2 mt-md-4" id="profitability-display">
-            <div class="card-header"><h2>
-                Profitability
-                <span class="badge d-none"
-                      id="profitability-badge"
-                      data-toggle="tooltip"
-                      title="Portfolio total value change since the first valuation. You can reset it from the portfolio tab."
-                ><span id="profitability-value"></span>%</span>
-                <a class="float-right blue-text"
-                   href="{{url_for('portfolio')}}"
-                   data-toggle="tooltip"
-                   title="Portfolio details">
-                    <i class="fas fa-ellipsis"></i>
-                </a>
-                </h2></div>
+            <div class="card-header">
+                <h2>
+                    <div class="row">
+                        <div class="col-12 col-md-5">
+                            Profitability
+                        </div>
+                        <div class="col-10 col-md-6">
+                            <span class="d-none align-middle"
+                                  id="flat-profitability">
+                                <span id="flat-profitability-text">
+                                </span>
+                                {{reference_unit}}
+                            </span>
+                            <span class="badge d-none"
+                                  id="profitability-badge"
+                                  data-toggle="tooltip"
+                                  title="Portfolio total value change since the first valuation. You can reset it from the portfolio tab."
+                            ><span id="profitability-value"></span>%</span>
+                        </div>
+                        <div class="col-2 col-md-1 text-right">
+                            <a class="blue-text"
+                               href="{{url_for('portfolio')}}"
+                               data-toggle="tooltip"
+                               title="Portfolio details">
+                                <i class="fas fa-ellipsis"></i>
+                            </a>
+                        </div>
+                    </div>
+                </h2>
+            </div>
             <div class="card-body card-text" id="profitability_graph">
                 <div class="w-100">
                     <div id="portfolio_historyChart"

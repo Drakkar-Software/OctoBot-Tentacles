@@ -81,24 +81,30 @@
                     </div>
                 {% endif %}
             </div>
-            {% if has_real_trader%}
             <div class="card-footer d-flex justify-content-end">
-                <div>
-                    <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}" class="btn btn-outline-danger btn-lg waves-effect"
-                    data-toggle="tooltip" data-placement="top" title="Triggers a total portfolios re-synchronization using exchanges as a reference.">
+                <div class="d-flex justify-content-end">
+                    <button
+                        data-url="{{ url_for('api.clear_portfolio_history') }}"
+                        id="clear-portfolio-history-button"
+                        class="btn btn-outline-warning waves-effect"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        title="Reset portfolio and profitability historical values."
+                    >
+                        <i class="fas fa-trash"></i> Reset history
+                    </button>
+                    {% if has_real_trader%}
+                    <button id="refresh-portfolio" update-url="{{ url_for('api.refresh_portfolio') }}"
+                            class="btn btn-outline-danger btn-lg waves-effect"
+                            data-toggle="tooltip"
+                            data-placement="top"
+                            title="Triggers a total portfolios re-synchronization using exchanges as a reference."
+                    >
                         <i class="fa fa-sync"></i> Force refresh
                     </button>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
-        </div>
-        <div class="d-flex justify-content-end">
-            <button
-                data-url="{{ url_for('api.clear_portfolio_history') }}"
-                id="clear-portfolio-history-button"
-                class="btn btn-outline-warning waves-effect">
-                <i class="fas fa-trash"></i> Reset profitability & portfolio history
-            </button>
         </div>
     {% endif %}
     <br>

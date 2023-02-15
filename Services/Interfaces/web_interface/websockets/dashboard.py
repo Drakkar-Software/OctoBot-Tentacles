@@ -29,7 +29,9 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
     @staticmethod
     def _get_profitability():
         profitability_digits = 4
-        has_real_trader, has_simulated_trader, _, _, real_percent_profitability, simulated_percent_profitability, \
+        has_real_trader, has_simulated_trader, \
+        real_global_profitability, simulated_global_profitability, \
+        real_percent_profitability, simulated_percent_profitability, \
         real_no_trade_profitability, simulated_no_trade_profitability, \
         market_average_profitability = services_interfaces.get_global_profitability()
         profitability_data = {
@@ -39,11 +41,15 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
         if has_real_trader:
             profitability_data["bot_real_profitability"] = \
                 pretty_printer.round_with_decimal_count(real_percent_profitability, profitability_digits)
+            profitability_data["bot_real_flat_profitability"] = \
+                pretty_printer.round_with_decimal_count(real_global_profitability, profitability_digits)
             profitability_data["real_no_trade_profitability"] = \
                 pretty_printer.round_with_decimal_count(real_no_trade_profitability, profitability_digits)
         if has_simulated_trader:
             profitability_data["bot_simulated_profitability"] = \
                 pretty_printer.round_with_decimal_count(simulated_percent_profitability, profitability_digits)
+            profitability_data["bot_simulated_flat_profitability"] = \
+                pretty_printer.round_with_decimal_count(simulated_global_profitability, profitability_digits)
             profitability_data["simulated_no_trade_profitability"] = \
                 pretty_printer.round_with_decimal_count(simulated_no_trade_profitability, profitability_digits)
         return profitability_data
