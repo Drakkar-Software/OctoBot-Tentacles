@@ -32,14 +32,20 @@ class Bybit(exchanges.RestExchange):
     # Bybit default take profits are market orders
     # note: use BUY_MARKET and SELL_MARKET since in reality those are conditional market orders, which behave the same
     # way as limit order but with higher fees
-    _BYBIT_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.TAKE_PROFIT,
-                             trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
-    SUPPORTED_BUNDLED_ORDERS = {
-        trading_enums.TraderOrderType.BUY_MARKET: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_MARKET: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.BUY_LIMIT: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
-    }
+    _BYBIT_BUNDLED_ORDERS = [
+        trading_enums.TraderOrderType.STOP_LOSS, 
+        trading_enums.TraderOrderType.TAKE_PROFIT,
+        trading_enums.TraderOrderType.BUY_MARKET,
+        trading_enums.TraderOrderType.SELL_MARKET]
+    def __init__(self, config, exchange_manager, connector_class=None):
+        super().__init__(config, exchange_manager, connector_class=None)
+        if exchange_manager.is_future:
+            self.SUPPORTED_BUNDLED_ORDERS = {
+                trading_enums.TraderOrderType.BUY_MARKET: self._BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_MARKET: self._BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.BUY_LIMIT: self._BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_LIMIT: self._BYBIT_BUNDLED_ORDERS,
+            }
 
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
@@ -198,7 +204,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     # Trades
     EXEC_TYPE = "execType"
     TRADE_TYPE = "Trade"
-
+    PARTIALLY_FILLED_CANCELED = "PARTIALLY_FILLED_CANCELED"
     def fix_order(self, raw, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         order_info = raw[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
@@ -208,6 +214,12 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         if tigger_above := order_info.get(trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value):
             fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
                 tigger_above == self.BYBIT_TRIGGER_ABOVE_VALUE
+        status = fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+        try:
+            status = trading_enums.OrderStatus(status)
+        except ValueError:
+            if status == self.PARTIALLY_FILLED_CANCELED:
+                status = trading_enums.OrderStatus.PARTIALLY_FILLED.value
         self._adapt_order_type(fixed)
 
         return fixed
