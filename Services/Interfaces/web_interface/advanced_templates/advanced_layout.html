@@ -93,17 +93,19 @@
             </div>
             <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
                 <ul class="navbar-nav ml-auto">
-                    {% if is_backtesting_enabled %}
-                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.strategy_optimizer' == active_page %} active{% endif %}">
-                        <a class="nav-link" href="{{ url_for('advanced.strategy_optimizer') }}">Strategy optimizer</a>
-                    </li>
+                    {% if is_advanced_interface_enabled %}
+                        {% if is_backtesting_enabled %}
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.strategy_optimizer' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('advanced.strategy_optimizer') }}">Strategy optimizer</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.tentacles' == active_page %} active{% endif %}">
+                            <a class="nav-link" href="{{ url_for('advanced.tentacles') }}">Tentacles</a>
+                        </li>
+                        <li class="nav-item mx-1 px-0 my-auto">
+                            <a class="btn btn-sm btn-outline-default waves-effect" href="{{ url_for('home') }}"><i class="fa fa-home"></i> Back to OctoBot</a>
+                        </li>
                     {% endif %}
-                    <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.tentacles' == active_page %} active{% endif %}">
-                        <a class="nav-link" href="{{ url_for('advanced.tentacles') }}">Tentacles</a>
-                    </li>
-                    <li class="nav-item mx-1 px-0 my-auto">
-                        <a class="btn btn-sm btn-outline-default waves-effect" href="{{ url_for('home') }}"><i class="fa fa-home"></i> Back to OctoBot</a>
-                    </li>
                 </ul>
             </div>
         </nav>

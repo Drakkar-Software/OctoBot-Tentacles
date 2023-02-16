@@ -326,6 +326,10 @@ def are_automations_enabled():
     return octobot_constants.ENABLE_AUTOMATIONS
 
 
+def is_advanced_interface_enabled():
+    return octobot_constants.ENABLE_ADVANCED_INTERFACE
+
+
 def restart_global_automations():
     interfaces_util.run_in_bot_main_loop(
         interfaces_util.get_bot_api().get_automation().restart(),
