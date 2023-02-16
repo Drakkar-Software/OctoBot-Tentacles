@@ -47,6 +47,7 @@ import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.display as display
+import octobot_commons.errors as commons_errors
 import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
@@ -155,23 +156,35 @@ def _get_logger():
 
 
 def _get_evaluators_tentacles_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    except KeyError:
+        return {}
 
 
 def _get_trading_tentacles_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
 
 
 def get_evaluators_tentacles_startup_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    except KeyError:
+        return {}
 
 
 def get_trading_tentacles_startup_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
 
 
 def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
@@ -376,7 +389,7 @@ def _get_tentacle_activation_desc(name, activated, startup_val, media_url, missi
 
 def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation, startup_tentacles_activation,
                                              root_element, media_url, missing_tentacles: set):
-    for tentacle_class_name, activated in tentacles_activation[root_element].items():
+    for tentacle_class_name, activated in tentacles_activation.get(root_element, {}).items():
         startup_val = startup_tentacles_activation[root_element][tentacle_class_name]
         try:
             tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
@@ -593,7 +606,10 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set, single_stra
 
 
 def get_config_activated_trading_mode():
-    return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+    try:
+        return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+    except commons_errors.ConfigTradingError:
+        return None
 
 
 def get_config_activated_strategies():

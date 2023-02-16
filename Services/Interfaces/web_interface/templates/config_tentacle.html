@@ -196,14 +196,16 @@
                 <a class="float-right blue-text" target="_blank" rel="noopener" href="{{OCTOBOT_WEBSITE_URL}}/guides/#backtesting">
                     &nbsp <i class="fa-solid fa-question"></i>
                 </a>
+                {% if activated_trading_mode %}
                 <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                     Current trading mode: {{ activated_trading_mode.get_name() }}
                 </a>
+                {% endif %}
             </h2>
         </div>
         <div class="card-body">
             <div class="row w-100">
-                {% if activated_trading_mode.is_backtestable() %}
+                {% if activated_trading_mode and activated_trading_mode.is_backtestable() %}
                     {% if data_files %}
                         <div class="col-6">
                            <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
@@ -236,7 +238,7 @@
                             No backtesting data files found. Once you have data files, you will be able to use them here.
                         </h4>
                     {% endif %}
-                {% else %}
+                {% elif activated_trading_mode %}
                     <div class="col-8 alert alert-warning mt-1 text-center" role="alert">
                         <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> can't be used in backtesting for now.
                     </div>
