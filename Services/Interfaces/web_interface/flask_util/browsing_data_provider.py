@@ -19,6 +19,7 @@ import secrets
 import octobot_commons.singleton as singleton
 import octobot_commons.logging as logging
 import octobot_commons.constants as constants
+import octobot_commons.json_util as json_util
 import octobot_commons.configuration as commons_configuration
 import octobot_commons.authentication as commons_authentication
 
@@ -123,9 +124,8 @@ class BrowsingDataProvider(singleton.Singleton):
         self.browsing_data = self._get_default_data()
         read_data = {}
         try:
-            with open(self._get_file()) as sessions_file:
-                read_data = json.load(sessions_file)
-                self.browsing_data.update(read_data)
+            read_data = json_util.read_file(self._get_file())
+            self.browsing_data.update(read_data)
         except FileNotFoundError:
             pass
         except Exception as err:
