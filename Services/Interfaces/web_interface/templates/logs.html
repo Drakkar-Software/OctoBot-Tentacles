@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "logs" %}
 {% import 'macros/tables.html' as m_tables %}
+{% import 'macros/flash_messages.html' as m_flash_messages %}
 
 {% macro extract_logs(logs_list) -%}
     {% for log in logs_list %}
@@ -13,6 +14,7 @@
 <div class="card">
     <div class="card-header"><h2>Event logs</h2></div>
     <div class="card-body">
+      {{ m_flash_messages.flash_messages() }}
       <table id="logs_datatable" class="table table-striped table-bordered table-hover table-responsive-sm">
         <caption>Find the full current and previous OctoBot executions information in logs/OctoBot.log files.</caption>
       <thead>
