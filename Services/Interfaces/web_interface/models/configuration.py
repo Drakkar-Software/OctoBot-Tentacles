@@ -47,6 +47,7 @@ import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.display as display
+import octobot_commons.errors as commons_errors
 import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
@@ -155,34 +156,45 @@ def _get_logger():
 
 
 def _get_evaluators_tentacles_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    except KeyError:
+        return {}
 
 
 def _get_trading_tentacles_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
 
 
 def get_evaluators_tentacles_startup_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_EVALUATOR_PATH]
+    except KeyError:
+        return {}
 
 
 def get_trading_tentacles_startup_activation():
-    return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
-        tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_startup_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
 
 
 def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
     try:
-        doc_file = tentacles_manager_api.get_tentacle_documentation_path(name)
-        if path.isfile(doc_file):
-            resource_url = f"{media_url}/{tentacles_manager_api.get_tentacle_resources_path(name).replace(path.sep, '/')}/"
-            with open(doc_file) as doc_file:
-                doc_content = doc_file.read()
-                # patch resources paths into the tentacle resource path
-                return doc_content.replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
+        doc_content = tentacles_manager_api.get_tentacle_documentation(name)
+        if doc_content:
+            resource_url = \
+                f"{media_url}/{tentacles_manager_api.get_tentacle_resources_path(name).replace(path.sep, '/')}/"
+            # patch resources paths into the tentacle resource path
+            return doc_content.replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
     except KeyError as e:
         if missing_tentacles is None or name not in missing_tentacles:
             _get_logger().error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
@@ -193,7 +205,7 @@ def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
         # can happen when tentacles metadata.json are invalid
         return ""
 
-def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set):
+def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set, whitelist=None):
     import tentacles.Trading.Mode as modes
     import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
@@ -208,6 +220,8 @@ def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentac
     if with_trading_modes:
         trading_config = _get_trading_tentacles_activation()
         for key, val in trading_config.items():
+            if whitelist and key not in whitelist:
+                continue
             config_class = tentacles_management.get_class_from_string(key, trading_modes.AbstractTradingMode, modes,
                                                                       tentacles_management.trading_mode_parent_inspection)
             if config_class:
@@ -220,6 +234,8 @@ def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentac
 
     evaluator_config = _get_evaluators_tentacles_activation()
     for key, val in evaluator_config.items():
+        if whitelist and key not in whitelist:
+            continue
         config_class = tentacles_management.get_class_from_string(key, evaluators.StrategyEvaluator,
                                                                   strategies,
                                                                   tentacles_management.evaluator_parent_inspection)
@@ -323,6 +339,10 @@ def are_automations_enabled():
     return octobot_constants.ENABLE_AUTOMATIONS
 
 
+def is_advanced_interface_enabled():
+    return octobot_constants.ENABLE_ADVANCED_INTERFACE
+
+
 def restart_global_automations():
     interfaces_util.run_in_bot_main_loop(
         interfaces_util.get_bot_api().get_automation().restart(),
@@ -369,7 +389,7 @@ def _get_tentacle_activation_desc(name, activated, startup_val, media_url, missi
 
 def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation, startup_tentacles_activation,
                                              root_element, media_url, missing_tentacles: set):
-    for tentacle_class_name, activated in tentacles_activation[root_element].items():
+    for tentacle_class_name, activated in tentacles_activation.get(root_element, {}).items():
         startup_val = startup_tentacles_activation[root_element][tentacle_class_name]
         try:
             tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
@@ -492,10 +512,11 @@ def _add_trading_modes_requirements(trading_modes_list, strategy_config):
             _get_logger().exception(e, False)
 
 
-def get_strategy_config(media_url, missing_tentacles: set, with_trading_modes=True):
+def get_strategy_config(media_url, missing_tentacles: set, with_trading_modes=True, whitelist=None):
     strategy_config, strategy_config_classes = _get_strategy_activation_state(with_trading_modes,
                                                                               media_url,
-                                                                              missing_tentacles)
+                                                                              missing_tentacles,
+                                                                              whitelist=whitelist)
     if with_trading_modes:
         _add_trading_modes_requirements(strategy_config_classes[TRADING_MODES_KEY], strategy_config)
     _add_strategies_requirements(strategy_config_classes[STRATEGIES_KEY], strategy_config)
@@ -515,21 +536,24 @@ def accept_terms(accepted):
 
 
 def _fill_evaluator_config(evaluator_name, activated, eval_type_key,
-                           evaluator_type, detailed_config, media_url, is_strategy=False):
+                           evaluator_type, detailed_config, media_url, name_filter=None):
     klass = tentacles_management.get_class_from_string(evaluator_name, evaluators.AbstractEvaluator, evaluator_type,
                                                        tentacles_management.evaluator_parent_inspection)
+    filtered = name_filter and evaluator_name != name_filter
     if klass:
-        detailed_config[eval_type_key][evaluator_name] = {}
-        detailed_config[eval_type_key][evaluator_name][constants.ACTIVATION_KEY] = activated
-        detailed_config[eval_type_key][evaluator_name][DESCRIPTION_KEY] = get_tentacle_documentation(evaluator_name,
-                                                                                                     media_url)
-        detailed_config[eval_type_key][evaluator_name][EVALUATION_FORMAT_KEY] = "float" \
-            if klass.get_eval_type() == evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE else str(klass.get_eval_type())
-        return True, klass
-    return False, klass
+        if not filtered:
+            detailed_config[eval_type_key][evaluator_name] = {}
+            detailed_config[eval_type_key][evaluator_name][constants.ACTIVATION_KEY] = activated
+            detailed_config[eval_type_key][evaluator_name][DESCRIPTION_KEY] = \
+                get_tentacle_documentation(evaluator_name, media_url)
+            detailed_config[eval_type_key][evaluator_name][EVALUATION_FORMAT_KEY] = "float" \
+                if klass.get_eval_type() == evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE \
+                else str(klass.get_eval_type())
+        return True, klass, filtered
+    return False, klass, filtered
 
 
-def get_evaluator_detailed_config(media_url, missing_tentacles: set):
+def get_evaluator_detailed_config(media_url, missing_tentacles: set, single_strategy=None):
     import tentacles.Evaluator.Strategies as strategies
     import tentacles.Evaluator.TA as ta
     import tentacles.Evaluator.Social as social
@@ -547,38 +571,45 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set):
     strategy_class_by_name = {}
     evaluator_config = _get_evaluators_tentacles_activation()
     for evaluator_name, activated in evaluator_config.items():
-        is_TA, klass = _fill_evaluator_config(evaluator_name, activated, TA_KEY, ta, detailed_config, media_url)
+        is_TA, klass, _ = _fill_evaluator_config(evaluator_name, activated, TA_KEY, ta, detailed_config, media_url)
         if not is_TA:
-            is_social, klass = _fill_evaluator_config(evaluator_name, activated, SOCIAL_KEY,
-                                                      social, detailed_config, media_url)
+            is_social, klass, _ = _fill_evaluator_config(evaluator_name, activated, SOCIAL_KEY,
+                                                         social, detailed_config, media_url)
             if not is_social:
-                is_real_time, klass = _fill_evaluator_config(evaluator_name, activated, RT_KEY,
-                                                             rt, detailed_config, media_url)
+                is_real_time, klass, _ = _fill_evaluator_config(evaluator_name, activated, RT_KEY,
+                                                                rt, detailed_config, media_url)
                 if not is_real_time:
-                    is_scripted, klass = _fill_evaluator_config(evaluator_name, activated, SCRIPTED_KEY,
-                                                                scripted, detailed_config, media_url)
+                    is_scripted, klass, _ = _fill_evaluator_config(evaluator_name, activated, SCRIPTED_KEY,
+                                                                   scripted, detailed_config, media_url)
                     if not is_scripted:
-                        is_strategy, klass = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
-                                                                    strategies, strategy_config, media_url,
-                                                                    is_strategy=True)
+                        is_strategy, klass, filtered = _fill_evaluator_config(evaluator_name, activated, STRATEGIES_KEY,
+                                                                              strategies, strategy_config, media_url,
+                                                                              name_filter=single_strategy)
                         if is_strategy:
-                            strategy_class_by_name[evaluator_name] = klass
+                            if not filtered:
+                                strategy_class_by_name[evaluator_name] = klass
                         else:
                             _add_to_missing_tentacles_if_missing(evaluator_name, missing_tentacles)
 
     _add_strategies_requirements(strategy_class_by_name, strategy_config)
-    required_elements = _get_required_element(strategy_config)
-    for eval_type in detailed_config.values():
-        for eval_name, eval_details in eval_type.items():
-            eval_details[REQUIRED_KEY] = eval_name in required_elements
+    if required_elements := _get_required_element(strategy_config):
+        for eval_type in detailed_config.values():
+            for eval_name, eval_details in eval_type.items():
+                eval_details[REQUIRED_KEY] = eval_name in required_elements
 
-    detailed_config[ACTIVATED_STRATEGIES] = [s for s, details in strategy_config[STRATEGIES_KEY].items()
-                                             if details[constants.ACTIVATION_KEY]]
+    detailed_config[ACTIVATED_STRATEGIES] = [
+        s
+        for s, details in strategy_config[STRATEGIES_KEY].items()
+        if details[constants.ACTIVATION_KEY]
+    ]
     return detailed_config
 
 
 def get_config_activated_trading_mode():
-    return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+    try:
+        return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+    except commons_errors.ConfigTradingError:
+        return None
 
 
 def get_config_activated_strategies():

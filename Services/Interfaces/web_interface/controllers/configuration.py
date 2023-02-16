@@ -269,15 +269,20 @@ def config_tentacle():
             missing_tentacles = set()
             media_url = flask.url_for("tentacle_media", _external=True)
             tentacle_class, tentacle_type, tentacle_desc = models.get_tentacle_from_string(tentacle_name, media_url)
-            evaluator_config = models.get_evaluator_detailed_config(media_url,
-                                                                    missing_tentacles) if tentacle_type == "strategy" and \
-                                                                                          tentacle_desc[
-                                                                                              models.REQUIREMENTS_KEY] == [
-                                                                                              "*"] else None
-            strategy_config = models.get_strategy_config(media_url,
-                                                         missing_tentacles) if tentacle_type == "trading mode" and \
-                                                                               len(tentacle_desc[
-                                                                                       models.REQUIREMENTS_KEY]) > 1 else None
+            is_strategy = tentacle_type == "strategy"
+            is_trading_mode = tentacle_type == "trading mode"
+            evaluator_config = None
+            strategy_config = None
+            wildcard_requirements = tentacle_desc[models.REQUIREMENTS_KEY] == ["*"]
+            if is_strategy and wildcard_requirements:
+                evaluator_config = models.get_evaluator_detailed_config(
+                    media_url, missing_tentacles, single_strategy=tentacle_name
+                )
+            elif is_trading_mode and len(tentacle_desc[models.REQUIREMENTS_KEY]) > 1:
+                strategy_config = models.get_strategy_config(
+                    media_url, missing_tentacles, with_trading_modes=False,
+                    whitelist=None if wildcard_requirements else tentacle_desc[models.REQUIREMENTS_KEY]
+                )
             evaluator_startup_config = models.get_evaluators_tentacles_startup_activation() \
                 if evaluator_config or strategy_config else None
             tentacle_commands = models.get_tentacle_user_commands(tentacle_class)

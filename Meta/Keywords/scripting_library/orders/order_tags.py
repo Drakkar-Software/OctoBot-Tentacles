@@ -15,5 +15,9 @@
 #  License along with this library.
 
 
-def get_tagged_orders(ctx, tag, symbol=None):
-    return ctx.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol, tag=tag)
+def get_tagged_orders(
+    ctx, tag, symbol=None, since: int or float = -1, until: int or float = -1
+):
+    return ctx.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
+        symbol=symbol, tag=tag, since=since, until=until
+    )

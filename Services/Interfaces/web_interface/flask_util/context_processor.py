@@ -35,9 +35,6 @@ def context_processor_register():
     def get_tentacle_config_file_content(tentacle_class):
         return models.get_tentacle_config(tentacle_class)
 
-    def get_tentacle_config_schema_content(tentacle_class):
-        return models.get_tentacle_config_schema(tentacle_class)
-
     def get_exchange_holdings(holdings, holding_type):
         return ', '.join(f'{exchange.capitalize()}: {holding[holding_type]}'
                          for exchange, holding in holdings['exchanges'].items())
@@ -130,7 +127,6 @@ def context_processor_register():
         TAB_START=web_enums.TabsLocation.START,
         TAB_END=web_enums.TabsLocation.END,
         get_tentacle_config_file_content=get_tentacle_config_file_content,
-        get_tentacle_config_schema_content=get_tentacle_config_schema_content,
         get_currency_id=get_currency_id,
         filter_currency_pairs=filter_currency_pairs,
         get_exchange_holdings=get_exchange_holdings,
@@ -148,4 +144,5 @@ def context_processor_register():
         startup_messages=models.get_startup_messages(),
         are_automations_enabled=models.are_automations_enabled(),
         is_backtesting_enabled=models.is_backtesting_enabled(),
+        is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
     )

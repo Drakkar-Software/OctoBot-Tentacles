@@ -9,9 +9,11 @@
             <a class="float-right blue-text" target="_blank" data-intro="backtesting">
                 <i class="fa-solid fa-question"></i>
             </a>
+            {% if activated_trading_mode %}
             <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                 Current trading mode: {{ activated_trading_mode.get_name() }}
             </a>
+            {% endif %}
         </h2>
     </div>
     <div class="card-body">
@@ -61,7 +63,7 @@
                     <i class="fa fa-cloud-download-alt"></i> Get historical data
                 </a>
             </div>
-            {% if activated_trading_mode.is_backtestable() %}
+            {% if activated_trading_mode and activated_trading_mode.is_backtestable() %}
                 <div class="container-fluid row mx-0">
                     <div class="row col-12 col-md-3">
                         <div class="custom-control custom-switch mx-4 d-none my-auto" id="synchronized-data-only-div">
@@ -86,7 +88,7 @@
                         </div>
                     </div>
                 </div>
-            {% else %}
+            {% elif activated_trading_mode %}
                 <div class="alert alert-warning mt-1 text-center" role="alert">
                     <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                         {{ activated_trading_mode.get_name() }}</a>

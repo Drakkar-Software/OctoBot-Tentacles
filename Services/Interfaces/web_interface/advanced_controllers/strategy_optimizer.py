@@ -81,5 +81,5 @@ def strategy_optimizer():
                                          time_frames=models.get_time_frames_list(current_strategy),
                                          evaluators=models.get_evaluators_list(current_strategy),
                                          risks=models.get_risks_list(),
-                                         trading_mode=trading_mode.get_name(),
+                                         trading_mode=trading_mode.get_name() if trading_mode else None,
                                          run_params=models.get_current_run_params())
