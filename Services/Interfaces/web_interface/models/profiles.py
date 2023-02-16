@@ -28,6 +28,7 @@ import octobot.community as community
 ACTIVATION = "activation"
 VERSION = "version"
 IMPORTED = "imported"
+READ_ERROR = "read_error"
 
 
 def get_current_profile():
@@ -74,7 +75,9 @@ def get_profiles_tentacles_details(profiles_list):
             tentacles_by_profile_id[profile.profile_id] = {
                 ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
                 VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config),
-                IMPORTED: profile.imported
+                IMPORTED: profile.imported,
+                READ_ERROR:
+                    not tentacles_manager_api.is_tentacles_setup_config_successfully_loaded(tentacles_setup_config),
             }
         except Exception:
             # do not raise here to prevent avoid config display
