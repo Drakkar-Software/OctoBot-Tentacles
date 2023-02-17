@@ -18,12 +18,13 @@ import time
 
 import ccxt
 
+import octobot_commons.constants as commons_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
+import octobot_trading.personal_data as trading_personal_data
 
 
 class Bybit(exchanges.RestExchange):
@@ -99,7 +100,7 @@ class Bybit(exchanges.RestExchange):
                           quantity: float, price: float, stop_price: float = None, side: str = None,
                           current_price: float = None, params: dict = None):
         params = params or {}
-        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
+        if trading_personal_data.is_stop_order(order_type):
             params["stop_order_id"] = order_id
         if stop_price is not None:
             # params["stop_px"] = stop_price
@@ -109,11 +110,12 @@ class Bybit(exchanges.RestExchange):
                                          price=price, stop_price=stop_price, side=side,
                                          current_price=current_price, params=params)
 
-    async def _verify_order(self, created_order, order_type, symbol, price, side, params=None):
-        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
-            params = params or {}
-            params["stop"] = True
-        return await super()._verify_order(created_order, order_type, symbol, price, side, params=params)
+    async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
+        if trading_personal_data.is_stop_order(order_type):
+            get_order_params = get_order_params or {}
+            get_order_params["stop"] = True
+        return await super()._verify_order(created_order, order_type, symbol, price, side,
+                                           get_order_params=get_order_params)
 
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
