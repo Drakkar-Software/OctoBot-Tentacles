@@ -750,7 +750,7 @@ def get_metrics_enabled():
 
 
 def get_beta_env_enabled_in_config():
-    return community.IdentifiersProvider.is_staging_environment_enabled(
+    return octobot_constants.USE_BETA_EARLY_ACCESS or community.IdentifiersProvider.is_staging_environment_enabled(
         interfaces_util.get_edited_config(dict_only=True)
     )
 
