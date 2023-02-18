@@ -273,15 +273,16 @@ def config_tentacle():
             is_trading_mode = tentacle_type == "trading mode"
             evaluator_config = None
             strategy_config = None
-            wildcard_requirements = tentacle_desc[models.REQUIREMENTS_KEY] == ["*"]
+            requirements = tentacle_desc.get(models.REQUIREMENTS_KEY, [])
+            wildcard_requirements = requirements == ["*"]
             if is_strategy and wildcard_requirements:
                 evaluator_config = models.get_evaluator_detailed_config(
                     media_url, missing_tentacles, single_strategy=tentacle_name
                 )
-            elif is_trading_mode and len(tentacle_desc[models.REQUIREMENTS_KEY]) > 1:
+            elif is_trading_mode and len(requirements) > 1:
                 strategy_config = models.get_strategy_config(
                     media_url, missing_tentacles, with_trading_modes=False,
-                    whitelist=None if wildcard_requirements else tentacle_desc[models.REQUIREMENTS_KEY]
+                    whitelist=None if wildcard_requirements else requirements
                 )
             evaluator_startup_config = models.get_evaluators_tentacles_startup_activation() \
                 if evaluator_config or strategy_config else None
