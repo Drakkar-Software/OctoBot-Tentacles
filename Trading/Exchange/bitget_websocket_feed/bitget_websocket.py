@@ -21,9 +21,9 @@ import tentacles.Trading.Exchange.bitget.bitget_exchange as bitget_exchange
 class BitgetCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     EXCHANGE_FEEDS = {
         Feeds.TRADES: True,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,   # missing volume in candle
+        Feeds.KLINE: True,
         Feeds.TICKER: True,
-        Feeds.CANDLE: Feeds.UNSUPPORTED.value,  # missing volume in candle
+        Feeds.CANDLE: True,
     }
 
     @classmethod
