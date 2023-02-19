@@ -24,7 +24,7 @@
             <span class="white-text"> Any configuration change will be applied after OctBot restarts.</span>
             <ul class="nav mx-auto">
                 <li class="nav-item">
-                    <a class="nav-link btn green waves-effect" id='save-config' href="#" role="tab" update-url="{{ url_for('advanced.evaluator_config') }}">Save and restart later</a>
+                    <a class="nav-link btn green waves-effect" id='save-config' href="#" role="tab" update-url="{{ url_for('advanced.evaluator_config') }}">Save</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link btn orange waves-effect" id='reset-config' href="#" role="tab">Reset all</a>
@@ -32,7 +32,7 @@
             </ul>
             <ul class="nav ml-auto">
                 <li class="nav-item">
-                    <button id='save-config-and-restart' update-url="{{ url_for('advanced.evaluator_config') }}" type="button" class="nav-link btn red waves-effect">Save and restart Octobot</button>
+                    <button id='save-config-and-restart' update-url="{{ url_for('advanced.evaluator_config') }}" type="button" class="nav-link btn red waves-effect">Apply changes and restart</button>
                 </li>
             </ul>
         </nav>
