@@ -176,7 +176,7 @@ _TUTORIALS = {
                 {
                     title: 'Launch automations',
                     element: document.querySelector('#applyAutomations'),
-                    intro: `Automations are started with your OctoBot and when hitting the "apply automations" button.`
+                    intro: `Automations are started with your OctoBot and when hitting the Apply button.`
                 },
                 {
                     title: 'Automations are saved in your profile',
