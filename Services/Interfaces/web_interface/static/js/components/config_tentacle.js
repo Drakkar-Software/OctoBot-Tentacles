@@ -294,8 +294,16 @@ function initConfigEditor(showWaiter) {
             closeOnSelect: false,
             placeholder: "Select values to use"
         });
+        const configEditorButtons = $("#configEditorButtons");
         if(configEditor !== null){
             configEditor.on("change", editorChangeCallback);
+            if(configEditorButtons.length){
+                configEditorButtons.removeClass(hidden_class);
+            }
+        } else {
+            if(configEditorButtons.length){
+                configEditorButtons.addClass(hidden_class);
+            }
         }
         handleConfigDisplay(true);
     }
