@@ -17,6 +17,7 @@ import time
 import decimal
 import typing
 
+import octobot_commons.constants as commons_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
@@ -292,6 +293,9 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_LEVER = "lever"
     DATA = "data"
 
+    # Funding
+    OKX_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
+
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         if self.connector.exchange_manager.is_future \
@@ -368,4 +372,27 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                 self.OKX_LEVER,
                 constants.DEFAULT_SYMBOL_LEVERAGE,
             )
+        return fixed
+
+    def parse_funding_rate(self, fixed, **kwargs):
+        try:
+            """
+            Kucoin next funding time is not provided
+            To obtain the last_funding_time : 
+            """
+            # no previous funding time of rate on okx
+            next_funding_timestamp = self.get_uniformized_timestamp(
+                fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_TIMESTAMP.value, 0)
+            )
+            fixed.update({
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                    next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME,
+                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
+                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0))),
+                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: next_funding_timestamp,
+                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: decimal.Decimal(
+                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0))),
+            })
+        except KeyError as e:
+            self.logger.error(f"Fail to parse funding dict ({e})")
         return fixed
