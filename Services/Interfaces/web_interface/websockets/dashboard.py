@@ -55,7 +55,7 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
         return profitability_data
 
     @staticmethod
-    def _format_new_data(real_trades=None, simulated_trades=None):
+    def _format_new_data(exchange_id=None, real_trades=None, simulated_trades=None):
         if real_trades is None:
             real_trades = []
         if simulated_trades is None:
@@ -68,7 +68,8 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
         return {
             "real_trades": models.format_trades(real_trades),
             "simulated_trades": models.format_trades(simulated_trades),
-            "symbol": symbol
+            "symbol": symbol,
+            "exchange_id": exchange_id
         }
 
     @websockets.websocket_with_login_required_when_activated
