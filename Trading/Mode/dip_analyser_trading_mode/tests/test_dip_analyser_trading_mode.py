@@ -57,7 +57,7 @@ async def tools():
             await _stop(trader.exchange_manager)
 
 
-async def test_run_independent_backtestings_with_memory_check():
+async def _test_run_independent_backtestings_with_memory_check():
     """
     Should always be called first here to avoid other tests' related memory check issues
     """
@@ -96,7 +96,7 @@ async def test_init(tools):
     }
 
 
-async def test_create_bottom_order(tools):
+async def test_create_limit_bottom_order(tools):
     producer, consumer, trader = tools
 
     price = decimal.Decimal("1000")
@@ -109,6 +109,7 @@ async def test_create_bottom_order(tools):
     await asyncio_tools.wait_asyncio_next_cycle()
 
     order = trading_api.get_open_orders(trader.exchange_manager)[0]
+    assert isinstance(order, trading_personal_data.BuyLimitOrder)
     expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
         consumer.SOFT_MAX_CURRENCY_RATIO
@@ -117,9 +118,39 @@ async def test_create_bottom_order(tools):
     expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
     assert order.origin_price == expected_price
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available  > trading_constants.ZERO
+    assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
 
     assert order.order_id in consumer.sell_targets_by_order_id
+
+
+async def test_create_market_bottom_order(tools):
+    producer, consumer, trader = tools
+
+    price = decimal.Decimal("1000")
+    market_quantity = decimal.Decimal("2")
+    volume_weight = decimal.Decimal("1")
+    risk_multiplier = decimal.Decimal("1.1")
+    consumer.USE_BUY_MARKET_ORDERS_VALUE = True
+    trades = trading_api.get_trade_history(trader.exchange_manager)
+    assert trades == []
+    await producer._create_bottom_order(1, volume_weight, 1)
+    # create as task to allow creator's queue to get processed (market order is instantly filled)
+    await asyncio.create_task(_check_open_orders_count(trader, 0))
+    await asyncio_tools.wait_asyncio_next_cycle()
+
+    trade = trading_api.get_trade_history(trader.exchange_manager)[0]
+    assert trade.trade_type == trading_enums.TraderOrderType.BUY_MARKET
+    expected_quantity = market_quantity * risk_multiplier * \
+        consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+        consumer.SOFT_MAX_CURRENCY_RATIO
+    assert trade.origin_quantity == expected_quantity
+
+    # no price multiplier used as it is a market order (use market price)
+    assert trade.origin_price == price
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+    assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
+
+    assert trade.origin_order_id in consumer.sell_targets_by_order_id
 
 
 async def test_create_bottom_order_with_configured_quantity(tools):
@@ -519,7 +550,7 @@ async def test_create_too_small_sell_orders(tools):
     assert open_orders[2].origin_price == max_price
 
 
-async def test_order_fill_callback(tools):
+async def test_order_fill_callback_with_limit_entry(tools):
     producer, consumer, trader = tools
 
     volume_weight = 1
@@ -566,6 +597,42 @@ async def test_order_fill_callback(tools):
     await producer._create_bottom_order(2, volume_weight, price_weight)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
+
+
+async def test_order_fill_callback_with_market_entry(tools):
+    producer, consumer, trader = tools
+
+    volume_weight = 1
+    price_weight = 1
+    consumer.USE_BUY_MARKET_ORDERS_VALUE = True
+    await producer._create_bottom_order(1, volume_weight, price_weight)
+    # create as task to allow creator's queue to get processed
+    # market order is instantly filled
+    await asyncio.create_task(_check_open_orders_count(trader, 0))
+
+    entry = trading_api.get_trade_history(trader.exchange_manager)[0]
+
+    # create as task to allow creator's queue to get processed
+    for _ in range(consumer.trading_mode.sell_orders_per_buy):
+        await asyncio_tools.wait_asyncio_next_cycle()
+    await asyncio.create_task(_check_open_orders_count(trader, consumer.trading_mode.sell_orders_per_buy))
+
+    assert entry.status == trading_enums.OrderStatus.FILLED
+    open_orders = trading_api.get_open_orders(trader.exchange_manager)
+    assert all(o.status == trading_enums.OrderStatus.OPEN for o in open_orders)
+    assert all(o.side == trading_enums.TradeOrderSide.SELL for o in open_orders)
+    total_sell_quantity = sum(o.origin_quantity for o in open_orders)
+    assert entry.origin_quantity * decimal.Decimal("0.95") <= total_sell_quantity <= entry.origin_quantity
+
+    price = decimal.Decimal(f"{entry.executed_price}")
+    max_price = price * consumer.PRICE_WEIGH_TO_PRICE_PERCENT[1]
+    increment = (max_price - price) / consumer.trading_mode.sell_orders_per_buy
+    assert open_orders[0].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + increment, 8)
+    assert open_orders[1].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 2 * increment, 8)
+    assert open_orders[2].origin_price == \
+        trading_personal_data.decimal_trunc_with_n_decimal_digits(price + 3 * increment, 8)
 
 
 async def test_order_fill_callback_without_fees(tools):
