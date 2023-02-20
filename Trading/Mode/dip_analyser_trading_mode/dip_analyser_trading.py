@@ -58,6 +58,15 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
                   "sold, otherwise a small part will be kept to cover exchange fees."
         )
         self.UI.user_input(
+            DipAnalyserTradingModeConsumer.USE_BUY_MARKET_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Use market orders instead of limit orders upon buy signals. Using a market order makes will "
+                  "guaranty that each buy signal will create an entry. "
+                  "Limit orders (which are priced at 99.5% of the current price) "
+                  "can delay an entry for some time to replace an open buy order with a more suitable "
+                  "one when the market is very volatile. "
+                  "However limit orders might also never be filled and ending up missing a buy opportunity."
+        )
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.STOP_LOSS_MULTIPLIER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0, max_val=1,
             title="Stop loss price multiplier: ratio to compute the stop loss price. "
@@ -138,8 +147,10 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
 
 class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
+    USE_BUY_MARKET_ORDERS = "use_buy_market_orders"
     STOP_LOSS_MULTIPLIER = "stop_loss_multiplier"
     STOP_LOSS_PRICE_MULTIPLIER = decimal.Decimal(0)
+    USE_BUY_MARKET_ORDERS_VALUE = False
     LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.995")
     SOFT_MAX_CURRENCY_RATIO = decimal.Decimal("0.33")
     # consider a high ratio not to take too much risk and not to prevent order creation either
@@ -178,6 +189,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         """
         self.STOP_LOSS_PRICE_MULTIPLIER = \
             decimal.Decimal(f"{self.trading_mode.trading_config.get(self.STOP_LOSS_MULTIPLIER, 0)}")
+        self.USE_BUY_MARKET_ORDERS_VALUE = self.trading_mode.trading_config.get(self.USE_BUY_MARKET_ORDERS, False)
         self.PRICE_WEIGH_TO_PRICE_PERCENT = {}
         self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
             decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
@@ -232,7 +244,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
-                    order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                    order_type=trading_enums.TraderOrderType.BUY_MARKET
+                    if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT,
                     symbol=symbol,
                     current_price=price,
                     quantity=order_quantity,
