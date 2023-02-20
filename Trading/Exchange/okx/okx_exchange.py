@@ -293,7 +293,6 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     DATA = "data"
 
     def fix_order(self, raw, symbol=None, **kwargs):
-        raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, **kwargs)
         if self.connector.exchange_manager.is_future \
                 and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
@@ -303,8 +302,7 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
         if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
-                float(raw_order_info.get(self.OKX_LEVER, 1))
+                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value]
         self._adapt_order_type(fixed)
         return fixed
 
