@@ -79,14 +79,6 @@ for logger in loggers:
 registered_plugins = []
 notifications = []
 
-matrix_history = []
-symbol_data_history = {}
-portfolio_value_history = {
-    "real_value": [],
-    "simulated_value": [],
-    "timestamp": []
-}
-
 TIME_AXIS_TITLE = "Time"
 
 
@@ -112,25 +104,6 @@ def update_registered_plugins(plugins):
 
 # register flask utilities
 import tentacles.Services.Interfaces.web_interface.flask_util
-
-
-def add_to_matrix_history(matrix):
-    matrix_history.append({
-        "matrix": copy.deepcopy(matrix.get_matrix()),
-        "timestamp": time.time()
-    })
-
-
-def add_to_portfolio_value_history(real_value, simulated_value):
-    portfolio_value_history["real_value"].append(real_value)
-    portfolio_value_history["simulated_value"].append(simulated_value)
-    portfolio_value_history["timestamp"].append(time.time())
-
-
-def add_to_symbol_data_history(symbol, data, time_frame, force_data_reset=False):
-    if symbol not in symbol_data_history:
-        symbol_data_history[symbol] = {}
-    symbol_data_history[symbol][time_frame] = data
 
 
 def flush_notifications():
@@ -176,18 +149,6 @@ async def add_notification(level, title, message, sound=None):
         "Sound": sound
     })
     send_general_notifications()
-
-
-def get_matrix_history():
-    return matrix_history
-
-
-def get_portfolio_value_history():
-    return portfolio_value_history
-
-
-def get_symbol_data_history(symbol, time_frame):
-    return symbol_data_history[symbol][time_frame]
 
 
 def get_notifications():
