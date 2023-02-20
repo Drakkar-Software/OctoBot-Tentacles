@@ -140,8 +140,6 @@ $(document).ready(function () {
                     socket.emit("candle_graph_update", update_detail);
                 }, price_graph_update_interval);
             }
-        }else{
-            log("update_detail not found", candle_data.symbol, candle_data.exchange_id, update_details)
         }
     }
 
