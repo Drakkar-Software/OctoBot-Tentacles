@@ -111,10 +111,12 @@ $(document).ready(function () {
         });
     }
 
-    function _find_symbol_details(symbol) {
+    function _find_symbol_details(symbol, exchange_id) {
         let found_update_detail = undefined;
-        $.each(update_details, function (i, update_detail) {
-            if (update_detail.symbol === symbol) {
+        update_details.forEach((update_detail) => {
+            if (update_detail.symbol.replace(new RegExp("/","g"), "|")
+                === symbol.replace(new RegExp("/","g"), "|")
+                && update_detail.exchange_id === exchange_id) {
                 found_update_detail = update_detail;
             }
         })
@@ -127,7 +129,7 @@ $(document).ready(function () {
         if (isDefined(data.request)) {
             update_detail = data.request;
         } else {
-            update_detail = _find_symbol_details(candle_data.symbol);
+            update_detail = _find_symbol_details(candle_data.symbol, candle_data.exchange_id);
         }
         if (isDefined(update_detail)) {
             get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
@@ -138,6 +140,8 @@ $(document).ready(function () {
                     socket.emit("candle_graph_update", update_detail);
                 }, price_graph_update_interval);
             }
+        }else{
+            log("update_detail not found", candle_data.symbol, candle_data.exchange_id, update_details)
         }
     }
 
