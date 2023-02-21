@@ -810,7 +810,7 @@ async def _load_market(exchange, results):
 
 
 def _add_merged_exchanges(exchanges):
-    extended = copy.copy(exchanges)
+    extended = list(exchanges)
     for exchange in exchanges:
         if exchange in MERGED_CCXT_EXCHANGES:
             extended.append(MERGED_CCXT_EXCHANGES[exchange])
