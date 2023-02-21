@@ -313,17 +313,17 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
-        # CCXT standard funding_rate parsing logic
-        funding_dict = fixed
-        if from_ticker and ccxt_constants.CCXT_INFO in fixed:
-            funding_dict, old_funding_dict = fixed[ccxt_constants.CCXT_INFO], fixed
-
-        try:
-            """
-            Bybit last funding time is not provided
-            To obtain the last_funding_time : 
-            => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
-            """
+        """
+        Bybit last funding time is not provided
+        To obtain the last_funding_time :
+        => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
+        """
+        funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+        if from_ticker:
+            if ccxt_constants.CCXT_INFO not in funding_dict:
+                return {}
+            # no data in fixed when coming from ticker
+            funding_dict = fixed[ccxt_constants.CCXT_INFO]
             funding_next_timestamp = float(
                 funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0)
             )
@@ -331,12 +331,22 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                     funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
                 trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0)),
+                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)),
                 trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp,
                 trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: constants.NaN
             })
-        except KeyError as e:
-            self.logger.error(f"Fail to parse funding dict ({e})")
+        else:
+            funding_next_timestamp = float(
+                funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value, 0)
+            )
+            funding_dict.update({
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                    funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
+                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
+                    funding_dict.get(ccxt_constants.CCXT_INFO, {})
+                    .get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)
+                ),
+            })
         return funding_dict
 
     def parse_mark_price(self, fixed, from_ticker=False, **kwargs) -> dict:

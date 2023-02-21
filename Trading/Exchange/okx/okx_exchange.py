@@ -374,25 +374,19 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             )
         return fixed
 
-    def parse_funding_rate(self, fixed, **kwargs):
-        try:
-            """
-            Kucoin next funding time is not provided
-            To obtain the last_funding_time : 
-            """
-            # no previous funding time of rate on okx
-            next_funding_timestamp = self.get_uniformized_timestamp(
-                fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_TIMESTAMP.value, 0)
-            )
-            fixed.update({
-                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                    next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME,
-                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0))),
-                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: next_funding_timestamp,
-                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: decimal.Decimal(
-                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0))),
-            })
-        except KeyError as e:
-            self.logger.error(f"Fail to parse funding dict ({e})")
+    def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
+        if from_ticker:
+            # no funding info in ticker
+            return {}
+        fixed = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+        # no previous funding time of rate on okx
+        next_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
+        # only the next scheduled funding rate is available: use it for last value
+        next_funding_rate = fixed[trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value]
+        fixed.update({
+            trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME,
+            trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: next_funding_rate,
+            trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: next_funding_rate,
+        })
         return fixed

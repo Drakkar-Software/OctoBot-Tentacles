@@ -332,27 +332,22 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
-        try:
-            """
-            Kucoin next funding time is not provided
-            To obtain the last_funding_time : 
-            => timestamp(previous_funding_timestamp) + timestamp(KUCOIN_DEFAULT_FUNDING_TIME)
-            """
-            previous_funding_timestamp = self.get_uniformized_timestamp(
-                fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.PREVIOUS_FUNDING_TIMESTAMP.value, 0)
-            )
-            fixed.update({
-                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value: previous_funding_timestamp,
-                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.PREVIOUS_FUNDING_RATE.value, 0))),
-                trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
-                    previous_funding_timestamp + self.KUCOIN_DEFAULT_FUNDING_TIME,
-                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: decimal.Decimal(
-                    str(fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0))),
-            })
-        except KeyError as e:
-            self.logger.error(f"Fail to parse funding dict ({e})")
-        return fixed
+        """
+        Kucoin next funding time is not provided
+        To obtain the last_funding_time :
+        => timestamp(previous_funding_timestamp) + timestamp(KUCOIN_DEFAULT_FUNDING_TIME)
+        """
+        if from_ticker:
+            # no funding info in ticker
+            return {}
+        funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+        # from super().parse_funding_rate
+        previous_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value]
+        fixed.update({
+            trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
+                previous_funding_timestamp + self.KUCOIN_DEFAULT_FUNDING_TIME,
+        })
+        return funding_dict
 
     def parse_position(self, fixed, **kwargs):
         raw_position_info = fixed[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
