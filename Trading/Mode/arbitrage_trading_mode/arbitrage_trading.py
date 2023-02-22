@@ -32,6 +32,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.modes as trading_modes
 import octobot_trading.octobot_channel_consumer as octobot_channel_consumer
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors as trading_errors
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 
 
@@ -490,6 +491,10 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
                                  f"{arbitrage_container.own_exchange_price}")
                 return True
             return False
+        except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) as err:
+            self.logger.warning(f"Skipping order cancel: {err}")
+            # order can't be cancelled, ignore it and proceed
+            return True
         except KeyError:
             # order is not open anymore: can't cancel
             return False

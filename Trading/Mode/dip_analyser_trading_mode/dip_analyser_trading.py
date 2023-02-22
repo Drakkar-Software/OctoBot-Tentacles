@@ -615,5 +615,9 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         cancelled_orders = False
         if self.exchange_manager.trader.is_enabled:
             for order in self._get_current_buy_orders():
-                cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
+                try:
+                    cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
+                except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) as err:
+                    self.logger.warning(f"Skipping order cancel: {err}")
+                    # order can't be cancelled: don't set cancelled_orders to True
         return cancelled_orders
