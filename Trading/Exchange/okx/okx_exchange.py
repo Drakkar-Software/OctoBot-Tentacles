@@ -97,7 +97,7 @@ class Okx(exchanges.RestExchange):
         params = {}
         if self.exchange_manager.is_future:
             params["reduceOnly"] = order.reduce_only
-            params["marginMode"] = self._get_ccxt_margin_type(order.symbol)
+            params[self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE] = self._get_ccxt_margin_type(order.symbol)
         return params
 
     # todo check
@@ -166,7 +166,6 @@ class Okx(exchanges.RestExchange):
         return await super()._verify_order(created_order, order_type, symbol, price, side,
                                            get_order_params=get_order_params)
 
-    # todo check
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -213,6 +212,14 @@ class Okx(exchanges.RestExchange):
         :param symbol: the symbol
         :return: the current symbol leverage multiplier
         """
+        kwargs = kwargs or {}
+        if self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE not in kwargs:
+            margin_type = self.connector.adapter.OKX_ISOLATED_MARGIN_MODE
+            try:
+                margin_type = self._get_ccxt_margin_type(symbol)
+            except KeyError:
+                pass
+            kwargs[self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE] = margin_type
         return await self.connector.get_symbol_leverage(symbol=symbol, **kwargs)
 
     async def set_symbol_leverage(self, symbol: str, leverage: float, **kwargs):
@@ -268,7 +275,6 @@ class Okx(exchanges.RestExchange):
         """
 
     def _get_used_order_types(self):
-        # todo fill in with used order type (used to get open and closed orders)
         return [
             self.connector.adapter.OKX_CONDITIONAL_ORDER_TYPE,
         ]
@@ -285,13 +291,13 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_MARGIN_MODE = "mgnMode"
     OKX_ISOLATED_MARGIN_MODE = "isolated"
     OKX_CROSS_MARGIN_MODE = "cross"
-
     OKX_POS_SIDE = "posSide"
     OKX_ONE_WAY_MODE = "net"
 
     # LEVERAGE
     OKX_LEVER = "lever"
     DATA = "data"
+    OKX_LEVERAGE_MARGIN_MODE = "marginMode"
 
     # Funding
     OKX_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
