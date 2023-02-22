@@ -28,7 +28,6 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.signals as trading_signals
 import octobot_trading.personal_data as personal_data
 import octobot_trading.modes.script_keywords as script_keywords
-from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc
 
 
 class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
@@ -192,7 +191,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
     async def _cancel_orders(self, orders_descriptions, symbol):
         cancelled_count = 0
         for _, order in self.get_open_order_from_description(orders_descriptions, symbol):
-            await self.exchange_manager.trader.cancel_order(order)
+            try:
+                await self.exchange_manager.trader.cancel_order(order)
+            except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
+                self.logger.warning(f"Skipping order cancel: {err}")
             cancelled_count += 1
         return cancelled_count
 
