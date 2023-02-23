@@ -174,7 +174,10 @@ function position_request_failure_callback(updated_data, update_url, dom_root_el
 function reload_orders(){
     const previous_search = ordersDataTable.search();
     const previous_order = ordersDataTable.order();
-    $("#openOrderTable").load(location.href + " #openOrderTable",function(){
+    $("#trading-orders-and-positions").load(location.href + " #trading-orders-and-positions", () => {
+        positionsDataTable = $('#positions_datatable').DataTable({
+            "paging":   false,
+        });
         ordersDataTable = $('#open_orders_datatable').DataTable({
             "paging": false,
             "search": {
