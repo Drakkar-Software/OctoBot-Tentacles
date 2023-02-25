@@ -45,6 +45,9 @@ class Bybit(exchanges.RestExchange):
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
 
+    # set True when get_positions() is not returning empty positions and should use get_position() instead
+    REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
+
     BUY_STR = "Buy"
     SELL_STR = "Sell"
 
@@ -78,15 +81,6 @@ class Bybit(exchanges.RestExchange):
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
             kwargs["end"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
-    async def get_positions(self, symbols=None, **kwargs: dict) -> list:
-        params = {}
-        raw_positions = []
-        for settleCoin in ("USDT", "BTC"):
-            params["settleCoin"] = settleCoin
-            params["dataFilter"] = "full"
-            raw_positions += await super().get_positions(symbols=symbols, **params)
-        return raw_positions
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
@@ -141,10 +135,24 @@ class Bybit(exchanges.RestExchange):
             params["reduceOnly"] = order.reduce_only
         return params
 
-    def get_bundled_order_parameters(self, stop_loss_price=None, take_profit_price=None) -> dict:
+    def _get_margin_type_query_params(self, symbol, **kwargs):
+        if not self.exchange_manager.exchange.has_pair_future_contract(symbol):
+            raise KeyError(f"{symbol} contract unavailable")
+        else:
+            contract = self.exchange_manager.exchange.get_pair_future_contract(symbol)
+            kwargs = kwargs or {}
+            kwargs[ccxt_enums.ExchangePositionCCXTColumns.LEVERAGE.value] = float(contract.current_leverage)
+        return kwargs
+
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool, **kwargs: dict):
+        kwargs = self._get_margin_type_query_params(symbol, **kwargs)
+        await super().set_symbol_margin_type(symbol, isolated, **kwargs)
+
+    def get_bundled_order_parameters(self, order, stop_loss_price=None, take_profit_price=None) -> dict:
         """
-        Returns True when this exchange supports orders created upon other orders fill (ex: a stop loss created at
-        the same time as a buy order)
+        Returns the updated params when this exchange supports orders created upon other orders fill
+        (ex: a stop loss created at the same time as a buy order)
+        :param order: the initial order
         :param stop_loss_price: the bundled order stopLoss price
         :param take_profit_price: the bundled order takeProfit price
         :return: A dict with the necessary parameters to create the bundled order on exchange alongside the
@@ -271,7 +279,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                                                      ccxt_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
-                    trading_enums.TraderPositionType(
+                    trading_enums.MarginType(
                         fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:

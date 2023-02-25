@@ -23,13 +23,89 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 
 
+def _disabled_okx_algo_order_creation(f):
+    async def wrapper(*args, **kwargs):
+        # Algo order prevent bundled orders from working as they require to use the regular order api
+        # Since the regular order api works for limit and market orders as well, us it all the time
+        # Algo api is used for stop losses.
+        # This ccxt issue will remain as long as privatePostTradeOrderAlgo will be used for each order with a
+        # stopLossPrice or takeProfitPrice even when both are set (which make it an invalid okx algo order)
+        connector = args[0]
+        client = connector.client
+        client.privatePostTradeOrderAlgo = client.privatePostTradeOrder
+        try:
+            return await f(*args, **kwargs)
+        finally:
+            client.privatePostTradeOrderAlgo = connector.saved_privatePostTradeOrderAlgo
+    return wrapper
+
+
+def _enabled_okx_algo_order_creation(f):
+    async def wrapper(*args, **kwargs):
+        # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
+        connector = args[0]
+        connector.client.privatePostTradeOrderAlgo = connector.saved_privatePostTradeOrderAlgo
+        return await f(*args, **kwargs)
+    return wrapper
+
+
+class OkxConnector(ccxt_connector.CCXTConnector):
+
+    def _create_client(self):
+        super()._create_client()
+        # save client.privatePostTradeOrderAlgo ref to prevent concurrent _disabled_algo_order_creation issues
+        self.saved_privatePostTradeOrderAlgo = self.client.privatePostTradeOrderAlgo
+
+    @_disabled_okx_algo_order_creation
+    async def create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
+        return await super().create_market_buy_order(symbol, quantity, price=price, params=params)
+
+    @_disabled_okx_algo_order_creation
+    async def create_limit_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
+        return await super().create_limit_buy_order(symbol, quantity, price=price, params=params)
+
+    @_disabled_okx_algo_order_creation
+    async def create_market_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
+        return await super().create_market_sell_order(symbol, quantity, price=price, params=params)
+
+    @_disabled_okx_algo_order_creation
+    async def create_limit_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
+        return await super().create_limit_sell_order(symbol, quantity, price=price, params=params)
+
+    @_enabled_okx_algo_order_creation
+    async def create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        return self.adapter.adapt_order(
+            await self.client.create_order(symbol, "market", side, quantity, params=params), symbol=symbol
+        )
+
+
 class Okx(exchanges.RestExchange):
-    MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
     DESCRIPTION = ""
+    DEFAULT_CONNECTOR_CLASS = OkxConnector
+    MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
+
+    # Okx default take profits are market orders
+    # note: use BUY_MARKET and SELL_MARKET since in reality those are conditional market orders, which behave the same
+    # way as limit order but with higher fees
+    _OKX_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.TAKE_PROFIT,
+                           trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
+    SUPPORTED_BUNDLED_ORDERS = {
+        trading_enums.TraderOrderType.BUY_MARKET: _OKX_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.SELL_MARKET: _OKX_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.BUY_LIMIT: _OKX_BUNDLED_ORDERS,
+        trading_enums.TraderOrderType.SELL_LIMIT: _OKX_BUNDLED_ORDERS,
+    }
+
+    # Set True when exchange is not returning empty position details when fetching a position with a specified symbol
+    # Exchange will then fallback to self.get_mocked_empty_position when having get_position returning None
     REQUIRES_MOCKED_EMPTY_POSITION = True   # https://www.okx.com/learn/complete-guide-to-okex-api-v5-upgrade#h-rest-2
+
+    # set True when get_positions() is not returning empty positions and should use get_position() instead
+    REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
 
     @classmethod
     def get_name(cls):
@@ -58,20 +134,6 @@ class Okx(exchanges.RestExchange):
             kwargs["until"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
-    async def _create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
-        """
-        Add price to default connector call for market orders https://github.com/ccxt/ccxt/issues/9523
-        """
-        return await self.connector.client.create_market_order(symbol=symbol, side='buy', amount=quantity,
-                                                               price=price, params=params)
-
-    async def _create_market_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
-        """
-        Add price to default connector call for market orders https://github.com/ccxt/ccxt/issues/9523
-        """
-        return await self.connector.client.create_market_order(symbol=symbol, side='sell', amount=quantity,
-                                                               price=price, params=params)
-
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
@@ -92,20 +154,46 @@ class Okx(exchanges.RestExchange):
             if sub_account.get("enable", False)
         ]
 
-    # todo check
     def get_order_additional_params(self, order) -> dict:
         params = {}
         if self.exchange_manager.is_future:
             params["reduceOnly"] = order.reduce_only
-            params[self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE] = self._get_ccxt_margin_type(order.symbol)
+            params[ccxt_enums.ExchangeOrderCCXTColumns.MARGIN_MODE.value] = self._get_ccxt_margin_type(order.symbol)
         return params
 
-    # todo check
+    def get_bundled_order_parameters(self, order, stop_loss_price=None, take_profit_price=None) -> dict:
+        """
+        Returns the updated params when this exchange supports orders created upon other orders fill
+        (ex: a stop loss created at the same time as a buy order)
+        :param order: the initial order
+        :param stop_loss_price: the bundled order stopLoss price
+        :param take_profit_price: the bundled order takeProfit price
+        :return: A dict with the necessary parameters to create the bundled order on exchange alongside the
+        base order in one request
+        """
+        params = {}
+        if not (
+            trading_personal_data.is_stop_order(order.order_type) or
+            trading_personal_data.is_take_profit_order(order.order_type)
+        ):
+            # force non algo order "order type"
+            if isinstance(order, trading_personal_data.MarketOrder):
+                params["ordType"] = "market"
+            elif isinstance(order, trading_personal_data.LimitOrder):
+                params["px"] = str(order.origin_price)
+                params["ordType"] = "limit"
+        if stop_loss_price is not None:
+            params[self.connector.adapter.OKX_STOP_LOSS_PRICE] = float(stop_loss_price)
+            params["slOrdPx"] = -1  # execute as market order
+        if take_profit_price is not None:
+            params[self.connector.adapter.OKX_TAKE_PROFIT_PRICE] = float(take_profit_price)
+            params["tpOrdPx"] = -1  # execute as market order
+        return params
+
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
-        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-        order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
-        return order
+        params[self.connector.adapter.OKX_STOP_LOSS_PRICE] = price  # make ccxt understand that it's a stop loss
+        return await self.connector.create_market_stop_loss_order(symbol, quantity, price, side, current_price, params=params)
 
     async def _get_all_typed_orders(self, method, symbol=None, since=None, limit=None, **kwargs) -> list:
         limit = self._fix_limit(limit)
@@ -144,16 +232,21 @@ class Okx(exchanges.RestExchange):
                 return await self.get_order_from_open_and_closed_orders(order_id, symbol=symbol, **kwargs)
             raise
 
-    async def cancel_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> trading_enums.OrderStatus:
-        return await super().cancel_order(order_id, symbol=symbol, **self._get_okx_order_params(order_id, **kwargs))
+    async def cancel_order(
+            self, order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        return await super().cancel_order(
+            order_id, symbol, order_type, **self._get_okx_order_params(order_id, order_type, **kwargs)
+        )
 
-    def _get_okx_order_params(self, order_id, **kwargs):
+    def _get_okx_order_params(self, order_id, order_type=None, **kwargs):
         params = kwargs or {}
         try:
             if "stop" not in params:
-                order = self.exchange_manager.exchange_personal_data.orders_manager.get_order(order_id)
-                params["stop"] = trading_personal_data.is_stop_order(order.order_type) \
-                    or trading_personal_data.is_take_profit_order(order.order_type)
+                order_type = order_type or \
+                             self.exchange_manager.exchange_personal_data.orders_manager.get_order(order_id).order_type
+                params["stop"] = trading_personal_data.is_stop_order(order_type) \
+                    or trading_personal_data.is_take_profit_order(order_type)
         except KeyError:
             pass
         return params
@@ -166,6 +259,15 @@ class Okx(exchanges.RestExchange):
         return await super()._verify_order(created_order, order_type, symbol, price, side,
                                            get_order_params=get_order_params)
 
+    def _is_oco_order(self, params):
+        return all(
+            oco_order_param in params
+            for oco_order_param in (
+                self.connector.adapter.OKX_STOP_LOSS_PRICE,
+                self.connector.adapter.OKX_TAKE_PROFIT_PRICE
+            )
+        )
+
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -173,6 +275,11 @@ class Okx(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # on futures exchange expects, quantity in contracts: convert quantity into contracts
             quantity = quantity / self.get_contract_size(symbol)
+        if self._is_oco_order(params):
+            raise trading_errors.NotSupported(
+                f"OCO bundled orders (orders including both a stop loss and take profit price) "
+                f"are not yet supported on {self.get_name()}"
+            )
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
@@ -182,17 +289,13 @@ class Okx(exchanges.RestExchange):
         if not self.exchange_manager.exchange.has_pair_future_contract(symbol):
             raise KeyError(f"{symbol} contract unavailable")
         contract = contract or self.exchange_manager.exchange.get_pair_future_contract(symbol)
-        return self.connector.adapter.OKX_ISOLATED_MARGIN_MODE if contract.is_isolated() \
-            else self.connector.adapter.OKX_CROSS_MARGIN_MODE
+        return ccxt_enums.ExchangeMarginTypes.ISOLATED.value if contract.is_isolated() \
+            else ccxt_enums.ExchangeMarginTypes.CROSS.value
 
-    def _get_margin_query_params(self, symbol, allow_missing_contract=False, **kwargs):
+    def _get_margin_query_params(self, symbol, **kwargs):
         pos_side = self.connector.adapter.OKX_ONE_WAY_MODE
         if not self.exchange_manager.exchange.has_pair_future_contract(symbol):
-            if not allow_missing_contract:
-                raise KeyError(f"{symbol} contract unavailable")
-            kwargs.update({
-                self.connector.adapter.OKX_POS_SIDE: pos_side,
-            })
+            raise KeyError(f"{symbol} contract unavailable")
         else:
             contract = self.exchange_manager.exchange.get_pair_future_contract(symbol)
             if not contract.is_one_way_position_mode():
@@ -213,13 +316,13 @@ class Okx(exchanges.RestExchange):
         :return: the current symbol leverage multiplier
         """
         kwargs = kwargs or {}
-        if self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE not in kwargs:
-            margin_type = self.connector.adapter.OKX_ISOLATED_MARGIN_MODE
+        if ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value not in kwargs:
+            margin_type = ccxt_enums.ExchangeMarginTypes.ISOLATED.value
             try:
                 margin_type = self._get_ccxt_margin_type(symbol)
             except KeyError:
                 pass
-            kwargs[self.connector.adapter.OKX_LEVERAGE_MARGIN_MODE] = margin_type
+            kwargs[ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value] = margin_type
         return await self.connector.get_symbol_leverage(symbol=symbol, **kwargs)
 
     async def set_symbol_leverage(self, symbol: str, leverage: float, **kwargs):
@@ -229,7 +332,7 @@ class Okx(exchanges.RestExchange):
         :param leverage: the leverage
         :return: the update result
         """
-        kwargs = self._get_margin_query_params(symbol, allow_missing_contract=True, **kwargs)
+        kwargs = self._get_margin_query_params(symbol, **kwargs)
         kwargs.pop(self.connector.adapter.OKX_LEVER, None)
         return await self.connector.set_symbol_leverage(leverage=leverage, symbol=symbol, **kwargs)
 
@@ -264,7 +367,7 @@ class Okx(exchanges.RestExchange):
         position[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
             adapter.parse_position_mode(raw_data[adapter.OKX_POS_SIDE])
         position[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            adapter.parse_position_type(raw_data[adapter.OKX_MARGIN_MODE])
+            adapter.parse_margin_type(raw_data[adapter.OKX_MARGIN_MODE])
         position[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
             leverage_data[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value]
 
@@ -276,7 +379,10 @@ class Okx(exchanges.RestExchange):
 
     def _get_used_order_types(self):
         return [
+            # stop orders
             self.connector.adapter.OKX_CONDITIONAL_ORDER_TYPE,
+            # created with bundled orders including stop loss & take profit: unsupported for now
+            # self.connector.adapter.OKX_OCO_ORDER_TYPE,
         ]
 
 
@@ -284,20 +390,20 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     # ORDERS
     OKX_ORDER_TYPE = "ordType"
     OKX_TRIGGER_ORDER_TYPE = "trigger"
+    OKX_OCO_ORDER_TYPE = "oco"
     OKX_CONDITIONAL_ORDER_TYPE = "conditional"
     OKX_LAST_PRICE = "last"
+    OKX_STOP_LOSS_PRICE = "stopLossPrice"
+    OKX_TAKE_PROFIT_PRICE = "takeProfitPrice"
 
     # POSITIONS
     OKX_MARGIN_MODE = "mgnMode"
-    OKX_ISOLATED_MARGIN_MODE = "isolated"
-    OKX_CROSS_MARGIN_MODE = "cross"
     OKX_POS_SIDE = "posSide"
     OKX_ONE_WAY_MODE = "net"
 
     # LEVERAGE
     OKX_LEVER = "lever"
     DATA = "data"
-    OKX_LEVERAGE_MARGIN_MODE = "marginMode"
 
     # Funding
     OKX_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
@@ -345,9 +451,9 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
         parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
         # use isolated by default. Set in set_leverage
         parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            trading_enums.TraderPositionType(
+            trading_enums.MarginType(
                 fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
-                or trading_enums.TraderPositionType.ISOLATED.value
+                or trading_enums.MarginType.ISOLATED.value
             )
         # use one way by default. Set in set_leverage
         if parsed[trading_enums.ExchangeConstantsPositionColumns.SIZE.value] == constants.ZERO:
@@ -355,11 +461,11 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                 trading_enums.PositionMode.ONE_WAY
         return parsed
 
-    def parse_position_type(self, margin_mode):
-        if margin_mode == self.OKX_ISOLATED_MARGIN_MODE:
-            return trading_enums.TraderPositionType.ISOLATED
-        elif margin_mode == self.OKX_CROSS_MARGIN_MODE:
-            return trading_enums.TraderPositionType.CROSS
+    def parse_margin_type(self, margin_mode):
+        if margin_mode == ccxt_enums.ExchangeMarginTypes.ISOLATED.value:
+            return trading_enums.MarginType.ISOLATED
+        elif margin_mode == ccxt_enums.ExchangeMarginTypes.CROSS.value:
+            return trading_enums.MarginType.CROSS
         raise ValueError(margin_mode)
 
     def parse_position_mode(self, position_mode):
