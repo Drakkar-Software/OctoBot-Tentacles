@@ -57,8 +57,13 @@ class Kucoin(exchanges.RestExchange):
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = decimal.Decimal("0.95")
 
+    # set True when get_positions() is not returning empty positions and should use get_position() instead
+    REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
+
     # get_my_recent_trades only covers the last 24h on kucoin
     ALLOW_TRADES_FROM_CLOSED_ORDERS = True  # set True when get_my_recent_trades should use get_closed_orders
+
+    SUPPORTS_SET_MARGIN_TYPE = False  # set False when there is no API to switch between cross and isolated margin types
 
     # order that should be self-managed by OctoBot
     # can be overridden locally to match exchange support
@@ -264,16 +269,6 @@ class Kucoin(exchanges.RestExchange):
             await fetch_position(self.connector.client, symbol, **kwargs)
         )
 
-    async def get_positions(self, symbols=None, **kwargs: dict) -> list:
-        if symbols is None:
-            # return await super().get_positions(symbols=symbols, **kwargs)
-            raise NotImplementedError
-        # force get_position when symbols is set as ccxt get_positions is only returning open positions
-        return [
-            await self.get_position(symbol, **kwargs)
-            for symbol in symbols
-        ]
-
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
         """
@@ -353,7 +348,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
         raw_position_info = fixed[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         parsed = super().parse_position(fixed, **kwargs)
         parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            trading_enums.TraderPositionType(
+            trading_enums.MarginType(
                 fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
             )
         parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
