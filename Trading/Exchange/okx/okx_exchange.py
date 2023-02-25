@@ -395,6 +395,8 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_LAST_PRICE = "last"
     OKX_STOP_LOSS_PRICE = "stopLossPrice"
     OKX_TAKE_PROFIT_PRICE = "takeProfitPrice"
+    OKX_STOP_LOSS_TRIGGER_PRICE = "slTriggerPx"
+    OKX_TAKE_PROFIT_TRIGGER_PRICE = "tpTriggerPx"
 
     # POSITIONS
     OKX_MARGIN_MODE = "mgnMode"
@@ -426,9 +428,18 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
         order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
         if stop_price := fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None):
             last_price = order_info.get(self.OKX_LAST_PRICE, None)
-            if last_price is None:
-                self.logger.error(f"Unhandled stop order: last price is None")
-            else:
+            stop_loss_trigger_price = order_info.get(self.OKX_STOP_LOSS_TRIGGER_PRICE, None)
+            take_profit_trigger_price = order_info.get(self.OKX_TAKE_PROFIT_TRIGGER_PRICE, None)
+            updated_type = trading_enums.TradeOrderType.UNKNOWN.value
+            if stop_loss_trigger_price and take_profit_trigger_price:
+                # OCO order, unsupported yet
+                self.logger.debug(f"Unsupported OCO order {fixed}")
+                updated_type = trading_enums.TradeOrderType.UNSUPPORTED.value
+            elif stop_loss_trigger_price is not None:
+                updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            elif take_profit_trigger_price is not None:
+                updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+            elif last_price is not None:
                 last_price = float(last_price)
                 side = fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
                 if side == trading_enums.TradeOrderSide.BUY.value:
@@ -443,8 +454,10 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                         updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
                     else:
                         updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
-                # stop loss are not tagged as such by ccxt, force it
-                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
+            else:
+                self.logger.error(f"Unknown order type, order: {fixed}")
+            # stop loss and take profits are not tagged as such by ccxt, force it
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
         return fixed
 
     def parse_position(self, fixed, force_empty=False, **kwargs):
