@@ -433,7 +433,7 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             updated_type = trading_enums.TradeOrderType.UNKNOWN.value
             if stop_loss_trigger_price and take_profit_trigger_price:
                 # OCO order, unsupported yet
-                self.logger.debug(f"Unsupported OCO order {fixed}")
+                self.logger.debug(f"Unsupported OKX OCO (stop loss & take profit in a single order): {fixed}")
                 updated_type = trading_enums.TradeOrderType.UNSUPPORTED.value
             elif stop_loss_trigger_price is not None:
                 updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
