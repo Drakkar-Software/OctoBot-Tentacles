@@ -211,7 +211,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                     exchange=exchange,
                     cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
                     symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
-                    timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
+                    timestamp=[int(candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec)
                                for candle in candles],
                     multiple=True
             )
@@ -226,7 +226,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
 
     def find_candle(self, candles, timestamp):
         for candle in candles:
-            if candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] == timestamp:
+            if int(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]) == int(timestamp):
                 return candle[-1], candle[0]
         return None, None
 
@@ -256,7 +256,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 exchange=exchange,
                 cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
                 symbol=symbol, time_frame=time_frame, candle=to_add_candles,
-                timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
+                timestamp=[int(candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec)
                            for candle in to_add_candles],
                 multiple=True
             )
@@ -296,7 +296,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         exchange=exchange,
                         cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(str(symbol)),
                         symbol=symbol.symbol_str, time_frame=time_frame, candle=current_bot_candles,
-                        timestamp=[candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec
+                        timestamp=[int(candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] + time_frame_sec)
                                    for candle in current_bot_candles],
                         multiple=True
                 )
