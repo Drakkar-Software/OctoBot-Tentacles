@@ -273,6 +273,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_sell_orders(self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base):
         current_order = None
         try:
+            reduce_only = False
+            if self.exchange_manager.is_future and await self.wait_for_active_position(symbol, timeout):
+                # can use reduce only orders now that the position is active
+                reduce_only = True
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             created_orders = []
@@ -289,12 +293,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     current_price=sell_base,
                     quantity=order_quantity,
                     price=order_price,
-                    reduce_only=True if self.exchange_manager.is_future else None
+                    reduce_only=reduce_only
                 )
-                created_order = await self.trading_mode.create_order(current_order)
-                created_orders.append(created_order)
-                if stop_order := await self._create_stop_loss_if_enabled(created_order, sell_base, symbol_market):
-                    created_orders.append(stop_order)
+                if created_order := await self.trading_mode.create_order(current_order):
+                    created_orders.append(created_order)
+                    if stop_order := await self._create_stop_loss_if_enabled(created_order, sell_base, symbol_market):
+                        created_orders.append(stop_order)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
