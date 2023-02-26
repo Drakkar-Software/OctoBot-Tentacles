@@ -392,6 +392,7 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_TRIGGER_ORDER_TYPE = "trigger"
     OKX_OCO_ORDER_TYPE = "oco"
     OKX_CONDITIONAL_ORDER_TYPE = "conditional"
+    OKX_BASIC_ORDER_TYPES = ["market", "limit"]
     OKX_LAST_PRICE = "last"
     OKX_STOP_LOSS_PRICE = "stopLossPrice"
     OKX_TAKE_PROFIT_PRICE = "takeProfitPrice"
@@ -426,7 +427,8 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
 
     def _adapt_order_type(self, fixed):
         order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
-        if stop_price := fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None):
+        if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.TYPE.value, None) not in self.OKX_BASIC_ORDER_TYPES:
+            trigger_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.TRIGGER_PRICE.value, None)
             last_price = order_info.get(self.OKX_LAST_PRICE, None)
             stop_loss_trigger_price = order_info.get(self.OKX_STOP_LOSS_TRIGGER_PRICE, None)
             take_profit_trigger_price = order_info.get(self.OKX_TAKE_PROFIT_TRIGGER_PRICE, None)
@@ -444,13 +446,13 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                 side = fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
                 if side == trading_enums.TradeOrderSide.BUY.value:
                     # trigger stop loss buy when price goes bellow stop_price, untriggered when last price is above
-                    if last_price > stop_price:
+                    if last_price > trigger_price:
                         updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
                     else:
                         updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
                 else:
                     # trigger take profit sell when price goes above stop_price, untriggered when last price is bellow
-                    if last_price < stop_price:
+                    if last_price < trigger_price:
                         updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
                     else:
                         updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
