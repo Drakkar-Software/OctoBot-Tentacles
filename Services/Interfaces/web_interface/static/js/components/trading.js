@@ -178,6 +178,7 @@ function reload_orders(){
         positionsDataTable = $('#positions_datatable').DataTable({
             "paging":   false,
         });
+        handle_close_buttons();
         ordersDataTable = $('#open_orders_datatable').DataTable({
             "paging": false,
             "search": {
