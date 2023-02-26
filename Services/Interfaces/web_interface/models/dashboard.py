@@ -61,7 +61,7 @@ def format_trades(dict_trade_history):
                                 trading_enums.OrderStatus.UNKNOWN.value)
         trade_side = trading_enums.TradeOrderSide(dict_trade[trading_enums.ExchangeConstantsOrderColumns.SIDE.value])
         trade_type = trading_api.parse_trade_type(dict_trade)
-        if trade_type == trading_enums.TraderOrderType.UNKNOWN:
+        if trade_type in (trading_enums.TraderOrderType.UNSUPPORTED, trading_enums.TraderOrderType.UNKNOWN):
             trade_type = trade_side
         if status is not trading_enums.OrderStatus.CANCELED.value or DISPLAY_CANCELLED_TRADES:
             trade_time = dict_trade[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value]
