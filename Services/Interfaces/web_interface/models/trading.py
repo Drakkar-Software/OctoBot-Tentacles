@@ -153,6 +153,60 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
+def get_pnl_history(exchange=None, symbol=None, since=None):
+    TIME = "t"
+    PNL = "pnl"
+    PNL_PERCENT = "pnl_p"
+    PNL_AMOUNT = "pnl_a"
+    history = []
+    if exchange:
+        history += trading_api.get_completed_pnl_history(
+            dashboard.get_first_exchange_data(exchange)[0],
+            symbol=symbol,
+            since=since
+        )
+    else:
+        for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+            history += trading_api.get_completed_pnl_history(
+                exchange_manager,
+                symbol=symbol,
+                since=since
+            )
+    pnl_history = {}
+    for pnl in history:
+        close_time = pnl.get_close_time()
+        pnl, pnl_p = pnl.get_profits()
+        pnl_a = pnl.get_close_quantity()
+        if close_time not in pnl_history:
+            pnl_history[close_time] = {
+                PNL: pnl,
+                PNL_PERCENT: pnl_p,
+                PNL_AMOUNT: pnl_a,
+            }
+        else:
+            pnl_val = pnl_history[close_time]
+            # average pnl % according to close amounts
+            pnl_val[PNL_PERCENT] = (
+                (pnl_val[PNL_PERCENT] * pnl_val[PNL_AMOUNT]) +
+                (pnl_p * pnl_a)
+            ) / (pnl_val[PNL_AMOUNT] + pnl_a)
+            pnl_val[PNL] += pnl
+            pnl_val[PNL_AMOUNT] += pnl_a
+
+    return sorted(
+        [
+            {
+                TIME: t,
+                PNL: pnl[PNL],
+                PNL_PERCENT: pnl[PNL_PERCENT],
+                PNL_AMOUNT: pnl[PNL_AMOUNT],
+            }
+            for t, pnl in pnl_history.items()
+        ],
+        key=lambda x: x[TIME]
+    )
+
+
 def clear_exchanges_orders_history(simulated_only=False):
     _run_on_exchange_ids(trading_api.clear_orders_storage_history, simulated_only=simulated_only)
     return {"title": "Cleared orders history"}
