@@ -96,6 +96,21 @@ def historical_portfolio_value():
         return util.get_rest_reply("No exchange portfolio", 404)
 
 
+@api.api.route("/pnl_history", methods=['GET'])
+@login.login_required_when_activated
+def pnl_history():
+    exchange = flask.request.args.get("exchange")
+    symbol = flask.request.args.get("symbol")
+    since = flask.request.args.get("since")
+    return flask.jsonify(
+        models.get_pnl_history(
+            exchange=exchange,
+            symbol=symbol,
+            since=since,
+        )
+    )
+
+
 @api.api.route("/clear_orders_history", methods=['POST'])
 @login.login_required_when_activated
 def clear_orders_history():
