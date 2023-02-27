@@ -91,6 +91,7 @@ class OrderData:
     price: decimal.Decimal = trading_constants.ZERO
     symbol: str = 0
     is_virtual: bool = True
+    associated_entry_id: str = None
 
 
 class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
@@ -282,12 +283,15 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 elif trading_api.get_portfolio_currency(self.exchange_manager, market).available < order_quantity * order_price:
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=order_type,
-                                                                            symbol=order_data.symbol,
-                                                                            current_price=current_price,
-                                                                            quantity=order_quantity,
-                                                                            price=order_price)
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type=order_type,
+                    symbol=order_data.symbol,
+                    current_price=current_price,
+                    quantity=order_quantity,
+                    price=order_price,
+                    associated_entry_id=order_data.associated_entry_id
+                )
                 # disable instant fill to avoid looping order fill in simulator
                 current_order.allow_instant_fill = False
                 created_order = await self.exchange_manager.trader.create_order(current_order)
@@ -520,6 +524,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
           trading_enums.ExchangeConstantsOrderColumns.SIDE.value
         ] == trading_enums.TradeOrderSide.BUY.value
         new_side = trading_enums.TradeOrderSide.SELL if now_selling else trading_enums.TradeOrderSide.BUY
+        associated_entry_id = filled_order[
+            trading_enums.ExchangeConstantsOrderColumns.ID.value
+        ]
         if self.flat_increment is None:
             details = "self.flat_increment is unset"
             if self.symbol_market is None:
@@ -535,7 +542,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
         price = filled_price + price_increment if now_selling else filled_price - price_increment
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
-        new_order = OrderData(new_side, volume, price, self.symbol)
+        new_order = OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)
         if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
             await self._lock_portfolio_and_create_order_when_possible(new_order, filled_price)
         else:

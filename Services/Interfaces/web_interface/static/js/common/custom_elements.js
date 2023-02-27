@@ -138,6 +138,75 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     }
 }
 
+function create_histogram_chart(element, data, titleY1, titleY2, fontColor='white', update=true){
+    const trace1 = {
+      x: data.map((e) => new Date(e.time*1000)),
+      y: data.map((e) => e.y1),
+      marker: {
+         color: data[data.length - 1].y1 > 0 ? 'green': 'red',
+      },
+      opacity: 1,
+      line: {
+        width: 4,
+      },
+      type: 'scatter',
+      name: titleY1,
+    };
+    const trace2 = {
+      x: data.map((e) => new Date(e.time*1000)),
+      y: data.map((e) => e.y2),
+      marker: {
+         color: data.map((e) => e.y2 > 0 ? "green": "red"),
+      },
+      yaxis: 'y2',
+      opacity: 0.6,
+      type: 'bar',
+      name: titleY2,
+    };
+
+    const yWith0 = trace1.y.slice(0);
+    yWith0.push(0);
+    const maxDisplayY = Math.max.apply(null, yWith0.y);
+    const minDisplayY = Math.min.apply(null, yWith0.y);
+    const layout = {
+        xaxis: {
+            autorange: true,
+            showgrid: false,
+            domain: [0, 1],
+            type: 'date',
+            rangeslider: {
+                visible: false,
+            }
+        },
+        yaxis1: {
+            showgrid: true,
+            range: [minDisplayY, maxDisplayY]
+        },
+        yaxis2: {
+            showgrid: false,
+            overlaying: 'y',
+            side: 'right',
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {
+            color: fontColor
+        }
+    };
+    const plotlyConfig = {
+        scrollZoom: false,
+        modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
+        responsive: true,
+        showEditInChartStudio: false,
+        displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
+    };
+    if(update){
+        Plotly.restyle(element, {x: [trace1.x], y: [trace2.y], y2: [trace2.y]}, 0);
+    } else {
+        Plotly.newPlot(element, [trace1, trace2], layout, plotlyConfig);
+    }
+}
+
 function update_circular_progress_doughnut(chart, done, remaining){
     chart.data.datasets[0].data[0] = done;
     chart.data.datasets[0].data[1] = remaining;
