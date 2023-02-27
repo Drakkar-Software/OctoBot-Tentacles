@@ -214,10 +214,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return await self.create_buy_order(symbol, timeout, volume_weight, price_weight)
         elif state == trading_enums.EvaluatorStates.SHORT.value:
             quantity = data.get(self.VOLUME_KEY, decimal.Decimal("1"))
-            sell_weight = self._get_sell_target_for_registered_order(data[self.ORDER_ID_KEY])
+            buy_order_id = data[self.ORDER_ID_KEY]
+            sell_weight = self._get_sell_target_for_registered_order(buy_order_id)
             sell_base = data[self.BUY_PRICE_KEY]
             return await self.create_sell_orders(symbol, timeout, self.trading_mode.sell_orders_per_buy,
-                                                 quantity, sell_weight, sell_base)
+                                                 quantity, sell_weight, sell_base, buy_order_id)
         self.logger.error(f"Unknown required order action: data= {data}")
 
     async def create_buy_order(self, symbol, timeout, volume_weight, price_weight):
@@ -270,7 +271,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.exception(e, False)
             return []
 
-    async def create_sell_orders(self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base):
+    async def create_sell_orders(
+            self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_id
+    ):
         current_order = None
         try:
             reduce_only = False
@@ -293,11 +296,14 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     current_price=sell_base,
                     quantity=order_quantity,
                     price=order_price,
-                    reduce_only=reduce_only
+                    reduce_only=reduce_only,
+                    associated_entry_id=buy_order_id,
                 )
                 if created_order := await self.trading_mode.create_order(current_order):
                     created_orders.append(created_order)
-                    if stop_order := await self._create_stop_loss_if_enabled(created_order, sell_base, symbol_market):
+                    if stop_order := await self._create_stop_loss_if_enabled(
+                            created_order, sell_base, symbol_market, buy_order_id
+                    ):
                         created_orders.append(stop_order)
             if created_orders:
                 return created_orders
@@ -315,7 +321,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.exception(e, False)
             return []
 
-    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market):
+    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_id):
         if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
             return None
         stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
@@ -332,6 +338,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side=trading_enums.TradeOrderSide.SELL,
             reduce_only=True,
             group=oco_group,
+            associated_entry_id=buy_order_id,
         )
         stop_order = await self.trading_mode.create_order(current_order)
         self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")

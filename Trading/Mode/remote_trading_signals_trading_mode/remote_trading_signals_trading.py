@@ -335,6 +335,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET):
             # side param is not supported for these orders
             side = None
+        associated_entries = order_description[trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value]
         order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
             order_type=order_type,
@@ -346,8 +347,12 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             tag=order_description[trading_enums.TradingSignalOrdersAttrs.TAG.value],
             group=group,
             fees_currency_side=fees_currency_side,
-            reduce_only=reduce_only
+            reduce_only=reduce_only,
+            associated_entry_id=associated_entries[0] if associated_entries else None
         )
+        if len(associated_entries) > 1:
+            for associated_entry in associated_entries[1:]:
+                order.associate_to_entry(associated_entry)
         order.set_shared_signal_order_id(
             order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
         )

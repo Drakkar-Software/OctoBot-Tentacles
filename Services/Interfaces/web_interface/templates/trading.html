@@ -114,6 +114,23 @@
     </div>
     <br>
     {% endif %}
+    <span id="trading-pnl-history" class="d-none">
+        <div class="card">
+            <div class="card-header">
+                <h2>Trades profits and losses history</h2>
+            </div>
+            <div class="card-body">
+                <div class="w-100">
+                    <div id="pnl_historyChart"
+                         data-url="{{url_for('api.pnl_history', quote=reference_market)}}"
+                         data-unit="{{reference_market}}"
+                         class="h-100 w-100">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+    </span>
     <span id="trading-orders-and-positions">
         {% if real_positions or simulated_positions %}
         <div class="card">
@@ -263,6 +280,7 @@
 {% endblock %}
 
 {% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/common/custom_elements.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/common_handlers.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/trading.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>

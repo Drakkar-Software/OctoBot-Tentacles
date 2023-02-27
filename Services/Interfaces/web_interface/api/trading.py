@@ -101,10 +101,12 @@ def historical_portfolio_value():
 def pnl_history():
     exchange = flask.request.args.get("exchange")
     symbol = flask.request.args.get("symbol")
+    quote = flask.request.args.get("quote")
     since = flask.request.args.get("since")
     return flask.jsonify(
         models.get_pnl_history(
             exchange=exchange,
+            quote=quote,
             symbol=symbol,
             since=since,
         )

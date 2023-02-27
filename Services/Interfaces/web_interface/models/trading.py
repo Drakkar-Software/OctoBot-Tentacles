@@ -153,7 +153,7 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
-def get_pnl_history(exchange=None, symbol=None, since=None):
+def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
     TIME = "t"
     PNL = "pnl"
     PNL_PERCENT = "pnl_p"
@@ -162,6 +162,7 @@ def get_pnl_history(exchange=None, symbol=None, since=None):
     if exchange:
         history += trading_api.get_completed_pnl_history(
             dashboard.get_first_exchange_data(exchange)[0],
+            quote=quote,
             symbol=symbol,
             since=since
         )
@@ -169,14 +170,15 @@ def get_pnl_history(exchange=None, symbol=None, since=None):
         for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
             history += trading_api.get_completed_pnl_history(
                 exchange_manager,
+                quote=quote,
                 symbol=symbol,
                 since=since
             )
     pnl_history = {}
-    for pnl in history:
-        close_time = pnl.get_close_time()
-        pnl, pnl_p = pnl.get_profits()
-        pnl_a = pnl.get_close_quantity()
+    for historical_pnl in history:
+        close_time = historical_pnl.get_close_time()
+        pnl, pnl_p = historical_pnl.get_profits()
+        pnl_a = historical_pnl.get_closed_pnl_quantity()
         if close_time not in pnl_history:
             pnl_history[close_time] = {
                 PNL: pnl,
@@ -197,9 +199,9 @@ def get_pnl_history(exchange=None, symbol=None, since=None):
         [
             {
                 TIME: t,
-                PNL: pnl[PNL],
-                PNL_PERCENT: pnl[PNL_PERCENT],
-                PNL_AMOUNT: pnl[PNL_AMOUNT],
+                PNL: float(pnl[PNL]),
+                PNL_PERCENT: float(pnl[PNL_PERCENT]),
+                PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
             }
             for t, pnl in pnl_history.items()
         ],

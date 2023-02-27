@@ -209,10 +209,10 @@ def _create_candles_data(exchange_manager, symbol, time_frame, historical_candle
             simulated_trades_history = []
             if trading_api.is_trader_existing_and_enabled(exchange_manager):
                 if trading_api.is_trader_simulated(exchange_manager):
-                    simulated_trades_history += trading_api.get_trade_history(exchange_manager, symbol,
+                    simulated_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
                                                                               first_time_to_handle_in_board, True)
                 else:
-                    real_trades_history += trading_api.get_trade_history(exchange_manager, symbol,
+                    real_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
                                                                          first_time_to_handle_in_board, True)
 
             if real_trades_history:

@@ -194,6 +194,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                            symbol=self.trading_mode.symbol,
                                                            timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
         now_selling = arbitrage_container.state is trading_enums.EvaluatorStates.LONG
+        entry_id = arbitrage_container.initial_limit_order_id
         if now_selling:
             quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                         current_symbol_holding)
@@ -211,7 +212,8 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                         current_price=arbitrage_container.own_exchange_price,
                                                                         quantity=order_quantity,
                                                                         price=order_price,
-                                                                        group=oco_group)
+                                                                        group=oco_group,
+                                                                        associated_entry_id=entry_id)
             created_order = await self.exchange_manager.trader.create_order(current_order)
             created_orders.append(created_order)
             arbitrage_container.secondary_limit_order_id = created_order.order_id
@@ -229,7 +231,8 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     price=stop_price,
                     group=oco_group,
                     side=trading_enums.TradeOrderSide.SELL
-                    if now_selling else trading_enums.TradeOrderSide.BUY
+                    if now_selling else trading_enums.TradeOrderSide.BUY,
+                    associated_entry_id=entry_id,
                 )
                 await self.exchange_manager.trader.create_order(current_order)
                 arbitrage_container.secondary_stop_order_id = current_order.order_id

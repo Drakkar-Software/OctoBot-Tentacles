@@ -78,19 +78,21 @@ def trading():
     real_positions, simulated_positions = interfaces_util.get_all_positions()
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
     exchanges_load = models.get_exchanges_load()
-    return flask.render_template('trading.html',
-                                 real_open_orders=real_open_orders,
-                                 simulated_open_orders=simulated_open_orders,
-                                 real_positions=real_positions,
-                                 simulated_positions=simulated_positions,
-                                 watched_symbols=models.get_watched_symbols(),
-                                 pairs_with_status=interfaces_util.get_currencies_with_status(),
-                                 has_real_trader=has_real_trader,
-                                 exchanges_load=exchanges_load,
-                                 is_community_feed_connected=models.is_community_feed_connected(),
-                                 last_signal_time=models.get_last_signal_time(),
-                                 followed_strategy_url=models.get_followed_strategy_url(),
-                                 )
+    return flask.render_template(
+        'trading.html',
+        real_open_orders=real_open_orders,
+        simulated_open_orders=simulated_open_orders,
+        real_positions=real_positions,
+        simulated_positions=simulated_positions,
+        watched_symbols=models.get_watched_symbols(),
+        pairs_with_status=interfaces_util.get_currencies_with_status(),
+        has_real_trader=has_real_trader,
+        exchanges_load=exchanges_load,
+        is_community_feed_connected=models.is_community_feed_connected(),
+        last_signal_time=models.get_last_signal_time(),
+        followed_strategy_url=models.get_followed_strategy_url(),
+        reference_market=interfaces_util.get_reference_market(),
+    )
 
 
 @web_interface.server_instance.route("/trades")
