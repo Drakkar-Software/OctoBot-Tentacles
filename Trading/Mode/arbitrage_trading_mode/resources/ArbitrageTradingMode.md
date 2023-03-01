@@ -28,3 +28,5 @@ Exchanges that are used for **price reference only require no api keys** as no t
 <div class="text-center">
     <img src="https://raw.githubusercontent.com/Drakkar-Software/OctoBot/assets/arbitrage.png" width="100%" height="100%">
 </div>
+
+_This trading mode supports PNL history._
