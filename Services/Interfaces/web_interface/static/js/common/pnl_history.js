@@ -27,25 +27,25 @@ const loadPnlFullChartHistory = (data, update) => {
             return {
                 time: element.t,
                 y1: total_pnl,
-                y2: element.pnl_p,
+                y2: element.pnl,
             }
         })
         create_histogram_chart(
-            document.getElementById("pnl_historyChart"), chartedData, `cumulated ${unit}`, "% change", 'white', update
+            document.getElementById("pnl_historyChart"), chartedData, `cumulated ${unit}`, "change", 'white', false
         );
     }else{
         parentDiv.addClass(hidden_class);
     }
 }
 
-const loadPnlTableHistory = (data) => {
+const loadPnlTableHistory = (data, update) => {
     let total_pnl = 0;
     const rows = data.map((element) => {
         total_pnl += element.pnl;
         return [
             {timestamp: element.t, date: element.d},
             element.pnl,
-            round_digits(element.pnl_p, 2),
+            // round_digits(element.pnl_p, 2),
             round_digits(element.pnl_a, 8),
             round_digits(total_pnl, 8),
         ]
@@ -53,6 +53,9 @@ const loadPnlTableHistory = (data) => {
     log("rows", rows)
     const pnlTable = $("#pnl_historyTable");
     const unit = pnlTable.data("unit");
+    if(update){
+        pnlTable.DataTable().destroy();
+    }
     pnlTable.DataTable({
         data: rows.reverse(),
         columns: [
@@ -64,7 +67,7 @@ const loadPnlTableHistory = (data) => {
                 }
             },
             { title: `${unit} Profit and Loss` },
-            { title: '% Profit and Loss' },
+            // { title: '% Profit and Loss' },  // figure out a way to merge % at different scales
             { title: `${unit} traded volume` },
             { title: `Cumulated ${unit} Profit and Loss` },
         ],
@@ -72,7 +75,7 @@ const loadPnlTableHistory = (data) => {
     });
 }
 
-const fetchPnlHistory = async () => {
+const fetchPnlHistory = async (scale) => {
     const url = $("#pnl_historyChart").data("url");
-    return await async_send_and_interpret_bot_update(null, url, null, "GET")
+    return await async_send_and_interpret_bot_update(null, `${url}${scale}`, null, "GET")
 }

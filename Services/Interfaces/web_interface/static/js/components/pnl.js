@@ -18,7 +18,29 @@
 
 
 $(document).ready(async () => {
-    const pnlHistory = await fetchPnlHistory();
-    loadPnlFullChartHistory(pnlHistory, false);
-    loadPnlTableHistory(pnlHistory);
+    const registerScaleSelector = () => {
+        $('a[data-action="change-scale"]').on("click", (event) => {
+            const selector = $(event.currentTarget);
+            if(!selector.hasClass("active")){
+                selector.addClass("active");
+                $('a[data-action="change-scale"]').each((_, jselement) => {
+                    const element = $(jselement);
+                    if(element.data("scale") !== selector.data("scale")){
+                        element.removeClass("active");
+                    }
+                })
+                updatePnl(true);
+            }
+        })
+    }
+    const getScale = () => {
+        return $('a.nav-link.active').data("scale");
+    }
+    const updatePnl = async (update) => {
+        const pnlHistory = await fetchPnlHistory(getScale());
+        loadPnlFullChartHistory(pnlHistory, update);
+        loadPnlTableHistory(pnlHistory, update);
+    }
+    await updatePnl(false);
+    registerScaleSelector();
 });

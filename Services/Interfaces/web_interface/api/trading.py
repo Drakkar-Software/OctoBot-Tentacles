@@ -103,12 +103,14 @@ def pnl_history():
     symbol = flask.request.args.get("symbol")
     quote = flask.request.args.get("quote")
     since = flask.request.args.get("since")
+    scale = flask.request.args.get("scale", "")
     return flask.jsonify(
         models.get_pnl_history(
             exchange=exchange,
             quote=quote,
             symbol=symbol,
             since=since,
+            scale=scale,
         )
     )
 
