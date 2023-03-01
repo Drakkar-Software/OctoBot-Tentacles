@@ -16,3 +16,5 @@ continued downtrends without using stop losses: funds might get locked in open s
 
 Limit buy orders might be automatically cancelled and replaced when a 
 better buy opportunity is identified.
+
+_This trading mode supports PNL history._

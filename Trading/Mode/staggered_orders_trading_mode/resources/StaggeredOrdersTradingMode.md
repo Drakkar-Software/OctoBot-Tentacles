@@ -21,3 +21,5 @@ and BTC/USDT can't be activated together for the same OctoBot instance since the
 (here USDT).
 
 Staggered modes can be used to specify the way to allocate funds: modes are neutral, mountain, valley, sell slope and buy slope.
+
+_This trading mode supports PNL history._
