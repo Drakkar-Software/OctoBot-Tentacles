@@ -113,6 +113,19 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
     })
 }
 
+const async_send_and_interpret_bot_update = async (updated_data, update_url, dom_root_element, method="POST") => {
+    return new Promise((resolve, reject) => {
+        const success = (updated_data, update_url, dom_root_element, msg, status) => {
+            resolve(msg);
+        }
+        const failure = (updated_data, update_url, dom_root_element, msg, status) => {
+            generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status)
+            reject(msg);
+        }
+        send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success, failure, method);
+    });
+}
+
 const notificationCallbacks = [];
 const _reconnectedCallbacks = [];
 let _isBotDisconnected = false;

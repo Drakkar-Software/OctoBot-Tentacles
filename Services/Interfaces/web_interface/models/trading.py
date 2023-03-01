@@ -19,6 +19,7 @@ import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.timestamp_util as timestamp_util
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 
@@ -155,6 +156,7 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
 
 def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
     TIME = "t"
+    DATE = "d"
     PNL = "pnl"
     PNL_PERCENT = "pnl_p"
     PNL_AMOUNT = "pnl_a"
@@ -178,7 +180,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
     for historical_pnl in history:
         close_time = historical_pnl.get_close_time()
         pnl, pnl_p = historical_pnl.get_profits()
-        pnl_a = historical_pnl.get_closed_pnl_quantity()
+        pnl_a = historical_pnl.get_closed_close_value()
         if close_time not in pnl_history:
             pnl_history[close_time] = {
                 PNL: pnl,
@@ -199,6 +201,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
         [
             {
                 TIME: t,
+                DATE: timestamp_util.convert_timestamp_to_datetime(t, time_format='%Y-%m-%d %H:%M:%S'),
                 PNL: float(pnl[PNL]),
                 PNL_PERCENT: float(pnl[PNL_PERCENT]),
                 PNL_AMOUNT: float(pnl[PNL_AMOUNT]),

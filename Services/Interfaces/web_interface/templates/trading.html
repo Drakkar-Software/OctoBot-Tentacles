@@ -117,7 +117,15 @@
     <span id="trading-pnl-history" class="d-none">
         <div class="card">
             <div class="card-header">
-                <h2>Trades profits and losses history</h2>
+                <h2>
+                    Trades Profit and Loss history
+                    <a class="float-right blue-text"
+                       href="{{url_for('pnl')}}"
+                       data-toggle="tooltip"
+                       title="PNL details">
+                        <i class="fas fa-ellipsis"></i>
+                    </a>
+                </h2>
             </div>
             <div class="card-body">
                 <div class="w-100">
@@ -283,5 +291,6 @@
 <script src="{{ url_for('static', filename='js/common/custom_elements.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/common_handlers.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/common/pnl_history.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/trading.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
