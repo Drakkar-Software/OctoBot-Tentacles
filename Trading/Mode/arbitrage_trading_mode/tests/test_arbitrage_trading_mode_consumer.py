@@ -114,7 +114,9 @@ async def test_create_secondary_arbitrage_order():
         price = decimal.Decimal(10)
 
         # long
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.LONG)
+        arbitrage = arbitrage_container_import.ArbitrageContainer(
+            price, decimal.Decimal(15), trading_enums.EvaluatorStates.LONG
+        )
         quantity = decimal.Decimal(5)
         orders = await binance_consumer._create_secondary_arbitrage_order(arbitrage, quantity)
         assert orders
@@ -126,6 +128,7 @@ async def test_create_secondary_arbitrage_order():
         assert limit_order.symbol == binance_consumer.trading_mode.symbol
         assert limit_order.order_id == arbitrage.secondary_limit_order_id
         assert limit_order.origin_quantity == quantity
+        assert limit_order.associated_entry_ids is None
 
         order_group_1 = limit_order.order_group
         stop_order = order_group_1.get_group_open_orders()[1]
@@ -136,9 +139,13 @@ async def test_create_secondary_arbitrage_order():
         assert stop_order.symbol == binance_consumer.trading_mode.symbol
         assert stop_order.order_id == arbitrage.secondary_stop_order_id
         assert stop_order.origin_quantity == quantity
+        assert limit_order.associated_entry_ids is None
 
         # short
-        arbitrage = arbitrage_container_import.ArbitrageContainer(price, decimal.Decimal(15), trading_enums.EvaluatorStates.SHORT)
+        arbitrage = arbitrage_container_import.ArbitrageContainer(
+            price, decimal.Decimal(15), trading_enums.EvaluatorStates.SHORT
+        )
+        arbitrage.initial_limit_order_id = "123"
         quantity = decimal.Decimal(5)
         orders = await binance_consumer._create_secondary_arbitrage_order(arbitrage, quantity)
         assert orders
@@ -150,6 +157,7 @@ async def test_create_secondary_arbitrage_order():
         assert limit_order.symbol == binance_consumer.trading_mode.symbol
         assert limit_order.order_id == arbitrage.secondary_limit_order_id
         assert limit_order.origin_quantity == quantity
+        assert limit_order.associated_entry_ids == ["123"]
 
         order_group_2 = limit_order.order_group
         stop_order = order_group_2.get_group_open_orders()[1]
@@ -161,6 +169,7 @@ async def test_create_secondary_arbitrage_order():
         assert stop_order.symbol == binance_consumer.trading_mode.symbol
         assert stop_order.order_id == arbitrage.secondary_stop_order_id
         assert stop_order.origin_quantity == quantity
+        assert limit_order.associated_entry_ids == ["123"]
 
 
 async def test_get_quantity_from_holdings():
