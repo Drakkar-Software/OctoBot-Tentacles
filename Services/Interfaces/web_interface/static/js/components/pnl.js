@@ -34,12 +34,16 @@ $(document).ready(async () => {
         })
     }
     const getScale = () => {
-        return $('a.nav-link.active').data("scale");
+        return $('a.nav-link.scale-selector.active').data("scale");
+    }
+    const hideLoader = () => {
+        $("#pnl-waiter").hide();
     }
     const updatePnl = async (update) => {
         const pnlHistory = await fetchPnlHistory(getScale());
         loadPnlFullChartHistory(pnlHistory, update);
         loadPnlTableHistory(pnlHistory, update);
+        hideLoader();
     }
     await updatePnl(false);
     registerScaleSelector();

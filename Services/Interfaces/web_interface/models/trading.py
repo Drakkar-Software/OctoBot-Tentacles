@@ -154,30 +154,38 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
-def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
-    TIME = "t"
-    DATE = "d"
-    PNL = "pnl"
-    PNL_AMOUNT = "pnl_a"
-    history = []
+def _get_pnl_history(exchange, quote, symbol, since):
     if exchange:
-        history += trading_api.get_completed_pnl_history(
+        return trading_api.get_completed_pnl_history(
             dashboard.get_first_exchange_data(exchange)[0],
             quote=quote,
             symbol=symbol,
             since=since
         )
-    else:
-        for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-            history += trading_api.get_completed_pnl_history(
-                exchange_manager,
-                quote=quote,
-                symbol=symbol,
-                since=since
-            )
+    history = []
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        history += trading_api.get_completed_pnl_history(
+            exchange_manager,
+            quote=quote,
+            symbol=symbol,
+            since=since
+        )
+    return history
+
+
+def has_pnl_history(exchange=None, quote=None, symbol=None, since=None):
+    return bool(_get_pnl_history(exchange, quote, symbol, since))
+
+
+def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
+    TIME = "t"
+    DATE = "d"
+    PNL = "pnl"
+    PNL_AMOUNT = "pnl_a"
     pnl_history = {}
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
         commons_constants.MINUTE_TO_SECONDS if scale else 1
+    history = _get_pnl_history(exchange, quote, symbol, since)
     for historical_pnl in history:
         close_time = historical_pnl.get_close_time()
         scaled_time = close_time - (close_time % scale_seconds)
