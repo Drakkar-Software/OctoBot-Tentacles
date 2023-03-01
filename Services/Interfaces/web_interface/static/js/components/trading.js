@@ -214,7 +214,7 @@ let ordersDataTable = null;
 let positionsDataTable = null;
 
 $(document).ready(async () => {
-    const pnlHistory = await fetchPnlHistory();
+    const pnlHistory = await fetchPnlHistory("1d");   // use 1 day scale by default
     loadPnlFullChartHistory(pnlHistory, false);
     update_pairs_colors();
     $(".watched_element").each(function () {

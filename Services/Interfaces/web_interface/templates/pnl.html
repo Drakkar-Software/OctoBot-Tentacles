@@ -14,25 +14,44 @@
 <br>
 
 <div class="card">
-    <div class="card-header">
-        <h2>Profit and Loss history</h2>
+    <div class="card-header d-flex justify-content-between">
+        <div>
+            <h2>
+                <span class="float-left">
+                    <a href="{{ origin_page if origin_page else url_for("trading")}}">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                </span>
+                &ensp;Profit and Loss history
+            </h2>
+        </div>
+        <div>
+            <ul class="nav nav-pills">
+              <li class="nav-item">
+                <a class="nav-link primary-pill"
+                   href="#"
+                   data-action="change-scale"
+                   data-scale=""
+                >Details</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link primary-pill active"
+                   href="#"
+                   data-action="change-scale"
+                   data-scale="1d"
+                >Daily</a>
+              </li>
+            </ul>
+        </div>
     </div>
     <div class="card-body">
         <div class="w-100">
             <div id="pnl_historyChart"
-                 data-url="{{url_for('api.pnl_history', quote=reference_market)}}"
+                 data-url="{{url_for('api.pnl_history', quote=reference_market, scale='')}}"
                  data-unit="{{reference_market}}"
                  class="h-100 w-100">
             </div>
         </div>
-    </div>
-</div>
-<br>
-<div class="card">
-    <div class="card-header">
-        <h2>History details</h2>
-    </div>
-    <div class="card-body">
         <div class="w-100">
             <table id="pnl_historyTable"
                  data-unit="{{reference_market}}"

@@ -154,11 +154,10 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
-def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
+def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
     TIME = "t"
     DATE = "d"
     PNL = "pnl"
-    PNL_PERCENT = "pnl_p"
     PNL_AMOUNT = "pnl_a"
     history = []
     if exchange:
@@ -177,33 +176,28 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None):
                 since=since
             )
     pnl_history = {}
+    scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
+        commons_constants.MINUTE_TO_SECONDS if scale else 1
     for historical_pnl in history:
         close_time = historical_pnl.get_close_time()
+        scaled_time = close_time - (close_time % scale_seconds)
         pnl, pnl_p = historical_pnl.get_profits()
         pnl_a = historical_pnl.get_closed_close_value()
-        if close_time not in pnl_history:
-            pnl_history[close_time] = {
+        if scaled_time not in pnl_history:
+            pnl_history[scaled_time] = {
                 PNL: pnl,
-                PNL_PERCENT: pnl_p,
                 PNL_AMOUNT: pnl_a,
             }
         else:
-            pnl_val = pnl_history[close_time]
-            # average pnl % according to close amounts
-            pnl_val[PNL_PERCENT] = (
-                (pnl_val[PNL_PERCENT] * pnl_val[PNL_AMOUNT]) +
-                (pnl_p * pnl_a)
-            ) / (pnl_val[PNL_AMOUNT] + pnl_a)
+            pnl_val = pnl_history[scaled_time]
             pnl_val[PNL] += pnl
             pnl_val[PNL_AMOUNT] += pnl_a
-
     return sorted(
         [
             {
                 TIME: t,
                 DATE: timestamp_util.convert_timestamp_to_datetime(t, time_format='%Y-%m-%d %H:%M:%S'),
                 PNL: float(pnl[PNL]),
-                PNL_PERCENT: float(pnl[PNL_PERCENT]),
                 PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
             }
             for t, pnl in pnl_history.items()
