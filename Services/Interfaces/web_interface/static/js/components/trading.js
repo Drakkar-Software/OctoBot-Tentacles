@@ -174,7 +174,7 @@ function position_request_failure_callback(updated_data, update_url, dom_root_el
 function reload_orders(){
     const previous_search = ordersDataTable.search();
     const previous_order = ordersDataTable.order();
-    $("#trading-orders-and-positions").load(location.href + " #trading-orders-and-positions", () => {
+    $("#trading-orders-and-positions").load(location.href + " #main-nav", () => {
         positionsDataTable = $('#positions_datatable').DataTable({
             "paging":   false,
         });
@@ -214,8 +214,6 @@ let ordersDataTable = null;
 let positionsDataTable = null;
 
 $(document).ready(async () => {
-    const pnlHistory = await fetchPnlHistory("1d");   // use 1 day scale by default
-    loadPnlFullChartHistory(pnlHistory, false);
     update_pairs_colors();
     $(".watched_element").each(function () {
         $(this).click(addOrRemoveWatchedSymbol);

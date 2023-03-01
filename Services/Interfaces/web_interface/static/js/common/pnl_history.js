@@ -31,7 +31,7 @@ const loadPnlFullChartHistory = (data, update) => {
             }
         })
         create_histogram_chart(
-            document.getElementById("pnl_historyChart"), chartedData, `cumulated ${unit}`, "change", 'white', false
+            document.getElementById("pnl_historyChart"), chartedData, `cumulated profit/loss`, "profit/loss", unit, 'white', false
         );
     }else{
         parentDiv.addClass(hidden_class);
@@ -44,13 +44,12 @@ const loadPnlTableHistory = (data, update) => {
         total_pnl += element.pnl;
         return [
             {timestamp: element.t, date: element.d},
-            element.pnl,
+            round_digits(element.pnl, 8),
             // round_digits(element.pnl_p, 2),
             round_digits(element.pnl_a, 8),
             round_digits(total_pnl, 8),
         ]
     });
-    log("rows", rows)
     const pnlTable = $("#pnl_historyTable");
     const unit = pnlTable.data("unit");
     if(update){

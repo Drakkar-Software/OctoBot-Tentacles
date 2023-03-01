@@ -138,7 +138,7 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     }
 }
 
-function create_histogram_chart(element, data, titleY1, titleY2, fontColor='white', update=true){
+function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, fontColor='white', update=true){
     const trace1 = {
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.y1),
@@ -164,10 +164,6 @@ function create_histogram_chart(element, data, titleY1, titleY2, fontColor='whit
       name: titleY2,
     };
 
-    const yWith0 = trace1.y.slice(0);
-    yWith0.push(0);
-    const maxDisplayY = Math.max.apply(null, yWith0.y);
-    const minDisplayY = Math.min.apply(null, yWith0.y);
     const layout = {
         xaxis: {
             autorange: true,
@@ -180,7 +176,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, fontColor='whit
         },
         yaxis1: {
             showgrid: true,
-            range: [minDisplayY, maxDisplayY]
+            title: nameYAxis,
         },
         yaxis2: {
             showgrid: false,
@@ -191,7 +187,8 @@ function create_histogram_chart(element, data, titleY1, titleY2, fontColor='whit
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: fontColor
-        }
+        },
+        showlegend: false,
     };
     const plotlyConfig = {
         scrollZoom: false,
@@ -201,7 +198,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, fontColor='whit
         displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
     };
     if(update){
-        Plotly.restyle(element, {x: [trace1.x], y: [trace2.y], y2: [trace2.y]}, 0);
+        Plotly.restyle(element, {x: [trace1.x], y: [trace1.y], y2: [trace2.y]}, 0);
     } else {
         Plotly.newPlot(element, [trace1, trace2], layout, plotlyConfig);
     }
