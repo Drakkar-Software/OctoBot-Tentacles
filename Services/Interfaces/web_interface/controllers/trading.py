@@ -104,6 +104,15 @@ def trades():
                                  simulated_trades_history=simulated_trades_history)
 
 
+@web_interface.server_instance.route("/pnl")
+@login.login_required_when_activated
+def pnl():
+    return flask.render_template(
+        'pnl.html',
+        reference_market=interfaces_util.get_reference_market(),
+    )
+
+
 @web_interface.server_instance.route("/trading_type_selector")
 @login.login_required_when_activated
 def trading_type_selector():

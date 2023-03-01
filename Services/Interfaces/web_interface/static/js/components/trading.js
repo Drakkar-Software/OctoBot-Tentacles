@@ -209,41 +209,13 @@ function ordersNotificationCallback(title, _) {
     }
 }
 
-function loadPnlHistory(update) {
-    const pnlHistoryDiv = $("#pnl_historyChart");
-    const url = pnlHistoryDiv.data("url");
-    const unit = pnlHistoryDiv.data("unit");
-    const success = (updated_data, update_url, dom_root_element, msg, status) => {
-        const parentDiv = $(`#trading-pnl-history`);
-        if(msg.length > 1){
-            parentDiv.removeClass(hidden_class);
-            let total_pnl = 0;
-            const chartedData = msg.map((element) => {
-                total_pnl += element.pnl;
-                return {
-                    time: element.t,
-                    y1: total_pnl,
-                    y2: element.pnl_p,
-                }
-            })
-            log("chartedData", chartedData)
-            create_histogram_chart(
-                document.getElementById("pnl_historyChart"), chartedData, `cumulated ${unit}`, "% change", 'white', update
-            );
-        }else{
-            parentDiv.addClass(hidden_class);
-        }
-    }
-    send_and_interpret_bot_update(null, url, null, success, generic_request_failure_callback, "GET");
-
-}
-
 const cancelButtonIndex = 8;
 let ordersDataTable = null;
 let positionsDataTable = null;
 
-$(document).ready(function() {
-    loadPnlHistory(false);
+$(document).ready(async () => {
+    const pnlHistory = await fetchPnlHistory();
+    loadPnlFullChartHistory(pnlHistory, false);
     update_pairs_colors();
     $(".watched_element").each(function () {
         $(this).click(addOrRemoveWatchedSymbol);
