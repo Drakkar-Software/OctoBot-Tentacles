@@ -27,9 +27,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @login.login_required_when_activated
 def orders():
     if flask.request.method == 'GET':
-        real_open_orders, simulated_open_orders = interfaces_util.get_all_open_orders()
-
-        return json.dumps({"real_open_orders": real_open_orders, "simulated_open_orders": simulated_open_orders})
+        return flask.jsonify(models.get_all_orders_data())
     elif flask.request.method == "POST":
         result = ""
         request_data = flask.request.get_json()
@@ -45,13 +43,17 @@ def orders():
         return flask.jsonify(result)
 
 
+@api.api.route("/trades", methods=['GET'])
+@login.login_required_when_activated
+def trades():
+    return flask.jsonify(models.get_all_trades_data())
+
+
 @api.api.route("/positions", methods=['GET', 'POST'])
 @login.login_required_when_activated
 def positions():
     if flask.request.method == 'GET':
-        real_positions, simulated_positions = interfaces_util.get_all_positions()
-
-        return json.dumps({"real_positions": real_positions, "simulated_positions": simulated_positions})
+        return flask.jsonify(models.get_all_positions_data())
     elif flask.request.method == "POST":
         result = ""
         request_data = flask.request.get_json()

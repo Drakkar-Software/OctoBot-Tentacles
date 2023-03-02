@@ -75,7 +75,6 @@ function handle_cancel_buttons() {
         const to_cancel_orders = get_displayed_orders_desc();
         cancel_after_confirm($('#CancelAllOrdersModal'), to_cancel_orders, $(this).attr(update_url_attr), true);
     });
-    add_cancel_individual_orders_button();
 }
 
 function handle_close_buttons() {
@@ -159,52 +158,215 @@ function orders_request_success_callback(updated_data, update_url, dom_root_elem
     }else{
         create_alert("success", msg, "");
     }
-    reload_orders();
+    reloadDisplay(true);
 }
 
 function orders_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
     create_alert("error", msg.responseText, "");
-    reload_orders();
+    reload_orders(true);
 }
 
 function position_request_failure_callback(updated_data, update_url, dom_root_element, msg, status) {
     create_alert("error", msg.responseText, "");
 }
 
-function reload_orders(){
-    const previous_search = ordersDataTable.search();
-    const previous_order = ordersDataTable.order();
-    $("#trading-orders-and-positions").load(location.href + " #main-nav", () => {
-        positionsDataTable = $('#positions_datatable').DataTable({
-            "paging":   false,
-        });
-        handle_close_buttons();
-        ordersDataTable = $('#open_orders_datatable').DataTable({
-            "paging": false,
-            "search": {
-                "search": previous_search
-            },
-            "order": previous_order,
-        });
-        add_cancel_individual_orders_button();
-        const cancelIcon = $("#cancel_all_icon");
-        $("#cancel_order_progress_bar").hide();
-        if(cancelIcon.hasClass("fa-spinner")){
-            cancelIcon.removeClass("fa fa-spinner fa-spin");
-            cancelIcon.addClass("fas fa-ban");
-        }
-        if ($("button[action=cancel_order]").length === 0){
-            $("#cancel_all_orders").prop("disabled", true);
-        }else{
-            $("#cancel_all_orders").prop("disabled", false);
-        }
+
+const _displaySort = (data, type) => {
+    if (type === 'display') {
+        return data.display
+    }
+    return data.sort;
+}
+
+const reload_positions = async (update) => {
+    const table = $("#positions-table");
+    const url = table.data("url");
+    const closePositionUrl = table.data("close-url");
+    const positions = await async_send_and_interpret_bot_update(null, url, null, "GET")
+    $("#positions-waiter").hide();
+    const rows = positions.map((element) => {
+        return [
+            `${element.side.toUpperCase()} ${element.contract}`,
+            round_digits(element.amount, 5),
+            {display: `${round_digits(element.value, 5)} ${element.market}`, sort: element.value},
+            round_digits(element.entry_price, 8),
+            round_digits(element.liquidation_price, 8),
+            {display: `${round_digits(element.margin, 5)} ${element.market}`, sort: element.margin},
+            {display: `${round_digits(element.unrealized_pnl, 5)} ${element.market}`, sort: element.unrealized_pnl},
+            element.exchange,
+            element.SoR,
+            {symbol: element.symbol, side: element.side},
+        ]
     });
+    let previousSearch = undefined;
+    let previousOrder = undefined;
+    if (update) {
+        const previousDataTable = table.DataTable();
+        previousSearch = previousDataTable.search();
+        previousOrder = previousDataTable.order();
+        previousDataTable.destroy();
+    }
+    table.DataTable({
+        data: rows,
+        columns: [
+            {title: "Contract"},
+            {title: "Size"},
+            {title: "Value", render: _displaySort},
+            {title: "Entry price"},
+            {title: "Liquidation price"},
+            {title: "Position margin", render: _displaySort},
+            {title: "Unrealized PNL", render: _displaySort},
+            {title: "Exchange"},
+            {title: "#"},
+            {
+                title: "Close",
+                render: (data, type) => {
+                    if (type === 'display') {
+                        return `<button type="button" class="btn btn-sm btn-outline-danger waves-effect" 
+                                       data-action="close_position" data-position_symbol=${data.symbol} 
+                                       data-position_side="${data.side}"
+                                       data-update-url="${closePositionUrl}">
+                                       <i class="fas fa-ban"></i></button>`
+                    }
+                    return data;
+                },
+            },
+        ],
+        paging: false,
+        search: {
+            search: previousSearch,
+        },
+        order: previousOrder,
+    });
+    handle_close_buttons();
+}
+
+const reload_trades = async (update) => {
+    const table = $("#trades-table");
+    const url = table.data("url");
+    const trades = await async_send_and_interpret_bot_update(null, url, null, "GET")
+    $("#trades-waiter").hide();
+    const rows = trades.map((element) => {
+        return [
+            element.symbol,
+            element.type,
+            round_digits(element.price, 8),
+            round_digits(element.amount, 8),
+            element.exchange,
+            {display: `${round_digits(element.cost, 5)} ${element.market}`, sort: element.cost},
+            {display: `${round_digits(element.fee_cost, 5)} ${element.fee_currency}`, sort: element.fee_cost},
+            {display: element.date, sort: element.time},
+            element.id,
+            element.SoR,
+        ]
+    });
+    let previousSearch = undefined;
+    let previousOrder = [[7, "desc"]];
+    if (update) {
+        const previousDataTable = table.DataTable();
+        previousSearch = previousDataTable.search();
+        previousOrder = previousDataTable.order();
+        previousDataTable.destroy();
+    }
+    table.DataTable({
+        data: rows,
+        columns: [
+            {title: "Pair"},
+            {title: "Type"},
+            {title: "Price"},
+            {title: "Quantity"},
+            {title: "Exchange"},
+            {title: "Total", render: _displaySort},
+            {title: "Fee", render: _displaySort},
+            {title: "Execution", render: _displaySort},
+            {title: "ID"},
+            {title: "#"},
+        ],
+        paging: true,
+        search: {
+            search: previousSearch,
+        },
+        order: previousOrder,
+    });
+    handle_close_buttons();
+}
+
+const reload_orders = async (update) => {
+    const table = $("#orders-table");
+    const url = table.data("url");
+    const cancelOrderUrl = table.data("cancel-url");
+    const orders = await async_send_and_interpret_bot_update(null, url, null, "GET")
+    $("#orders-waiter").hide();
+    const rows = orders.map((element) => {
+        return [
+            element.symbol,
+            element.type,
+            round_digits(element.price, 8),
+            round_digits(element.amount, 8),
+            element.exchange,
+            {display: element.date, sort: element.time},
+            {display: `${round_digits(element.cost, 8)} ${element.market}`, sort: element.cost},
+            element.SoR,
+            element.id,
+            element.id,
+        ]
+    });
+    let previousSearch = undefined;
+    let previousOrder = undefined;
+    if(update){
+        const previousDataTable = table.DataTable();
+        previousSearch = previousDataTable.search();
+        previousOrder = previousDataTable.order();
+        previousDataTable.destroy();
+    }
+    table.DataTable({
+        data: rows,
+        columns: [
+            { title: "Pair" },
+            { title: "Type" },
+            { title: "Price" },
+            { title: "Quantity" },
+            { title: "Exchange" },
+            { title: "Date", render: _displaySort },
+            { title: "Total", render: _displaySort },
+            { title: "#" },
+            {
+                title: "Cancel",
+                render: function (data, type) {
+                    if (type === 'display') {
+                       return `<button type="button" class="btn btn-sm btn-outline-danger waves-effect" 
+                                       action="cancel_order" order_desc="${ data }" 
+                                       update-url="${cancelOrderUrl}">
+                                       <i class="fas fa-ban"></i></button>`
+                    }
+                    return data;
+                },
+            },
+        ],
+        paging: false,
+        search: {
+            search: previousSearch,
+        },
+        order: previousOrder,
+    });
+    add_cancel_individual_orders_button();
+    const cancelIcon = $("#cancel_all_icon");
+    $("#cancel_order_progress_bar").hide();
+    if(cancelIcon.hasClass("fa-spinner")){
+        cancelIcon.removeClass("fa fa-spinner fa-spin");
+        cancelIcon.addClass("fas fa-ban");
+    }
+    if ($("button[action=cancel_order]").length === 0){
+        $("#cancel_all_orders").prop("disabled", true);
+    }else{
+        $("#cancel_all_orders").prop("disabled", false);
+    }
 }
 
 function ordersNotificationCallback(title, _) {
     if(title.toLowerCase().indexOf("order") !== -1){
         debounce(function() {
-            reload_orders();
+            reloadDisplay(true);
         }, 500);
     }
 }
@@ -213,18 +375,20 @@ const cancelButtonIndex = 8;
 let ordersDataTable = null;
 let positionsDataTable = null;
 
+const reloadDisplay = async (update) => {
+    await Promise.all([
+        reload_orders(update),
+        reload_positions(update),
+        reload_trades(update),
+    ]);
+}
+
 $(document).ready(async () => {
     update_pairs_colors();
     $(".watched_element").each(function () {
         $(this).click(addOrRemoveWatchedSymbol);
     });
-    ordersDataTable = $('#open_orders_datatable').DataTable({
-        "paging":   false,
-    });
-    positionsDataTable = $('#positions_datatable').DataTable({
-        "paging":   false,
-    });
     handle_cancel_buttons();
-    handle_close_buttons();
     register_notification_callback(ordersNotificationCallback);
+    await reloadDisplay(false)
 });

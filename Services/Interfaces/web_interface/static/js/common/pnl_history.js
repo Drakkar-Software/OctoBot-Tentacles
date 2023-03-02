@@ -46,8 +46,8 @@ const loadPnlTableHistory = (data, update) => {
             {timestamp: element.t, date: element.d},
             round_digits(element.pnl, 8),
             // round_digits(element.pnl_p, 2),
-            round_digits(element.pnl_a, 8),
             round_digits(total_pnl, 8),
+            round_digits(element.pnl_a, 8),
         ]
     });
     const pnlTable = $("#pnl_historyTable");
@@ -60,17 +60,18 @@ const loadPnlTableHistory = (data, update) => {
         columns: [
             {
                 title: 'Closing time',
-                render: {
-                    "_": "date",
-                    "sort": "timestamp"  // not working for unknown reasons
-                }
+                render: (data, type) => {
+                    if (type === 'display') {
+                        return data.date
+                    }
+                    return data.timestamp;
+                },
             },
             { title: `${unit} Profit and Loss` },
             // { title: '% Profit and Loss' },  // figure out a way to merge % at different scales
-            { title: `${unit} traded volume` },
             { title: `Cumulated ${unit} Profit and Loss` },
+            { title: `${unit} traded volume` },
         ],
-        ordering: false,
     });
 }
 
