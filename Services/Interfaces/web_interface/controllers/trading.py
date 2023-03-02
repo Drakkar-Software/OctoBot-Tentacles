@@ -77,6 +77,7 @@ def trading():
     real_open_orders, simulated_open_orders = interfaces_util.get_all_open_orders()
     real_positions, simulated_positions = interfaces_util.get_all_positions()
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
+    real_trades_history, simulated_trades_history = interfaces_util.get_trades_history()
     exchanges_load = models.get_exchanges_load()
     return flask.render_template(
         'trading.html',
@@ -92,6 +93,9 @@ def trading():
         last_signal_time=models.get_last_signal_time(),
         followed_strategy_url=models.get_followed_strategy_url(),
         reference_market=interfaces_util.get_reference_market(),
+        has_pnl_history=models.has_pnl_history(),
+        real_trades_history=real_trades_history,
+        simulated_trades_history=simulated_trades_history,
     )
 
 
