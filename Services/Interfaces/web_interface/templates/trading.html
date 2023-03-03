@@ -2,7 +2,6 @@
 {% set active_page = "trading" %}
 {% set startup_messages_added_classes = "justify-content-end px-4" %}
 {% set inner_startup_messages_added_classes = "offset-md-3 offset-lg-2 offset-1" %}
-{% import 'macros/tables.html' as m_tables %}
 {% import 'macros/cards.html' as m_cards %}
 {% import 'macros/starting_waiter.html' as m_waiter %}
 
@@ -23,24 +22,6 @@
     {% endif %}
 {%- endmacro %}
 
-{% macro extract_orders(order_list, sim_or_real) -%}
-    {% for order in order_list %}
-        {{ m_tables.order_tr(order, convert_type(order.order_type), convert_timestamp(order.creation_time), sim_or_real) }}
-    {% endfor %}
-{%- endmacro %}
-
-{% macro extract_positions(position_list, sim_or_real) -%}
-    {% for position in position_list %}
-        {{ m_tables.position_tr(position, sim_or_real) }}
-    {% endfor %}
-{%- endmacro %}
-
-{% macro extract_trades(trades_list, sim_or_real) -%}
-    {% for trade in trades_list %}
-        {{ m_tables.trades_tr(trade, convert_type(trade.trade_type),convert_timestamp(trade.executed_time), sim_or_real) }}
-    {% endfor %}
-{%- endmacro %}
-
 {% macro waiter(waiter_id, title) %}
 <div id="{{waiter_id}}" class="text-center my-4 py-4 h-100">
     <div class="py-4">
@@ -55,7 +36,7 @@
 {% block body %}
 <br>
 
-{% if not (pairs_with_status or simulated_open_orders or has_real_trader) %}
+{% if not (pairs_with_status or has_real_trader) %}
     {{ m_waiter.display_loading_message() }}
 {% else %}
     {% for exchange, load in exchanges_load.items() %}
@@ -71,34 +52,34 @@
     {% endif %}
 
 <div class="row">
-    <nav class="col-md-3 col-lg-2 col-1 d-block sidebar shadow">
+    <nav class="mt-md-4 mt-2 col-md-3 col-lg-2 col-1 d-block sidebar shadow">
         <div class="sidebar-sticky mt-0 pt-0">
             <div class="nav flex-column pt-0 mt-0 mt-md-4" id="v-tab" role="tablist"
                  aria-orientation="vertical">
                 {% if has_pnl_history %}
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" data-tab="default" id="panel-pnl-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" data-tab="default" id="panel-pnl-tab" data-toggle="tab"
                    href="#panel-pnl" role="tab" aria-controls="panel-pnl" aria-selected="true">
                     <i class="fa-solid fa-chart-line"></i><span class="d-none d-md-block pl-3">Profit & Loss</span>
                 </a>
                 {% endif %}
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex {{'active' if not has_pnl_history else ''}}" id="panel-orders-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex {{'active' if not has_pnl_history else ''}}" id="panel-orders-tab" data-toggle="tab"
                    href="#panel-orders" role="tab" aria-controls="panel-orders" aria-selected="false">
                     <i class="fa-solid fa-list-ul"></i><span class="d-none d-md-block pl-3">Orders</span>
                 </a>
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-positions-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-positions-tab" data-toggle="tab"
                    href="#panel-positions" role="tab" aria-controls="panel-positions" aria-selected="false">
                     <i class="fa-solid fa-table-list"></i><span class="d-none d-md-block pl-3">Positions</span>
                 </a>
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-market-status-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-market-status-tab" data-toggle="tab"
                    href="#panel-market-status" role="tab" aria-controls="panel-market-status" aria-selected="false">
                     <i class="fab fa-bitcoin"></i><span class="d-none d-md-block pl-3">Market Status</span>
                 </a>
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-trades-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-trades-tab" data-toggle="tab"
                    href="#panel-trades" role="tab" aria-controls="panel-trades" aria-selected="false">
                     <i class="fa-solid fa-clock-rotate-left"></i><span class="d-none d-md-block pl-3">Trades</span>
                 </a>
                 {% if followed_strategy_url %}
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-followed-strategy-tab" data-toggle="pill"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-followed-strategy-tab" data-toggle="tab"
                    href="#panel-followed-strategy" role="tab" aria-controls="panel-followed-strategy" aria-selected="false">
                    <i class="fa-solid fa-copy"></i><span class="d-none d-md-block pl-3">Followed strategy</span>
                 </a>
@@ -159,6 +140,13 @@
                                  class="w-100 table-striped table-responsive-sm">
                             </table>
                         </div>
+                        <div class="alert alert-info mt-2">
+                            For accuracy, Profit and Loss is computed only for <strong> trades
+                            that are coming from a trading mode that is supporting PNL history</strong> such as
+                            Grid Trading or the Dip Analyser.
+                            Please check trading modes description to find out if PNL history is supported.
+                            Resetting the trades history will reset Profit and Loss.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -168,8 +156,9 @@
                 <div class="card">
                     <div class="card-header">
                         <h2>Open orders
-                            <button type="button" class="btn btn-outline-danger waves-effect float-right" id="cancel_all_orders" update-url="{{ url_for('api.orders', action='cancel_orders') }}"
-                                    {{ "disabled" if not(real_open_orders or simulated_open_orders) }}>
+                            <button type="button" class="btn btn-outline-danger waves-effect float-right" id="cancel_all_orders"
+                                    update-url="{{ url_for('api.orders', action='cancel_orders') }}"
+                                    disabled>
                             <i id="cancel_all_icon" class="fas fa-ban"></i> <span class="d-none d-md-inline-block">Cancel all</span>
                             </button>
                         </h2>
@@ -315,10 +304,10 @@
 
 <div class="modal" id="CancelAllOrdersModal" tabindex="-1" role="dialog" aria-labelledby="#CancelAllOrdersModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text">
+    <div class="modal-content modal-text bg-dark text-light">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#CancelAllOrdersModalLabel">Confirm action</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -335,10 +324,10 @@
 
 <div class="modal" id="CancelOrderModal" tabindex="-1" role="dialog" aria-labelledby="#CancelOrderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text">
+    <div class="modal-content modal-text bg-dark text-light">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#CancelOrderModalLabel">Confirm action</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -353,12 +342,12 @@
   </div>
 </div>
 
-<div class="modal" id="ClosePositionModal" tabindex="-1" role="dialog" aria-labelledby="#CancelOrderModalLabel" aria-hidden="true">
+<div class="modal" id="ClosePositionModal" tabindex="-1" role="dialog" aria-labelledby="#ClosePositionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text">
+    <div class="modal-content modal-text bg-dark text-light">
       <div class="modal-header primary-text">
-        <h5 class="modal-title">Confirm action</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <h5 class="modal-title" id="#ClosePositionModalLabel">Confirm action</h5>
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -384,7 +373,5 @@
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/common_handlers.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/pnl_history.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-<script src="{{ url_for('static', filename='js/components/pnl.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/trading.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-<script src="{{ url_for('static', filename='js/components/trades.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

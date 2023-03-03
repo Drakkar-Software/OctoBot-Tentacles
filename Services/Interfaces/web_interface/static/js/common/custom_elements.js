@@ -138,32 +138,38 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     }
 }
 
-function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, fontColor='white', update=true){
+function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, fontColor='gray', update=true){
     const trace1 = {
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.y1),
       marker: {
-         color: data[data.length - 1].y1 > 0 ? 'green': 'red',
+         color: "#212121",
       },
-      opacity: 1,
+      opacity: 0.9,
       line: {
         width: 4,
       },
       type: 'scatter',
       name: titleY1,
     };
+    // rgb(198,40,40) octobot red
+    // rgb(0,142,0) green
     const trace2 = {
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.y2),
       marker: {
-         color: data.map((e) => e.y2 > 0 ? "green": "red"),
+         color: data.map((e) => e.y2 > 0 ? 'rgba(0,142,0,.8)': 'rgba(198,40,40,.5)'),
+          line: {
+            color: data.map((e) => e.y2 > 0 ? 'rgb(0,142,0)': 'rgb(198,40,40)'),
+            width: 1.5,
+          }
       },
       yaxis: 'y2',
-      opacity: 0.6,
       type: 'bar',
       name: titleY2,
     };
-
+    const maxDisplayY = Math.max(0, Math.max.apply(null, trace2.y) * 1.5);
+    const minDisplayY = Math.min(0, Math.min.apply(null, trace2.y) * 1.5);
     const layout = {
         xaxis: {
             autorange: true,
@@ -176,12 +182,17 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
         },
         yaxis1: {
             showgrid: true,
+            overlaying: 'y2',
             title: nameYAxis,
+            rangemode: "tozero",
+            // range: [minDisplayY, maxDisplayY],
         },
         yaxis2: {
+            rangemode: "tozero",
             showgrid: false,
-            overlaying: 'y',
+            showticklabels: false,
             side: 'right',
+            range: [minDisplayY, maxDisplayY],
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
