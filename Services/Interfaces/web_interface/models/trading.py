@@ -17,8 +17,10 @@ import sortedcontainers
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors as trading_errors
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as logging
 import octobot_commons.timestamp_util as timestamp_util
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
@@ -190,20 +192,26 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
         commons_constants.MINUTE_TO_SECONDS if scale else 1
     history = _get_pnl_history(exchange, quote, symbol, since)
+    invalid_pnls = 0
     for historical_pnl in history:
-        close_time = historical_pnl.get_close_time()
-        scaled_time = close_time - (close_time % scale_seconds)
-        pnl, pnl_p = historical_pnl.get_profits()
-        pnl_a = historical_pnl.get_closed_close_value()
-        if scaled_time not in pnl_history:
-            pnl_history[scaled_time] = {
-                PNL: pnl,
-                PNL_AMOUNT: pnl_a,
-            }
-        else:
-            pnl_val = pnl_history[scaled_time]
-            pnl_val[PNL] += pnl
-            pnl_val[PNL_AMOUNT] += pnl_a
+        try:
+            close_time = historical_pnl.get_close_time()
+            scaled_time = close_time - (close_time % scale_seconds)
+            pnl, pnl_p = historical_pnl.get_profits()
+            pnl_a = historical_pnl.get_closed_close_value()
+            if scaled_time not in pnl_history:
+                pnl_history[scaled_time] = {
+                    PNL: pnl,
+                    PNL_AMOUNT: pnl_a,
+                }
+            else:
+                pnl_val = pnl_history[scaled_time]
+                pnl_val[PNL] += pnl
+                pnl_val[PNL_AMOUNT] += pnl_a
+        except trading_errors.IncompletePNLError:
+            invalid_pnls += 1
+    if invalid_pnls:
+        logging.get_logger("TradingModel").warning(f"{invalid_pnls} invalid TradePNLs in history")
     return sorted(
         [
             {

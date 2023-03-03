@@ -18,7 +18,7 @@
 
 const loadPnlFullChartHistory = (data, update) => {
     const unit = $("#pnl_historyChart").data("unit");
-    const parentDiv = $(`#trading-pnl-history`);
+    const parentDiv = $(`#pnl_historyChart`);
     if(data.length > 1){
         parentDiv.removeClass(hidden_class);
         let total_pnl = 0;
@@ -45,15 +45,17 @@ const loadPnlTableHistory = (data, update) => {
         return [
             {timestamp: element.t, date: element.d},
             round_digits(element.pnl, 8),
-            // round_digits(element.pnl_p, 2),
             round_digits(total_pnl, 8),
             round_digits(element.pnl_a, 8),
         ]
     });
     const pnlTable = $("#pnl_historyTable");
     const unit = pnlTable.data("unit");
+    let previousOrder = [[0, "desc"]];
     if(update){
-        pnlTable.DataTable().destroy();
+        const previousDatatable = pnlTable.DataTable();
+        previousOrder = previousDatatable.order();
+        previousDatatable.destroy();
     }
     pnlTable.DataTable({
         data: rows.reverse(),
@@ -68,14 +70,17 @@ const loadPnlTableHistory = (data, update) => {
                 },
             },
             { title: `${unit} Profit and Loss` },
-            // { title: '% Profit and Loss' },  // figure out a way to merge % at different scales
             { title: `Cumulated ${unit} Profit and Loss` },
             { title: `${unit} traded volume` },
         ],
+        order: previousOrder,
     });
 }
 
 const fetchPnlHistory = async (scale) => {
     const url = $("#pnl_historyChart").data("url");
+    if(typeof url === "undefined"){
+        return [];
+    }
     return await async_send_and_interpret_bot_update(null, `${url}${scale}`, null, "GET")
 }
