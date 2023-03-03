@@ -73,7 +73,4 @@ class CoinbaseProCCXTAdapter(exchanges.CCXTAdapter):
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
             trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
                 trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
-            trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
-                if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
-                else trading_enums.TradeOrderType.LIMIT.value
         return raw

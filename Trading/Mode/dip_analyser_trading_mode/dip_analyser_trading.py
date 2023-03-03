@@ -58,6 +58,15 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
                   "sold, otherwise a small part will be kept to cover exchange fees."
         )
         self.UI.user_input(
+            DipAnalyserTradingModeConsumer.USE_BUY_MARKET_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Use market orders instead of limit orders upon buy signals. Using a market order makes will "
+                  "guaranty that each buy signal will create an entry. "
+                  "Limit orders (which are priced at 99.5% of the current price) "
+                  "can delay an entry for some time to replace an open buy order with a more suitable "
+                  "one when the market is very volatile. "
+                  "However limit orders might also never be filled and ending up missing a buy opportunity."
+        )
+        self.UI.user_input(
             DipAnalyserTradingModeConsumer.STOP_LOSS_MULTIPLIER, commons_enums.UserInputTypes.FLOAT, 0, inputs,
             min_val=0, max_val=1,
             title="Stop loss price multiplier: ratio to compute the stop loss price. "
@@ -138,8 +147,10 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
 
 
 class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
+    USE_BUY_MARKET_ORDERS = "use_buy_market_orders"
     STOP_LOSS_MULTIPLIER = "stop_loss_multiplier"
     STOP_LOSS_PRICE_MULTIPLIER = decimal.Decimal(0)
+    USE_BUY_MARKET_ORDERS_VALUE = False
     LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.995")
     SOFT_MAX_CURRENCY_RATIO = decimal.Decimal("0.33")
     # consider a high ratio not to take too much risk and not to prevent order creation either
@@ -178,6 +189,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         """
         self.STOP_LOSS_PRICE_MULTIPLIER = \
             decimal.Decimal(f"{self.trading_mode.trading_config.get(self.STOP_LOSS_MULTIPLIER, 0)}")
+        self.USE_BUY_MARKET_ORDERS_VALUE = self.trading_mode.trading_config.get(self.USE_BUY_MARKET_ORDERS, False)
         self.PRICE_WEIGH_TO_PRICE_PERCENT = {}
         self.PRICE_WEIGH_TO_PRICE_PERCENT[1] = \
             decimal.Decimal(f"{self.trading_mode.trading_config[self.LIGHT_PRICE_WEIGHT]}")
@@ -202,10 +214,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return await self.create_buy_order(symbol, timeout, volume_weight, price_weight)
         elif state == trading_enums.EvaluatorStates.SHORT.value:
             quantity = data.get(self.VOLUME_KEY, decimal.Decimal("1"))
-            sell_weight = self._get_sell_target_for_registered_order(data[self.ORDER_ID_KEY])
+            buy_order_id = data[self.ORDER_ID_KEY]
+            sell_weight = self._get_sell_target_for_registered_order(buy_order_id)
             sell_base = data[self.BUY_PRICE_KEY]
             return await self.create_sell_orders(symbol, timeout, self.trading_mode.sell_orders_per_buy,
-                                                 quantity, sell_weight, sell_base)
+                                                 quantity, sell_weight, sell_base, buy_order_id)
         self.logger.error(f"Unknown required order action: data= {data}")
 
     async def create_buy_order(self, symbol, timeout, volume_weight, price_weight):
@@ -232,7 +245,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
-                    order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                    order_type=trading_enums.TraderOrderType.BUY_MARKET
+                    if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT,
                     symbol=symbol,
                     current_price=price,
                     quantity=order_quantity,
@@ -257,9 +271,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.exception(e, False)
             return []
 
-    async def create_sell_orders(self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base):
+    async def create_sell_orders(
+            self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_id
+    ):
         current_order = None
         try:
+            reduce_only = False
+            if self.exchange_manager.is_future and await self.wait_for_active_position(symbol, timeout):
+                # can use reduce only orders now that the position is active
+                reduce_only = True
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
             created_orders = []
@@ -276,12 +296,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     current_price=sell_base,
                     quantity=order_quantity,
                     price=order_price,
-                    reduce_only=True if self.exchange_manager.is_future else None
+                    reduce_only=reduce_only,
+                    associated_entry_id=buy_order_id,
                 )
-                created_order = await self.trading_mode.create_order(current_order)
-                created_orders.append(created_order)
-                if stop_order := await self._create_stop_loss_if_enabled(created_order, sell_base, symbol_market):
-                    created_orders.append(stop_order)
+                if created_order := await self.trading_mode.create_order(current_order):
+                    created_orders.append(created_order)
+                    if stop_order := await self._create_stop_loss_if_enabled(
+                            created_order, sell_base, symbol_market, buy_order_id
+                    ):
+                        created_orders.append(stop_order)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -298,7 +321,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.exception(e, False)
             return []
 
-    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market):
+    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_id):
         if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
             return None
         stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
@@ -315,6 +338,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side=trading_enums.TradeOrderSide.SELL,
             reduce_only=True,
             group=oco_group,
+            associated_entry_id=buy_order_id,
         )
         stop_order = await self.trading_mode.create_order(current_order)
         self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")
@@ -591,5 +615,9 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         cancelled_orders = False
         if self.exchange_manager.trader.is_enabled:
             for order in self._get_current_buy_orders():
-                cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
+                try:
+                    cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
+                except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) as err:
+                    self.logger.warning(f"Skipping order cancel: {err}")
+                    # order can't be cancelled: don't set cancelled_orders to True
         return cancelled_orders

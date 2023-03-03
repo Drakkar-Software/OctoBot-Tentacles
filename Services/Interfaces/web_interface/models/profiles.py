@@ -30,6 +30,8 @@ VERSION = "version"
 IMPORTED = "imported"
 READ_ERROR = "read_error"
 
+_PROFILE_TENTACLES_CONFIG_CACHE = {}
+
 
 def get_current_profile():
     return interfaces_util.get_edited_config(dict_only=False).profile
@@ -65,13 +67,29 @@ def get_profiles():
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id
 
 
-def get_profiles_tentacles_details(profiles_list):
-    tentacles_by_profile_id = {}
-    for profile in profiles_list.values():
-        try:
-            tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(
+def _get_profile_setup_config(profile, reloading_profile):
+    if profile.profile_id == reloading_profile:
+        _PROFILE_TENTACLES_CONFIG_CACHE.pop(reloading_profile, None)
+        return tentacles_manager_api.get_tentacles_setup_config(
+            profile.get_tentacles_config_path()
+        )
+    try:
+        _PROFILE_TENTACLES_CONFIG_CACHE[profile.profile_id]
+    except KeyError:
+        _PROFILE_TENTACLES_CONFIG_CACHE[profile.profile_id] = \
+            tentacles_manager_api.get_tentacles_setup_config(
                 profile.get_tentacles_config_path()
             )
+    return _PROFILE_TENTACLES_CONFIG_CACHE[profile.profile_id]
+
+
+def get_profiles_tentacles_details(profiles_list):
+    tentacles_by_profile_id = {}
+    current_profile_id = get_current_profile().profile_id
+    for profile in profiles_list.values():
+        try:
+            # force reload for current profile as tentacles setup config can change
+            tentacles_setup_config = _get_profile_setup_config(profile, current_profile_id)
             tentacles_by_profile_id[profile.profile_id] = {
                 ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
                 VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config),

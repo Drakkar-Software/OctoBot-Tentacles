@@ -23,3 +23,5 @@ To apply changes to the Grid Trading Mode settings, you will have to manually ca
 This trading mode instantly places opposite side orders when an order is filled.
 
 This trading mode has been made possible thanks to the support of PKBO & Calusari.
+
+_This trading mode supports PNL history._

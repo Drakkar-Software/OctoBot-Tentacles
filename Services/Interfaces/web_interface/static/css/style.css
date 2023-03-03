@@ -230,6 +230,12 @@ a.nav-link.primary-tab-selector.active {
     background-color: #C62828;
 }
 
+a.nav-link.active.primary-pill,
+a.nav-link.active.primary-pill:hover{
+    background-color: #C62828;
+    color: white !important;
+}
+
 .btn.btn-sm.rounded-circle {
     padding-left: 0.64rem;
     padding-right: 0.64rem;

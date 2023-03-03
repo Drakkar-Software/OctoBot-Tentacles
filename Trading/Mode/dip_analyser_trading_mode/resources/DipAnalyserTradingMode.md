@@ -13,3 +13,8 @@ Warning: Ensure **enough funds are available in your portfolio** for OctoBot to 
 Sell orders are never cancelled by this strategy unless stop losses are enabled, 
 therefore it is not advised to use it on
 continued downtrends without using stop losses: funds might get locked in open sell orders.
+
+Limit buy orders might be automatically cancelled and replaced when a 
+better buy opportunity is identified.
+
+_This trading mode supports PNL history._

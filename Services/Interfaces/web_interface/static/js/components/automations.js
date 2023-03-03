@@ -37,9 +37,28 @@ $(document).ready(function() {
         const update_url = $("button[data-role='startAutomations']").attr(update_url_attr);
         send_and_interpret_bot_update(null, update_url, null, successCallback);
     }
+    const updateAutomationsCount = (delta) => {
+        if(configEditor === null){
+            return;
+        }
+        const automationsCount = configEditor.getEditor("root.automations_count");
+        const updatedValue = Number(automationsCount.getValue()) + delta;
+        if(updatedValue < 0){
+            return;
+        }
+        automationsCount.setValue(String(updatedValue));
+    }
+    const addAutomation = () => {
+        updateAutomationsCount(1);
+    }
+    const removeAutomation = () => {
+        updateAutomationsCount(-1);
+    }
     if (!startTutorialIfNecessary("automations")){
         displayFeedbackFormIfNecessary();
     }
     addEditorChangeEventCallback(onEditorChange);
     $("button[data-role='startAutomations']").on("click", startAutomations);
+    $("button[data-role='add-automation']").on("click", addAutomation);
+    $("button[data-role='remove-automation']").on("click", removeAutomation);
 });

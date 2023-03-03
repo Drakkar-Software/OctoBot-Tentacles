@@ -61,7 +61,7 @@ def format_trades(dict_trade_history):
                                 trading_enums.OrderStatus.UNKNOWN.value)
         trade_side = trading_enums.TradeOrderSide(dict_trade[trading_enums.ExchangeConstantsOrderColumns.SIDE.value])
         trade_type = trading_api.parse_trade_type(dict_trade)
-        if trade_type == trading_enums.TraderOrderType.UNKNOWN:
+        if trade_type in (trading_enums.TraderOrderType.UNSUPPORTED, trading_enums.TraderOrderType.UNKNOWN):
             trade_type = trade_side
         if status is not trading_enums.OrderStatus.CANCELED.value or DISPLAY_CANCELLED_TRADES:
             trade_time = dict_trade[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value]
@@ -161,22 +161,22 @@ def get_first_symbol_data():
         return {}
 
 
-def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api, list_arrays, in_backtesting,
-                         ignore_trades):
+def _create_candles_data(exchange_manager, symbol, time_frame, historical_candles, kline,
+                         bot_api, list_arrays, in_backtesting, ignore_trades):
     candles_key = "candles"
     real_trades_key = "real_trades"
     simulated_trades_key = "simulated_trades"
+    symbol_key = "symbol"
+    exchange_id_key = "exchange_id"
     result_dict = {
         candles_key: {},
         real_trades_key: {},
         simulated_trades_key: {},
+        symbol_key: symbol,
+        exchange_id_key: trading_api.get_exchange_manager_id(exchange_manager),
     }
     try:
-        if not in_backtesting:
-            web_interface.add_to_symbol_data_history(symbol, historical_candles, time_frame, False)
-            data = web_interface.get_symbol_data_history(symbol, time_frame)
-        else:
-            data = historical_candles
+        data = historical_candles
 
         # add kline as the last (current) candle that is not yet in history
         if math.nan not in kline and data[commons_enums.PriceIndexes.IND_PRICE_TIME.value][-1] != kline[
@@ -202,19 +202,18 @@ def _create_candles_data(symbol, time_frame, historical_candles, kline, bot_api,
         data_x = timestamp_util.convert_timestamps_to_datetime(data[commons_enums.PriceIndexes.IND_PRICE_TIME.value],
                                                                time_format="%y-%m-%d %H:%M:%S",
                                                                force_timezone=False)
-
-        independent_backtesting = web_interface.WebInterface.tools[
-            constants.BOT_TOOLS_BACKTESTING] if in_backtesting else None
-        bot_api_for_history = None if in_backtesting else bot_api
         if not ignore_trades:
             # handle trades after the 1st displayed candle start time for dashboard
             first_time_to_handle_in_board = data[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0]
-            real_trades_history, simulated_trades_history = \
-                interfaces_util.get_trades_history(bot_api_for_history,
-                                                   symbol,
-                                                   independent_backtesting,
-                                                   since=first_time_to_handle_in_board,
-                                                   as_dict=True)
+            real_trades_history = []
+            simulated_trades_history = []
+            if trading_api.is_trader_existing_and_enabled(exchange_manager):
+                if trading_api.is_trader_simulated(exchange_manager):
+                    simulated_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
+                                                                              first_time_to_handle_in_board, True)
+                else:
+                    real_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
+                                                                         first_time_to_handle_in_board, True)
 
             if real_trades_history:
                 result_dict[real_trades_key] = format_trades(real_trades_history)
@@ -264,7 +263,7 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
             if trading_api.has_symbol_klines(symbol_data, time_frame):
                 kline = trading_api.get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
-                return _create_candles_data(symbol_id, time_frame, historical_candles,
+                return _create_candles_data(exchange_manager, symbol_id, time_frame, historical_candles,
                                             kline, bot_api, list_arrays, in_backtesting, ignore_trades)
         except KeyError:
             traded_pairs = trading_api.get_trading_pairs(exchange_manager)

@@ -1021,6 +1021,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_sell_order = open_orders[-1]
+        assert newly_created_sell_order.associated_entry_ids == [to_fill_order.order_id]
         assert newly_created_sell_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price + (price_spread - price_increment)
         assert newly_created_sell_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price,
@@ -1044,6 +1045,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_buy_order = open_orders[-1]
+        assert newly_created_buy_order.associated_entry_ids == [to_fill_order.order_id]
         assert newly_created_buy_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price - (price_spread - price_increment)
         assert newly_created_buy_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price, 8)
@@ -1066,6 +1068,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_sell_order = open_orders[-1]
+        assert newly_created_sell_order.associated_entry_ids == [to_fill_order.order_id]
         assert newly_created_sell_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price + (price_spread - price_increment)
         assert newly_created_sell_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price, 8)
@@ -1087,6 +1090,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_buy_order = open_orders[-1]
+        assert newly_created_buy_order.associated_entry_ids == [to_fill_order.order_id]
         assert newly_created_buy_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price - (price_spread - price_increment)
         assert newly_created_buy_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price, 8)

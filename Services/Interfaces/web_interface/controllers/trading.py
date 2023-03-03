@@ -74,32 +74,23 @@ def symbol_market_status():
 @web_interface.server_instance.route("/trading")
 @login.login_required_when_activated
 def trading():
-    real_open_orders, simulated_open_orders = interfaces_util.get_all_open_orders()
     real_positions, simulated_positions = interfaces_util.get_all_positions()
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
     exchanges_load = models.get_exchanges_load()
-    return flask.render_template('trading.html',
-                                 real_open_orders=real_open_orders,
-                                 simulated_open_orders=simulated_open_orders,
-                                 real_positions=real_positions,
-                                 simulated_positions=simulated_positions,
-                                 watched_symbols=models.get_watched_symbols(),
-                                 pairs_with_status=interfaces_util.get_currencies_with_status(),
-                                 has_real_trader=has_real_trader,
-                                 exchanges_load=exchanges_load,
-                                 is_community_feed_connected=models.is_community_feed_connected(),
-                                 last_signal_time=models.get_last_signal_time(),
-                                 followed_strategy_url=models.get_followed_strategy_url(),
-                                 )
-
-
-@web_interface.server_instance.route("/trades")
-@login.login_required_when_activated
-def trades():
-    real_trades_history, simulated_trades_history = interfaces_util.get_trades_history()
-    return flask.render_template('trades.html',
-                                 real_trades_history=real_trades_history,
-                                 simulated_trades_history=simulated_trades_history)
+    return flask.render_template(
+        'trading.html',
+        real_positions=real_positions,
+        simulated_positions=simulated_positions,
+        watched_symbols=models.get_watched_symbols(),
+        pairs_with_status=interfaces_util.get_currencies_with_status(),
+        has_real_trader=has_real_trader,
+        exchanges_load=exchanges_load,
+        is_community_feed_connected=models.is_community_feed_connected(),
+        last_signal_time=models.get_last_signal_time(),
+        followed_strategy_url=models.get_followed_strategy_url(),
+        reference_market=interfaces_util.get_reference_market(),
+        has_pnl_history=models.has_pnl_history(),
+    )
 
 
 @web_interface.server_instance.route("/trading_type_selector")

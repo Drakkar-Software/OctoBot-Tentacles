@@ -86,7 +86,6 @@ from tentacles.Services.Interfaces.web_interface.controllers.medias import (
 from tentacles.Services.Interfaces.web_interface.controllers.trading import (
     portfolio,
     symbol_market_status,
-    trades,
     utility_processor,
 )
 from tentacles.Services.Interfaces.web_interface.controllers.profiles import (
@@ -139,7 +138,6 @@ __all__ = [
     "portfolio",
     "symbol_market_status",
     "trading",
-    "trades",
     "utility_processor",
     "profiles_selector",
     "automations",

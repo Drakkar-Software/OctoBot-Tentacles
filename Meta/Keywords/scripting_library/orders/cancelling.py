@@ -20,9 +20,9 @@ import tentacles.Meta.Keywords.scripting_library.orders.order_tags as order_tags
 
 async def cancel_orders(
     ctx, which="all", symbol=None, symbols=None,
-    cancel_loaded_orders=True, since: int or float = -1, 
+    cancel_loaded_orders=True, since: int or float = -1,
     until: int or float = -1,
-    ) -> bool:
+) -> bool:
     symbols = symbols or [symbol] if symbol or symbols else [ctx.symbol]
     orders = None
     orders_canceled = False

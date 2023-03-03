@@ -17,8 +17,11 @@ import sortedcontainers
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors as trading_errors
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as logging
+import octobot_commons.timestamp_util as timestamp_util
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 
@@ -151,6 +154,184 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
         dashboard.get_first_exchange_data(exchange)[0],
         currency, time_frame, from_timestamp, to_timestamp
     )
+
+
+def _get_pnl_history(exchange, quote, symbol, since):
+    if exchange:
+        return trading_api.get_completed_pnl_history(
+            dashboard.get_first_exchange_data(exchange)[0],
+            quote=quote,
+            symbol=symbol,
+            since=since
+        )
+    history = []
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        history += trading_api.get_completed_pnl_history(
+            exchange_manager,
+            quote=quote,
+            symbol=symbol,
+            since=since
+        )
+    return history
+
+
+def has_pnl_history(exchange=None, quote=None, symbol=None, since=None):
+    return bool(_get_pnl_history(exchange, quote, symbol, since))
+
+
+def _convert_timestamp(timestamp):
+    return timestamp_util.convert_timestamp_to_datetime(timestamp, time_format='%Y-%m-%d %H:%M:%S')
+
+
+def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
+    TIME = "t"
+    DATE = "d"
+    PNL = "pnl"
+    PNL_AMOUNT = "pnl_a"
+    pnl_history = {}
+    scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
+        commons_constants.MINUTE_TO_SECONDS if scale else 1
+    history = _get_pnl_history(exchange, quote, symbol, since)
+    invalid_pnls = 0
+    for historical_pnl in history:
+        try:
+            close_time = historical_pnl.get_close_time()
+            scaled_time = close_time - (close_time % scale_seconds)
+            pnl, pnl_p = historical_pnl.get_profits()
+            pnl_a = historical_pnl.get_closed_close_value()
+            if scaled_time not in pnl_history:
+                pnl_history[scaled_time] = {
+                    PNL: pnl,
+                    PNL_AMOUNT: pnl_a,
+                }
+            else:
+                pnl_val = pnl_history[scaled_time]
+                pnl_val[PNL] += pnl
+                pnl_val[PNL_AMOUNT] += pnl_a
+        except trading_errors.IncompletePNLError:
+            invalid_pnls += 1
+    if invalid_pnls:
+        logging.get_logger("TradingModel").warning(f"{invalid_pnls} invalid TradePNLs in history")
+    return sorted(
+        [
+            {
+                TIME: t,
+                DATE: _convert_timestamp(t),
+                PNL: float(pnl[PNL]),
+                PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
+            }
+            for t, pnl in pnl_history.items()
+        ],
+        key=lambda x: x[TIME]
+    )
+
+
+SYMBOL = "symbol"
+TYPE = "type"
+PRICE = "price"
+AMOUNT = "amount"
+EXCHANGE = "exchange"
+TIME = "time"
+DATE = "date"
+COST = "cost"
+MARKET = "market"
+SIMULATED_OR_REAL = "SoR"
+ID = "id"
+FEE_COST = "fee_cost"
+FEE_CURRENCY = "fee_currency"
+SIDE = "side"
+CONTRACT = "contract"
+VALUE = "value"
+ENTRY_PRICE = "entry_price"
+LIQUIDATION_PRICE = "liquidation_price"
+MARGIN = "margin"
+UNREALIZED_PNL = "unrealized_pnl"
+
+
+def _dump_order(order, is_simulated):
+    return {
+        SYMBOL: order.symbol,
+        TYPE: order.order_type.name.replace("_", " "),
+        PRICE: order.origin_price if not order.origin_stop_price else order.origin_stop_price,
+        AMOUNT: order.origin_quantity,
+        EXCHANGE: order.exchange_manager.exchange.name if order.exchange_manager else '',
+        DATE: _convert_timestamp(order.creation_time),
+        TIME: order.creation_time,
+        COST: order.total_cost,
+        MARKET: order.market,
+        SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
+        ID: order.order_id,
+    }
+
+
+def get_all_orders_data():
+    real, simulated = interfaces_util.get_all_open_orders()
+    return [
+        _dump_order(order, False)
+        for order in real
+    ] + [
+        _dump_order(order, True)
+        for order in simulated
+    ]
+
+
+def _dump_trade(trade, is_simulated):
+    return {
+        SYMBOL: trade.symbol,
+        TYPE: trade.trade_type.name.replace("_", " "),
+        PRICE: trade.executed_price,
+        AMOUNT: trade.executed_quantity,
+        EXCHANGE: trade.exchange_manager.exchange.name if trade.exchange_manager else '',
+        DATE: _convert_timestamp(trade.executed_time),
+        TIME: trade.executed_time,
+        COST: trade.total_cost,
+        MARKET: trade.market,
+        FEE_COST: trade.fee.get(trading_enums.FeePropertyColumns.COST.value, 0) if trade.fee else 0,
+        FEE_CURRENCY: trade.fee.get(trading_enums.FeePropertyColumns.CURRENCY.value, '') if trade.fee else '',
+        SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
+        ID: trade.trade_id,
+    }
+
+
+def get_all_trades_data():
+    real, simulated = interfaces_util.get_trades_history()
+    return [
+        _dump_trade(trade, False)
+        for trade in real
+    ] + [
+        _dump_trade(trade, True)
+        for trade in simulated
+    ]
+
+
+def _dump_position(position, is_simulated):
+    return {
+        SYMBOL: position.symbol,
+        SIDE: position.side.value,
+        CONTRACT: str(position.symbol_contract),
+        AMOUNT: position.size,
+        VALUE: position.value,
+        MARKET: position.currency if position.symbol_contract.is_inverse_contract() else position.market,
+        ENTRY_PRICE: position.entry_price,
+        LIQUIDATION_PRICE: position.liquidation_price,
+        MARGIN: position.margin,
+        UNREALIZED_PNL: position.unrealized_pnl,
+        EXCHANGE: position.exchange_manager.exchange.name if position.exchange_manager else '',
+        SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
+    }
+
+
+def get_all_positions_data():
+    real, simulated = interfaces_util.get_all_positions()
+    return [
+        _dump_position(position, False)
+        for position in real
+        if not position.is_idle()
+    ] + [
+        _dump_position(position, True)
+        for position in simulated
+        if not position.is_idle()
+    ]
 
 
 def clear_exchanges_orders_history(simulated_only=False):

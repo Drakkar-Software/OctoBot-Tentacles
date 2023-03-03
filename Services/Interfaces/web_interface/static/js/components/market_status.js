@@ -49,11 +49,15 @@ function schedule_update(){
 function update_graph(exchange, update=false, data=undefined, re_update=true, initialization=false){
     const in_backtesting = get_in_backtesting_mode();
     if(isDefined(update_details.time_frame) && isDefined(update_details.symbol) && isDefined(exchange)){
+        const formated_symbol = update_details.symbol.replace(new RegExp("/","g"), "|");
+        if(isDefined(data) && (formated_symbol !== data.symbol.replace(new RegExp("/","g"), "|") ||
+            update_details.exchange_id !== data.exchange_id)){
+            return;
+        }
         if (initialization && !in_backtesting){
             init_update_handler();
             updating_graph = false;
         }
-        const formated_symbol = update_details.symbol.replace(new RegExp("/","g"), "|");
         const valid_exchange_name = exchange.split("[")[0];
         get_symbol_price_graph("graph-symbol-price", update_details.exchange_id, valid_exchange_name,
             formated_symbol, update_details.time_frame, in_backtesting, !update,

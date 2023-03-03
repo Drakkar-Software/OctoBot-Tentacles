@@ -108,10 +108,12 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
 
     @staticmethod
     async def _web_trades_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, trade, old_trade):
-        web_interface_root.send_new_trade(trade,
-                                          trading_api.is_trader_simulated(
-                                              trading_api.get_exchange_manager_from_exchange_name_and_id(exchange,
-                                                                                                         exchange_id)))
+        web_interface_root.send_new_trade(
+            trade,
+            exchange_id,
+            trading_api.is_trader_simulated(trading_api.get_exchange_manager_from_exchange_name_and_id(exchange,
+                                                                                                       exchange_id))
+        )
 
     @staticmethod
     async def _web_ohlcv_empty_callback(

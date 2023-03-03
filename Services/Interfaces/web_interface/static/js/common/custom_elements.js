@@ -138,6 +138,83 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     }
 }
 
+function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, fontColor='gray', update=true){
+    const trace1 = {
+      x: data.map((e) => new Date(e.time*1000)),
+      y: data.map((e) => e.y1),
+      marker: {
+         color: "#212121",
+      },
+      opacity: 0.9,
+      line: {
+        width: 4,
+      },
+      type: 'scatter',
+      name: titleY1,
+    };
+    // rgb(198,40,40) octobot red
+    // rgb(0,142,0) green
+    const trace2 = {
+      x: data.map((e) => new Date(e.time*1000)),
+      y: data.map((e) => e.y2),
+      marker: {
+         color: data.map((e) => e.y2 > 0 ? 'rgba(0,142,0,.8)': 'rgba(198,40,40,.5)'),
+          line: {
+            color: data.map((e) => e.y2 > 0 ? 'rgb(0,142,0)': 'rgb(198,40,40)'),
+            width: 1.5,
+          }
+      },
+      yaxis: 'y2',
+      type: 'bar',
+      name: titleY2,
+    };
+    const maxDisplayY = Math.max(0, Math.max.apply(null, trace2.y) * 1.5);
+    const minDisplayY = Math.min(0, Math.min.apply(null, trace2.y) * 1.5);
+    const layout = {
+        xaxis: {
+            autorange: true,
+            showgrid: false,
+            domain: [0, 1],
+            type: 'date',
+            rangeslider: {
+                visible: false,
+            }
+        },
+        yaxis1: {
+            showgrid: true,
+            overlaying: 'y2',
+            title: nameYAxis,
+            rangemode: "tozero",
+            // range: [minDisplayY, maxDisplayY],
+        },
+        yaxis2: {
+            rangemode: "tozero",
+            showgrid: false,
+            showticklabels: false,
+            side: 'right',
+            range: [minDisplayY, maxDisplayY],
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {
+            color: fontColor
+        },
+        showlegend: false,
+    };
+    const plotlyConfig = {
+        scrollZoom: false,
+        modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
+        responsive: true,
+        showEditInChartStudio: false,
+        displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
+    };
+    if(update){
+        Plotly.restyle(element, {x: [trace1.x], y: [trace1.y], y2: [trace2.y]}, 0);
+    } else {
+        Plotly.newPlot(element, [trace1, trace2], layout, plotlyConfig);
+    }
+}
+
 function update_circular_progress_doughnut(chart, done, remaining){
     chart.data.datasets[0].data[0] = done;
     chart.data.datasets[0].data[1] = remaining;

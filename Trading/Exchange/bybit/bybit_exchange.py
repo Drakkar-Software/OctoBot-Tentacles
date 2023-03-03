@@ -18,12 +18,13 @@ import time
 
 import ccxt
 
+import octobot_commons.constants as commons_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
+import octobot_trading.personal_data as trading_personal_data
 
 
 class Bybit(exchanges.RestExchange):
@@ -43,6 +44,9 @@ class Bybit(exchanges.RestExchange):
 
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
+
+    # set True when get_positions() is not returning empty positions and should use get_position() instead
+    REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
@@ -78,15 +82,6 @@ class Bybit(exchanges.RestExchange):
             kwargs["end"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
-    async def get_positions(self, symbols=None, **kwargs: dict) -> list:
-        params = {}
-        raw_positions = []
-        for settleCoin in ("USDT", "BTC"):
-            params["settleCoin"] = settleCoin
-            params["dataFilter"] = "full"
-            raw_positions += await super().get_positions(symbols=symbols, **params)
-        return raw_positions
-
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["triggerPrice"] = price
@@ -99,7 +94,7 @@ class Bybit(exchanges.RestExchange):
                           quantity: float, price: float, stop_price: float = None, side: str = None,
                           current_price: float = None, params: dict = None):
         params = params or {}
-        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
+        if trading_personal_data.is_stop_order(order_type):
             params["stop_order_id"] = order_id
         if stop_price is not None:
             # params["stop_px"] = stop_price
@@ -109,11 +104,12 @@ class Bybit(exchanges.RestExchange):
                                          price=price, stop_price=stop_price, side=side,
                                          current_price=current_price, params=params)
 
-    async def _verify_order(self, created_order, order_type, symbol, price, side, params=None):
-        if order_type in (trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT):
-            params = params or {}
-            params["stop"] = True
-        return await super()._verify_order(created_order, order_type, symbol, price, side, params=params)
+    async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
+        if trading_personal_data.is_stop_order(order_type):
+            get_order_params = get_order_params or {}
+            get_order_params["stop"] = True
+        return await super()._verify_order(created_order, order_type, symbol, price, side,
+                                           get_order_params=get_order_params)
 
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
@@ -139,10 +135,24 @@ class Bybit(exchanges.RestExchange):
             params["reduceOnly"] = order.reduce_only
         return params
 
-    def get_bundled_order_parameters(self, stop_loss_price=None, take_profit_price=None) -> dict:
+    def _get_margin_type_query_params(self, symbol, **kwargs):
+        if not self.exchange_manager.exchange.has_pair_future_contract(symbol):
+            raise KeyError(f"{symbol} contract unavailable")
+        else:
+            contract = self.exchange_manager.exchange.get_pair_future_contract(symbol)
+            kwargs = kwargs or {}
+            kwargs[ccxt_enums.ExchangePositionCCXTColumns.LEVERAGE.value] = float(contract.current_leverage)
+        return kwargs
+
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool, **kwargs: dict):
+        kwargs = self._get_margin_type_query_params(symbol, **kwargs)
+        await super().set_symbol_margin_type(symbol, isolated, **kwargs)
+
+    def get_bundled_order_parameters(self, order, stop_loss_price=None, take_profit_price=None) -> dict:
         """
-        Returns True when this exchange supports orders created upon other orders fill (ex: a stop loss created at
-        the same time as a buy order)
+        Returns the updated params when this exchange supports orders created upon other orders fill
+        (ex: a stop loss created at the same time as a buy order)
+        :param order: the initial order
         :param stop_loss_price: the bundled order stopLoss price
         :param take_profit_price: the bundled order takeProfit price
         :return: A dict with the necessary parameters to create the bundled order on exchange alongside the
@@ -269,7 +279,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                                                      ccxt_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
                 trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
-                    trading_enums.TraderPositionType(
+                    trading_enums.MarginType(
                         fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
@@ -311,17 +321,17 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
-        # CCXT standard funding_rate parsing logic
-        funding_dict = fixed
-        if from_ticker and ccxt_constants.CCXT_INFO in fixed:
-            funding_dict, old_funding_dict = fixed[ccxt_constants.CCXT_INFO], fixed
-
-        try:
-            """
-            Bybit last funding time is not provided
-            To obtain the last_funding_time : 
-            => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
-            """
+        """
+        Bybit last funding time is not provided
+        To obtain the last_funding_time :
+        => timestamp(next_funding_time) - timestamp(BYBIT_DEFAULT_FUNDING_TIME)
+        """
+        funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+        if from_ticker:
+            if ccxt_constants.CCXT_INFO not in funding_dict:
+                return {}
+            # no data in fixed when coming from ticker
+            funding_dict = fixed[ccxt_constants.CCXT_INFO]
             funding_next_timestamp = float(
                 funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0)
             )
@@ -329,12 +339,22 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                     funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
                 trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, 0)),
+                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)),
                 trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp,
                 trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: constants.NaN
             })
-        except KeyError as e:
-            self.logger.error(f"Fail to parse funding dict ({e})")
+        else:
+            funding_next_timestamp = float(
+                funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value, 0)
+            )
+            funding_dict.update({
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                    funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
+                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
+                    funding_dict.get(ccxt_constants.CCXT_INFO, {})
+                    .get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)
+                ),
+            })
         return funding_dict
 
     def parse_mark_price(self, fixed, from_ticker=False, **kwargs) -> dict:

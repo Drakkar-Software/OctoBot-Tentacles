@@ -93,6 +93,7 @@ VALUE = "value"
 NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
                                           tentacles_manager_constants.TENTACLES_SERVICES_PATH,
                                           tentacles_manager_constants.TENTACLES_TRADING_PATH]
+_TENTACLE_CONFIG_CACHE = {}
 
 DEFAULT_EXCHANGE = "binance"
 MERGED_CCXT_EXCHANGES = {
@@ -370,8 +371,21 @@ def get_tentacle_config(klass):
     return tentacles_manager_api.get_tentacle_config(interfaces_util.get_edited_tentacles_config(), klass)
 
 
+def get_cached_tentacle_config(klass):
+    """
+    Should only be used to read static parts of a tentacle config (like requirements)
+    """
+    key = klass if isinstance(klass, str) else klass.get_name()
+    try:
+        return _TENTACLE_CONFIG_CACHE[key]
+    except KeyError:
+        _TENTACLE_CONFIG_CACHE[key] = get_tentacle_config(klass)
+    return _TENTACLE_CONFIG_CACHE[key]
+
+
 def get_tentacle_config_schema(klass):
     try:
+        _get_logger().error("get_tentacle_config_schema")
         with open(tentacles_manager_api.get_tentacle_config_schema_path(klass)) as schema_file:
             return schema_file.read()
     except Exception:
@@ -472,7 +486,7 @@ def _get_required_element(elements_config):
 
 def _add_strategy_requirements_and_default_config(desc, klass):
     tentacles_config = interfaces_util.get_startup_tentacles_config()
-    strategy_config = get_tentacle_config(klass)
+    strategy_config = get_cached_tentacle_config(klass)
     desc[REQUIREMENTS_KEY] = [evaluator for evaluator in klass.get_required_evaluators(tentacles_config,
                                                                                        strategy_config)]
     desc[COMPATIBLE_TYPES_KEY] = [evaluator for evaluator in klass.get_compatible_evaluators_types(tentacles_config,
@@ -483,7 +497,7 @@ def _add_strategy_requirements_and_default_config(desc, klass):
 
 def _add_trading_mode_requirements_and_default_config(desc, klass):
     tentacles_config = interfaces_util.get_startup_tentacles_config()
-    mode_config = get_tentacle_config(klass)
+    mode_config = get_cached_tentacle_config(klass)
     required_strategies, required_strategies_count = klass.get_required_strategies_names_and_count(tentacles_config,
                                                                                                    mode_config)
     if required_strategies:
@@ -810,7 +824,7 @@ async def _load_market(exchange, results):
 
 
 def _add_merged_exchanges(exchanges):
-    extended = copy.copy(exchanges)
+    extended = list(exchanges)
     for exchange in exchanges:
         if exchange in MERGED_CCXT_EXCHANGES:
             extended.append(MERGED_CCXT_EXCHANGES[exchange])

@@ -190,8 +190,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
 
     async def _parse_order_details(self, ctx, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
-        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, None).casefold()
-
+        order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, "").casefold()
         order_exchange_creation_params = {
             param_name.split(TradingViewSignalsTradingMode.PARAM_PREFIX_KEY)[1]: param_value
             for param_name, param_value in parsed_data.items()
@@ -234,9 +233,12 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         return state, order_data
 
     async def _parse_volume(self, ctx, parsed_data, side, target_price):
+        user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
+        if user_volume == "0":
+            return trading_constants.ZERO
         return await script_keywords.get_amount_from_input_amount(
             context=ctx,
-            input_amount=str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0)),
+            input_amount=user_volume,
             side=side,
             reduce_only=False,
             is_stop_order=False,
