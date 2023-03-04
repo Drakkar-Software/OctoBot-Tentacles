@@ -195,7 +195,8 @@ def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
             resource_url = \
                 f"{media_url}/{tentacles_manager_api.get_tentacle_resources_path(name).replace(path.sep, '/')}/"
             # patch resources paths into the tentacle resource path
-            return doc_content.replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
+            return doc_content.replace(f"\n\n", "<br><br>")\
+                .replace(f"{tentacles_manager_constants.TENTACLE_RESOURCES}/", resource_url)
     except KeyError as e:
         if missing_tentacles is None or name not in missing_tentacles:
             _get_logger().error(f"Impossible to load tentacle documentation for {name} ({e.__class__.__name__}: {e}). "
