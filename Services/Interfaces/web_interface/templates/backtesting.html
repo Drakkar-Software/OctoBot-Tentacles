@@ -18,7 +18,7 @@
     </div>
     <div class="card-body">
         {% if data_files %}
-            <table class="table table-striped table-bordered table-sm table-hover table-responsive-lg" id="dataFilesTable">
+            <table class="table table-striped table-sm table-responsive-lg" id="dataFilesTable">
               <caption>Select data file(s) to use</caption>
               <thead>
                 <tr>
@@ -137,7 +137,7 @@
             <div class="alert alert-danger" id="backtestingErrorsAlert" role="alert" style="display: none;">
               Errors occurred during backtesting, <a href="{{ url_for('logs') }}" class="alert-link">details in logs</a>.
             </div>
-            <table class="table table-striped table-bordered table-sm table-hover table-responsive-lg">
+            <table class="table table-striped table-sm table-responsive-lg">
               <tbody>
                 <tr>
                   <td>Bot profitability</td><td id="bProf"></td>
