@@ -184,7 +184,7 @@ $(document).ready(function() {
     handleDefaultImages();
     $(".markdown-content").each(function () {
         const element = $(this);
-        element.html(markdown_to_html(element.text().trim()))
+        element.html(markdown_to_html(element.text().trim().replaceAll("<br><br>", "\n\n")));
     });
     fetch_images();
 });
