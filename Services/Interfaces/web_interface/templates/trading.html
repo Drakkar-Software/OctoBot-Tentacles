@@ -66,10 +66,12 @@
                    href="#panel-orders" role="tab" aria-controls="panel-orders" aria-selected="false">
                     <i class="fa-solid fa-list-ul"></i><span class="d-none d-md-block pl-3">Orders</span>
                 </a>
+                {% if real_positions or simulated_positions %}
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-positions-tab" data-toggle="tab"
                    href="#panel-positions" role="tab" aria-controls="panel-positions" aria-selected="false">
                     <i class="fa-solid fa-table-list"></i><span class="d-none d-md-block pl-3">Positions</span>
                 </a>
+                {% endif %}
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-market-status-tab" data-toggle="tab"
                    href="#panel-market-status" role="tab" aria-controls="panel-market-status" aria-selected="false">
                     <i class="fab fa-bitcoin"></i><span class="d-none d-md-block pl-3">Market Status</span>
@@ -180,7 +182,7 @@
             </div>
             {% if real_positions or simulated_positions %}
             <div class="tab-pane fade" id="panel-positions" role="tabpanel"
-                 aria-labelledby="panel-orders-tab">
+                 aria-labelledby="panel-positions-tab">
                 <div class="card">
                     <div class="card-header">
                         <h2>Positions</h2>
@@ -247,7 +249,7 @@
                  aria-labelledby="panel-trades-tab">
                 <div class="card">
                     <div class="card-header"><h2>
-                        &ensp;Trades
+                        &ensp;Trades history
                     </h2></div>
                     <div class="card-body">
                     {{ waiter("trades-waiter", "Loading trades") }}
