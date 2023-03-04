@@ -21,6 +21,7 @@ import octobot_trading.exchanges as exchanges
 
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
+    BASE_REST_API = "api.hollaex.com"
 
     DEFAULT_MAX_LIMIT = 500
 
@@ -30,8 +31,8 @@ class hollaex(exchanges.RestExchange):
         Called at constructor, should define all the exchange's user inputs.
         """
         cls.UI.user_input(
-            "rest", commons_enums.UserInputTypes.TEXT, "https://api.hollaex.com", inputs,
-            title="Address of the Hollaex based exchange API (similar to https://api.hollaex.com)"
+            "rest", commons_enums.UserInputTypes.TEXT, f"https://{cls.BASE_REST_API}", inputs,
+            title=f"Address of the Hollaex based exchange API (similar to https://{cls.BASE_REST_API})"
         )
 
     def get_additional_connector_config(self):
