@@ -166,6 +166,9 @@ def _get_pnl_history(exchange, quote, symbol, since):
         )
     history = []
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        if trading_api.get_is_backtesting(exchange_manager):
+            # skip backtesting exchanges
+            continue
         history += trading_api.get_completed_pnl_history(
             exchange_manager,
             quote=quote,
