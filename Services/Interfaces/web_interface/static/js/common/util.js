@@ -149,7 +149,11 @@ function isMobileDisplay() {
 
 function round_digits(number, decimals) {
     const rounded = Number(Math.round(`${number}e${decimals}`) + `e-${decimals}`);
-    return isNaN(rounded) ? 0 : rounded;
+    if(isNaN(rounded)){
+        const n = Number(`${number}`);
+        return n.toFixed(decimals);
+    }
+    return rounded;
 }
 
 function handle_numbers(number) {
