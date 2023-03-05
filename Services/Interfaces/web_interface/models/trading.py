@@ -128,6 +128,9 @@ def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, f
 def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp):
     merged_result = sortedcontainers.SortedDict()
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        if trading_api.get_is_backtesting(exchange_manager):
+            # skip backtesting exchanges
+            continue
         for value in _get_exchange_historical_portfolio(
                 exchange_manager, currency, time_frame, from_timestamp, to_timestamp
         ):
@@ -366,7 +369,8 @@ def clear_exchanges_portfolio_history(simulated_only=False, simulated_portfolio=
 
 async def _async_run_on_exchange_ids(coro, exchange_ids, simulated_only, **kwargs):
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(exchange_ids):
-        if not simulated_only or trading_api.is_trader_simulated(exchange_manager):
+        if (not simulated_only or trading_api.is_trader_simulated(exchange_manager)) \
+                and not trading_api.get_is_backtesting(exchange_manager):
             await coro(exchange_manager, **kwargs)
 
 
@@ -378,5 +382,6 @@ def _run_on_exchange_ids(coro, simulated_only=False, **kwargs):
 
 def _sync_run_on_exchange_ids(func, simulated_only=False, **kwargs):
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if not simulated_only or trading_api.is_trader_simulated(exchange_manager):
+        if (not simulated_only or trading_api.is_trader_simulated(exchange_manager)) \
+                and not trading_api.get_is_backtesting(exchange_manager):
             func(exchange_manager, **kwargs)
