@@ -220,8 +220,8 @@ const reload_positions = async (update) => {
             `${element.side.toUpperCase()} ${element.contract}`,
             round_digits(element.amount, 5),
             {display: `${round_digits(element.value, 5)} ${element.market}`, sort: element.value},
-            round_digits(element.entry_price, 8),
-            round_digits(element.liquidation_price, 8),
+            round_digits(element.entry_price, MAX_PRICE_DIGITS),
+            round_digits(element.liquidation_price, MAX_PRICE_DIGITS),
             {display: `${round_digits(element.margin, 5)} ${element.market}`, sort: element.margin},
             {display: `${round_digits(element.unrealized_pnl, 5)} ${element.market}`, sort: element.unrealized_pnl},
             element.exchange,
@@ -279,8 +279,8 @@ const reload_trades = async (update) => {
         return [
             element.symbol,
             element.type,
-            round_digits(element.price, 8),
-            round_digits(element.amount, 8),
+            round_digits(element.price, MAX_PRICE_DIGITS),
+            round_digits(element.amount, MAX_PRICE_DIGITS),
             element.exchange,
             {display: `${round_digits(element.cost, 5)} ${element.market}`, sort: element.cost},
             {display: `${round_digits(element.fee_cost, 5)} ${element.fee_currency}`, sort: element.fee_cost},
@@ -331,11 +331,11 @@ const reload_orders = async (update) => {
         return [
             element.symbol,
             element.type,
-            round_digits(element.price, 8),
-            round_digits(element.amount, 8),
+            round_digits(element.price, MAX_PRICE_DIGITS),
+            round_digits(element.amount, MAX_PRICE_DIGITS),
             element.exchange,
             {display: element.date, sort: element.time},
-            {display: `${round_digits(element.cost, 8)} ${element.market}`, sort: element.cost},
+            {display: `${round_digits(element.cost, MAX_PRICE_DIGITS)} ${element.market}`, sort: element.cost},
             element.SoR,
             element.id,
             element.id,
@@ -455,6 +455,8 @@ const registerTableButtonsEvents = () => {
         }
     });
 }
+
+const MAX_PRICE_DIGITS = 8;
 
 registerScaleSelector();
 registerTableButtonsEvents();
