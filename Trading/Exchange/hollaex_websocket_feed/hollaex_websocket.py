@@ -16,11 +16,11 @@
 import ccxt.pro as ccxt_pro
 import octobot_trading.exchanges as exchanges
 from octobot_trading.enums import WebsocketFeeds as Feeds
-import tentacles.Trading.Exchange.hollaex as hollaex_tentacle
+from ..hollaex.hollaex_exchange import hollaex
 
 
 class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
-    BASE_WS_API = f"{hollaex_tentacle.BASE_REST_API}/stream"
+    BASE_WS_API = f"{hollaex.BASE_REST_API}/stream"
     EXCHANGE_FEEDS = {
         Feeds.TRADES: True,
         Feeds.KLINE: Feeds.UNSUPPORTED.value,
@@ -33,10 +33,10 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
             rest_config = self.exchange_manager.exchange.get_additional_connector_config()
             try:
                 rest_url = rest_config["urls"]["api"]["rest"]
-                if hollaex_tentacle.BASE_REST_API not in rest_url:
+                if hollaex.BASE_REST_API not in rest_url:
                     current_ws_url = ccxt_pro.hollaex().describe()["urls"]["api"]["ws"]
                     custom_url = rest_url.split("https://")[1]
-                    rest_config["urls"]["api"]["ws"] = current_ws_url.replace(hollaex_tentacle.BASE_REST_API, custom_url)
+                    rest_config["urls"]["api"]["ws"] = current_ws_url.replace(hollaex.BASE_REST_API, custom_url)
                 # use rest exchange additional config if any
                 self.additional_config = self.exchange_manager.exchange.get_additional_connector_config()
             except KeyError as err:
@@ -45,4 +45,4 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
 
     @classmethod
     def get_name(cls):
-        return hollaex_tentacle.get_name()
+        return hollaex.get_name()
