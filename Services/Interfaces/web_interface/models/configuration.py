@@ -635,6 +635,16 @@ def get_config_activated_evaluators():
     return evaluators_api.get_activated_evaluators(interfaces_util.get_bot_api().get_edited_tentacles_config())
 
 
+def has_futures_exchange():
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        if not (
+                trading_api.get_is_backtesting(exchange_manager)
+                or not trading_api.is_trader_existing_and_enabled(exchange_manager)
+        ) and trading_api.get_exchange_type(exchange_manager) is trading_enums.ExchangeTypes.FUTURE:
+            return True
+    return False
+
+
 def update_tentacles_activation_config(new_config, deactivate_others=False):
     tentacles_setup_configuration = interfaces_util.get_edited_tentacles_config()
     try:
