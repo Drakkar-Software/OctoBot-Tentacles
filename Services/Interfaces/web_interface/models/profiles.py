@@ -28,6 +28,7 @@ import octobot.community as community
 ACTIVATION = "activation"
 VERSION = "version"
 IMPORTED = "imported"
+REQUIRE_EXACT_VERSION = "require_exact_version"
 READ_ERROR = "read_error"
 
 _PROFILE_TENTACLES_CONFIG_CACHE = {}
@@ -94,6 +95,7 @@ def get_profiles_tentacles_details(profiles_list):
                 ACTIVATION: tentacles_manager_api.get_activated_tentacles(tentacles_setup_config),
                 VERSION: tentacles_manager_api.get_tentacles_installation_version(tentacles_setup_config),
                 IMPORTED: profile.imported,
+                REQUIRE_EXACT_VERSION: False,  # implement if exact version is required in profiles
                 READ_ERROR:
                     not tentacles_manager_api.is_tentacles_setup_config_successfully_loaded(tentacles_setup_config),
             }
