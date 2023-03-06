@@ -66,7 +66,7 @@
                    href="#panel-orders" role="tab" aria-controls="panel-orders" aria-selected="false">
                     <i class="fa-solid fa-list-ul"></i><span class="d-none d-md-block pl-3">Orders</span>
                 </a>
-                {% if real_positions or simulated_positions %}
+                {% if might_have_positions %}
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panel-positions-tab" data-toggle="tab"
                    href="#panel-positions" role="tab" aria-controls="panel-positions" aria-selected="false">
                     <i class="fa-solid fa-table-list"></i><span class="d-none d-md-block pl-3">Positions</span>
@@ -180,7 +180,7 @@
                     </div>
                 </div>
             </div>
-            {% if real_positions or simulated_positions %}
+            {% if might_have_positions %}
             <div class="tab-pane fade" id="panel-positions" role="tabpanel"
                  aria-labelledby="panel-positions-tab">
                 <div class="card">
