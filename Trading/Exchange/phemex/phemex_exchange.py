@@ -29,7 +29,7 @@ class Phemex(exchanges.RestExchange):
         return 'phemex'
 
     def _get_ohlcv_params(self, time_frame, limit, **kwargs):
-        to_time = self.connector.milliseconds()
+        to_time = self.connector.client.milliseconds()
         time_frame_msec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
         kwargs.update({
             "from": to_time - (time_frame_msec * (limit + 1)),
