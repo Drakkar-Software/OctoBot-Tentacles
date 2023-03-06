@@ -804,6 +804,10 @@ def get_enabled_trading_pairs() -> set:
     return symbols
 
 
+def get_exchange_available_trading_pairs(exchange_manager) -> list:
+    return trading_api.get_trading_pairs(exchange_manager)
+
+
 def get_symbol_list(exchanges):
     result = interfaces_util.run_in_bot_async_executor(_load_markets(exchanges))
     return list(set(result))
