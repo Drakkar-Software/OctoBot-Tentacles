@@ -91,16 +91,18 @@ def _get_candles_reply(exchange, exchange_id, symbol, time_frame):
     }
 
 
-def _get_first_exchange_identifiers(exchange_name=None):
+def _get_first_exchange_identifiers(exchange_name=None, trading_exchange_only=False):
     for exchange_manager in interfaces_util.get_exchange_managers():
+        if trading_exchange_only and not trading_api.is_trader_existing_and_enabled(exchange_manager):
+            continue
         name = trading_api.get_exchange_name(exchange_manager)
         if exchange_name is None or name == exchange_name:
             return exchange_manager, name, trading_api.get_exchange_manager_id(exchange_manager)
     raise KeyError("No exchange to be found")
 
 
-def get_first_exchange_data(exchange_name=None):
-    return _get_first_exchange_identifiers(exchange_name)
+def get_first_exchange_data(exchange_name=None, trading_exchange_only=False):
+    return _get_first_exchange_identifiers(exchange_name, trading_exchange_only=trading_exchange_only)
 
 
 def get_watched_symbol_data(symbol):

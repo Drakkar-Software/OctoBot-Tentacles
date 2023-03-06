@@ -9,7 +9,7 @@
 
 {% macro exchange_overload_warning(exchange, load) -%}
     {% if load["overloaded"] %}
-        <div class="alert alert-danger font-weight-normal" role="alert">
+        <div class="alert alert-danger font-weight-normal offset-md-3 offset-lg-2 offset-1" role="alert">
             <span class="text-capitalize">{{ exchange }}</span> exchange is overloaded by
             <span class="font-weight-bold">{{ (load["load"] * 100 / load["max_load"] - 100) | round | int }}%</span>.
             <span class="d-none d-sm-inline">
@@ -43,7 +43,7 @@
         {{ exchange_overload_warning(exchange, load) }}
     {% endfor %}
     {% if vars['exchange_overload'] %}
-    <div class="d-none d-md-block alert alert-warning font-weight-normal" role="alert">
+    <div class="d-none d-md-block alert alert-warning font-weight-normal offset-md-3 offset-lg-2 offset-1" role="alert">
         This limit is due to the exchange's REST API rate limit and prevents OctoBot from getting banned for spam.
         OctoBot is operating with the given configuration but this exchange trading will be slowed down and might
         underperform due to this rate limit restrictions.

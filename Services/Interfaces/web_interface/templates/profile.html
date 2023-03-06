@@ -139,7 +139,8 @@
                         </p>
                     </div>
                 {% elif profiles_tentacles_details[current_profile.profile_id]["version"] != CURRENT_BOT_VERSION
-                    and not profiles_tentacles_details[current_profile.profile_id]["imported"] %}
+                    and not profiles_tentacles_details[current_profile.profile_id]["imported"]
+                    and profiles_tentacles_details[current_profile.profile_id]["require_exact_version"]%}
                     <div class="alert alert-warning" role="alert">
                         <h4>Profile version warning</h4>
                         <p>

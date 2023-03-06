@@ -128,7 +128,8 @@ def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, f
 def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp):
     merged_result = sortedcontainers.SortedDict()
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if trading_api.get_is_backtesting(exchange_manager):
+        if trading_api.get_is_backtesting(exchange_manager) \
+                or not trading_api.is_trader_existing_and_enabled(exchange_manager):
             # skip backtesting exchanges
             continue
         for value in _get_exchange_historical_portfolio(
@@ -154,7 +155,7 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     if exchange is None:
         return _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp)
     return _get_exchange_historical_portfolio(
-        dashboard.get_first_exchange_data(exchange)[0],
+        dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
         currency, time_frame, from_timestamp, to_timestamp
     )
 
@@ -162,14 +163,15 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
 def _get_pnl_history(exchange, quote, symbol, since):
     if exchange:
         return trading_api.get_completed_pnl_history(
-            dashboard.get_first_exchange_data(exchange)[0],
+            dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
             quote=quote,
             symbol=symbol,
             since=since
         )
     history = []
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if trading_api.get_is_backtesting(exchange_manager):
+        if trading_api.get_is_backtesting(exchange_manager) \
+                or not trading_api.is_trader_existing_and_enabled(exchange_manager):
             # skip backtesting exchanges
             continue
         history += trading_api.get_completed_pnl_history(
