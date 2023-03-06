@@ -67,7 +67,7 @@ class Bybit(exchanges.RestExchange):
         :return: The list of supported exchange types
         """
         return [
-            trading_enums.ExchangeTypes.SPOT,
+            # trading_enums.ExchangeTypes.SPOT, # not yet supported
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
