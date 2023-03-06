@@ -501,6 +501,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
+        self.ignore_exchange_fees = False
         super().__init__(channel, config, trading_mode, exchange_manager)
 
         self.state = trading_enums.EvaluatorStates.NEUTRAL
@@ -508,7 +509,6 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
         self.last_buy_candle = None
         self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base
-        self.ignore_exchange_fees = False
 
     def on_reload_config(self):
         """
