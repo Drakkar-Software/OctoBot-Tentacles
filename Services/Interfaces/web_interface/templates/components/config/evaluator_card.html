@@ -42,7 +42,7 @@
             <span class="badge {{'badge-warning' if startup_config[evaluator_name] != info['activation'] else ('badge-success' if info['activation'] else 'badge-secondary')}}">
                 {{('Activation pending restart' if info['activation'] else 'Deactivation pending restart') if startup_config[evaluator_name] != info['activation'] else ('Activated' if info['activation'] else 'Deactivated')}}
             </span>
-            <button class="btn btn-outline-primary btn-md waves-effect"  data-toggle="modal" data-target="#{{evaluator_name}}Modal" no-activation-click="true"><i class="fa fa-info-circle" no-activation-click="true"></i></button>
+            <button class="btn btn-outline-primary btn-md waves-effect" data-toggle="modal" data-target="#{{evaluator_name}}Modal" no-activation-click="true"><i class="fa fa-info-circle" no-activation-click="true"></i></button>
         </span>
     </a>
     {{ evaluator_card_modal(evaluator_name, info, strategy) }}
