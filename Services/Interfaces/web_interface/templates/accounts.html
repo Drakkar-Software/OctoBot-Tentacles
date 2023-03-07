@@ -95,9 +95,7 @@
                                                                        enabled=config_exchanges[exchange].get('enabled', True),
                                                                        sandboxed=config_exchanges[exchange].get('sandboxed', False),
                                                                        selected_exchange_type=config_exchanges[exchange].get('exchange-type', 'spot'),
-                                                                       full_config=True,
-                                                                       exchange_docs_url=EXCHANGES_DOCS_URL,
-                                                                       donation_url=OCTOBOT_DONATION_URL)}}
+                                                                       full_config=True)}}
                     {% endfor %}
                 </div>
             </div>
@@ -162,9 +160,7 @@
                                                         add_class=added_class,
                                                         keys_value="NO KEY",
                                                         config_values="no value",
-                                                        full_config=True,
-                                                        exchange_docs_url=EXCHANGES_DOCS_URL,
-                                                        donation_url=OCTOBOT_DONATION_URL) }}
+                                                        full_config=True) }}
     </div>
 
     <!-- Services -->

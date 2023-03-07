@@ -1,7 +1,7 @@
 {% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
 
 {% macro tentacles_packages(current_logged_in_email, role, is_donor, selected_user_bot, tentacles_packages,
-                            community_url, donation_url, default_image, is_preview, show_account,
+                            community_url, default_image, is_preview, show_account,
                             can_logout) -%}
 <div class="card">
     <div class="card-header d-flex justify-content-between flex-wrap">
@@ -54,12 +54,6 @@
                             <i class="fas fa-trophy" data-toggle="tooltip"
                                title="OctoBot donor: On behalf of the OctoBot team, thank you for being awesome and your donating to the project."></i>
                         {% endif %}
-
-                        <a href="{{ donation_url }}" id=register-donation class="btn btn-sm rounded-circle btn-primary waves-effect"
-                           target="_blank" rel="noopener"
-                           data-toggle="tooltip" title="Register a donation.">
-                            <i class="fas fa-1_5x fa-plus"></i>
-                        </a>
                     </span>
                 </h5>
             </div>
