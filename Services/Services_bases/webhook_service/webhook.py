@@ -104,8 +104,9 @@ class WebHookService(services.AbstractService):
 
     def has_required_configuration(self):
         try:
-            return self.check_required_config(self.config[services_constants.CONFIG_CATEGORY_SERVICES]
-                                              [services_constants.CONFIG_WEBHOOK])
+            return self.check_required_config(
+                self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(services_constants.CONFIG_WEBHOOK, {})
+            )
         except KeyError:
             return False
 
@@ -190,6 +191,8 @@ class WebHookService(services.AbstractService):
             flask.abort(500)
 
     async def prepare(self) -> None:
+        if self.use_web_interface_for_webhook:
+            return
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
         self.ngrok_enabled = self.config[services_constants.CONFIG_CATEGORY_SERVICES][
             services_constants.CONFIG_WEBHOOK].get(services_constants.CONFIG_ENABLE_NGROK, True)
@@ -269,13 +272,13 @@ class WebHookService(services.AbstractService):
         return self._start_isolated_server()
 
     def _is_healthy(self):
-        return self.webhook_host is not None and self.webhook_port is not None
+        return self.use_web_interface_for_webhook or self.webhook_host is not None and self.webhook_port is not None
 
     def get_successful_startup_message(self):
-        webhook_endpoint = self.webhook_public_url
+        webhook_endpoint = f"address: {self.webhook_public_url}"
         if self.use_web_interface_for_webhook:
-            webhook_endpoint = f"{self.webhook_host} and port: {self.webhook_port}"
-        return f"Webhook configured on address: {webhook_endpoint}", self._is_healthy()
+            webhook_endpoint = "web interface webhook api"
+        return f"Webhook configured on {webhook_endpoint}", self._is_healthy()
 
     def stop(self):
         if not self.use_web_interface_for_webhook and self.connected:
