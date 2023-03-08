@@ -66,7 +66,7 @@ def context_processor_register():
         return (
             filtered_symbol + [
                 s
-                for s in config_symbols[currency]["pairs"]
+                for s in config_symbols[currency].get(commons_constants.CONFIG_CRYPTO_PAIRS, [])
                 if s in symbol_list and s not in filtered_symbol
             ]
         )
