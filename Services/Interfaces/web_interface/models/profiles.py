@@ -141,7 +141,7 @@ def export_profile(profile_id, export_path) -> str:
 
 
 def import_profile(profile_path, name, profile_url=None):
-    profile = profiles.import_profile(profile_path, name=name, origin_url=profile_url)
+    profile = profiles.import_profile(profile_path, constants.PROFILE_FILE_SCHEMA, name=name, origin_url=profile_url)
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
     return profile
 
