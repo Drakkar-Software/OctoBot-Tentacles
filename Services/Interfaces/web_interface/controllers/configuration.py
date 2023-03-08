@@ -20,6 +20,7 @@ from datetime import datetime
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
+import octobot_commons.errors as commons_errors
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -116,8 +117,11 @@ def profiles_management(action):
     if action == "import":
         file = flask.request.files['file']
         name = werkzeug.utils.secure_filename(flask.request.files['file'].filename)
-        new_profile = models.import_profile(file, name)
-        flask.flash(f"{new_profile.name} profile successfully imported.", "success")
+        try:
+            new_profile = models.import_profile(file, name)
+            flask.flash(f"{new_profile.name} profile successfully imported.", "success")
+        except Exception as err:
+            flask.flash(f"Error when importing profile: {err}.", "danger")
         return flask.redirect(next_url)
     if action == "download":
         url = flask.request.form['inputProfileLink']
