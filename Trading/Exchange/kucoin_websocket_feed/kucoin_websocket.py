@@ -32,6 +32,13 @@ class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.CANDLE: Feeds.UNSUPPORTED.value,  # not supported in futures
     }
 
+    SPOT_EXCHANGE_FEEDS = {
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
+    }
+
     IGNORED_FEED_PAIRS = {
         # When ticker or future index is available : no need to calculate mark price from recent trades
         # On kucoin, ticker feed is not containing close price: recent trades are required
@@ -54,6 +61,8 @@ class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     def update_exchange_feeds(cls, exchange_manager):
         if exchange_manager.is_future:
             cls.EXCHANGE_FEEDS = cls.FUTURES_EXCHANGE_FEEDS
+        else:
+            cls.EXCHANGE_FEEDS = cls.SPOT_EXCHANGE_FEEDS
 
     def get_adapter_class(self, adapter_class):
         return kucoin_exchange.KucoinCCXTAdapter
