@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import octobot_commons.enums
 import octobot_trading.enums as trading_enums
 import octobot_commons.enums as commons_enums
 import octobot_commons.errors as commons_errors
@@ -27,15 +26,15 @@ import octobot_trading.api as trading_api
 
 class DisplayedElements(display.DisplayTranslator):
     TABLE_KEY_TO_COLUMN = {
-        "x": "Time",
-        "y": "Value",
-        "z": "Value",
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume",
-        "symbol": "Symbol",
+        commons_enums.PlotAttributes.X.value: "Time",
+        commons_enums.PlotAttributes.Y.value: "Value",
+        commons_enums.PlotAttributes.Z.value: "Value",
+        commons_enums.PlotAttributes.OPEN.value: "Open",
+        commons_enums.PlotAttributes.HIGH.value: "High",
+        commons_enums.PlotAttributes.LOW.value: "Low",
+        commons_enums.PlotAttributes.CLOSE.value: "Close",
+        commons_enums.PlotAttributes.VOLUME.value: "Volume",
+        commons_enums.DBRows.SYMBOL.value: "Symbol",
     }
 
     async def fill_from_database(self, trading_mode, database_manager, exchange_name, symbol, time_frame, exchange_id,
@@ -71,7 +70,7 @@ class DisplayedElements(display.DisplayTranslator):
                     else:
                         try:
                             filtered_data = self._filter_displayed_elements(display_data, symbol, time_frame, table_name)
-                            chart = display_data[0]["chart"]
+                            chart = display_data[0][commons_enums.DisplayedElementTypes.CHART.value]
                             if chart is None:
                                 continue
                             if chart in graphs_by_parts:
@@ -136,59 +135,60 @@ class DisplayedElements(display.DisplayTranslator):
                     color = []
                     size = []
                     shape = []
-                    if dataset[0].get("x", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.X.value, None) is None:
                         x = None
-                    if dataset[0].get("y", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.Y.value, None) is None:
                         y = None
-                    if dataset[0].get("open", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.OPEN.value, None) is None:
                         open = None
-                    if dataset[0].get("high", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.HIGH.value, None) is None:
                         high = None
-                    if dataset[0].get("low", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.LOW.value, None) is None:
                         low = None
-                    if dataset[0].get("close", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.CLOSE.value, None) is None:
                         close = None
-                    if dataset[0].get("volume", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.VOLUME.value, None) is None:
                         volume = None
-                    if dataset[0].get("text", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.TEXT.value, None) is None:
                         text = None
-                    if dataset[0].get("color", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.COLOR.value, None) is None:
                         color = None
-                    if dataset[0].get("size", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.SIZE.value, None) is None:
                         size = None
-                    if dataset[0].get("shape", None) is None:
+                    if dataset[0].get(commons_enums.PlotAttributes.SHAPE.value, None) is None:
                         shape = None
-                    own_yaxis = dataset[0].get("own_yaxis", False)
+                    own_yaxis = dataset[0].get(commons_enums.PlotAttributes.OWN_YAXIS.value, False)
                     for data in dataset:
                         if x is not None:
-                            x.append(data["x"])
+                            x.append(data[commons_enums.PlotAttributes.X.value])
                         if y is not None:
-                            y.append(data["y"])
+                            y.append(data[commons_enums.PlotAttributes.Y.value])
                         if open is not None:
-                            open.append(data["open"])
+                            open.append(data[commons_enums.PlotAttributes.OPEN.value])
                         if high is not None:
-                            high.append(data["high"])
+                            high.append(data[commons_enums.PlotAttributes.HIGH.value])
                         if low is not None:
-                            low.append(data["low"])
+                            low.append(data[commons_enums.PlotAttributes.LOW.value])
                         if close is not None:
-                            close.append(data["close"])
+                            close.append(data[commons_enums.PlotAttributes.CLOSE.value])
                         if volume is not None:
-                            volume.append(data["volume"])
+                            volume.append(data[commons_enums.PlotAttributes.VOLUME.value])
                         if text is not None:
-                            text.append(data["text"])
+                            text.append(data[commons_enums.PlotAttributes.TEXT.value])
                         if color is not None:
-                            color.append(data["color"])
+                            color.append(data[commons_enums.PlotAttributes.COLOR.value])
                         if size is not None:
-                            size.append(data["size"])
+                            size.append(data[commons_enums.PlotAttributes.SIZE.value])
                         if shape is not None:
-                            shape.append(data["shape"])
+                            shape.append(data[commons_enums.PlotAttributes.SHAPE.value])
                     # use log scale for all positive charts
                     y_type = None
-                    if title == "candles_source" or 0 <= min(d.get("y", 0) for d in dataset):
+                    if title == commons_enums.DBTables.CANDLES_SOURCE.value \
+                            or 0 <= min(d.get(commons_enums.PlotAttributes.Y.value, 0) for d in dataset):
                         y_type = "log"
 
                     part.plot(
-                        kind=data.get("kind", None),
+                        kind=data.get(commons_enums.PlotAttributes.KIND.value, None),
                         x=x,
                         y=y,
                         open=open,
@@ -200,7 +200,7 @@ class DisplayedElements(display.DisplayTranslator):
                         text=text,
                         x_type="date",
                         y_type=y_type,
-                        mode=data.get("mode", None),
+                        mode=data.get(commons_enums.PlotAttributes.MODE.value, None),
                         own_yaxis=own_yaxis,
                         color=color,
                         size=size,
@@ -210,8 +210,8 @@ class DisplayedElements(display.DisplayTranslator):
         filtered_elements = [
             display_element
             for display_element in elements
-            if display_element.get("symbol", symbol) == symbol
-            and display_element.get("time_frame", time_frame) == time_frame
+            if display_element.get(commons_enums.DBRows.SYMBOL.value, symbol) == symbol
+            and display_element.get(commons_enums.DBRows.TIME_FRAME.value, time_frame) == time_frame
         ]
         if table_name == commons_enums.DBTables.TRANSACTIONS.value:
             # only display liquidations
@@ -221,11 +221,11 @@ class DisplayedElements(display.DisplayTranslator):
                 if display_element.get("trigger_source", None) == trading_enums.PNLTransactionSource.LIQUIDATION.value
             ]
             for display_element in filtered_elements:
-                display_element["color"] = "red"
-                display_element["shape"] = "x"
-                display_element["size"] = 15
-                display_element["text"] = f"Liquidation ({abs(display_element.get('closed_quantity', 0))} liquidated)"
-                display_element["y"] = display_element["order_exit_price"]
+                display_element[commons_enums.PlotAttributes.COLOR.value] = "red"
+                display_element[commons_enums.PlotAttributes.SHAPE.value] = commons_enums.PlotAttributes.X.value
+                display_element[commons_enums.PlotAttributes.SIZE.value] = 15
+                display_element[commons_enums.PlotAttributes.TEXT.value] = f"Liquidation ({abs(display_element.get('closed_quantity', 0))} liquidated)"
+                display_element[commons_enums.PlotAttributes.Y.value] = display_element["order_exit_price"]
         return filtered_elements
 
     async def _get_run_window(self, run_database):
@@ -242,11 +242,11 @@ class DisplayedElements(display.DisplayTranslator):
         for cached_value_metadata in cached_values:
             if cached_value_metadata.get(commons_enums.DBRows.TIME_FRAME.value, None) == time_frame:
                 try:
-                    chart = cached_value_metadata["chart"]
+                    chart = cached_value_metadata[commons_enums.DisplayedElementTypes.CHART.value]
                     x_shift = cached_value_metadata["x_shift"]
                     values = sorted(await self._get_cached_values_to_display(cached_value_metadata, x_shift,
                                                                              start_time, end_time),
-                                    key=lambda x: x["x"])
+                                    key=lambda x: x[commons_enums.PlotAttributes.X.value])
                     try:
                         graphs_by_parts[chart][cached_value_metadata[commons_enums.PlotAttributes.TITLE.value]] = values
                     except KeyError:
@@ -264,9 +264,9 @@ class DisplayedElements(display.DisplayTranslator):
     async def _get_cached_values_to_display(self, cached_value_metadata, x_shift, start_time, end_time):
         cache_file = cached_value_metadata[commons_enums.PlotAttributes.VALUE.value]
         cache_displayed_value = plotted_displayed_value = cached_value_metadata["cache_value"]
-        kind = cached_value_metadata["kind"]
-        mode = cached_value_metadata["mode"]
-        own_yaxis = cached_value_metadata["own_yaxis"]
+        kind = cached_value_metadata[commons_enums.PlotAttributes.KIND.value]
+        mode = cached_value_metadata[commons_enums.PlotAttributes.MODE.value]
+        own_yaxis = cached_value_metadata[commons_enums.PlotAttributes.OWN_YAXIS.value]
         condition = cached_value_metadata.get("condition", None)
         try:
             cache_database = databases.CacheDatabase(cache_file)
@@ -296,19 +296,19 @@ class DisplayedElements(display.DisplayTranslator):
                                 if not isinstance(x, list) and isinstance(y, list):
                                     for y_val in y:
                                         plotted_values.append({
-                                            "x": x,
-                                            "y": y_val,
-                                            "kind": kind,
-                                            "mode": mode,
-                                            "own_yaxis": own_yaxis,
+                                            commons_enums.PlotAttributes.X.value: x,
+                                            commons_enums.PlotAttributes.Y.value: y_val,
+                                            commons_enums.PlotAttributes.KIND.value: kind,
+                                            commons_enums.PlotAttributes.MODE.value: mode,
+                                            commons_enums.PlotAttributes.OWN_YAXIS.value: own_yaxis,
                                         })
                                 else:
                                     plotted_values.append({
-                                        "x": x,
-                                        "y": y,
-                                        "kind": kind,
-                                        "mode": mode,
-                                        "own_yaxis": own_yaxis,
+                                        commons_enums.PlotAttributes.X.value: x,
+                                        commons_enums.PlotAttributes.Y.value: y,
+                                        commons_enums.PlotAttributes.KIND.value: kind,
+                                        commons_enums.PlotAttributes.MODE.value: mode,
+                                        commons_enums.PlotAttributes.OWN_YAXIS.value: own_yaxis,
                                     })
                     except KeyError:
                         pass
@@ -332,9 +332,9 @@ class DisplayedElements(display.DisplayTranslator):
                            run_start_time, run_end_time):
         first_candle_time = last_candle_time = 0
         for candles_metadata in candles_list:
-            if candles_metadata.get("time_frame") == time_frame:
+            if candles_metadata.get(commons_enums.DBRows.TIME_FRAME.value) == time_frame:
                 try:
-                    chart = candles_metadata["chart"]
+                    chart = candles_metadata[commons_enums.DisplayedElementTypes.CHART.value]
                     candles = await self._get_candles_to_display(candles_metadata, exchange_name,
                                                                  exchange_id, symbol, time_frame,
                                                                  run_start_time, run_end_time)
@@ -343,10 +343,10 @@ class DisplayedElements(display.DisplayTranslator):
                     except KeyError:
                         graphs_by_parts[chart] = {commons_enums.DBTables.CANDLES.value: candles}
                     # candles are assumed to be ordered
-                    if first_candle_time == 0 or first_candle_time < candles[0]["x"]:
-                        first_candle_time = candles[0]["x"]
-                    if last_candle_time == 0 or last_candle_time > candles[-1]["x"]:
-                        last_candle_time = candles[-1]["x"]
+                    if first_candle_time == 0 or first_candle_time < candles[0][commons_enums.PlotAttributes.X.value]:
+                        first_candle_time = candles[0][commons_enums.PlotAttributes.X.value]
+                    if last_candle_time == 0 or last_candle_time > candles[-1][commons_enums.PlotAttributes.X.value]:
+                        last_candle_time = candles[-1][commons_enums.PlotAttributes.X.value]
                 except KeyError:
                     # some table have no chart
                     pass
@@ -361,14 +361,14 @@ class DisplayedElements(display.DisplayTranslator):
             )
             return [
                 {
-                    "x": time * 1000,
-                    "open": array_candles[commons_enums.PriceIndexes.IND_PRICE_OPEN.value][index],
-                    "high": array_candles[commons_enums.PriceIndexes.IND_PRICE_HIGH.value][index],
-                    "low": array_candles[commons_enums.PriceIndexes.IND_PRICE_LOW.value][index],
-                    "close": array_candles[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value][index],
-                    "volume": array_candles[commons_enums.PriceIndexes.IND_PRICE_VOL.value][index],
-                    "kind": "candlestick",
-                    "mode": "lines",
+                    commons_enums.PlotAttributes.X.value: time * 1000,
+                    commons_enums.PlotAttributes.OPEN.value: array_candles[commons_enums.PriceIndexes.IND_PRICE_OPEN.value][index],
+                    commons_enums.PlotAttributes.HIGH.value: array_candles[commons_enums.PriceIndexes.IND_PRICE_HIGH.value][index],
+                    commons_enums.PlotAttributes.LOW.value: array_candles[commons_enums.PriceIndexes.IND_PRICE_LOW.value][index],
+                    commons_enums.PlotAttributes.CLOSE.value: array_candles[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value][index],
+                    commons_enums.PlotAttributes.VOLUME.value: array_candles[commons_enums.PriceIndexes.IND_PRICE_VOL.value][index],
+                    commons_enums.PlotAttributes.KIND.value: "candlestick",
+                    commons_enums.PlotAttributes.MODE.value: "lines",
                 }
                 for index, time in enumerate(array_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value])
                 if (run_start_time == run_end_time == 0) or run_start_time <= time <= run_end_time
@@ -376,20 +376,20 @@ class DisplayedElements(display.DisplayTranslator):
         db_candles = await backtesting_api.get_all_ohlcvs(candles_metadata[commons_enums.DBRows.VALUE.value],
                                                           exchange_name,
                                                           symbol,
-                                                          octobot_commons.enums.TimeFrames(time_frame),
+                                                          commons_enums.TimeFrames(time_frame),
                                                           inferior_timestamp=run_start_time if run_start_time > 0
                                                           else -1,
                                                           superior_timestamp=run_end_time if run_end_time > 0 else -1)
         return [
             {
-                "x": db_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000,
-                "open": db_candle[commons_enums.PriceIndexes.IND_PRICE_OPEN.value],
-                "high": db_candle[commons_enums.PriceIndexes.IND_PRICE_HIGH.value],
-                "low": db_candle[commons_enums.PriceIndexes.IND_PRICE_LOW.value],
-                "close": db_candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value],
-                "volume": db_candle[commons_enums.PriceIndexes.IND_PRICE_VOL.value],
-                "kind": "candlestick",
-                "mode": "lines",
+                commons_enums.PlotAttributes.X.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000,
+                commons_enums.PlotAttributes.OPEN.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_OPEN.value],
+                commons_enums.PlotAttributes.HIGH.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_HIGH.value],
+                commons_enums.PlotAttributes.LOW.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_LOW.value],
+                commons_enums.PlotAttributes.CLOSE.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value],
+                commons_enums.PlotAttributes.VOLUME.value: db_candle[commons_enums.PriceIndexes.IND_PRICE_VOL.value],
+                commons_enums.PlotAttributes.KIND.value: "candlestick",
+                commons_enums.PlotAttributes.MODE.value: "lines",
             }
             for index, db_candle in enumerate(db_candles)
         ]
