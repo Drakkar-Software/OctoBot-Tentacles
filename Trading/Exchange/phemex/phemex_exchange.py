@@ -19,6 +19,7 @@ import typing
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
 class Phemex(exchanges.RestExchange):
@@ -27,6 +28,9 @@ class Phemex(exchanges.RestExchange):
     @classmethod
     def get_name(cls):
         return 'phemex'
+
+    def get_adapter_class(self):
+        return PhemexCCXTAdapter
 
     def _get_ohlcv_params(self, time_frame, limit, **kwargs):
         to_time = self.connector.client.milliseconds()
@@ -66,3 +70,22 @@ class Phemex(exchanges.RestExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
+
+class PhemexCCXTAdapter(exchanges.CCXTAdapter):
+    PHEMEX_FEE_CURRENCY = "feeCurrency"
+
+    def fix_order(self, raw, **kwargs):
+        fixed = super().fix_order(raw, **kwargs)
+        try:
+            if fixed[
+                trading_enums.ExchangeConstantsOrderColumns.STATUS.value
+            ] == trading_enums.OrderStatus.CLOSED.value \
+                    and fixed[trading_enums.ExchangeConstantsOrderColumns.FEE.value][
+               trading_enums.FeePropertyColumns.CURRENCY.value] is None:
+                order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+                fixed[trading_enums.ExchangeConstantsOrderColumns.FEE.value][
+                    trading_enums.FeePropertyColumns.CURRENCY.value] = order_info[self.PHEMEX_FEE_CURRENCY]
+        except KeyError as err:
+            self.logger.debug(f"Failed to fix order fees: {err}")
+        return fixed
