@@ -264,7 +264,7 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
             return {
                 trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value: symbol,
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
-                trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value: trading_enums.TraderPositionType(
+                trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value: trading_enums.MarginType(
                     fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
                 ),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value: size
@@ -346,6 +346,13 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
 
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
+        fixed[trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value] = fixed[
+            self.MARK_PRICE
+        ]
+        return fixed
+
+    def fix_funding_rate(self, raw, **kwargs):
+        fixed = super().fix_funding_rate(raw, **kwargs)
         fixed[
             trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value
         ] = fixed[self.NEXT_FUNDING_TIME]
@@ -354,8 +361,5 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
         )
         fixed[trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value] = fixed[
             ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value
-        ]
-        fixed[trading_enums.ExchangeConstantsMarkPriceColumns.MARK_PRICE.value] = fixed[
-            self.MARK_PRICE
         ]
         return fixed
