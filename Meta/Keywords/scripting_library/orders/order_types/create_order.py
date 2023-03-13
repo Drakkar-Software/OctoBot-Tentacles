@@ -348,10 +348,7 @@ async def _create_order(context, symbol, order_quantity, order_price, tag, order
     except Exception as e:
         error_message = f"failed to create order : {e}."
         context.logger.exception(e, True, f"Failed to create order : {e}.")
-    if orders:
-        if context is not None and context.plot_orders:
-            await basic_keywords.store_orders(context, orders, context.exchange_manager)
-    else:
+    if not orders:
         error_message = f"not enough funds"
     if error_message:
         context.logger.warning(f"No order created when asking for {symbol} {order_type.name} "

@@ -292,7 +292,6 @@ async def test_create_order(mock_context, symbol_market):
                            mock.AsyncMock(return_value=(None, None, decimal.Decimal(5), decimal.Decimal(105),
                                                         symbol_market))) \
         as get_pre_order_data_mock, \
-         mock.patch.object(basic_keywords, "store_orders", mock.AsyncMock()) as store_orders_mock, \
          mock.patch.object(create_order, "_get_group_adapted_quantity", mock.Mock(return_value=decimal.Decimal(1))) \
             as _get_group_adapted_quantity_mock:
 
@@ -310,7 +309,6 @@ async def test_create_order(mock_context, symbol_market):
         _get_group_adapted_quantity_mock.assert_called_once_with(mock_context, None,
                                                                  trading_enums.TraderOrderType.BUY_MARKET,
                                                                  decimal.Decimal(1))
-        store_orders_mock.assert_not_called()
         assert len(orders) == 1
         assert isinstance(orders[0], trading_personal_data.BuyMarketOrder)
         assert orders[0].symbol == "BTC/USDT"
@@ -338,10 +336,6 @@ async def test_create_order(mock_context, symbol_market):
         _get_group_adapted_quantity_mock.assert_called_once_with(mock_context, oco_group,
                                                                  trading_enums.TraderOrderType.TRAILING_STOP,
                                                                  decimal.Decimal(1))
-        store_orders_mock.assert_called_once()
-        assert store_orders_mock.mock_calls
-        assert store_orders_mock.mock_calls[0].args[0] is mock_context
-        assert orders is store_orders_mock.mock_calls[0].args[1]
         assert len(orders) == 1
         assert isinstance(orders[0], trading_personal_data.TrailingStopOrder)
         assert orders[0].symbol == "BTC/USDT"
@@ -354,7 +348,6 @@ async def test_create_order(mock_context, symbol_market):
         assert mock_context.just_created_orders == orders
         mock_context.just_created_orders = []
         get_pre_order_data_mock.reset_mock()
-        store_orders_mock.reset_mock()
         _get_group_adapted_quantity_mock.reset_mock()
 
         # with same order group as one previously created order: group them together
@@ -378,7 +371,6 @@ async def test_create_order(mock_context, symbol_market):
         _get_group_adapted_quantity_mock.assert_called_once_with(mock_context, oco_group,
                                                                  trading_enums.TraderOrderType.TRAILING_STOP,
                                                                  decimal.Decimal(1))
-        store_orders_mock.assert_not_called()
         assert len(orders) == 1
         assert isinstance(orders[0], trading_personal_data.TrailingStopOrder)
         assert orders[0].symbol == "BTC/USDT"
