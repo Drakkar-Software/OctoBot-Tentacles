@@ -51,6 +51,7 @@ class Bybit(exchanges.RestExchange):
 
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
