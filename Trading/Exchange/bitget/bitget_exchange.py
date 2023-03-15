@@ -24,6 +24,7 @@ import octobot_trading.errors
 
 class Bitget(exchanges.RestExchange):
     DESCRIPTION = ""
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     @classmethod
     def get_name(cls):
