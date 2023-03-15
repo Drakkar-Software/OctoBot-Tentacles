@@ -25,14 +25,13 @@ import octobot.constants as constants
 
 class TelegramService(services.AbstractService):
     CHAT_ID = "chat-id"
-
-    LOGGERS = ["telegram.bot", "telegram.ext.updater", "telegram.vendor.ptb_urllib3.urllib3.connectionpool"]
+    LOGGERS = ["telegram._bot", "hpack.hpack", "hpack.table", "httpx._client"]
 
     def __init__(self):
         super().__init__()
-        self.telegram_api = None
+        self.telegram_app: telegram.ext.Application = None
+        self._has_bot = False
         self.chat_id = None
-        self.telegram_updater = None
         self.users = []
         self.text_chat_dispatcher = {}
         self._bot_url = None
@@ -74,44 +73,66 @@ class TelegramService(services.AbstractService):
                    services_constants.CONFIG_TELEGRAM]
 
     async def prepare(self):
-        if not self.telegram_api:
+        if not self.telegram_app:
             self.chat_id = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                 self.CHAT_ID]
-            self.telegram_api = telegram.Bot(
-                token=self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
-                    services_constants.CONFIG_TOKEN])
-
-        if not self.telegram_updater:
-            self.telegram_updater = telegram.ext.Updater(
+            self.telegram_app = telegram.ext.ApplicationBuilder().token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
-                    services_constants.CONFIG_TOKEN],
-                use_context=True,
-                workers=1
-            )
+                    services_constants.CONFIG_TOKEN]
+            ).build()
+            await self._start_app()
 
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
 
-    def register_text_polling_handler(self, chat_types, handler):
+    async def _start_app(self):
+        self.connected = True
+        await self.telegram_app.initialize()
+        if self.telegram_app.post_init:
+            await self.telegram_app.post_init(self.telegram_app)
+
+    async def _start_bot(self):
+        self._has_bot = True
+        await self.telegram_app.updater.start_polling()
+        self.logger.info("self.telegram_app.updater.start_polling() done")
+        await self.telegram_app.start()
+        self.logger.info("self.telegram_app.start() done")
+
+    async def _stop_app(self):
+        await self.telegram_app.shutdown()
+        if self.telegram_app.post_shutdown:
+            await self.telegram_app.post_shutdown()
+        self.connected = False
+
+    async def _stop_bot(self):
+        if self.telegram_app.updater.running:
+            await self.telegram_app.updater.stop()
+        if self.telegram_app.running:
+            await self.telegram_app.stop()
+        if self.telegram_app.post_stop:
+            await self.telegram_app.post_stop(self.telegram_app)
+        self._has_bot = False
+
+    def register_text_polling_handler(self, chat_types: telegram.constants.ChatType, handler):
         for chat_type in chat_types:
             self.text_chat_dispatcher[chat_type] = handler
 
-    def text_handler(self, update, _):
-        chat_type = update.effective_chat["type"]
+    async def text_handler(self, update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE):
+        chat_type = update.effective_chat.type
         if chat_type in self.text_chat_dispatcher:
-            self.text_chat_dispatcher[chat_type](_, update)
+            await self.text_chat_dispatcher[chat_type](update, context)
         else:
             self.logger.info(f"No handler for telegram update of type {chat_type}, update: {update}")
 
     def add_text_handler(self):
-        self.telegram_updater.dispatcher.add_handler(
-            telegram.ext.MessageHandler(telegram.ext.Filters.text, self.text_handler))
+        self.telegram_app.add_handler(
+            telegram.ext.MessageHandler(telegram.ext.filters.TEXT, self.text_handler)
+        )
 
     def add_handlers(self, handlers):
-        for handler in handlers:
-            self.telegram_updater.dispatcher.add_handler(handler)
+        self.telegram_app.add_handlers(handlers)
 
     def add_error_handler(self, handler):
-        self.telegram_updater.dispatcher.add_error_handler(handler)
+        self.telegram_app.add_error_handler(handler)
 
     def is_registered(self, user_key):
         return user_key in self.users
@@ -119,18 +140,17 @@ class TelegramService(services.AbstractService):
     def register_user(self, user_key):
         self.users.append(user_key)
 
-    def start_dispatcher(self):
+    async def start_bot(self):
         try:
-            if self.users:
+            if not self._has_bot and self.users:
+                await self._start_bot()
+                self.logger.debug("Started telegram bot")
                 self.add_text_handler()
-                self.connected = True
-                self.telegram_updater.start_polling(timeout=2)
         except Exception as e:
-            self.connected = False
             raise e
 
     def is_running(self):
-        return self.telegram_updater and self.telegram_updater.running
+        return self.telegram_app and self.telegram_app.running
 
     def get_type(self):
         return services_constants.CONFIG_TELEGRAM
@@ -139,15 +159,13 @@ class TelegramService(services.AbstractService):
         return "https://telegram.org/"
 
     def get_endpoint(self):
-        return self.telegram_api
+        return self.telegram_app
 
-    def get_updater(self):
-        return self.telegram_updater
-
-    def stop(self):
-        if self.connected and self.telegram_updater:
-            self.telegram_updater.stop()
-            self.connected = False
+    async def stop(self):
+        if self.connected:
+            if self._has_bot:
+                await self._stop_bot()
+            await self._stop_app()
 
     @staticmethod
     def get_is_enabled(config):
@@ -164,26 +182,26 @@ class TelegramService(services.AbstractService):
     async def send_message(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
         kwargs = {}
         if markdown:
-            kwargs[services_constants.MESSAGE_PARSE_MODE] = telegram.parsemode.ParseMode.MARKDOWN
+            kwargs[services_constants.MESSAGE_PARSE_MODE] = telegram.constants.ParseMode.MARKDOWN
         try:
             if content:
-                # no async call possible yet
-                return self.telegram_api.send_message(chat_id=self.chat_id, text=content,
-                                                      reply_to_message_id=reply_to_message_id, **kwargs)
+                return await self.telegram_app.bot.send_message(
+                    chat_id=self.chat_id, text=content, reply_to_message_id=reply_to_message_id, **kwargs
+                )
         except telegram.error.TimedOut:
             # retry on failing
             try:
-                # no async call possible yet
-                return self.telegram_api.send_message(chat_id=self.chat_id, text=content,
-                                                      reply_to_message_id=reply_to_message_id, **kwargs)
+                return await self.telegram_app.bot.send_message(
+                    chat_id=self.chat_id, text=content, reply_to_message_id=reply_to_message_id, **kwargs
+                )
             except telegram.error.TimedOut as e:
                 self.logger.error(f"Failed to send message : {e}")
-        except telegram.error.Unauthorized as e:
+        except telegram.error.InvalidToken as e:
             self.logger.error(f"Failed to send message ({e}): invalid telegram configuration.")
         return None
 
     def _fetch_bot_url(self):
-        self._bot_url = f"https://web.telegram.org/#/im?p={self.telegram_api.get_me().name}"
+        self._bot_url = f"https://web.telegram.org/#/im?p={self.telegram_app.bot.name}"
         return self._bot_url
 
     def get_successful_startup_message(self):
@@ -192,6 +210,6 @@ class TelegramService(services.AbstractService):
         except telegram.error.NetworkError as e:
             self.log_connection_error_message(e)
             return "", False
-        except telegram.error.Unauthorized as e:
+        except telegram.error.InvalidToken as e:
             self.logger.error(f"Error when connecting to Telegram ({e}): invalid telegram configuration.")
             return "", False
