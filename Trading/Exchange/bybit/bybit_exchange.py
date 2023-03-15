@@ -136,7 +136,7 @@ class Bybit(exchanges.RestExchange):
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           params: dict = None) -> typing.Optional[dict]:
+                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if not self.exchange_manager.is_future:
             # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
             # (price should not be sent to market orders). Only used for buy market orders
@@ -153,7 +153,7 @@ class Bybit(exchanges.RestExchange):
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
-                                          params=params)
+                                          reduce_only=reduce_only, params=params)
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}

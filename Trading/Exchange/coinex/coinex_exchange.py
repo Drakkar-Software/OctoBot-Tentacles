@@ -61,9 +61,9 @@ class Coinex(exchanges.RestExchange):
                                                           f"market orders as quantity is in quote currency")
             quantity = quantity * price
         return await super().create_order(order_type, symbol, quantity,
-                                         price=price, stop_price=stop_price,
-                                         side=side, current_price=current_price,
-                                         reduce_only=reduce_only, params=params)
+                                          price=price, stop_price=stop_price,
+                                          side=side, current_price=current_price,
+                                          reduce_only=reduce_only, params=params)
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
