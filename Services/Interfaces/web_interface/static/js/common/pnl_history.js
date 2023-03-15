@@ -25,7 +25,7 @@ const loadPnlFullChartHistory = (data, update) => {
         const chartedData = data.map((element) => {
             total_pnl += element.pnl;
             return {
-                time: element.t,
+                time: element.ex_t,
                 y1: total_pnl,
                 y2: element.pnl,
             }
@@ -40,39 +40,129 @@ const loadPnlFullChartHistory = (data, update) => {
 
 const loadPnlTableHistory = (data, update) => {
     let total_pnl = 0;
+    const hasDetails = data.length && data[0].d !== null;
     const rows = data.map((element) => {
         total_pnl += element.pnl;
-        return [
-            {timestamp: element.t, date: element.d},
-            round_digits(element.pnl, 8),
-            round_digits(total_pnl, 8),
-            round_digits(element.pnl_a, 8),
-        ]
+        if(hasDetails){
+            return [
+                {
+                    timestamp: element.d.en_t,
+                    date: element.d.en_d,
+                    side: element.d.en_s,
+                    base: element.d.b,
+                    amount: round_digits(element.d.en_a, 8),
+                    price: round_digits(element.d.en_p, 8),
+                    total : round_digits(element.d.en_a * element.d.en_p, 8),
+                },
+                {
+                    timestamp: element.ex_t,
+                    date: element.ex_d,
+                    side: element.d.ex_s,
+                    base: element.d.b,
+                    amount: round_digits(element.d.ex_a, 8),
+                    price: round_digits(element.d.ex_p, 8),
+                    total : round_digits(element.d.ex_a * element.d.ex_p, 8)
+                },
+                round_digits(element.pnl, 8),
+                {
+                    currency: element.d.f_c,
+                    amount: round_digits(element.d.f, 8),
+                },
+            ]
+        }else{
+            return [
+                {timestamp: element.ex_t, date: element.ex_d},
+                round_digits(element.pnl, 8),
+                round_digits(total_pnl, 8),
+                round_digits(element.pnl_a, 8),
+            ]
+        }
     });
     const pnlTable = $("#pnl_historyTable");
     const unit = pnlTable.data("unit");
     let previousOrder = [[0, "desc"]];
     if(update){
-        const previousDatatable = pnlTable.DataTable();
-        previousOrder = previousDatatable.order();
-        previousDatatable.destroy();
+        const previousDataTable = pnlTable.DataTable();
+        previousOrder = previousDataTable.order();
+        previousDataTable.destroy();
     }
-    pnlTable.DataTable({
-        data: rows.reverse(),
-        columns: [
+
+    const getSideBadge = (side) => {
+        return `<span class="badge font-size-90 badge-${side === 'sell' ? 'danger': 'success'}">${side}</span>`
+    }
+
+    const getBoldRender = (amount) => {
+        return `<span class="font-weight-bold">${amount}</span>`
+    }
+
+    const getPnlOrdersDetails = (data) => {
+        return `${getSideBadge(data.side)} ${data.date}: ${getBoldRender(data.amount)} ${data.base} at ${getBoldRender(data.price)}, total ${getBoldRender(data.total)}`;
+    }
+
+    const columns = (
+        hasDetails ? [
+            {
+                title: `Entry (${unit})`,
+                render: (data, type) => {
+                    if (type === 'display' || type === 'filter') {
+                        return getPnlOrdersDetails(data);
+                    }
+                    return data.timestamp;
+                },
+                width: "39%",
+            },
+            {
+                title: `Close (${unit})`,
+                render: (data, type) => {
+                    if (type === 'display' || type === 'filter') {
+                        return getPnlOrdersDetails(data);
+                    }
+                    return data.timestamp;
+                },
+                width: "39%",
+            },
+            {
+                title: `${unit} PNL`,
+                width: "11%",
+            },
+            {
+                title: 'Fees',
+                render: (data, type) => {
+                    if (type === 'display' || type === 'filter') {
+                        return `${data.amount} ${data.currency}`
+                    }
+                    return data.amount;
+                },
+                width: "11%",
+            },
+        ] : [
             {
                 title: 'Closing time',
                 render: (data, type) => {
-                    if (type === 'display') {
+                    if (type === 'display' || type === 'filter') {
                         return data.date
                     }
                     return data.timestamp;
                 },
+                width: "25%",
             },
-            { title: `${unit} Profit and Loss` },
-            { title: `Cumulated ${unit} Profit and Loss` },
-            { title: `${unit} traded volume` },
-        ],
+            {
+                title: `${unit} Profit and Loss`,
+                width: "25%",
+            },
+            {
+                title: `Cumulated ${unit} Profit and Loss`,
+                width: "25%",
+            },
+            {
+                title: `${unit} traded volume`,
+                width: "25%",
+            },
+        ]
+    );
+    pnlTable.DataTable({
+        data: rows.reverse(),
+        columns: columns,
         order: previousOrder,
     });
 }

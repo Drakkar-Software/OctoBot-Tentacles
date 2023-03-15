@@ -108,7 +108,7 @@
                                    href="#"
                                    data-action="change-scale"
                                    data-scale=""
-                                >Live</a>
+                                >Detailed</a>
                               </li>
                               <li class="nav-item">
                                 <a class="nav-link primary-pill scale-selector"
@@ -143,9 +143,15 @@
                             </table>
                         </div>
                         <div class="alert alert-info mt-2">
-                            For accuracy, Profit and Loss is computed only for <strong> trades
-                            that are coming from a trading mode that is supporting PNL history</strong> such as
-                            Grid Trading or the Dip Analyser.
+                            For accuracy, Profit and Loss is computed only for trades that:
+                            <ul>
+                                <li>
+                                    Are coming from a trading mode that is supporting PNL history such as Grid Trading or the Dip Analyser.
+                                </li>
+                                <li>
+                                    Are from a trading pair including your reference market ({{ reference_market }}.
+                                </li>
+                            </ul>
                             Please check trading modes description to find out if PNL history is supported.
                             Resetting the trades history will reset Profit and Loss.
                         </div>
