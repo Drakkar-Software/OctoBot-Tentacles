@@ -114,7 +114,7 @@ class WebService(services.AbstractService):
     def get_should_warn():
         return False
 
-    def stop(self):
+    async def stop(self):
         if self.web_app:
             self.web_app.stop()
 

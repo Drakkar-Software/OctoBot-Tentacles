@@ -22,6 +22,7 @@ import tentacles.Services.Services_bases as Services_bases
 class TelegramNotifier(notifier.AbstractNotifier):
     REQUIRED_SERVICES = [Services_bases.TelegramService]
     NOTIFICATION_TYPE_KEY = "telegram"
+    USE_MAIN_LOOP = True
 
     async def _handle_notification(self, notification: notification.Notification):
         self.logger.debug(f"sending notification: {notification}")

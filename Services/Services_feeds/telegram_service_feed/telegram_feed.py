@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import telegram
+import telegram.ext
 
 import octobot_services.channel as services_channel
 import octobot_services.constants as services_constants
@@ -28,7 +30,7 @@ class TelegramServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = TelegramServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.TelegramService]
 
-    HANDLED_CHATS = ["group", "channel"]
+    HANDLED_CHATS = [telegram.constants.ChatType.GROUP, telegram.constants.ChatType.CHANNEL]
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
@@ -43,7 +45,8 @@ class TelegramServiceFeed(service_feeds.AbstractServiceFeed):
         self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL].extend(
             channel for channel in config[services_constants.CONFIG_TELEGRAM_CHANNEL]
             if channel not in
-            self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL])
+            self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL]
+        )
 
     # if True, disable channel whitelist and listen to every group/channel it is invited to
     def set_listen_to_all_groups_and_channels(self, activate=True):
@@ -54,13 +57,15 @@ class TelegramServiceFeed(service_feeds.AbstractServiceFeed):
             self.services[0].register_user(self.get_name())
             self.services[0].register_text_polling_handler(self.HANDLED_CHATS, self._feed_callback)
 
-    def _feed_callback(self, _, update):
+    async def _feed_callback(self, update: telegram.Update, _: telegram.ext.ContextTypes.DEFAULT_TYPE):
         message = update.effective_message.text
-        chat = update.effective_chat["title"]
-        if self.feed_config[services_constants.CONFIG_TELEGRAM_ALL_CHANNEL] or chat in self.feed_config[
-            services_constants.CONFIG_TELEGRAM_CHANNEL]:
+        chat = update.effective_chat.title
+        if (
+            self.feed_config[services_constants.CONFIG_TELEGRAM_ALL_CHANNEL]
+            or chat in self.feed_config[services_constants.CONFIG_TELEGRAM_CHANNEL]
+        ):
             message_desc = str(update)
-            self._notify_consumers(
+            await self._async_notify_consumers(
                 {
                     services_constants.FEED_METADATA: message_desc,
                     services_constants.CONFIG_GROUP_MESSAGE: update,

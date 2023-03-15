@@ -280,7 +280,7 @@ class WebHookService(services.AbstractService):
             webhook_endpoint = "web interface webhook api"
         return f"Webhook configured on {webhook_endpoint}", self._is_healthy()
 
-    def stop(self):
+    async def stop(self):
         if not self.use_web_interface_for_webhook and self.connected:
             ngrok.kill()
             if self.webhook_server:
