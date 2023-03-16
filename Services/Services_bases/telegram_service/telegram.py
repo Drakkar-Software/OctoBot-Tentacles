@@ -182,6 +182,11 @@ class TelegramService(services.AbstractService):
                and self.get_is_enabled(self.config)
 
     async def send_message(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
+        if not self.chat_id:
+            self.logger.warning(
+                "Impossible to send telegram message: please provide a chat id in telegram configuration."
+            )
+            return None
         kwargs = {}
         if markdown:
             kwargs[services_constants.MESSAGE_PARSE_MODE] = telegram.constants.ParseMode.MARKDOWN
