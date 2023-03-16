@@ -74,15 +74,19 @@ class TelegramService(services.AbstractService):
 
     async def prepare(self):
         if not self.telegram_app:
+            bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
             self.chat_id = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                 self.CHAT_ID]
             self.telegram_app = telegram.ext.ApplicationBuilder().token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                     services_constants.CONFIG_TOKEN]
             ).build()
-            await self._start_app()
-
-        bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
+            try:
+                await self._start_app()
+            except telegram.error.InvalidToken as e:
+                self.logger.error(f"Telegram configuration error: {e} Your Telegram token is invalid.")
+            except telegram.error.NetworkError as e:
+                self.log_connection_error_message(e)
 
     async def _start_app(self):
         self.connected = True
@@ -90,17 +94,15 @@ class TelegramService(services.AbstractService):
         if self.telegram_app.post_init:
             await self.telegram_app.post_init(self.telegram_app)
 
-    async def _start_bot(self):
+    async def _start_bot(self, polling_error_callback):
         self._has_bot = True
-        await self.telegram_app.updater.start_polling()
-        self.logger.info("self.telegram_app.updater.start_polling() done")
+        await self.telegram_app.updater.start_polling(error_callback=polling_error_callback)
         await self.telegram_app.start()
-        self.logger.info("self.telegram_app.start() done")
 
     async def _stop_app(self):
         await self.telegram_app.shutdown()
         if self.telegram_app.post_shutdown:
-            await self.telegram_app.post_shutdown()
+            await self.telegram_app.post_shutdown(self.telegram_app)
         self.connected = False
 
     async def _stop_bot(self):
@@ -140,10 +142,10 @@ class TelegramService(services.AbstractService):
     def register_user(self, user_key):
         self.users.append(user_key)
 
-    async def start_bot(self):
+    async def start_bot(self, polling_error_callback):
         try:
             if not self._has_bot and self.users:
-                await self._start_bot()
+                await self._start_bot(polling_error_callback)
                 self.logger.debug("Started telegram bot")
                 self.add_text_handler()
         except Exception as e:
@@ -206,10 +208,9 @@ class TelegramService(services.AbstractService):
 
     def get_successful_startup_message(self):
         try:
-            return f"Successfully initialized and accessible at: {self._fetch_bot_url()}.", True
-        except telegram.error.NetworkError as e:
-            self.log_connection_error_message(e)
+            self.telegram_app.bot.name
+        except RuntimeError:
+            # raised by telegram_app.bot.name property when not properly initialized (invalid token, etc)
+            # error has already been logged in prepare()
             return "", False
-        except telegram.error.InvalidToken as e:
-            self.logger.error(f"Error when connecting to Telegram ({e}): invalid telegram configuration.")
-            return "", False
+        return f"Successfully initialized and accessible at: {self._fetch_bot_url()}.", True

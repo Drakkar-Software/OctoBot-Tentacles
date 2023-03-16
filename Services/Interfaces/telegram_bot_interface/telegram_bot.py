@@ -51,7 +51,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
 
     async def _inner_start(self) -> bool:
         if self.telegram_service:
-            await self.telegram_service.start_bot()
+            await self.telegram_service.start_bot(TelegramBotInterface.handle_polling_error)
             return True
         else:
             # debug level log only: error log is already produced in initialize()
@@ -290,31 +290,34 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                 )
 
     @staticmethod
-    async def command_error(update, context, error=None):
-        ctx_error = context.error if hasattr(context, 'error') else None
-        if update is None and error is None and ctx_error is not None:
-            return TelegramBotInterface.handle_context_error(ctx_error)
-        error = error or ctx_error
+    async def command_error(update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE):
+        if update is None:
+            TelegramBotInterface.get_logger().error(
+                f"Command error with no telegram update. This should not happen. "
+                f"context.error: {context} context: {context}"
+            )
+            return
         TelegramBotInterface.get_logger().warning("Command receiver error. Please check logs for more details.") \
-            if error is None else TelegramBotInterface.get_logger().exception(error, False)
+            if context.error is None else TelegramBotInterface.get_logger().exception(context.error, False)
         if update is not None and TelegramBotInterface._is_valid_user(update):
             await TelegramBotInterface._send_message(
-                update, f"Failed to perform this command {update.effective_message} : `{error}`"
+                update, f"Failed to perform this command {update.effective_message.text} : `{context.error}`"
             )
 
     @staticmethod
-    def handle_context_error(ctx_error):
-        if isinstance(ctx_error, (telegram.error.NetworkError, telegram.error.Conflict)):
-            error_message = f"Telegram bot error: {ctx_error} ({ctx_error.__class__.__name__})"
-            if TelegramBotInterface.get_error_log_level(ctx_error) is logging.ERROR:
+    def handle_polling_error(error):
+        if isinstance(error, (telegram.error.NetworkError, telegram.error.Conflict)):
+            error_message = f"Telegram bot error: {error} ({error.__class__.__name__})"
+            if TelegramBotInterface.get_error_log_level(error) is logging.ERROR:
                 TelegramBotInterface.get_logger().error(error_message)
-            elif TelegramBotInterface.get_error_log_level(ctx_error) is logging.WARNING:
+            elif TelegramBotInterface.get_error_log_level(error) is logging.WARNING:
                 TelegramBotInterface.get_logger().warning(error_message)
             else:
                 TelegramBotInterface.get_logger().debug(error_message)
         else:
-            TelegramBotInterface.get_logger().error(f"Unexpected telegram bot error: {ctx_error} "
-                                                    f"({ctx_error.__class__.__name__})")
+            TelegramBotInterface.get_logger().error(
+                f"Unexpected telegram bot error: {error} ({error.__class__.__name__})"
+            )
 
     @staticmethod
     def get_error_log_level(error):
