@@ -258,6 +258,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                 DETAILS: pnl[DETAILS],
             }
             for t, pnl in pnl_history.items()
+            if not use_detailed_history or pnl[PNL]  # skip 0 value pnl in detailed history
         ],
         key=lambda x: x[EXIT_TIME]
     )
