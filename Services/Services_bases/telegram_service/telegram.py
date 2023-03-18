@@ -16,6 +16,7 @@
 import logging
 import telegram
 import telegram.ext
+import telegram.request
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
@@ -77,10 +78,17 @@ class TelegramService(services.AbstractService):
             bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
             self.chat_id = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                 self.CHAT_ID]
-            self.telegram_app = telegram.ext.ApplicationBuilder().token(
+            # force http 1.1 requests to avoid the following issue:
+            # Invalid input ConnectionInputs.RECV_WINDOW_UPDATE in state ConnectionState.CLOSED
+            # from https://github.com/python-telegram-bot/python-telegram-bot/issues/3556
+            self.telegram_app = telegram.ext.ApplicationBuilder()\
+                .token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                     services_constants.CONFIG_TOKEN]
-            ).build()
+                )\
+                .request(telegram.request.HTTPXRequest(http_version="1.1"))\
+                .get_updates_request(telegram.request.HTTPXRequest(http_version="1.1"))\
+                .build()
             try:
                 await self._start_app()
             except telegram.error.InvalidToken as e:
