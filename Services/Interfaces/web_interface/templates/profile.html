@@ -362,9 +362,7 @@
                             enabled=config_exchanges[exchange].get('enabled', True),
                             sandboxed=config_exchanges[exchange].get('sandboxed', False),
                             selected_exchange_type=config_exchanges[exchange].get('exchange-type', exchanges_details[exchange]['default_exchange_type']),
-                            full_config=False,
-                            exchange_docs_url=EXCHANGES_DOCS_URL,
-                            donation_url=OCTOBOT_DONATION_URL) }}
+                            full_config=False) }}
                             {% endfor %}
                         </div>
                     </div>

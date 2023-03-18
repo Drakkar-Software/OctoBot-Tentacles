@@ -241,6 +241,10 @@ a.nav-link.active.primary-pill:hover{
     padding-right: 0.64rem;
 }
 
+.font-size-90 {
+    font-size: 90% !important;
+}
+
 /* Cards */
 .card-deck {
     display: flex;
@@ -327,6 +331,13 @@ a.nav-link.active.primary-pill:hover{
     min-width: 2rem;
     max-height: 3rem;
     min-height: 2rem;
+}
+
+.cloud-logo {
+    max-width: 6rem;
+    min-width: 4rem;
+    max-height: 6rem;
+    min-height: 4rem;
 }
 
 /* elegant-color white-text */

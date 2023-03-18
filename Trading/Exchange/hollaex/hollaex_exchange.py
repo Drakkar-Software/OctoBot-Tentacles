@@ -22,6 +22,7 @@ import octobot_trading.exchanges as exchanges
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
     BASE_REST_API = "api.hollaex.com"
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     DEFAULT_MAX_LIMIT = 500
 

@@ -204,7 +204,7 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
     for pair in trades_data:
         trades_data[pair] = sorted(trades_data[pair], key=lambda tr: tr[commons_enums.PlotAttributes.X.value])
     funding_fees_history_by_pair = await _get_grouped_funding_fees(meta_database,
-                                                                   commons_enums.PlotAttributes.SYMBOL.value)
+                                                                   commons_enums.DBRows.SYMBOL.value)
     time_data = []
     value_data = []
     pairs = list(trades_data)
@@ -249,8 +249,8 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
                             moving_portfolio_data[symbol] += trade[commons_enums.PlotAttributes.VOLUME.value]
                             moving_portfolio_data[ref_market] -= trade[commons_enums.PlotAttributes.VOLUME.value] * \
                                                                  trade[commons_enums.PlotAttributes.Y.value]
-                        moving_portfolio_data[trade[commons_enums.DBTables.FEES_CURRENCY.value]] -= \
-                            trade[commons_enums.DBTables.FEES_AMOUNT.value]
+                        moving_portfolio_data[trade[commons_enums.DBRows.FEES_CURRENCY.value]] -= \
+                            trade[commons_enums.DBRows.FEES_AMOUNT.value]
 
                         # last trade case: as there is not trade afterwards, the next condition would never be filled,
                         # force trade_index_by_pair[pair] increment
@@ -310,12 +310,12 @@ def _read_pnl_from_trades(x_data, pnl_data, cumulative_pnl_data, trades_history,
     for trades in trades_history.values():
         all_trades += trades
     for trade in sorted(all_trades, key=lambda x: x[commons_enums.PlotAttributes.X.value]):
-        currency, ref_market = symbol_util.parse_symbol(trade[commons_enums.DBTables.SYMBOL.value]).base_and_quote()
+        currency, ref_market = symbol_util.parse_symbol(trade[commons_enums.DBRows.SYMBOL.value]).base_and_quote()
         trade_volume = trade[commons_enums.PlotAttributes.VOLUME.value]
         buy_order_volume_by_price = buy_order_volume_by_price_by_currency[currency]
         if trade[commons_enums.PlotAttributes.SIDE.value] == trading_enums.TradeOrderSide.BUY.value:
-            fees = trade[commons_enums.DBTables.FEES_AMOUNT.value]
-            fees_multiplier = 1 if trade[commons_enums.DBTables.FEES_CURRENCY.value] == currency \
+            fees = trade[commons_enums.DBRows.FEES_AMOUNT.value]
+            fees_multiplier = 1 if trade[commons_enums.DBRows.FEES_CURRENCY.value] == currency \
                 else 1 / trade[commons_enums.PlotAttributes.Y.value]
             paid_fees = fees * fees_multiplier
             buy_fees += paid_fees * trade[commons_enums.PlotAttributes.Y.value]
@@ -348,8 +348,8 @@ def _read_pnl_from_trades(x_data, pnl_data, cumulative_pnl_data, trades_history,
                 # (ex if started with already 10 btc)
                 # total obtained (in ref market) – sell order fees – buy costs (in ref market before fees)
                 buy_cost = sum(price * volume for price, volume in volume_by_bought_prices.items())
-                fees = trade[commons_enums.DBTables.FEES_AMOUNT.value]
-                fees_multiplier = 1 if trade[commons_enums.DBTables.FEES_CURRENCY.value] == ref_market \
+                fees = trade[commons_enums.DBRows.FEES_AMOUNT.value]
+                fees_multiplier = 1 if trade[commons_enums.DBRows.FEES_CURRENCY.value] == ref_market \
                     else trade[commons_enums.PlotAttributes.Y.value]
                 sell_fees += fees * fees_multiplier
                 local_pnl = trade[commons_enums.PlotAttributes.Y.value] * \
@@ -456,19 +456,19 @@ async def total_paid_fees(meta_database, all_trades):
                 # - because funding fees are stored as negative number when paid (positive when "gained")
                 paid_fees -= transaction["quantity"]
     for trade in all_trades:
-        currency = symbol_util.parse_symbol(trade[commons_enums.DBTables.SYMBOL.value]).base
-        if trade[commons_enums.DBTables.FEES_CURRENCY.value] == currency:
-            if trade[commons_enums.DBTables.FEES_CURRENCY.value] == fees_currency:
-                paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value]
+        currency = symbol_util.parse_symbol(trade[commons_enums.DBRows.SYMBOL.value]).base
+        if trade[commons_enums.DBRows.FEES_CURRENCY.value] == currency:
+            if trade[commons_enums.DBRows.FEES_CURRENCY.value] == fees_currency:
+                paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value]
             else:
-                paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value] * \
+                paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value] * \
                              trade[commons_enums.PlotAttributes.Y.value]
         else:
-            if trade[commons_enums.DBTables.FEES_CURRENCY.value] == fees_currency:
-                paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value] / \
+            if trade[commons_enums.DBRows.FEES_CURRENCY.value] == fees_currency:
+                paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value] / \
                              trade[commons_enums.PlotAttributes.Y.value]
             else:
-                paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value]
+                paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value]
     return paid_fees
 
 
@@ -506,9 +506,9 @@ async def plot_trades(meta_database, plotted_element):
     account_type = trading_api.get_account_type_from_run_metadata(await get_metadata(meta_database))
     data = await meta_database.get_trades_db(account_type).all(commons_enums.DBTables.TRADES.value)
     key_to_label = {
-        "y": "Price",
-        "type": "Type",
-        "side": "Side",
+        commons_enums.PlotAttributes.Y.value: "Price",
+        commons_enums.PlotAttributes.TYPE.value: "Type",
+        commons_enums.PlotAttributes.SIDE.value: "Side",
     }
     additional_columns = [
         {
@@ -537,11 +537,11 @@ async def plot_withdrawals(meta_database, plotted_element):
     )
     # apply quantity to y for each withdrawal
     for withdrawal in withdrawal_history:
-        withdrawal["y"] = withdrawal["quantity"]
+        withdrawal[commons_enums.PlotAttributes.Y.value] = withdrawal["quantity"]
     key_to_label = {
-        "y": "Quantity",
+        commons_enums.PlotAttributes.Y.value: "Quantity",
         "currency": "Currency",
-        "side": "Side",
+        commons_enums.PlotAttributes.SIDE.value: "Side",
     }
     additional_columns = []
 
@@ -555,13 +555,13 @@ async def plot_positions(meta_database, plotted_element):
         transaction_types=(trading_enums.TransactionType.CLOSE_REALISED_PNL.value,)
     )
     key_to_label = {
-        "x": "Exit time",
+        commons_enums.PlotAttributes.X.value: "Exit time",
         "first_entry_time": "Entry time",
         "average_entry_price": "Average entry price",
         "average_exit_price": "Average exit price",
         "cumulated_closed_quantity": "Cumulated closed quantity",
         "realised_pnl": "Realised PNL",
-        "side": "Side",
+        commons_enums.PlotAttributes.SIDE.value: "Side",
         "trigger_source": "Closed by",
     }
 
@@ -601,8 +601,8 @@ async def plot_table(meta_database, plotted_element, data_source, columns=None, 
                     x_shift = cache_data[0]["x_shift"]
                     data = [
                         {
-                            "x": (cache_element[commons_enums.CacheDatabaseColumns.TIMESTAMP.value] + x_shift) * 1000,
-                            "y": cache_element[cache_value]
+                            commons_enums.PlotAttributes.X.value: (cache_element[commons_enums.CacheDatabaseColumns.TIMESTAMP.value] + x_shift) * 1000,
+                            commons_enums.PlotAttributes.Y.value: cache_element[cache_value]
                         }
                         for cache_element in cache
                     ]
@@ -790,8 +790,8 @@ async def plot_historical_win_rates(meta_database, plotted_element, exchange=Non
 
 async def _get_best_case_growth_from_transactions(trading_transactions_history,
                                                   x_as_trade_count, meta_database):
-    ref_market = meta_database.run_db._database.adaptor.database.storage.cache['metadata']['1']['ref_market']
-    start_balance = meta_database.run_db._database.adaptor.database.storage.cache['portfolio']['1'][ref_market]['total']
+    ref_market = meta_database.run_db._database.adaptor.database.storage.cache[commons_enums.DBTables.METADATA.value]['1']['ref_market']
+    start_balance = meta_database.run_db._database.adaptor.database.storage.cache[commons_enums.DBTables.PORTFOLIO.value]['1'][ref_market]['total']
     best_case_data, _, start_balance, end_balance, x_data \
         = await portfolio_util.get_coefficient_of_determination_data(transactions=trading_transactions_history,
                                                                      start_balance=start_balance,

@@ -2,7 +2,7 @@
 {% macro config_exchange_card(config, exchange, exchanges_details, is_supporting_future_trading,
                               keys_value="*********", enabled=True,
                               sandboxed=False, selected_exchange_type='spot', add_class='', config_values=None,
-                              full_config=True, exchange_docs_url="", donation_url="", lite_config=False) -%}
+                              full_config=True, lite_config=False) -%}
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
@@ -14,18 +14,12 @@
                         <i class="fas fa-star" data-toggle="tooltip" data-placement="top" title="Partner exchange:
                         Support the OctoBot project by trading on this exchange."></i>
                     </span>
-                    <span data-role="account-warning" class="text-danger mx-md-4 d-none">
-                        <i class="fas fa-exclamation-triangle" data-toggle="tooltip" data-placement="top" title="Login successful
-                        however {{exchange | capitalize}} will not support OctoBot on this account (based its own exchange rules).
-                        OctoBot will only support spot trading.
-                        Please either create a new {{exchange | capitalize}} account or donate to the project to use futures
-                        trading on live mode."></i>
-                    </span>
                     <span data-role="valid-account" class="mx-md-4 d-none">
                         <i class="fas fa-check" data-toggle="tooltip" data-placement="top" title="Login successful"></i>
                     </span>
                     <span data-role="supporting-account" class="mx-md-4 d-none">
-                        <i class="fas fa-trophy" data-toggle="tooltip" data-placement="top" title="Partner exchange: Thanks for being awesome and supporting the OctoBot project."></i>
+                        <i class="fas fa-trophy" data-toggle="tooltip" data-placement="top"
+                           title="Partner exchange: Thank you for supporting the OctoBot project by using this exchange !"></i>
                     </span>
                 </h4>
             </div>
@@ -62,19 +56,7 @@
         <div class="card-body px-2 px-md-4" name="{{exchange}}" config-key="exchanges_{{exchange}}">
             <div data-role="account-warning-details-wrapper" class="alert alert-danger d-none px-1 px-md-4">
                 <span data-role="account-warning-details">
-                    OctoBot works with exchanges to remain free, please create a new exchange account to support the project.
-                </span>
-                <span data-role="account-partners-docs">
-                    More info on partner exchanges on
-                    <a target="_blank" rel="noopener"
-                    href="{{exchange_docs_url}}#partner-exchanges-support-octobot">OctoBot docs</a>.
-                </span>
-                <span data-role="supporter-account">
-                    If you prefer not to create a new account, you can instead donate to the project and register your donation
-                    <a target="_blank" rel="noopener"
-                    href="{{donation_url}}">on this form</a>. Donation amounts are up to you and
-                    will enable live futures trading on your OctoBot after
-                    <a target="_blank" rel="noopener" href="{{url_for('community')}}">logging in with your community account</a>.
+                    Unknown authentication error.
                 </span>
             </div>
             <div class="d-md-flex">

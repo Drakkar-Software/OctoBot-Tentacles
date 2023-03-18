@@ -27,9 +27,6 @@ from tentacles.Meta.Keywords.scripting_library.tests import event_loop, mock_con
 from tentacles.Meta.Keywords.scripting_library.tests.exchanges import backtesting_trader, backtesting_config, \
     backtesting_exchange_manager, fake_backtesting
 
-# All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 
 def test_get_target_position_side():
     assert target_position.get_target_position_side(1) == trading_enums.TradeOrderSide.BUY.value
@@ -38,6 +35,7 @@ def test_get_target_position_side():
         target_position.get_target_position_side(0)
 
 
+@pytest.mark.asyncio
 async def test_get_target_position(mock_context):
     with pytest.raises(errors.InvalidArgumentError):
         await target_position.get_target_position(mock_context, "1sdsqdq")

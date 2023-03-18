@@ -70,12 +70,12 @@ async def test_get_historical_pnl(default_price_data, default_trades_data, defau
 
 
 async def test_total_paid_fees(default_trades_data):
-    usdt_fees = sum(trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    usdt_fees = sum(trade[commons_enums.DBRows.FEES_AMOUNT.value]
                     for trade in default_trades_data["BTC/USDT"]
-                    if trade[commons_enums.DBTables.FEES_CURRENCY.value] == "USDT")
-    btc_fees_in_usdt = sum(trade[commons_enums.DBTables.FEES_AMOUNT.value] * trade[commons_enums.PlotAttributes.Y.value]
+                    if trade[commons_enums.DBRows.FEES_CURRENCY.value] == "USDT")
+    btc_fees_in_usdt = sum(trade[commons_enums.DBRows.FEES_AMOUNT.value] * trade[commons_enums.PlotAttributes.Y.value]
                            for trade in default_trades_data["BTC/USDT"]
-                           if trade[commons_enums.DBTables.FEES_CURRENCY.value] == "BTC")
+                           if trade[commons_enums.DBRows.FEES_CURRENCY.value] == "BTC")
     with mock.patch.object(run_data_analysis, "get_transactions",
                            mock.AsyncMock(return_value=[])) as get_transactions_mock:
         assert round(await run_data_analysis.total_paid_fees(None, default_trades_data["BTC/USDT"]), 15) == \

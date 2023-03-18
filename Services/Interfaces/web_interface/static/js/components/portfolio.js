@@ -99,6 +99,7 @@ $(document).ready(function() {
         displayPortfolioTable();
         const chartTitle = `Assets value (${referenceMarket})`;
         createPortfolioChart("portfolio_doughnutChart", chartTitle, animate);
+        handleButtons();
     }
 
     const update_display = (withImages, animate) => {
@@ -123,10 +124,13 @@ $(document).ready(function() {
             send_and_interpret_bot_update(null, url, null, success, generic_request_failure_callback)
         })
     }
+
+    const handleButtons = () => {
+        handle_portfolio_button();
+        handleClearButton()
+    }
     update_display(false, true);
     if(firstLoad){
         start_periodic_refresh();
-        handle_portfolio_button();
-        handleClearButton()
     }
 });

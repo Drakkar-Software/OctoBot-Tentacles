@@ -192,11 +192,24 @@ def _convert_timestamp(timestamp):
 
 
 def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
-    TIME = "t"
-    DATE = "d"
+    ENTRY_PRICE = "en_p"
+    EXIT_PRICE = "ex_p"
+    ENTRY_TIME = "en_t"
+    ENTRY_DATE = "en_d"
+    EXIT_TIME = "ex_t"
+    EXIT_DATE = "ex_d"
+    ENTRY_SIDE = "en_s"
+    EXIT_SIDE = "ex_s"
+    ENTRY_AMOUNT = "en_a"
+    EXIT_AMOUNT = "ex_a"
+    DETAILS = "d"
     PNL = "pnl"
     PNL_AMOUNT = "pnl_a"
+    FEES = "f"
+    FEES_CURRENCIES = "f_c"
+    BASE = "b"
     pnl_history = {}
+    use_detailed_history = not(scale)
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
         commons_constants.MINUTE_TO_SECONDS if scale else 1
     history = _get_pnl_history(exchange, quote, symbol, since)
@@ -211,11 +224,26 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                 pnl_history[scaled_time] = {
                     PNL: pnl,
                     PNL_AMOUNT: pnl_a,
+                    DETAILS: None
                 }
             else:
                 pnl_val = pnl_history[scaled_time]
                 pnl_val[PNL] += pnl
                 pnl_val[PNL_AMOUNT] += pnl_a
+            if use_detailed_history:
+                pnl_history[scaled_time][DETAILS] = {
+                    ENTRY_TIME: historical_pnl.get_entry_time(),
+                    ENTRY_DATE: _convert_timestamp(historical_pnl.get_entry_time()),
+                    ENTRY_PRICE: float(historical_pnl.get_entry_price()),
+                    EXIT_PRICE: float(historical_pnl.get_close_price()),
+                    ENTRY_SIDE: historical_pnl.entries[0].side.value,
+                    EXIT_SIDE: historical_pnl.closes[0].side.value,
+                    ENTRY_AMOUNT: historical_pnl.get_total_entry_quantity(),
+                    EXIT_AMOUNT: historical_pnl.get_total_close_quantity(),
+                    FEES: float(historical_pnl.get_total_paid_fees()),
+                    FEES_CURRENCIES: ", ".join(historical_pnl.get_fees_currencies()),
+                    BASE: historical_pnl.entries[0].currency,
+                }
         except trading_errors.IncompletePNLError:
             invalid_pnls += 1
     if invalid_pnls:
@@ -223,14 +251,16 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     return sorted(
         [
             {
-                TIME: t,
-                DATE: _convert_timestamp(t),
+                EXIT_TIME: t,
+                EXIT_DATE: _convert_timestamp(t),
                 PNL: float(pnl[PNL]),
                 PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
+                DETAILS: pnl[DETAILS],
             }
             for t, pnl in pnl_history.items()
+            if not use_detailed_history or pnl[PNL]  # skip 0 value pnl in detailed history
         ],
-        key=lambda x: x[TIME]
+        key=lambda x: x[EXIT_TIME]
     )
 
 

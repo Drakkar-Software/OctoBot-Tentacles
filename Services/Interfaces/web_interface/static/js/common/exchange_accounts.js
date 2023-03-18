@@ -17,19 +17,15 @@
  */
 function register_exchanges_checks(check_existing_accounts){
     const update_exchanges_details = (exchangeCard, exchangeData) => {
-        const warnIcon = $(exchangeCard.find("[data-role=account-warning]"));
         const unloggedSupportingIcon = $(exchangeCard.find("[data-role=supporting-exchange]"));
         const supportingIcon = $(exchangeCard.find("[data-role=supporting-account]"));
         const validIcon = $(exchangeCard.find("[data-role=valid-account]"));
         const warnDetailsWrapper = $(exchangeCard.find("[data-role=account-warning-details-wrapper]"));
         const warnDetails = $(exchangeCard.find("[data-role=account-warning-details]"));
-        const partnersDocs = $(exchangeCard.find("[data-role=account-partners-docs]"));
-        const supporterAccountWarn = $(exchangeCard.find("[data-role=supporter-account]"))
 
-        partnersDocs.addClass(hidden_class);
-        supporterAccountWarn.addClass(hidden_class);
-        if(exchangeData["supporting_exchange"] || exchangeData["supporter_account"]){
-            if(exchangeData["auth_success"] && (exchangeData["compatible_account"] || exchangeData["supporter_account"])){
+        warnDetailsWrapper.addClass(hidden_class);
+        if(exchangeData["supporting_exchange"]){
+            if(exchangeData["auth_success"]){
                 supportingIcon.removeClass(hidden_class);
                 unloggedSupportingIcon.addClass(hidden_class);
             }else{
@@ -38,26 +34,12 @@ function register_exchanges_checks(check_existing_accounts){
             }
         }
         if(exchangeData["auth_success"]){
-            warnIcon.addClass(hidden_class);
-            if(!exchangeData["compatible_account"] && !exchangeData["supporter_account"]){
-                warnDetailsWrapper.removeClass(hidden_class);
-                supporterAccountWarn.removeClass(hidden_class);
-                warnDetails.text(exchangeData["error_message"]);
-                if (exchangeData["error_message"] !== null && exchangeData["error_message"].includes("create a new")) {
-                    partnersDocs.removeClass(hidden_class);
-                    warnIcon.removeClass(hidden_class);
-                }
-            }else{
-                validIcon.removeClass(hidden_class);
-                warnDetailsWrapper.addClass(hidden_class);
-            }
+            validIcon.removeClass(hidden_class);
         }else{
             validIcon.addClass(hidden_class);
             if(exchangeData["configured_account"]) {
                 warnDetailsWrapper.removeClass(hidden_class);
                 warnDetails.text(exchangeData["error_message"]);
-            }else{
-                warnDetailsWrapper.addClass(hidden_class);
             }
         }
     }

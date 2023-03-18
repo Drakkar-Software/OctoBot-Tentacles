@@ -14,17 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
+from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.cryptocom.cryptocom_exchange as cryptocom_exchange
 
 
-class CryptoCom(exchanges.RestExchange):
-    DESCRIPTION = ""
-    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
-    # should be fetched using recent trades.
-    REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = True  # set True when get_closed_orders is not supported
+class CryptoComCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
+    EXCHANGE_FEEDS = {
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
+    }
 
     @classmethod
     def get_name(cls):
-        return 'cryptocom'
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+        return cryptocom_exchange.CryptoCom.get_name()

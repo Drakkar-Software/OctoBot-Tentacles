@@ -102,7 +102,7 @@
         {% set show_nab_bar = show_nab_bar|default(True) -%}
 
         {% if show_nab_bar %}
-            <nav class="navbar navbar-expand-md navbar-dark sticky-top py-0 py-md-2" id="main-nav-bar">
+            <nav class="navbar navbar-expand-lg navbar-dark sticky-top py-0 py-md-2" id="main-nav-bar">
                 <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                     <ul class="navbar-nav mr-auto" id="main-nav-left-part">
                         <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
@@ -122,7 +122,9 @@
                         </li>
                         {% if are_automations_enabled %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'automations' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('automations') }}">Automations</a>
+                            <a class="nav-link" href="{{ url_for('automations') }}" aria-label="Logs">
+                                <i class="d-inline d-xl-none fa-solid fa-repeat" data-toggle="tooltip" data-placement="top" title="Automations"></i>
+                                <span class="d-none d-xl-inline">Automations</span></a>
                         </li>
                         {% endif %}
                         {% for plugin_tab in get_plugin_tabs(TAB_START) %}

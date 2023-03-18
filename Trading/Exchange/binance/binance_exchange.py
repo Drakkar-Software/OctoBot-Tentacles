@@ -21,6 +21,8 @@ import octobot_trading.exchanges as exchanges
 
 class Binance(exchanges.RestExchange):
     DESCRIPTION = ""
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    # should be fetched using recent trades.
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
@@ -44,52 +46,6 @@ class Binance(exchanges.RestExchange):
             params = {}
         params.update({'recvWindow': 60000})
         return params
-
-    async def get_order(self, order_id, symbol=None, **kwargs):
-        return await self._ensure_order_completeness(
-            await super().get_order(order_id=order_id, symbol=symbol, **kwargs),
-            symbol, **kwargs
-        )
-
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           params: dict = None):
-        return await self._ensure_order_completeness(
-            await super().create_order(order_type, symbol, quantity,
-                                       price=price, stop_price=stop_price,
-                                       side=side, current_price=current_price,
-                                       params=params),
-            symbol
-        )
-
-    async def get_closed_orders(self, symbol=None, since=None, limit=None, **kwargs):
-        orders = await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        # closed orders are missing fees on binance: add them from trades
-        trades = {
-            trade[trading_enums.ExchangeConstantsOrderColumns.ORDER.value]: trade
-            for trade in await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
-        }
-        for order in orders:
-            self._fill_order_missing_data(order, trades)
-        return orders
-
-    async def _ensure_order_completeness(self, order, symbol, **kwargs):
-        if order and order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.CLOSED.value and \
-                not order[trading_enums.ExchangeConstantsOrderColumns.FEE.value]:
-            trades = {
-                trade[trading_enums.ExchangeConstantsOrderColumns.ORDER.value]: trade
-                for trade in await super().get_my_recent_trades(symbol=symbol, **kwargs)
-            }
-            self._fill_order_missing_data(order, trades)
-        return order
-
-    def _fill_order_missing_data(self, order, trades):
-        order_id = order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
-        if not order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] and order_id in trades:
-            order[trading_enums.ExchangeConstantsOrderColumns.FEE.value] = \
-                trades[order_id][trading_enums.ExchangeConstantsOrderColumns.FEE.value]
 
 
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):

@@ -114,7 +114,7 @@ class TelegramApiService(services.AbstractService):
     def get_brand_name(self):
         return "telegram"
 
-    def stop(self):
+    async def stop(self):
         if self.connected:
             self.telegram_client.disconnect()
             self.connected = False

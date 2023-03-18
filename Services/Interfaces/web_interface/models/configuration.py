@@ -661,6 +661,10 @@ def update_tentacles_activation_config(new_config, deactivate_others=False):
         return False
 
 
+def get_active_exchanges():
+    return trading_api.get_enabled_exchanges_names(interfaces_util.get_startup_config(dict_only=True))
+
+
 async def _reset_profile_portfolio_history(current_edited_config):
     models.clear_exchanges_portfolio_history(simulated_only=True)
     if not trading_api.is_trader_simulator_enabled_in_config(current_edited_config.config):
@@ -802,6 +806,10 @@ def get_enabled_trading_pairs() -> set:
         if values[commons_constants.CONFIG_ENABLED_OPTION]:
             symbols = symbols.union(set(values[commons_constants.CONFIG_CRYPTO_PAIRS]))
     return symbols
+
+
+def get_exchange_available_trading_pairs(exchange_manager) -> list:
+    return trading_api.get_trading_pairs(exchange_manager)
 
 
 def get_symbol_list(exchanges):

@@ -84,9 +84,12 @@ async def mock_context(backtesting_trader):
     exchange_manager.client_symbols.append("ETH/USDT")
     exchange_manager.client_symbols.append("ETH/BTC")
     # init prices with BTC/USDT = 40000, ETH/BTC = 0.1 and ETH/USDT = 4000
-    portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair["BTC/USDT"] = decimal.Decimal("40000")
-    portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair["ETH/USDT"] = decimal.Decimal("4000")
-    portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair["ETH/BTC"] = decimal.Decimal("0.1")
+    portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair["BTC/USDT"] = \
+        decimal.Decimal("40000")
+    portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair["ETH/USDT"] = \
+        decimal.Decimal("4000")
+    portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair["ETH/BTC"] = \
+        decimal.Decimal("0.1")
     portfolio_manager.handle_balance_updated()
     yield context
 

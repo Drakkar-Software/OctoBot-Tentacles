@@ -113,7 +113,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     # change reference market to USDT
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(last_btc_price * 10 + 1000))
@@ -232,7 +232,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
 async def test_valid_create_new_orders_ref_market_as_quote(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(10 + 1000 / last_btc_price))
@@ -406,7 +406,7 @@ async def test_split_create_new_orders(tools):
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = decimal.Decimal(str(2000000001))
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = decimal.Decimal(str(2000000001))
 
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(last_btc_price * 2000000001 + 1000))
@@ -520,7 +520,7 @@ async def test_valid_create_new_orders_without_stop_order(tools):
     # change reference market to get more orders
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(last_btc_price * 10 + 1000))
@@ -738,7 +738,7 @@ async def test_create_multiple_buy_orders_after_fill(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
 
     # with BTC/USDT
-    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.last_prices_by_trading_pair[symbol] = \
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
         last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(10 + 1000 / last_btc_price))

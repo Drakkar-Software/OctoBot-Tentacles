@@ -15,6 +15,7 @@
 #  License along with this library.
 import decimal
 import time
+import typing
 
 import ccxt
 
@@ -25,6 +26,7 @@ import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.constants as constants
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.errors
 
 
 class Bybit(exchanges.RestExchange):
@@ -35,24 +37,42 @@ class Bybit(exchanges.RestExchange):
     # way as limit order but with higher fees
     _BYBIT_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.TAKE_PROFIT,
                              trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
-    SUPPORTED_BUNDLED_ORDERS = {
+    SUPPORTED_BUNDLED_ORDERS = {}
+    FUTURES_SUPPORTED_BUNDLED_ORDERS = {
         trading_enums.TraderOrderType.BUY_MARKET: _BYBIT_BUNDLED_ORDERS,
         trading_enums.TraderOrderType.SELL_MARKET: _BYBIT_BUNDLED_ORDERS,
         trading_enums.TraderOrderType.BUY_LIMIT: _BYBIT_BUNDLED_ORDERS,
         trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
     }
+    SPOT_SUPPORTED_BUNDLED_ORDER = {}
 
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
 
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
 
     LONG_STR = BUY_STR
     SHORT_STR = SELL_STR
+
+    # Order category. 0：normal order by default; 1：TP/SL order, Required for TP/SL order.
+    ORDER_CATEGORY = "orderCategory"
+
+    def __init__(self, config, exchange_manager, connector_class=None):
+        super().__init__(config, exchange_manager, connector_class=connector_class)
+        self.order_quantity_by_amount = {}
+        self.order_quantity_by_id = {}
+
+    @classmethod
+    def update_supported_elements(cls, exchange_manager):
+        if exchange_manager.is_future:
+            cls.SUPPORTED_BUNDLED_ORDERS = cls.FUTURES_SUPPORTED_BUNDLED_ORDERS
+        else:
+            cls.SUPPORTED_BUNDLED_ORDERS = cls.SPOT_SUPPORTED_BUNDLED_ORDER
 
     def get_adapter_class(self):
         return BybitCCXTAdapter
@@ -67,7 +87,7 @@ class Bybit(exchanges.RestExchange):
         :return: The list of supported exchange types
         """
         return [
-            # trading_enums.ExchangeTypes.SPOT, # not yet supported
+            trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
@@ -75,18 +95,75 @@ class Bybit(exchanges.RestExchange):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
-        # never fetch more than 200 candles or get candles from the past
-        limit = min(limit, 200)
+        # apply api candles limit
+        limit = min(limit, 200 if self.exchange_manager.is_future else 1000)
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
             kwargs["end"] = int(time.time() * 1000)
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
+    async def get_open_orders(self, symbol: str = None, since: int = None,
+                              limit: int = None, **kwargs: dict) -> list:
+        if symbol and not self.exchange_manager.is_future:
+            # not done by ccxt spot request
+            symbol = self.connector.client.markets[symbol]["id"]
+        orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        if not self.exchange_manager.is_future:
+            kwargs = kwargs or {}
+            # include stop orders
+            kwargs[self.ORDER_CATEGORY] = 1
+            orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        return orders
+
+    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        try:
+            return await super().get_order(order_id, symbol=symbol, **kwargs)
+        except octobot_trading.errors.FailedRequest:
+            if self.ORDER_CATEGORY not in kwargs:
+                kwargs[self.ORDER_CATEGORY] = 1
+                return await super().get_order(order_id, symbol=symbol, **kwargs)
+            raise
+
+    async def cancel_order(
+            self, order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        kwargs = kwargs or {}
+        if trading_personal_data.is_stop_order(order_type):
+            kwargs[self.ORDER_CATEGORY] = 1
+        return await super().cancel_order(
+            order_id, symbol, order_type, **kwargs
+        )
+
+    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
+                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
+                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
+        if not self.exchange_manager.is_future:
+            # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
+            # (price should not be sent to market orders). Only used for buy market orders
+            self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
+            if order_type is trading_enums.TraderOrderType.BUY_MARKET:
+                # on Bybit, market orders are in quote currency (YYY in XYZ/YYY)
+                used_price = price or current_price
+                if not used_price:
+                    raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
+                                                              f"market orders as quantity is in quote currency")
+                origin_quantity = quantity
+                quantity = quantity * used_price
+                self.order_quantity_by_amount[float(quantity)] = float(origin_quantity)
+        return await super().create_order(order_type, symbol, quantity,
+                                          price=price, stop_price=stop_price,
+                                          side=side, current_price=current_price,
+                                          reduce_only=reduce_only, params=params)
+
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["triggerPrice"] = price
-        # Trigger the order when market price rises to triggerPrice or falls to triggerPrice. 1: rise; 2: fall
-        params["triggerDirection"] = 1 if price > current_price else 2
+        if self.exchange_manager.is_future:
+            # Trigger the order when market price rises to triggerPrice or falls to triggerPrice. 1: rise; 2: fall
+            params["triggerDirection"] = 1 if price > current_price else 2
+        else:
+            params[self.ORDER_CATEGORY] = 1
         order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
         return order
 
@@ -107,7 +184,10 @@ class Bybit(exchanges.RestExchange):
     async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
         if trading_personal_data.is_stop_order(order_type):
             get_order_params = get_order_params or {}
-            get_order_params["stop"] = True
+            if self.exchange_manager.is_future:
+                get_order_params["stop"] = True
+            else:
+                get_order_params[self.ORDER_CATEGORY] = 1
         return await super()._verify_order(created_order, order_type, symbol, price, side,
                                            get_order_params=get_order_params)
 
@@ -218,8 +298,40 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         if tigger_above := order_info.get(trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value):
             fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = \
                 tigger_above == self.BYBIT_TRIGGER_ABOVE_VALUE
+        status = fixed.get(trading_enums.ExchangeConstantsOrderColumns.STATUS.value)
+        if status == 'ORDER_NEW':
+            fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.OPEN.value
+        if status == 'ORDER_CANCELED':
+            fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CANCELED.value
+        if status == 'PARTIALLY_FILLED_CANCELED':
+            fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.FILLED.value
         self._adapt_order_type(fixed)
-
+        if not self.connector.exchange_manager.is_future:
+            try:
+                if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
+                        == trading_enums.TradeOrderType.MARKET.value and \
+                        fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
+                        == trading_enums.TradeOrderSide.BUY.value:
+                    try:
+                        quantity = self.connector.exchange_manager.exchange.order_quantity_by_amount[
+                            kwargs.get("quantity")
+                        ]
+                        self.connector.exchange_manager.exchange.order_quantity_by_id[
+                            fixed[ccxt_enums.ExchangeOrderCCXTColumns.ID.value]
+                        ] = quantity
+                    except KeyError:
+                        quantity = self.connector.exchange_manager.exchange.order_quantity_by_id[
+                            fixed[ccxt_enums.ExchangeOrderCCXTColumns.ID.value]
+                        ]
+                    if fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None or \
+                            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] < quantity * 0.999:
+                        # when order status is PARTIALLY_FILLED_CANCELED but is actually filled
+                        fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
+                            trading_enums.OrderStatus.OPEN.value
+                    # convert amount to have the same units as every other exchange
+                    fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = quantity
+            except KeyError:
+                pass
         return fixed
 
     def _adapt_order_type(self, fixed):
@@ -233,11 +345,19 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 # take profit are not tagged as such by ccxt, force it
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
                     trading_enums.TradeOrderType.TAKE_PROFIT.value
+        elif not self.connector.exchange_manager.is_future:
+            order_category = order_info.get(self.connector.exchange_manager.exchange.ORDER_CATEGORY, None)
+            if order_category == "1":
+                # can't identify take profits, use stop loss
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                    trading_enums.TradeOrderType.STOP_LOSS.value
         return fixed
 
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
-        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        if self.connector.exchange_manager.is_future:
+            # only missing in futures
+            fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
         return fixed
     
     def parse_position(self, fixed, **kwargs):
@@ -373,10 +493,11 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         }
 
     def fix_trades(self, raw, **kwargs):
-        raw = [
-            trade
-            for trade in raw
-            if trade[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get(
-                self.EXEC_TYPE, None) == self.TRADE_TYPE    # ignore non-trade elements (such as funding)
-        ]
+        if self.connector.exchange_manager.is_future:
+            raw = [
+                trade
+                for trade in raw
+                if trade[trading_enums.ExchangeConstantsOrderColumns.INFO.value].get(
+                    self.EXEC_TYPE, None) == self.TRADE_TYPE    # ignore non-trade elements (such as funding)
+            ]
         return super().fix_trades(raw, **kwargs)

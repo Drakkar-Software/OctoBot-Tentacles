@@ -271,7 +271,7 @@ class Okx(exchanges.RestExchange):
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           params: dict = None) -> typing.Optional[dict]:
+                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if self.exchange_manager.is_future:
             # on futures exchange expects, quantity in contracts: convert quantity into contracts
             quantity = quantity / self.get_contract_size(symbol)
@@ -283,7 +283,7 @@ class Okx(exchanges.RestExchange):
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
-                                          params=params)
+                                          reduce_only=reduce_only, params=params)
 
     def _get_ccxt_margin_type(self, symbol, contract=None):
         if not self.exchange_manager.exchange.has_pair_future_contract(symbol):

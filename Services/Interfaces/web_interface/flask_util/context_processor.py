@@ -66,7 +66,7 @@ def context_processor_register():
         return (
             filtered_symbol + [
                 s
-                for s in config_symbols[currency]["pairs"]
+                for s in config_symbols[currency].get(commons_constants.CONFIG_CRYPTO_PAIRS, [])
                 if s in symbol_list and s not in filtered_symbol
             ]
         )
@@ -116,9 +116,9 @@ def context_processor_register():
         DEVELOPER_DOCS_URL=constants.DEVELOPER_DOCS_URL,
         EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
         OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
+        OCTOBOT_CLOUD_URL=constants.OCTOBOT_CLOUD_URL,
         OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
         OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
-        OCTOBOT_DONATION_URL=constants.OCTOBOT_DONATION_URL,
         CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
         IS_DEMO=constants.IS_DEMO,
         IS_CLOUD=constants.IS_CLOUD_ENV,
