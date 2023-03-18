@@ -149,7 +149,7 @@ async def plot(ctx, title, x=None,
         elif isinstance(z, list) and not isinstance(x, list):
             x = [x] * len(z)
         if len(x) and \
-                not ctx.symbol_writer.contains_row(title,
+                not await ctx.symbol_writer.contains_row(title,
                                                    {"x": _get_value_from_array(x, -1) * x_multiplier}):
             x_value = (_get_value_from_array(x, -1) + x_shift) * x_multiplier
             await ctx.symbol_writer.upsert(
@@ -182,7 +182,7 @@ async def plot(ctx, title, x=None,
 async def plot_shape(ctx, title, value, y_value,
                      chart=commons_enums.PlotCharts.SUB_CHART.value,
                      kind="scattergl", mode="markers", line_shape="linear", x_multiplier=1000):
-    if not ctx.symbol_writer.contains_row(title, {
+    if not await ctx.symbol_writer.contains_row(title, {
         "x": ctx.x,
         "time_frame": ctx.time_frame
     }):
