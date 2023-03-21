@@ -49,8 +49,13 @@ class DisplayedElements(display.DisplayTranslator):
                 exchange_name, symbol, time_frame = \
                     await self._adapt_inputs_for_backtesting_results(meta_db, exchange_name, symbol, time_frame)
             run_db = meta_db.get_run_db()
-            metadata = (await run_db.all(commons_enums.DBTables.METADATA.value))[0]
-            account_type = trading_api.get_account_type_from_run_metadata(metadata)
+            metadata_rows = await run_db.all(commons_enums.DBTables.METADATA.value)
+            metadata = metadata_rows[0] if metadata_rows else None
+            account_type = trading_api.get_account_type_from_run_metadata(metadata) \
+                if database_manager.is_backtesting() \
+                else trading_api.get_account_type_from_exchange_manager(
+                trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+            )
             dbs = [
                 run_db,
                 meta_db.get_transactions_db(account_type, exchange_name),
@@ -107,15 +112,19 @@ class DisplayedElements(display.DisplayTranslator):
                 exchange_name = single_exchange
         if not await meta_db.run_dbs_identifier.symbol_base_identifier_exists(exchange_name, symbol):
             run_metadata = await meta_db.get_run_db().all(commons_enums.DBTables.METADATA.value)
-            symbols = run_metadata[0].get(commons_enums.DBRows.SYMBOLS.value, [])
-            if len(symbols) == 1:
-                # retarget symbol
-                symbol = symbols[0]
-            else:
-                # no single exchange with data
-                raise commons_errors.MissingExchangeDataError(
-                    f"No symbol related data for {exchange_name}"
-                )
+            try:
+                symbols = run_metadata[0].get(commons_enums.DBRows.SYMBOLS.value, [])
+                if len(symbols) == 1:
+                    # retarget symbol
+                    symbol = symbols[0]
+                else:
+                    # no single exchange with data
+                    raise commons_errors.MissingExchangeDataError(
+                        f"No symbol related data for {exchange_name}"
+                    )
+            except IndexError:
+                # no run metadata, try to continue
+                pass
         return exchange_name, symbol, time_frame
 
     def _plot_graphs(self, graphs_by_parts):
