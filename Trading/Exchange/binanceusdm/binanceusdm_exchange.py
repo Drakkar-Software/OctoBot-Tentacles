@@ -30,6 +30,7 @@ class BinanceUsdM(exchanges.RestExchange):
     DESCRIPTION = ""
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
+    SUPPORTS_ORDER_EDITING = False
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -186,28 +187,6 @@ class BinanceUsdM(exchanges.RestExchange):
             "_create_limit_trailing_stop_order is not implemented"
         )
 
-    async def edit_order(
-        self,
-        order_id: str,
-        order_type: trading_enums.TraderOrderType,
-        symbol: str,
-        quantity: decimal.Decimal,
-        price: decimal.Decimal,
-        stop_price: decimal.Decimal = None,
-        side: trading_enums.TradeOrderSide = None,
-        current_price: decimal.Decimal = None,
-        params: dict = None,
-    ):
-        # Binance futures doesnt have a api for editing orders
-        return await self.edit_order_by_replacing(
-            order_id=order_id,
-            order_type=order_type,
-            symbol=symbol,
-            quantity=quantity,
-            price=price,
-            stop_price=stop_price,
-            side=side,
-        )
 
 
 class BinanceUsdMAdapter(exchanges.CCXTAdapter):
