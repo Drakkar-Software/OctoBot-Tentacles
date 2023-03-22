@@ -313,7 +313,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         async with self.lock:
             arbitrage = self._get_arbitrage(order_id)
             if arbitrage is not None:
-                filled_quantity = filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+                filled_quantity = filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED_AMOUNT.value]
                 if arbitrage.passed_initial_order:
                     # filled limit order or stop loss: close arbitrage
                     arbitrage_success = filled_order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] != \

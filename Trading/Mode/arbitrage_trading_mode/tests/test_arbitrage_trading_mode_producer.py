@@ -479,7 +479,7 @@ def get_order_dict(order_id, symbol, price, quantity, status, order_type, fees_a
         trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value: symbol,
         trading_enums.ExchangeConstantsOrderColumns.PRICE.value: price,
         trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value: quantity,
-        trading_enums.ExchangeConstantsOrderColumns.FILLED.value: quantity,
+        trading_enums.ExchangeConstantsOrderColumns.FILLED_AMOUNT.value: quantity,
         trading_enums.ExchangeConstantsOrderColumns.STATUS.value: status,
         trading_enums.ExchangeConstantsOrderColumns.TYPE.value: order_type,
         trading_enums.ExchangeConstantsOrderColumns.FEE.value: {

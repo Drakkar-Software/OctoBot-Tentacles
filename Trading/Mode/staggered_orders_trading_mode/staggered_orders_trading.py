@@ -539,7 +539,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 self.symbol_market, self.spread * self.flat_increment / self.increment)
         price_increment = self.flat_spread - self.flat_increment
         filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
-        filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
+        filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED_AMOUNT.value]))
         price = filled_price + price_increment if now_selling else filled_price - price_increment
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
         new_order = OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)

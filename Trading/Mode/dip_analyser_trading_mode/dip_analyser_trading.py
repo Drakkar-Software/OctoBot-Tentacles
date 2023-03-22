@@ -555,7 +555,7 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             paid_fees = 0 if self.ignore_exchange_fees else \
                 decimal.Decimal(f"{trading_personal_data.total_fees_from_order_dict(filled_order, self.base)}")
             sell_quantity = \
-                decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]}") - paid_fees
+                decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED_AMOUNT.value]}") - paid_fees
             price = decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}")
             await self._create_sell_order_if_enabled(filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value],
                                                      sell_quantity,

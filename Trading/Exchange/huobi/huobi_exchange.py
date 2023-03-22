@@ -65,7 +65,7 @@ class HuobiCCXTAdapter(exchanges.CCXTAdapter):
                     == trading_enums.TradeOrderSide.BUY.value:
                 # convert amount to have the same units as evert other exchange: use FILLED for accuracy
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                    fixed[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+                    fixed[trading_enums.ExchangeConstantsOrderColumns.FILLED_AMOUNT.value]
         except KeyError:
             pass
         return fixed

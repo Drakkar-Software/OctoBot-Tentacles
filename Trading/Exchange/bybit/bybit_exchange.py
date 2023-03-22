@@ -384,7 +384,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
             #     if side == enums.PositionSide.LONG.value else enums.PositionSide.SHORT
 
             unrealized_pnl = self.safe_decimal(fixed,
-                                               ccxt_enums.ExchangePositionCCXTColumns.UNREALISED_PNL.value,
+                                               ccxt_enums.ExchangePositionCCXTColumns.UNREALIZED_PNL.value,
                                                constants.ZERO)
             liquidation_price = self.safe_decimal(fixed,
                                                   ccxt_enums.ExchangePositionCCXTColumns.LIQUIDATION_PRICE.value,
@@ -404,12 +404,16 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
                     size if original_side == trading_enums.PositionSide.LONG.value else -size,
+                trading_enums.ExchangeConstantsPositionColumns.SINGLE_CONTRACT_VALUE.value:
+                    self.safe_decimal(
+                        fixed, ccxt_enums.ExchangePositionCCXTColumns.CONTRACT_SIZE.value, constants.ONE
+                    ),
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:
                     self.safe_decimal(
                         fixed, ccxt_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value,
                         constants.ZERO
                     ),
-                trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value:
+                trading_enums.ExchangeConstantsPositionColumns.VALUE.value:
                     self.safe_decimal(
                         fixed, ccxt_enums.ExchangePositionCCXTColumns.NOTIONAL.value, constants.ZERO
                     ),
@@ -418,7 +422,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                         fixed, ccxt_enums.ExchangePositionCCXTColumns.LEVERAGE.value, constants.ONE
                     ),
                 trading_enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value: unrealized_pnl,
-                trading_enums.ExchangeConstantsPositionColumns.REALISED_PNL.value:
+                trading_enums.ExchangeConstantsPositionColumns.REALIZED_PNL.value:
                     self.safe_decimal(
                         fixed, self.BYBIT_REALIZED_PNL, constants.ZERO
                     ),
