@@ -261,6 +261,7 @@
                     {{ waiter("trades-waiter", "Loading trades") }}
                       <table id="trades-table"
                              data-url="{{url_for('api.trades')}}"
+                             data-reference-market="{{reference_market}}"
                              class="w-100 table-striped table-responsive-sm">
                       </table>
                     </div>

@@ -276,6 +276,7 @@ MARKET = "market"
 SIMULATED_OR_REAL = "SoR"
 ID = "id"
 FEE_COST = "fee_cost"
+REF_MARKET_COST = "ref_market_cost"
 FEE_CURRENCY = "fee_currency"
 SIDE = "side"
 CONTRACT = "contract"
@@ -313,6 +314,13 @@ def get_all_orders_data():
     ]
 
 
+def _convert_amount(exchange_manager, amount, currency):
+    multiplier = trading_api.get_currency_ref_market_value(exchange_manager, currency)
+    if multiplier is None:
+        return None
+    return float(multiplier * amount)
+
+
 def _dump_trade(trade, is_simulated):
     return {
         SYMBOL: trade.symbol,
@@ -323,6 +331,7 @@ def _dump_trade(trade, is_simulated):
         DATE: _convert_timestamp(trade.executed_time),
         TIME: trade.executed_time,
         COST: trade.total_cost,
+        REF_MARKET_COST: _convert_amount(trade.exchange_manager, trade.total_cost, trade.market),
         MARKET: trade.market,
         FEE_COST: trade.fee.get(trading_enums.FeePropertyColumns.COST.value, 0) if trade.fee else 0,
         FEE_CURRENCY: trade.fee.get(trading_enums.FeePropertyColumns.CURRENCY.value, '') if trade.fee else '',
