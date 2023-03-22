@@ -102,6 +102,7 @@ class TelegramService(services.AbstractService):
                 self.log_connection_error_message(e)
 
     async def _start_app(self):
+        self.logger.debug("Initializing telegram connection")
         self.connected = True
         await self.telegram_app.initialize()
         if self.telegram_app.post_init:
