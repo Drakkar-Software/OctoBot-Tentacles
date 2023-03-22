@@ -414,13 +414,19 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             total_volume = 0
             for i in range(adapted_sell_orders_count):
                 order_price = sell_base + (increment * (i + 1))
-                for adapted_quantity, adapted_price \
-                        in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
-                        order_volume,
-                        order_price,
-                        symbol_market):
-                    total_volume += adapted_quantity
-                    volume_with_price.append((adapted_quantity, adapted_price))
+                try:
+                    for adapted_quantity, adapted_price \
+                            in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+                            order_volume,
+                            order_price,
+                            symbol_market):
+                        total_volume += adapted_quantity
+                        volume_with_price.append((adapted_quantity, adapted_price))
+                except trading_errors.MissingMinimalExchangeTradeVolume as error:
+                    self.logger.exception(
+                        error, True, 
+                        f"Failed to generate sell orders - error: {error}")
+                    # continue trying to create other orders
             if not volume_with_price:
                 volume_with_price.append((quantity, trading_personal_data.decimal_adapt_price(symbol_market,
                                                                                               sell_base + increment)))
