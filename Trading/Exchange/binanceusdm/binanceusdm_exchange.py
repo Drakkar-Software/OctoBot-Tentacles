@@ -70,8 +70,9 @@ class BinanceUsdM(exchanges.RestExchange):
         inverse: bool,
         tp_sl_mode: trading_enums.TakeProfitStopLossMode,
     ):
-        # no partial tp / sl - use limit and stop market instead
-        pass
+        # no partial tp / sl mode for this exchange
+        # it is already able to place partial limit and stop market
+        raise NotImplementedError
 
     async def _create_limit_buy_order(
         self, symbol, quantity, price=None, reduce_only: bool = False, params=None
@@ -204,9 +205,6 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
                     fixed.get(ccxt_enums.ExchangePositionCCXTColumns.CONTRACTS.value, 0)
                 )
             )
-            # if size == constants.ZERO:
-            #     return {}  # Don't parse empty position
-
             symbol = self.connector.get_pair_from_exchange(
                 fixed[ccxt_enums.ExchangePositionCCXTColumns.SYMBOL.value]
             )
