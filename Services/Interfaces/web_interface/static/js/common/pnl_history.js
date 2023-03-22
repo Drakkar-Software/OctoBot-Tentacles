@@ -65,8 +65,9 @@ const loadPnlTableHistory = (data, update) => {
                 },
                 round_digits(element.pnl, 8),
                 {
-                    currency: element.d.f_c,
+                    special: element.d.s_f.map(e => {return {f: round_digits(e.f, 8), c: e.c}}),
                     amount: round_digits(element.d.f, 8),
+                    quote: element.d.q,
                 },
             ]
         }else{
@@ -126,10 +127,12 @@ const loadPnlTableHistory = (data, update) => {
                 width: "11%",
             },
             {
-                title: 'Fees',
+                title: 'Total fees',
                 render: (data, type) => {
                     if (type === 'display' || type === 'filter') {
-                        return `${data.amount} ${data.currency}`
+                        const base = data.amount ? `${data.amount} ${data.quote}${data.special.length ?' + ' : ''}` : "";
+                        const special = data.special.length ? data.special.map(e => `${e.f} ${e.c}`).join(", ") : "";
+                        return `${base}${special}`
                     }
                     return data.amount;
                 },

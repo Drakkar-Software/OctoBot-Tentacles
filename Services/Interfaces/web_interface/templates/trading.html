@@ -114,6 +114,13 @@
                                 <a class="nav-link primary-pill scale-selector"
                                    href="#"
                                    data-action="change-scale"
+                                   data-scale="1h"
+                                >1h</a>
+                              </li>
+                              <li class="nav-item">
+                                <a class="nav-link primary-pill scale-selector"
+                                   href="#"
+                                   data-action="change-scale"
                                    data-scale="4h"
                                 >4h</a>
                               </li>
@@ -261,6 +268,7 @@
                     {{ waiter("trades-waiter", "Loading trades") }}
                       <table id="trades-table"
                              data-url="{{url_for('api.trades')}}"
+                             data-reference-market="{{reference_market}}"
                              class="w-100 table-striped table-responsive-sm">
                       </table>
                     </div>

@@ -25,6 +25,7 @@ import octobot.constants as constants
 
 
 class TelegramService(services.AbstractService):
+    CONNECT_TIMEOUT = 7  # default is 5, use 7 to take slow connections into account
     CHAT_ID = "chat-id"
     LOGGERS = ["telegram._bot", "hpack.hpack", "hpack.table", "httpx._client"]
 
@@ -86,8 +87,12 @@ class TelegramService(services.AbstractService):
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM][
                     services_constants.CONFIG_TOKEN]
                 )\
-                .request(telegram.request.HTTPXRequest(http_version="1.1"))\
-                .get_updates_request(telegram.request.HTTPXRequest(http_version="1.1"))\
+                .request(telegram.request.HTTPXRequest(
+                    http_version="1.1", connect_timeout=self.CONNECT_TIMEOUT
+                ))\
+                .get_updates_request(telegram.request.HTTPXRequest(
+                    http_version="1.1", connect_timeout=self.CONNECT_TIMEOUT
+                ))\
                 .build()
             try:
                 await self._start_app()
@@ -97,6 +102,7 @@ class TelegramService(services.AbstractService):
                 self.log_connection_error_message(e)
 
     async def _start_app(self):
+        self.logger.debug("Initializing telegram connection")
         self.connected = True
         await self.telegram_app.initialize()
         if self.telegram_app.post_init:
