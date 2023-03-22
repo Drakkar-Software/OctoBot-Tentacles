@@ -273,6 +273,7 @@ const reload_positions = async (update) => {
 
 const reload_trades = async (update) => {
     const table = $("#trades-table");
+    const refMarket = table.data("reference-market");
     const trades = await async_get_data_from_url(table)
     $("#trades-waiter").hide();
     const rows = trades.map((element) => {
@@ -283,6 +284,10 @@ const reload_trades = async (update) => {
             round_digits(element.amount, MAX_PRICE_DIGITS),
             element.exchange,
             {display: `${round_digits(element.cost, 5)} ${element.market}`, sort: element.cost},
+            {
+                display: `${element.ref_market_cost === null ? `no ${element.market} price in ${refMarket}` : round_digits(element.ref_market_cost, 5)}`,
+                sort: element.ref_market_cost === null ? 0 : element.ref_market_cost
+            },
             {display: `${round_digits(element.fee_cost, 5)} ${element.fee_currency}`, sort: element.fee_cost},
             {display: element.date, sort: element.time},
             element.id,
@@ -290,7 +295,7 @@ const reload_trades = async (update) => {
         ]
     });
     let previousSearch = undefined;
-    let previousOrder = [[7, "desc"]];
+    let previousOrder = [[8, "desc"]];
     let addedRows = true;
     if (update) {
         const previousDataTable = table.DataTable();
@@ -308,6 +313,7 @@ const reload_trades = async (update) => {
             {title: "Quantity"},
             {title: "Exchange"},
             {title: "Total", render: _displaySort},
+            {title: `${refMarket} Total`, render: _displaySort},
             {title: "Fee", render: _displaySort},
             {title: "Execution", render: _displaySort},
             {title: "ID"},
