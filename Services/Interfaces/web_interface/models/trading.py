@@ -206,8 +206,10 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     PNL = "pnl"
     PNL_AMOUNT = "pnl_a"
     FEES = "f"
-    FEES_CURRENCIES = "f_c"
+    SPECIAL_FEES = "s_f"
     BASE = "b"
+    QUOTE = "q"
+    CURRENCY = "c"
     pnl_history = {}
     use_detailed_history = not(scale)
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
@@ -240,9 +242,16 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                     EXIT_SIDE: historical_pnl.closes[0].side.value,
                     ENTRY_AMOUNT: historical_pnl.get_total_entry_quantity(),
                     EXIT_AMOUNT: historical_pnl.get_total_close_quantity(),
-                    FEES: float(historical_pnl.get_total_paid_fees()),
-                    FEES_CURRENCIES: ", ".join(historical_pnl.get_fees_currencies()),
+                    FEES: float(historical_pnl.get_paid_regular_fees_in_quote()),
+                    SPECIAL_FEES: [
+                        {
+                            CURRENCY: currency,
+                            FEES: float(value),
+                        }
+                        for currency, value in historical_pnl.get_paid_special_fees_by_currency().items()
+                    ],
                     BASE: historical_pnl.entries[0].currency,
+                    QUOTE: historical_pnl.entries[0].market,
                 }
         except trading_errors.IncompletePNLError:
             invalid_pnls += 1
@@ -258,7 +267,8 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                 DETAILS: pnl[DETAILS],
             }
             for t, pnl in pnl_history.items()
-            if not use_detailed_history or pnl[PNL]  # skip 0 value pnl in detailed history
+            # skip 0 value pnl in detailed history
+            if not use_detailed_history or (pnl[PNL] or pnl.get(DETAILS, {}).get(SPECIAL_FEES, 0))
         ],
         key=lambda x: x[EXIT_TIME]
     )
