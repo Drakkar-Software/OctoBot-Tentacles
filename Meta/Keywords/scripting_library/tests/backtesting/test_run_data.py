@@ -129,8 +129,8 @@ async def _test_historical_pnl_values_from_trades(price_data, trades_data, pnl_d
                                                       transaction_types=(
                                                           trading_enums.TransactionType.TRADING_FEE.value,
                                                           trading_enums.TransactionType.FUNDING_FEE.value,
-                                                          trading_enums.TransactionType.REALISED_PNL.value,
-                                                          trading_enums.TransactionType.CLOSE_REALISED_PNL.value)
+                                                          trading_enums.TransactionType.REALIZED_PNL.value,
+                                                          trading_enums.TransactionType.CLOSE_REALIZED_PNL.value)
                                                       )
         if include_cumulative:
             assert plotted_element.plot.call_count == 2

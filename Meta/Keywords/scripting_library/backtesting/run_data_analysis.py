@@ -367,7 +367,7 @@ def _read_pnl_from_trades(x_data, pnl_data, cumulative_pnl_data, trades_history,
 def _read_pnl_from_transactions(x_data, pnl_data, cumulative_pnl_data, trading_transactions_history, x_as_trade_count):
     previous_value = 0
     for transaction in trading_transactions_history:
-        transaction_pnl = 0 if transaction["realised_pnl"] is None else transaction["realised_pnl"]
+        transaction_pnl = 0 if transaction["realized_pnl"] is None else transaction["realized_pnl"]
         transaction_quantity = 0 if transaction["quantity"] is None else transaction["quantity"]
         local_quantity = transaction_pnl + transaction_quantity
         cumulated_pnl = local_quantity + previous_value
@@ -399,8 +399,8 @@ async def _get_historical_pnl(meta_database, plotted_element, include_cumulative
         meta_database,
         transaction_types=(trading_enums.TransactionType.TRADING_FEE.value,
                            trading_enums.TransactionType.FUNDING_FEE.value,
-                           trading_enums.TransactionType.REALISED_PNL.value,
-                           trading_enums.TransactionType.CLOSE_REALISED_PNL.value)
+                           trading_enums.TransactionType.REALIZED_PNL.value,
+                           trading_enums.TransactionType.CLOSE_REALIZED_PNL.value)
     )
     if trading_transactions_history:
         # can rely on pnl history
@@ -552,7 +552,7 @@ async def plot_withdrawals(meta_database, plotted_element):
 async def plot_positions(meta_database, plotted_element):
     realized_pnl_history = await get_transactions(
         meta_database,
-        transaction_types=(trading_enums.TransactionType.CLOSE_REALISED_PNL.value,)
+        transaction_types=(trading_enums.TransactionType.CLOSE_REALIZED_PNL.value,)
     )
     key_to_label = {
         commons_enums.PlotAttributes.X.value: "Exit time",
@@ -560,8 +560,8 @@ async def plot_positions(meta_database, plotted_element):
         "average_entry_price": "Average entry price",
         "average_exit_price": "Average exit price",
         "cumulated_closed_quantity": "Cumulated closed quantity",
-        "realised_pnl": "Realised PNL",
         commons_enums.PlotAttributes.SIDE.value: "Side",
+        "realized_pnl": "Realized PNL",
         "trigger_source": "Closed by",
     }
 
@@ -677,7 +677,7 @@ def _get_default_searches(columns, types):
 def _get_wins_and_losses_from_transactions(x_data, wins_and_losses_data, trading_transactions_history,
                                            x_as_trade_count):
     for transaction in trading_transactions_history:
-        transaction_pnl = 0 if transaction["realised_pnl"] is None else transaction["realised_pnl"]
+        transaction_pnl = 0 if transaction["realized_pnl"] is None else transaction["realized_pnl"]
         current_cumulative_wins = wins_and_losses_data[-1] if wins_and_losses_data else 0
         if transaction_pnl < 0:
             wins_and_losses_data.append(current_cumulative_wins - 1)
@@ -708,8 +708,8 @@ async def plot_historical_wins_and_losses(meta_database, plotted_element, exchan
         meta_database,
         transaction_types=(trading_enums.TransactionType.TRADING_FEE.value,
                            trading_enums.TransactionType.FUNDING_FEE.value,
-                           trading_enums.TransactionType.REALISED_PNL.value,
-                           trading_enums.TransactionType.CLOSE_REALISED_PNL.value)
+                           trading_enums.TransactionType.REALIZED_PNL.value,
+                           trading_enums.TransactionType.CLOSE_REALIZED_PNL.value)
     )
     if trading_transactions_history:
         # can rely on pnl history
@@ -735,7 +735,7 @@ def _get_win_rates_from_transactions(x_data, win_rates_data, trading_transaction
     wins_count = 0
     losses_count = 0
     for transaction in trading_transactions_history:
-        transaction_pnl = 0 if transaction["realised_pnl"] is None else transaction["realised_pnl"]
+        transaction_pnl = 0 if transaction["realized_pnl"] is None else transaction["realized_pnl"]
         if transaction_pnl < 0:
             losses_count += 1
         elif transaction_pnl > 0:
@@ -766,8 +766,8 @@ async def plot_historical_win_rates(meta_database, plotted_element, exchange=Non
         meta_database,
         transaction_types=(trading_enums.TransactionType.TRADING_FEE.value,
                            trading_enums.TransactionType.FUNDING_FEE.value,
-                           trading_enums.TransactionType.REALISED_PNL.value,
-                           trading_enums.TransactionType.CLOSE_REALISED_PNL.value)
+                           trading_enums.TransactionType.REALIZED_PNL.value,
+                           trading_enums.TransactionType.CLOSE_REALIZED_PNL.value)
     )
     if trading_transactions_history:
         # can rely on pnl history
@@ -813,8 +813,8 @@ async def plot_best_case_growth(meta_database, plotted_element, exchange=None,
         meta_database,
         transaction_types=(trading_enums.TransactionType.TRADING_FEE.value,
                            trading_enums.TransactionType.FUNDING_FEE.value,
-                           trading_enums.TransactionType.REALISED_PNL.value,
-                           trading_enums.TransactionType.CLOSE_REALISED_PNL.value)
+                           trading_enums.TransactionType.REALIZED_PNL.value,
+                           trading_enums.TransactionType.CLOSE_REALIZED_PNL.value)
     )
     if trading_transactions_history:
         # can rely on pnl history
