@@ -162,19 +162,21 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
 
 def _get_pnl_history(exchange, quote, symbol, since):
     if exchange:
-        return trading_api.get_completed_pnl_history(
-            dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
-            quote=quote,
-            symbol=symbol,
-            since=since
-        )
-    history = []
+        return {
+            exchange: trading_api.get_completed_pnl_history(
+                dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
+                quote=quote,
+                symbol=symbol,
+                since=since
+            )
+        }
+    history = {}
     for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
         if trading_api.get_is_backtesting(exchange_manager) \
                 or not trading_api.is_trader_existing_and_enabled(exchange_manager):
             # skip backtesting exchanges
             continue
-        history += trading_api.get_completed_pnl_history(
+        history[trading_api.get_exchange_name(exchange_manager)] = trading_api.get_completed_pnl_history(
             exchange_manager,
             quote=quote,
             symbol=symbol,
@@ -205,56 +207,61 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     DETAILS = "d"
     PNL = "pnl"
     PNL_AMOUNT = "pnl_a"
+    EXCHANGE = "ex"
     FEES = "f"
     SPECIAL_FEES = "s_f"
     BASE = "b"
     QUOTE = "q"
     CURRENCY = "c"
+    TRADES_COUNT = "tc"
     pnl_history = {}
     use_detailed_history = not(scale)
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
         commons_constants.MINUTE_TO_SECONDS if scale else 1
-    history = _get_pnl_history(exchange, quote, symbol, since)
+    history_by_exchange = _get_pnl_history(exchange, quote, symbol, since)
     invalid_pnls = 0
-    for historical_pnl in history:
-        try:
-            close_time = historical_pnl.get_close_time()
-            scaled_time = close_time - (close_time % scale_seconds)
-            pnl, pnl_p = historical_pnl.get_profits()
-            pnl_a = historical_pnl.get_closed_close_value()
-            if scaled_time not in pnl_history:
-                pnl_history[scaled_time] = {
-                    PNL: pnl,
-                    PNL_AMOUNT: pnl_a,
-                    DETAILS: None
-                }
-            else:
-                pnl_val = pnl_history[scaled_time]
-                pnl_val[PNL] += pnl
-                pnl_val[PNL_AMOUNT] += pnl_a
-            if use_detailed_history:
-                pnl_history[scaled_time][DETAILS] = {
-                    ENTRY_TIME: historical_pnl.get_entry_time(),
-                    ENTRY_DATE: _convert_timestamp(historical_pnl.get_entry_time()),
-                    ENTRY_PRICE: float(historical_pnl.get_entry_price()),
-                    EXIT_PRICE: float(historical_pnl.get_close_price()),
-                    ENTRY_SIDE: historical_pnl.entries[0].side.value,
-                    EXIT_SIDE: historical_pnl.closes[0].side.value,
-                    ENTRY_AMOUNT: historical_pnl.get_total_entry_quantity(),
-                    EXIT_AMOUNT: historical_pnl.get_total_close_quantity(),
-                    FEES: float(historical_pnl.get_paid_regular_fees_in_quote()),
-                    SPECIAL_FEES: [
-                        {
-                            CURRENCY: currency,
-                            FEES: float(value),
-                        }
-                        for currency, value in historical_pnl.get_paid_special_fees_by_currency().items()
-                    ],
-                    BASE: historical_pnl.entries[0].currency,
-                    QUOTE: historical_pnl.entries[0].market,
-                }
-        except trading_errors.IncompletePNLError:
-            invalid_pnls += 1
+    for exchange_name, historical_pnl_elements in history_by_exchange.items():
+        for historical_pnl in historical_pnl_elements:
+            try:
+                close_time = historical_pnl.get_close_time()
+                scaled_time = close_time - (close_time % scale_seconds)
+                pnl, pnl_p = historical_pnl.get_profits()
+                pnl_a = historical_pnl.get_closed_close_value()
+                if scaled_time not in pnl_history:
+                    pnl_history[scaled_time] = {
+                        PNL: pnl,
+                        PNL_AMOUNT: pnl_a,
+                        DETAILS: None
+                    }
+                else:
+                    pnl_val = pnl_history[scaled_time]
+                    pnl_val[PNL] += pnl
+                    pnl_val[PNL_AMOUNT] += pnl_a
+                if use_detailed_history:
+                    pnl_history[scaled_time][DETAILS] = {
+                        ENTRY_TIME: historical_pnl.get_entry_time(),
+                        ENTRY_DATE: _convert_timestamp(historical_pnl.get_entry_time()),
+                        ENTRY_PRICE: float(historical_pnl.get_entry_price()),
+                        EXIT_PRICE: float(historical_pnl.get_close_price()),
+                        ENTRY_SIDE: historical_pnl.entries[0].side.value,
+                        EXIT_SIDE: historical_pnl.closes[0].side.value,
+                        ENTRY_AMOUNT: historical_pnl.get_total_entry_quantity(),
+                        EXIT_AMOUNT: historical_pnl.get_total_close_quantity(),
+                        FEES: float(historical_pnl.get_paid_regular_fees_in_quote()),
+                        SPECIAL_FEES: [
+                            {
+                                CURRENCY: currency,
+                                FEES: float(value),
+                            }
+                            for currency, value in historical_pnl.get_paid_special_fees_by_currency().items()
+                        ],
+                        BASE: historical_pnl.entries[0].currency,
+                        QUOTE: historical_pnl.entries[0].market,
+                        EXCHANGE: exchange_name,
+                        TRADES_COUNT: len(historical_pnl.entries) + len(historical_pnl.closes)
+                    }
+            except trading_errors.IncompletePNLError:
+                invalid_pnls += 1
     if invalid_pnls:
         logging.get_logger("TradingModel").warning(f"{invalid_pnls} invalid TradePNLs in history")
     return sorted(
