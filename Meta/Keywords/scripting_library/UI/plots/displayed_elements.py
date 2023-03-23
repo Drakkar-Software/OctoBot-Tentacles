@@ -114,7 +114,7 @@ class DisplayedElements(display.DisplayTranslator):
             run_metadata = await meta_db.get_run_db().all(commons_enums.DBTables.METADATA.value)
             try:
                 symbols = run_metadata[0].get(commons_enums.DBRows.SYMBOLS.value, [])
-                if len(symbols) == 1:
+                if len(symbols) > 0:
                     # retarget symbol
                     symbol = symbols[0]
                 else:
