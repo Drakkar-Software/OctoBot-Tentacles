@@ -233,6 +233,8 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
             for pair in pairs:
                 other_candle = price_data[pair][index]
                 symbol, ref_market = symbol_util.parse_symbol(pair).base_and_quote()
+                moving_portfolio_data[ref_market] = moving_portfolio_data.get(ref_market, 0)
+                moving_portfolio_data[symbol] = moving_portfolio_data.get(symbol, 0)
                 # part 1: compute portfolio total value after trade update when any
                 # 1.1: trades
                 # start iteration where it last stopped to reduce complexity
