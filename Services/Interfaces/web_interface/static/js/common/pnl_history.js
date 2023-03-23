@@ -50,6 +50,9 @@ const loadPnlTableHistory = (data, update) => {
                     date: element.d.en_d,
                     side: element.d.en_s,
                     base: element.d.b,
+                    quote: element.d.q,
+                    exchange: element.d.ex,
+                    trades: element.d.tc,
                     amount: round_digits(element.d.en_a, 8),
                     price: round_digits(element.d.en_p, 8),
                     total : round_digits(element.d.en_a * element.d.en_p, 8),
@@ -59,6 +62,9 @@ const loadPnlTableHistory = (data, update) => {
                     date: element.ex_d,
                     side: element.d.ex_s,
                     base: element.d.b,
+                    quote: element.d.q,
+                    exchange: element.d.ex,
+                    trades: element.d.tc,
                     amount: round_digits(element.d.ex_a, 8),
                     price: round_digits(element.d.ex_p, 8),
                     total : round_digits(element.d.ex_a * element.d.ex_p, 8)
@@ -97,7 +103,7 @@ const loadPnlTableHistory = (data, update) => {
     }
 
     const getPnlOrdersDetails = (data) => {
-        return `${getSideBadge(data.side)} ${data.date}: ${getBoldRender(data.amount)} ${data.base} at ${getBoldRender(data.price)}, total ${getBoldRender(data.total)}`;
+        return `<span data-toggle="tooltip" title="symbol: ${data.base}/${data.quote} exchange: ${data.exchange} trades: ${data.trades}">${getSideBadge(data.side)} ${data.date}: ${getBoldRender(data.amount)} ${data.base} at ${getBoldRender(data.price)}, total ${getBoldRender(data.total)}</span>`;
     }
 
     const columns = (
