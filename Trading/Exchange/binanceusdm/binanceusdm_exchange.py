@@ -217,7 +217,6 @@ class BinanceUsdM(exchanges.RestExchange):
         )
 
 
-
 class BinanceUsdMAdapter(exchanges.CCXTAdapter):
     BINANCE_MODE = "hedged"
     POSITION_SIDE = "positionSide"
@@ -358,13 +357,10 @@ class BinanceUsdMAdapter(exchanges.CCXTAdapter):
 
     def fix_funding_rate(self, raw, **kwargs):
         fixed = super().fix_funding_rate(raw, **kwargs)
-        fixed[
-            trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value
-        ] = fixed[self.NEXT_FUNDING_TIME]
-        fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value] = (
+        fixed[ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value] = fixed[
+            self.NEXT_FUNDING_TIME
+        ]
+        fixed[ccxt_enums.ExchangeFundingCCXTColumns.LAST_FUNDING_TIME.value] = (
             fixed[self.NEXT_FUNDING_TIME] - self.DEFAULT_FUNDING_TIME
         )
-        fixed[trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value] = fixed[
-            ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value
-        ]
         return fixed
