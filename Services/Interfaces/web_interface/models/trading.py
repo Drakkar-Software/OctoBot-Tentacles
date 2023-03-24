@@ -281,6 +281,20 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     )
 
 
+def _get_dumped_data(real, simulated, dump_func):
+    return [
+        dumped
+        for dumped in tuple(
+            dump_func(order, False)
+            for order in real
+        ) + tuple(
+            dump_func(order, True)
+            for order in simulated
+        )
+        if dumped is not None
+    ]
+
+
 SYMBOL = "symbol"
 TYPE = "type"
 PRICE = "price"
@@ -305,30 +319,27 @@ UNREALIZED_PNL = "unrealized_pnl"
 
 
 def _dump_order(order, is_simulated):
-    return {
-        SYMBOL: order.symbol,
-        TYPE: order.order_type.name.replace("_", " "),
-        PRICE: order.origin_price if not order.origin_stop_price else order.origin_stop_price,
-        AMOUNT: order.origin_quantity,
-        EXCHANGE: order.exchange_manager.exchange.name if order.exchange_manager else '',
-        DATE: _convert_timestamp(order.creation_time),
-        TIME: order.creation_time,
-        COST: order.total_cost,
-        MARKET: order.market,
-        SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
-        ID: order.order_id,
-    }
+    try:
+        return {
+            SYMBOL: order.symbol,
+            TYPE: order.order_type.name.replace("_", " "),
+            PRICE: order.origin_price if not order.origin_stop_price else order.origin_stop_price,
+            AMOUNT: order.origin_quantity,
+            EXCHANGE: order.exchange_manager.exchange.name if order.exchange_manager else '',
+            DATE: _convert_timestamp(order.creation_time),
+            TIME: order.creation_time,
+            COST: order.total_cost,
+            MARKET: order.market,
+            SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
+            ID: order.order_id,
+        }
+    except Exception as err:
+        logging.get_logger("TradingModel").exception(f"Error when dumping order {err}, order: {order}")
+        return None
 
 
 def get_all_orders_data():
-    real, simulated = interfaces_util.get_all_open_orders()
-    return [
-        _dump_order(order, False)
-        for order in real
-    ] + [
-        _dump_order(order, True)
-        for order in simulated
-    ]
+    return _get_dumped_data(*interfaces_util.get_all_open_orders(), _dump_order)
 
 
 def _convert_amount(exchange_manager, amount, currency):
@@ -339,63 +350,60 @@ def _convert_amount(exchange_manager, amount, currency):
 
 
 def _dump_trade(trade, is_simulated):
-    return {
-        SYMBOL: trade.symbol,
-        TYPE: trade.trade_type.name.replace("_", " "),
-        PRICE: trade.executed_price,
-        AMOUNT: trade.executed_quantity,
-        EXCHANGE: trade.exchange_manager.exchange.name if trade.exchange_manager else '',
-        DATE: _convert_timestamp(trade.executed_time),
-        TIME: trade.executed_time,
-        COST: trade.total_cost,
-        REF_MARKET_COST: _convert_amount(trade.exchange_manager, trade.total_cost, trade.market),
-        MARKET: trade.market,
-        FEE_COST: trade.fee.get(trading_enums.FeePropertyColumns.COST.value, 0) if trade.fee else 0,
-        FEE_CURRENCY: trade.fee.get(trading_enums.FeePropertyColumns.CURRENCY.value, '') if trade.fee else '',
-        SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
-        ID: trade.trade_id,
-    }
+    try:
+        return {
+            SYMBOL: trade.symbol,
+            TYPE: trade.trade_type.name.replace("_", " "),
+            PRICE: trade.executed_price,
+            AMOUNT: trade.executed_quantity,
+            EXCHANGE: trade.exchange_manager.exchange.name if trade.exchange_manager else '',
+            DATE: _convert_timestamp(trade.executed_time),
+            TIME: trade.executed_time,
+            COST: trade.total_cost,
+            REF_MARKET_COST: _convert_amount(trade.exchange_manager, trade.total_cost, trade.market),
+            MARKET: trade.market,
+            FEE_COST: trade.fee.get(trading_enums.FeePropertyColumns.COST.value, 0) if trade.fee else 0,
+            FEE_CURRENCY: trade.fee.get(trading_enums.FeePropertyColumns.CURRENCY.value, '') if trade.fee else '',
+            SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
+            ID: trade.trade_id,
+        }
+    except Exception as err:
+        logging.get_logger("TradingModel").exception(f"Error when dumping trade {err}, trade: {trade}")
+        return None
 
 
 def get_all_trades_data():
-    real, simulated = interfaces_util.get_trades_history()
-    return [
-        _dump_trade(trade, False)
-        for trade in real
-    ] + [
-        _dump_trade(trade, True)
-        for trade in simulated
-    ]
+    return _get_dumped_data(*interfaces_util.get_trades_history(), _dump_trade)
 
 
 def _dump_position(position, is_simulated):
-    return {
-        SYMBOL: position.symbol,
-        SIDE: position.side.value,
-        CONTRACT: str(position.symbol_contract),
-        AMOUNT: position.size,
-        VALUE: position.value,
-        MARKET: position.currency if position.symbol_contract.is_inverse_contract() else position.market,
-        ENTRY_PRICE: position.entry_price,
-        LIQUIDATION_PRICE: position.liquidation_price,
-        MARGIN: position.margin,
-        UNREALIZED_PNL: position.unrealized_pnl,
-        EXCHANGE: position.exchange_manager.exchange.name if position.exchange_manager else '',
-        SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
-    }
+    try:
+        return {
+            SYMBOL: position.symbol,
+            SIDE: position.side.value,
+            CONTRACT: str(position.symbol_contract),
+            AMOUNT: position.size,
+            VALUE: position.value,
+            MARKET: position.currency if position.symbol_contract.is_inverse_contract() else position.market,
+            ENTRY_PRICE: position.entry_price,
+            LIQUIDATION_PRICE: position.liquidation_price,
+            MARGIN: position.margin,
+            UNREALIZED_PNL: position.unrealized_pnl,
+            EXCHANGE: position.exchange_manager.exchange.name if position.exchange_manager else '',
+            SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
+        }
+    except Exception as err:
+        logging.get_logger("TradingModel").exception(f"Error when dumping position {err}, position: {position}")
+        return None
 
 
 def get_all_positions_data():
     real, simulated = interfaces_util.get_all_positions()
-    return [
-        _dump_position(position, False)
-        for position in real
-        if not position.is_idle()
-    ] + [
-        _dump_position(position, True)
-        for position in simulated
-        if not position.is_idle()
-    ]
+    return _get_dumped_data(
+        (position for position in real if not position.is_idle()),
+        (position for position in simulated if not position.is_idle()),
+        _dump_position
+    )
 
 
 def clear_exchanges_orders_history(simulated_only=False):
