@@ -18,10 +18,18 @@ function handleProfileEditor(){
     const saveProfile = $(".save-profile");
     const profileName = $('.profile-name-editor');
     const profileDescription = $('.profile-description-editor');
+    const profileComplexity = $('.profile-complexity-selector');
+    const profileRisk = $('.profile-risk-selector');
     profileName.on('save', function (){
         onProfileEdit(true, $(this).parents(".profile-details").find(".save-profile"));
     });
     profileDescription.on('save', function (){
+        onProfileEdit(true, $(this).parents(".profile-details").find(".save-profile"));
+    });
+    profileComplexity.on('change', function (){
+        onProfileEdit(true, $(this).parents(".profile-details").find(".save-profile"));
+    });
+    profileRisk.on('change', function (){
         onProfileEdit(true, $(this).parents(".profile-details").find(".save-profile"));
     });
     saveProfile.click(function (){
@@ -32,7 +40,9 @@ function handleProfileEditor(){
         const data = {
             id: profileDetails.attr("data-id"),
             name: profileDetails.find(".profile-name-editor").editable("getValue", true),
-            description: profileDetails.find(".profile-description-editor").editable("getValue", true)
+            description: profileDetails.find(".profile-description-editor").editable("getValue", true),
+            complexity: profileDetails.find(".profile-complexity-selector").val(),
+            risk: profileDetails.find(".profile-risk-selector").val(),
         };
         send_and_interpret_bot_update(data, updateURL, null,
             saveCurrentProfileSuccessCallback, saveCurrentProfileFailureCallback);
