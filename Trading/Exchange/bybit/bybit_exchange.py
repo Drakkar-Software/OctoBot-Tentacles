@@ -164,7 +164,9 @@ class Bybit(exchanges.RestExchange):
             params["triggerDirection"] = 1 if price > current_price else 2
         else:
             params[self.ORDER_CATEGORY] = 1
-        order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
+        order = await self.connector.client.create_order(
+            symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+        )
         return order
 
     async def _edit_order(self, order_id: str, order_type: trading_enums.TraderOrderType, symbol: str,
