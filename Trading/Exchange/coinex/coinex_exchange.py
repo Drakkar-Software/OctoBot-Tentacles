@@ -17,6 +17,7 @@ import decimal
 import typing
 
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 
@@ -31,6 +32,15 @@ class Coinex(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return CoinexCCXTAdapter
+
+    def get_additional_connector_config(self):
+        # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
+        # (price should not be sent to market orders). Only used for buy market orders
+        return {
+            ccxt_constants.CCXT_OPTIONS: {
+                "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
+            }
+        }
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
@@ -51,9 +61,6 @@ class Coinex(exchanges.RestExchange):
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
-        # (price should not be sent to market orders). Only used for buy market orders
-        self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
         if order_type is trading_enums.TraderOrderType.BUY_MARKET:
             # on coinex, market orders are in quote currency (YYY in XYZ/YYY)
             if price is None:
