@@ -254,14 +254,14 @@ function update_last_candle(to_update_candles, to_update_vols, new_candles, last
 function create_layout(graph_title){
     return {
         title: graph_title,
-        dragmode: 'zoom',
+        dragmode: 'pan',
         margin: {
             r: 10,
             t: 25,
             b: 40,
             l: 60
         },
-        showlegend: true,
+        showlegend: false,
         xaxis: {
             autorange: true,
             domain: [0, 1],
@@ -377,7 +377,7 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
         const data = [volume_trace, price_trace, real_trader_trades, simulator_trades];
         const plotlyConfig = {
-            scrollZoom: true,
+            scrollZoom: false,
             modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
             responsive: true,
             showEditInChartStudio: true,
