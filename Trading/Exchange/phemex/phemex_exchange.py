@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import decimal
 import typing
 
 import octobot_commons.enums as commons_enums
@@ -31,6 +32,20 @@ class Phemex(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return PhemexCCXTAdapter
+
+    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
+                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
+                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
+        if order_type is trading_enums.TraderOrderType.BUY_MARKET \
+                or order_type is trading_enums.TraderOrderType.SELL_MARKET:
+            # remove price argument on market orders or ccxt will try to convert cost into amount and
+            # make rounding differences
+            price = None
+        return await super().create_order(order_type, symbol, quantity,
+                                          price=price, stop_price=stop_price,
+                                          side=side, current_price=current_price,
+                                          reduce_only=reduce_only, params=params)
 
     def _get_ohlcv_params(self, time_frame, limit, **kwargs):
         to_time = self.connector.client.milliseconds()

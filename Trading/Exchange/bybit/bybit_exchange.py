@@ -67,6 +67,16 @@ class Bybit(exchanges.RestExchange):
         self.order_quantity_by_amount = {}
         self.order_quantity_by_id = {}
 
+    def get_additional_connector_config(self):
+        if not self.exchange_manager.is_future:
+            # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
+            # (price should not be sent to market orders). Only used for buy market orders
+            return {
+                ccxt_constants.CCXT_OPTIONS: {
+                    "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
+                }
+            }
+
     @classmethod
     def update_supported_elements(cls, exchange_manager):
         if exchange_manager.is_future:
@@ -139,9 +149,6 @@ class Bybit(exchanges.RestExchange):
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if not self.exchange_manager.is_future:
-            # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
-            # (price should not be sent to market orders). Only used for buy market orders
-            self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
             if order_type is trading_enums.TraderOrderType.BUY_MARKET:
                 # on Bybit, market orders are in quote currency (YYY in XYZ/YYY)
                 used_price = price or current_price
