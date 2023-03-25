@@ -41,6 +41,8 @@
     },
     "profile": {
         "avatar": "default_profile.png",
+        "risk": 2,
+        "complexity": 3,
         "description": "TradingViewSignalsTrading is a profile configured to react on signals from tradingview.com. It requires to setup a trading view pro account and a webhook service. See how to configure at : https://www.octobot.info/webhooks/tradingview-webhook.",
         "id": "tradingview_trading",
         "name": "TradingView Signals Trading",
