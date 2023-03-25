@@ -79,7 +79,9 @@ class OkxConnector(ccxt_connector.CCXTConnector):
     @_enabled_okx_algo_order_creation
     async def create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         return self.adapter.adapt_order(
-            await self.client.create_order(symbol, "market", side, quantity, params=params), symbol=symbol
+            await self.client.create_order(
+                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+            ), symbol=symbol
         )
 
 

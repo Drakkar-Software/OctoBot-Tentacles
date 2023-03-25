@@ -142,7 +142,9 @@ class Kucoin(exchanges.RestExchange):
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-        order = await self.connector.client.create_order(symbol, "market", side, quantity, params=params)
+        order = await self.connector.client.create_order(
+            symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+        )
         return order
 
     async def _update_balance(self, balance, currency, **kwargs):
