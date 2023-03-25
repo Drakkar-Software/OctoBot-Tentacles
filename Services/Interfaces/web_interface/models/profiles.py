@@ -18,6 +18,7 @@ import os
 import octobot_services.interfaces.util as interfaces_util
 import octobot_commons.profiles as profiles
 import octobot_commons.errors as errors
+import octobot_commons.enums as commons_enums
 import octobot_commons.authentication as authentication
 import octobot_trading.util as trading_util
 import octobot_tentacles_manager.api as tentacles_manager_api
@@ -115,6 +116,8 @@ def update_profile(profile_id, json_profile):
     profile.name = new_name
     profile.description = json_profile.get("description", profile.description)
     profile.avatar = json_profile.get("avatar", profile.avatar)
+    profile.complexity = commons_enums.ProfileComplexity(int(json_profile.get("complexity", profile.complexity.value)))
+    profile.risk = commons_enums.ProfileRisk(int(json_profile.get("risk", profile.risk.value)))
     profile.validate_and_save_config()
     if renamed:
         profile.rename_folder(new_name, False)
