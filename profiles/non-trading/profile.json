@@ -34,6 +34,8 @@
     },
     "profile": {
         "avatar": "default_profile.png",
+        "risk": 1,
+        "complexity": 1,
         "description": "Non-Trading is a profile that does not trade. It will not create any order. Use this profile to run OctoBot without creating any order.",
         "id": "default",
         "name": "Non-Trading",
