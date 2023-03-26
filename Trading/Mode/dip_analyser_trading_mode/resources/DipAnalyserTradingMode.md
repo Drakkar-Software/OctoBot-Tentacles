@@ -6,7 +6,7 @@ filled.
 When a **buy order is filled, sell orders will automatically be created at a higher price**
 than this of the filled buy order. The number of sell orders created after each buy can be configured.
 
-A higher risk will make larger buy orders.
+A higher risk configuration will make larger buy orders when order size is not configured.
 
 Warning: Ensure **enough funds are available in your portfolio** for OctoBot to place the **initial buy orders**.
 
