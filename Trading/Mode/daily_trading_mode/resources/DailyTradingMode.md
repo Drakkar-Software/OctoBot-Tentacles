@@ -1,4 +1,4 @@
-DailyTradingMode is a **low risk versatile trading mode** that reacts only the its state changes to 
+DailyTradingMode reacts only the its state changes to 
 a state that is different from the previous one and that is not NEUTRAL.
 
 <div class="text-center">

@@ -1,4 +1,4 @@
-SignalTradingMode is a middle risk trading mode adapted to liquid and relatively flat markets. 
+SignalTradingMode is a trading mode adapted to liquid and relatively flat markets. 
 It will try to find reversals and trade them.  
 
 This trading mode is using the daily trading mode orders system with adapted parameters.
