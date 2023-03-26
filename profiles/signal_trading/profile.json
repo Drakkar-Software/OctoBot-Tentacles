@@ -44,7 +44,7 @@
         "avatar": "default_profile.png",
         "risk": 3,
         "complexity": 1,
-        "description": "SignalTrading is a middle risk profile. It is adapted to liquid and relatively flat markets. It will try to find reversals and trade them.",
+        "description": "SignalTrading is adapted to liquid and relatively flat markets. It will try to find reversals and trade them.",
         "id": "signal_trading",
         "name": "Signal Trading",
         "read_only": true
