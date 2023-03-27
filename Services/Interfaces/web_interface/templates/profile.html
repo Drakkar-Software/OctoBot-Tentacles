@@ -75,7 +75,7 @@
                    href="#panelTrading" role="tab" aria-controls="panelTrading" aria-selected="false">
                     <i class="fas fa-wallet"></i><span class="d-none d-md-block pl-3">Trading</span>
                 </a>
-                {% if config_tentacles_by_group %}
+                {% if config_tentacles_by_group or other_tentacles_config %}
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelTentacles-tab" data-toggle="pill"
                    href="#panelTentacles" role="tab" aria-controls="panelTentacles" aria-selected="false">
                     <i class="fas fa-cogs"></i><span class="d-none d-md-block pl-3">Tentacles</span>
@@ -394,10 +394,19 @@
                     </div>
                 </div>
             </div>
-            {% if config_tentacles_by_group %}
+            {% if config_tentacles_by_group or other_tentacles_config %}
             <div class="tab-pane fade config-root" id="panelTentacles" role="tabpanel"
                  aria-labelledby="panelTentacles-tab">
-                {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row config-container">
+                            {% for config_tentacle in other_tentacles_config %}
+                            {{ m_config_tentacle_card.config_tentacle_card(config_tentacle["name"], config_tentacle, False) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <br>
                 {% for group, config_tentacles in config_tentacles_by_group.items() %}
                 <div class="card">
                     <div class="card-header text-capitalize">
@@ -406,7 +415,7 @@
                     <div class="card-body">
                         <div class="row config-container" id="{{group}}-config-root">
                             {% for config_tentacle in config_tentacles %}
-                            {{ m_config_tentacle_card.config_tentacle_card(config_tentacle["name"], config_tentacle) }}
+                            {{ m_config_tentacle_card.config_tentacle_card(config_tentacle["name"], config_tentacle, True) }}
                             {% endfor %}
                         </div>
                     </div>

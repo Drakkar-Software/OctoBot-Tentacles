@@ -1,10 +1,11 @@
 {% import 'macros/tentacles.html' as m_tentacles %}
 
-{% macro config_tentacle_card(name, info) %}
+{% macro config_tentacle_card(name, info, can_be_disabled) %}
     <a href="#" onclick="return false;"
        class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
        id="{{ name }}" name="{{ name }}"
        config-type="tentacle_config" config-key={{name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{info['startup_config']}}
+       {{ "no-activation-click='true'" if not can_be_disabled}}
     >
         {{ name }}
         <span class="float-right">
@@ -35,6 +36,8 @@
               {{ m_tentacles.tentacle_description(info, strategy, name ) }}
           </div>
           <div class="modal-footer">
+            <a href="{{ url_for('config_tentacle', name=name) }}"
+               class="btn btn-primary waves-effect" role="button">Configure</a>
             <button class="btn btn-primary waves-effect" data-dismiss="modal">Close</button>
           </div>
         </div>
