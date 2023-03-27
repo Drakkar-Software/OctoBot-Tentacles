@@ -84,6 +84,9 @@ def profile():
 
                                  in_backtesting=backtesting_api.is_backtesting_enabled(display_config),
 
+                                 other_tentacles_config=models.get_extra_tentacles_config_desc(media_url,
+                                                                                               missing_tentacles),
+
                                  config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
                                                                                                          missing_tentacles),
 

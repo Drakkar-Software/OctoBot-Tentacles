@@ -63,6 +63,13 @@ class AbstractWebInterfacePlugin(tentacles_management.AbstractTentacle):
         Override if user inputs are required for this plugin
         """
 
+    @classmethod
+    def is_configurable(cls):
+        """
+        Override if the tentacle is allowed to be configured
+        """
+        return False
+
     def blueprint_factory(self):
         self.blueprint = flask.Blueprint(
             self.name,
