@@ -56,6 +56,7 @@ import octobot.enums as octobot_enums
 import octobot.databases_util as octobot_databases_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.plugins as web_plugins
 
 NAME_KEY = "name"
 SHORT_NAME_KEY = "n"
@@ -71,6 +72,7 @@ TRADING_MODES_KEY = "trading-modes"
 STRATEGIES_KEY = "strategies"
 TRADING_MODE_KEY = "trading mode"
 EXCHANGE_KEY = "exchange"
+WEB_PLUGIN_KEY = "web plugin"
 STRATEGY_KEY = "strategy"
 TA_EVALUATOR_KEY = "technical evaluator"
 SOCIAL_EVALUATOR_KEY = "social evaluator"
@@ -168,6 +170,14 @@ def _get_trading_tentacles_activation():
     try:
         return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
             tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
+
+
+def _get_services_tentacles_activation():
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_SERVICES_PATH]
     except KeyError:
         return {}
 
@@ -279,10 +289,18 @@ def _get_tentacle_packages():
     yield scripted, evaluators.ScriptedEvaluator, SCRIPTED_EVALUATOR_KEY
     import tentacles.Trading.Exchange as exchanges
     yield exchanges, trading_exchanges.AbstractExchange, EXCHANGE_KEY
+    import tentacles.Services.Interfaces as interfaces
+    yield interfaces, web_plugins.AbstractWebInterfacePlugin, WEB_PLUGIN_KEY
 
 
 def _get_activation_state(name, activation_states):
     return name in activation_states and activation_states[name]
+
+
+def is_trading_strategy_configuration(tentacle_type):
+    return tentacle_type in (
+        SCRIPTED_EVALUATOR_KEY, RT_EVALUATOR_KEY, SOCIAL_EVALUATOR_KEY, TA_EVALUATOR_KEY, STRATEGY_KEY, TRADING_MODE_KEY
+    )
 
 
 def get_tentacle_from_string(name, media_url, with_info=True):
@@ -290,7 +308,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
         parent_inspector = tentacles_management.evaluator_parent_inspection
         if tentacle_type == TRADING_MODE_KEY:
             parent_inspector = tentacles_management.trading_mode_parent_inspection
-        if tentacle_type == EXCHANGE_KEY:
+        if tentacle_type in (EXCHANGE_KEY, WEB_PLUGIN_KEY):
             parent_inspector = tentacles_management.default_parents_inspection
         klass = tentacles_management.get_class_from_string(name, abstract_class, package, parent_inspector)
         if klass:
@@ -304,6 +322,8 @@ def get_tentacle_from_string(name, media_url, with_info=True):
                     activation_states = _get_trading_tentacles_activation()
                 elif tentacle_type == EXCHANGE_KEY:
                     activation_states = _get_trading_tentacles_activation()
+                elif tentacle_type == WEB_PLUGIN_KEY:
+                    activation_states = _get_services_tentacles_activation()
                 else:
                     activation_states = _get_evaluators_tentacles_activation()
                     if tentacle_type == STRATEGY_KEY:

@@ -23,9 +23,11 @@
 {% endmacro %}
 
 {% macro tentacle_horizontal_description_row_content(info, strategy, use_all_cols) %}
+    {% if info['description'] %}
     <div class="col{{'' if use_all_cols else '-md-8'}} markdown-content">
         {{info['description']}}
     </div>
+    {% endif %}
 {% endmacro %}
 
 {% macro tentacle_with_link(tentacle_name) %}
