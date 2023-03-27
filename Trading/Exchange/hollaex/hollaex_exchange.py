@@ -27,11 +27,11 @@ class hollaex(exchanges.RestExchange):
     DEFAULT_MAX_LIMIT = 500
 
     @classmethod
-    def init_user_inputs(cls, inputs: dict) -> None:
+    def init_user_inputs_from_class(cls, inputs: dict) -> None:
         """
         Called at constructor, should define all the exchange's user inputs.
         """
-        cls.UI.user_input(
+        cls.CLASS_UI.user_input(
             "rest", commons_enums.UserInputTypes.TEXT, f"https://{cls.BASE_REST_API}", inputs,
             title=f"Address of the Hollaex based exchange API (similar to https://{cls.BASE_REST_API})"
         )
