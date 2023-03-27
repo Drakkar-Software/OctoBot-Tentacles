@@ -33,9 +33,6 @@ class BrowsingDataProvider(singleton.Singleton):
     PROFILE = "profile"
     AUTOMATIONS = "automations"
     PROFILE_SELECTOR = "profile_selector"
-    DISPLAY_KEYS = [
-        HOME, PROFILE, PROFILE_SELECTOR, AUTOMATIONS
-    ]
 
     def __init__(self):
         self.browsing_data = {}
@@ -56,18 +53,22 @@ class BrowsingDataProvider(singleton.Singleton):
         try:
             value = self.browsing_data[self.FIRST_DISPLAY][element]
         except KeyError:
-            value = False
+            value = True
         if value:
             self.set_is_first_display(element, False)
         return value
 
     def set_is_first_display(self, element, is_first_display):
-        if self.browsing_data[self.FIRST_DISPLAY][element] != is_first_display:
+        try:
+            if self.browsing_data[self.FIRST_DISPLAY][element] != is_first_display:
+                self.browsing_data[self.FIRST_DISPLAY][element] = is_first_display
+                self.dump_saved_data()
+        except KeyError:
             self.browsing_data[self.FIRST_DISPLAY][element] = is_first_display
             self.dump_saved_data()
 
     def set_first_displays(self, is_first_display):
-        for key in self.DISPLAY_KEYS:
+        for key in self.browsing_data[self.FIRST_DISPLAY]:
             self.browsing_data[self.FIRST_DISPLAY][key] = is_first_display
         self.dump_saved_data()
 
@@ -112,10 +113,7 @@ class BrowsingDataProvider(singleton.Singleton):
     def _get_default_data(self):
         return {
             self.SESSION_SEC_KEY: self._create_session_secret_key(),
-            self.FIRST_DISPLAY: {
-                key: False
-                for key in self.DISPLAY_KEYS
-            },
+            self.FIRST_DISPLAY: {},
             self.CURRENCY_LOGO: {},
             self.ALL_CURRENCIES: []
         }
