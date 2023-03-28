@@ -19,6 +19,6 @@ import octobot_trading.exchanges as exchanges
 class ConfigurableDefaultCCXTRestExchange(exchanges.DefaultRestExchange):
 
     @classmethod
-    def load_user_inputs(cls, tentacles_setup_config, tentacle_config):
+    def load_user_inputs_from_class(cls, tentacles_setup_config, tentacle_config):
         # bypass parent to use the real load_user_inputs and enable user inputs configuration
-        return exchanges.RestExchange.load_user_inputs(tentacles_setup_config, tentacle_config)
+        return exchanges.RestExchange.load_user_inputs_from_class(tentacles_setup_config, tentacle_config)
