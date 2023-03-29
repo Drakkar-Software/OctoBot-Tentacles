@@ -114,13 +114,16 @@ class GPTService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/gpt/using-gpt-with-octobot"
+        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/chatgpt-interface"
 
     def get_type(self) -> None:
         return services_constants.CONFIG_GPT
 
+    def get_website_url(self):
+        return "https://platform.openai.com/overview"
+
     def get_logo(self):
-        return None
+        return "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
     
     def _get_api_key(self):
         return self._env_secret_key or \
