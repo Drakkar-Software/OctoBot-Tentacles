@@ -195,7 +195,7 @@ async def test_create_orders_with_default_config():
         assert producer.sell_orders_count is not None
 
         producer.sell_funds = decimal.Decimal("0.00006")  # 5 orders
-        producer.buy_funds = decimal.Decimal("0.5")  # 12 orders
+        producer.buy_funds = decimal.Decimal("1")  # 24 orders
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -213,11 +213,11 @@ async def test_create_orders_with_default_config():
         # btc_available_funds for reduced because orders are not created
         assert 10 - 0.001 <= btc_available_funds < 10
         assert 1000 - 100 <= usd_available_funds < 1000
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + 10))
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + producer.buy_orders_count))
         created_orders = trading_api.get_open_orders(exchange_manager)
         created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
         created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
-        assert len(created_buy_orders) == producer.buy_orders_count == 10
+        assert len(created_buy_orders) == producer.buy_orders_count == 20
         assert len(created_sell_orders) < producer.sell_orders_count
         assert len(created_sell_orders) == 5
         # ensure only orders closest to the current price have been created
@@ -232,7 +232,7 @@ async def test_create_orders_with_default_config():
         pf_btc_available_funds = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
         pf_usd_available_funds = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
         assert pf_btc_available_funds >= 10 - 0.00006
-        assert pf_usd_available_funds >= 1000 - 0.5
+        assert pf_usd_available_funds >= 1000 - 1
 
         assert pf_btc_available_funds >= btc_available_funds
         assert pf_usd_available_funds >= usd_available_funds

@@ -3,17 +3,18 @@ a mirror order is instantly created and generates profit when completed.
 
 #### Default configuration
 When left unspecified for a trading pair, the grid will be initialized with a spread
-of 4% of the current price and an increment of 1% and a maximum of 10 buy and sell orders.
+of 1.5% of the current price and an increment of 0.5% and a maximum of 20 buy and sell orders.
 
 When enough funds are available, the default configuration will result in:
-- 10 buy order covering 98% to 89% of the current price
-- 10 sell orders going from 102% to 111% of the current price 
+- Up to 20 buy order covering 99.25% to 89.5% of the current price
+- Up to 20 sell orders covering 100.75% to 110.5% of the current price 
 
 #### Trading pair configuration
-You can customize the grid for each pair.
-
-For each pair to trade,  enter the interval between each order, the number of initial orders to 
-create and you are ready to go.
+You can customize the grid for each trading pair. To configure a pair, enter:
+- The name of the pair 
+- The interval between buy and sell (spread) 
+- The interval between each order (increment)
+- The amount of initial buy and sell orders to create 
 
 #### Profits
 Profits will be made from price movements within the covered price area.  
