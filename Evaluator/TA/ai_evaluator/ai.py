@@ -20,6 +20,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.enums as enums
 import octobot_commons.os_util as os_util
+import octobot_commons.data_util as data_util
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
 import octobot_evaluators.errors as evaluators_errors
@@ -105,20 +106,17 @@ class GPTEvaluator(evaluators.TAEvaluator):
             return
         try:
             self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-            computed_data = self.INDICATORS[self.indicator](candle_data, self.period)
+            computed_data = self.call_indicator(candle_data)
             reduced_data = computed_data[-self.PASSED_DATA_LEN:]
             formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
             prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame)
             cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
-            if "down " in cleaned_prediction:
-                self.eval_note = 1
-            elif "up " in cleaned_prediction:
-                self.eval_note = -1
-            else:
+            prediction_side = self._parse_prediction_side(cleaned_prediction)
+            if prediction_side == 0:
                 self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
                 return
             confidence = self._parse_confidence(cleaned_prediction) / 100
-            self.eval_note = self.eval_note * confidence
+            self.eval_note = prediction_side * confidence
         except services_errors.InvalidRequestError as e:
             self.logger.error(f"Invalid GPT request: {e}")
         except services_errors.RateLimitError as e:
@@ -146,6 +144,9 @@ class GPTEvaluator(evaluators.TAEvaluator):
         except (services_errors.CreationError, services_errors.UnavailableInBacktestingError) as err:
             raise evaluators_errors.UnavailableEvaluatorError(f"Impossible to get ChatGPT prediction: {err}") from err
 
+    def call_indicator(self, candle_data):
+        return data_util.drop_nan(self.INDICATORS[self.indicator](candle_data, self.period))
+
     def get_candles_data_api(self):
         return {
             self.SOURCES[0]: trading_api.get_symbol_open_candles,
@@ -158,6 +159,13 @@ class GPTEvaluator(evaluators.TAEvaluator):
     def _check_timeframe(self, time_frame):
         return commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(time_frame)] >= \
             self._min_allowed_timeframe_minutes
+
+    def _parse_prediction_side(self, cleaned_prediction):
+        if "down " in cleaned_prediction:
+            return 1
+        elif "up " in cleaned_prediction:
+            return -1
+        return 0
 
     def _parse_confidence(self, cleaned_prediction):
         """
