@@ -1,0 +1,5 @@
+{
+    "indicator": "ema",
+    "source": "close",
+    "period": 2
+}
