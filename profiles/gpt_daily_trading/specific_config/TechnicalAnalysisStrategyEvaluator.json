@@ -1,0 +1,22 @@
+{
+    "compatible_evaluator_types": [
+        "TA",
+        "REAL_TIME"
+    ],
+    "default_config": [
+        "DoubleMovingAverageTrendEvaluator",
+        "RSIMomentumEvaluator"
+    ],
+    "required_evaluators": [
+        "*"
+    ],
+    "required_time_frames": [
+        "4h"
+    ],
+    "time_frames_to_weight": [
+        {
+            "time_frame": "4h",
+            "weight": 50
+        }
+    ]
+}
