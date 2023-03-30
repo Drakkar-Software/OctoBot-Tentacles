@@ -1,0 +1,5 @@
+{
+    "indicator": "No indicator: the raw value of the selected source",
+    "period": 2,
+    "source": "Close"
+}

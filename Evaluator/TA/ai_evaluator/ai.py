@@ -43,7 +43,6 @@ class GPTEvaluator(evaluators.TAEvaluator):
         "Kaufman Adaptive Moving Average": tulipy.kama,
         "Hull Moving Average": tulipy.kama,
         "RSI: Relative Strength Index": tulipy.rsi,
-        "Stochastic RSI": tulipy.stochrsi,
         "Detrended Price Oscillator": tulipy.dpo,
     }
     SOURCES = ["Open", "High", "Low", "Close", "Volume"]
