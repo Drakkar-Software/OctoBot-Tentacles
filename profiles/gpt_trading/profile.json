@@ -38,9 +38,9 @@
         "avatar": "ChatGPT_logo.svg",
         "complexity": 2,
         "description": "GPT DailyTrading uses ChatGPT to predict the market. It can be used to send alerts according to ChatGPT's predictions and trade directly based on the profile's DailyTradingMode configuration.\nConfigure the GPTEvaluator to customize the way market data are sent to ChatGPT.",
-        "id": "a4e95e51-2ca3-46a2-a689-e671abb5a760",
+        "id": "gpt_trading",
         "imported": false,
-        "name": "GPT DailyTrading",
+        "name": "GPT Trading",
         "origin_url": null,
         "read_only": true,
         "risk": 3
