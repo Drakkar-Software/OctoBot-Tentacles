@@ -224,7 +224,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         return consumers + [order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           is_new, is_from_bot):
+                                           update_type, is_from_bot):
         if order[
             trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
             async with self.producers[0].get_lock():
