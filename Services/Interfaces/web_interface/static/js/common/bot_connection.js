@@ -19,7 +19,7 @@
 function init_status_websocket(){
     const onBotReconnected = () => _reconnectedCallbacks.forEach((callback) => callback());
     const socket = get_websocket("/notifications");
-    socket.on('update', function(data) {
+    socket.on('update', (data) => {
         if(_isBotDisconnected){
             _isBotDisconnected = false;
             onBotReconnected();
@@ -27,9 +27,11 @@ function init_status_websocket(){
         unlock_ui();
         manage_alert(data);
     });
-    socket.on('disconnect', function() {
-        _isBotDisconnected = true;
-        lock_ui();
+    socket.on('disconnect', async () => {
+        if(!_isBotDisconnected && await checkDisconnected()){
+            _isBotDisconnected = true;
+            lock_ui();
+        }
     });
 }
 
@@ -113,13 +115,15 @@ function send_and_interpret_bot_update(updated_data, update_url, dom_root_elemen
     })
 }
 
-const async_send_and_interpret_bot_update = async (updated_data, update_url, dom_root_element, method="POST") => {
+const async_send_and_interpret_bot_update = async (updated_data, update_url, dom_root_element, method="POST", alertOnFailure=true) => {
     return new Promise((resolve, reject) => {
         const success = (updated_data, update_url, dom_root_element, msg, status) => {
             resolve(msg);
         }
         const failure = (updated_data, update_url, dom_root_element, msg, status) => {
-            generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status)
+            if(alertOnFailure){
+                generic_request_failure_callback(updated_data, update_url, dom_root_element, msg, status)
+            }
             reject(msg);
         }
         send_and_interpret_bot_update(updated_data, update_url, dom_root_element, success, failure, method);
@@ -132,6 +136,15 @@ let _isBotDisconnected = false;
 
 function isBotDisconnected(){
     return _isBotDisconnected;
+}
+
+async function checkDisconnected(){
+    try {
+        await async_send_and_interpret_bot_update(null, $("#resources-urls").data("ping-url"), null, "GET", false);
+        return false;
+    } catch (err) {
+        return true;
+    }
 }
 
 function register_notification_callback(callback){
