@@ -40,7 +40,7 @@ def _disabled_okx_algo_order_creation(f):
         try:
             return await f(*args, **kwargs)
         finally:
-            client.privatePostTradeOrderAlgo = connector.saved_privatePostTradeOrderAlgo
+            client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
     return wrapper
 
 
@@ -48,17 +48,18 @@ def _enabled_okx_algo_order_creation(f):
     async def wrapper(*args, **kwargs):
         # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
         connector = args[0]
-        connector.client.privatePostTradeOrderAlgo = connector.saved_privatePostTradeOrderAlgo
+        connector.client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
         return await f(*args, **kwargs)
     return wrapper
 
 
 class OkxConnector(ccxt_connector.CCXTConnector):
+    PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
 
     def _create_client(self):
         super()._create_client()
         # save client.privatePostTradeOrderAlgo ref to prevent concurrent _disabled_algo_order_creation issues
-        self.saved_privatePostTradeOrderAlgo = self.client.privatePostTradeOrderAlgo
+        self.set_saved_data(self.PRIVATE_POST_TRADE_ORDER_ALGO, self.client.privatePostTradeOrderAlgo)
 
     @_disabled_okx_algo_order_creation
     async def create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
