@@ -910,6 +910,7 @@ async def _load_markets(exchanges):
     exchange_manager_by_exchange_name = {
         trading_api.get_exchange_name(exchange_manager): exchange_manager
         for exchange_manager in exchange_managers
+        if not trading_api.get_is_backtesting(exchange_manager)
     }
     for exchange in _add_merged_exchanges(exchanges):
         if exchange not in exchange_symbol_fetch_blacklist:
