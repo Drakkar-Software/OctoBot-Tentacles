@@ -713,8 +713,8 @@ async def test_order_fill_callback_not_in_db(tools):
                                                              None,
                                                              symbol=to_fill_order.symbol,
                                                              order=to_fill_order.to_dict(),
-                                                             is_from_bot=True,
-                                                             is_new=False)
+                                                             update_type=trading_enums.OrderUpdateType.STATE_CHANGE.value,
+                                                             is_from_bot=True)
     # create as task to allow creator's queue to get processed
     for _ in range(3):
         await asyncio_tools.wait_asyncio_next_cycle()
