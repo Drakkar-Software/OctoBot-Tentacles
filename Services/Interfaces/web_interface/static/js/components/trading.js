@@ -207,7 +207,7 @@ const async_get_data_from_url = async (element) => {
     if(typeof url === "undefined"){
         return [];
     }
-    return await async_send_and_interpret_bot_update(null, url, null, "GET")
+    return await async_send_and_interpret_bot_update(null, url, null, "GET", true)
 }
 
 const reload_positions = async (update) => {

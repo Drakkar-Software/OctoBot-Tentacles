@@ -252,6 +252,7 @@
         <!-- Resources urls -->
         <span class="d-none" id="resources-urls"
               data-audio-media-url="{{ url_for('audio_media', name='', _external=True) }}"
+              data-ping-url="{{ url_for('api.ping') }}"
         ></span>
 
         {% block additional_scripts %}
