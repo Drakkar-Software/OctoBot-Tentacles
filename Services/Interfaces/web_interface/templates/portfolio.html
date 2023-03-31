@@ -41,7 +41,7 @@
 
     <br>
     {% if not has_real_trader and not has_simulated_trader %}
-        {{ m_waiter.display_loading_message() }}
+        {{ m_waiter.display_loading_message(details="If this message remains, there might be an issue with your exchange(s) configuration.") }}
     {% else %}
         <div class="card" id="portfoliosCard" reference_market="{{reference_unit}}">
             {{ display_init_warning() }}
