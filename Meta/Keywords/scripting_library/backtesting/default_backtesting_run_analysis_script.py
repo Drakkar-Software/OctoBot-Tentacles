@@ -9,40 +9,40 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 async def default_backtesting_analysis_script(ctx: script_keywords.Context):
     async with ctx.backtesting_results() as (run_data, run_display):
-        if ctx.backtesting_analysis_settings["plot_pnl_on_main_chart"]:
+        if ctx.analysis_settings["plot_pnl_on_main_chart"]:
             with run_display.part("main-chart") as part:
                 await run_data_analysis.plot_historical_portfolio_value(run_data, part)
                 await run_data_analysis.plot_historical_pnl_value(
                     run_data, part, x_as_trade_count=False,
                     own_yaxis=True,
-                    include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_main_chart"]
+                    include_unitary=ctx.analysis_settings["plot_trade_gains_on_main_chart"]
                 )
 
         with run_display.part("backtesting-run-overview") as part:
-            if ctx.backtesting_analysis_settings.get("plot_hist_portfolio_on_backtesting_chart", True):
+            if ctx.analysis_settings.get("plot_hist_portfolio_on_backtesting_chart", True):
                 await run_data_analysis.plot_historical_portfolio_value(run_data, part)
-            if ctx.backtesting_analysis_settings["plot_pnl_on_backtesting_chart"]:
+            if ctx.analysis_settings["plot_pnl_on_backtesting_chart"]:
                 await run_data_analysis.plot_historical_pnl_value(
                     run_data, part, x_as_trade_count=False,
                     own_yaxis=True,
-                    include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_backtesting_chart"]
+                    include_unitary=ctx.analysis_settings["plot_trade_gains_on_backtesting_chart"]
                 )
-            if ctx.backtesting_analysis_settings["plot_best_case_growth_on_backtesting_chart"]:
+            if ctx.analysis_settings["plot_best_case_growth_on_backtesting_chart"]:
                 await run_data_analysis.plot_best_case_growth(run_data, part, x_as_trade_count=True, own_yaxis=False)
-            if ctx.backtesting_analysis_settings["plot_funding_fees_on_backtesting_chart"]:
+            if ctx.analysis_settings["plot_funding_fees_on_backtesting_chart"]:
                 await run_data_analysis.plot_historical_funding_fees(run_data, part, own_yaxis=True)
-            if ctx.backtesting_analysis_settings["plot_wins_and_losses_count_on_backtesting_chart"]:
+            if ctx.analysis_settings["plot_wins_and_losses_count_on_backtesting_chart"]:
                 await run_data_analysis.plot_historical_wins_and_losses(run_data, part, own_yaxis=True,
                                                                         x_as_trade_count=False)
-            if ctx.backtesting_analysis_settings["plot_win_rate_on_backtesting_chart"]:
+            if ctx.analysis_settings["plot_win_rate_on_backtesting_chart"]:
                 await run_data_analysis.plot_historical_win_rates(run_data, part, own_yaxis=True,
                                                                   x_as_trade_count=False)
             # await plot_withdrawals(run_data, part)
-        if ctx.backtesting_analysis_settings["display_backtest_details"]:
+        if ctx.analysis_settings["display_backtest_details"]:
             with run_display.part("backtesting-details", "value") as part:
-                backtesting_report = await get_backtesting_report_template(run_data, ctx.backtesting_analysis_settings)
+                backtesting_report = await get_backtesting_report_template(run_data, ctx.analysis_settings)
                 await run_data_analysis.display_html(part, backtesting_report)
-        if ctx.backtesting_analysis_settings["display_trades_and_positions"]:
+        if ctx.analysis_settings["display_trades_and_positions"]:
             with run_display.part("list-of-trades-part", "table") as part:
                 await run_data_analysis.plot_trades(run_data, part)
                 await run_data_analysis.plot_positions(run_data, part)
@@ -50,7 +50,7 @@ async def default_backtesting_analysis_script(ctx: script_keywords.Context):
     return run_display
 
 
-async def get_backtesting_report_template(run_data, backtesting_analysis_settings):
+async def get_backtesting_report_template(run_data, analysis_settings):
     metadata = await run_data.get_backtesting_metadata_from_run()
     optimizer_id_display = get_column_display(commons_enums.BacktestingMetadata.OPTIMIZER_ID.value,
                                               commons_enums.BacktestingMetadata.OPTIMIZER_ID.value) \
@@ -58,7 +58,7 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
     paid_fees_display = get_column_display(services_constants.PAID_FEES_STR,
                                            metadata["paid_fees"]) if "paid_fees" in metadata.keys() else ""
     performance_summary = ""
-    if backtesting_analysis_settings.get("display_backtest_details_general", True):
+    if analysis_settings.get("display_backtest_details_general", True):
         performance_summary \
             = get_section_display("General",
                                   get_column_display(commons_enums.BacktestingMetadata.NAME.value,
@@ -73,7 +73,7 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
                                                        metadata[commons_enums.DBRows.EXCHANGES.value])
                                   + get_column_display(commons_enums.BacktestingMetadata.BACKTESTING_FILES.value,
                                                        metadata[commons_enums.BacktestingMetadata.BACKTESTING_FILES.value]))
-    if backtesting_analysis_settings.get("display_backtest_details_performances", True):
+    if analysis_settings.get("display_backtest_details_performances", True):
         performance_summary \
             += get_section_display("Performance",
                                    get_column_display(commons_enums.BacktestingMetadata.START_PORTFOLIO.value,
@@ -108,7 +108,7 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
                                    paid_fees_display
                                    )
 
-    if backtesting_analysis_settings.get("display_backtest_details_details", True):
+    if analysis_settings.get("display_backtest_details_details", True):
         performance_summary \
             += get_section_display("Details",
                                    get_column_display(commons_enums.BacktestingMetadata.TIME_FRAMES.value,
@@ -132,7 +132,7 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
                                                           metadata[commons_enums.BacktestingMetadata.TIMESTAMP.value]))
                                    )
 
-    if backtesting_analysis_settings.get("display_backtest_details_strategy_settings", True):
+    if analysis_settings.get("display_backtest_details_strategy_settings", True):
         performance_summary \
             += get_section_display("Strategy Settings",
                                    get_user_inputs_display(metadata)
