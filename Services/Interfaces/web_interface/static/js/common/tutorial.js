@@ -253,7 +253,7 @@ function registerTutorial(tutorialName, callback){
     _TUTORIALS[tutorialName] = callback
 }
 
-function displayLocalTutorial(tutorialName){
+function displayLocalTutorial(tutorialName, afterExitCallback){
     if(typeof _TUTORIALS[tutorialName] === "undefined"){
         console.error(`Tutorial not found ${tutorialName}`)
         return;
@@ -263,14 +263,18 @@ function displayLocalTutorial(tutorialName){
         showProgress: true,
         showBullets: false,
     }
-    introJs().setOptions(defaultOptions).setOptions(_TUTORIALS[tutorialName]()).start();
+    const intro = introJs().setOptions(defaultOptions).setOptions(_TUTORIALS[tutorialName]());
+    if(afterExitCallback !== null){
+        intro.onexit(afterExitCallback);
+    }
+    intro.start();
 }
 
-function startTutorialIfNecessary(tutorialName) {
+function startTutorialIfNecessary(tutorialName, afterExitCallback=null) {
     if($(`span[data-display-intro="True"]`).length === 0){
         return false;
     }
-    displayLocalTutorial(tutorialName);
+    displayLocalTutorial(tutorialName, afterExitCallback);
     return true;
 }
 
@@ -278,7 +282,7 @@ function startTutorialIfNecessary(tutorialName) {
 $(document).ready(function () {
    $(`a[data-intro]`).each((_, element) => {
        $(element).on("click", (event) => {
-           displayLocalTutorial($(event.currentTarget).data("intro"))
+           displayLocalTutorial($(event.currentTarget).data("intro"), null)
        })
    })
 });
