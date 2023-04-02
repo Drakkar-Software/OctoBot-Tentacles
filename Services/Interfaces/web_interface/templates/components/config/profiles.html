@@ -29,6 +29,14 @@ get_filtered_list, read_only=False) %}
                    class="{{'editable profile-description-editor' if not profile.read_only}}">{{ profile.description }}</span>
             </span>
         </p>
+        <div class="d-flex justify-content-around">
+            <div>
+                {{ profile_complexity(profile, read_only or profile.read_only) }}
+            </div>
+            <div>
+                {{ profile_risk(profile, read_only or profile.read_only) }}
+            </div>
+        </div>
     </div>
     <div>
         {% if not (read_only or profile.read_only) %}
@@ -168,7 +176,56 @@ get_filtered_list, read_only=False) %}
         </div>
     </div>
 </div>
+{% endmacro %}
 
+{% macro profile_complexity(profile, read_only) %}
+<div class="{{'d-flex' if not read_only}}">
+    <label class="my-auto" for="{{profile.profile_id}}profile-complexity">
+      Complexity:
+    </label>
+    {% if read_only %}
+    <span class="badge text-light bg-rating-{{profile.complexity.value}}">
+        {{profile.complexity.name | capitalize}}
+    </span>
+    {% else %}
+    <select id="{{profile.profile_id}}-profile-complexity" class="form-control profile-complexity-selector">
+        <option value="1" {{'selected' if profile.complexity.value == 1}}>
+            Easy
+        </option>
+        <option value="2" {{'selected' if profile.complexity.value == 2}}>
+            Medium
+        </option>
+        <option value="3" {{'selected' if profile.complexity.value == 3}}>
+            Difficult
+        </option>
+    </select>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro profile_risk(profile, read_only) %}
+<div class="{{'d-flex' if not read_only}}">
+    <label class="my-auto" for="{{profile.profile_id}}profile-risk">
+      Risk:
+    </label>
+    {% if read_only %}
+    <span class="badge text-light bg-rating-{{profile.risk.value}}">
+        {{profile.risk.name | capitalize}}
+    </span>
+    {% else %}
+    <select id="{{profile.profile_id}}-profile-risk" class="form-control profile-risk-selector">
+        <option value="1" {{'selected' if profile.risk.value == 1}}>
+            Low
+        </option>
+        <option value="2" {{'selected' if profile.risk.value == 2}}>
+            Moderate
+        </option>
+        <option value="3" {{'selected' if profile.risk.value == 3}}>
+            High
+        </option>
+    </select>
+    {% endif %}
+</div>
 {% endmacro %}
 
 {% macro profile_tab(current_profile, profile, tentacles_details, strategy_config, evaluator_config, get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader, get_filtered_list, OCTOBOT_DOCS_URL) %}

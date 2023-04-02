@@ -232,7 +232,7 @@ class WebHookService(services.AbstractService):
             self.logger.exception(e, True, f"Error when running webhook service: ({e})")
         self.connected = False
 
-    def _start_isolated_server(self):
+    async def _start_isolated_server(self):
         if self.webhook_app is None:
             self.webhook_app = flask.Flask(__name__)
             # gevent WSGI server has to be created in the thread it is started: create everything in this thread
@@ -245,7 +245,7 @@ class WebHookService(services.AbstractService):
                 timeout = time.time() - start_time > self.CONNECTION_TIMEOUT
             if timeout:
                 self.logger.error("Webhook took too long to start, now stopping it.")
-                self.stop()
+                await self.stop()
                 self.connected = False
             return self.connected is True
         return True
@@ -269,7 +269,7 @@ class WebHookService(services.AbstractService):
     async def start_webhooks(self) -> bool:
         if self.use_web_interface_for_webhook:
             return await self._register_on_web_interface()
-        return self._start_isolated_server()
+        return await self._start_isolated_server()
 
     def _is_healthy(self):
         return self.use_web_interface_for_webhook or self.webhook_host is not None and self.webhook_port is not None

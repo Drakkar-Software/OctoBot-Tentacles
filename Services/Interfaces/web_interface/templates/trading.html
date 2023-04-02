@@ -37,7 +37,7 @@
 <br>
 
 {% if not (pairs_with_status or has_real_trader) %}
-    {{ m_waiter.display_loading_message() }}
+    {{ m_waiter.display_loading_message(details="If this message remains, there might be an issue with your exchange(s) configuration.") }}
 {% else %}
     {% for exchange, load in exchanges_load.items() %}
         {{ exchange_overload_warning(exchange, load) }}
@@ -156,7 +156,7 @@
                                     Are coming from a trading mode that is supporting PNL history such as Grid Trading or the Dip Analyser.
                                 </li>
                                 <li>
-                                    Are from a trading pair including your reference market ({{ reference_market }}.
+                                    Are from a trading pair including your reference market ({{ reference_market }}).
                                 </li>
                             </ul>
                             Please check trading modes description to find out if PNL history is supported.

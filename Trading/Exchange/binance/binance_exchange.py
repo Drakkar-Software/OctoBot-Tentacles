@@ -13,10 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import decimal
-
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 
 
 class Binance(exchanges.RestExchange):
@@ -37,6 +36,13 @@ class Binance(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return BinanceCCXTAdapter
+
+    def get_additional_connector_config(self):
+        return {
+            ccxt_constants.CCXT_OPTIONS: {
+                "quoteOrderQty": False  # disable quote conversion
+            }
+        }
 
     async def get_balance(self, **kwargs):
         return await exchanges.RestExchange.get_balance(self, **self._get_params(kwargs))

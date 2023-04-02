@@ -88,10 +88,10 @@ class TelegramService(services.AbstractService):
                     services_constants.CONFIG_TOKEN]
                 )\
                 .request(telegram.request.HTTPXRequest(
-                    http_version="1.1", connect_timeout=self.CONNECT_TIMEOUT
+                    connect_timeout=self.CONNECT_TIMEOUT
                 ))\
                 .get_updates_request(telegram.request.HTTPXRequest(
-                    http_version="1.1", connect_timeout=self.CONNECT_TIMEOUT
+                    connect_timeout=self.CONNECT_TIMEOUT
                 ))\
                 .build()
             try:

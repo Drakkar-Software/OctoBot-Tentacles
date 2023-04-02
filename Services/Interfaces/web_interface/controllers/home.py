@@ -16,11 +16,13 @@
 
 import flask
 
+import octobot_commons.authentication as authentication
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+import octobot.constants as constants
 
 
 @web_interface.server_instance.route("/")
@@ -34,6 +36,14 @@ def home():
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
             flask_util.BrowsingDataProvider.HOME
         )
+        form_to_display = constants.WELCOME_FEEDBACK_FORM_ID
+        try:
+            user_id = models.get_user_account_id()
+            display_feedback_form = form_to_display and not models.has_filled_form(form_to_display)
+        except authentication.AuthenticationRequired:
+            # no authenticated user: don't display form
+            user_id = None
+            display_feedback_form = False
         return flask.render_template(
             'index.html',
             watched_symbols=models.get_watched_symbols(),
@@ -41,6 +51,9 @@ def home():
             display_intro=display_intro,
             selected_profile=models.get_current_profile().name,
             reference_unit=interfaces_util.get_reference_market(),
+            user_id=user_id,
+            form_to_display=form_to_display,
+            display_feedback_form=display_feedback_form,
         )
     else:
         return flask.redirect(flask.url_for("terms"))

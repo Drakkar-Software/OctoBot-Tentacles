@@ -1,0 +1,48 @@
+{
+    "config": {
+        "crypto-currencies": {
+            "Bitcoin": {
+                "enabled": true,
+                "pairs": [
+                    "BTC/USDT"
+                ]
+            }
+        },
+        "exchanges": {
+            "binance": {
+                "enabled": true,
+                "exchange-type": "spot"
+            }
+        },
+        "trader": {
+            "enabled": false,
+            "load-trade-history": true
+        },
+        "trader-simulator": {
+            "enabled": true,
+            "fees": {
+                "maker": 0.1,
+                "taker": 0.1
+            },
+            "starting-portfolio": {
+                "BTC": 10,
+                "USDT": 1000
+            }
+        },
+        "trading": {
+            "reference-market": "USDT",
+            "risk": 1
+        }
+    },
+    "profile": {
+        "avatar": "ChatGPT_logo.svg",
+        "complexity": 2,
+        "description": "GPT DailyTrading uses ChatGPT to predict the market. It can be used to send alerts according to ChatGPT's predictions and trade directly based on the profile's DailyTradingMode configuration.\nConfigure the GPTEvaluator to customize the way market data are sent to ChatGPT.",
+        "id": "gpt_trading",
+        "imported": false,
+        "name": "GPT Trading",
+        "origin_url": null,
+        "read_only": true,
+        "risk": 3
+    }
+}

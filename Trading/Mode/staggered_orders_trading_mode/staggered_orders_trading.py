@@ -113,8 +113,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_REINVEST_PROFITS = "reinvest_profits"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
-    CONFIG_DEFAULT_SPREAD_PERCENT = 4
-    CONFIG_DEFAULT_INCREMENT_PERCENT = 1
+    CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
+    CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -224,7 +224,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         return consumers + [order_consumer]
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           is_new, is_from_bot):
+                                           update_type, is_from_bot):
         if order[
             trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
             async with self.producers[0].get_lock():

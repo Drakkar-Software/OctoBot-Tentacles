@@ -16,6 +16,9 @@
 import octobot_tentacles_manager.constants as tentacles_manager_constants
 import octobot_commons.constants as commons_constants
 
+ALLOWED_IMAGE_FORMATS = ["png", "jpg", "jpeg", "gif", "svg"]
+ALLOWED_SOUNDS_FORMATS = ["mp3"]
+
 
 def _is_valid_path(path, header):
     return path.startswith(header) and ".." not in path
@@ -23,15 +26,14 @@ def _is_valid_path(path, header):
 
 def is_valid_tentacle_image_path(path):
     path_ending = path.split(".")[-1].lower()
-    return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path,
-                                                                           tentacles_manager_constants.TENTACLES_PATH)
+    return path_ending in ALLOWED_IMAGE_FORMATS and _is_valid_path(path, tentacles_manager_constants.TENTACLES_PATH)
 
 
 def is_valid_profile_image_path(path):
     path_ending = path.split(".")[-1].lower()
-    return path_ending in ["png", "jpg", "jpeg", "gif"] and _is_valid_path(path, commons_constants.USER_PROFILES_FOLDER)
+    return path_ending in ALLOWED_IMAGE_FORMATS and _is_valid_path(path, commons_constants.USER_PROFILES_FOLDER)
 
 
 def is_valid_audio_path(path):
     path_ending = path.split(".")[-1].lower()
-    return path_ending in ["mp3"] and _is_valid_path(path, "")
+    return path_ending in ALLOWED_SOUNDS_FORMATS and _is_valid_path(path, "")

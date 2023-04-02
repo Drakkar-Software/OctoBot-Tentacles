@@ -24,7 +24,7 @@ function get_websocket(namespace){
         namespace,
         {
             reconnectionDelay: 2000, // Prevent unexpected disconnection on slow loading pages (ex: first config load)
-            transports: ["websocket", "polling"], // use WebSocket first, if available
+            transports: ["polling", "websocket"], // update polling to ws when possible
         });
 }
 

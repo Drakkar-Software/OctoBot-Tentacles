@@ -41,6 +41,8 @@
     },
     "profile": {
         "avatar": "default_profile.png",
+        "risk": 1,
+        "complexity": 3,
         "description": "ArbitrageTrading is watching prices of the configured trading pairs across the available exchanges to find arbitrage opportunities.",
         "id": "arbitrage_trading",
         "name": "Arbitrage Trading",

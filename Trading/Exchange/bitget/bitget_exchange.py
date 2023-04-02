@@ -18,6 +18,7 @@ import typing
 import time
 
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 
@@ -33,6 +34,15 @@ class Bitget(exchanges.RestExchange):
     def get_adapter_class(self):
         return BitgetCCXTAdapter
 
+    def get_additional_connector_config(self):
+        # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
+        # (price should not be sent to market orders). Only used for buy market orders
+        return {
+            ccxt_constants.CCXT_OPTIONS: {
+                "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
+            }
+        }
+
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
@@ -43,9 +53,6 @@ class Bitget(exchanges.RestExchange):
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
-        # (price should not be sent to market orders). Only used for buy market orders
-        self.connector.add_options({"createMarketBuyOrderRequiresPrice": False})
         if order_type is trading_enums.TraderOrderType.BUY_MARKET:
             # on Bitget, market orders are in quote currency (YYY in XYZ/YYY)
             used_price = price or current_price

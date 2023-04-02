@@ -92,7 +92,7 @@
             <div class="card-header" id="all-watched-markets"><h2>Watched markets</h2></div>
             <div class="card-body d-none text-center" id="loadingMarketsDiv">
                 <h2>
-                    OctoBot is starting, markets will be refreshed when available.
+                    OctoBot is starting, markets will be refreshed when exchanges will be reachable.
                 </h2>
             </div>
             <div class="card-body text-center" name="loadingSpinner">
@@ -123,6 +123,12 @@
     <span class="d-none"
           data-display-intro="{{display_intro}}"
           data-selected-profile="{{selected_profile}}"
+    ></span>
+    <span class="d-none" id="feedback-form-data"
+          data-display-form="{{display_feedback_form}}"
+          data-user-id="{{user_id}}"
+          data-form-to-display="{{form_to_display}}"
+          data-on-submit-url="{{url_for('api.register_submitted_form')}}"
     ></span>
 {% endblock %}
 

@@ -503,6 +503,18 @@ a:hover.badge {
     z-index: 2;
 }
 
+.bg-rating-1 {
+    background-color: rgba(238, 93, 80, 0.6);
+}
+
+.bg-rating-2 {
+    background-color: rgba(255, 181, 71, 0.6);
+}
+
+.bg-rating-3 {
+    background-color: rgba(1, 181, 116, 0.6);
+}
+
 /* tables */
 table tbody tr,
 table.dataTable,

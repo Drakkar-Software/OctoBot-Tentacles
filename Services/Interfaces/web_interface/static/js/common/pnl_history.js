@@ -181,5 +181,5 @@ const fetchPnlHistory = async (scale) => {
     if(typeof url === "undefined"){
         return [];
     }
-    return await async_send_and_interpret_bot_update(null, `${url}${scale}`, null, "GET")
+    return await async_send_and_interpret_bot_update(null, `${url}${scale}`, null, "GET", true)
 }

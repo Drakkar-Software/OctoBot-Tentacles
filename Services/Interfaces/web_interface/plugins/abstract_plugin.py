@@ -16,10 +16,15 @@
 import flask
 import os
 
+import octobot_commons.enums as commons_enums
 import octobot_commons.logging as logging
+import octobot_commons.tentacles_management as tentacles_management
+import octobot_tentacles_manager.api
+import octobot_services.interfaces.util as interfaces_util
 
 
-class AbstractWebInterfacePlugin:
+class AbstractWebInterfacePlugin(tentacles_management.AbstractTentacle):
+    USER_INPUT_TENTACLE_TYPE = commons_enums.UserInputTentacleTypes.WEB_PLUGIN
     NAME = None
     URL_PREFIX = None
     PLUGIN_ROOT_FOLDER = None
@@ -28,6 +33,7 @@ class AbstractWebInterfacePlugin:
     ADDITIONAL_KWARGS = {}
 
     def __init__(self, name, url_prefix, plugin_folder, template_folder, static_folder, **kwargs):
+        super().__init__()
         self.name = name
         self.url_prefix = url_prefix
         self.template_folder = os.path.join(plugin_folder, template_folder) if plugin_folder else None
@@ -50,6 +56,19 @@ class AbstractWebInterfacePlugin:
         :return:
         """
         return []
+
+    @classmethod
+    def init_user_inputs_from_class(cls, inputs: dict) -> None:
+        """
+        Override if user inputs are required for this plugin
+        """
+
+    @classmethod
+    def is_configurable(cls):
+        """
+        Override if the tentacle is allowed to be configured
+        """
+        return False
 
     def blueprint_factory(self):
         self.blueprint = flask.Blueprint(
@@ -80,6 +99,12 @@ class AbstractWebInterfacePlugin:
         self.register_routes()
         server_instance.register_blueprint(self.blueprint)
         self.logger.debug(f"Registered {self.name} plugin")
+
+    @classmethod
+    def get_tentacle_config(cls, tentacles_setup_config=None):
+        return octobot_tentacles_manager.api.get_tentacle_config(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config(), cls
+        )
 
     def __str__(self):
         return f"name: {self.name} url_prefix: {self.url_prefix} " \

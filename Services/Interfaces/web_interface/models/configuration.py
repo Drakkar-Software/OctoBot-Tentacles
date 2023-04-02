@@ -29,6 +29,7 @@ import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
 import octobot_services.interfaces.util as interfaces_util
+import octobot_tentacles_manager.api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.constants as tentacles_manager_constants
 import octobot_trading.api as trading_api
@@ -56,6 +57,7 @@ import octobot.enums as octobot_enums
 import octobot.databases_util as octobot_databases_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface.plugins as web_plugins
 
 NAME_KEY = "name"
 SHORT_NAME_KEY = "n"
@@ -71,6 +73,7 @@ TRADING_MODES_KEY = "trading-modes"
 STRATEGIES_KEY = "strategies"
 TRADING_MODE_KEY = "trading mode"
 EXCHANGE_KEY = "exchange"
+WEB_PLUGIN_KEY = "web plugin"
 STRATEGY_KEY = "strategy"
 TA_EVALUATOR_KEY = "technical evaluator"
 SOCIAL_EVALUATOR_KEY = "social evaluator"
@@ -89,10 +92,16 @@ DISPLAYED_ELEMENTS_KEY = "displayed_elements"
 ASSET = "asset"
 VALUE = "value"
 
-# tentacles from which configuration is not handled in strategies / evaluators configuration
-NON_TRADING_STRATEGY_RELATED_TENTACLES = [tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
-                                          tentacles_manager_constants.TENTACLES_SERVICES_PATH,
-                                          tentacles_manager_constants.TENTACLES_TRADING_PATH]
+# tentacles from which configuration is not handled in strategies / evaluators configuration and that can be groupped
+GROUPPABLE_NON_TRADING_STRATEGY_RELATED_TENTACLES = [
+    tentacles_manager_constants.TENTACLES_BACKTESTING_PATH,
+    tentacles_manager_constants.TENTACLES_SERVICES_PATH,
+    tentacles_manager_constants.TENTACLES_TRADING_PATH
+]
+# tentacles for which configuration can be done in the tentacles tab of profile config
+EXTRA_CONFIGURABLE_TENTACLES_TYPES = [
+    tentacles_manager_constants.TENTACLES_INTERFACES_PATH
+]
 _TENTACLE_CONFIG_CACHE = {}
 
 DEFAULT_EXCHANGE = "binance"
@@ -168,6 +177,14 @@ def _get_trading_tentacles_activation():
     try:
         return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
             tentacles_manager_constants.TENTACLES_TRADING_PATH]
+    except KeyError:
+        return {}
+
+
+def _get_services_tentacles_activation():
+    try:
+        return tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())[
+            tentacles_manager_constants.TENTACLES_SERVICES_PATH]
     except KeyError:
         return {}
 
@@ -279,10 +296,18 @@ def _get_tentacle_packages():
     yield scripted, evaluators.ScriptedEvaluator, SCRIPTED_EVALUATOR_KEY
     import tentacles.Trading.Exchange as exchanges
     yield exchanges, trading_exchanges.AbstractExchange, EXCHANGE_KEY
+    import tentacles.Services.Interfaces as interfaces
+    yield interfaces, web_plugins.AbstractWebInterfacePlugin, WEB_PLUGIN_KEY
 
 
 def _get_activation_state(name, activation_states):
     return name in activation_states and activation_states[name]
+
+
+def is_trading_strategy_configuration(tentacle_type):
+    return tentacle_type in (
+        SCRIPTED_EVALUATOR_KEY, RT_EVALUATOR_KEY, SOCIAL_EVALUATOR_KEY, TA_EVALUATOR_KEY, STRATEGY_KEY, TRADING_MODE_KEY
+    )
 
 
 def get_tentacle_from_string(name, media_url, with_info=True):
@@ -290,7 +315,7 @@ def get_tentacle_from_string(name, media_url, with_info=True):
         parent_inspector = tentacles_management.evaluator_parent_inspection
         if tentacle_type == TRADING_MODE_KEY:
             parent_inspector = tentacles_management.trading_mode_parent_inspection
-        if tentacle_type == EXCHANGE_KEY:
+        if tentacle_type in (EXCHANGE_KEY, WEB_PLUGIN_KEY):
             parent_inspector = tentacles_management.default_parents_inspection
         klass = tentacles_management.get_class_from_string(name, abstract_class, package, parent_inspector)
         if klass:
@@ -304,6 +329,8 @@ def get_tentacle_from_string(name, media_url, with_info=True):
                     activation_states = _get_trading_tentacles_activation()
                 elif tentacle_type == EXCHANGE_KEY:
                     activation_states = _get_trading_tentacles_activation()
+                elif tentacle_type == WEB_PLUGIN_KEY:
+                    activation_states = _get_services_tentacles_activation()
                 else:
                     activation_states = _get_evaluators_tentacles_activation()
                     if tentacle_type == STRATEGY_KEY:
@@ -395,11 +422,11 @@ def get_tentacle_config_schema(klass):
 
 def _get_tentacle_activation_desc(name, activated, startup_val, media_url, missing_tentacles: set):
     return {
-               constants.TENTACLE_CLASS_NAME: name,
-               constants.ACTIVATION_KEY: activated,
-               DESCRIPTION_KEY: get_tentacle_documentation(name, media_url, missing_tentacles),
-               constants.STARTUP_CONFIG_KEY: startup_val
-           }, tentacles_manager_api.get_tentacle_group(name)
+        constants.TENTACLE_CLASS_NAME: name,
+        constants.ACTIVATION_KEY: activated,
+        DESCRIPTION_KEY: get_tentacle_documentation(name, media_url, missing_tentacles),
+        constants.STARTUP_CONFIG_KEY: startup_val
+    }
 
 
 def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation, startup_tentacles_activation,
@@ -407,8 +434,9 @@ def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_acti
     for tentacle_class_name, activated in tentacles_activation.get(root_element, {}).items():
         startup_val = startup_tentacles_activation[root_element][tentacle_class_name]
         try:
-            tentacle, group = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
-                                                            missing_tentacles)
+            tentacle = _get_tentacle_activation_desc(tentacle_class_name, activated, startup_val, media_url,
+                                                     missing_tentacles)
+            group = tentacles_manager_api.get_tentacle_group(tentacle_class_name)
             if group in activation_by_group:
                 activation_by_group[group].append(tentacle)
             else:
@@ -417,12 +445,34 @@ def _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_acti
             # can happen when tentacles metadata.json are invalid
             pass
 
+
+def get_extra_tentacles_config_desc(media_url, missing_tentacles: set):
+    tentacles_descriptions = []
+    all_tentacles = {
+        tentacle_class.__name__: tentacle_class
+        for tentacle_class in tentacles_management.AbstractTentacle.get_all_subclasses()
+    }
+    for tentacle_type in EXTRA_CONFIGURABLE_TENTACLES_TYPES:
+        for tentacle_class_name in tentacles_manager_api.get_tentacles_classes_names_for_type(tentacle_type):
+            if tentacle_class_name in all_tentacles and all_tentacles[tentacle_class_name].is_configurable():
+                try:
+                    tentacles_descriptions.append(
+                        _get_tentacle_activation_desc(
+                            tentacle_class_name, True, True, media_url, missing_tentacles
+                        )
+                    )
+                except AttributeError:
+                    # can happen when tentacles metadata.json are invalid
+                    pass
+    return tentacles_descriptions
+
+
 def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
     tentacles_activation = tentacles_manager_api.get_tentacles_activation(interfaces_util.get_edited_tentacles_config())
     startup_tentacles_activation = tentacles_manager_api.get_tentacles_activation(
         interfaces_util.get_startup_tentacles_config())
     activation_by_group = {}
-    for root_element in NON_TRADING_STRATEGY_RELATED_TENTACLES:
+    for root_element in GROUPPABLE_NON_TRADING_STRATEGY_RELATED_TENTACLES:
         try:
             _add_tentacles_activation_desc_for_group(activation_by_group, tentacles_activation,
                                                      startup_tentacles_activation, root_element, media_url,
@@ -860,6 +910,7 @@ async def _load_markets(exchanges):
     exchange_manager_by_exchange_name = {
         trading_api.get_exchange_name(exchange_manager): exchange_manager
         for exchange_manager in exchange_managers
+        if not trading_api.get_is_backtesting(exchange_manager)
     }
     for exchange in _add_merged_exchanges(exchanges):
         if exchange not in exchange_symbol_fetch_blacklist:
