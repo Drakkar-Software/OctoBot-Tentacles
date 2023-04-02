@@ -124,6 +124,12 @@
           data-display-intro="{{display_intro}}"
           data-selected-profile="{{selected_profile}}"
     ></span>
+    <span class="d-none" id="feedback-form-data"
+          data-display-form="{{display_feedback_form}}"
+          data-user-id="{{user_id}}"
+          data-form-to-display="{{form_to_display}}"
+          data-on-submit-url="{{url_for('api.register_submitted_form')}}"
+    ></span>
 {% endblock %}
 
 {% block additional_scripts %}

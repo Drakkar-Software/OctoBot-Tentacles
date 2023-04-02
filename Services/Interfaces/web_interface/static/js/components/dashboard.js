@@ -187,6 +187,17 @@ $(document).ready(function () {
         handle_profitability(socket);
     }
 
+    const displayFeedbackFormIfNecessary = () => {
+        const feedbackFormData = $("#feedback-form-data");
+        if(feedbackFormData.data("display-form") === "True") {
+            displayFeedbackForm(
+                feedbackFormData.data("form-to-display"),
+                feedbackFormData.data("user-id"),
+                feedbackFormData.data("on-submit-url"),
+            );
+        }
+    };
+
     let update_details = [];
     let waiting_profitability_update = false;
 
@@ -195,5 +206,7 @@ $(document).ready(function () {
     get_version_upgrade();
     init_dashboard_websocket();
     init_graphs();
-    startTutorialIfNecessary("home");
+    if(!startTutorialIfNecessary("home", displayFeedbackFormIfNecessary)){
+        displayFeedbackFormIfNecessary()
+    }
 });

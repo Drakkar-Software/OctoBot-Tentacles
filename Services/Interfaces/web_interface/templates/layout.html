@@ -95,7 +95,7 @@
             })(window, document, "clarity", "script", "{{ TRACKING_ID }}");
         </script>
         {% endif %}
-        <script async src="https://tally.so/widgets/embed.js"></script>
+        <script src="https://tally.so/widgets/embed.js"></script>
         <script src="{{ url_for('static', filename='js/components/navbar.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 
         {% set show_nab_bar = show_nab_bar|default(True) -%}
