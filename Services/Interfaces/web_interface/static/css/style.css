@@ -504,7 +504,7 @@ a:hover.badge {
 }
 
 .bg-rating-1 {
-    background-color: rgba(238, 93, 80, 0.6);
+    background-color: rgba(1, 181, 116, 0.6);
 }
 
 .bg-rating-2 {
@@ -512,7 +512,7 @@ a:hover.badge {
 }
 
 .bg-rating-3 {
-    background-color: rgba(1, 181, 116, 0.6);
+    background-color: rgba(238, 93, 80, 0.6);
 }
 
 /* tables */
