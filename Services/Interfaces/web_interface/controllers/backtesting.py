@@ -19,6 +19,7 @@ import werkzeug
 
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.constants as commons_constants
+import octobot_backtesting.constants as backtesting_constants
 
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -59,13 +60,21 @@ def backtesting():
                 data = flask.request.get_json()
                 source = flask.request.args["source"]
                 auto_stop = flask.request.args.get("auto_stop", False)
-                exchange_id = data.get("exchange_id", None)
+                data_sources = data.get("data_sources", None)
+                if data_sources:
+                    if backtesting_constants.CONFIG_CURRENT_BOT_DATA in data_sources:
+                        data_sources = [backtesting_constants.CONFIG_CURRENT_BOT_DATA]
+                else:
+                   data_sources = [data.get("data_source", backtesting_constants.CONFIG_CURRENT_BOT_DATA) ]
+                exchange_ids = data.get("exchange_ids", None)
+                if not exchange_ids:
+                    exchange_ids = [data.get("exchange_id", None)]
                 trading_type = data.get("exchange_type", None)
                 portfolio = data.get("portfolio", None)
                 reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
                 success, reply = models.start_backtesting_using_current_bot_data(
-                    data.get("data_source", models.CURRENT_BOT_DATA),
-                    exchange_id,
+                    data_sources,
+                    exchange_ids,
                     source,
                     reset_tentacle_config,
                     start_timestamp=data.get("start_timestamp", None),
