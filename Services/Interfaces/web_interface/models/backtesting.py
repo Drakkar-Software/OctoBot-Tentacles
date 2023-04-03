@@ -32,7 +32,6 @@ import octobot_backtesting.api as backtesting_api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_backtesting.constants as backtesting_constants
 import octobot_backtesting.enums as backtesting_enums
-import octobot_backtesting.collectors as collectors
 import octobot_services.interfaces.util as interfaces_util
 import octobot_services.enums as services_enums
 import octobot_trading.constants as trading_constants
@@ -40,11 +39,11 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
+import tentacles.Services.Interfaces.web_interface.enums as web_interface_enums
 import tentacles.Services.Interfaces.web_interface.models.trading as trading_model
 
 
 STOPPING_TIMEOUT = 30
-CURRENT_BOT_DATA = "current_bot_data"
 # data collector can be really slow, let it up to 2 hours to run
 DATA_COLLECTOR_TIMEOUT = 2 * commons_constants.HOURS_TO_SECONDS
 
@@ -101,19 +100,19 @@ def start_backtesting_using_specific_files(files, source, reset_tentacle_config=
                               start_callback=start_callback)
 
 
-def start_backtesting_using_current_bot_data(data_source, exchange_id, source, reset_tentacle_config=False,
+def start_backtesting_using_current_bot_data(data_sources, exchange_ids, source, reset_tentacle_config=False,
                                              start_timestamp=None, end_timestamp=None, trading_type=None,
                                              portfolio=None,
                                              enable_logs=False, auto_stop=False,
                                              collector_start_callback=None, start_callback=None):
-    use_current_bot_data = data_source == CURRENT_BOT_DATA
-    files = None if use_current_bot_data else [data_source]
+    use_current_bot_data = data_sources == [backtesting_constants.CONFIG_CURRENT_BOT_DATA]
+    files = None if use_current_bot_data else data_sources
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=False,
                               start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
                               portfolio=portfolio,
                               use_current_bot_data=use_current_bot_data,
-                              exchange_id=exchange_id, enable_logs=enable_logs,
+                              exchange_ids=exchange_ids, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
                               start_callback=start_callback)
 
@@ -150,11 +149,12 @@ def _parse_trading_type(trading_type):
 def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
                        start_timestamp=None, end_timestamp=None, trading_type=None, portfolio=None,
                        use_current_bot_data=False,
-                       exchange_id=None, enable_logs=False, auto_stop=False,
+                       exchange_ids=[None], enable_logs=False, auto_stop=False,
                        collector_start_callback=None, start_callback=None):
     tools = web_interface_root.WebInterface.tools
-    if exchange_id is not None:
-        trading_model.ensure_valid_exchange_id(exchange_id)
+    if exchange_ids != [None]:
+        for exchange_id in exchange_ids:
+            trading_model.ensure_valid_exchange_id(exchange_id)
     try:
         previous_independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         optimizer = tools[constants.BOT_TOOLS_STRATEGY_OPTIMIZER]
@@ -164,10 +164,11 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                                )
         if is_optimizer_running and not isinstance(optimizer, octobot.strategy_optimizer.StrategyDesignOptimizer):
             return False, "An optimizer is already running"
-        if use_current_bot_data and \
-                isinstance(tools[constants.BOT_TOOLS_DATA_COLLECTOR], collectors.AbstractExchangeBotSnapshotCollector):
-            # can't start a new backtest with use_current_bot_data when a snapshot collector is on
-            return False, "An data collector is already running"
+        if use_current_bot_data:
+            status, _ = get_data_collector_status()
+            if status != web_interface_enums.DataCollectorsStatus.NOT_STARTED.value:
+                # can't start a new backtest with use_current_bot_data when a snapshot collector is on
+                return False, "An data collector is already running"
         if tools[constants.BOT_PREPARING_BACKTESTING]:
             return False, "An backtesting is already running"
         if previous_independent_backtesting and \
@@ -189,10 +190,14 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
             config[commons_constants.CONFIG_CONTRACT_TYPE] = contract_type
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             if is_optimizer_running and files is None:
-                files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False)]
+                files = []
+                for exchange_id in exchange_ids:
+                    files.append(get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=False))
             if not is_optimizer_running and use_current_bot_data:
-                tools[constants.BOT_TOOLS_DATA_COLLECTOR] = \
-                    create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+                tools[constants.BOT_TOOLS_DATA_COLLECTOR] = []
+                for exchange_id in exchange_ids:
+                    tools[constants.BOT_TOOLS_DATA_COLLECTOR].append(
+                        create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp))
                 tools[constants.BOT_TOOLS_BACKTESTING] = None
             else:
                 tools[constants.BOT_TOOLS_BACKTESTING] = octobot_api.create_independent_backtesting(
@@ -222,14 +227,16 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
 
 
 async def _collect_initialize_and_run_independent_backtesting(
-        data_collector_instance, independent_backtesting, config, tentacles_setup_config, files, run_on_common_part_only,
+        data_collector_instances, independent_backtesting, config, tentacles_setup_config, files, run_on_common_part_only,
         start_timestamp, end_timestamp, portfolio, enable_logs, auto_stop, collector_start_callback, start_callback):
     logger = bot_logging.get_logger("StartIndependentBacktestingModel")
-    if data_collector_instance is not None:
+    if data_collector_instances is not None:
         try:
             if collector_start_callback:
                 collector_start_callback()
-            files = [await backtesting_api.initialize_and_run_data_collector(data_collector_instance)]
+            files = []
+            for data_collector_instance in data_collector_instances:
+                files.append(await backtesting_api.initialize_and_run_data_collector(data_collector_instance))
         except Exception as e:
             bot_logging.get_logger("DataCollectorModel").exception(
                 e, True, f"Error when collecting historical data: {e}")
@@ -324,28 +331,61 @@ def get_delete_data_file(file_name):
 def get_data_collector_status():
     progress = {"current_step": 0, "total_steps": 0, "current_step_percent": 0}
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
-        data_collector = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]
-        if backtesting_api.is_data_collector_in_progress(data_collector):
-            current_step, total_steps, current_step_percent = \
-                backtesting_api.get_data_collector_progress(data_collector)
-            progress["current_step"] = current_step
-            progress["total_steps"] = total_steps
-            progress["current_step_percent"] = current_step_percent
-            return "collecting", progress
-        if backtesting_api.is_data_collector_finished(data_collector):
-            return "finished", progress
-        return "starting", progress
-    return "not started", progress
+        data_collectors = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]
+        amount_of_collectors = len (data_collectors)
+        percent_by_collector = []
+        reference_progress = None # {"current_step": 1, "total_steps": 1, "current_step_percent": 100}
+        all_collectors_finished = True
+        all_collectors_starting = True
+        for data_collector in data_collectors:
+            if backtesting_api.is_data_collector_in_progress(data_collector):
+                all_collectors_finished = False
+                all_collectors_starting = False
+                current_step, total_steps, current_step_percent = \
+                    backtesting_api.get_data_collector_progress(data_collector)
+                percent_by_collector.append(current_step_percent)
+                if not reference_progress:
+                    reference_progress = {
+                        "current_step": current_step, "total_steps": total_steps,
+                        "current_step_percent": current_step_percent
+                        }
+            elif backtesting_api.is_data_collector_finished(data_collector):
+                all_collectors_finished = all_collectors_finished
+                all_collectors_starting = False
+                percent_by_collector.append(100)
+            else:
+                percent_by_collector.append(0)
+                all_collectors_starting = all_collectors_starting
+        if all_collectors_finished:
+            return web_interface_enums.DataCollectorsStatus.FINISHED.value, progress
+        if all_collectors_starting:
+            return web_interface_enums.DataCollectorsStatus.STARTING.value, progress
+        
+        if reference_progress:
+            reference_total_steps = reference_progress["total_steps"] * amount_of_collectors
+        else:
+            reference_total_steps = amount_of_collectors
+        for collector_percent in percent_by_collector:
+            progress["current_step_percent"] += collector_percent / amount_of_collectors
+            progress["current_step"] += reference_total_steps * collector_percent / 100
+        progress["total_steps"] = reference_total_steps * amount_of_collectors
+        return web_interface_enums.DataCollectorsStatus.COLLECTING.value, progress
+    return web_interface_enums.DataCollectorsStatus.NOT_STARTED.value, progress
 
 
 def stop_data_collector():
     success = False
-    message = "Failed to stop data collector"
+    fail_message = "Failed to stop data collector"
+    success_message = "Data collector stopped"
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is not None:
-        success = interfaces_util.run_in_bot_main_loop(backtesting_api.stop_data_collector(web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]))
-        message = "Data collector stopped"
-        web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
-    return success, message
+        success = True
+        for collector in \
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]:
+            success = success and interfaces_util.run_in_bot_main_loop(
+                backtesting_api.stop_data_collector(collector))
+        if success:
+            web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
+    return success, success_message if success else fail_message
 
 
 def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
@@ -386,9 +426,9 @@ def collect_data_file(exchange, symbols, time_frames=None, start_timestamp=None,
         exchange, symbols, time_frames, start_timestamp, end_timestamp, "collect data"
     ):
         return False, message
-    if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] is None or \
-            backtesting_api.is_data_collector_finished(
-                web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR]):
+    status, _ = get_data_collector_status()
+    if status in (web_interface_enums.DataCollectorsStatus.FINISHED.value,
+                  web_interface_enums.DataCollectorsStatus.NOT_STARTED.value):
         if time_frames is not None:
             time_frames = time_frames if isinstance(time_frames, list) else [time_frames]
             if not any(isinstance(time_frame, commons_enums.TimeFrames) for time_frame in time_frames):
@@ -426,7 +466,7 @@ def _background_collect_exchange_historical_data(exchange, exchange_type, symbol
         time_frames=time_frames,
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp)
-    web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
+    web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = [data_collector_instance]
     coro = _start_collect_and_notify(data_collector_instance)
     threading.Thread(target=asyncio.run, args=(coro,), name=f"DataCollector{symbols}").start()
 

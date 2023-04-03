@@ -28,3 +28,11 @@ class PriceStrings(enum.Enum):
 class TabsLocation(enum.Enum):
     START = "start"
     END = "end"
+
+
+class DataCollectorsStatus(enum.Enum):
+    FINISHED= "finished"
+    STARTING= "starting"
+    COLLECTING= "collecting"
+    NOT_STARTED = "not started"
+    

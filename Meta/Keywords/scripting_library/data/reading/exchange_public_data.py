@@ -210,10 +210,23 @@ async def get_candles_from_name(ctx, source_name="low", time_frame=None, symbol=
 
 async def _local_candles_manager(exchange_manager, symbol, time_frame, start_timestamp, end_timestamp):
     # warning: should only be called with an exchange simulator (in backtesting)
-    ohlcv_data: list = await exchange_manager.exchange.exchange_importers[0].get_ohlcv(
-        exchange_name=exchange_manager.exchange_name,
-        symbol=symbol,
-        time_frame=commons_enums.TimeFrames(time_frame))
+    ohlcv_data: list = None
+    for importer in exchange_manager.exchange.exchange_importers:
+        if (importer.exchange_name == exchange_manager.exchange_name 
+            and symbol in importer.symbols
+            and commons_enums.TimeFrames(time_frame) in importer.time_frames
+            ):
+            ohlcv_data: list = await importer.get_ohlcv(
+                exchange_name=exchange_manager.exchange_name,
+                symbol=symbol,
+                time_frame=commons_enums.TimeFrames(time_frame),
+            )
+            break
+    if not ohlcv_data:
+        raise(
+            f"Failed to load candles data for {symbol} {time_frame} "
+            f"{exchange_manager.exchange_name} - no data available to load"
+            )
     chronological_candles = sorted(ohlcv_data, key=lambda candle: candle[0])
     full_candles_history = [
         ohlcv[-1]
@@ -237,7 +250,7 @@ async def _get_candle_manager(context, symbol, time_frame, max_history):
             return candle_manager
         start_timestamp = backtesting_api.get_backtesting_starting_time(context.exchange_manager.exchange.backtesting)
         end_timestamp = backtesting_api.get_backtesting_ending_time(context.exchange_manager.exchange.backtesting)
-        _key = symbol + time_frame + str(start_timestamp) + str(end_timestamp)
+        _key = context.exchange_manager.exchange_name + symbol + time_frame + str(start_timestamp) + str(end_timestamp)
         try:
             return run_persistence.get_shared_element(_key)
         except KeyError:
