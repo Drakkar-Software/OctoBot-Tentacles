@@ -254,7 +254,7 @@ function update_last_candle(to_update_candles, to_update_vols, new_candles, last
 function create_layout(graph_title){
     return {
         title: graph_title,
-        dragmode: 'zoom',
+        dragmode: isMobileDisplay() ? false : 'zoom',
         margin: {
             r: 10,
             t: 25,
