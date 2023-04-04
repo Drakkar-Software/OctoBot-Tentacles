@@ -102,9 +102,10 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     };
     const minY = Math.min.apply(null, trace.y);
     const maxDisplayY = Math.max.apply(null, trace.y);
-    const minDisplayY = Math.max(0, minY - (maxDisplayY - minY));
+    const minDisplayY = Math.max(0, minY - ((maxDisplayY - minY) / 2));
     const layout = {
         title: title,
+        dragmode: isMobileDisplay() ? false : 'zoom',
         xaxis: {
             autorange: true,
             showgrid: false,
@@ -171,6 +172,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
     const maxDisplayY = Math.max(0, Math.max.apply(null, trace2.y) * 1.5);
     const minDisplayY = Math.min(0, Math.min.apply(null, trace2.y) * 1.5);
     const layout = {
+        dragmode: isMobileDisplay() ? false : 'zoom',
         xaxis: {
             autorange: true,
             showgrid: false,
