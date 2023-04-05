@@ -39,19 +39,22 @@ def get_current_profile():
     return interfaces_util.get_edited_config(dict_only=False).profile
 
 
-def duplicate_and_select_profile(profile_id):
-    config = interfaces_util.get_edited_config(dict_only=False)
-    to_duplicate = config.profile_by_id[profile_id]
-    new_profile = config.profile_by_id[profile_id].duplicate(name=f"{to_duplicate.name}_(copy)",
-                                                             description=to_duplicate.description)
+def duplicate_profile(profile_id):
+    to_duplicate = get_profile(profile_id)
+    new_profile = to_duplicate.duplicate(name=f"{to_duplicate.name}_(copy)", description=to_duplicate.description)
     tentacles_manager_api.refresh_profile_tentacles_setup_config(new_profile.path)
-    config.load_profiles()
-    _select_and_save(config, new_profile.profile_id)
+    interfaces_util.get_edited_config(dict_only=False).load_profiles()
+    return get_profile(new_profile.profile_id)
+
+
+def convert_to_live_profile(profile_id):
+    profile = get_profile(profile_id)
+    profile.profile_type = commons_enums.ProfileType.LIVE
+    profile.validate_and_save_config()
 
 
 def select_profile(profile_id):
-    config = interfaces_util.get_edited_config(dict_only=False)
-    _select_and_save(config, profile_id)
+    _select_and_save(interfaces_util.get_edited_config(dict_only=False), profile_id)
 
 
 def _select_and_save(config, profile_id):
@@ -65,8 +68,16 @@ def _update_edited_tentacles_config(config):
     interfaces_util.set_edited_tentacles_config(updated_tentacles_config)
 
 
-def get_profiles():
-    return interfaces_util.get_edited_config(dict_only=False).profile_by_id
+def get_profile(profile_id):
+    return interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id]
+
+
+def get_profiles(profile_type: commons_enums.ProfileType = None):
+    return {
+        identifier: profile
+        for identifier, profile in interfaces_util.get_edited_config(dict_only=False).profile_by_id.items()
+        if profile_type is None or profile.profile_type is profile_type
+    }
 
 
 def _get_profile_setup_config(profile, reloading_profile):
@@ -106,18 +117,19 @@ def get_profiles_tentacles_details(profiles_list):
     return tentacles_by_profile_id
 
 
-def update_profile(profile_id, json_profile):
-    config = interfaces_util.get_edited_config(dict_only=False)
-    profile = config.profile_by_id[profile_id]
-    new_name = json_profile.get("name", profile.name)
+def update_profile(profile_id, json_profile_desc, json_profile_content=None):
+    profile = get_profile(profile_id)
+    new_name = json_profile_desc.get("name", profile.name)
     renamed = profile.name != new_name
     if renamed and get_current_profile().profile_id == profile_id:
         return False, "Can't rename the active profile"
     profile.name = new_name
-    profile.description = json_profile.get("description", profile.description)
-    profile.avatar = json_profile.get("avatar", profile.avatar)
-    profile.complexity = commons_enums.ProfileComplexity(int(json_profile.get("complexity", profile.complexity.value)))
-    profile.risk = commons_enums.ProfileRisk(int(json_profile.get("risk", profile.risk.value)))
+    profile.description = json_profile_desc.get("description", profile.description)
+    profile.avatar = json_profile_desc.get("avatar", profile.avatar)
+    profile.complexity = commons_enums.ProfileComplexity(int(json_profile_desc.get("complexity", profile.complexity.value)))
+    profile.risk = commons_enums.ProfileRisk(int(json_profile_desc.get("risk", profile.risk.value)))
+    if json_profile_content is not None:
+        profile.config = json_profile_content
     profile.validate_and_save_config()
     if renamed:
         profile.rename_folder(new_name, False)
@@ -129,7 +141,7 @@ def remove_profile(profile_id):
     if get_current_profile().profile_id == profile_id:
         return profile, "Can't remove the active profile"
     try:
-        profile = interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id]
+        profile = get_profile(profile_id)
         interfaces_util.get_edited_config(dict_only=False).remove_profile(profile_id)
     except errors.ProfileRemovalError as err:
         return profile, err
@@ -137,10 +149,7 @@ def remove_profile(profile_id):
 
 
 def export_profile(profile_id, export_path) -> str:
-    return profiles.export_profile(
-        interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id],
-        export_path
-    )
+    return profiles.export_profile(get_profile(profile_id), export_path)
 
 
 def import_profile(profile_path, name, profile_url=None):
@@ -162,7 +171,7 @@ def download_and_import_profile(profile_url):
 
 
 def get_profile_name(profile_id) -> str:
-    return interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id].name
+    return get_profile(profile_id).name
 
 
 def get_forced_profile() -> profiles.Profile:

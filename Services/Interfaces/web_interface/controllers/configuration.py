@@ -20,7 +20,7 @@ from datetime import datetime
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
-import octobot_commons.errors as commons_errors
+import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -52,7 +52,7 @@ def profile():
     display_config = interfaces_util.get_edited_config()
 
     missing_tentacles = set()
-    profiles = models.get_profiles()
+    profiles = models.get_profiles(commons_enums.ProfileType.LIVE)
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
     enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
     display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
@@ -105,9 +105,16 @@ def profiles_management(action):
         return util.get_rest_reply(flask.jsonify(data))
     if action == "duplicate":
         profile_id = flask.request.args.get("profile_id")
-        models.duplicate_and_select_profile(profile_id)
+        models.duplicate_profile(profile_id)
+        models.select_profile(profile_id)
         flask.flash(f"New profile successfully created and selected.", "success")
         return util.get_rest_reply(flask.jsonify("Profile created"))
+    if action == "use_as_live":
+        profile_id = flask.request.args.get("profile_id")
+        models.convert_to_live_profile(profile_id)
+        models.select_profile(profile_id)
+        flask.flash(f"Profile successfully converted to live profile and selected.", "success")
+        return flask.redirect(flask.url_for("profile"))
     if action == "remove":
         data = flask.request.get_json()
         to_remove_id = data["id"]
