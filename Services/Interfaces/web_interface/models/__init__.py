@@ -177,7 +177,9 @@ from tentacles.Services.Interfaces.web_interface.models.medias import (
 )
 from tentacles.Services.Interfaces.web_interface.models.profiles import (
     get_current_profile,
-    duplicate_and_select_profile,
+    get_profile,
+    duplicate_profile,
+    convert_to_live_profile,
     select_profile,
     get_profiles,
     get_profiles_tentacles_details,
@@ -353,7 +355,9 @@ __all__ = [
     "is_valid_profile_image_path",
     "is_valid_audio_path",
     "get_current_profile",
-    "duplicate_and_select_profile",
+    "get_profile",
+    "duplicate_profile",
+    "convert_to_live_profile",
     "select_profile",
     "get_profiles",
     "get_profiles_tentacles_details",
