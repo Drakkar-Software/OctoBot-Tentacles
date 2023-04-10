@@ -237,7 +237,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             orders_should_have_been_created = False
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
             quantity = await self._get_buy_quantity_from_weight(ctx, volume_weight, max_buy_size, base)
-            limit_price = trading_personal_data.decimal_adapt_price(symbol_market, self.get_limit_price(price))
+            limit_price = trading_personal_data.decimal_adapt_price(
+                symbol_market,
+                price if self.USE_BUY_MARKET_ORDERS_VALUE else self.get_limit_price(price)
+            )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     limit_price,
@@ -250,7 +253,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     symbol=symbol,
                     current_price=price,
                     quantity=order_quantity,
-                    price=order_price
+                    price=order_price,
                 )
                 if created_order := await self.trading_mode.create_order(current_order):
                     created_orders.append(created_order)
