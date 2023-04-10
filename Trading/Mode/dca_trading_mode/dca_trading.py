@@ -29,7 +29,9 @@ import octobot_trading.personal_data as trading_personal_data
 
 class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     AMOUNT_TO_BUY_IN_REF_MARKET = "amount_to_buy_in_reference_market"
-    ORDER_PRICE_DISTANCE = decimal.Decimal(str(0.001))
+    LIMIT_ORDERS_PRICE_MULTIPLIER = "limit_orders_price_multiplier"
+    USE_MARKET_ORDERS = "use_market_orders"
+    DEFAULT_LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.999")
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
@@ -46,19 +48,25 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             created_orders = []
             orders_should_have_been_created = False
             quantity = self.trading_mode.order_quantity_of_ref_market / price
-            limit_price = trading_personal_data.decimal_adapt_price(symbol_market, price * (trading_constants.ONE -
-                                                                                            self.ORDER_PRICE_DISTANCE))
+            target_price = price if self.trading_mode.use_market_orders else \
+                trading_personal_data.decimal_adapt_price(
+                    symbol_market,
+                    price * self.trading_mode.limit_orders_price_multiplier
+                )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
-                    limit_price,
+                    target_price,
                     symbol_market):
                 orders_should_have_been_created = True
-                current_order = trading_personal_data.create_order_instance(trader=self.exchange_manager.trader,
-                                                                            order_type=trading_enums.TraderOrderType.BUY_LIMIT,
-                                                                            symbol=symbol,
-                                                                            current_price=price,
-                                                                            quantity=order_quantity,
-                                                                            price=order_price)
+                current_order = trading_personal_data.create_order_instance(
+                    trader=self.exchange_manager.trader,
+                    order_type= trading_enums.TraderOrderType.BUY_MARKET
+                    if self.trading_mode.use_market_orders else trading_enums.TraderOrderType.BUY_LIMIT,
+                    symbol=symbol,
+                    current_price=price,
+                    quantity=order_quantity,
+                    price=order_price
+                )
                 created_order = await self.exchange_manager.trader.create_order(current_order)
                 created_orders.append(created_order)
             if created_orders:
@@ -118,7 +126,8 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.info("DCA task triggered")
 
                 for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
-                        self.exchange_manager.config).items():
+                        self.exchange_manager.config
+                ).items():
                     for pair in pairs:
                         await self.trigger_dca_for_symbol(cryptocurrency=cryptocurrency, symbol=pair)
 
@@ -154,6 +163,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.order_quantity_of_ref_market = None
+        self.limit_orders_price_multiplier = DCATradingModeConsumer.DEFAULT_LIMIT_PRICE_MULTIPLIER
+        self.use_market_orders = False
         self.minutes_before_next_buy = None
 
     def init_user_inputs(self, inputs: dict) -> None:
@@ -162,10 +173,24 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         those are defined somewhere else.
         """
         self.order_quantity_of_ref_market = decimal.Decimal(str(self.UI.user_input(
-            DCATradingModeConsumer.AMOUNT_TO_BUY_IN_REF_MARKET, commons_enums.UserInputTypes.FLOAT, 1, inputs,
-            min_val=1,
-            title="The amount of dollars (or unit of reference market) to buy on each transaction.",
+            DCATradingModeConsumer.AMOUNT_TO_BUY_IN_REF_MARKET, commons_enums.UserInputTypes.FLOAT, 50, inputs,
+            min_val=0.0000001,
+            title="The amount of dollars (or quote currency: USDT for BTC/USDT) to buy on each transaction.",
         )))
+        self.limit_orders_price_multiplier = decimal.Decimal(str(
+            self.UI.user_input(
+                DCATradingModeConsumer.LIMIT_ORDERS_PRICE_MULTIPLIER, commons_enums.UserInputTypes.FLOAT,
+                float(DCATradingModeConsumer.DEFAULT_LIMIT_PRICE_MULTIPLIER), inputs,
+                min_val=0, max_val=1,
+                title="Limit orders price multiplier: ratio to compute buy limit orders price. "
+                      "Example: a 0.7 multiplier on a 2000 USDT buy would create a "
+                      "limit price at 2000*0.7 = 1400 USDT."
+            )
+        ))
+        self.use_market_orders = self.UI.user_input(
+            DCATradingModeConsumer.USE_MARKET_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="Use market orders instead of limit orders."
+        )
         self.minutes_before_next_buy = int(self.UI.user_input(
             DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 60, inputs,
             min_val=1,
