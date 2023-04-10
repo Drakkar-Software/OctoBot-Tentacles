@@ -106,6 +106,12 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     const layout = {
         title: title,
         dragmode: isMobileDisplay() ? false : 'zoom',
+      margin: {
+        l: 30,
+        r: 0,
+        t: 40,
+        b: 40,
+      },
         xaxis: {
             autorange: true,
             showgrid: false,
@@ -113,17 +119,19 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
             type: 'date',
             rangeslider: {
                 visible: false,
-            }
+            },
+            automargin: true,
         },
         yaxis1: {
             showgrid: false,
-            range: [minDisplayY, maxDisplayY]
+            range: [minDisplayY, maxDisplayY],
+            automargin: true,
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: fontColor
-        }
+        },
     };
     const plotlyConfig = {
         scrollZoom: false,
