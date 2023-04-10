@@ -251,15 +251,21 @@ def config_tentacle():
     if flask.request.method == 'POST':
         tentacle_name = flask.request.args.get("name")
         action = flask.request.args.get("action")
+        profile_id = flask.request.args.get("profile_id")
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id) if profile_id else None
         success = True
         response = ""
         reload_config = False
         if action == "update":
             request_data = flask.request.get_json()
-            success, response = models.update_tentacle_config(tentacle_name, request_data)
+            success, response = models.update_tentacle_config(
+                tentacle_name, request_data, tentacles_setup_config=tentacles_setup_config
+            )
             reload_config = True
         elif action == "factory_reset":
-            success, response = models.reset_config_to_default(tentacle_name)
+            success, response = models.reset_config_to_default(
+                tentacle_name, tentacles_setup_config=tentacles_setup_config
+            )
             reload_config = True
         if flask.request.args.get("reload"):
             try:
@@ -340,13 +346,17 @@ def config_tentacle_edit_details(tentacle):
 def config_tentacles():
     if flask.request.method == 'POST':
         action = flask.request.args.get("action")
+        profile_id = flask.request.args.get("profile_id")
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id) if profile_id else None
         success = True
         response = ""
         if action == "update":
             request_data = flask.request.get_json()
             responses = []
-            for tentacle, config in request_data.items():
-                update_success, update_response = models.update_tentacle_config(tentacle, config)
+            for tentacle, tentacle_config in request_data.items():
+                update_success, update_response = models.update_tentacle_config(
+                    tentacle, tentacle_config, tentacles_setup_config=tentacles_setup_config
+                )
                 success = update_success and success
                 responses.append(update_response)
             response = ", ".join(responses)

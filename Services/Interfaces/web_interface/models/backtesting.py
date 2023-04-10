@@ -91,13 +91,11 @@ def get_data_files_with_description():
 
 def start_backtesting_using_specific_files(files, source, reset_tentacle_config=False, run_on_common_part_only=True,
                                            start_timestamp=None, end_timestamp=None, trading_type=None,
-                                           portfolio=None,
                                            enable_logs=False,
                                            auto_stop=False, collector_start_callback=None, start_callback=None):
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=run_on_common_part_only,
                               start_timestamp=start_timestamp, end_timestamp=end_timestamp, trading_type=trading_type,
-                              portfolio=portfolio,
                               use_current_bot_data=False, enable_logs=enable_logs,
                               auto_stop=auto_stop, collector_start_callback=collector_start_callback,
                               start_callback=start_callback)
@@ -182,11 +180,8 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                     octobot_api.stop_independent_backtesting(previous_independent_backtesting)
                 )
             if profile_id is not None:
-                profile = profiles_model.get_profile(profile_id)
-                config = profile.config
-                tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(
-                    profile.get_tentacles_config_path()
-                )
+                config = profiles_model.get_profile(profile_id).config
+                tentacles_setup_config = profiles_model.get_tentacles_setup_config_from_profile_id(profile_id)
             else:
                 if reset_tentacle_config:
                     tentacles_config = interfaces_util.get_edited_config(dict_only=False).get_tentacles_config_path()

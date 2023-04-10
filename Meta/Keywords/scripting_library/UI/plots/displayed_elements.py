@@ -96,7 +96,8 @@ class DisplayedElements(display.DisplayTranslator):
                                           first_candle_time, last_candle_time)
             self._plot_graphs(graphs_by_parts)
             if with_inputs:
-                with self.part("inputs", element_type=commons_enums.DisplayedElementTypes.INPUT.value) as part:
+                with self.part(commons_enums.DBTables.INPUTS.value,
+                               element_type=commons_enums.DisplayedElementTypes.INPUT.value) as part:
                     self.add_user_inputs(inputs, part)
 
     async def _adapt_inputs_for_backtesting_results(self, meta_db, exchange_name, symbol, time_frame):
