@@ -72,6 +72,12 @@ def get_profile(profile_id):
     return interfaces_util.get_edited_config(dict_only=False).profile_by_id[profile_id]
 
 
+def get_tentacles_setup_config_from_profile_id(profile_id):
+    return tentacles_manager_api.get_tentacles_setup_config(
+        get_profile(profile_id).get_tentacles_config_path()
+    )
+
+
 def get_profiles(profile_type: commons_enums.ProfileType = None):
     return {
         identifier: profile
