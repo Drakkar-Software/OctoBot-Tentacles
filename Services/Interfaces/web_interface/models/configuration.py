@@ -224,7 +224,9 @@ def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
         # can happen when tentacles metadata.json are invalid
         return ""
 
-def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set, whitelist=None):
+def _get_strategy_activation_state(
+        with_trading_modes, media_url, missing_tentacles: set, whitelist=None, backtestable_only=False
+):
     import tentacles.Trading.Mode as modes
     import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
@@ -241,13 +243,17 @@ def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentac
         for key, val in trading_config.items():
             if whitelist and key not in whitelist:
                 continue
-            config_class = tentacles_management.get_class_from_string(key, trading_modes.AbstractTradingMode, modes,
-                                                                      tentacles_management.trading_mode_parent_inspection)
+            config_class = tentacles_management.get_class_from_string(
+                key, trading_modes.AbstractTradingMode, modes, tentacles_management.trading_mode_parent_inspection
+            )
             if config_class:
-                strategy_config[TRADING_MODES_KEY][key] = {}
-                strategy_config[TRADING_MODES_KEY][key][constants.ACTIVATION_KEY] = val
-                strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(key, media_url)
-                strategy_config_classes[TRADING_MODES_KEY][key] = config_class
+                if not backtestable_only or (backtestable_only and config_class.is_backtestable()):
+                    strategy_config[TRADING_MODES_KEY][key] = {}
+                    strategy_config[TRADING_MODES_KEY][key][constants.ACTIVATION_KEY] = val
+                    strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(
+                        key, media_url
+                    )
+                    strategy_config_classes[TRADING_MODES_KEY][key] = config_class
             else:
                 _add_to_missing_tentacles_if_missing(key, missing_tentacles)
 
@@ -589,11 +595,14 @@ def _add_trading_modes_requirements(trading_modes_list, strategy_config):
             _get_logger().exception(e, False)
 
 
-def get_strategy_config(media_url, missing_tentacles: set, with_trading_modes=True, whitelist=None):
+def get_strategy_config(
+        media_url, missing_tentacles: set, with_trading_modes=True, whitelist=None, backtestable_only=False
+):
     strategy_config, strategy_config_classes = _get_strategy_activation_state(with_trading_modes,
                                                                               media_url,
                                                                               missing_tentacles,
-                                                                              whitelist=whitelist)
+                                                                              whitelist=whitelist,
+                                                                              backtestable_only=backtestable_only)
     if with_trading_modes:
         _add_trading_modes_requirements(strategy_config_classes[TRADING_MODES_KEY], strategy_config)
     _add_strategies_requirements(strategy_config_classes[STRATEGIES_KEY], strategy_config)

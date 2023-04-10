@@ -143,6 +143,8 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     SYMBOL_KEY,
     ID_KEY,
     JSON_PORTFOLIO_SCHEMA,
+    TRADING_MODES_KEY,
+    STRATEGIES_KEY,
     change_reference_market_on_config_currencies,
     send_command_to_activated_tentacles,
     send_command_to_tentacles,
