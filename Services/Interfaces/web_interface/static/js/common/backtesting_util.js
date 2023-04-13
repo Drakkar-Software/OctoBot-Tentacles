@@ -17,8 +17,9 @@
  * License along with this library.
  */
 
-function start_backtesting(request, update_url){
-    send_and_interpret_bot_update(request, update_url, null, start_success_callback, start_error_callback);
+function start_backtesting(request, update_url, success_callback=null){
+    const success = success_callback === null ? start_success_callback : success_callback;
+    send_and_interpret_bot_update(request, update_url, null, success, start_error_callback);
 }
 
 function start_success_callback(updated_data, update_url, dom_root_element, msg, status){
