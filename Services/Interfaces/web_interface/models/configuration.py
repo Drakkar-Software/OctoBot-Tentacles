@@ -360,14 +360,15 @@ async def get_tentacle_config_and_user_inputs(tentacle_class, bot_config, tentac
     )
 
 
-def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None):
+def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None, profile_id=None):
+    config = interfaces_util.get_edited_config()
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
+    if profile_id:
+        config = models.get_profile(profile_id).config
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id)
     tentacle_class = tentacle_class or tentacles_manager_api.get_tentacle_class_from_string(tentacle)
     config, user_inputs = interfaces_util.run_in_bot_main_loop(
-        get_tentacle_config_and_user_inputs(
-            tentacle_class,
-            interfaces_util.get_edited_config(),
-            interfaces_util.get_edited_tentacles_config(),
-        )
+        get_tentacle_config_and_user_inputs(tentacle_class, config, tentacles_setup_config)
     )
     display_elements = display.display_translator_factory()
     display_elements.add_user_inputs(user_inputs)
@@ -722,15 +723,16 @@ def has_futures_exchange():
     return False
 
 
-def update_tentacles_activation_config(new_config, deactivate_others=False):
-    tentacles_setup_configuration = interfaces_util.get_edited_tentacles_config()
+def update_tentacles_activation_config(new_config, deactivate_others=False, tentacles_setup_configuration=None):
+    tentacles_setup_configuration = tentacles_setup_configuration or interfaces_util.get_edited_tentacles_config()
     try:
         updated_config = {
             element_name: activated if isinstance(activated, bool) else activated.lower() == "true"
             for element_name, activated in new_config.items()
         }
-        if tentacles_manager_api.update_activation_configuration(interfaces_util.get_edited_tentacles_config(),
-                                                                 updated_config, deactivate_others):
+        if tentacles_manager_api.update_activation_configuration(
+                tentacles_setup_configuration, updated_config, deactivate_others
+        ):
             tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_configuration)
         return True
     except Exception as e:
