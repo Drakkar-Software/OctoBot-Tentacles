@@ -333,8 +333,9 @@ def config_tentacle():
 @login.login_required_when_activated
 def config_tentacle_edit_details(tentacle):
     try:
+        profile_id = flask.request.args.get("profile", None)
         return util.get_rest_reply(
-            models.get_tentacle_config_and_edit_display(tentacle)
+            models.get_tentacle_config_and_edit_display(tentacle, profile_id=profile_id)
         )
     except Exception as e:
         commons_logging.get_logger("configuration").exception(e)
