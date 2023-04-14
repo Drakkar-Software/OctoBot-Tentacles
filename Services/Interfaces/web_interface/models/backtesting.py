@@ -285,12 +285,13 @@ def get_backtesting_status():
     if web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING] is not None:
         independent_backtesting = web_interface_root.WebInterface.tools[constants.BOT_TOOLS_BACKTESTING]
         if octobot_api.is_independent_backtesting_in_progress(independent_backtesting):
-            return "computing", octobot_api.get_independent_backtesting_progress(independent_backtesting) * 100
+            return "computing", octobot_api.get_independent_backtesting_progress(independent_backtesting) * 100, \
+                bot_logging.get_backtesting_errors_count()
         if octobot_api.is_independent_backtesting_finished(independent_backtesting) or \
                 octobot_api.is_independent_backtesting_stopped(independent_backtesting):
-            return "finished", 100
-        return "starting", 0
-    return "not started", 0
+            return "finished", 100, bot_logging.get_backtesting_errors_count()
+        return "starting", 0, 0
+    return "not started", 0, 0
 
 
 def get_backtesting_report(source):

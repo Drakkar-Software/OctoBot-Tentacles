@@ -163,6 +163,7 @@ function init_backtesting_status_websocket(){
 function _handle_backtesting(backtesting_status_data){
     const backtesting_status = backtesting_status_data["status"];
     const progress = backtesting_status_data["progress"];
+    const errors = backtesting_status_data["errors"];
 
     const report = $("#backtestingReport");
     const progress_bar = $(`#${backtestingMainProgressBar}`);
@@ -200,8 +201,8 @@ function _handle_backtesting(backtesting_status_data){
                 load_report(report, should_alert);
             }
 
-            if(previousBacktestingStatus === "computing") {
-                backtesting_done_callbacks.forEach((callback) => callback());
+            if(previousBacktestingStatus === "computing" || previousBacktestingStatus === "starting") {
+                backtesting_done_callbacks.forEach((callback) => callback(errors));
             }
         }
     }
