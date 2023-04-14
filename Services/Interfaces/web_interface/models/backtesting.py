@@ -354,20 +354,38 @@ def stop_data_collector():
     return success, message
 
 
-def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp):
+def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp, profile_id=None):
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+    symbols = trading_api.get_trading_symbols(exchange_manager)
+    time_frames = trading_api.get_relevant_time_frames(exchange_manager)
+    if profile_id is not None:
+        profile = profiles_model.get_profile(profile_id)
+        tentacles_setup_config = profiles_model.get_tentacles_setup_config_from_profile(profile)
+        strategies = configuration_model.get_config_activated_strategies(tentacles_setup_config)
+        time_frames = [
+            tf
+            for tf in configuration_model.get_traded_time_frames(
+                exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
+            ) or (commons_enums.TimeFrames.ONE_MINUTE,)
+        ]
+        symbols = [
+            commons_symbols.parse_symbol(symbol)
+            for symbol in trading_api.get_config_symbols(profile.config, True)
+        ]
     return backtesting_api.exchange_bot_snapshot_data_collector_factory(
         trading_api.get_exchange_name(exchange_manager),
         interfaces_util.get_bot_api().get_edited_tentacles_config(),
-        trading_api.get_trading_symbols(exchange_manager),
+        symbols,
         exchange_id,
-        time_frames=trading_api.get_relevant_time_frames(exchange_manager),
+        time_frames=time_frames,
         start_timestamp=start_timestamp,
-        end_timestamp=end_timestamp)
+        end_timestamp=end_timestamp
+    )
 
 
-def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=True):
-    data_collector_instance = create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp)
+def get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp, collect=True, profile_id=None):
+    data_collector_instance = create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp,
+                                                             profile_id=profile_id)
     if not collect:
         return data_collector_instance.file_name
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
