@@ -20,7 +20,7 @@ const mardownConverter = new showdown.Converter();
 const currentURL = `${window.location.protocol}//${window.location.host}`;
 
 function markdown_to_html(text) {
-    return mardownConverter.makeHtml(text.trim().replaceAll("<br><br>", "\n\n"))
+    return mardownConverter.makeHtml(text?.trim().replaceAll("<br><br>", "\n\n"))
 }
 
 function fetch_images() {

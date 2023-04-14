@@ -73,8 +73,12 @@ def get_profile(profile_id):
 
 
 def get_tentacles_setup_config_from_profile_id(profile_id):
+    return get_tentacles_setup_config_from_profile(get_profile(profile_id))
+
+
+def get_tentacles_setup_config_from_profile(profile):
     return tentacles_manager_api.get_tentacles_setup_config(
-        get_profile(profile_id).get_tentacles_config_path()
+        profile.get_tentacles_config_path()
     )
 
 
