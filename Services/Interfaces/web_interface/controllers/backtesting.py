@@ -62,6 +62,7 @@ def backtesting():
                 exchange_id = data.get("exchange_id", None)
                 trading_type = data.get("exchange_type", None)
                 profile_id = data.get("profile_id", None)
+                name = data.get("name", None)
                 reset_tentacle_config = flask.request.args.get("reset_tentacle_config", False)
                 success, reply = models.start_backtesting_using_current_bot_data(
                     data.get("data_source", models.CURRENT_BOT_DATA),
@@ -74,6 +75,7 @@ def backtesting():
                     profile_id=profile_id,
                     enable_logs=data.get("enable_logs", False),
                     auto_stop=auto_stop,
+                    name=name,
                     collector_start_callback=web_interface.send_data_collector_status,
                     start_callback=web_interface.send_backtesting_status
                 )
