@@ -25,8 +25,8 @@ class BacktestingNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_backtesting_status():
-        backtesting_status, progress = models.get_backtesting_status()
-        return {"status": backtesting_status, "progress": progress}
+        backtesting_status, progress, errors = models.get_backtesting_status()
+        return {"status": backtesting_status, "progress": progress, "errors": errors}
 
     @websockets.websocket_with_login_required_when_activated
     def on_backtesting_status(self):
