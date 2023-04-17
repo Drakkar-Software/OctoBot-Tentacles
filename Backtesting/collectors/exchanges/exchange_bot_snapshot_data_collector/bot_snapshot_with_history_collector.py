@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
-import logging
 import os
 import json
 import time
@@ -32,13 +31,10 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.databases as databases
 import octobot_backtesting.data as data
+import octobot_trading.api as trading_api
+import octobot_trading.errors as trading_errors
 import tentacles.Backtesting.importers.exchanges.generic_exchange_importer as generic_exchange_importer
 
-try:
-    import octobot_trading.api as trading_api
-    import octobot_trading.errors as trading_errors
-except ImportError:
-    logging.error("ExchangeHistoryDataCollector requires OctoBot-Trading package installed")
 
 
 class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnapshotCollector):
@@ -267,22 +263,17 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 multiple=True
             )
 
-    async def _check_ohlcv_integrity(self, exchange, symbol, time_frame):
-        database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+    async def _check_ohlcv_integrity(self, database_candles):
         # ensure no timestamp is here twice
         all_timestamps = [candle[-1][0] for candle in database_candles]
         unique_timestamps = set(all_timestamps)
         if len(unique_timestamps) != len(database_candles):
-            counters = {
+            return {
                 timestamp: counter
                 for timestamp, counter in collections.Counter(all_timestamps).items()
                 if counter > 1
             }
-            self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol.symbol_str} on {time_frame}: "
-                                f"{len(unique_timestamps)} different timestamps for {len(database_candles)} "
-                                f"different candles. Problematic timestamps: {counters}")
-            return False
-        return True
+        return {}
 
     async def get_ohlcv_history(self, exchange, symbol, time_frame):
         try:
@@ -297,7 +288,25 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             else:
                 already_fetched_candles_candles = self.get_ohlcv_snapshot(symbol, time_frame)
                 bot_first_data_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
-            if self.is_creating_database:
+            database_candles = []
+            save_all_candles = self.is_creating_database
+            if not self.is_creating_database:
+                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+                counters = await self._check_ohlcv_integrity(database_candles)
+                if counters:
+                    self.logger.warning(f"Duplicate candles in {exchange} data file for {symbol.symbol_str} "
+                                        f"on {time_frame}. Problematic timestamps: {counters}. "
+                                        f"Resetting database to ensure data integrity")
+
+                    await self.delete_all(
+                        backtesting_enums.ExchangeDataTables.OHLCV,
+                        exchange=exchange,
+                        cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(str(symbol)),
+                        symbol=symbol.symbol_str,
+                        time_frame=time_frame
+                    )
+                    save_all_candles = True
+            if save_all_candles or not database_candles:
                 # don't include the bot last candle twice
                 history_end_time = bot_first_data_timestamp - 1
                 if self.start_timestamp and self.start_timestamp < history_end_time:
@@ -313,15 +322,17 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         multiple=True
                 )
             else:
-                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
-                first_candle_data_time = min(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                                             for candle in database_candles) * 1000
-                last_candle_data_time = max(candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                                            for candle in database_candles) * 1000
+                candle_times = [
+                    candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                    for candle in database_candles
+                ]
+                first_candle_data_time = min(candle_times) * 1000
+                last_candle_data_time = max(candle_times) * 1000
                 if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
                     # fetch missing data between required start time and actual start time in data file
                     last_progress = await self.collect_historical_ohlcv(
-                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time)
+                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time
+                    )
                 if last_candle_data_time + 1 < bot_first_data_timestamp:
                     # fetch missing data between end time in data file and available data
                     # last_candle_data_time + 1 not to fetch the first candle twice
@@ -332,9 +343,13 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 # finally, apply current candles
                 await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
                                         database_candles, already_fetched_candles_candles)
-            if not await self._check_ohlcv_integrity(exchange, symbol, time_frame):
-                self.logger.error(f"Error when checking database integrity. "
-                                  f"Delete this data file: {self.file_name} to reset it.")
+            database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+            counters = await self._check_ohlcv_integrity(database_candles)
+            if counters:
+                self.logger.error(f"Error when checking database integrity of {exchange} "
+                                  f"data file for {symbol.symbol_str}. "
+                                  f"Delete this data file: {self.file_name} to reset it. "
+                                  f"Problematic timestamps: {counters}")
             self.current_step_percent += 100 / self.total_steps - last_progress
         except trading_errors.FailedRequest as err:
             self.logger.exception(err, False)
