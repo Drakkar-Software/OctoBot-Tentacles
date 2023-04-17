@@ -241,12 +241,14 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                         PNL: pnl,
                         PNL_AMOUNT: pnl_a,
                         QUOTE: historical_pnl.entries[0].market,
+                        TRADES_COUNT: len(historical_pnl.entries) + len(historical_pnl.closes),
                         DETAILS: None
                     }
                 else:
                     pnl_val = pnl_history[scaled_time]
                     pnl_val[PNL] += pnl
                     pnl_val[PNL_AMOUNT] += pnl_a
+                    pnl_val[TRADES_COUNT] += len(historical_pnl.entries) + len(historical_pnl.closes)
                 if use_detailed_history:
                     pnl_history[scaled_time][DETAILS] = {
                         ENTRY_TIME: historical_pnl.get_entry_time(),
@@ -268,7 +270,6 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                         ],
                         BASE: historical_pnl.entries[0].currency,
                         EXCHANGE: exchange_name,
-                        TRADES_COUNT: len(historical_pnl.entries) + len(historical_pnl.closes)
                     }
             except trading_errors.IncompletePNLError:
                 invalid_pnls += 1
@@ -282,6 +283,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                 PNL: float(pnl[PNL]),
                 PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
                 QUOTE: pnl[QUOTE],
+                TRADES_COUNT: pnl[TRADES_COUNT],
                 DETAILS: pnl[DETAILS],
             }
             for t, pnl in pnl_history.items()
