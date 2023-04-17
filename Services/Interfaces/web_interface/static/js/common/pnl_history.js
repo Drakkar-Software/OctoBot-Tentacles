@@ -50,7 +50,8 @@ const loadPnlTableHistory = (data, update) => {
                     date: element.d.en_d,
                     side: element.d.en_s,
                     base: element.d.b,
-                    quote: element.d.q,
+                    quote: element.q,
+                    symbol: element.d.s,
                     exchange: element.d.ex,
                     trades: element.d.tc,
                     amount: round_digits(element.d.en_a, 8),
@@ -62,7 +63,8 @@ const loadPnlTableHistory = (data, update) => {
                     date: element.ex_d,
                     side: element.d.ex_s,
                     base: element.d.b,
-                    quote: element.d.q,
+                    quote: element.q,
+                    symbol: element.d.s,
                     exchange: element.d.ex,
                     trades: element.d.tc,
                     amount: round_digits(element.d.ex_a, 8),
@@ -73,12 +75,12 @@ const loadPnlTableHistory = (data, update) => {
                 {
                     special: element.d.s_f.map(e => {return {f: round_digits(e.f, 8), c: e.c}}),
                     amount: round_digits(element.d.f, 8),
-                    quote: element.d.q,
+                    quote: element.q,
                 },
             ]
         }else{
             return [
-                {timestamp: element.ex_t, date: element.ex_d},
+                {timestamp: element.ex_t, date: element.ex_d, quote: element.q},
                 round_digits(element.pnl, 8),
                 round_digits(total_pnl, 8),
                 round_digits(element.pnl_a, 8),
@@ -86,7 +88,7 @@ const loadPnlTableHistory = (data, update) => {
         }
     });
     const pnlTable = $("#pnl_historyTable");
-    const unit = pnlTable.data("unit");
+    const unit = rows.length ? rows[0][0].quote : pnlTable.data("unit");
     let previousOrder = [[0, "desc"]];
     if(update){
         const previousDataTable = pnlTable.DataTable();
@@ -103,7 +105,7 @@ const loadPnlTableHistory = (data, update) => {
     }
 
     const getPnlOrdersDetails = (data) => {
-        return `<span data-toggle="tooltip" title="symbol: ${data.base}/${data.quote} exchange: ${data.exchange} trades: ${data.trades}">${getSideBadge(data.side)} ${data.date}: ${getBoldRender(data.amount)} ${data.base} at ${getBoldRender(data.price)}, total ${getBoldRender(data.total)}</span>`;
+        return `<span data-toggle="tooltip" title="symbol: ${data.symbol} exchange: ${data.exchange} trades: ${data.trades}">${getSideBadge(data.side)} ${data.date}: ${getBoldRender(data.amount)} ${data.base} at ${getBoldRender(data.price)}, total ${getBoldRender(data.total)}</span>`;
     }
 
     const columns = (
@@ -176,10 +178,10 @@ const loadPnlTableHistory = (data, update) => {
     });
 }
 
-const fetchPnlHistory = async (scale) => {
+const fetchPnlHistory = async (scale, pair) => {
     const url = $("#pnl_historyChart").data("url");
     if(typeof url === "undefined"){
         return [];
     }
-    return await async_send_and_interpret_bot_update(null, `${url}${scale}`, null, "GET", true)
+    return await async_send_and_interpret_bot_update(null, `${url}${scale}&symbol=${pair}`, null, "GET", true)
 }

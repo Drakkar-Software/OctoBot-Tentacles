@@ -134,9 +134,21 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body pt-0">
                         {{ waiter("pnl-waiter", "Loading Profit and Loss") }}
                         <div class="w-100">
+                            <div class="d-flex justify-content-end">
+                                <select id="symbol-select" class="selectpicker" data-live-search="true">
+                                    <option value="" selected>
+                                        Reference market
+                                    </option>
+                                    {% for symbol in pnl_symbols | sort %}
+                                        <option value="{{ symbol }}">
+                                            {{ symbol }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div id="pnl_historyChart"
                                  data-url="{{url_for('api.pnl_history', quote=reference_market, scale='')}}"
                                  data-unit="{{reference_market}}"

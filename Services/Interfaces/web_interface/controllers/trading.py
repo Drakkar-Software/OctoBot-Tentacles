@@ -76,6 +76,7 @@ def symbol_market_status():
 def trading():
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
     exchanges_load = models.get_exchanges_load()
+    pnl_symbols = models.get_pnl_history_symbols()
     return flask.render_template(
         'trading.html',
         might_have_positions=models.has_futures_exchange(),
@@ -87,7 +88,8 @@ def trading():
         last_signal_time=models.get_last_signal_time(),
         followed_strategy_url=models.get_followed_strategy_url(),
         reference_market=interfaces_util.get_reference_market(),
-        has_pnl_history=models.has_pnl_history(),
+        pnl_symbols=pnl_symbols,
+        has_pnl_history=bool(pnl_symbols),
     )
 
 

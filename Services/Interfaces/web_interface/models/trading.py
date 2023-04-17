@@ -185,8 +185,13 @@ def _get_pnl_history(exchange, quote, symbol, since):
     return history
 
 
-def has_pnl_history(exchange=None, quote=None, symbol=None, since=None):
-    return bool(_get_pnl_history(exchange, quote, symbol, since))
+def get_pnl_history_symbols(exchange=None, quote=None, symbol=None, since=None):
+    return set(
+        historical_pnl.entries[0].symbol
+        for exchange_name, historical_pnl_elements in _get_pnl_history(exchange, quote, symbol, since).items()
+        for historical_pnl in historical_pnl_elements
+        if historical_pnl.entries
+    )
 
 
 def _convert_timestamp(timestamp):
@@ -213,11 +218,15 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
     BASE = "b"
     QUOTE = "q"
     CURRENCY = "c"
+    SYMBOL = "s"
     TRADES_COUNT = "tc"
     pnl_history = {}
     use_detailed_history = not(scale)
     scale_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(scale)] * \
         commons_constants.MINUTE_TO_SECONDS if scale else 1
+    symbol = symbol or None
+    # set quote filter to None when symbol is not provided
+    quote = None if symbol else quote
     history_by_exchange = _get_pnl_history(exchange, quote, symbol, since)
     invalid_pnls = 0
     for exchange_name, historical_pnl_elements in history_by_exchange.items():
@@ -231,6 +240,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                     pnl_history[scaled_time] = {
                         PNL: pnl,
                         PNL_AMOUNT: pnl_a,
+                        QUOTE: historical_pnl.entries[0].market,
                         DETAILS: None
                     }
                 else:
@@ -247,6 +257,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                         EXIT_SIDE: historical_pnl.closes[0].side.value,
                         ENTRY_AMOUNT: historical_pnl.get_total_entry_quantity(),
                         EXIT_AMOUNT: historical_pnl.get_total_close_quantity(),
+                        SYMBOL: historical_pnl.entries[0].symbol,
                         FEES: float(historical_pnl.get_paid_regular_fees_in_quote()),
                         SPECIAL_FEES: [
                             {
@@ -256,7 +267,6 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                             for currency, value in historical_pnl.get_paid_special_fees_by_currency().items()
                         ],
                         BASE: historical_pnl.entries[0].currency,
-                        QUOTE: historical_pnl.entries[0].market,
                         EXCHANGE: exchange_name,
                         TRADES_COUNT: len(historical_pnl.entries) + len(historical_pnl.closes)
                     }
@@ -271,6 +281,7 @@ def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=No
                 EXIT_DATE: _convert_timestamp(t),
                 PNL: float(pnl[PNL]),
                 PNL_AMOUNT: float(pnl[PNL_AMOUNT]),
+                QUOTE: pnl[QUOTE],
                 DETAILS: pnl[DETAILS],
             }
             for t, pnl in pnl_history.items()

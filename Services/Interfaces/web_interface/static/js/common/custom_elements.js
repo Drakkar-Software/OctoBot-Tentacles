@@ -106,12 +106,12 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     const layout = {
         title: title,
         dragmode: isMobileDisplay() ? false : 'zoom',
-      margin: {
-        l: 30,
-        r: 0,
-        t: 40,
-        b: 40,
-      },
+        margin: {
+            l: 30,
+            r: 0,
+            t: 40,
+            b: 40,
+        },
         xaxis: {
             autorange: true,
             showgrid: false,
@@ -208,6 +208,11 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: fontColor
+        },
+        margin: {
+            l: 30,
+            r: 30,
+            t: 40,
         },
         showlegend: false,
     };
