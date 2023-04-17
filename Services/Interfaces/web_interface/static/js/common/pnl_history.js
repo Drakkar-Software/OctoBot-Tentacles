@@ -53,7 +53,7 @@ const loadPnlTableHistory = (data, update) => {
                     quote: element.q,
                     symbol: element.d.s,
                     exchange: element.d.ex,
-                    trades: element.d.tc,
+                    trades: element.tc,
                     amount: round_digits(element.d.en_a, 8),
                     price: round_digits(element.d.en_p, 8),
                     total : round_digits(element.d.en_a * element.d.en_p, 8),
@@ -66,7 +66,7 @@ const loadPnlTableHistory = (data, update) => {
                     quote: element.q,
                     symbol: element.d.s,
                     exchange: element.d.ex,
-                    trades: element.d.tc,
+                    trades: element.tc,
                     amount: round_digits(element.d.ex_a, 8),
                     price: round_digits(element.d.ex_p, 8),
                     total : round_digits(element.d.ex_a * element.d.ex_p, 8)

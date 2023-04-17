@@ -412,10 +412,14 @@ const getScale = () => {
 const getSymbol = () => {
     return $("#symbol-select").val();
 }
+const updateTradesCount = (pnlHistory) => {
+    $("#match-trades-count").text(pnlHistory.reduce((sum, element) => sum + element.tc, 0));
+}
 const reload_pnl = async (update) => {
     const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
     loadPnlFullChartHistory(pnlHistory, update);
     loadPnlTableHistory(pnlHistory, update);
+    updateTradesCount(pnlHistory);
     $("#pnl-waiter").hide();
 }
 
