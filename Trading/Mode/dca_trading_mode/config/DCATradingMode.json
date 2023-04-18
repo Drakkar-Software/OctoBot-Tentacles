@@ -1,5 +1,7 @@
 {
     "required_strategies": [],
     "amount_to_buy_in_reference_market": 50,
+    "limit_orders_price_multiplier": 0.999,
+    "use_market_orders": false,
     "minutes_before_next_buy": 10080
 }

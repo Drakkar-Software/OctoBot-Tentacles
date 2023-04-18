@@ -67,3 +67,22 @@ def start_copy_trading():
         return util.get_rest_reply(flask.jsonify(response)) if success else util.get_rest_reply(response, 500)
     except Exception as e:
         return util.get_rest_reply(f"Unexpected error : {e}", 500)
+
+
+@api.api.route('/trading_strategies_tentacles_details<backtestable_only>', methods=["GET"])
+@login.login_required_when_activated
+def trading_strategies_tentacles_details(backtestable_only):
+    missing_tentacles = set()
+    media_url = flask.url_for("tentacle_media", _external=True)
+    evaluators = {}
+    for evals in models.get_evaluator_detailed_config(media_url, missing_tentacles).values():
+        if isinstance(evals, dict):
+            evaluators.update(evals)
+    strategy_config = models.get_strategy_config(
+        media_url, missing_tentacles, with_trading_modes=True, whitelist=None, backtestable_only=backtestable_only
+    )
+    return flask.jsonify({
+        "trading_modes": strategy_config[models.TRADING_MODES_KEY],
+        "strategies": strategy_config[models.STRATEGIES_KEY],
+        "evaluators": evaluators,
+    })

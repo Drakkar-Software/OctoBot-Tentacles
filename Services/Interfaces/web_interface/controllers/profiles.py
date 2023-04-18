@@ -17,6 +17,7 @@ import flask
 
 import octobot_commons.authentication as authentication
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -37,7 +38,7 @@ def profiles_selector():
     if onboarding and models.get_forced_profile() is not None:
         return flask.redirect(flask.url_for("trading_type_selector", reboot=reboot, onboarding=onboarding))
 
-    profiles = models.get_profiles()
+    profiles = models.get_profiles(commons_enums.ProfileType.LIVE)
     current_profile = models.get_current_profile()
     display_config = interfaces_util.get_edited_config()
 

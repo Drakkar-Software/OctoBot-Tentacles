@@ -89,6 +89,17 @@ class GPTEvaluator(evaluators.TAEvaluator):
     def use_backtesting_init_timeout(self):
         super().use_backtesting_init_timeout()
         self.is_backtesting = True
+        if not gpt_service.GPTService.BACKTESTING_ENABLED:
+            self.logger.error(f"{self.get_name()} is disabled in backtesting. It will only emit neutral evaluations")
+
+    async def _init_registered_topics(self, all_symbols_by_crypto_currencies, currencies, symbols, time_frames):
+        await super()._init_registered_topics(all_symbols_by_crypto_currencies, currencies, symbols, time_frames)
+        for time_frame in time_frames:
+            if not self._check_timeframe(time_frame.value):
+                self.logger.error(f"{time_frame.value} time frame will be ignored for {self.get_name()} "
+                                  f"as {time_frame.value} is not allowed in this configuration. "
+                                  f"The shortest allowed time frame is {self.min_allowed_timeframe}. {self.get_name()} "
+                                  f"will emit neutral evaluations on this time frame.")
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -99,34 +110,38 @@ class GPTEvaluator(evaluators.TAEvaluator):
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
-        if not self._check_timeframe(time_frame):
-            self.logger.error(f"The {time_frame} time frame is not allowed in this configuration. "
-                              f"Shortest allowed time frame is {self.min_allowed_timeframe}")
-            return
-        try:
-            self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-            computed_data = self.call_indicator(candle_data)
-            reduced_data = computed_data[-self.PASSED_DATA_LEN:]
-            formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
-            prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame)
-            cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
-            prediction_side = self._parse_prediction_side(cleaned_prediction)
-            if prediction_side == 0:
-                self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
-                return
-            confidence = self._parse_confidence(cleaned_prediction) / 100
-            self.eval_note = prediction_side * confidence
-        except services_errors.InvalidRequestError as e:
-            self.logger.error(f"Invalid GPT request: {e}")
-        except services_errors.RateLimitError as e:
-            self.logger.error(f"Too many requests: {e}")
-        except evaluators_errors.UnavailableEvaluatorError as e:
-            self.logger.exception(e, True, f"Evaluation error: {e}")
-        except tulipy.lib.InvalidOptionError as e:
-            self.logger.warning(
-                f"Error when computing {self.indicator} on {self.period} period with {len(candle_data)} candles: {e}"
-            )
-            self.logger.exception(e, False)
+        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+        if self._check_timeframe(time_frame):
+            try:
+                computed_data = self.call_indicator(candle_data)
+                reduced_data = computed_data[-self.PASSED_DATA_LEN:]
+                formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
+                prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame)
+                cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
+                prediction_side = self._parse_prediction_side(cleaned_prediction)
+                if prediction_side == 0:
+                    self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
+                    return
+                confidence = self._parse_confidence(cleaned_prediction) / 100
+                self.eval_note = prediction_side * confidence
+            except services_errors.InvalidRequestError as e:
+                self.logger.error(f"Invalid GPT request: {e}")
+            except services_errors.RateLimitError as e:
+                self.logger.error(f"Too many requests: {e}")
+            except services_errors.UnavailableInBacktestingError:
+                # error already logged error for backtesting in use_backtesting_init_timeout
+                pass
+            except evaluators_errors.UnavailableEvaluatorError as e:
+                self.logger.exception(e, True, f"Evaluation error: {e}")
+            except tulipy.lib.InvalidOptionError as e:
+                self.logger.warning(
+                    f"Error when computing {self.indicator} on {self.period} period with {len(candle_data)} "
+                    f"candles: {e}"
+                )
+                self.logger.exception(e, False)
+        else:
+            self.logger.debug(f"Ignored {time_frame} time frame as the shorted allowed time frame is "
+                              f"{self.min_allowed_timeframe}")
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
@@ -140,7 +155,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
             ])
             self.logger.info(f"GPT's answer is '{resp}' for {symbol} on {time_frame} with input: {inputs}")
             return resp
-        except (services_errors.CreationError, services_errors.UnavailableInBacktestingError) as err:
+        except services_errors.CreationError as err:
             raise evaluators_errors.UnavailableEvaluatorError(f"Impossible to get ChatGPT prediction: {err}") from err
 
     def call_indicator(self, candle_data):

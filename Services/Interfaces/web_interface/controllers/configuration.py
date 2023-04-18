@@ -20,7 +20,7 @@ from datetime import datetime
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
-import octobot_commons.errors as commons_errors
+import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -52,7 +52,7 @@ def profile():
     display_config = interfaces_util.get_edited_config()
 
     missing_tentacles = set()
-    profiles = models.get_profiles()
+    profiles = models.get_profiles(commons_enums.ProfileType.LIVE)
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
     enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
     display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
@@ -105,9 +105,16 @@ def profiles_management(action):
         return util.get_rest_reply(flask.jsonify(data))
     if action == "duplicate":
         profile_id = flask.request.args.get("profile_id")
-        models.duplicate_and_select_profile(profile_id)
+        models.duplicate_profile(profile_id)
+        models.select_profile(profile_id)
         flask.flash(f"New profile successfully created and selected.", "success")
         return util.get_rest_reply(flask.jsonify("Profile created"))
+    if action == "use_as_live":
+        profile_id = flask.request.args.get("profile_id")
+        models.convert_to_live_profile(profile_id)
+        models.select_profile(profile_id)
+        flask.flash(f"Profile successfully converted to live profile and selected.", "success")
+        return flask.redirect(flask.url_for("profile"))
     if action == "remove":
         data = flask.request.get_json()
         to_remove_id = data["id"]
@@ -244,15 +251,21 @@ def config_tentacle():
     if flask.request.method == 'POST':
         tentacle_name = flask.request.args.get("name")
         action = flask.request.args.get("action")
+        profile_id = flask.request.args.get("profile_id")
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id) if profile_id else None
         success = True
         response = ""
         reload_config = False
         if action == "update":
             request_data = flask.request.get_json()
-            success, response = models.update_tentacle_config(tentacle_name, request_data)
+            success, response = models.update_tentacle_config(
+                tentacle_name, request_data, tentacles_setup_config=tentacles_setup_config
+            )
             reload_config = True
         elif action == "factory_reset":
-            success, response = models.reset_config_to_default(tentacle_name)
+            success, response = models.reset_config_to_default(
+                tentacle_name, tentacles_setup_config=tentacles_setup_config
+            )
             reload_config = True
         if flask.request.args.get("reload"):
             try:
@@ -320,8 +333,9 @@ def config_tentacle():
 @login.login_required_when_activated
 def config_tentacle_edit_details(tentacle):
     try:
+        profile_id = flask.request.args.get("profile", None)
         return util.get_rest_reply(
-            models.get_tentacle_config_and_edit_display(tentacle)
+            models.get_tentacle_config_and_edit_display(tentacle, profile_id=profile_id)
         )
     except Exception as e:
         commons_logging.get_logger("configuration").exception(e)
@@ -333,13 +347,17 @@ def config_tentacle_edit_details(tentacle):
 def config_tentacles():
     if flask.request.method == 'POST':
         action = flask.request.args.get("action")
+        profile_id = flask.request.args.get("profile_id")
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id) if profile_id else None
         success = True
         response = ""
         if action == "update":
             request_data = flask.request.get_json()
             responses = []
-            for tentacle, config in request_data.items():
-                update_success, update_response = models.update_tentacle_config(tentacle, config)
+            for tentacle, tentacle_config in request_data.items():
+                update_success, update_response = models.update_tentacle_config(
+                    tentacle, tentacle_config, tentacles_setup_config=tentacles_setup_config
+                )
                 success = update_success and success
                 responses.append(update_response)
             response = ", ".join(responses)

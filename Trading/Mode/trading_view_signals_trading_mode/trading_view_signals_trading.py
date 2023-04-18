@@ -38,6 +38,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
+    TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
@@ -226,6 +227,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                                                                                 target_price),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY:
+                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,

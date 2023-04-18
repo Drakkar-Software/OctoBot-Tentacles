@@ -22,9 +22,17 @@ import octobot_trading.exchanges as exchanges
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
     BASE_REST_API = "api.hollaex.com"
+    REST_KEY = "rest"
+    HAS_WEBSOCKETS_KEY = "has_websockets"
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     DEFAULT_MAX_LIMIT = 500
+
+    def __init__(self, config, exchange_manager):
+        super().__init__(config, exchange_manager)
+        self.exchange_manager.rest_only = not self.tentacle_config.get(
+            self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only
+        )
 
     @classmethod
     def init_user_inputs_from_class(cls, inputs: dict) -> None:
@@ -32,14 +40,20 @@ class hollaex(exchanges.RestExchange):
         Called at constructor, should define all the exchange's user inputs.
         """
         cls.CLASS_UI.user_input(
-            "rest", commons_enums.UserInputTypes.TEXT, f"https://{cls.BASE_REST_API}", inputs,
+            cls.REST_KEY, commons_enums.UserInputTypes.TEXT, f"https://{cls.BASE_REST_API}", inputs,
             title=f"Address of the Hollaex based exchange API (similar to https://{cls.BASE_REST_API})"
+        )
+        cls.CLASS_UI.user_input(
+            cls.HAS_WEBSOCKETS_KEY, commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title=f"Use websockets feed. To enable only when websockets are supported by the exchange."
         )
 
     def get_additional_connector_config(self):
         urls = ccxt.hollaex().urls
         custom_urls = {
-            "api": self.tentacle_config
+            "api": {
+                self.REST_KEY: self.tentacle_config[self.REST_KEY]
+            }
         }
         urls.update(custom_urls)
         return {

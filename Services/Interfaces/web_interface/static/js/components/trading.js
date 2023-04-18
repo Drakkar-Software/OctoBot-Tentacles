@@ -397,13 +397,29 @@ const registerScaleSelector = () => {
         }
     })
 }
+const registerSymbolSelector = () => {
+    $("#symbol-select").on("change", () => {
+        reload_pnl(true);
+    })
+}
+const registerFilterSelectors = () => {
+    registerScaleSelector();
+    registerSymbolSelector();
+}
 const getScale = () => {
     return $('a.nav-link.scale-selector.active').data("scale");
 }
+const getSymbol = () => {
+    return $("#symbol-select").val();
+}
+const updateTradesCount = (pnlHistory) => {
+    $("#match-trades-count").text(pnlHistory.reduce((sum, element) => sum + element.tc, 0));
+}
 const reload_pnl = async (update) => {
-    const pnlHistory = await fetchPnlHistory(getScale());
+    const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
     loadPnlFullChartHistory(pnlHistory, update);
     loadPnlTableHistory(pnlHistory, update);
+    updateTradesCount(pnlHistory);
     $("#pnl-waiter").hide();
 }
 
@@ -464,7 +480,7 @@ const registerTableButtonsEvents = () => {
 
 const MAX_PRICE_DIGITS = 8;
 
-registerScaleSelector();
+registerFilterSelectors();
 registerTableButtonsEvents();
 update_pairs_colors();
 $(".watched_element").each((_, element) => {

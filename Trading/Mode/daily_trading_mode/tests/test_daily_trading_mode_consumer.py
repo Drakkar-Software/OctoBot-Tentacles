@@ -147,6 +147,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.origin_quantity == decimal.Decimal(str(7.6))
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
+    assert order.chained_orders == []
     assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
@@ -175,6 +176,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -201,6 +203,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -225,6 +228,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -293,6 +297,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -315,6 +320,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -336,6 +342,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -549,6 +556,7 @@ async def test_valid_create_new_orders_without_stop_order(tools):
     assert order.filled_quantity == order.origin_quantity
     assert order.simulated is True
     assert order.order_group is None
+    assert order.chained_orders == []
 
     trading_mode_test_toolkit.check_order_limits(order, market_status)
 
@@ -800,3 +808,93 @@ async def ensure_smaller_orders(consumer, symbol, trader):
     trading_enums.TraderOrderType.SELL_MARKET, trading_enums.TraderOrderType.BUY_MARKET)):
         # no need to fill market orders
         await trading_mode_test_toolkit.fill_orders(orders4, trader)
+
+
+async def test_stop_loss_and_take_profit_orders(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+
+    # with BTC/USDT
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
+        last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(10 + 1000 / last_btc_price))
+
+    state = trading_enums.EvaluatorStates.VERY_LONG.value
+    # stop loss only
+    data = {
+        consumer.STOP_PRICE_KEY: decimal.Decimal("10"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+    }
+    orders_with_stop = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
+    buy_order = orders_with_stop[0]
+    assert len(buy_order.chained_orders) == 1
+    stop_order = buy_order.chained_orders[0]
+    assert isinstance(stop_order, trading_personal_data.StopLossOrder)
+    assert stop_order.origin_quantity == buy_order.origin_quantity == decimal.Decimal("0.01")
+    assert stop_order.origin_price == decimal.Decimal("10")
+    # stop has been triggered as signal is triggering a buy market order that is instantly filled
+    assert stop_order.is_waiting_for_chained_trigger is False
+    assert stop_order.is_open()
+
+    state = trading_enums.EvaluatorStates.LONG.value
+    # take profit only
+    data = {
+        consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("100000"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+    }
+    orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
+    buy_order = orders_with_tp[0]
+    assert len(buy_order.chained_orders) == 1
+    take_profit_order = buy_order.chained_orders[0]
+    assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+    assert take_profit_order.origin_quantity == buy_order.origin_quantity == decimal.Decimal("0.01")
+    assert take_profit_order.origin_price == decimal.Decimal("100000")
+    assert take_profit_order.is_waiting_for_chained_trigger
+    assert not take_profit_order.is_open()
+    assert not take_profit_order.is_created()
+
+    # stop loss and take profit
+    data = {
+        consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("100012"),
+        consumer.STOP_PRICE_KEY: decimal.Decimal("123"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+    }
+    orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state, data=data)
+    buy_order = orders_with_tp[0]
+    assert len(buy_order.chained_orders) == 2
+    stop_order = buy_order.chained_orders[0]
+    assert isinstance(stop_order, trading_personal_data.StopLossOrder)
+    assert stop_order.origin_quantity == buy_order.origin_quantity == decimal.Decimal("0.01")
+    assert stop_order.origin_price == decimal.Decimal("123")
+    assert stop_order.is_waiting_for_chained_trigger
+    assert not take_profit_order.is_open()
+    assert not take_profit_order.is_created()
+    take_profit_order = buy_order.chained_orders[1]
+    assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+    assert take_profit_order.origin_quantity == buy_order.origin_quantity == decimal.Decimal("0.01")
+    assert take_profit_order.origin_price == decimal.Decimal("100012")
+    assert take_profit_order.is_waiting_for_chained_trigger
+    assert not take_profit_order.is_open()
+    assert not take_profit_order.is_created()
+    assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
+    assert take_profit_order.order_group is stop_order.order_group
+
+    # stop loss and take profit but decreasing position size: create stop loss and no take profit
+    # (this initial order is a take profit already)
+    state = trading_enums.EvaluatorStates.SHORT.value
+    data = {
+        consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("100012"),
+        consumer.STOP_PRICE_KEY: decimal.Decimal("123"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+    }
+    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state, data=data)
+    assert len(orders) == 1
+    sell_limit = orders[0]
+    order_group = sell_limit.order_group
+    stop_loss = exchange_manager.exchange_personal_data.orders_manager.get_order_from_group(order_group.name)[1]
+    assert isinstance(sell_limit, trading_personal_data.SellLimitOrder)
+    assert isinstance(stop_loss, trading_personal_data.StopLossOrder)
+    assert sell_limit.chained_orders == []
+    assert stop_loss.chained_orders == []
+    assert stop_loss.origin_price == decimal.Decimal("123")
+    assert sell_limit.origin_quantity == stop_loss.origin_quantity == decimal.Decimal("0.01")

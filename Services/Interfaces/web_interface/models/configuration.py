@@ -224,7 +224,9 @@ def get_tentacle_documentation(name, media_url, missing_tentacles: set = None):
         # can happen when tentacles metadata.json are invalid
         return ""
 
-def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentacles: set, whitelist=None):
+def _get_strategy_activation_state(
+        with_trading_modes, media_url, missing_tentacles: set, whitelist=None, backtestable_only=False
+):
     import tentacles.Trading.Mode as modes
     import tentacles.Evaluator.Strategies as strategies
     strategy_config = {
@@ -241,13 +243,17 @@ def _get_strategy_activation_state(with_trading_modes, media_url, missing_tentac
         for key, val in trading_config.items():
             if whitelist and key not in whitelist:
                 continue
-            config_class = tentacles_management.get_class_from_string(key, trading_modes.AbstractTradingMode, modes,
-                                                                      tentacles_management.trading_mode_parent_inspection)
+            config_class = tentacles_management.get_class_from_string(
+                key, trading_modes.AbstractTradingMode, modes, tentacles_management.trading_mode_parent_inspection
+            )
             if config_class:
-                strategy_config[TRADING_MODES_KEY][key] = {}
-                strategy_config[TRADING_MODES_KEY][key][constants.ACTIVATION_KEY] = val
-                strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(key, media_url)
-                strategy_config_classes[TRADING_MODES_KEY][key] = config_class
+                if not backtestable_only or (backtestable_only and config_class.is_backtestable()):
+                    strategy_config[TRADING_MODES_KEY][key] = {}
+                    strategy_config[TRADING_MODES_KEY][key][constants.ACTIVATION_KEY] = val
+                    strategy_config[TRADING_MODES_KEY][key][DESCRIPTION_KEY] = get_tentacle_documentation(
+                        key, media_url
+                    )
+                    strategy_config_classes[TRADING_MODES_KEY][key] = config_class
             else:
                 _add_to_missing_tentacles_if_missing(key, missing_tentacles)
 
@@ -346,14 +352,23 @@ def get_tentacle_user_commands(klass):
     return klass.get_user_commands() if klass is not None and hasattr(klass, "get_user_commands") else {}
 
 
-def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None):
+async def get_tentacle_config_and_user_inputs(tentacle_class, bot_config, tentacles_setup_config):
+    return await tentacle_class.get_raw_config_and_user_inputs(
+        bot_config,
+        tentacles_setup_config,
+        interfaces_util.get_bot_api().get_bot_id()
+    )
+
+
+def get_tentacle_config_and_edit_display(tentacle, tentacle_class=None, profile_id=None):
+    config = interfaces_util.get_edited_config()
+    tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
+    if profile_id:
+        config = models.get_profile(profile_id).config
+        tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id)
     tentacle_class = tentacle_class or tentacles_manager_api.get_tentacle_class_from_string(tentacle)
     config, user_inputs = interfaces_util.run_in_bot_main_loop(
-        tentacle_class.get_raw_config_and_user_inputs(
-            interfaces_util.get_edited_config(),
-            interfaces_util.get_edited_tentacles_config(),
-            interfaces_util.get_bot_api().get_bot_id()
-        )
+        get_tentacle_config_and_user_inputs(tentacle_class, config, tentacles_setup_config)
     )
     display_elements = display.display_translator_factory()
     display_elements.add_user_inputs(user_inputs)
@@ -485,14 +500,16 @@ def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
             if len(tentacles) > 1}
 
 
-def update_tentacle_config(tentacle_name, config_update, tentacle_class=None):
+def update_tentacle_config(tentacle_name, config_update, tentacle_class=None, tentacles_setup_config=None):
     try:
         tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
         if tentacle_class is None:
             return False, f"Can't find {tentacle_name} class"
-        tentacles_manager_api.update_tentacle_config(interfaces_util.get_edited_tentacles_config(),
-                                                     tentacle_class,
-                                                     config_update)
+        tentacles_manager_api.update_tentacle_config(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config(),
+            tentacle_class,
+            config_update
+        )
         return True, f"{tentacle_name} updated"
     except Exception as e:
         _get_logger().exception(e, False)
@@ -509,11 +526,13 @@ def update_copied_trading_id(copy_id):
     )
 
 
-def reset_config_to_default(tentacle_name, tentacle_class=None):
+def reset_config_to_default(tentacle_name, tentacle_class=None, tentacles_setup_config=None):
     try:
         tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
-        tentacles_manager_api.factory_tentacle_reset_config(interfaces_util.get_edited_tentacles_config(),
-                                                            tentacle_class)
+        tentacles_manager_api.factory_tentacle_reset_config(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config(),
+            tentacle_class
+        )
         return True, f"{tentacle_name} configuration reset to default values"
     except FileNotFoundError as e:
         error_message = f"Error when resetting factory tentacle config: no default values file at {e.filename}"
@@ -577,11 +596,14 @@ def _add_trading_modes_requirements(trading_modes_list, strategy_config):
             _get_logger().exception(e, False)
 
 
-def get_strategy_config(media_url, missing_tentacles: set, with_trading_modes=True, whitelist=None):
+def get_strategy_config(
+        media_url, missing_tentacles: set, with_trading_modes=True, whitelist=None, backtestable_only=False
+):
     strategy_config, strategy_config_classes = _get_strategy_activation_state(with_trading_modes,
                                                                               media_url,
                                                                               missing_tentacles,
-                                                                              whitelist=whitelist)
+                                                                              whitelist=whitelist,
+                                                                              backtestable_only=backtestable_only)
     if with_trading_modes:
         _add_trading_modes_requirements(strategy_config_classes[TRADING_MODES_KEY], strategy_config)
     _add_strategies_requirements(strategy_config_classes[STRATEGIES_KEY], strategy_config)
@@ -670,19 +692,25 @@ def get_evaluator_detailed_config(media_url, missing_tentacles: set, single_stra
     return detailed_config
 
 
-def get_config_activated_trading_mode():
+def get_config_activated_trading_mode(tentacles_setup_config=None):
     try:
-        return trading_api.get_activated_trading_mode(interfaces_util.get_bot_api().get_edited_tentacles_config())
+        return trading_api.get_activated_trading_mode(
+            tentacles_setup_config or interfaces_util.get_bot_api().get_edited_tentacles_config()
+        )
     except commons_errors.ConfigTradingError:
         return None
 
 
-def get_config_activated_strategies():
-    return evaluators_api.get_activated_strategies_classes(interfaces_util.get_bot_api().get_edited_tentacles_config())
+def get_config_activated_strategies(tentacles_setup_config=None):
+    return evaluators_api.get_activated_strategies_classes(
+        tentacles_setup_config or interfaces_util.get_bot_api().get_edited_tentacles_config()
+    )
 
 
-def get_config_activated_evaluators():
-    return evaluators_api.get_activated_evaluators(interfaces_util.get_bot_api().get_edited_tentacles_config())
+def get_config_activated_evaluators(tentacles_setup_config=None):
+    return evaluators_api.get_activated_evaluators(
+        tentacles_setup_config or interfaces_util.get_bot_api().get_edited_tentacles_config()
+    )
 
 
 def has_futures_exchange():
@@ -695,15 +723,16 @@ def has_futures_exchange():
     return False
 
 
-def update_tentacles_activation_config(new_config, deactivate_others=False):
-    tentacles_setup_configuration = interfaces_util.get_edited_tentacles_config()
+def update_tentacles_activation_config(new_config, deactivate_others=False, tentacles_setup_configuration=None):
+    tentacles_setup_configuration = tentacles_setup_configuration or interfaces_util.get_edited_tentacles_config()
     try:
         updated_config = {
             element_name: activated if isinstance(activated, bool) else activated.lower() == "true"
             for element_name, activated in new_config.items()
         }
-        if tentacles_manager_api.update_activation_configuration(interfaces_util.get_edited_tentacles_config(),
-                                                                 updated_config, deactivate_others):
+        if tentacles_manager_api.update_activation_configuration(
+                tentacles_setup_configuration, updated_config, deactivate_others
+        ):
             tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_configuration)
         return True
     except Exception as e:
@@ -858,8 +887,12 @@ def get_enabled_trading_pairs() -> set:
     return symbols
 
 
-def get_exchange_available_trading_pairs(exchange_manager) -> list:
-    return trading_api.get_trading_pairs(exchange_manager)
+def get_exchange_available_trading_pairs(exchange_manager, profile=None) -> list:
+    return trading_api.get_trading_pairs(exchange_manager) if profile is None else [
+        pair
+        for pair in trading_api.get_all_exchange_symbols(exchange_manager)
+        if pair in trading_api.get_config_symbols(profile.config, True)
+    ]
 
 
 def get_symbol_list(exchanges):
@@ -945,8 +978,11 @@ def get_timeframes_list(exchanges):
             if time_frame in allowed_timeframes]
 
 
-def get_strategy_required_time_frames(strategy_class):
-    return strategy_class.get_required_time_frames({}, interfaces_util.get_edited_tentacles_config())
+def get_strategy_required_time_frames(strategy_class, tentacles_setup_config=None):
+    return strategy_class.get_required_time_frames(
+        {},
+        tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
+    )
 
 
 def format_config_symbols(config):
@@ -1082,8 +1118,20 @@ def get_json_simulated_portfolio(user_config):
     ]
 
 
-def get_traded_time_frames(exchange_manager):
-    return trading_api.get_relevant_time_frames(exchange_manager)
+def get_traded_time_frames(exchange_manager, strategies=None, tentacles_setup_config=None) -> list:
+    if strategies is None:
+        return trading_api.get_relevant_time_frames(exchange_manager)
+    strategies_time_frames = []
+    for strategy_class in strategies:
+        strategies_time_frames += [
+            tf.value
+            for tf in get_strategy_required_time_frames(strategy_class, tentacles_setup_config)
+        ]
+    return [
+        commons_enums.TimeFrames(time_frame)
+        for time_frame in trading_api.get_all_exchange_time_frames(exchange_manager)
+        if time_frame in strategies_time_frames
+    ]
 
 
 def get_full_exchange_list(remove_config_exchanges=False):

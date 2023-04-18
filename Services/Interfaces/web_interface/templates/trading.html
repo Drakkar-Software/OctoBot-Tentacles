@@ -137,6 +137,22 @@
                     <div class="card-body">
                         {{ waiter("pnl-waiter", "Loading Profit and Loss") }}
                         <div class="w-100">
+                            <div class="d-flex justify-content-between">
+                                <h4>
+                                    <span id="match-trades-count" class="badge font-size-90 badge-success"></span>
+                                    <span class="d-none d-md-inline">Matched</span> Trades
+                                </h4>
+                                <select id="symbol-select" class="selectpicker" data-live-search="true">
+                                    <option value="" selected>
+                                        Reference market
+                                    </option>
+                                    {% for symbol in pnl_symbols | sort %}
+                                        <option value="{{ symbol }}">
+                                            {{ symbol }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div id="pnl_historyChart"
                                  data-url="{{url_for('api.pnl_history', quote=reference_market, scale='')}}"
                                  data-unit="{{reference_market}}"
@@ -149,16 +165,10 @@
                                  class="w-100 table-striped table-responsive-sm">
                             </table>
                         </div>
-                        <div class="alert alert-info mt-2">
-                            For accuracy, Profit and Loss is computed only for trades that:
-                            <ul>
-                                <li>
-                                    Are coming from a trading mode that is supporting PNL history such as Grid Trading or the Dip Analyser.
-                                </li>
-                                <li>
-                                    Are from a trading pair including your reference market ({{ reference_market }}).
-                                </li>
-                            </ul>
+                        <div class="alert alert-info mt-4">
+                            For accuracy, Profit and Loss is only computed for trades that are coming from a
+                            trading mode that is supporting PNL history such as Grid Trading or the Dip Analyser.
+                            <br>
                             Please check trading modes description to find out if PNL history is supported.
                             Resetting the trades history will reset Profit and Loss.
                         </div>

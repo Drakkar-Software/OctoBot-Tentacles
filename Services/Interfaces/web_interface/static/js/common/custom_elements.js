@@ -102,9 +102,16 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     };
     const minY = Math.min.apply(null, trace.y);
     const maxDisplayY = Math.max.apply(null, trace.y);
-    const minDisplayY = Math.max(0, minY - (maxDisplayY - minY));
+    const minDisplayY = Math.max(0, minY - ((maxDisplayY - minY) / 2));
     const layout = {
         title: title,
+        dragmode: isMobileDisplay() ? false : 'zoom',
+        margin: {
+            l: 30,
+            r: 0,
+            t: 40,
+            b: 40,
+        },
         xaxis: {
             autorange: true,
             showgrid: false,
@@ -112,17 +119,19 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
             type: 'date',
             rangeslider: {
                 visible: false,
-            }
+            },
+            automargin: true,
         },
         yaxis1: {
             showgrid: false,
-            range: [minDisplayY, maxDisplayY]
+            range: [minDisplayY, maxDisplayY],
+            automargin: true,
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: fontColor
-        }
+        },
     };
     const plotlyConfig = {
         scrollZoom: false,
@@ -171,6 +180,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
     const maxDisplayY = Math.max(0, Math.max.apply(null, trace2.y) * 1.5);
     const minDisplayY = Math.min(0, Math.min.apply(null, trace2.y) * 1.5);
     const layout = {
+        dragmode: isMobileDisplay() ? false : 'zoom',
         xaxis: {
             autorange: true,
             showgrid: false,
@@ -198,6 +208,11 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: fontColor
+        },
+        margin: {
+            l: 30,
+            r: 30,
+            t: 40,
         },
         showlegend: false,
     };
