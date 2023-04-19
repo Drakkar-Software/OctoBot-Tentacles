@@ -257,7 +257,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                            self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
                                            symbol=symbol.symbol_str,
                                            time_frame=time_frame.value,
-                                           timestamp=candle_timestamp)
+                                           timestamp=str(candle_timestamp))
         if to_add_candles:
             await self.save_ohlcv(
                 exchange=exchange,
