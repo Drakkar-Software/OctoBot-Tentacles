@@ -124,6 +124,9 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         parsed_data = {}
         signal_data = data.get("metadata", "")
         for line in signal_data.split("\n"):
+            if not line.strip():
+                # ignore empty lines
+                continue
             values = line.split("=")
             try:
                 value = values[1].strip()
