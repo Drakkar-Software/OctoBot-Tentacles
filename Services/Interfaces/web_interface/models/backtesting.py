@@ -375,10 +375,24 @@ def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp, 
                 exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
             ) or (commons_enums.TimeFrames.ONE_MINUTE,)
         ]
+        exchange_symbols = trading_api.get_all_exchange_symbols(exchange_manager)
+        profile_symbols = trading_api.get_config_symbols(profile.config, True)
         symbols = [
             commons_symbols.parse_symbol(symbol)
-            for symbol in trading_api.get_config_symbols(profile.config, True)
+            for symbol in profile_symbols
+            if symbol in exchange_symbols
         ]
+        if len(symbols) < len(profile_symbols):
+            skipped = [
+                symbol
+                for symbol in profile_symbols
+                if commons_symbols.parse_symbol(symbol) not in symbols
+            ]
+            bot_logging.get_logger("DataCollectorWebInterfaceModel").error(
+                f"Skipping {skipped} symbol(s) for backtesting as they "
+                f"are not available on {trading_api.get_exchange_name(exchange_manager)}"
+            )
+
     return backtesting_api.exchange_bot_snapshot_data_collector_factory(
         trading_api.get_exchange_name(exchange_manager),
         interfaces_util.get_bot_api().get_edited_tentacles_config(),

@@ -993,6 +993,16 @@ def format_config_symbols(config):
     return config[commons_constants.CONFIG_CRYPTO_CURRENCIES]
 
 
+def format_config_symbols_without_enabled_key(config):
+    enabled_config = {}
+    for currency, data in config[commons_constants.CONFIG_CRYPTO_CURRENCIES].items():
+        if data.get(commons_constants.CONFIG_ENABLED_OPTION, False) and data[commons_constants.CONFIG_CRYPTO_PAIRS]:
+            enabled_config[currency] = {
+                commons_constants.CONFIG_CRYPTO_PAIRS: data[commons_constants.CONFIG_CRYPTO_PAIRS]
+            }
+    return enabled_config
+
+
 def _is_legit_currency(currency):
     return not any(sub_name in currency for sub_name in EXCLUDED_CURRENCY_SUBNAME) and len(currency) < 30
 

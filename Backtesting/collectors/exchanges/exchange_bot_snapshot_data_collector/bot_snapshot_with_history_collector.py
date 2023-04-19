@@ -57,6 +57,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                                         data_format=data_format)
         self.is_creating_database = False
         self.description = None
+        self.missing_symbols = []
         self.fetched_data = {
             self.OHLCV: {},
             self.KLINE: {},
@@ -126,6 +127,10 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             self.logger.info(f"Start collecting history on {self.exchange_name}")
             tasks = []
             for symbol_index, symbol in enumerate(self.symbols):
+                if symbol in self.missing_symbols:
+                    self.logger.error(f"Skipping {symbol} from backtesting data: "
+                                      f"missing price history on {self.exchange_name}")
+                    continue
                 self.logger.info(f"Collecting history for {symbol}...")
                 tasks.append(asyncio.create_task(self.get_ticker_history(self.exchange_name, symbol)))
                 tasks.append(asyncio.create_task(self.get_order_book_history(self.exchange_name, symbol)))
@@ -369,9 +374,16 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         pass
 
     async def adapt_timestamps(self):
-        lowest_timestamp = min([await self.get_first_candle_timestamp(symbol, tf)
-                                for tf in self.time_frames
-                                for symbol in self.symbols])
+        lowest_timestamps = []
+        for symbol in self.symbols:
+            for tf in self.time_frames:
+                first_timestamp = await self.get_first_candle_timestamp(symbol, tf)
+                if first_timestamp is None:
+                    self.missing_symbols.append(symbol)
+                    break
+                else:
+                    lowest_timestamps.append(first_timestamp)
+        lowest_timestamp = min(lowest_timestamps)
         if self.start_timestamp is None or lowest_timestamp < self.start_timestamp:
             self.start_timestamp = lowest_timestamp
         self.end_timestamp = self.end_timestamp or time.time() * 1000
@@ -391,5 +403,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             fetched_candles = await self.exchange_manager.exchange.get_symbol_prices(
                 str(symbol), time_frame, since=self.start_timestamp
             )
+            if not fetched_candles:
+                return None
             self.fetched_data[self.OHLCV][self.get_fetch_data_id(symbol, time_frame)] = fetched_candles
             return fetched_candles[0][commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
