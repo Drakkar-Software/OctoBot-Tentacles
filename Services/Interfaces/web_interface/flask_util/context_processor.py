@@ -122,6 +122,7 @@ def context_processor_register():
         CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
         IS_DEMO=constants.IS_DEMO,
         IS_CLOUD=constants.IS_CLOUD_ENV,
+        CAN_INSTALL_TENTACLES=constants.CAN_INSTALL_TENTACLES,
         IS_ALLOWING_TRACKING=models.get_metrics_enabled(),
         TRACKING_ID=constants.TRACKING_ID,
         TAB_START=web_enums.TabsLocation.START,
