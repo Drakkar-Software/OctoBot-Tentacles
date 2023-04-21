@@ -26,6 +26,7 @@ import octobot_commons.symbols as commons_symbols
 
 class Coinbase(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 299
+    REQUIRES_AUTHENTICATION = True
 
     @classmethod
     def get_name(cls):
@@ -57,7 +58,7 @@ class Coinbase(exchanges.RestExchange):
 
     def _get_ohlcv_params(self, time_frame, limit, **kwargs):
         # to be added in tentacle
-        limit = min(self.MAX_PAGINATION_LIMIT, limit)
+        limit = min(self.MAX_PAGINATION_LIMIT, limit) if limit else self.MAX_PAGINATION_LIMIT
         time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
         to_time = self.connector.client.milliseconds()
         kwargs.update({
