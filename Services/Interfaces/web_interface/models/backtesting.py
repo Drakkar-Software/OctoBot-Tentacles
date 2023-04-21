@@ -400,7 +400,8 @@ def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp, 
         exchange_id,
         time_frames=time_frames,
         start_timestamp=start_timestamp,
-        end_timestamp=end_timestamp
+        end_timestamp=end_timestamp,
+        config=interfaces_util.get_bot_api().get_edited_config(dict_only=True),
     )
 
 
@@ -470,7 +471,9 @@ def _background_collect_exchange_historical_data(exchange, exchange_type, symbol
         [commons_symbols.parse_symbol(symbol) for symbol in symbols],
         time_frames=time_frames,
         start_timestamp=start_timestamp,
-        end_timestamp=end_timestamp)
+        end_timestamp=end_timestamp,
+        config=interfaces_util.get_bot_api().get_edited_config(dict_only=True),
+    )
     web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = data_collector_instance
     coro = _start_collect_and_notify(data_collector_instance)
     threading.Thread(target=asyncio.run, args=(coro,), name=f"DataCollector{symbols}").start()

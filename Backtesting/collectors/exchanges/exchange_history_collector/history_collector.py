@@ -57,8 +57,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 .is_simulated() \
                 .is_rest_only() \
                 .is_exchange_only() \
-                .is_without_auth() \
-                .is_ignoring_config() \
                 .is_future(use_future) \
                 .disable_trading_mode() \
                 .use_tentacles_setup_config(self.tentacles_setup_config) \
