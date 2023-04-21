@@ -52,6 +52,8 @@ class Bybit(exchanges.RestExchange):
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    EXPECT_POSSIBLE_ORDER_NOT_FOUND_DURING_ORDER_CREATION = True  # set True when get_order() can return None
+    # (order not found) when orders are instantly filled on exchange and are not fully processed on the exchange side.
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
@@ -106,7 +108,7 @@ class Bybit(exchanges.RestExchange):
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         # apply api candles limit
-        limit = min(limit, 200 if self.exchange_manager.is_future else 1000)
+        limit = min(limit, 200)
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
             kwargs["end"] = int(time.time() * 1000)
@@ -364,9 +366,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
-        if self.connector.exchange_manager.is_future:
-            # only missing in futures
-            fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
         return fixed
     
     def parse_position(self, fixed, **kwargs):
