@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
+import sortedcontainers
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchange_data as trading_exchange_data
@@ -195,9 +196,54 @@ def _position_factory(symbol, contract_data):
     return trading_personal_data.create_position_from_type(_TraderMock(), contract)
 
 
+def _evaluate_portfolio(portfolio, price_data, use_start_value):
+    handled_currencies = []
+    value = 0
+
+    vals = {}
+    for pair, candles in price_data.items():
+        candle = candles[0 if use_start_value else len(candles) - 1]
+        symbol, ref_market = symbol_util.parse_symbol(pair).base_and_quote()
+        if symbol not in handled_currencies:
+            value += portfolio.get(symbol, {}).get(octobot_commons.constants.PORTFOLIO_TOTAL, 0) * candle[
+                commons_enums.PriceIndexes.IND_PRICE_OPEN.value
+            ]
+            vals[symbol] = candle[
+                commons_enums.PriceIndexes.IND_PRICE_OPEN.value
+            ]
+            handled_currencies.append(symbol)
+        if ref_market not in handled_currencies:
+            value += portfolio.get(ref_market, {}).get(octobot_commons.constants.PORTFOLIO_TOTAL, 0)
+            handled_currencies.append(ref_market)
+    return value
+
+
+async def get_portfolio_values(meta_database, exchange=None):
+    metadata = await get_metadata(meta_database)
+    starting_portfolio = json.loads(metadata[commons_enums.BacktestingMetadata.START_PORTFOLIO.value].replace("'", '"'))
+    ending_portfolio = json.loads(metadata[commons_enums.BacktestingMetadata.END_PORTFOLIO.value].replace("'", '"'))
+    price_data, trades_data, moving_portfolio_data, trading_type, metadata = \
+        await _load_historical_values(meta_database, exchange, with_portfolio=False, with_trades=False)
+    return _evaluate_portfolio(
+        starting_portfolio,
+        price_data,
+        True,
+    ), _evaluate_portfolio(
+        ending_portfolio,
+        price_data,
+        False,
+    )
+
+
 async def plot_historical_portfolio_value(meta_database, plotted_element, exchange=None, own_yaxis=False):
     price_data, trades_data, moving_portfolio_data, trading_type, metadata = \
         await _load_historical_values(meta_database, exchange)
+    price_data_by_time = {}
+    for symbol, candles in price_data.items():
+        price_data_by_time[symbol] = {
+            candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]: candle
+            for candle in candles
+        }
     if trading_type == "future":
         # TODO: historical unrealized pnl
         pass
@@ -205,14 +251,15 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
         trades_data[pair] = sorted(trades_data[pair], key=lambda tr: tr[commons_enums.PlotAttributes.X.value])
     funding_fees_history_by_pair = await _get_grouped_funding_fees(meta_database,
                                                                    commons_enums.DBRows.SYMBOL.value)
-    time_data = []
-    value_data = []
+    value_data = sortedcontainers.SortedDict()
     pairs = list(trades_data)
     if pairs:
         pair = pairs[0]
-        candles = price_data[pair]
-        time_data = [candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] for candle in candles]
-        value_data = [0] * len(candles)
+        candles = price_data_by_time[pair]
+        value_data = sortedcontainers.SortedDict({
+            t: 0
+            for t in candles
+        })
         trade_index_by_pair = {p: 0 for p in pairs}
         funding_fees_index_by_pair = {p: 0 for p in pairs}
         # TODO multi exchanges
@@ -228,10 +275,14 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
         # else:
         #     positions_by_pair = {}
         # TODO update position instead of portfolio when filled orders and apply position unrealized pnl to portfolio
-        for index, ref_candle in enumerate(candles):
-            handled_currencies = []
+        for candle_time, ref_candle in candles.items():
+            current_candles = {}
             for pair in pairs:
-                other_candle = price_data[pair][index]
+                if candle_time not in price_data_by_time[pair]:
+                    # no price data for this time in this pair
+                    continue
+                other_candle = price_data_by_time[pair][candle_time]
+                current_candles[pair] = other_candle
                 symbol, ref_market = symbol_util.parse_symbol(pair).base_and_quote()
                 moving_portfolio_data[ref_market] = moving_portfolio_data.get(ref_market, 0)
                 moving_portfolio_data[symbol] = moving_portfolio_data.get(symbol, 0)
@@ -240,9 +291,8 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
                 # start iteration where it last stopped to reduce complexity
                 for trade_index, trade in enumerate(trades_data[pair][trade_index_by_pair[pair]:]):
                     # handle trades that are both older and at the current candle starting from the last trade index
-                    # (older trades to handle the ones that might be from candles we dont have data one)
-                    if trade[commons_enums.PlotAttributes.X.value] <= \
-                            ref_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]:
+                    # (older trades to handle the ones that might be from candles we dont have data on)
+                    if trade[commons_enums.PlotAttributes.X.value] <= candle_time:
                         if trade[commons_enums.PlotAttributes.SIDE.value] == trading_enums.TradeOrderSide.SELL.value:
                             moving_portfolio_data[symbol] -= trade[commons_enums.PlotAttributes.VOLUME.value]
                             moving_portfolio_data[ref_market] += trade[commons_enums.PlotAttributes.VOLUME.value] * \
@@ -271,34 +321,34 @@ async def plot_historical_portfolio_value(meta_database, plotted_element, exchan
                 # start iteration where it last stopped to reduce complexity
                 for funding_fee_index, funding_fee \
                         in enumerate(funding_fees_history_by_pair.get(pair, [])[funding_fees_index_by_pair[pair]:]):
-                    if funding_fee[commons_enums.PlotAttributes.X.value] == \
-                            ref_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]:
+                    if funding_fee[commons_enums.PlotAttributes.X.value] == candle_time:
                         moving_portfolio_data[funding_fee[trading_enums.FeePropertyColumns.CURRENCY.value]] -= \
                             funding_fee["quantity"]
-                    if funding_fee[commons_enums.PlotAttributes.X.value] > \
-                            ref_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]:
+                    if funding_fee[commons_enums.PlotAttributes.X.value] > candle_time:
                         # no need to continue iterating, save current index for new candle
                         funding_fees_index_by_pair[pair] = funding_fee_index  # TODO
                         break
-                # part 2: now that portfolio is up to date, compute portfolio total value
-                if other_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] == \
-                        ref_candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]:
-                    if symbol not in handled_currencies:
-                        value_data[index] = \
-                            value_data[index] + \
-                            moving_portfolio_data[symbol] * other_candle[
-                                commons_enums.PriceIndexes.IND_PRICE_OPEN.value]
-                        handled_currencies.append(symbol)
-                    if ref_market not in handled_currencies:
-                        value_data[index] = value_data[index] + moving_portfolio_data[ref_market]
-                        handled_currencies.append(ref_market)
-
+            # part 2: now that portfolio is up-to-date, compute portfolio total value
+            handled_currencies = []
+            for pair, other_candle in current_candles.items():
+                symbol, ref_market = symbol_util.parse_symbol(pair).base_and_quote()
+                if symbol not in handled_currencies:
+                    value_data[candle_time] = \
+                        value_data[candle_time] + \
+                        moving_portfolio_data[symbol] * other_candle[
+                            commons_enums.PriceIndexes.IND_PRICE_OPEN.value
+                        ]
+                    handled_currencies.append(symbol)
+                if ref_market not in handled_currencies:
+                    value_data[candle_time] = value_data[candle_time] + moving_portfolio_data[ref_market]
+                    handled_currencies.append(ref_market)
     plotted_element.plot(
         mode="scatter",
-        x=time_data,
-        y=value_data,
+        x=list(value_data.keys()),
+        y=list(value_data.values()),
         title="Portfolio value",
-        own_yaxis=own_yaxis)
+        own_yaxis=own_yaxis
+    )
 
 
 def _read_pnl_from_trades(x_data, pnl_data, cumulative_pnl_data, trades_history, x_as_trade_count):
