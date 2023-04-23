@@ -98,9 +98,11 @@
                             <a class="nav-link" href="{{ url_for('advanced.strategy_optimizer') }}">Strategy optimizer</a>
                         </li>
                         {% endif %}
+                        {% if CAN_INSTALL_TENTACLES %}
                         <li class="nav-item mx-1 px-0 my-auto {% if 'advanced.tentacles' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('advanced.tentacles') }}">Tentacles</a>
                         </li>
+                        {% endif %}
                         <li class="nav-item mx-1 px-0 my-auto">
                             <a class="btn btn-sm btn-outline-default waves-effect" href="{{ url_for('home') }}"><i class="fa fa-home"></i> Back to OctoBot</a>
                         </li>

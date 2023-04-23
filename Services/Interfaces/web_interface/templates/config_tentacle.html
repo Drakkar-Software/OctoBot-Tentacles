@@ -198,7 +198,7 @@
                 </a>
                 {% if activated_trading_mode %}
                 <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
-                    Current trading mode: {{ activated_trading_mode.get_name() }}
+                    <span class="d-none d-md-inline">Current trading mode: </span>{{ activated_trading_mode.get_name() }}
                 </a>
                 {% endif %}
             </h2>
@@ -207,7 +207,7 @@
             <div class="row w-100">
                 {% if activated_trading_mode and activated_trading_mode.is_backtestable() %}
                     {% if data_files %}
-                        <div class="col-6">
+                        <div class="col-12 col-md-6 col-xl-4">
                            <select class="selectpicker w-100" data-live-search="true" data-width="auto" data-window-padding="25" id="dataFileSelect"
                                    {{ "disabled" if not tentacle_desc["activation"] }}>
                             {% for file, description in data_files%}
@@ -220,12 +220,24 @@
                              {% endfor %}
                            </select>
                         </div>
-                        <div class="col-3">
+                        <div class="col-12 col-md-6 col-xl-5 row">
                             {% if tentacle_desc["activation"] %}
-                                <button type="button" id="startBacktesting" class="btn btn-primary waves-effect"
-                                        start-url="{{ url_for('backtesting', action_type='start_backtesting', source='config_tentacle', reset_tentacle_config=True) }}">
-                                    Start backtesting
-                                </button>
+                                <div class="col-12 col-xl-8 d-flex">
+                                    <div class="mt-2 mx-1">
+                                        From :
+                                        <input type="date" class="datepicker" id="startDate">
+                                    </div>
+                                    <div class="mt-2 mx-1">
+                                        To :
+                                        <input type="date" class="datepicker" id="endDate">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-4">
+                                    <button type="button" id="startBacktesting" class="btn btn-primary waves-effect"
+                                            start-url="{{ url_for('backtesting', action_type='start_backtesting', source='config_tentacle', reset_tentacle_config=True) }}">
+                                        Backtest
+                                    </button>
+                                </div>
                             {% else %}
                                 <a href="{{ url_for('profile') if tentacle_type in ["trading mode", "strategy"] else url_for('advanced.evaluator_config') }}"
                                     role="button" id="startBacktesting" class="btn btn-outline-primary waves-effect">
@@ -243,7 +255,7 @@
                         <a class="alert-link" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">{{ activated_trading_mode.get_name() }}</a> can't be used in backtesting for now.
                     </div>
                 {% endif %}
-                <div class="col-3">
+                <div class="col-12 col-xl-3">
                     <a href="{{ url_for('data_collector', from=url_for(request.endpoint, name=name)) }}" class="btn btn-outline-info waves-effect"> <i class="fa fa-cloud-download-alt"></i> Get historical data</a>
                 </div>
             </div>

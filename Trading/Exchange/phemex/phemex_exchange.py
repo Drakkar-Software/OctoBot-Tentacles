@@ -48,6 +48,8 @@ class Phemex(exchanges.RestExchange):
                                           reduce_only=reduce_only, params=params)
 
     def _get_ohlcv_params(self, time_frame, limit, **kwargs):
+        if limit is None:
+            return {}
         to_time = self.connector.client.milliseconds()
         time_frame_msec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
         kwargs.update({
@@ -56,14 +58,12 @@ class Phemex(exchanges.RestExchange):
         })
         return kwargs
 
-    async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
-                                **kwargs: dict) -> typing.Optional[list]:
-        # without limit is not supported
-        if limit is None:
-            limit = 100
-        return await super().get_symbol_prices(
-            symbol=symbol, time_frame=time_frame, **self._get_ohlcv_params(time_frame, limit, **kwargs)
-        )
+    async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
+                              **kwargs: dict) -> typing.Optional[list]:
+        # get_kline_price is returning the last 100 candles on phemex
+        return (await super().get_kline_price(
+            symbol=symbol, time_frame=time_frame, **kwargs)
+        )[-1]
 
     async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, order_id=order_id, **kwargs):
@@ -103,4 +103,13 @@ class PhemexCCXTAdapter(exchanges.CCXTAdapter):
                     trading_enums.FeePropertyColumns.CURRENCY.value] = order_info[self.PHEMEX_FEE_CURRENCY]
         except KeyError as err:
             self.logger.debug(f"Failed to fix order fees: {err}")
+        try:
+            if fixed[
+                trading_enums.ExchangeConstantsOrderColumns.STATUS.value
+            ] == trading_enums.OrderStatus.CLOSED.value:
+                base_amount = fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]
+                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
+                    base_amount - fixed[trading_enums.ExchangeConstantsOrderColumns.REMAINING.value]
+        except KeyError as err:
+            self.logger.debug(f"Failed to fix order amount: {err}")
         return fixed

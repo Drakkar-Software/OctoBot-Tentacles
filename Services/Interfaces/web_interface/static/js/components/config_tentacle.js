@@ -151,10 +151,18 @@ function handleButtons() {
     });
 
     $("#startBacktesting").click(function(){
+        if(!check_date_range()){
+            create_alert("error", "Invalid date range.", "");
+            return;
+        }
         $("#backtesting_progress_bar").show();
         lock_interface();
         const request = {};
         request["files"] = get_selected_files();
+        const startDate = $("#startDate");
+        const endDate = $("#endDate");
+        request["start_timestamp"] = startDate.val().length ? (new Date(startDate.val()).getTime()) : null;
+        request["end_timestamp"] = endDate.val().length ? (new Date(endDate.val()).getTime()) : null;
         const update_url = $("#startBacktesting").attr("start-url");
         start_backtesting(request, update_url);
     });
@@ -169,6 +177,11 @@ function handleButtons() {
         window.location.hash = "backtestingInputPart";
         location.reload();
     })
+}
+function check_date_range(){
+    const start_date = new Date($("#startDate").val());
+    const end_date = new Date($("#endDate").val());
+    return (!isNaN(start_date) && !isNaN(end_date)) ? start_date < end_date : true;
 }
 
 function get_config_key(elem){

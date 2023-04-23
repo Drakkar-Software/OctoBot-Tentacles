@@ -79,16 +79,18 @@ $(document).ready(function () {
 
     function get_version_upgrade() {
         const upgradeVersionAlertDiv = $("#upgradeVersion");
-        $.get({
-            url: upgradeVersionAlertDiv.attr(update_url_attr),
-            dataType: "json",
-            success: function (msg, status) {
-                if (msg) {
-                    upgradeVersionAlertDiv.text(msg);
-                    upgradeVersionAlertDiv.parent().parent().removeClass(disabled_item_class);
+        if(upgradeVersionAlertDiv.length){
+            $.get({
+                url: upgradeVersionAlertDiv.attr(update_url_attr),
+                dataType: "json",
+                success: function (msg, status) {
+                    if (msg) {
+                        upgradeVersionAlertDiv.text(msg);
+                        upgradeVersionAlertDiv.parent().parent().removeClass(disabled_item_class);
+                    }
                 }
-            }
-        })
+            })
+        }
     }
 
     function handle_graph_update() {
