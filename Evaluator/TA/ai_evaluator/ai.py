@@ -46,14 +46,17 @@ class GPTEvaluator(evaluators.TAEvaluator):
         "Detrended Price Oscillator": tulipy.dpo,
     }
     SOURCES = ["Open", "High", "Low", "Close", "Volume"]
+    GPT_MODELS = []
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
         self.indicator = None
         self.source = None
         self.period = None
+        self.gpt_model = gpt_service.GPTService.DEFAULT_MODEL
         self.is_backtesting = False
         self.min_allowed_timeframe = os.getenv("MIN_GPT_TIMEFRAME", None)
+        self.enable_model_selector = os_util.parse_boolean_environment_var("ENABLE_GPT_MODELS_SELECTOR", "True")
         self._min_allowed_timeframe_minutes = 0
         try:
             if self.min_allowed_timeframe:
@@ -61,13 +64,25 @@ class GPTEvaluator(evaluators.TAEvaluator):
                     commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(self.min_allowed_timeframe)]
         except ValueError:
             self.logger.error(f"Invalid timeframe configuration: unknown timeframe: '{self.min_allowed_timeframe}'")
-        self.allow_reevaluations = os_util.parse_boolean_environment_var("ALLOW_GPT_REEVALUATIONS", "false")
+        self.allow_reevaluations = os_util.parse_boolean_environment_var("ALLOW_GPT_REEVALUATIONS", "True")
 
     def enable_reevaluation(self) -> bool:
         """
         Override when artificial re-evaluations from the evaluator channel can be disabled
         """
         return self.allow_reevaluations
+
+    async def load_and_save_user_inputs(self, bot_id: str) -> dict:
+        """
+        instance method API for user inputs
+        Initialize and save the tentacle user inputs in run data
+        :return: the filled user input configuration
+        """
+        self.is_backtesting = self._is_in_backtesting()
+        if self.is_backtesting and not gpt_service.GPTService.BACKTESTING_ENABLED:
+            self.logger.error(f"{self.get_name()} is disabled in backtesting. It will only emit neutral evaluations")
+        await self._init_GPT_models()
+        return await super().load_and_save_user_inputs(bot_id)
 
     def init_user_inputs(self, inputs: dict) -> None:
         self.indicator = self.UI.user_input(
@@ -85,12 +100,22 @@ class GPTEvaluator(evaluators.TAEvaluator):
             self.period, inputs, min_val=1,
             title="Period: length of the indicator period."
         )
+        if len(self.GPT_MODELS) > 1 and self.enable_model_selector:
+            self.gpt_model = self.UI.user_input(
+                "GPT model", enums.UserInputTypes.OPTIONS, gpt_service.GPTService.DEFAULT_MODEL,
+                inputs, options=list(self.GPT_MODELS),
+                title="GPT Model: the GPT model to use."
+            )
 
-    def use_backtesting_init_timeout(self):
-        super().use_backtesting_init_timeout()
-        self.is_backtesting = True
-        if not gpt_service.GPTService.BACKTESTING_ENABLED:
-            self.logger.error(f"{self.get_name()} is disabled in backtesting. It will only emit neutral evaluations")
+    async def _init_GPT_models(self):
+        if not self.GPT_MODELS:
+            self.GPT_MODELS = [gpt_service.GPTService.DEFAULT_MODEL]
+            if self.enable_model_selector and not self.is_backtesting:
+                try:
+                    service = await services_api.get_service(gpt_service.GPTService, self.is_backtesting)
+                    self.GPT_MODELS = service.models
+                except Exception as err:
+                    self.logger.exception(err, True, f"Impossible to fetch GPT models: {err}")
 
     async def _init_registered_topics(self, all_symbols_by_crypto_currencies, currencies, symbols, time_frames):
         await super()._init_registered_topics(all_symbols_by_crypto_currencies, currencies, symbols, time_frames)
@@ -149,10 +174,13 @@ class GPTEvaluator(evaluators.TAEvaluator):
     async def ask_gpt(self, preprompt, inputs, symbol, time_frame) -> str:
         try:
             service = await services_api.get_service(gpt_service.GPTService, self.is_backtesting)
-            resp = await service.get_chat_completion([
-                service.create_message("system", preprompt),
-                service.create_message("user", inputs),
-            ])
+            resp = await service.get_chat_completion(
+                [
+                    service.create_message("system", preprompt),
+                    service.create_message("user", inputs),
+                ],
+                model=self.gpt_model if self.enable_model_selector else None
+            )
             self.logger.info(f"GPT's answer is '{resp}' for {symbol} on {time_frame} with input: {inputs}")
             return resp
         except services_errors.CreationError as err:
