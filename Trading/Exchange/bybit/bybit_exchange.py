@@ -70,14 +70,18 @@ class Bybit(exchanges.RestExchange):
         self.order_quantity_by_id = {}
 
     def get_additional_connector_config(self):
+        connector_config = {
+            ccxt_constants.CCXT_OPTIONS: {
+                "recvWindow": 60000,    # default is 5000, avoid time related issues
+            }
+        }
         if not self.exchange_manager.is_future:
             # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
             # (price should not be sent to market orders). Only used for buy market orders
-            return {
-                ccxt_constants.CCXT_OPTIONS: {
-                    "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
-                }
-            }
+            connector_config[ccxt_constants.CCXT_OPTIONS][
+                "createMarketBuyOrderRequiresPrice"
+            ] = False  # disable quote conversion
+        return connector_config
 
     @classmethod
     def update_supported_elements(cls, exchange_manager):
