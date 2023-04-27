@@ -131,12 +131,6 @@ class Okx(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
-    async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
-        if "since" in kwargs:
-            # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
-            kwargs["until"] = int(time.time() * 1000)
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
