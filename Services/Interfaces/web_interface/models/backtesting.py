@@ -227,9 +227,10 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 timeout=DATA_COLLECTOR_TIMEOUT)
             return True, "Backtesting started"
     except Exception as e:
-        tools[constants.BOT_PREPARING_BACKTESTING] = False
         bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, False)
         return False, f"Error when starting backtesting: {e}"
+    finally:
+        tools[constants.BOT_PREPARING_BACKTESTING] = False
 
 
 async def _collect_initialize_and_run_independent_backtesting(
@@ -244,6 +245,7 @@ async def _collect_initialize_and_run_independent_backtesting(
         except Exception as e:
             bot_logging.get_logger("DataCollectorModel").exception(
                 e, True, f"Error when collecting historical data: {e}")
+            web_interface_root.WebInterface.tools[constants.BOT_PREPARING_BACKTESTING] = False
             return
         finally:
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None

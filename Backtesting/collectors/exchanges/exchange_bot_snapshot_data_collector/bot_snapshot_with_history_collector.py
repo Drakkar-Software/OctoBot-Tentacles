@@ -292,7 +292,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                                commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
             else:
                 already_fetched_candles_candles = self.get_ohlcv_snapshot(symbol, time_frame)
-                bot_first_data_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
+                bot_first_data_timestamp = await self.get_first_candle_timestamp(
+                    self.start_timestamp, symbol, time_frame
+                )
             database_candles = []
             save_all_candles = self.is_creating_database
             if not self.is_creating_database:
@@ -356,9 +358,6 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                   f"Delete this data file: {self.file_name} to reset it. "
                                   f"Problematic timestamps: {counters}")
             self.current_step_percent += 100 / self.total_steps - last_progress
-        except trading_errors.FailedRequest as err:
-            self.logger.exception(err, False)
-            self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")
         except Exception:
             raise
 
@@ -377,13 +376,16 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         lowest_timestamps = []
         for symbol in self.symbols:
             for tf in self.time_frames:
-                first_timestamp = await self.get_first_candle_timestamp(symbol, tf)
+                first_timestamp = await self.get_first_candle_timestamp(
+                    self.start_timestamp, symbol, tf
+                )
                 if first_timestamp is None:
                     self.missing_symbols.append(symbol)
                     break
                 else:
                     lowest_timestamps.append(first_timestamp)
         lowest_timestamp = min(lowest_timestamps)
+        # lowest_timestamp depends on self.start_timestamp if set. It will not go further
         if self.start_timestamp is None or lowest_timestamp < self.start_timestamp:
             self.start_timestamp = lowest_timestamp
         self.end_timestamp = self.end_timestamp or time.time() * 1000
@@ -393,7 +395,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     def get_fetch_data_id(self, symbol, timeframe):
         return f"{symbol}{timeframe.value}"
 
-    async def get_first_candle_timestamp(self, symbol, time_frame):
+    async def get_first_candle_timestamp(self, ideal_start_timestamp, symbol, time_frame):
         try:
             symbol_data = trading_api.get_symbol_data(self.exchange_manager, str(symbol), allow_creation=False)
             candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
@@ -401,7 +403,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         except KeyError:
             # symbol or timeframe not available in live exchange
             fetched_candles = await self.exchange_manager.exchange.get_symbol_prices(
-                str(symbol), time_frame, since=self.start_timestamp
+                str(symbol), time_frame, since=ideal_start_timestamp
             )
             if not fetched_candles:
                 return None
