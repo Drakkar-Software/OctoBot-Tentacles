@@ -55,8 +55,12 @@ function _handle_data_collector_status(data_collector_status_data, socket){
     const current_progress = data_collector_status_data["progress"]["current_step_percent"];
     const total_progress = Math.round((data_collector_status_data["progress"]["current_step"] 
                                     / data_collector_status_data["progress"]["total_steps"]) * 100);
+    const stopButton = $("#collector-stop-button");
 
     if(data_collector_status === "collecting" || data_collector_status === "starting"){
+        if(stopButton.length){
+            stopButton.removeClass(hidden_class);
+        }
         lock_collector_ui(true);
         updateDataCollectorProgress(current_progress, total_progress);
         DataCollectorCollectingCallbacks.forEach((callback) => callback());
@@ -64,6 +68,9 @@ function _handle_data_collector_status(data_collector_status_data, socket){
         setTimeout(function () {_refreshDataCollectorStatus(socket);}, 100);
     }
     else{
+        if(stopButton.length){
+            stopButton.addClass(hidden_class);
+        }
         lock_collector_ui(false);
         DataCollectorDoneCallbacks.forEach((callback) => callback());
     }
