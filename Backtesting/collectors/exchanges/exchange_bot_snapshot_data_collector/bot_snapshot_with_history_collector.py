@@ -290,6 +290,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             already_fetched_candles_candles = self.fetched_data[self.OHLCV][fetch_data_id]
             database_candles = []
             save_all_candles = self.is_creating_database
+            updated_db = False
             if not self.is_creating_database:
                 database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
                 counters = await self._check_ohlcv_integrity(database_candles)
@@ -305,6 +306,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         symbol=symbol.symbol_str,
                         time_frame=time_frame
                     )
+                    updated_db = True
                     save_all_candles = True
             if save_all_candles or not database_candles:
                 await self.save_ohlcv(
@@ -316,6 +318,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         multiple=True
                 )
                 database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+                updated_db = True
             candle_times = [
                 candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
                 for candle in database_candles
@@ -329,20 +332,26 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                 last_progress = await self.collect_historical_ohlcv(
                     exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time
                 )
+                if last_progress:
+                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    updated_db = True
             # 2. fill in any missing candle after existing candles
             if last_candle_data_time < self.end_timestamp:
                 # fetch missing data between end time in data file and available data
-                 last_progress = await self.collect_historical_ohlcv(
-                    exchange, symbol, time_frame, time_frame_sec, last_candle_data_time, self.end_timestamp
+                last_progress = await self.collect_historical_ohlcv(
+                   exchange, symbol, time_frame, time_frame_sec, last_candle_data_time, self.end_timestamp
                 )
-            database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
-            counters = await self._check_ohlcv_integrity(database_candles)
-            if counters:
-                self.logger.error(f"Error when checking database integrity of {exchange} "
-                                  f"data file for {symbol.symbol_str}. "
-                                  f"Delete this data file: {self.file_name} to reset it. "
-                                  f"Problematic timestamps: {counters}")
-            self.current_step_percent += 100 / self.total_steps - last_progress
+                if last_progress:
+                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    updated_db = True
+            if updated_db:
+                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+                counters = await self._check_ohlcv_integrity(database_candles)
+                if counters:
+                    self.logger.error(f"Error when checking database integrity of {exchange} "
+                                      f"data file for {symbol.symbol_str}. "
+                                      f"Delete this data file: {self.file_name} to reset it. "
+                                      f"Problematic timestamps: {counters}")
         except Exception:
             raise
 
