@@ -378,3 +378,8 @@ function paginatedSelect2(selectElement, options, pageSize){
         }
     );
 }
+
+const sortTimeFrames = (timeFrames) => {
+    timeFrames.sort((a, b) => TimeFramesMinutes[a] - TimeFramesMinutes[b]);
+    return timeFrames;
+}
