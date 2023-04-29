@@ -10,51 +10,71 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 async def default_backtesting_analysis_script(ctx: script_keywords.Context):
     async with ctx.backtesting_results() as (run_data, run_display):
+        historical_values = await run_data_analysis.load_historical_values(run_data, None)
         if ctx.backtesting_analysis_settings["plot_pnl_on_main_chart"]:
             with run_display.part("main-chart") as part:
                 try:
-                    await run_data_analysis.plot_historical_portfolio_value(run_data, part)
+                    await run_data_analysis.plot_historical_portfolio_value(
+                        run_data, part,
+                        historical_values=historical_values,
+                    )
                     await run_data_analysis.plot_historical_pnl_value(
                         run_data, part, x_as_trade_count=False,
                         own_yaxis=True,
-                        include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_main_chart"]
+                        include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_main_chart"],
+                        historical_values=historical_values,
                     )
                 except Exception as err:
                     ctx.logger.exception(err, True, f"Error when computing main chant graphs {err}")
         with run_display.part("backtesting-run-overview") as part:
             try:
                 if ctx.backtesting_analysis_settings.get("plot_hist_portfolio_on_backtesting_chart", True):
-                    await run_data_analysis.plot_historical_portfolio_value(run_data, part)
+                    await run_data_analysis.plot_historical_portfolio_value(
+                        run_data, part,
+                        historical_values=historical_values,
+                    )
                 if ctx.backtesting_analysis_settings["plot_pnl_on_backtesting_chart"]:
                     await run_data_analysis.plot_historical_pnl_value(
                         run_data, part, x_as_trade_count=False,
                         own_yaxis=True,
-                        include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_backtesting_chart"]
+                        include_unitary=ctx.backtesting_analysis_settings["plot_trade_gains_on_backtesting_chart"],
+                        historical_values=historical_values,
                     )
                 if ctx.backtesting_analysis_settings["plot_best_case_growth_on_backtesting_chart"]:
-                    await run_data_analysis.plot_best_case_growth(run_data, part, x_as_trade_count=True, own_yaxis=False)
+                    await run_data_analysis.plot_best_case_growth(
+                        run_data, part, x_as_trade_count=True, own_yaxis=False,
+                        historical_values=historical_values,
+                    )
                 if ctx.backtesting_analysis_settings["plot_funding_fees_on_backtesting_chart"]:
-                    await run_data_analysis.plot_historical_funding_fees(run_data, part, own_yaxis=True)
+                    await run_data_analysis.plot_historical_funding_fees(
+                        run_data, part, own_yaxis=True,
+                    )
                 if ctx.backtesting_analysis_settings["plot_wins_and_losses_count_on_backtesting_chart"]:
-                    await run_data_analysis.plot_historical_wins_and_losses(run_data, part, own_yaxis=True,
-                                                                            x_as_trade_count=False)
+                    await run_data_analysis.plot_historical_wins_and_losses(
+                        run_data, part, own_yaxis=True, x_as_trade_count=False,
+                        historical_values=historical_values,
+                    )
                 if ctx.backtesting_analysis_settings["plot_win_rate_on_backtesting_chart"]:
-                    await run_data_analysis.plot_historical_win_rates(run_data, part, own_yaxis=True,
-                                                                      x_as_trade_count=False)
+                    await run_data_analysis.plot_historical_win_rates(
+                        run_data, part, own_yaxis=True, x_as_trade_count=False,
+                        historical_values=historical_values,
+                    )
                 # await plot_withdrawals(run_data, part)
             except Exception as err:
                 ctx.logger.exception(err, True, f"Error when computing run overview graphs {err}")
         if ctx.backtesting_analysis_settings["display_backtest_details"]:
             with run_display.part("backtesting-details", "value") as part:
                 try:
-                    backtesting_report = await get_backtesting_report_template(run_data, ctx.backtesting_analysis_settings)
+                    backtesting_report = await get_backtesting_report_template(
+                        run_data, ctx.backtesting_analysis_settings, historical_values
+                    )
                     await run_data_analysis.display_html(part, backtesting_report)
                 except Exception as err:
                     ctx.logger.exception(err, True, f"Error when computing details part {err}")
         if ctx.backtesting_analysis_settings["display_trades_and_positions"]:
             with run_display.part("list-of-trades-part", "table") as part:
                 try:
-                    await run_data_analysis.plot_trades(run_data, part)
+                    await run_data_analysis.plot_trades(run_data, part, historical_values=historical_values)
                     await run_data_analysis.plot_positions(run_data, part)
                     # await plot_table(run_data, part, "SMA 1")  # plot any cache key as a table
                 except Exception as err:
@@ -62,8 +82,8 @@ async def default_backtesting_analysis_script(ctx: script_keywords.Context):
     return run_display
 
 
-async def get_backtesting_report_template(run_data, backtesting_analysis_settings):
-    metadata = await run_data.get_backtesting_metadata_from_run()
+async def get_backtesting_report_template(run_data, backtesting_analysis_settings, historical_values):
+    price_data, _, _, _, _, metadata = historical_values
     optimizer_id_display = get_column_display(commons_enums.BacktestingMetadata.OPTIMIZER_ID.value,
                                               commons_enums.BacktestingMetadata.OPTIMIZER_ID.value) \
         if commons_enums.BacktestingMetadata.OPTIMIZER_ID.value in metadata.keys() else ""
