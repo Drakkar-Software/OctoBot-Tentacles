@@ -377,6 +377,7 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
         const data = [volume_trace, price_trace, real_trader_trades, simulator_trades];
         const plotlyConfig = {
+            staticPlot: isMobileDisplay(),
             scrollZoom: false,
             modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
             responsive: true,
