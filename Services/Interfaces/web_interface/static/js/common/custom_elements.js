@@ -134,6 +134,7 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
         },
     };
     const plotlyConfig = {
+        staticPlot: isMobileDisplay(),
         scrollZoom: false,
         modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
         responsive: true,
@@ -217,6 +218,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
         showlegend: false,
     };
     const plotlyConfig = {
+        staticPlot: isMobileDisplay(),
         scrollZoom: false,
         modeBarButtonsToRemove: ["select2d", "lasso2d", "toggleSpikelines"],
         responsive: true,
