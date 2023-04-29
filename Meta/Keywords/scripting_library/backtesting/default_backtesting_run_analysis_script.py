@@ -93,6 +93,8 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
     reference_market = metadata[commons_enums.DBRows.REFERENCE_MARKET.value]
     if backtesting_analysis_settings.get("display_backtest_details_performances", True):
         start_portfolio_value, end_portfolio_value = await run_data_analysis.get_portfolio_values(run_data)
+        gains = f"{pretty_printer.get_min_string_from_number(metadata[commons_enums.BacktestingMetadata.GAINS.value])} " \
+                f"({pretty_printer.get_min_string_from_number(metadata[commons_enums.BacktestingMetadata.PERCENT_GAINS.value])}%)"
         performance_summary \
             += get_section_display("Performance",
                                    get_column_display(commons_enums.BacktestingMetadata.START_PORTFOLIO.value,
@@ -109,28 +111,30 @@ async def get_backtesting_report_template(run_data, backtesting_analysis_setting
                                    get_column_display(f"{commons_enums.BacktestingMetadata.END_PORTFOLIO.value} "
                                                       f"{reference_market} value",
                                                       end_portfolio_value) +
-                                   get_column_display(commons_enums.BacktestingMetadata.PERCENT_GAINS.value,
-                                                      metadata[commons_enums.BacktestingMetadata.PERCENT_GAINS.value]) +
-                                   get_column_display(f"{reference_market} {commons_enums.BacktestingMetadata.GAINS.value}",
-                                                      metadata[commons_enums.BacktestingMetadata.GAINS.value]) +
+                                   get_column_display(f"{reference_market} gains", gains) +
+                                   get_column_display(
+                                       commons_enums.BacktestingMetadata.MARKETS_PROFITABILITY.value,
+                                       metadata.get(commons_enums.BacktestingMetadata.MARKETS_PROFITABILITY.value, {})
+                                   ) +
                                    get_column_display(
                                        commons_enums.BacktestingMetadata.TRADES.value + " (entries and exits)",
-                                       metadata[commons_enums.BacktestingMetadata.TRADES.value]) +
-                                   get_column_display(commons_enums.BacktestingMetadata.ENTRIES.value,
-                                                      metadata[commons_enums.BacktestingMetadata.ENTRIES.value]) +
-                                   get_column_display(commons_enums.BacktestingMetadata.WINS.value,
-                                                      metadata[commons_enums.BacktestingMetadata.WINS.value]) +
-                                   get_column_display(commons_enums.BacktestingMetadata.LOSES.value,
-                                                      metadata[commons_enums.BacktestingMetadata.LOSES.value]) +
-                                   get_column_display(commons_enums.BacktestingMetadata.WIN_RATE.value,
-                                                      metadata[commons_enums.BacktestingMetadata.WIN_RATE.value]) +
-                                   get_column_display(commons_enums.BacktestingMetadata.DRAW_DOWN.value,
-                                                      metadata[commons_enums.BacktestingMetadata.DRAW_DOWN.value]) +
-                                   get_column_display(
-                                       commons_enums.BacktestingMetadata.COEFFICIENT_OF_DETERMINATION_MAX_BALANCE.value,
-                                       metadata[commons_enums.BacktestingMetadata
-                                           .COEFFICIENT_OF_DETERMINATION_MAX_BALANCE.value]) +
-                                   paid_fees_display
+                                       metadata[commons_enums.BacktestingMetadata.TRADES.value])
+                                   # todo fix those values
+                                   # + get_column_display(commons_enums.BacktestingMetadata.ENTRIES.value,
+                                   #                    metadata[commons_enums.BacktestingMetadata.ENTRIES.value]) +
+                                   # get_column_display(commons_enums.BacktestingMetadata.WINS.value,
+                                   #                    metadata[commons_enums.BacktestingMetadata.WINS.value]) +
+                                   # get_column_display(commons_enums.BacktestingMetadata.LOSES.value,
+                                   #                    metadata[commons_enums.BacktestingMetadata.LOSES.value]) +
+                                   # get_column_display(commons_enums.BacktestingMetadata.WIN_RATE.value,
+                                   #                    metadata[commons_enums.BacktestingMetadata.WIN_RATE.value]) +
+                                   # get_column_display(commons_enums.BacktestingMetadata.DRAW_DOWN.value,
+                                   #                    metadata[commons_enums.BacktestingMetadata.DRAW_DOWN.value]) +
+                                   # get_column_display(
+                                   #     commons_enums.BacktestingMetadata.COEFFICIENT_OF_DETERMINATION_MAX_BALANCE.value,
+                                   #     metadata[commons_enums.BacktestingMetadata
+                                   #         .COEFFICIENT_OF_DETERMINATION_MAX_BALANCE.value]) +
+                                   # paid_fees_display
                                    )
     if backtesting_analysis_settings.get("display_backtest_details_general", True):
         performance_summary \
@@ -200,6 +204,7 @@ def get_column_display(title, value):
             <div class="backtesting-run-container-values-value">
                 {', '.join(value) if (isinstance(value, list) and value and isinstance(value[0], (int, float, str)))
                     else pretty_printer.get_min_string_from_number(value) if isinstance(value, float) 
+                    else ', '.join(f"{key}: {val}" for key, val in value.items()) if isinstance(value, dict) 
                     else value}
             </div>
         </div>
