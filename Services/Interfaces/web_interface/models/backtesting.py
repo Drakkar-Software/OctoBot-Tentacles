@@ -306,10 +306,14 @@ def get_backtesting_status():
 def get_backtesting_report(source):
     tools = web_interface_root.WebInterface.tools
     if tools[constants.BOT_TOOLS_BACKTESTING]:
-        backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         if tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] == source:
-            return interfaces_util.run_in_bot_async_executor(
-                octobot_api.get_independent_backtesting_report(backtesting))
+            return {
+                "report": interfaces_util.run_in_bot_async_executor(
+                    octobot_api.get_independent_backtesting_report(independent_backtesting)
+                ),
+                "trades": trading_model.get_all_trades_data(independent_backtesting=independent_backtesting)
+            }
     return {}
 
 
