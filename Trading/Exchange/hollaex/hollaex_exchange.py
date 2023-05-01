@@ -30,9 +30,10 @@ class hollaex(exchanges.RestExchange):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.exchange_manager.rest_only = not self.tentacle_config.get(
-            self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only
-        )
+        self.exchange_manager.rest_only = self.exchange_manager.rest_only \
+            or not self.tentacle_config.get(
+                self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only
+            )
 
     @classmethod
     def init_user_inputs_from_class(cls, inputs: dict) -> None:
