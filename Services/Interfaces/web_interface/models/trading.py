@@ -385,8 +385,8 @@ def _dump_trade(trade, is_simulated):
         return None
 
 
-def get_all_trades_data():
-    return _get_dumped_data(*interfaces_util.get_trades_history(), _dump_trade)
+def get_all_trades_data(independent_backtesting=None):
+    return _get_dumped_data(*interfaces_util.get_trades_history(independent_backtesting=independent_backtesting), _dump_trade)
 
 
 def _dump_position(position, is_simulated):

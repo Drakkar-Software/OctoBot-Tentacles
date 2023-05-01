@@ -49,21 +49,23 @@ function load_report(report, should_alert=False) {
     const reportDiv = $("#backtestingReport");
     if (reportDiv.length) {
         const url = reportDiv.attr(update_url_attr);
-        $.get(url, function (data) {
-            if ("bot_report" in data) {
+        $.get(url, (data) => {
+            if ("report" in data) {
+                const globalReport = data["report"]
+                const botReport = globalReport["bot_report"]
                 report.show();
                 const profitabilities = [];
-                const show_exchanges = Object.keys(data["bot_report"]["profitability"]).length > 1;
-                $.each(data["bot_report"]["profitability"], function (exchange, profitability) {
+                const show_exchanges = Object.keys(botReport["profitability"]).length > 1;
+                $.each(botReport["profitability"], function (exchange, profitability) {
                     const exch = show_exchanges ? `${exchange}: ` : "";
                     profitabilities.push(`${exch}${profitability}`);
                 });
                 let profitability = profitabilities.join(", ");
-                const errors_count = data["errors_count"];
-                if ("error" in data || errors_count > 0) {
+                const errors_count = globalReport["errors_count"];
+                if ("error" in globalReport || errors_count > 0) {
                     let error_message = "Warning: error(s) during backtesting";
-                    if ("error" in data) {
-                        error_message += " " + data["error"];
+                    if ("error" in globalReport) {
+                        error_message += " " + globalReport["error"];
                     }
                     if (errors_count > 0) {
                         error_message += " " + errors_count + " error(s)";
@@ -79,7 +81,7 @@ function load_report(report, should_alert=False) {
                 }
 
                 const symbol_reports = [];
-                $.each(data["symbol_report"], function (index, value) {
+                $.each(globalReport["symbol_report"], function (index, value) {
                     $.each(value, function (symbol, profitability) {
                         symbol_reports.push(`${symbol}: ${round_digits(profitability, 4)}%`);
                     });
@@ -87,17 +89,17 @@ function load_report(report, should_alert=False) {
                 const all_profitability = symbol_reports.join(", ");
                 $("#bProf").html(`${round_digits(profitability, 4)}%`);
                 const avg_profitabilities = [];
-                $.each(data["bot_report"]["market_average_profitability"], function (exchange, market_average_profitability) {
+                $.each(botReport["market_average_profitability"], function (exchange, market_average_profitability) {
                     const exch = show_exchanges ? `${exchange}: ` : "";
                     avg_profitabilities.push(`${exch}${round_digits(market_average_profitability, 4)}%`);
                 });
                 $("#maProf").html(avg_profitabilities.join(", "));
-                $("#refM").html(data["bot_report"]["reference_market"]);
+                $("#refM").html(botReport["reference_market"]);
                 $("#sProf").html(all_profitability);
-                $("#reportTradingModeName").html(data["bot_report"]["trading_mode"]);
-                $("#reportTradingModeNameLink").attr("href", $("#reportTradingModeNameLink").attr("base_href") + data["bot_report"]["trading_mode"]);
+                $("#reportTradingModeName").html(botReport["trading_mode"]);
+                $("#reportTradingModeNameLink").attr("href", $("#reportTradingModeNameLink").attr("base_href") + botReport["trading_mode"]);
                 const end_portfolio_reports = [];
-                $.each(data["bot_report"]["end_portfolio"], function (exchange, portfolio) {
+                $.each(botReport["end_portfolio"], function (exchange, portfolio) {
                     let exchange_portfolio = show_exchanges ? `${exchange} ` : "";
                     $.each(portfolio, function (symbol, holdings) {
                         const digits = holdings["total"] > 10 ? 2 : 10;
@@ -107,7 +109,7 @@ function load_report(report, should_alert=False) {
                 });
                 $("#ePort").html(end_portfolio_reports.join(", "));
                 const starting_portfolio_reports = [];
-                $.each(data["bot_report"]["starting_portfolio"], function (exchange, portfolio) {
+                $.each(botReport["starting_portfolio"], function (exchange, portfolio) {
                     let exchange_portfolio = show_exchanges ? `${exchange} ` : "";
                     $.each(portfolio, function (symbol, holdings) {
                         exchange_portfolio = `${exchange_portfolio} ${symbol}: ${holdings["total"]}`;
@@ -116,7 +118,9 @@ function load_report(report, should_alert=False) {
                 });
                 $("#sPort").html(starting_portfolio_reports.join(", "));
 
-                add_graphs(data["chart_identifiers"]);
+                add_graphs(globalReport["chart_identifiers"]);
+                add_tables(data["trades"], botReport["reference_market"]);
+
             }
         }).fail(function () {
             report.hide();
@@ -143,6 +147,10 @@ function add_graphs(chart_identifiers){
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
         get_symbol_price_graph(`${graph_symbol_price_id}${exchange_id}${symbol}`, exchange_id, exchange_name, formated_symbol, time_frame, true);
     })
+}
+
+const add_tables = (trades, refMarket) => {
+    return displayTradesTable("result-trades", trades, refMarket, true);
 }
 
 function updateBacktestingProgress(progress){

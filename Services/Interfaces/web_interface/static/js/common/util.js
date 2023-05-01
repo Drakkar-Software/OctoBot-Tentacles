@@ -188,25 +188,34 @@ function fix_config_values(config){
     });
 }
 
-function getValueChangedFromRef(newObject, refObject) {
+function getValueChangedFromRef(newObject, refObject, allowUndefinedValues=true) {
     let changes = false;
     if (newObject instanceof Array && newObject.length !== refObject.length){
         changes = true;
     }
     else{
-        $.each(newObject, function (key, val) {
-            if (val instanceof Array || val instanceof Object){
-                changes = getValueChangedFromRef(val, refObject[key]);
+        Object.keys(newObject).forEach((key) => {
+            if(changes){
+                return;
+            }
+            const val = newObject[key];
+            const refVal = refObject[key];
+            if (allowUndefinedValues && (typeof refVal === "undefined" || typeof val === "undefined")){
+                // ignore missing values
+                return;
+            }
+            else if (val instanceof Array || val instanceof Object){
+                changes = getValueChangedFromRef(val, refVal, allowUndefinedValues);
             }
             else if (refObject[key] !== val){
                 if (typeof val === "number"){
-                    changes = Number(refObject[key]) !== val;
+                    changes = Number(refVal) !== val;
                 }else{
                     changes = true;
                 }
             }
             if (changes){
-                return false;
+                return;
             }
         });
     }
