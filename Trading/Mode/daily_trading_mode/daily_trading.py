@@ -484,7 +484,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side=side,
         )
         return (
-            await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(main_order, chained_order),
+            await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
+                main_order, chained_order, True
+            ),
             chained_order
         )
 

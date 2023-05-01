@@ -438,7 +438,9 @@ async def _bundle_chained_order(context, symbol_market, order, quantity, default
         group=group,
         **order_kwargs
     )
-    params = await context.trader.bundle_chained_order_with_uncreated_order(order, chained_order)
+    params = await context.trader.bundle_chained_order_with_uncreated_order(
+        order, chained_order, chained_order.update_with_triggering_order_fees
+    )
     if basic_keywords.is_emitting_trading_signals(context):
         context.get_signal_builder().add_created_order(chained_order, context.trader.exchange_manager,
                                                        order_pf_percent, order_position_percent)

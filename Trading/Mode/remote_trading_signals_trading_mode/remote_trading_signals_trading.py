@@ -260,7 +260,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             main_order = to_create_orders[bundled_with][0]
             # always align bundled order quantity with the main order one
             chained_order.update(chained_order.symbol, quantity=main_order.origin_quantity)
-            params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(main_order, chained_order)
+            params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
+                main_order, chained_order, chained_order.update_with_triggering_order_fees
+            )
             to_create_orders[bundled_with][1].update(params)
         except KeyError:
             if bundled_with in ignored_orders:
@@ -292,7 +294,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if chained_order.origin_quantity == trading_constants.ZERO:
             self.logger.warning(f"Ignored chained order: {chained_order}: not enough funds")
             return 0
-        await chained_order.set_as_chained_order(base_order, False, {})
+        await chained_order.set_as_chained_order(base_order, False, {}, chained_order.update_with_triggering_order_fees)
         base_order.add_chained_order(chained_order)
         if base_order.is_filled() and chained_order.should_be_created():
             await personal_data.create_as_chained_order(chained_order)
@@ -358,6 +360,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 order.associate_to_entry(associated_entry)
         order.set_shared_signal_order_id(
             order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+        )
+        order.update_with_triggering_order_fees = order_description.get(
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value, False
         )
         return order
 
