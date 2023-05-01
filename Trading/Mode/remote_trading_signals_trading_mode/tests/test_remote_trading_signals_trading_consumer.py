@@ -79,10 +79,13 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     # market order is filled, chained & bundled orders got created
     assert isinstance(orders[0], trading_personal_data.StopLossOrder)
     assert isinstance(orders[0].order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
-    assert orders[0].origin_quantity == decimal.Decimal("0.10713784")
+    assert orders[0].update_with_triggering_order_fees is False
     assert orders[0].origin_price == decimal.Decimal("9990")
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
+    assert orders[1].update_with_triggering_order_fees is True
+    assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
+    # update_with_triggering_order_fees is False
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
     assert len(trades) == 1
     assert trades[0].trade_type, trading_enums.TraderOrderType.BUY_MARKET

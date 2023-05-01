@@ -141,6 +141,7 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
         }
     )
 
@@ -213,6 +214,7 @@ def mocked_bundle_stop_loss_in_sell_limit_signal(mocked_sell_limit_signal):
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
         }
     )
     return mocked_sell_limit_signal
@@ -250,6 +252,7 @@ def mocked_bundle_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_sig
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: False,
         }
     )
     mocked_buy_market_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
@@ -290,5 +293,6 @@ def mocked_buy_market_signal():
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
         }
     )
