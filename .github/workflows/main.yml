@@ -11,20 +11,20 @@ on:
 
 jobs:
   tests:
-    name: ${{ matrix.os }}${{ matrix.arch }} - Python 3.8 - ${{ matrix.type }} - tests
+    name: ${{ matrix.os }}${{ matrix.arch }} - Python - ${{ matrix.python }} - Tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ macos-latest, windows-latest, ubuntu-latest ]
         arch: [ x64 ]
-        type: [sources, cython]
+        python: [ '3.10' ]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.8.x'
+        python-version: ${{ matrix.python }}
         architecture: ${{ matrix.arch }}
 
     - name: Install OctoBot on Unix
@@ -85,29 +85,13 @@ jobs:
         python start.py tentacles --install --location "../any_platform.zip" --all
       shell: powershell
 
-    - name: Compile project
-      if: matrix.type == 'cython'
-      run: |
-        cd OctoBot
-        python setup.py build_ext --inplace
-        python setup.py install
-
     - name: Pytests
-      if: matrix.type == 'cython'
-      env:
-        CYTHON_IGNORE: True
-      run: |
-        cd OctoBot
-        pytest --cov=. --cov-config=.coveragerc --durations=0 -rw --ignore=tentacles/Trading/Exchange tentacles
-
-    - name: Pytests
-      if: matrix.type != 'cython'
       run: |
         cd OctoBot
         pytest --cov=. --cov-config=.coveragerc --durations=0 -rw --ignore=tentacles/Trading/Exchange tentacles
 
     - name: Publish coverage
-      if: matrix.type == 'sources' && github.event_name == 'push'
+      if: github.event_name == 'push'
       continue-on-error: true
       run: coveralls
       env:
@@ -115,10 +99,16 @@ jobs:
 
   upload_tentacles:
     needs: tests
-    name: ubuntu-latest - Python 3.8 - upload tentacles
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }}${{ matrix.arch }} - Python - ${{ matrix.python }} - Upload
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        arch: [ x64 ]
+        python: [ '3.10' ]
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Environment Variables
         run: |
           echo "S3_API_KEY=${{ secrets.S3_API_KEY }}" >> $GITHUB_ENV
@@ -128,11 +118,11 @@ jobs:
           TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
           echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.8.x'
-          architecture: 'x64'
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.arch }}
 
       - name: Produce tentacles package
         env:
@@ -178,16 +168,10 @@ jobs:
           python start.py tentacles -m "../metadata.yaml" -d "../new_tentacles" -p "../../any_platform.zip" -upe ${{ secrets.TENTACLES_OFFICIAL_PATH }}/packages/full/${{ secrets.TENTACLES_REPOSITORY_NAME }}/
 
   notify:
-    name: Notify
-    runs-on: ubuntu-latest
+    if: ${{ failure() }}
     needs:
       - tests
       - upload_tentacles
-    if: ${{ failure() }}
-
-    steps:
-      - name: Notify discord
-        uses: sarisia/actions-status-discord@v1
-        with:
-          status: Failure
-          webhook: ${{ secrets.DISCORD_GITHUB_WEBHOOK }}
+    uses: Drakkar-Software/.github/.github/workflows/failure_notify_workflow.yml@master
+    secrets:
+      DISCORD_GITHUB_WEBHOOK: ${{ secrets.DISCORD_GITHUB_WEBHOOK }}

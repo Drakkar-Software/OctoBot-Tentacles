@@ -5,14 +5,14 @@ on:
 
 jobs:
   cron-tests:
-    name: ubuntu-latestx64 - Python 3.8 - cython - tests
+    name: ubuntu-latestx64 - Python 3.10 - tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.8.x'
+          python-version: '3.10.x'
           architecture: 'x64'
 
       - name: Install OctoBot on Unix
@@ -32,15 +32,8 @@ jobs:
           python start.py tentacles -d "../new_tentacles" -p "../../any_platform.zip"
           python start.py tentacles --install --location "../any_platform.zip" --all
 
-      - name: Compile project
-        run: |
-          cd OctoBot
-          python setup.py build_ext --inplace
-          python setup.py install
-
       - name: Pytests
         env:
-          CYTHON_IGNORE: True
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
           BINANCE_API_SECRET: ${{ secrets.BINANCE_API_SECRET }}
         run: |
@@ -48,15 +41,9 @@ jobs:
           pytest --cov=. --cov-config=.coveragerc --durations=0 -rw tentacles/Trading/Exchange
 
   notify:
-    name: Notify
-    runs-on: ubuntu-latest
+    if: ${{ failure() }}
     needs:
       - cron-tests
-    if: ${{ failure() }}
-
-    steps:
-      - name: Notify discord
-        uses: sarisia/actions-status-discord@v1
-        with:
-          status: Failure
-          webhook: ${{ secrets.DISCORD_GITHUB_WEBHOOK }}
+    uses: Drakkar-Software/.github/.github/workflows/failure_notify_workflow.yml@master
+    secrets:
+      DISCORD_GITHUB_WEBHOOK: ${{ secrets.DISCORD_GITHUB_WEBHOOK }}
