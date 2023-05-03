@@ -23,8 +23,8 @@ Where:
 - `ORDER_TYPE` is the type of order (LIMIT or MARKET). Overrides the `Use market orders` parameter
 - `VOLUME` is the volume of the order in base asset (BTC for BTC/USDT) it can a flat amount (ex: `0.1` to trade 0.1 BTC on BTC/USD), a % of the total portfolio value (ex: `2%`) or a % of the available holdings (ex: `12a%`)
 - `PRICE` is the price of the limit order in quote asset (USDT for BTC/USDT)
-- `STOP_PRICE` is the price of the stop order to create. When increasing the position or buying in spot trading, the stop loss will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the stop loss will be created instantly.
-- `TAKE_PROFIT_PRICE` is the price of the take profit order to create. When increasing the position or buying in spot trading, the take profit will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the take profit will be created instantly.
+- `STOP_PRICE` is the price of the stop order to create. When increasing the position or buying in spot trading, the stop loss will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the stop loss will be created instantly. *Orders crated this way are compatible with PNL history.*
+- `TAKE_PROFIT_PRICE` is the price of the take profit order to create. When increasing the position or buying in spot trading, the take profit will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the take profit will be created instantly. *Orders crated this way are compatible with PNL history.*
 - `REDUCE_ONLY` when true, only reduce the current position (avoid accidental short position opening when reducing a long position). **Only used in futures trading**. Default is false
 
 When not specified, orders volume and price are automatically computed based on the current 
