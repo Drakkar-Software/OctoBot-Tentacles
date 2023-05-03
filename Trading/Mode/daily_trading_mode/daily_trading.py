@@ -471,7 +471,12 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
-        return await self.trading_mode.create_order(current_order, params=params or None)
+        created_order = await self.trading_mode.create_order(current_order, params=params or None)
+        for chained_order in chained_orders:
+            # ensure entry in associated (in real trading, initial order id might be None
+            # and therefore skipping association
+            chained_order.associate_to_entry(created_order.order_id)
+        return created_order
 
     async def _register_chained_order(self, main_order, price, order_type, side):
         chained_order = trading_personal_data.create_order_instance(
@@ -482,6 +487,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             quantity=main_order.origin_quantity,
             price=price,
             side=side,
+            associated_entry_id=main_order.order_id,
         )
         return (
             await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
@@ -832,8 +838,9 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-                # cancel open orders
-                await self.cancel_symbol_open_orders(symbol)
+                if self.trading_mode.consumers and not self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
+                    # cancel open orders when not on target profit mode
+                    await self.cancel_symbol_open_orders(symbol)
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
