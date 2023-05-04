@@ -322,6 +322,11 @@
                         </div>
                         <br>
                         {% endif %}
+                        {% if "future" in enabled_exchange_types %}
+                        <div class="alert alert-info" role="alert">
+                             <i class="fas fa-star"></i> Only future trading pairs can be traded on futures trading exchanges.
+                        </div>
+                        {% endif %}
                         <!-- Card deck -->
                         <div class="card-deck config-container" update-url="{{ url_for('config') }}">
                             {% for crypto_currency in config_symbols %}

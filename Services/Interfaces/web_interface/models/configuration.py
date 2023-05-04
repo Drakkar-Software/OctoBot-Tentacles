@@ -1174,6 +1174,14 @@ def get_other_exchange_list(remove_config_exchanges=False):
             exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
 
 
+def get_enabled_exchange_types(config_exchanges):
+    return {
+        config[commons_constants.CONFIG_EXCHANGE_TYPE]
+        for config in config_exchanges.values()
+        if config[commons_constants.CONFIG_ENABLED_OPTION]
+    }
+
+
 def get_exchanges_details(exchanges_config) -> dict:
     details = {}
     tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
