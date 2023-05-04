@@ -50,7 +50,7 @@
                 <h2>
                     <div class="row">
                         <div class="col-12 col-md-5">
-                            Profitability
+                            Portfolio value
                         </div>
                         <div class="col-10 col-md-6">
                             <span class="d-none align-middle"
@@ -66,11 +66,26 @@
                             ><span id="profitability-value"></span>%</span>
                         </div>
                         <div class="col-2 col-md-1 text-right">
+                            {% if has_pnl_history %}
+                            <a class="blue-text"
+                               href="{{url_for('trading')}}"
+                               data-toggle="tooltip"
+                               title="Profit and Loss">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </a>
+                            {% else %}
+                            <span class="disabled-text"
+                               href="{{url_for('trading')}}"
+                               data-toggle="tooltip"
+                               title="Profit and Loss: accessible when trading with PNL compatible trading modes.">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </span>
+                            {% endif %}
                             <a class="blue-text"
                                href="{{url_for('portfolio')}}"
                                data-toggle="tooltip"
                                title="Portfolio details">
-                                <i class="fas fa-ellipsis"></i>
+                                <i class="fas fa-chart-pie"></i>
                             </a>
                         </div>
                     </div>

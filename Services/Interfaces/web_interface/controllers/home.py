@@ -37,6 +37,7 @@ def home():
             flask_util.BrowsingDataProvider.HOME
         )
         form_to_display = constants.WELCOME_FEEDBACK_FORM_ID
+        pnl_symbols = models.get_pnl_history_symbols()
         try:
             user_id = models.get_user_account_id()
             display_feedback_form = form_to_display and not models.has_filled_form(form_to_display)
@@ -46,6 +47,7 @@ def home():
             display_feedback_form = False
         return flask.render_template(
             'index.html',
+            has_pnl_history=bool(pnl_symbols),
             watched_symbols=models.get_watched_symbols(),
             backtesting_mode=in_backtesting,
             display_intro=display_intro,

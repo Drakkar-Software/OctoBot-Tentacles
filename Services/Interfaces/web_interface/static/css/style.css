@@ -309,6 +309,10 @@ a.nav-link.active.primary-pill:hover{
     color: #C62828;
 }
 
+.disabled-text {
+    color: grey;
+}
+
 .medium-size {
     max-width: 18rem;
     min-width: 12rem;
