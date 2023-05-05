@@ -1199,9 +1199,9 @@ def get_other_exchange_list(remove_config_exchanges=False):
 
 def get_enabled_exchange_types(config_exchanges):
     return {
-        config[commons_constants.CONFIG_EXCHANGE_TYPE]
+        config.get(commons_constants.CONFIG_EXCHANGE_TYPE, trading_enums.ExchangeTypes.SPOT.value)
         for config in config_exchanges.values()
-        if config[commons_constants.CONFIG_ENABLED_OPTION]
+        if config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
     }
 
 
