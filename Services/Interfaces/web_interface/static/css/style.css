@@ -309,6 +309,10 @@ a.nav-link.active.primary-pill:hover{
     color: #C62828;
 }
 
+.disabled-text {
+    color: grey;
+}
+
 .medium-size {
     max-width: 18rem;
     min-width: 12rem;
@@ -362,6 +366,14 @@ a.nav-link.active.primary-pill:hover{
 .select2 li span,
 .card-text {
     color: white !important;
+}
+
+.select2-results__group{
+    font-weight: bold;
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+    font-size: .875rem;
+    color: #6c757d;
 }
 
 .card .card,

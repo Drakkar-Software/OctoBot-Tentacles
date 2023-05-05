@@ -25,6 +25,8 @@ import octobot.constants as constants
 
 
 class GPTService(services.AbstractService):
+    DEFAULT_MODEL = "gpt-3.5-turbo"
+
     def get_fields_description(self):
         if self._env_secret_key is None:
             return {
@@ -43,7 +45,7 @@ class GPTService(services.AbstractService):
         super().__init__()
         logging.getLogger("openai").setLevel(logging.WARNING)
         self._env_secret_key = os.getenv(services_constants.ENV_OPENAI_SECRET_KEY, None)
-        self.model = os.getenv(services_constants.ENV_GPT_MODEL, "gpt-3.5-turbo")
+        self.model = os.getenv(services_constants.ENV_GPT_MODEL, self.DEFAULT_MODEL)
         self.models = []
         self.daily_tokens_limit = int(os.getenv(services_constants.ENV_GPT_DAILY_TOKENS_LIMIT, 0))
         self.consumed_daily_tokens = 1
@@ -64,9 +66,10 @@ class GPTService(services.AbstractService):
     ):
         self._ensure_rate_limit()
         try:
+            model = model or self.model
             completions = await openai.ChatCompletion.acreate(
                 api_key=self._get_api_key(),
-                model=model or self.model,
+                model=model,
                 max_tokens=max_tokens,
                 n=n,
                 stop=stop,
@@ -76,9 +79,13 @@ class GPTService(services.AbstractService):
             self._update_token_usage(completions['usage']['total_tokens'])
             return completions["choices"][0]["message"]["content"]
         except openai.error.InvalidRequestError as err:
-            raise errors.InvalidRequestError(f"Error when running request (invalid request): {err}") from err
+            raise errors.InvalidRequestError(
+                f"Error when running request with model {model} (invalid request): {err}"
+            ) from err
         except Exception as err:
-            raise errors.InvalidRequestError(f"Unexpected error when running request: {err}") from err
+            raise errors.InvalidRequestError(
+                f"Unexpected error when running request with model {model}: {err}"
+            ) from err
 
     def _ensure_rate_limit(self):
         if self.last_consumed_token_date != datetime.date.today():

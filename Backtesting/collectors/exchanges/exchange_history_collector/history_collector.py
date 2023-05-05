@@ -35,7 +35,6 @@ except ImportError:
 
 class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
     IMPORTER = generic_exchange_importer.GenericExchangeDataImporter
-    DEFAULT_START_TIMESTAMP = 1325376000    # 1 January 2012 00:00:00
 
     def __init__(self, config, exchange_name, exchange_type, tentacles_setup_config, symbols, time_frames,
                  use_all_available_timeframes=False,
@@ -135,7 +134,9 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         if self.start_timestamp is not None:
             start_time = self.start_timestamp
             end_time = self.end_timestamp or time.time() * 1000
-            first_candle_timestamp = await self.get_first_candle_timestamp(symbol, time_frame) * 1000
+            first_candle_timestamp = await self.get_first_candle_timestamp(
+                self.start_timestamp, symbol, time_frame
+            ) * 1000
             if self.start_timestamp < first_candle_timestamp:
                 start_time = first_candle_timestamp
             async for hist_candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol_id, time_frame,
@@ -168,16 +169,18 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
     async def check_timestamps(self):
         if self.start_timestamp is not None:
-            lowest_timestamp = min([await self.get_first_candle_timestamp(symbol,
-                                                                          time_frame_manager.find_min_time_frame(
-                                                                              self.time_frames))
-                                    for symbol in self.symbols])
+            lowest_timestamp = min([
+                await self.get_first_candle_timestamp(
+                    self.start_timestamp, symbol, time_frame_manager.find_min_time_frame(self.time_frames)
+                )
+                for symbol in self.symbols
+            ])
             if lowest_timestamp > self.start_timestamp:
                 self.start_timestamp = lowest_timestamp
             if self.start_timestamp > (self.end_timestamp if self.end_timestamp else (time.time() * 1000)):
                 raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
-    async def get_first_candle_timestamp(self, symbol, time_frame):
-        return (await self.exchange.get_symbol_prices(str(symbol), time_frame, limit=1,
-                                                      since=self.DEFAULT_START_TIMESTAMP))[0]\
-                                            [commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+    async def get_first_candle_timestamp(self, ideal_start_timestamp, symbol, time_frame):
+        return (
+            await self.exchange.get_symbol_prices(str(symbol), time_frame, limit=1, since=ideal_start_timestamp)
+        )[0][commons_enums.PriceIndexes.IND_PRICE_TIME.value]

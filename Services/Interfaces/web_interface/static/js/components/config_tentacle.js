@@ -225,7 +225,9 @@ function handle_evaluator_configuration_editor(){
 }
 
 function something_is_unsaved(){
-    let edited_config = canEditConfig() ? getValueChangedFromRef(configEditor.getValue(), savedConfig) : false;
+    let edited_config = canEditConfig() ? getValueChangedFromRef(
+        configEditor.getValue(), savedConfig, true
+    ) : false;
     return (
         edited_config
         || $("#super-container").find("."+modified_badge).length > 0

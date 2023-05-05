@@ -87,16 +87,16 @@ async def _test_historical_portfolio_values(price_data, trades_data, portfolio_d
                                             expected_time_data, expected_value_data, exchange_type,
                                             spot_metadata):
     plotted_element = mock.Mock()
-    with mock.patch.object(run_data_analysis, "_load_historical_values",
+    with mock.patch.object(run_data_analysis, "load_historical_values",
                            mock.AsyncMock(return_value=(price_data, trades_data, portfolio_data, exchange_type,
-                                                        spot_metadata))) \
-            as _load_historical_values_mock, \
+                                                        spot_metadata, spot_metadata))) \
+            as load_historical_values_mock, \
          mock.patch.object(run_data_analysis, "get_transactions",
                            mock.AsyncMock(return_value=funding_fees_data)) \
             as get_transactions_mock:
         await run_data_analysis.plot_historical_portfolio_value("meta_database", plotted_element,
                                                                 exchange="exchange", own_yaxis=True)
-        _load_historical_values_mock.assert_called_once_with("meta_database", "exchange")
+        load_historical_values_mock.assert_called_once_with("meta_database", "exchange")
         get_transactions_mock.assert_called_once_with("meta_database",
                                                       transaction_type=trading_enums.TransactionType.FUNDING_FEE.value)
         plotted_element.plot.assert_called_once_with(
@@ -114,9 +114,10 @@ async def _test_historical_pnl_values_from_trades(price_data, trades_data, pnl_d
                                                   expected_cumulative_values,
                                                   exchange_type, spot_metadata):
     plotted_element = mock.Mock()
-    with mock.patch.object(run_data_analysis, "_load_historical_values",
-                           mock.AsyncMock(return_value=(price_data, trades_data, None, exchange_type, spot_metadata))) \
-            as _load_historical_values_mock, \
+    with mock.patch.object(run_data_analysis, "load_historical_values",
+                           mock.AsyncMock(return_value=(price_data, trades_data, None, exchange_type, spot_metadata,
+                                                        spot_metadata))) \
+            as load_historical_values_mock, \
          mock.patch.object(run_data_analysis, "get_transactions",
                            mock.AsyncMock(return_value=pnl_data)) \
             as get_transactions_mock:
@@ -124,7 +125,7 @@ async def _test_historical_pnl_values_from_trades(price_data, trades_data, pnl_d
                                                     include_unitary,
                                                     exchange="exchange", x_as_trade_count=x_as_trade_count,
                                                     own_yaxis=True)
-        _load_historical_values_mock.assert_called_once_with("meta_database", "exchange")
+        load_historical_values_mock.assert_called_once_with("meta_database", "exchange")
         get_transactions_mock.assert_called_once_with("meta_database",
                                                       transaction_types=(
                                                           trading_enums.TransactionType.TRADING_FEE.value,

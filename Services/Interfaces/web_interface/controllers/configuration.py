@@ -54,10 +54,12 @@ def profile():
     missing_tentacles = set()
     profiles = models.get_profiles(commons_enums.ProfileType.LIVE)
     config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
+    enabled_exchange_types = models.get_enabled_exchange_types(config_exchanges)
     enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
     display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
         flask_util.BrowsingDataProvider.PROFILE
     )
+    exchange_symbols = sorted(models.get_symbol_list(enabled_exchanges or config_exchanges))
     return flask.render_template('profile.html',
                                  current_profile=current_profile,
                                  profiles=profiles,
@@ -65,6 +67,7 @@ def profile():
                                  display_intro=display_intro,
 
                                  config_exchanges=config_exchanges,
+                                 enabled_exchange_types=enabled_exchange_types,
                                  config_trading=display_config[commons_constants.CONFIG_TRADING],
                                  config_trader=display_config[commons_constants.CONFIG_TRADER],
                                  config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
@@ -74,7 +77,7 @@ def profile():
 
                                  real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
-                                 symbol_list=sorted(models.get_symbol_list(enabled_exchanges or config_exchanges)),
+                                 symbol_list_by_type=models.get_all_symbols_list_by_symbol_type(exchange_symbols),
                                  full_symbol_list=models.get_all_symbols_list(),
                                  evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
                                  strategy_config=models.get_strategy_config(media_url, missing_tentacles),

@@ -74,13 +74,14 @@ async def get_starting_portfolio(meta_database) -> dict:
     return json.loads(portfolio.replace("'", '"'))
 
 
-async def _load_historical_values(meta_database, exchange, with_candles=True,
-                                  with_trades=True, with_portfolio=True, time_frame=None):
+async def load_historical_values(meta_database, exchange, with_candles=True,
+                                 with_trades=True, with_portfolio=True, time_frame=None):
     price_data = {}
     trades_data = {}
     moving_portfolio_data = {}
     trading_type = "spot"
     metadata = {}
+    run_global_metadata = {}
     try:
         starting_portfolio = await get_starting_portfolio(meta_database)
         metadata = await get_metadata(meta_database)
@@ -126,7 +127,7 @@ async def _load_historical_values(meta_database, exchange, with_candles=True,
                     moving_portfolio_data[ref_market] = 0
     except IndexError:
         pass
-    return price_data, trades_data, moving_portfolio_data, trading_type, metadata
+    return price_data, trades_data, moving_portfolio_data, trading_type, metadata, run_global_metadata
 
 
 async def backtesting_data(meta_database, data_label):
@@ -218,12 +219,11 @@ def _evaluate_portfolio(portfolio, price_data, use_start_value):
     return value
 
 
-async def get_portfolio_values(meta_database, exchange=None):
-    metadata = await get_metadata(meta_database)
+async def get_portfolio_values(meta_database, exchange=None, historical_values=None):
+    price_data, trades_data, moving_portfolio_data, trading_type, metadata, _ = \
+        historical_values or await load_historical_values(meta_database, exchange, with_portfolio=False, with_trades=False)
     starting_portfolio = json.loads(metadata[commons_enums.BacktestingMetadata.START_PORTFOLIO.value].replace("'", '"'))
     ending_portfolio = json.loads(metadata[commons_enums.BacktestingMetadata.END_PORTFOLIO.value].replace("'", '"'))
-    price_data, trades_data, moving_portfolio_data, trading_type, metadata = \
-        await _load_historical_values(meta_database, exchange, with_portfolio=False, with_trades=False)
     return _evaluate_portfolio(
         starting_portfolio,
         price_data,
@@ -235,9 +235,11 @@ async def get_portfolio_values(meta_database, exchange=None):
     )
 
 
-async def plot_historical_portfolio_value(meta_database, plotted_element, exchange=None, own_yaxis=False):
-    price_data, trades_data, moving_portfolio_data, trading_type, metadata = \
-        await _load_historical_values(meta_database, exchange)
+async def plot_historical_portfolio_value(
+    meta_database, plotted_element, exchange=None, own_yaxis=False, historical_values=None
+):
+    price_data, trades_data, moving_portfolio_data, trading_type, metadata, _ = \
+        historical_values or await load_historical_values(meta_database, exchange)
     price_data_by_time = {}
     for symbol, candles in price_data.items():
         price_data_by_time[symbol] = {
@@ -433,14 +435,14 @@ def _read_pnl_from_transactions(x_data, pnl_data, cumulative_pnl_data, trading_t
 
 
 async def _get_historical_pnl(meta_database, plotted_element, include_cumulative, include_unitary,
-                              exchange=None, x_as_trade_count=True, own_yaxis=False):
+                              exchange=None, x_as_trade_count=True, own_yaxis=False, historical_values=None):
     # PNL:
     # 1. open position: consider position opening fee from PNL
     # 2. close position: consider closed amount + closing fee into PNL
     # what is a trade ?
     #   futures: when position going to 0 (from long/short) => trade is closed
     #   spot: when position lowered => trade is closed
-    price_data, trades_data, _, _, _ = await _load_historical_values(meta_database, exchange)
+    price_data, trades_data, _, _, _, _ = historical_values or await load_historical_values(meta_database, exchange)
     if not (price_data and next(iter(price_data.values()))):
         return
     x_data = [0 if x_as_trade_count
@@ -525,9 +527,11 @@ async def total_paid_fees(meta_database, all_trades):
 
 
 async def plot_historical_pnl_value(meta_database, plotted_element, exchange=None, x_as_trade_count=True,
-                                    own_yaxis=False, include_cumulative=True, include_unitary=True):
+                                    own_yaxis=False, include_cumulative=True, include_unitary=True,
+                                    historical_values=None):
     return await _get_historical_pnl(meta_database, plotted_element, include_cumulative, include_unitary,
-                                     exchange=exchange, x_as_trade_count=x_as_trade_count, own_yaxis=own_yaxis)
+                                     exchange=exchange, x_as_trade_count=x_as_trade_count, own_yaxis=own_yaxis,
+                                     historical_values=historical_values)
 
 
 def _plot_table_data(data, plotted_element, data_name, additional_key_to_label, additional_columns,
@@ -554,9 +558,15 @@ def _plot_table_data(data, plotted_element, data_name, additional_key_to_label, 
         searches=searches)
 
 
-async def plot_trades(meta_database, plotted_element):
-    account_type = trading_api.get_account_type_from_run_metadata(await get_metadata(meta_database))
-    data = await meta_database.get_trades_db(account_type).all(commons_enums.DBTables.TRADES.value)
+async def plot_trades(meta_database, plotted_element, historical_values=None):
+    if historical_values:
+        _, trades_data, _, _, _, _ = historical_values
+        data = []
+        for trades in trades_data.values():
+            data += trades
+    else:
+        account_type = trading_api.get_account_type_from_run_metadata(await get_metadata(meta_database))
+        data = await meta_database.get_trades_db(account_type).all(commons_enums.DBTables.TRADES.value)
     key_to_label = {
         commons_enums.PlotAttributes.Y.value: "Price",
         commons_enums.PlotAttributes.TYPE.value: "Type",
@@ -750,8 +760,8 @@ def _get_wins_and_losses_from_trades(x_data, wins_and_losses_data, trades_histor
 
 
 async def plot_historical_wins_and_losses(meta_database, plotted_element, exchange=None, x_as_trade_count=False,
-                                          own_yaxis=True):
-    price_data, trades_data, _, _, _ = await _load_historical_values(meta_database, exchange)
+                                          own_yaxis=True, historical_values=None):
+    price_data, trades_data, _, _, _, _ = historical_values or await load_historical_values(meta_database, exchange)
     if not (price_data and next(iter(price_data.values()))):
         return
     x_data = []
@@ -808,8 +818,8 @@ def _get_win_rates_from_trades(x_data, win_rates_data, trades_history, x_as_trad
 
 
 async def plot_historical_win_rates(meta_database, plotted_element, exchange=None,
-                                    x_as_trade_count=False, own_yaxis=True):
-    price_data, trades_data, _, _, _ = await _load_historical_values(meta_database, exchange)
+                                    x_as_trade_count=False, own_yaxis=True, historical_values=None):
+    price_data, trades_data, _, _, _, _ = historical_values or await load_historical_values(meta_database, exchange)
     if not (price_data and next(iter(price_data.values()))):
         return
     x_data = []
@@ -855,8 +865,8 @@ async def _get_best_case_growth_from_transactions(trading_transactions_history,
 
 
 async def plot_best_case_growth(meta_database, plotted_element, exchange=None,
-                                x_as_trade_count=False, own_yaxis=False):
-    price_data, trades_data, _, _, _ = await _load_historical_values(meta_database, exchange)
+                                x_as_trade_count=False, own_yaxis=False, historical_values=None):
+    price_data, trades_data, _, _, _, _ = historical_values or await load_historical_values(meta_database, exchange)
     if not (price_data and next(iter(price_data.values()))):
         return
     x_data = []

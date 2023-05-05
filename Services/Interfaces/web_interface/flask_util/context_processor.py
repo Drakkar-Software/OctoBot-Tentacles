@@ -52,24 +52,28 @@ def context_processor_register():
         except KeyError:
             return currency_key
 
-    def filter_currency_pairs(currency, symbol_list, full_symbol_list, config_symbols):
+    def filter_currency_pairs(currency, symbol_list_by_type, full_symbol_list, config_symbols):
         currency_key = currency.lower()
         try:
             symbol = _get_details_from_full_symbol_list(full_symbol_list, currency_key)[configuration_model.SYMBOL_KEY]
         except KeyError:
-            return symbol_list
-        filtered_symbol = [
-            s
-            for s in symbol_list
-            if symbol in symbol_util.parse_symbol(s).base_and_quote()
-        ]
-        return (
-            filtered_symbol + [
+            return symbol_list_by_type
+        filtered_symbol = {
+            symbol_type: [
                 s
-                for s in config_symbols[currency].get(commons_constants.CONFIG_CRYPTO_PAIRS, [])
-                if s in symbol_list and s not in filtered_symbol
+                for s in symbols
+                if symbol in symbol_util.parse_symbol(s).base_and_quote()
             ]
-        )
+            for symbol_type, symbols in symbol_list_by_type.items()
+        }
+        spot = "SPOT trading"
+        if spot in filtered_symbol:
+            filtered_symbol[spot] += [
+                s
+                for s in config_symbols[currency]["pairs"]
+                if s in symbol_list_by_type[spot] and s not in filtered_symbol[spot]
+            ]
+        return filtered_symbol
 
     def get_profile_traded_pairs_by_currency(profile):
         return {

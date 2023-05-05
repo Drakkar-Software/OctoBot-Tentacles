@@ -1049,6 +1049,29 @@ def get_all_symbols_list():
     return all_currencies
 
 
+def get_all_symbols_list_by_symbol_type(all_symbols):
+    spot = "SPOT trading"
+    linear = "Futures trading - linear"
+    inverse = "Futures trading - inverse"
+
+    def _is_of_type(symbol, trading_type):
+        parsed = commons_symbols.parse_symbol(symbol)
+        if parsed.is_spot():
+            return trading_type == spot
+        elif parsed.is_perpetual_future():
+            if trading_type == linear:
+                return parsed.is_linear()
+            if trading_type == inverse:
+                return parsed.is_inverse()
+        return False
+    return {
+        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type) ]
+        for trading_type in (
+            spot, linear, inverse
+        )
+    }
+
+
 def get_exchange_logo(exchange_name):
     try:
         return exchange_logos[exchange_name]
@@ -1172,6 +1195,14 @@ def get_other_exchange_list(remove_config_exchanges=False):
     return [exchange for exchange in full_list
             if
             exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
+
+
+def get_enabled_exchange_types(config_exchanges):
+    return {
+        config.get(commons_constants.CONFIG_EXCHANGE_TYPE, trading_enums.ExchangeTypes.SPOT.value)
+        for config in config_exchanges.values()
+        if config.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+    }
 
 
 def get_exchanges_details(exchanges_config) -> dict:

@@ -40,18 +40,10 @@ class Binance(exchanges.RestExchange):
     def get_additional_connector_config(self):
         return {
             ccxt_constants.CCXT_OPTIONS: {
-                "quoteOrderQty": False  # disable quote conversion
+                "quoteOrderQty": False,  # disable quote conversion
+                "recvWindow": 60000,    # default is 10000, avoid time related issues
             }
         }
-
-    async def get_balance(self, **kwargs):
-        return await exchanges.RestExchange.get_balance(self, **self._get_params(kwargs))
-
-    def _get_params(self, params):
-        if params is None:
-            params = {}
-        params.update({'recvWindow': 60000})
-        return params
 
 
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):

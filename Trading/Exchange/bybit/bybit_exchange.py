@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
-import time
 import typing
 
 import ccxt
@@ -70,14 +69,18 @@ class Bybit(exchanges.RestExchange):
         self.order_quantity_by_id = {}
 
     def get_additional_connector_config(self):
+        connector_config = {
+            ccxt_constants.CCXT_OPTIONS: {
+                "recvWindow": 60000,    # default is 5000, avoid time related issues
+            }
+        }
         if not self.exchange_manager.is_future:
             # tell ccxt to use amount as provided and not to compute it by multiplying it by price which is done here
             # (price should not be sent to market orders). Only used for buy market orders
-            return {
-                ccxt_constants.CCXT_OPTIONS: {
-                    "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
-                }
-            }
+            connector_config[ccxt_constants.CCXT_OPTIONS][
+                "createMarketBuyOrderRequiresPrice"
+            ] = False  # disable quote conversion
+        return connector_config
 
     @classmethod
     def update_supported_elements(cls, exchange_manager):
@@ -105,14 +108,6 @@ class Bybit(exchanges.RestExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
-
-    async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
-        # apply api candles limit
-        limit = min(limit, 200)
-        if "since" in kwargs:
-            # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
-            kwargs["end"] = int(time.time() * 1000)
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:

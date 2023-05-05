@@ -227,9 +227,10 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 timeout=DATA_COLLECTOR_TIMEOUT)
             return True, "Backtesting started"
     except Exception as e:
-        tools[constants.BOT_PREPARING_BACKTESTING] = False
         bot_logging.get_logger("DataCollectorWebInterfaceModel").exception(e, False)
         return False, f"Error when starting backtesting: {e}"
+    finally:
+        tools[constants.BOT_PREPARING_BACKTESTING] = False
 
 
 async def _collect_initialize_and_run_independent_backtesting(
@@ -244,6 +245,7 @@ async def _collect_initialize_and_run_independent_backtesting(
         except Exception as e:
             bot_logging.get_logger("DataCollectorModel").exception(
                 e, True, f"Error when collecting historical data: {e}")
+            web_interface_root.WebInterface.tools[constants.BOT_PREPARING_BACKTESTING] = False
             return
         finally:
             web_interface_root.WebInterface.tools[constants.BOT_TOOLS_DATA_COLLECTOR] = None
@@ -304,10 +306,14 @@ def get_backtesting_status():
 def get_backtesting_report(source):
     tools = web_interface_root.WebInterface.tools
     if tools[constants.BOT_TOOLS_BACKTESTING]:
-        backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
+        independent_backtesting = tools[constants.BOT_TOOLS_BACKTESTING]
         if tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] == source:
-            return interfaces_util.run_in_bot_async_executor(
-                octobot_api.get_independent_backtesting_report(backtesting))
+            return {
+                "report": interfaces_util.run_in_bot_async_executor(
+                    octobot_api.get_independent_backtesting_report(independent_backtesting)
+                ),
+                "trades": trading_model.get_all_trades_data(independent_backtesting=independent_backtesting)
+            }
     return {}
 
 

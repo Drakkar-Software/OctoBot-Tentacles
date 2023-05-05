@@ -212,8 +212,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                        start_time, end_time, update_progress=True):
         last_progress = 0
         symbol_id = str(symbol)
-        async for candles in trading_api.get_historical_ohlcv(self.exchange_manager, symbol_id, time_frame,
-                                                              start_time, end_time):
+        async for candles in trading_api.get_historical_ohlcv(
+            self.exchange_manager, symbol_id, time_frame, start_time, end_time
+        ):
             await self.save_ohlcv(
                     exchange=exchange,
                     cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(symbol_id),
@@ -222,8 +223,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                for candle in candles],
                     multiple=True
             )
-            progress = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - start_time / 1000) / \
-                                        ((end_time - start_time) / 1000) * 100
+            progress = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - self.start_timestamp / 1000) / \
+                                        ((self.end_timestamp - self.start_timestamp) / 1000) * 100
             if update_progress:
                 progress_over_all_steps = progress / self.total_steps
                 self.current_step_percent += progress_over_all_steps - last_progress
@@ -286,15 +287,10 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
             # use current data from current bot
             fetch_data_id = self.get_fetch_data_id(symbol, time_frame)
-            if fetch_data_id in self.fetched_data[self.OHLCV]:
-                already_fetched_candles_candles = self.fetched_data[self.OHLCV][fetch_data_id]
-                bot_first_data_timestamp = already_fetched_candles_candles[0][
-                                               commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
-            else:
-                already_fetched_candles_candles = self.get_ohlcv_snapshot(symbol, time_frame)
-                bot_first_data_timestamp = await self.get_first_candle_timestamp(symbol, time_frame)
+            already_fetched_candles_candles = self.fetched_data[self.OHLCV][fetch_data_id]
             database_candles = []
             save_all_candles = self.is_creating_database
+            updated_db = False
             if not self.is_creating_database:
                 database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
                 counters = await self._check_ohlcv_integrity(database_candles)
@@ -310,14 +306,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                         symbol=symbol.symbol_str,
                         time_frame=time_frame
                     )
+                    updated_db = True
                     save_all_candles = True
             if save_all_candles or not database_candles:
-                # don't include the bot last candle twice
-                history_end_time = bot_first_data_timestamp - 1
-                if self.start_timestamp and self.start_timestamp < history_end_time:
-                    # fetch missing data
-                    last_progress = await self.collect_historical_ohlcv(
-                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, history_end_time)
                 await self.save_ohlcv(
                         exchange=exchange,
                         cryptocurrency=self.exchange_manager.exchange.get_pair_cryptocurrency(str(symbol)),
@@ -326,39 +317,41 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                                    for candle in already_fetched_candles_candles],
                         multiple=True
                 )
-            else:
-                candle_times = [
-                    candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                    for candle in database_candles
-                ]
-                first_candle_data_time = min(candle_times) * 1000
-                last_candle_data_time = max(candle_times) * 1000
-                if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
-                    # fetch missing data between required start time and actual start time in data file
-                    last_progress = await self.collect_historical_ohlcv(
-                        exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time
-                    )
-                if last_candle_data_time + 1 < bot_first_data_timestamp:
-                    # fetch missing data between end time in data file and available data
-                    # last_candle_data_time + 1 not to fetch the first candle twice
-                    # do not add (time_frame_sec * 1000) to bot_first_data_timestamp to avoid double adding
-                    await self.collect_historical_ohlcv(
-                        exchange, symbol, time_frame, time_frame_sec, last_candle_data_time + 1,
-                        bot_first_data_timestamp, update_progress=False)
-                # finally, apply current candles
-                await self.update_ohlcv(exchange, symbol, time_frame, time_frame_sec,
-                                        database_candles, already_fetched_candles_candles)
-            database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
-            counters = await self._check_ohlcv_integrity(database_candles)
-            if counters:
-                self.logger.error(f"Error when checking database integrity of {exchange} "
-                                  f"data file for {symbol.symbol_str}. "
-                                  f"Delete this data file: {self.file_name} to reset it. "
-                                  f"Problematic timestamps: {counters}")
-            self.current_step_percent += 100 / self.total_steps - last_progress
-        except trading_errors.FailedRequest as err:
-            self.logger.exception(err, False)
-            self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")
+                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+                updated_db = True
+            candle_times = [
+                candle[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                for candle in database_candles
+            ]
+            # +/-1 not to fetch the last candle twice
+            first_candle_data_time = min(candle_times) * 1000 - 1
+            last_candle_data_time = max(candle_times) * 1000 + 1
+            # 1. fill in any missing candle before existing candles
+            if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
+                # fetch missing data between required start time and actual start time in data file
+                last_progress = await self.collect_historical_ohlcv(
+                    exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time
+                )
+                if last_progress:
+                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    updated_db = True
+            # 2. fill in any missing candle after existing candles
+            if last_candle_data_time < self.end_timestamp:
+                # fetch missing data between end time in data file and available data
+                last_progress = await self.collect_historical_ohlcv(
+                   exchange, symbol, time_frame, time_frame_sec, last_candle_data_time, self.end_timestamp
+                )
+                if last_progress:
+                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    updated_db = True
+            if updated_db:
+                database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
+                counters = await self._check_ohlcv_integrity(database_candles)
+                if counters:
+                    self.logger.error(f"Error when checking database integrity of {exchange} "
+                                      f"data file for {symbol.symbol_str}. "
+                                      f"Delete this data file: {self.file_name} to reset it. "
+                                      f"Problematic timestamps: {counters}")
         except Exception:
             raise
 
@@ -377,13 +370,16 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         lowest_timestamps = []
         for symbol in self.symbols:
             for tf in self.time_frames:
-                first_timestamp = await self.get_first_candle_timestamp(symbol, tf)
+                first_timestamp = await self.get_first_candle_timestamp(
+                    self.start_timestamp, symbol, tf
+                )
                 if first_timestamp is None:
                     self.missing_symbols.append(symbol)
                     break
                 else:
                     lowest_timestamps.append(first_timestamp)
         lowest_timestamp = min(lowest_timestamps)
+        # lowest_timestamp depends on self.start_timestamp if set. It will not go further
         if self.start_timestamp is None or lowest_timestamp < self.start_timestamp:
             self.start_timestamp = lowest_timestamp
         self.end_timestamp = self.end_timestamp or time.time() * 1000
@@ -393,15 +389,18 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
     def get_fetch_data_id(self, symbol, timeframe):
         return f"{symbol}{timeframe.value}"
 
-    async def get_first_candle_timestamp(self, symbol, time_frame):
+    async def get_first_candle_timestamp(self, ideal_start_timestamp, symbol, time_frame):
         try:
             symbol_data = trading_api.get_symbol_data(self.exchange_manager, str(symbol), allow_creation=False)
             candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame)
+            self.fetched_data[self.OHLCV][self.get_fetch_data_id(symbol, time_frame)] = self.get_ohlcv_snapshot(
+                symbol, time_frame
+            )
             return candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0] * 1000
         except KeyError:
             # symbol or timeframe not available in live exchange
             fetched_candles = await self.exchange_manager.exchange.get_symbol_prices(
-                str(symbol), time_frame, since=self.start_timestamp
+                str(symbol), time_frame, since=ideal_start_timestamp
             )
             if not fetched_candles:
                 return None
