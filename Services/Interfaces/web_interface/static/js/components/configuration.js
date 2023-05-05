@@ -204,7 +204,7 @@ function handleCardDecksAddButtons(){
                     $(this).siblings('.select2').length === 0
                     && !$(this).parent().hasClass('default')
                 ){
-                    $(this).children("option").each(function () {
+                    $(this).find("option").each(function () {
                         const option = $(this);
                         const symbols = option.attr("value").split("/");
                         const reference_market = select_input.attr("reference_market").toUpperCase();

@@ -1,5 +1,5 @@
 {% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_currency_card(config_symbols, crypto_currency, symbol_list, full_symbol_list, get_currency_id, add_class='', no_select=False, additional_classes="", symbol="") -%}
+{% macro config_currency_card(config_symbols, crypto_currency, symbol_list_by_type, full_symbol_list, get_currency_id, add_class='', no_select=False, additional_classes="", symbol="") -%}
     <!-- Card -->
     <div class="card {{add_class}} mb-3 medium-size config-card">
 
@@ -25,10 +25,11 @@
                                                     "global_config",
                                                     config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols and 'pair' in config_symbols[crypto_currency] else [],
                                                     config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols and 'pair' in config_symbols[crypto_currency] else [],
-                                                    symbol_list,
+                                                    symbol_list_by_type,
                                                     no_select,
                                                     identifier=crypto_currency,
-                                                    placeholder_str="Select trading pair(s)")
+                                                    placeholder_str="Select trading pair(s)",
+                                                    dict_as_option_group=True)
                 }}
             </p>
 

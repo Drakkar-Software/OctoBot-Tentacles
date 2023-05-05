@@ -1049,6 +1049,29 @@ def get_all_symbols_list():
     return all_currencies
 
 
+def get_all_symbols_list_by_symbol_type(all_symbols):
+    spot = "SPOT trading"
+    linear = "Futures trading - linear"
+    inverse = "Futures trading - inverse"
+
+    def _is_of_type(symbol, trading_type):
+        parsed = commons_symbols.parse_symbol(symbol)
+        if parsed.is_spot():
+            return trading_type == spot
+        elif parsed.is_perpetual_future():
+            if trading_type == linear:
+                return parsed.is_linear()
+            if trading_type == inverse:
+                return parsed.is_inverse()
+        return False
+    return {
+        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type) ]
+        for trading_type in (
+            spot, linear, inverse
+        )
+    }
+
+
 def get_exchange_logo(exchange_name):
     try:
         return exchange_logos[exchange_name]

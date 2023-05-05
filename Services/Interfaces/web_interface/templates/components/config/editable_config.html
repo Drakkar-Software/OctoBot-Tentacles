@@ -1,6 +1,6 @@
 {% macro editable_key(config, key, config_key, config_type, config_value, startup_config_value, suggestions="",
                       no_select=False, number_step=0.01, force_title=False, tooltip=None, identifier="",
-                      placeholder_str="", allow_create_for=None, edit_key=False) -%}
+                      placeholder_str="", allow_create_for=None, edit_key=False, dict_as_option_group=False) -%}
     <span
         {% if tooltip is not none and not config[key] | is_bool %}
             data-toggle="tooltip" title="{{tooltip}}"
@@ -9,9 +9,9 @@
         {% if config[key]|default (config_value) is string %}
             {{ editable_key_string(config, key, config_key, config_type, config_value, startup_config_value, suggestions, placeholder_str) }}
         {% elif config[key]|default (config_value) | is_dict %}
-            {{ editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str, allow_create_for) }}
+            {{ editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str, allow_create_for, dict_as_option_group=dict_as_option_group) }}
         {% elif config[key]|default (config_value) | is_list %}
-            {{ editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier, placeholder_str) }}
+            {{ editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier, placeholder_str, dict_as_option_group=dict_as_option_group) }}
         {% elif config[key]|default (config_value) | is_bool %}
             {{ editable_key_bool(config, key, config_key, config_type, config_value, startup_config_value, suggestions, tooltip) }}
         {% elif config[key]|default (config_value) is number %}
@@ -22,7 +22,7 @@
     </span>
 {%- endmacro %}
 
-{% macro editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str, allow_create_for) -%}
+{% macro editable_key_dict(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, number_step, force_title, tooltip, identifier, placeholder_str, allow_create_for, dict_as_option_group) -%}
     <span class="text-capitalize">{{ key }} : </span> <br>
     {% for new_key in config[key] %}
 
@@ -39,7 +39,8 @@
                             tooltip,
                             identifier,
                             placeholder_str,
-                            edit_key=(allow_create_for == key))
+                            edit_key=(allow_create_for == key),
+                            dict_as_option_group=dict_as_option_group)
         }}
         {% if loop.last and allow_create_for == key %}
             <span data-add-template-for="{{config_key + '_Empty'}}" class="d-none">
@@ -56,7 +57,8 @@
                                 tooltip,
                                 identifier,
                                 placeholder_str,
-                                edit_key=True)
+                                edit_key=True,
+                                dict_as_option_group=dict_as_option_group)
                 }}
             </span>
             <button type="button" class="btn btn-sm btn-primary rounded-circle waves-effect ml-4"
@@ -162,7 +164,7 @@
     </div>
 {%- endmacro %}
 
-{% macro editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier="", placeholder_str="") -%}
+{% macro editable_key_list(config, key, config_key, config_type, config_value, startup_config_value, suggestions, no_select, force_title, identifier="", placeholder_str="", dict_as_option_group=False) -%}
     {% if force_title %}
         <span class="text-capitalize">{{ key }} : </span>
     {% endif %}
@@ -177,22 +179,38 @@
             id="{{config_key}}"
             editable_config_id="multi-select-element-{{ identifier }}"
             >
-        {% for name in config[key] %}
-            <option value="{{ name }}"
-            {% if not no_select %}
-                selected="selected"
-            {% endif %}
-            >
-                {{ name }}
-            </option>
-        {% endfor %}
-        {% for name in suggestions %}
-            {% if name not in config[key] %}
-            <option value="{{ name }}">
-                {{ name }}
-            </option>
-            {% endif %}
-        {% endfor %}
+        {% if dict_as_option_group and suggestions is mapping %}
+            {% for group_name, values in suggestions.items() %}
+                <optgroup label="{{group_name}}">
+                {% for name in values %}
+                    <option value="{{ name }}"
+                    {% if not no_select %}
+                        {{"selected=selected" if name in config[key] else ""}}
+                    {% endif %}
+                    >
+                        {{ name }}
+                    </option>
+                {% endfor %}
+               </optgroup>
+            {% endfor %}
+        {% else %}
+            {% for name in config[key] %}
+                <option value="{{ name }}"
+                {% if not no_select %}
+                    selected="selected"
+                {% endif %}
+                >
+                    {{ name }}
+                </option>
+            {% endfor %}
+            {% for name in suggestions %}
+                {% if name not in config[key] %}
+                <option value="{{ name }}">
+                    {{ name }}
+                </option>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
     </select>
     {% if not no_select %}
     <br>
