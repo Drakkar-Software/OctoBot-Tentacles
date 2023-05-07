@@ -209,7 +209,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         ]
 
     async def collect_historical_ohlcv(self, exchange, symbol, time_frame, time_frame_sec,
-                                       start_time, end_time, update_progress=True):
+                                       start_time, end_time, progress_multiplier):
         last_progress = 0
         symbol_id = str(symbol)
         async for candles in trading_api.get_historical_ohlcv(
@@ -225,11 +225,10 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             )
             progress = (candles[-1][commons_enums.PriceIndexes.IND_PRICE_TIME.value] - self.start_timestamp / 1000) / \
                                         ((self.end_timestamp - self.start_timestamp) / 1000) * 100
-            if update_progress:
-                progress_over_all_steps = progress / self.total_steps
-                self.current_step_percent += progress_over_all_steps - last_progress
-                self.logger.debug(f"progress: {self.current_step_percent}%")
-                last_progress = progress_over_all_steps
+            progress_over_all_steps = progress * progress_multiplier / self.total_steps
+            self.current_step_percent += progress_over_all_steps - last_progress
+            self.logger.debug(f"progress: {self.current_step_percent}%")
+            last_progress = progress_over_all_steps
         return last_progress
 
     def find_candle(self, candles, timestamp):
@@ -326,24 +325,32 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             # +/-1 not to fetch the last candle twice
             first_candle_data_time = min(candle_times) * 1000 - 1
             last_candle_data_time = max(candle_times) * 1000 + 1
+            fill_before = self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time
+            fill_after = last_candle_data_time < self.end_timestamp
+            progress_per_collect = 0.5 if fill_after and fill_before else 1
             # 1. fill in any missing candle before existing candles
-            if self.start_timestamp and self.start_timestamp + time_frame_sec * 1000 < first_candle_data_time:
+            if fill_before:
                 # fetch missing data between required start time and actual start time in data file
                 last_progress = await self.collect_historical_ohlcv(
-                    exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time
+                    exchange, symbol, time_frame, time_frame_sec, self.start_timestamp, first_candle_data_time,
+                    progress_per_collect
                 )
                 if last_progress:
-                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    self.current_step_percent += 100 * progress_per_collect / self.total_steps - last_progress
                     updated_db = True
             # 2. fill in any missing candle after existing candles
-            if last_candle_data_time < self.end_timestamp:
+            if fill_after:
                 # fetch missing data between end time in data file and available data
                 last_progress = await self.collect_historical_ohlcv(
-                   exchange, symbol, time_frame, time_frame_sec, last_candle_data_time, self.end_timestamp
+                    exchange, symbol, time_frame, time_frame_sec, last_candle_data_time, self.end_timestamp,
+                    progress_per_collect
                 )
                 if last_progress:
-                    self.current_step_percent += 100 / self.total_steps - last_progress
+                    self.current_step_percent += 100 * progress_per_collect / self.total_steps - last_progress
                     updated_db = True
+            if not (fill_before or fill_after):
+                # nothing to collect, update progress still
+                self.current_step_percent += 100 / self.total_steps
             if updated_db:
                 database_candles = await self._import_candles_from_datafile(exchange, symbol, time_frame)
                 counters = await self._check_ohlcv_integrity(database_candles)
