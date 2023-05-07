@@ -71,6 +71,14 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
             title="Cross exchange triggering delta: minimal percent difference to trigger an arbitrage order. Remember "
                   "to set it higher than twice your trading exchanges' fees since two orders will be placed each time.",
         )
+        self.UI.user_input(
+            "enable_shorts", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Enable shorts: enable arbitrage trades starting with a sell order and ending with a buy order.",
+        )
+        self.UI.user_input(
+            "enable_longs", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
+            title="Enable longs: enable arbitrage trades starting with a buy order and ending with a sell order.",
+        )
 
     def get_current_state(self) -> (str, float):
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
@@ -265,6 +273,7 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
         self.final_eval = ""
         self.quote, self.base = symbol_util.parse_symbol(self.trading_mode.symbol).base_and_quote()
         self.lock = asyncio.Lock()
+        self.enable_shorts = self.enable_longs = True
 
     def on_reload_config(self):
         """
@@ -275,6 +284,8 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             1 + decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
         self.inf_triggering_price_delta_ratio: decimal.Decimal = \
             1 - decimal.Decimal(str(self.trading_mode.trading_config["minimal_price_delta_percent"] / 100))
+        self.enable_shorts = self.trading_mode.trading_config.get("enable_shorts", True)
+        self.enable_longs = self.trading_mode.trading_config.get("enable_longs", True)
 
     async def inner_start(self) -> None:
         """
@@ -389,13 +400,21 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             elif other_exchanges_average_price < self.own_exchange_mark_price * self.inf_triggering_price_delta_ratio:
                 # min short = low price < own_price * (1 - 2fees)
                 state = trading_enums.EvaluatorStates.SHORT
-            if state is not None:
+            if self._is_traded_state(state):
                 # lock to prevent concurrent order management
                 async with self.lock:
                     # 1. cancel invalided opportunities if any
                     await self._ensure_no_expired_opportunities(other_exchanges_average_price, state)
                     # 2. handle new opportunities
                     await self._trigger_arbitrage_opportunity(other_exchanges_average_price, state)
+
+    def _is_traded_state(self, state):
+        if state is None:
+            return False
+        if state is trading_enums.EvaluatorStates.SHORT:
+            return self.enable_shorts
+        if state is trading_enums.EvaluatorStates.LONG:
+            return self.enable_longs
 
     async def _trigger_arbitrage_opportunity(self, other_exchanges_average_price, state):
         # ensure no similar arbitrage is already in place
