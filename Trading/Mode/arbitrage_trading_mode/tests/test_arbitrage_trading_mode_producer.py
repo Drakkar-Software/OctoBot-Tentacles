@@ -193,20 +193,35 @@ async def test_analyse_arbitrage_opportunities():
             # long opportunity 1
             binance_producer.own_exchange_mark_price = decimal.Decimal(str(10))
             binance_producer.other_exchanges_mark_prices = {"kraken": decimal.Decimal(str(100)), "binanceje": decimal.Decimal(str(200)), "bitfinex": decimal.Decimal(str(150))}
+            # long enabled
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_called_once_with(decimal.Decimal(str(150)), trading_enums.EvaluatorStates.LONG)
             trigger_mock.assert_called_once_with(decimal.Decimal(str(150)), trading_enums.EvaluatorStates.LONG)
             expiration_mock.reset_mock()
             trigger_mock.reset_mock()
+            # long disabled
+            binance_producer.enable_longs = False
+            await binance_producer._analyse_arbitrage_opportunities()
+            expiration_mock.assert_not_called()
+            trigger_mock.assert_not_called()
 
             # short opportunity 1
             binance_producer.own_exchange_mark_price = decimal.Decimal(str(100))
             binance_producer.other_exchanges_mark_prices = {"kraken": decimal.Decimal(str(70)), "binanceje": decimal.Decimal(str(71)), "bitfinex": decimal.Decimal(str(75))}
+            # short enabled
             await binance_producer._analyse_arbitrage_opportunities()
             expiration_mock.assert_called_once_with(decimal.Decimal(str(72)), trading_enums.EvaluatorStates.SHORT)
             trigger_mock.assert_called_once_with(decimal.Decimal(str(72)), trading_enums.EvaluatorStates.SHORT)
             expiration_mock.reset_mock()
             trigger_mock.reset_mock()
+            # short disabled
+            binance_producer.enable_shorts = False
+            await binance_producer._analyse_arbitrage_opportunities()
+            expiration_mock.assert_not_called()
+            trigger_mock.assert_not_called()
+
+            binance_producer.enable_longs = True
+            binance_producer.enable_shorts = True
 
             # long opportunity but price too close to current price
             binance_producer.own_exchange_mark_price = decimal.Decimal(str(71.99))
