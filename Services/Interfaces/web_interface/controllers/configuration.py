@@ -108,8 +108,8 @@ def profiles_management(action):
         return util.get_rest_reply(flask.jsonify(data))
     if action == "duplicate":
         profile_id = flask.request.args.get("profile_id")
-        models.duplicate_profile(profile_id)
-        models.select_profile(profile_id)
+        new_profile = models.duplicate_profile(profile_id)
+        models.select_profile(new_profile.profile_id)
         flask.flash(f"New profile successfully created and selected.", "success")
         return util.get_rest_reply(flask.jsonify("Profile created"))
     if action == "use_as_live":
