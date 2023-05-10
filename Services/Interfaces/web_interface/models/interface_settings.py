@@ -14,28 +14,68 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import octobot.constants as octobot_contants
+import octobot_trading.constants as trading_constants
 import octobot_services.interfaces.util as interfaces_util
-import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
+
+
+def get_watched_symbols():
+    try:
+        return get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS]
+    except KeyError:
+        get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS] = []
+    return get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS]
 
 
 def add_watched_symbol(symbol):
-    watched_symbols = models.get_watched_symbols()
+    watched_symbols = get_watched_symbols()
     if symbol not in watched_symbols:
         watched_symbols.append(symbol)
-        return _save_edition()
+        return _save_edition()[0]
     return True
 
 
 def remove_watched_symbol(symbol):
-    watched_symbols = models.get_watched_symbols()
+    watched_symbols = get_watched_symbols()
     try:
         watched_symbols.remove(symbol)
-        return _save_edition()
+        return _save_edition()[0]
     except ValueError:
         return True
 
 
+def get_display_timeframe():
+    return get_web_interface_config().get(
+        web_interface.WebInterface.DISPLAY_TIME_FRAME,
+        trading_constants.DISPLAY_TIME_FRAME.value
+    )
+
+
+def set_display_timeframe(time_frame):
+    get_web_interface_config()[
+        web_interface.WebInterface.DISPLAY_TIME_FRAME
+    ] = time_frame
+    return _save_edition()
+
+
+def get_web_interface_config():
+    return get_web_interface().local_config
+
+
 def _save_edition():
-    interfaces_util.get_edited_config(dict_only=False).save(schema_file=octobot_contants.CONFIG_FILE_SCHEMA)
-    return True
+    success, message = configuration_model.update_tentacle_config(
+        web_interface.WebInterface.get_name(),
+        get_web_interface().local_config,
+        tentacle_class=web_interface.WebInterface
+    )
+    reload_config()
+    return success, message
+
+
+def reload_config():
+    get_web_interface().reload_config()
+
+
+def get_web_interface():
+    return interfaces_util.get_bot_api().get_interface(web_interface.WebInterface)

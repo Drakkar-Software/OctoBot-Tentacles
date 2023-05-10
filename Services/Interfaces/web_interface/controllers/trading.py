@@ -58,7 +58,7 @@ def portfolio():
 def symbol_market_status():
     exchange_id = flask.request.args["exchange_id"]
     symbol = flask.request.args["symbol"]
-    symbol_time_frames, exchange = models.get_exchange_time_frames(exchange_id)
+    symbol_time_frames, exchange = models.get_exchange_watched_time_frames(exchange_id)
     time_frames = list(symbol_time_frames)
     time_frames.reverse()
     symbol_evaluation = models.get_evaluation(symbol, exchange, exchange_id)

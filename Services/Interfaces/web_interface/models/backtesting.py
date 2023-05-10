@@ -42,6 +42,7 @@ import octobot_trading.api as trading_api
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Interfaces.web_interface.models.trading as trading_model
+import tentacles.Services.Interfaces.web_interface.models.interface_settings as interface_settings_model
 import tentacles.Services.Interfaces.web_interface.models.profiles as profiles_model
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
 

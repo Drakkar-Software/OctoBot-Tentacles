@@ -34,9 +34,6 @@ ACTIVATION_KEY = "activation"
 TENTACLE_CLASS_NAME = "name"
 STARTUP_CONFIG_KEY = "startup_config"
 
-# web display
-DEFAULT_TIMEFRAME = "1h"
-
 # backtesting
 BOT_TOOLS_BACKTESTING = "backtesting"
 BOT_TOOLS_BACKTESTING_SOURCE = "backtesting_source"
