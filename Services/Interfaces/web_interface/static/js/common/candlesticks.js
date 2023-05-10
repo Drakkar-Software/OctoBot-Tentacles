@@ -223,6 +223,29 @@ function create_trades(trades, trader){
     }
 }
 
+function create_orders(orders, trader, lastTime){
+    if (isDefined(orders) && isDefined(orders.time) && orders.time.length > 0) {
+        return orders.time.map((x, index) => {
+            return {
+              x: [x, lastTime],
+              y: [orders.price[index], orders.price[index]],
+              mode: 'lines',
+              text: orders.description[index],
+              hoverinfo: "text",
+              line: {
+                dash: 'dashdot',
+                width: 1,
+                color: orders.order_side[index] === "sell" ? sell_color : buy_color,
+              },
+              xaxis: 'x',
+              yaxis: 'y2'
+            }
+        });
+    }else{
+        return []
+    }
+}
+
 function update_trades(trades, trader_name, reference_trades){
     if(isDefined(reference_trades) && isDefined(reference_trades.y)){
         if(isDefined(trades.time) && trades.time.length){
@@ -308,8 +331,9 @@ function push_new_candle(price_trace, volume_trace, candles, candle_index, last_
 function create_or_update_candlestick_graph(element_id, symbol_price_data, symbol, exchange_name, time_frame, replace=false){
     if (symbol_price_data) {
         const candles = symbol_price_data["candles"];
-        const real_trades = symbol_price_data["real_trades"];
-        const simulated_trades = symbol_price_data["simulated_trades"];
+        const trades = symbol_price_data["trades"];
+        const orders = symbol_price_data["orders"];
+        const isSimulated = symbol_price_data["simulated"]
 
         let layout = undefined;
 
@@ -318,6 +342,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
         let real_trader_trades = undefined;
         let simulator_trades = undefined;
+
+        let plotted_orders = undefined;
 
         const prev_data = document.getElementById(element_id);
         const prev_layout = prev_data.layout;
@@ -334,8 +360,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
             layout.datarevision = layout.datarevision + 1;
 
             // trades
-            real_trader_trades = update_trades(real_trades, "Real trader", real_trader_trades);
-            simulator_trades = update_trades(simulated_trades, "Simulator", simulator_trades);
+            real_trader_trades = isSimulated ? real_trader_trades : update_trades(trades, "Real trader", real_trader_trades);
+            simulator_trades = isSimulated ? update_trades(trades, "Simulator", simulator_trades) : simulator_trades;
 
             // candles
             if(isDefined(candles) && isDefined(candles.time) && candles.time.length){
@@ -371,13 +397,15 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
             volume_trace = create_volume(candles);
         }
         if(!isDefined(real_trader_trades)){
-            real_trader_trades = create_trades(real_trades, "Real trader");
+            real_trader_trades = isSimulated ? [] : create_trades(trades, "Real trader");
         }
         if(!isDefined(simulator_trades)){
-            simulator_trades = create_trades(simulated_trades, "Simulator");
+            simulator_trades = isSimulated ? create_trades(trades, "Simulator") : [];
         }
+        const lastTime = price_trace.x[price_trace.x.length - 1];
+        plotted_orders = create_orders(orders, isSimulated ? "Simulator": "Real trader", lastTime);
 
-        const data = [volume_trace, price_trace, real_trader_trades, simulator_trades];
+        const data = [volume_trace, price_trace, real_trader_trades, simulator_trades, ...plotted_orders];
         const plotlyConfig = {
             staticPlot: isMobileDisplay(),
             scrollZoom: false,
