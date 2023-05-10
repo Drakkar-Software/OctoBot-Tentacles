@@ -122,6 +122,45 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert "1" in consumer.trading_mode.last_signal_description
 
 
+async def test_handle_signal_orders_no_triggering_order(
+        local_trader, mocked_bundle_stop_loss_in_sell_limit_in_market_signal
+):
+    _, consumer, trader = local_trader
+    symbol = mocked_bundle_stop_loss_in_sell_limit_in_market_signal.content[
+        trading_enums.TradingSignalOrdersAttrs.SYMBOL.value
+    ]
+    exchange_manager = trader.exchange_manager
+    await consumer._handle_signal_orders(symbol, mocked_bundle_stop_loss_in_sell_limit_in_market_signal)
+    # ensure orders are created
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 2
+    # market order is filled, chained & bundled orders got created
+    # same as test_handle_signal_orders: skip other asserts
+    assert orders[1].order_group is orders[0].order_group
+    assert orders[0].shared_signal_order_id in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_shared_signal_order_id()
+    assert orders[1].shared_signal_order_id in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_shared_signal_order_id()
+
+    # now edit, cancel orders and create a new one
+    # change StopLossOrder group and cancel SellLimitOrder
+    _, cancel_signal, _ = _group_edit_cancel_create_order_signals(
+        orders[0].shared_signal_order_id, "new_group_id", trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+        orders[0].shared_signal_order_id, "3.356892%", 2000,
+        orders[1].shared_signal_order_id
+    )
+    cancel_signal.content[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value] = "0"
+    await consumer._handle_signal_orders(symbol, cancel_signal)
+
+    port_cancel_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    # order 1 got cancelled, since it's grouped with order 0, both are cancelled
+    assert len(port_cancel_orders) ==0
+    assert orders[0].shared_signal_order_id not in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_shared_signal_order_id()
+    assert orders[1].shared_signal_order_id not in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_shared_signal_order_id()
+
+
 async def test_handle_signal_orders_reduce_quantity_create_order(local_trader, mocked_buy_market_signal):
     _, consumer, trader = local_trader
     symbol = mocked_buy_market_signal.content[
@@ -249,6 +288,13 @@ async def test_handle_signal_create_orders_not_enough_funds_using_min_amount(loc
 
     consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
     # re-enable minimal amount config
+    # same shared order id: no order created
+    await consumer._handle_signal_orders(symbol, limit_signal)
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 1
+    assert orders[0] is order_1  # no order created
+    # change shared order id not to skip creation
+    limit_signal.content[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value] = "123"
     await consumer._handle_signal_orders(symbol, limit_signal)
     orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
     assert len(orders) == 2
