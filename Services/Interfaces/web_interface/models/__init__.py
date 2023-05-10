@@ -163,7 +163,6 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     format_trades,
     get_first_exchange_data,
     get_watched_symbol_data,
-    get_watched_symbols,
     get_startup_messages,
     get_first_symbol_data,
     get_currency_price_graph_update,
@@ -171,6 +170,9 @@ from tentacles.Services.Interfaces.web_interface.models.dashboard import (
 from tentacles.Services.Interfaces.web_interface.models.interface_settings import (
     add_watched_symbol,
     remove_watched_symbol,
+    get_watched_symbols,
+    get_display_timeframe,
+    set_display_timeframe,
 )
 from tentacles.Services.Interfaces.web_interface.models.logs import (
     LOG_EXPORT_FORMAT,
@@ -225,7 +227,8 @@ from tentacles.Services.Interfaces.web_interface.models.tentacles import (
 )
 from tentacles.Services.Interfaces.web_interface.models.trading import (
     ensure_valid_exchange_id,
-    get_exchange_time_frames,
+    get_exchange_watched_time_frames,
+    get_all_watched_time_frames,
     get_initializing_currencies_prices_set,
     get_evaluation,
     get_exchanges_load,
@@ -361,6 +364,8 @@ __all__ = [
     "get_startup_messages",
     "add_watched_symbol",
     "remove_watched_symbol",
+    "get_display_timeframe",
+    "set_display_timeframe",
     "LOG_EXPORT_FORMAT",
     "export_logs",
     "is_valid_tentacle_image_path",
@@ -403,7 +408,8 @@ __all__ = [
     "uninstall_modules",
     "get_tentacles",
     "ensure_valid_exchange_id",
-    "get_exchange_time_frames",
+    "get_exchange_watched_time_frames",
+    "get_all_watched_time_frames",
     "get_initializing_currencies_prices_set",
     "get_evaluation",
     "get_exchanges_load",

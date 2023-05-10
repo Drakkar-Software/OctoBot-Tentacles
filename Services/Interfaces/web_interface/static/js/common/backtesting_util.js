@@ -118,7 +118,9 @@ function load_report(report, should_alert=False) {
                 });
                 $("#sPort").html(starting_portfolio_reports.join(", "));
 
-                add_graphs(globalReport["chart_identifiers"]);
+                last_chart_identifiers = globalReport["chart_identifiers"]
+                fillTimeFrameSelector(last_chart_identifiers);
+                add_graphs(last_chart_identifiers);
                 add_tables(data["trades"], botReport["reference_market"]);
 
             }
@@ -128,6 +130,27 @@ function load_report(report, should_alert=False) {
             report.attr("loading", "false");
         });
     }
+}
+
+
+const fillTimeFrameSelector = (chart_identifiers) => {
+    const selector = $("#timeFrameSelect");
+    selector.empty();
+    if(!chart_identifiers.length){
+        return;
+    }
+    selector.append(...chart_identifiers[0]["time_frames"].map(
+        (tf, index) => new Option(tf, tf)
+    ));
+    selector.val(chart_identifiers[0]["time_frames"][0]);
+    selector.selectpicker('refresh');
+}
+
+
+const registerTimeFrameSelector = () => {
+    $("#timeFrameSelect").on("change", () => {
+        add_graphs(last_chart_identifiers)
+    })
 }
 
 
@@ -141,7 +164,7 @@ function add_graphs(chart_identifiers){
         const symbol = chart_identifier["symbol"];
         const exchange_id = chart_identifier["exchange_id"];
         const exchange_name = chart_identifier["exchange_name"];
-        const time_frame = chart_identifier["time_frame"];
+        const time_frame =  $("#timeFrameSelect").val() ? $("#timeFrameSelect").val() : chart_identifier["time_frames"];
         const graph_card = target_template.html().replace(new RegExp(config_default_value,"g"), exchange_id+symbol);
         result_graphs.append(graph_card);
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
@@ -228,3 +251,8 @@ const backtesting_done_callbacks = [];
 const backtesting_computing_callbacks = [];
 let previousBacktestingStatus = undefined;
 let backtestingMainProgressBar = "backtesting_progress_bar";
+let last_chart_identifiers = [];
+
+$(document).ready(function() {
+   registerTimeFrameSelector();
+});

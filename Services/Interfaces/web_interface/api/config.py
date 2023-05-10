@@ -53,6 +53,16 @@ def change_reference_market_on_config_currencies():
     return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
 
 
+@api.api.route('/display_config', methods=["POST"])
+@login.login_required_when_activated
+def display_config():
+    request_data = flask.request.get_json()
+    if "time_frame" in request_data:
+        success, reply = models.set_display_timeframe(request_data["time_frame"])
+        return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
+    util.get_rest_reply(flask.jsonify("nothing to do"), 500)
+
+
 @api.api.route('/start_copy_trading', methods=["POST"])
 @login.login_required_when_activated
 def start_copy_trading():

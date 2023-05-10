@@ -22,6 +22,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as logging
 import octobot_commons.timestamp_util as timestamp_util
+import octobot_commons.time_frame_manager as time_frame_manager
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 
@@ -33,12 +34,20 @@ def ensure_valid_exchange_id(exchange_id) -> str:
         raise errors.MissingExchangeId() from e
 
 
-def get_exchange_time_frames(exchange_id):
+def get_exchange_watched_time_frames(exchange_id):
     try:
         exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
         return trading_api.get_watched_timeframes(exchange_manager), trading_api.get_exchange_name(exchange_manager)
     except KeyError:
         return [], ""
+
+
+def get_all_watched_time_frames():
+    time_frames = []
+    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
+        if not trading_api.get_is_backtesting(exchange_manager):
+            time_frames += trading_api.get_watched_timeframes(exchange_manager)
+    return time_frame_manager.sort_time_frames(list(set(time_frames)))
 
 
 def get_initializing_currencies_prices_set():

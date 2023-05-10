@@ -106,7 +106,17 @@
         </div>
         <br>
         <div class="card">
-            <div class="card-header" id="all-watched-markets"><h2>Watched markets</h2></div>
+            <div class="card-header d-flex justify-content-between" id="all-watched-markets">
+                <div>
+
+                </div><h2>Watched markets</h2>
+                <div>
+                    <a class="waves-effect float-right" href="#" id="display-dashboard-settings-modal-label"
+                       data-toggle="modal" data-target="#dashboard-settings-modal">
+                       <i class="fa fa-1_5x fa-cog"></i>
+                    </a>
+                </div>
+            </div>
             <div class="card-body d-none text-center" id="loadingMarketsDiv">
                 <h2>
                     OctoBot is starting, markets will be refreshed when exchanges will be reachable.
@@ -134,6 +144,30 @@
                     <div class="card-footer">No watched markets: using a default one. You can add <a href="#"><i class="far fa-star text-white" aria-label="Watched markets star"></i></a> watched markets in the <a href="{{ url_for('trading') }}">trading section</a>.</div>
                 {% endif %}
             {% endif %}
+        </div>
+        <div class="modal" id="dashboard-settings-modal" tabindex="-1" role="dialog"
+             aria-labelledby="#display-dashboard-settings-modal-label" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content modal-text bg-dark text-light">
+              <div class="modal-header primary-text">
+                <h2 class="modal-title">Settings</h2>
+                    <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+              </div>
+              <div class="modal-body">
+                <label for="timeFrameSelect">Dashboard time frame</label>
+                <select class="selectpicker" id="timeFrameSelect" data-live-search="true" data-update-url="{{url_for('api.display_config')}}">
+                  {% for time_frame in all_time_frames %}
+                    <option value="{{time_frame.value}}" {{'selected="selected"' if time_frame.value == display_time_frame}}>
+                        {{time_frame.value}}
+                    </option>
+                  {% endfor %}
+                </select>
+                  <div class="font-italic">Add and remove watched symbols from the <a href="{{url_for('trading')}}">trading tab</a>.</div>
+              </div>
+            </div>
+          </div>
         </div>
     </span>
     <br>
