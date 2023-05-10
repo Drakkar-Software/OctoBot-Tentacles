@@ -98,7 +98,10 @@ $(document).ready(function () {
             update_graph(data);
         });
         socket.on('new_data', function (data) {
-            update_graph(data, false);
+            debounce(
+                () => update_graph(data, false),
+                500
+            );
         });
         socket.on('error', function (data) {
             if ("missing exchange manager" === data) {

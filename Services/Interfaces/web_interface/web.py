@@ -124,9 +124,13 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         web_interface_root.send_new_trade(
             trade,
             exchange_id,
-            trading_api.is_trader_simulated(trading_api.get_exchange_manager_from_exchange_name_and_id(exchange,
-                                                                                                       exchange_id))
+            symbol
         )
+
+    @staticmethod
+    async def _web_orders_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, order,
+                                   update_type, is_from_bot):
+        web_interface_root.send_order_update(order, exchange_id, symbol)
 
     @staticmethod
     async def _web_ohlcv_empty_callback(
@@ -143,6 +147,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         try:
             if trading_api.is_exchange_trading(trading_api.get_exchange_manager_from_exchange_id(exchange_id)):
                 await trading_api.subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
+                await trading_api.subscribe_to_order_channel(self._web_orders_callback, exchange_id)
                 await trading_api.subscribe_to_ohlcv_channel(self._web_ohlcv_empty_callback, exchange_id)
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")

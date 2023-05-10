@@ -132,11 +132,12 @@ def send_strategy_optimizer_status(**kwargs):
     _send_notification(STRATEGY_OPTIMIZER_NOTIFICATION_KEY, **kwargs)
 
 
-def send_new_trade(dict_new_trade, exchange_id, is_simulated):
-    if is_simulated:
-        _send_notification(DASHBOARD_NOTIFICATION_KEY, exchange_id=exchange_id, simulated_trades=[dict_new_trade])
-    else:
-        _send_notification(DASHBOARD_NOTIFICATION_KEY, exchange_id=exchange_id, real_trades=[dict_new_trade])
+def send_new_trade(dict_new_trade, exchange_id, symbol):
+    _send_notification(DASHBOARD_NOTIFICATION_KEY, exchange_id=exchange_id, trades=[dict_new_trade], symbol=symbol)
+
+
+def send_order_update(dict_order, exchange_id, symbol):
+    _send_notification(DASHBOARD_NOTIFICATION_KEY, exchange_id=exchange_id, order=dict_order, symbol=symbol)
 
 
 async def add_notification(level, title, message, sound=None):
