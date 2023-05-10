@@ -410,7 +410,12 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 await self._bundle_order(order_description, to_create_orders, ignored_orders, bundled_with,
                                          fees_currency_side, created_groups, symbol)
         # create orders
+        already_handled_order_ids = self.exchange_manager.exchange_personal_data.orders_manager\
+            .get_all_active_and_pending_orders_shared_signal_order_id()
         for shared_signal_order_id, order_with_param in to_create_orders.items():
+            if shared_signal_order_id in already_handled_order_ids:
+                self.logger.debug(f"Ignored order with shared signal id {shared_signal_order_id}: order already handled")
+                continue
             created_orders[shared_signal_order_id] = \
                 await self.exchange_manager.trader.create_order(order_with_param[0], params=order_with_param[1])
         # handle chained orders
