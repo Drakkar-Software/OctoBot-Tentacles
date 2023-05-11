@@ -21,11 +21,12 @@ import tentacles.Services.Interfaces.web_interface.models.configuration as confi
 
 
 def get_watched_symbols():
+    config = get_web_interface_config()
     try:
-        return get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS]
+        return config[web_interface.WebInterface.WATCHED_SYMBOLS]
     except KeyError:
-        get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS] = []
-    return get_web_interface_config()[web_interface.WebInterface.WATCHED_SYMBOLS]
+        config[web_interface.WebInterface.WATCHED_SYMBOLS] = []
+    return config[web_interface.WebInterface.WATCHED_SYMBOLS]
 
 
 def add_watched_symbol(symbol):
@@ -71,7 +72,10 @@ def set_display_orders(display_orders):
 
 
 def get_web_interface_config():
-    return get_web_interface().local_config
+    try:
+        return get_web_interface().local_config
+    except AttributeError:
+        return {}
 
 
 def _save_edition():
