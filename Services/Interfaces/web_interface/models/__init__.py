@@ -173,7 +173,9 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
     remove_watched_symbol,
     get_watched_symbols,
     get_display_timeframe,
+    get_display_orders,
     set_display_timeframe,
+    set_display_orders,
 )
 from tentacles.Services.Interfaces.web_interface.models.logs import (
     LOG_EXPORT_FORMAT,
@@ -367,7 +369,9 @@ __all__ = [
     "add_watched_symbol",
     "remove_watched_symbol",
     "get_display_timeframe",
+    "get_display_orders",
     "set_display_timeframe",
+    "set_display_orders",
     "LOG_EXPORT_FORMAT",
     "export_logs",
     "is_valid_tentacle_image_path",

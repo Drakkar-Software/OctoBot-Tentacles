@@ -60,7 +60,7 @@ function update_graph(exchange, update=false, data=undefined, re_update=true, in
         }
         const valid_exchange_name = exchange.split("[")[0];
         get_symbol_price_graph("graph-symbol-price", update_details.exchange_id, valid_exchange_name,
-            formated_symbol, update_details.time_frame, in_backtesting, !update,
+            formated_symbol, update_details.time_frame, true, in_backtesting, !update,
             true, 0, data, schedule_update);
         if (update && re_update && !in_backtesting){
             schedule_update();

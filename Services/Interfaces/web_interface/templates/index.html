@@ -156,15 +156,21 @@
                     </button>
               </div>
               <div class="modal-body">
-                <label for="timeFrameSelect">Dashboard time frame</label>
-                <select class="selectpicker" id="timeFrameSelect" data-live-search="true" data-update-url="{{url_for('api.display_config')}}">
-                  {% for time_frame in all_time_frames %}
-                    <option value="{{time_frame.value}}" {{'selected="selected"' if time_frame.value == display_time_frame}}>
-                        {{time_frame.value}}
-                    </option>
-                  {% endfor %}
-                </select>
-                  <div class="font-italic">Add and remove watched symbols from the <a href="{{url_for('trading')}}">trading tab</a>.</div>
+                  <div class="mx-4">
+                    <label for="timeFrameSelect">Dashboard time frame</label>
+                    <select class="selectpicker" id="timeFrameSelect" data-live-search="true" data-update-url="{{url_for('api.display_config')}}">
+                      {% for time_frame in all_time_frames %}
+                        <option value="{{time_frame.value}}" {{'selected="selected"' if time_frame.value == display_time_frame}}>
+                            {{time_frame.value}}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <div class="custom-control custom-switch my-auto" id="synchronized-data-only-div">
+                        <input type="checkbox" class="custom-control-input" id="displayOrderToggle" {{'checked' if display_orders}}  data-update-url="{{url_for('api.display_config')}}">
+                        <label class="custom-control-label" for="displayOrderToggle">Display orders</label>
+                    </div>
+                    <div class="font-italic">Add and remove watched symbols from the <a href="{{url_for('trading')}}">trading tab</a>.</div>
+                  </div>
               </div>
             </div>
           </div>

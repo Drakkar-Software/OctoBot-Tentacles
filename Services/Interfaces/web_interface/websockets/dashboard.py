@@ -93,7 +93,8 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
                                                                data["time_frame"],
                                                                backtesting=False,
                                                                minimal_candles=True,
-                                                               ignore_trades=True)
+                                                               ignore_trades=True,
+                                                               ignore_orders=not models.get_display_orders())
             })
         except KeyError:
             flask_socketio.emit("error", "missing exchange manager")

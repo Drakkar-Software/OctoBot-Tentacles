@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting=false,
+function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, display_orders, backtesting=false,
                                 replace=false, should_retry=false, attempts=0,
                                 data=undefined, success_callback=undefined, no_data_callback=undefined){
     if(isDefined(data)){
@@ -24,7 +24,7 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
     }else{
         const backtesting_enabled = backtesting ? "backtesting" : "live";
         const ajax_url = "/dashboard/currency_price_graph_update/"+ exchange_id +"/" + symbol + "/"
-            + time_frame + "/" + backtesting_enabled;
+            + time_frame + "/" + backtesting_enabled + "?display_orders=" + display_orders;
         $.ajax({
             url: ajax_url,
             type: "GET",
@@ -41,7 +41,7 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
                         marketsElement.removeClass(disabled_item_class);
                         setTimeout(function(){
                             marketsElement.addClass(disabled_item_class);
-                            get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting, replace, should_retry,attempts+1, data, success_callback);
+                            get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, display_orders, backtesting, replace, should_retry,attempts+1, data, success_callback);
                         }, 3000);
                     }
                 }else{
@@ -68,20 +68,20 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
     }
 }
 
-function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, callback=undefined, time_frame=undefined) {
+function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, callback=undefined, time_frame=undefined, display_orders=true) {
     const url = $("#first_symbol_graph").attr(update_url_attr);
     $.get(url,function(data) {
         if($.isEmptyObject(data)){
             // no exchange data available yet, retry soon, bot must be starting
             setTimeout(function(){
-                get_first_symbol_price_graph(element_id, in_backtesting_mode, callback, time_frame);
+                get_first_symbol_price_graph(element_id, in_backtesting_mode, callback, time_frame, display_orders);
             }, 300);
         }else{
             if("time_frame" in data){
                 let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
                 const fetched_time_frame = time_frame ? time_frame : data["time_frame"];
                 get_symbol_price_graph(element_id, data["exchange_id"], data["exchange_name"], formatted_symbol,
-                    fetched_time_frame, in_backtesting_mode, false, true,
+                    fetched_time_frame, display_orders, in_backtesting_mode, false, true,
                     0, undefined, function () {
                         if(isDefined(callback)){
                             callback(data["exchange_id"], data["symbol"], data["time_frame"], element_id);
@@ -92,7 +92,7 @@ function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, cal
     });
 }
 
-function get_watched_symbol_price_graph(element, callback=undefined, no_data_callback=undefined, time_frame=undefined) {
+function get_watched_symbol_price_graph(element, callback=undefined, no_data_callback=undefined, time_frame=undefined, display_orders=true) {
     const symbol = element.attr("symbol");
     let formatted_symbol = symbol.replace(new RegExp("/","g"), "|");
     const ajax_url = "/dashboard/watched_symbol/"+ formatted_symbol;
@@ -101,7 +101,7 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
             const fetched_time_frame = time_frame ? time_frame : data["time_frame"];
             let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
             get_symbol_price_graph(element.attr("id"), data["exchange_id"], data["exchange_name"], formatted_symbol,
-                fetched_time_frame, false, false, true,
+                fetched_time_frame, display_orders, false, false, true,
                 0, undefined, function () {
                     if(isDefined(callback)){
                         callback(data["exchange_id"], data["symbol"], data["time_frame"], element.attr("id"));
@@ -112,7 +112,7 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
             const marketsElement = $("#loadingMarketsDiv");
             marketsElement.removeClass(disabled_item_class);
             setTimeout(function(){
-                get_watched_symbol_price_graph(element, callback, no_data_callback, time_frame);
+                get_watched_symbol_price_graph(element, callback, no_data_callback, time_frame, displayOrders);
             }, 1000);
         }
     });

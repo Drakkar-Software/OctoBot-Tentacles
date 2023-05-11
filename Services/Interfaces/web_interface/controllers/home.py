@@ -40,6 +40,7 @@ def home():
         pnl_symbols = models.get_pnl_history_symbols()
         all_time_frames = models.get_all_watched_time_frames()
         display_time_frame = models.get_display_timeframe()
+        display_orders = models.get_display_orders()
         try:
             user_id = models.get_user_account_id()
             display_feedback_form = form_to_display and not models.has_filled_form(form_to_display)
@@ -56,6 +57,7 @@ def home():
             selected_profile=models.get_current_profile().name,
             reference_unit=interfaces_util.get_reference_market(),
             display_time_frame=display_time_frame,
+            display_orders=display_orders,
             all_time_frames=all_time_frames,
             user_id=user_id,
             form_to_display=form_to_display,

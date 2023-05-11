@@ -168,7 +168,7 @@ function add_graphs(chart_identifiers){
         const graph_card = target_template.html().replace(new RegExp(config_default_value,"g"), exchange_id+symbol);
         result_graphs.append(graph_card);
         const formated_symbol = symbol.replace(new RegExp("/","g"), "|");
-        get_symbol_price_graph(`${graph_symbol_price_id}${exchange_id}${symbol}`, exchange_id, exchange_name, formated_symbol, time_frame, true);
+        get_symbol_price_graph(`${graph_symbol_price_id}${exchange_id}${symbol}`, exchange_id, exchange_name, formated_symbol, time_frame, true, true);
     })
 }
 

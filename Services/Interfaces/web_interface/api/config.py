@@ -39,8 +39,10 @@ def get_all_currencies(exchange):
 @login.login_required_when_activated
 def set_config_currency():
     request_data = flask.request.get_json()
-    success, reply = models.update_config_currencies(request_data["currencies"],
-                        replace=(request_data.get("action", "update") == "replace"))
+    success, reply = models.update_config_currencies(
+        request_data["currencies"],
+        replace=(request_data.get("action", "update") == "replace")
+    )
     return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
 
 
@@ -57,10 +59,13 @@ def change_reference_market_on_config_currencies():
 @login.login_required_when_activated
 def display_config():
     request_data = flask.request.get_json()
+    success = False
+    message = "nothing to do"
     if "time_frame" in request_data:
-        success, reply = models.set_display_timeframe(request_data["time_frame"])
-        return util.get_rest_reply(flask.jsonify(reply)) if success else util.get_rest_reply(reply, 500)
-    util.get_rest_reply(flask.jsonify("nothing to do"), 500)
+        success, message = models.set_display_timeframe(request_data["time_frame"])
+    if "display_orders" in request_data:
+        success, message = models.set_display_orders(request_data["display_orders"])
+    return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
 
 
 @api.api.route('/start_copy_trading', methods=["POST"])

@@ -52,10 +52,21 @@ def get_display_timeframe():
     )
 
 
+def get_display_orders():
+    return get_web_interface_config().get(web_interface.WebInterface.DISPLAY_ORDERS, True)
+
+
 def set_display_timeframe(time_frame):
     get_web_interface_config()[
         web_interface.WebInterface.DISPLAY_TIME_FRAME
     ] = time_frame
+    return _save_edition()
+
+
+def set_display_orders(display_orders):
+    get_web_interface_config()[
+        web_interface.WebInterface.DISPLAY_ORDERS
+    ] = display_orders
     return _save_edition()
 
 
