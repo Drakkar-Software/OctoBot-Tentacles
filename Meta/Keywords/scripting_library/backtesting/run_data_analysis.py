@@ -18,6 +18,7 @@ import sortedcontainers
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchange_data as trading_exchange_data
+import octobot_trading.storage as trading_storage
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.personal_data.portfolios.portfolio_util as portfolio_util
 import octobot_trading.api as trading_api
@@ -48,7 +49,7 @@ async def get_trades(meta_database, metadata, symbol):
     account_type = trading_api.get_account_type_from_run_metadata(metadata)
     return await meta_database.get_trades_db(account_type).select(
         commons_enums.DBTables.TRADES.value,
-        (await meta_database.get_orders_db(account_type).search()).symbol == symbol
+        (await meta_database.get_trades_db(account_type).search()).symbol == symbol
     )
 
 
@@ -555,7 +556,8 @@ def _plot_table_data(data, plotted_element, data_name, additional_key_to_label, 
         data_name,
         columns=columns,
         rows=rows,
-        searches=searches)
+        searches=searches
+    )
 
 
 async def plot_trades(meta_database, plotted_element, historical_values=None):
@@ -589,6 +591,39 @@ async def plot_trades(meta_database, plotted_element, historical_values=None):
         datum["fees"] = f'{datum["fees_amount"]} {datum["fees_currency"]}'
 
     _plot_table_data(data, plotted_element, commons_enums.DBTables.TRADES.value,
+                     key_to_label, additional_columns, datum_columns_callback)
+
+
+async def plot_orders(meta_database, plotted_element, historical_values=None):
+    if historical_values:
+        _, _, _, _, metadata, _ = historical_values
+    else:
+        metadata = await get_metadata(meta_database)
+    account_type = trading_api.get_account_type_from_run_metadata(metadata)
+    data = [
+        order[trading_storage.OrdersStorage.ORIGIN_VALUE_KEY]
+        for order in await meta_database.get_orders_db(account_type).all(commons_enums.DBTables.ORDERS.value)
+    ]
+    key_to_label = {
+        trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value: "Time",
+        trading_enums.ExchangeConstantsOrderColumns.PRICE.value: "Price",
+        trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value: "Amount",
+        trading_enums.ExchangeConstantsOrderColumns.TYPE.value: "Type",
+        trading_enums.ExchangeConstantsOrderColumns.SIDE.value: "Side",
+    }
+    additional_columns = [
+        {
+            "field": "total",
+            "label": "Total",
+            "render": None
+        }
+    ]
+
+    def datum_columns_callback(datum):
+        datum["total"] = datum[trading_enums.ExchangeConstantsOrderColumns.COST.value]
+        datum[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] *= 1000
+
+    _plot_table_data(data, plotted_element, commons_enums.DBTables.ORDERS.value,
                      key_to_label, additional_columns, datum_columns_callback)
 
 
