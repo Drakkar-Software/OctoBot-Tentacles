@@ -238,10 +238,10 @@ class DisplayedElements(display.DisplayTranslator):
                 side = order_details[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
                 display_element[commons_enums.PlotAttributes.COLOR.value] = "red" \
                     if side == trading_enums.TradeOrderSide.SELL.value else "green"
-                display_element[commons_enums.PlotAttributes.SHAPE.value] = commons_enums.PlotAttributes.X.value
+                display_element[commons_enums.PlotAttributes.SHAPE.value] = "line-ew-open"
                 display_element[commons_enums.PlotAttributes.MODE.value] = "markers"
                 display_element[commons_enums.PlotAttributes.KIND.value] = "scattergl"
-                display_element[commons_enums.PlotAttributes.SIZE.value] = 5
+                display_element[commons_enums.PlotAttributes.SIZE.value] = 15
                 display_element[commons_enums.PlotAttributes.TEXT.value] = \
                     f"{order_details[trading_enums.ExchangeConstantsOrderColumns.TYPE.value]} " \
                     f"{order_details[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]} " \

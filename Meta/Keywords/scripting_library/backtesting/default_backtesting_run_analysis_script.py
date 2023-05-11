@@ -75,6 +75,7 @@ async def default_backtesting_analysis_script(ctx: script_keywords.Context):
             with run_display.part("list-of-trades-part", "table") as part:
                 try:
                     await run_data_analysis.plot_trades(run_data, part, historical_values=historical_values)
+                    await run_data_analysis.plot_orders(run_data, part, historical_values=historical_values)
                     await run_data_analysis.plot_positions(run_data, part)
                     # await plot_table(run_data, part, "SMA 1")  # plot any cache key as a table
                 except Exception as err:
