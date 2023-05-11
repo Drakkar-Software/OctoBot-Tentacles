@@ -47,6 +47,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     REQUIRED_SERVICES = [Service_bases.WebService]
     IS_FLASK_APP_CONFIGURED = False
     DISPLAY_TIME_FRAME = "display_time_frame"
+    DISPLAY_ORDERS = "display_orders"
     WATCHED_SYMBOLS = "watched_symbols"
 
     tools = {

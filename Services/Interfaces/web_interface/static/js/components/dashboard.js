@@ -145,7 +145,7 @@ $(document).ready(function () {
         }
         if (isDefined(update_detail)) {
             get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
-                "", update_details.time_frame, get_in_backtesting_mode(),
+                "", update_details.time_frame, shouldDisplayOrders(), get_in_backtesting_mode(),
                 false, true, 0, candle_data);
             if (re_update) {
                 setTimeout(function () {
@@ -181,7 +181,7 @@ $(document).ready(function () {
         $("#first_symbol_graph").removeClass(hidden_class);
         Plotly.purge("graph-symbol-price");
         $("#graph-symbol-price").empty();
-        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater, time_frame);
+        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater, time_frame, shouldDisplayOrders());
     }
 
     function no_data_for_graph(element_id) {
@@ -199,15 +199,19 @@ $(document).ready(function () {
         handle_profitability(socket);
     }
 
+    const shouldDisplayOrders = () => {
+        return $("#displayOrderToggle").is(":checked");
+    }
+
     const updatePriceGraphs = () => {
         let useDefaultGraph = true;
-        const time_frame = $("timeFrameSelect").val();
+        const time_frame = $("#timeFrameSelect").val();
         $(".watched-symbol-graph").each(function () {
             useDefaultGraph = false;
             const element = $(this);
             Plotly.purge(element.attr("id"));
             element.empty();
-            get_watched_symbol_price_graph(element, init_updater, no_data_for_graph, time_frame);
+            get_watched_symbol_price_graph(element, init_updater, no_data_for_graph, time_frame, shouldDisplayOrders());
         });
         if (useDefaultGraph) {
             enable_default_graph(time_frame);
@@ -233,11 +237,22 @@ $(document).ready(function () {
         send_and_interpret_bot_update(request, url, null, undefined, generic_request_failure_callback);
     }
 
-    const registerTimeFrameSelector = () => {
+    const updateDisplayOrders = (display_orders) => {
+        const url = $("#displayOrderToggle").data("update-url");
+        const request = {
+            display_orders: display_orders,
+        }
+        send_and_interpret_bot_update(request, url, null, undefined, generic_request_failure_callback);
+    }
+
+    const registerConfigUpdates = () => {
         $("#timeFrameSelect").on("change", () => {
             updateDisplayTimeFrame($("#timeFrameSelect").val())
             updatePriceGraphs();
-            $("#dashboard-settings-modal").modal("hide");
+        })
+        $("#displayOrderToggle").on("change", () => {
+            updateDisplayOrders(shouldDisplayOrders());
+            updatePriceGraphs();
         })
     }
 
@@ -249,7 +264,7 @@ $(document).ready(function () {
     get_version_upgrade();
     init_dashboard_websocket();
     init_graphs();
-    registerTimeFrameSelector();
+    registerConfigUpdates();
     if(!startTutorialIfNecessary("home", displayFeedbackFormIfNecessary)){
         displayFeedbackFormIfNecessary()
     }
