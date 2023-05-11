@@ -21,11 +21,9 @@ import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
-import tentacles.Services.Interfaces.web_interface as web_interface
-import tentacles.Services.Interfaces.web_interface.constants as constants
+import tentacles.Services.Interfaces.web_interface.models.interface_settings as interface_settings
 import tentacles.Services.Interfaces.web_interface.enums as enums
 import octobot_commons.timestamp_util as timestamp_util
-import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols as commons_symbols
 
@@ -55,7 +53,8 @@ def format_trades(dict_trade_history):
         trade_description_key: [],
         trade_order_side_key: []
     }
-
+    if not dict_trade_history:
+        return trades
     for dict_trade in dict_trade_history:
         status = dict_trade.get(trading_enums.ExchangeConstantsOrderColumns.STATUS.value,
                                 trading_enums.OrderStatus.UNKNOWN.value)
@@ -76,6 +75,34 @@ def format_trades(dict_trade_history):
                 trades[trade_order_side_key].append(trade_side.value)
 
     return trades
+
+
+def format_orders(order, min_order_time):
+    time_key = "time"
+    price_key = "price"
+    description_key = "description"
+    order_side_key = "order_side"
+    formatted_orders = {
+        time_key: [],
+        price_key: [],
+        description_key: [],
+        order_side_key: []
+    }
+    for order in order:
+        if order.creation_time > trading_constants.MINIMUM_VAL_TRADE_TIME:
+            formatted_orders[time_key].append(
+                timestamp_util.convert_timestamp_to_datetime(
+                    max(min_order_time, order.creation_time),
+                    time_format="%y-%m-%d %H:%M:%S"
+                )
+            )
+            formatted_orders[price_key].append(float(order.origin_price))
+            formatted_orders[description_key].append(
+                f"{order.order_type.name.replace('_', ' ')}: {order.origin_quantity} {order.quantity_currency} "
+                f"at {order.origin_price}"
+            )
+            formatted_orders[order_side_key].append(order.side.value)
+    return formatted_orders
 
 
 def _remove_invalid_chars(string):
@@ -113,11 +140,11 @@ def get_watched_symbol_data(symbol):
             exchange_id = trading_api.get_exchange_manager_id(exchange_manager)
             exchange_name = trading_api.get_exchange_name(exchange_manager)
             last_possibility = _get_candles_reply(
-                    exchange_name,
-                    exchange_id,
-                    symbol,
-                    _get_time_frame(exchange_name, exchange_id)
-                )
+                exchange_name,
+                exchange_id,
+                symbol,
+                _get_default_time_frame(exchange_name, exchange_id)
+            )
             if symbol_object in trading_api.get_trading_symbols(exchange_manager):
                 return last_possibility
         # symbol has not been found in exchange, still return the last exchange
@@ -127,26 +154,18 @@ def get_watched_symbol_data(symbol):
         return {}
 
 
-def _get_time_frame(exchange_name, exchange_id):
-    try:
-        return time_frame_manager.get_display_time_frame(interfaces_util.get_global_config(),
-                                                         commons_enums.TimeFrames(constants.DEFAULT_TIMEFRAME))
-    except IndexError:
-        # second try with watched timeframes, there might be a real-time time frame available
-        return trading_api.get_watched_timeframes(
-            trading_api.get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
-        )[0]
+def _get_default_time_frame(exchange_name, exchange_id):
+    available_time_frames = trading_api.get_watched_timeframes(
+        trading_api.get_exchange_manager_from_exchange_name_and_id(exchange_name, exchange_id)
+    )
+    display_time_frame = commons_enums.TimeFrames(interface_settings.get_display_timeframe())
+    if display_time_frame in available_time_frames:
+        return display_time_frame
+    return available_time_frames[0]
 
 
 def _is_symbol_data_available(exchange_manager, symbol):
     return symbol in trading_api.get_trading_pairs(exchange_manager)
-
-
-def get_watched_symbols():
-    config = interfaces_util.get_edited_config()
-    if constants.CONFIG_WATCHED_SYMBOLS not in config:
-        config[constants.CONFIG_WATCHED_SYMBOLS] = []
-    return config[constants.CONFIG_WATCHED_SYMBOLS]
 
 
 def get_startup_messages():
@@ -157,23 +176,25 @@ def get_first_symbol_data():
     try:
         exchange, exchange_name, exchange_id = _get_first_exchange_identifiers()
         symbol = trading_api.get_trading_pairs(exchange)[0]
-        time_frame = _get_time_frame(exchange_name, exchange_id)
+        time_frame = _get_default_time_frame(exchange_name, exchange_id)
         return _get_candles_reply(exchange_name, exchange_id, symbol, time_frame)
     except (KeyError, IndexError):
         return {}
 
 
 def _create_candles_data(exchange_manager, symbol, time_frame, historical_candles, kline,
-                         bot_api, list_arrays, in_backtesting, ignore_trades):
+                         bot_api, list_arrays, in_backtesting, ignore_trades, ignore_orders):
     candles_key = "candles"
-    real_trades_key = "real_trades"
-    simulated_trades_key = "simulated_trades"
+    trades_key = "trades"
+    orders_key = "orders"
     symbol_key = "symbol"
+    simulated_key = "simulated"
     exchange_id_key = "exchange_id"
     result_dict = {
         candles_key: {},
-        real_trades_key: {},
-        simulated_trades_key: {},
+        trades_key: {},
+        orders_key: {},
+        simulated_key: trading_api.is_trader_simulated(exchange_manager),
         symbol_key: symbol,
         exchange_id_key: trading_api.get_exchange_manager_id(exchange_manager),
     }
@@ -207,21 +228,21 @@ def _create_candles_data(exchange_manager, symbol, time_frame, historical_candle
         if not ignore_trades:
             # handle trades after the 1st displayed candle start time for dashboard
             first_time_to_handle_in_board = data[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0]
-            real_trades_history = []
-            simulated_trades_history = []
+            trades_history = []
             if trading_api.is_trader_existing_and_enabled(exchange_manager):
-                if trading_api.is_trader_simulated(exchange_manager):
-                    simulated_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
-                                                                              first_time_to_handle_in_board, True)
-                else:
-                    real_trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
-                                                                         first_time_to_handle_in_board, True)
+                trades_history += trading_api.get_trade_history(exchange_manager, None, symbol,
+                                                                first_time_to_handle_in_board, True)
 
-            if real_trades_history:
-                result_dict[real_trades_key] = format_trades(real_trades_history)
+            result_dict[trades_key] = format_trades(trades_history)
 
-            if simulated_trades_history:
-                result_dict[simulated_trades_key] = format_trades(simulated_trades_history)
+        if not ignore_orders:
+            if trading_api.is_trader_existing_and_enabled(exchange_manager):
+                result_dict[orders_key] = format_orders(
+                    trading_api.get_open_orders(exchange_manager, symbol=symbol),
+                    # align time for historical candles only
+                    data[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0]
+                    if len(data[commons_enums.PriceIndexes.IND_PRICE_TIME.value]) > 2 else 0
+                )
 
         if list_arrays:
             result_dict[candles_key] = {
@@ -247,11 +268,8 @@ def _create_candles_data(exchange_manager, symbol, time_frame, historical_candle
 
 
 def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False,
-                                    minimal_candles=False, ignore_trades=False):
+                                    minimal_candles=False, ignore_trades=False, ignore_orders=False):
     bot_api = interfaces_util.get_bot_api()
-    # TODO: handle on the fly backtesting price graph
-    # if backtesting and WebInterface and WebInterface.tools[BOT_TOOLS_BACKTESTING]:
-    #     bot = WebInterface.tools[BOT_TOOLS_BACKTESTING].get_bot()
     parsed_symbol = commons_symbols.parse_symbol(parse_get_symbol(symbol))
     in_backtesting = backtesting_api.is_backtesting_enabled(interfaces_util.get_global_config()) or backtesting
     exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
@@ -266,7 +284,7 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
                 kline = trading_api.get_symbol_klines(symbol_data, time_frame)
             if historical_candles is not None:
                 return _create_candles_data(exchange_manager, symbol_id, time_frame, historical_candles,
-                                            kline, bot_api, list_arrays, in_backtesting, ignore_trades)
+                                            kline, bot_api, list_arrays, in_backtesting, ignore_trades, ignore_orders)
         except KeyError:
             traded_pairs = trading_api.get_trading_pairs(exchange_manager)
             if not traded_pairs or symbol_id in traded_pairs:

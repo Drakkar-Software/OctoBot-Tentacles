@@ -22,10 +22,12 @@ import flask_socketio
 from flask_compress import Compress
 
 import octobot_commons.logging as bot_logging
+import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
+import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
@@ -34,6 +36,8 @@ import tentacles.Services.Interfaces.web_interface.plugins as web_interface_plug
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Services_bases as Service_bases
+import octobot_tentacles_manager.api
+
 
 # import web_interface.controllers to register endpoints
 import tentacles.Services.Interfaces.web_interface.controllers
@@ -42,6 +46,9 @@ import tentacles.Services.Interfaces.web_interface.controllers
 class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     REQUIRED_SERVICES = [Service_bases.WebService]
     IS_FLASK_APP_CONFIGURED = False
+    DISPLAY_TIME_FRAME = "display_time_frame"
+    DISPLAY_ORDERS = "display_orders"
+    WATCHED_SYMBOLS = "watched_symbols"
 
     tools = {
         constants.BOT_TOOLS_BACKTESTING: None,
@@ -65,10 +72,17 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.started = False
         self.registered_plugins = []
         self._init_web_settings()
+        self.local_config = None
+        self.reload_config()
 
     async def register_new_exchange_impl(self, exchange_id):
         if exchange_id not in self.registered_exchanges_ids:
             await self._register_on_channels(exchange_id)
+
+    def reload_config(self, tentacles_setup_config=None):
+        self.local_config = octobot_tentacles_manager.api.get_tentacle_config(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config(), self.__class__
+        )
 
     def _init_web_settings(self):
         try:
@@ -111,9 +125,13 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         web_interface_root.send_new_trade(
             trade,
             exchange_id,
-            trading_api.is_trader_simulated(trading_api.get_exchange_manager_from_exchange_name_and_id(exchange,
-                                                                                                       exchange_id))
+            symbol
         )
+
+    @staticmethod
+    async def _web_orders_callback(exchange: str, exchange_id: str, cryptocurrency: str, symbol: str, order,
+                                   update_type, is_from_bot):
+        web_interface_root.send_order_update(order, exchange_id, symbol)
 
     @staticmethod
     async def _web_ohlcv_empty_callback(
@@ -130,6 +148,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         try:
             if trading_api.is_exchange_trading(trading_api.get_exchange_manager_from_exchange_id(exchange_id)):
                 await trading_api.subscribe_to_trades_channel(self._web_trades_callback, exchange_id)
+                await trading_api.subscribe_to_order_channel(self._web_orders_callback, exchange_id)
                 await trading_api.subscribe_to_ohlcv_channel(self._web_ohlcv_empty_callback, exchange_id)
         except ImportError:
             self.logger.error("Watching trade channels requires OctoBot-Trading package installed")

@@ -26,7 +26,6 @@ class BinanceCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.TICKER: True,
         Feeds.CANDLE: True,
     }
-    EXCHANGE_RECONNECT_INTERVAL = 12 * commons_constants.HOURS_TO_SECONDS
 
     @classmethod
     def get_name(cls):

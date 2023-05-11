@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting=false,
+function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, display_orders, backtesting=false,
                                 replace=false, should_retry=false, attempts=0,
                                 data=undefined, success_callback=undefined, no_data_callback=undefined){
     if(isDefined(data)){
@@ -24,7 +24,7 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
     }else{
         const backtesting_enabled = backtesting ? "backtesting" : "live";
         const ajax_url = "/dashboard/currency_price_graph_update/"+ exchange_id +"/" + symbol + "/"
-            + time_frame + "/" + backtesting_enabled;
+            + time_frame + "/" + backtesting_enabled + "?display_orders=" + display_orders;
         $.ajax({
             url: ajax_url,
             type: "GET",
@@ -41,7 +41,7 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
                         marketsElement.removeClass(disabled_item_class);
                         setTimeout(function(){
                             marketsElement.addClass(disabled_item_class);
-                            get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, backtesting, replace, should_retry,attempts+1, data, success_callback);
+                            get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, time_frame, display_orders, backtesting, replace, should_retry,attempts+1, data, success_callback);
                         }, 3000);
                     }
                 }else{
@@ -68,19 +68,20 @@ function get_symbol_price_graph(element_id, exchange_id, exchange_name, symbol, 
     }
 }
 
-function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, callback=undefined) {
+function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, callback=undefined, time_frame=undefined, display_orders=true) {
     const url = $("#first_symbol_graph").attr(update_url_attr);
     $.get(url,function(data) {
         if($.isEmptyObject(data)){
             // no exchange data available yet, retry soon, bot must be starting
             setTimeout(function(){
-                get_first_symbol_price_graph(element_id, in_backtesting_mode, callback);
+                get_first_symbol_price_graph(element_id, in_backtesting_mode, callback, time_frame, display_orders);
             }, 300);
         }else{
             if("time_frame" in data){
                 let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
+                const fetched_time_frame = time_frame ? time_frame : data["time_frame"];
                 get_symbol_price_graph(element_id, data["exchange_id"], data["exchange_name"], formatted_symbol,
-                    data["time_frame"], in_backtesting_mode, false, true,
+                    fetched_time_frame, display_orders, in_backtesting_mode, false, true,
                     0, undefined, function () {
                         if(isDefined(callback)){
                             callback(data["exchange_id"], data["symbol"], data["time_frame"], element_id);
@@ -91,15 +92,16 @@ function get_first_symbol_price_graph(element_id, in_backtesting_mode=false, cal
     });
 }
 
-function get_watched_symbol_price_graph(element, callback=undefined, no_data_callback=undefined) {
+function get_watched_symbol_price_graph(element, callback=undefined, no_data_callback=undefined, time_frame=undefined, display_orders=true) {
     const symbol = element.attr("symbol");
     let formatted_symbol = symbol.replace(new RegExp("/","g"), "|");
     const ajax_url = "/dashboard/watched_symbol/"+ formatted_symbol;
     $.get(ajax_url,function(data) {
         if("time_frame" in data){
+            const fetched_time_frame = time_frame ? time_frame : data["time_frame"];
             let formatted_symbol = data["symbol"].replace(new RegExp("/","g"), "|");
             get_symbol_price_graph(element.attr("id"), data["exchange_id"], data["exchange_name"], formatted_symbol,
-                data["time_frame"], false, false, true,
+                fetched_time_frame, display_orders, false, false, true,
                 0, undefined, function () {
                     if(isDefined(callback)){
                         callback(data["exchange_id"], data["symbol"], data["time_frame"], element.attr("id"));
@@ -110,7 +112,7 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
             const marketsElement = $("#loadingMarketsDiv");
             marketsElement.removeClass(disabled_item_class);
             setTimeout(function(){
-                get_watched_symbol_price_graph(element, callback, no_data_callback);
+                get_watched_symbol_price_graph(element, callback, no_data_callback, time_frame, displayOrders);
             }, 1000);
         }
     });
@@ -221,6 +223,29 @@ function create_trades(trades, trader){
     }
 }
 
+function create_orders(orders, trader, lastTime){
+    if (isDefined(orders) && isDefined(orders.time) && orders.time.length > 0) {
+        return orders.time.map((x, index) => {
+            return {
+              x: [x, lastTime],
+              y: [orders.price[index], orders.price[index]],
+              mode: 'lines',
+              text: orders.description[index],
+              hoverinfo: "text",
+              line: {
+                dash: 'dashdot',
+                width: 1,
+                color: orders.order_side[index] === "sell" ? sell_color : buy_color,
+              },
+              xaxis: 'x',
+              yaxis: 'y2'
+            }
+        });
+    }else{
+        return []
+    }
+}
+
 function update_trades(trades, trader_name, reference_trades){
     if(isDefined(reference_trades) && isDefined(reference_trades.y)){
         if(isDefined(trades.time) && trades.time.length){
@@ -306,8 +331,9 @@ function push_new_candle(price_trace, volume_trace, candles, candle_index, last_
 function create_or_update_candlestick_graph(element_id, symbol_price_data, symbol, exchange_name, time_frame, replace=false){
     if (symbol_price_data) {
         const candles = symbol_price_data["candles"];
-        const real_trades = symbol_price_data["real_trades"];
-        const simulated_trades = symbol_price_data["simulated_trades"];
+        const trades = symbol_price_data["trades"];
+        const orders = symbol_price_data["orders"];
+        const isSimulated = symbol_price_data["simulated"]
 
         let layout = undefined;
 
@@ -316,6 +342,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
 
         let real_trader_trades = undefined;
         let simulator_trades = undefined;
+
+        let plotted_orders = undefined;
 
         const prev_data = document.getElementById(element_id);
         const prev_layout = prev_data.layout;
@@ -332,8 +360,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
             layout.datarevision = layout.datarevision + 1;
 
             // trades
-            real_trader_trades = update_trades(real_trades, "Real trader", real_trader_trades);
-            simulator_trades = update_trades(simulated_trades, "Simulator", simulator_trades);
+            real_trader_trades = isSimulated ? real_trader_trades : update_trades(trades, "Real trader", real_trader_trades);
+            simulator_trades = isSimulated ? update_trades(trades, "Simulator", simulator_trades) : simulator_trades;
 
             // candles
             if(isDefined(candles) && isDefined(candles.time) && candles.time.length){
@@ -369,13 +397,15 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
             volume_trace = create_volume(candles);
         }
         if(!isDefined(real_trader_trades)){
-            real_trader_trades = create_trades(real_trades, "Real trader");
+            real_trader_trades = isSimulated ? [] : create_trades(trades, "Real trader");
         }
         if(!isDefined(simulator_trades)){
-            simulator_trades = create_trades(simulated_trades, "Simulator");
+            simulator_trades = isSimulated ? create_trades(trades, "Simulator") : [];
         }
+        const lastTime = price_trace.x[price_trace.x.length - 1];
+        plotted_orders = create_orders(orders, isSimulated ? "Simulator": "Real trader", lastTime);
 
-        const data = [volume_trace, price_trace, real_trader_trades, simulator_trades];
+        const data = [volume_trace, price_trace, real_trader_trades, simulator_trades, ...plotted_orders];
         const plotlyConfig = {
             staticPlot: isMobileDisplay(),
             scrollZoom: false,

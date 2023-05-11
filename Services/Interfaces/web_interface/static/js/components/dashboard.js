@@ -98,7 +98,10 @@ $(document).ready(function () {
             update_graph(data);
         });
         socket.on('new_data', function (data) {
-            update_graph(data, false);
+            debounce(
+                () => update_graph(data, false),
+                500
+            );
         });
         socket.on('error', function (data) {
             if ("missing exchange manager" === data) {
@@ -130,12 +133,19 @@ $(document).ready(function () {
         let update_detail = undefined;
         if (isDefined(data.request)) {
             update_detail = data.request;
+            // ensure candles are from the right timeframe
+            const client_update_detail = _find_symbol_details(candle_data.symbol, candle_data.exchange_id);
+            if(typeof client_update_detail !== "undefined"
+                && update_detail.time_frame !== client_update_detail.time_frame){
+                // wrong time frame: don't update and don't ask for more update
+                return
+            }
         } else {
             update_detail = _find_symbol_details(candle_data.symbol, candle_data.exchange_id);
         }
         if (isDefined(update_detail)) {
             get_symbol_price_graph(update_detail.elem_id, update_details.exchange_id, "",
-                "", update_details.time_frame, get_in_backtesting_mode(),
+                "", update_details.time_frame, shouldDisplayOrders(), get_in_backtesting_mode(),
                 false, true, 0, candle_data);
             if (re_update) {
                 setTimeout(function () {
@@ -147,12 +157,17 @@ $(document).ready(function () {
 
     function init_updater(exchange_id, symbol, time_frame, elem_id) {
         if (!get_in_backtesting_mode()) {
-            const update_detail = {};
-            update_detail.exchange_id = exchange_id;
-            update_detail.symbol = symbol;
-            update_detail.time_frame = time_frame;
-            update_detail.elem_id = elem_id;
-            update_details.push(update_detail);
+            let update_detail = _find_symbol_details(symbol, exchange_id);
+            if(typeof update_detail === "undefined"){
+                update_detail = {};
+                update_detail.exchange_id = exchange_id;
+                update_detail.symbol = symbol;
+                update_detail.time_frame = time_frame;
+                update_detail.elem_id = elem_id;
+                update_details.push(update_detail);
+            }else{
+                update_detail.time_frame = time_frame;
+            }
             setTimeout(function () {
                     if (isDefined(socket)) {
                         socket.emit("candle_graph_update", update_detail);
@@ -162,9 +177,11 @@ $(document).ready(function () {
         }
     }
 
-    function enable_default_graph() {
+    function enable_default_graph(time_frame) {
         $("#first_symbol_graph").removeClass(hidden_class);
-        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater);
+        Plotly.purge("graph-symbol-price");
+        $("#graph-symbol-price").empty();
+        get_first_symbol_price_graph("graph-symbol-price", get_in_backtesting_mode(), init_updater, time_frame, shouldDisplayOrders());
     }
 
     function no_data_for_graph(element_id) {
@@ -177,16 +194,28 @@ $(document).ready(function () {
 
     function init_graphs() {
         update_details = [];
-        let useDefaultGraph = true;
-        $(".watched-symbol-graph").each(function () {
-            useDefaultGraph = false;
-            get_watched_symbol_price_graph($(this), init_updater, no_data_for_graph);
-        });
-        if (useDefaultGraph) {
-            enable_default_graph();
-        }
+        updatePriceGraphs();
         handle_graph_update(socket);
         handle_profitability(socket);
+    }
+
+    const shouldDisplayOrders = () => {
+        return $("#displayOrderToggle").is(":checked");
+    }
+
+    const updatePriceGraphs = () => {
+        let useDefaultGraph = true;
+        const time_frame = $("#timeFrameSelect").val();
+        $(".watched-symbol-graph").each(function () {
+            useDefaultGraph = false;
+            const element = $(this);
+            Plotly.purge(element.attr("id"));
+            element.empty();
+            get_watched_symbol_price_graph(element, init_updater, no_data_for_graph, time_frame, shouldDisplayOrders());
+        });
+        if (useDefaultGraph) {
+            enable_default_graph(time_frame);
+        }
     }
 
     const displayFeedbackFormIfNecessary = () => {
@@ -200,6 +229,33 @@ $(document).ready(function () {
         }
     };
 
+    const updateDisplayTimeFrame = (timeFrame) => {
+        const url = $("#timeFrameSelect").data("update-url");
+        const request = {
+            time_frame: timeFrame,
+        }
+        send_and_interpret_bot_update(request, url, null, undefined, generic_request_failure_callback);
+    }
+
+    const updateDisplayOrders = (display_orders) => {
+        const url = $("#displayOrderToggle").data("update-url");
+        const request = {
+            display_orders: display_orders,
+        }
+        send_and_interpret_bot_update(request, url, null, undefined, generic_request_failure_callback);
+    }
+
+    const registerConfigUpdates = () => {
+        $("#timeFrameSelect").on("change", () => {
+            updateDisplayTimeFrame($("#timeFrameSelect").val())
+            updatePriceGraphs();
+        })
+        $("#displayOrderToggle").on("change", () => {
+            updateDisplayOrders(shouldDisplayOrders());
+            updatePriceGraphs();
+        })
+    }
+
     let update_details = [];
     let waiting_profitability_update = false;
 
@@ -208,6 +264,7 @@ $(document).ready(function () {
     get_version_upgrade();
     init_dashboard_websocket();
     init_graphs();
+    registerConfigUpdates();
     if(!startTutorialIfNecessary("home", displayFeedbackFormIfNecessary)){
         displayFeedbackFormIfNecessary()
     }

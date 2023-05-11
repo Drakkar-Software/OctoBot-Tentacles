@@ -18,9 +18,10 @@ import flask_socketio
 
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_trading.enums as trading_enums
+import octobot_services.interfaces as services_interfaces
+import octobot_trading.api as octobot_trading_api
 import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.models as models
-import octobot_services.interfaces as services_interfaces
 import tentacles.Services.Interfaces.web_interface.websockets as websockets
 
 
@@ -55,19 +56,12 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
         return profitability_data
 
     @staticmethod
-    def _format_new_data(exchange_id=None, real_trades=None, simulated_trades=None):
-        if real_trades is None:
-            real_trades = []
-        if simulated_trades is None:
-            simulated_trades = []
-        symbol = None
-        if real_trades:
-            symbol = real_trades[0][trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
-        elif simulated_trades:
-            symbol = simulated_trades[0][trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
+    def _format_new_data(exchange_id=None, trades=None, order=None, symbol=None):
+        exchange_manager = octobot_trading_api.get_exchange_manager_from_exchange_id(exchange_id)
         return {
-            "real_trades": models.format_trades(real_trades),
-            "simulated_trades": models.format_trades(simulated_trades),
+            "trades": models.format_trades(trades),
+            "orders": models.format_orders(octobot_trading_api.get_open_orders(exchange_manager, symbol=symbol), 0),
+            "simulated": octobot_trading_api.is_trader_simulated(exchange_manager),
             "symbol": symbol,
             "exchange_id": exchange_id
         }
@@ -99,7 +93,8 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
                                                                data["time_frame"],
                                                                backtesting=False,
                                                                minimal_candles=True,
-                                                               ignore_trades=True)
+                                                               ignore_trades=True,
+                                                               ignore_orders=not models.get_display_orders())
             })
         except KeyError:
             flask_socketio.emit("error", "missing exchange manager")

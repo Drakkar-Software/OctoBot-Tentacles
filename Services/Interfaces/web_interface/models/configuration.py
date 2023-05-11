@@ -29,7 +29,6 @@ import octobot_evaluators.api as evaluators_api
 import octobot_services.api as services_api
 import octobot_services.constants as services_constants
 import octobot_services.interfaces.util as interfaces_util
-import octobot_tentacles_manager.api
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.constants as tentacles_manager_constants
 import octobot_trading.api as trading_api

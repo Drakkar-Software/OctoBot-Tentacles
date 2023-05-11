@@ -22,6 +22,7 @@ import octobot_commons.databases as databases
 import octobot_commons.display as display
 import octobot_backtesting.api as backtesting_api
 import octobot_trading.api as trading_api
+import octobot_trading.storage as trading_storage
 
 
 class DisplayedElements(display.DisplayTranslator):
@@ -74,7 +75,7 @@ class DisplayedElements(display.DisplayTranslator):
                         cached_values += display_data
                     else:
                         try:
-                            filtered_data = self._filter_displayed_elements(display_data, symbol, time_frame, table_name)
+                            filtered_data = self._filter_and_adapt_displayed_elements(display_data, symbol, time_frame, table_name)
                             chart = display_data[0][commons_enums.DisplayedElementTypes.CHART.value]
                             if chart is None:
                                 continue
@@ -216,13 +217,7 @@ class DisplayedElements(display.DisplayTranslator):
                         size=size,
                         symbol=shape)
 
-    def _filter_displayed_elements(self, elements, symbol, time_frame, table_name):
-        filtered_elements = [
-            display_element
-            for display_element in elements
-            if display_element.get(commons_enums.DBRows.SYMBOL.value, symbol) == symbol
-            and display_element.get(commons_enums.DBRows.TIME_FRAME.value, time_frame) == time_frame
-        ]
+    def _adapt_for_display(self, table_name, filtered_elements):
         if table_name == commons_enums.DBTables.TRANSACTIONS.value:
             # only display liquidations
             filtered_elements = [
@@ -236,7 +231,43 @@ class DisplayedElements(display.DisplayTranslator):
                 display_element[commons_enums.PlotAttributes.SIZE.value] = 15
                 display_element[commons_enums.PlotAttributes.TEXT.value] = f"Liquidation ({abs(display_element.get('closed_quantity', 0))} liquidated)"
                 display_element[commons_enums.PlotAttributes.Y.value] = display_element["order_exit_price"]
+        elif table_name == commons_enums.DBTables.ORDERS.value:
+            # adapt order details for display
+            for display_element in filtered_elements:
+                order_details = display_element[trading_storage.AbstractStorage.ORIGIN_VALUE_KEY]
+                side = order_details[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+                display_element[commons_enums.PlotAttributes.COLOR.value] = "red" \
+                    if side == trading_enums.TradeOrderSide.SELL.value else "green"
+                display_element[commons_enums.PlotAttributes.SHAPE.value] = "line-ew-open"
+                display_element[commons_enums.PlotAttributes.MODE.value] = "markers"
+                display_element[commons_enums.PlotAttributes.KIND.value] = "scattergl"
+                display_element[commons_enums.PlotAttributes.SIZE.value] = 15
+                display_element[commons_enums.PlotAttributes.TEXT.value] = \
+                    f"{order_details[trading_enums.ExchangeConstantsOrderColumns.TYPE.value]} " \
+                    f"{order_details[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]} " \
+                    f"{order_details[trading_enums.ExchangeConstantsOrderColumns.QUANTITY_CURRENCY.value]} " \
+                    f"at {order_details[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}"
+                display_element[commons_enums.PlotAttributes.Y.value] = \
+                    order_details[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                display_element[commons_enums.PlotAttributes.X.value] = \
+                    order_details[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] * 1000
+                display_element[commons_enums.DisplayedElementTypes.CHART.value] = \
+                    commons_enums.PlotCharts.MAIN_CHART.value
         return filtered_elements
+
+    def _filter_and_adapt_displayed_elements(self, elements, symbol, time_frame, table_name):
+        filtered_elements = [
+            display_element
+            for display_element in elements
+            if (
+                display_element.get(commons_enums.DBRows.SYMBOL.value, symbol) == symbol
+                and display_element.get(commons_enums.DBRows.TIME_FRAME.value, time_frame) == time_frame
+            ) or (
+                display_element.get(trading_storage.AbstractStorage.ORIGIN_VALUE_KEY, {})
+                .get(trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value, None) == symbol
+            )
+        ]
+        return self._adapt_for_display(table_name, filtered_elements)
 
     async def _get_run_window(self, run_database):
         run_metadata = (await run_database.all(commons_enums.DBTables.METADATA.value))[0]
