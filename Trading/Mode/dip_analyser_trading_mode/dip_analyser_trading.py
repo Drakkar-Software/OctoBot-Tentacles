@@ -162,7 +162,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     DELTA_RATIO = decimal.Decimal("0.8")
 
-    ORDER_ID_KEY = "order_id"
+    SHARED_ORDER_ID_KEY = "shared_order_id"
     VOLUME_KEY = "volume"
     BUY_PRICE_KEY = "buy_price"
     VOLUME_WEIGHT_KEY = "volume_weight"
@@ -180,7 +180,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
-        self.sell_targets_by_order_id = {}
+        self.sell_targets_by_shared_order_id = {}
 
     def on_reload_config(self):
         """
@@ -214,11 +214,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return await self.create_buy_order(symbol, timeout, volume_weight, price_weight)
         elif state == trading_enums.EvaluatorStates.SHORT.value:
             quantity = data.get(self.VOLUME_KEY, decimal.Decimal("1"))
-            buy_order_id = data[self.ORDER_ID_KEY]
-            sell_weight = self._get_sell_target_for_registered_order(buy_order_id)
+            buy_order_shared_id = data[self.SHARED_ORDER_ID_KEY]
+            sell_weight = self._get_sell_target_for_registered_order(buy_order_shared_id)
             sell_base = data[self.BUY_PRICE_KEY]
             return await self.create_sell_orders(symbol, timeout, self.trading_mode.sell_orders_per_buy,
-                                                 quantity, sell_weight, sell_base, buy_order_id)
+                                                 quantity, sell_weight, sell_base, buy_order_shared_id)
         self.logger.error(f"Unknown required order action: data= {data}")
 
     async def create_buy_order(self, symbol, timeout, volume_weight, price_weight):
@@ -257,7 +257,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 if created_order := await self.trading_mode.create_order(current_order):
                     created_orders.append(created_order)
-                    self._register_buy_order(created_order.order_id, price_weight)
+                    self._register_buy_order(created_order.shared_signal_order_id, price_weight)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -275,7 +275,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def create_sell_orders(
-            self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_id
+            self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_shared_id
     ):
         current_order = None
         try:
@@ -300,12 +300,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=order_quantity,
                     price=order_price,
                     reduce_only=reduce_only,
-                    associated_entry_id=buy_order_id,
+                    associated_entry_id=buy_order_shared_id,
                 )
                 if created_order := await self.trading_mode.create_order(current_order):
                     created_orders.append(created_order)
                     if stop_order := await self._create_stop_loss_if_enabled(
-                            created_order, sell_base, symbol_market, buy_order_id
+                            created_order, sell_base, symbol_market, buy_order_shared_id
                     ):
                         created_orders.append(stop_order)
             if created_orders:
@@ -324,7 +324,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.exception(e, False)
             return []
 
-    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_id):
+    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_shared_id):
         if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
             return None
         stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
@@ -341,17 +341,17 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side=trading_enums.TradeOrderSide.SELL,
             reduce_only=True,
             group=oco_group,
-            associated_entry_id=buy_order_id,
+            associated_entry_id=buy_order_shared_id,
         )
         stop_order = await self.trading_mode.create_order(current_order)
         self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")
         return stop_order
 
-    def _register_buy_order(self, order_id, price_weight):
-        self.sell_targets_by_order_id[order_id] = price_weight
+    def _register_buy_order(self, shared_order_id, price_weight):
+        self.sell_targets_by_shared_order_id[shared_order_id] = price_weight
 
-    def unregister_buy_order(self, order_id):
-        self.sell_targets_by_order_id.pop(order_id, None)
+    def unregister_buy_order(self, shared_order_id):
+        self.sell_targets_by_shared_order_id.pop(shared_order_id, None)
 
     async def _get_buy_quantity_from_weight(self, ctx, volume_weight, market_quantity, currency):
         weighted_volume = self.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight]
@@ -390,15 +390,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 (1 - min(currency_ratio * self.DELTA_RATIO, trading_constants.ONE))
             return market_quantity * volume_ratio * weighted_volume
 
-    def _get_sell_target_for_registered_order(self, order_id):
+    def _get_sell_target_for_registered_order(self, shared_order_id):
         try:
-            return self.sell_targets_by_order_id[order_id]
+            return self.sell_targets_by_shared_order_id[shared_order_id]
         except KeyError:
-            if not self.sell_targets_by_order_id:
-                self.logger.warning(f"No registered buy orders, therefore no sell target for order with id {order_id}. "
-                                    f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
+            if not self.sell_targets_by_shared_order_id:
+                self.logger.warning(f"No registered buy orders, therefore no sell target for order with shared id "
+                                    f"{shared_order_id}. Using default sell target: {self.DEFAULT_SELL_TARGET}.")
             else:
-                self.logger.warning(f"No sell target for order with id {order_id}. "
+                self.logger.warning(f"No sell target for order with shared id {shared_order_id}. "
                                     f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
             return self.DEFAULT_SELL_TARGET
 
@@ -560,14 +560,16 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             sell_quantity = \
                 decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]}") - paid_fees
             price = decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}")
-            await self._create_sell_order_if_enabled(filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value],
-                                                     sell_quantity,
-                                                     price)
+            await self._create_sell_order_if_enabled(
+                filled_order[trading_enums.ExchangeConstantsOrderColumns.SHARED_SIGNAL_ORDER_ID.value],
+                sell_quantity,
+                price
+            )
 
-    async def _create_sell_order_if_enabled(self, order_id, sell_quantity, buy_price):
+    async def _create_sell_order_if_enabled(self, shared_order_id, sell_quantity, buy_price):
         if self.exchange_manager.trader.is_enabled:
             data = {
-                DipAnalyserTradingModeConsumer.ORDER_ID_KEY: order_id,
+                DipAnalyserTradingModeConsumer.SHARED_ORDER_ID_KEY: shared_order_id,
                 DipAnalyserTradingModeConsumer.VOLUME_KEY: sell_quantity,
                 DipAnalyserTradingModeConsumer.BUY_PRICE_KEY: buy_price,
             }

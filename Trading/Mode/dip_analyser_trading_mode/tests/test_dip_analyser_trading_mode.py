@@ -83,7 +83,7 @@ async def test_init(tools):
     assert producer.first_trigger
 
     # consumer
-    assert consumer.sell_targets_by_order_id == {}
+    assert consumer.sell_targets_by_shared_order_id == {}
     assert consumer.PRICE_WEIGH_TO_PRICE_PERCENT == {
         1: decimal.Decimal("1.04"),
         2: decimal.Decimal("1.07"),
@@ -120,7 +120,7 @@ async def test_create_limit_bottom_order(tools):
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
 
-    assert order.order_id in consumer.sell_targets_by_order_id
+    assert order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
 
 async def test_create_market_bottom_order(tools):
@@ -150,7 +150,7 @@ async def test_create_market_bottom_order(tools):
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
 
-    assert trade.origin_order_id in consumer.sell_targets_by_order_id
+    assert trade.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
 
 async def test_create_bottom_order_with_configured_quantity(tools):
@@ -185,7 +185,7 @@ async def test_create_bottom_order_with_configured_quantity(tools):
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available  > trading_constants.ZERO
 
-    assert order.order_id in consumer.sell_targets_by_order_id
+    assert order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
 
 async def test_create_too_large_bottom_order(tools):
@@ -236,7 +236,7 @@ async def test_create_bottom_order_replace_current(tools):
     assert first_order.origin_price == expected_price
     available_after_order = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available
     assert available_after_order > trading_constants.ZERO
-    assert first_order.order_id in consumer.sell_targets_by_order_id
+    assert first_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
     # second order, same weight
     await producer._create_bottom_order(1, volume_weight, 1)
@@ -252,8 +252,8 @@ async def test_create_bottom_order_replace_current(tools):
     assert second_order.origin_price == first_order.origin_price
     assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available == available_after_order
     # order still in sell_targets_by_order_id: cancelling orders doesn't remove them for this
-    assert first_order.order_id in consumer.sell_targets_by_order_id
-    assert second_order.order_id in consumer.sell_targets_by_order_id
+    assert first_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
+    assert second_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
     # third order, different weight
     volume_weight = 3
@@ -273,8 +273,8 @@ async def test_create_bottom_order_replace_current(tools):
     assert third_order.origin_price == first_order.origin_price
     available_after_third_order = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available
     assert available_after_third_order < available_after_order
-    assert second_order.order_id in consumer.sell_targets_by_order_id
-    assert third_order.order_id in consumer.sell_targets_by_order_id
+    assert second_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
+    assert third_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
     # fill third order
     await _fill_order(third_order, trader, trigger_update_callback=False, consumer=consumer)
@@ -305,12 +305,12 @@ async def test_create_bottom_order_replace_current(tools):
     assert fifth_order.origin_quantity == trading_personal_data.decimal_trunc_with_n_decimal_digits(expected_quantity, 8)
     assert fifth_order.origin_price == first_order.origin_price
     assert trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USDT").available < available_after_third_order
-    assert first_order.order_id in consumer.sell_targets_by_order_id
-    assert second_order.order_id in consumer.sell_targets_by_order_id
+    assert first_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
+    assert second_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
     # third_order still in _get_order_identifier to keep history
-    assert third_order.order_id in consumer.sell_targets_by_order_id
-    assert fifth_order.order_id in consumer.sell_targets_by_order_id
+    assert third_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
+    assert fifth_order.shared_signal_order_id in consumer.sell_targets_by_shared_order_id
 
 
 async def test_create_sell_orders_without_stop_loss(tools):
@@ -321,7 +321,7 @@ async def test_create_sell_orders_without_stop_loss(tools):
     buy_price = decimal.Decimal("100")
     order_id = "a"
     consumer.STOP_LOSS_PRICE_MULTIPLIER = trading_constants.ZERO
-    consumer.sell_targets_by_order_id[order_id] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id] = sell_target
     await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     for _ in range(consumer.trading_mode.sell_orders_per_buy):
@@ -354,7 +354,7 @@ async def test_create_sell_orders_without_stop_loss(tools):
     sell_target = 3
     buy_price = decimal.Decimal("2525")
     order_id_2 = "b"
-    consumer.sell_targets_by_order_id[order_id_2] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id_2] = sell_target
     await producer._create_sell_order_if_enabled(order_id_2, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     for _ in range(consumer.trading_mode.sell_orders_per_buy):
@@ -394,7 +394,7 @@ async def test_create_sell_orders_with_stop_loss(tools):
     order_id = "a"
     consumer.STOP_LOSS_PRICE_MULTIPLIER = decimal.Decimal("0.75")
     stop_price = consumer.STOP_LOSS_PRICE_MULTIPLIER * buy_price
-    consumer.sell_targets_by_order_id[order_id] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id] = sell_target
     await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     for _ in range(consumer.trading_mode.sell_orders_per_buy):
@@ -435,7 +435,7 @@ async def test_create_sell_orders_with_stop_loss(tools):
     sell_target = 3
     buy_price = decimal.Decimal("2525")
     order_id_2 = "b"
-    consumer.sell_targets_by_order_id[order_id_2] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id_2] = sell_target
     await producer._create_sell_order_if_enabled(order_id_2, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     for _ in range(consumer.trading_mode.sell_orders_per_buy):
@@ -476,7 +476,7 @@ async def test_create_too_large_sell_orders(tools):
     trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_quantity
     trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").total = sell_quantity
     order_id = "a"
-    consumer.sell_targets_by_order_id[order_id] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id] = sell_target
     await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, 0))
@@ -511,7 +511,7 @@ async def test_create_too_small_sell_orders(tools):
     sell_target = 2
     buy_price = decimal.Decimal("0.001")
     order_id = "a"
-    consumer.sell_targets_by_order_id[order_id] = sell_target
+    consumer.sell_targets_by_shared_order_id[order_id] = sell_target
     await producer._create_sell_order_if_enabled(order_id, sell_quantity, buy_price)
     # create as task to allow creator's queue to get processed
     await asyncio.create_task(_check_open_orders_count(trader, 0))
@@ -707,7 +707,7 @@ async def test_order_fill_callback_not_in_db(tools):
     await _fill_order(to_fill_order, trader, trigger_update_callback=False, consumer=consumer)
 
     # remove order from db
-    consumer.sell_targets_by_order_id = {}
+    consumer.sell_targets_by_shared_order_id = {}
     await consumer.trading_mode._order_notification_callback(None,
                                                              trader.exchange_manager.id,
                                                              None,

@@ -471,12 +471,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
-        created_order = await self.trading_mode.create_order(current_order, params=params or None)
-        for chained_order in chained_orders:
-            # ensure entry in associated (in real trading, initial order id might be None
-            # and therefore skipping association
-            chained_order.associate_to_entry(created_order.order_id)
-        return created_order
+        return await self.trading_mode.create_order(current_order, params=params or None)
 
     async def _register_chained_order(self, main_order, price, order_type, side):
         chained_order = trading_personal_data.create_order_instance(
@@ -487,7 +482,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             quantity=main_order.origin_quantity,
             price=price,
             side=side,
-            associated_entry_id=main_order.order_id,
+            associated_entry_id=main_order.shared_signal_order_id,
         )
         return (
             await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
@@ -804,7 +799,6 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                                   symbol=symbol,
                                   new_state=trading_enums.EvaluatorStates.NEUTRAL)
             return
-
         delta_risk = self._get_delta_risk()
         if self.final_eval < self.VERY_LONG_THRESHOLD + delta_risk:
             await self._set_state(cryptocurrency=cryptocurrency,

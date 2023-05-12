@@ -423,6 +423,13 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         for order_description in orders_descriptions:
             if (chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]) \
                     and order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value] is None:
+                shared_signal_order_id = \
+                    order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                if shared_signal_order_id in already_handled_order_ids:
+                    self.logger.debug(
+                        f"Ignored order with shared signal id {shared_signal_order_id}: order already handled"
+                    )
+                    continue
                 created_chained_orders_count += \
                     await self._chain_order(order_description, created_orders, ignored_orders, chained_to,
                                             fees_currency_side, created_groups, symbol, order_description_by_id)
