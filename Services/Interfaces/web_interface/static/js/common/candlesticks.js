@@ -120,6 +120,7 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
 
 const sell_color = "#ff0000";
 const buy_color = "#009900";
+const stop_color = "#FFA500";
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
@@ -191,11 +192,7 @@ function create_trades(trades, trader){
         const border_line_color = "#b6b8c3";
         const colors = [];
         $.each(data_order_side, function (index, value) {
-            if (value === "sell") {
-                colors.push(sell_color);
-            } else {
-                colors.push(buy_color);
-            }
+            colors.push(_getOrderColor(trades["trade_description"][index], value));
         });
 
         const line_with = trader === "Simulator" ? 0 : 1;
@@ -223,19 +220,29 @@ function create_trades(trades, trader){
     }
 }
 
+const _getOrderColor = (orderDesc, side) => {
+    if(orderDesc.includes("STOP")){
+        return stop_color;
+    }
+    return side === "sell" ? sell_color : buy_color
+}
+
 function create_orders(orders, trader, lastTime){
     if (isDefined(orders) && isDefined(orders.time) && orders.time.length > 0) {
         return orders.time.map((x, index) => {
             return {
               x: [x, lastTime],
               y: [orders.price[index], orders.price[index]],
-              mode: 'lines',
+              mode: 'lines+markers',
               text: orders.description[index],
               hoverinfo: "text",
               line: {
                 dash: 'dashdot',
-                width: 1,
-                color: orders.order_side[index] === "sell" ? sell_color : buy_color,
+                width: 2,
+                color: _getOrderColor(orders.description[index], orders.order_side[index]),
+              },
+              marker: {
+                  symbol: "star-diamond",
               },
               xaxis: 'x',
               yaxis: 'y2'
