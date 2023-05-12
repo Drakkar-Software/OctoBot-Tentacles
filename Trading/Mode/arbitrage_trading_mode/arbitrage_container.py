@@ -30,6 +30,7 @@ class ArbitrageContainer:
         self.passed_initial_order = False
         self.initial_before_fee_filled_quantity: decimal.Decimal = None
         self.initial_limit_order_id = None
+        self.initial_limit_order_shared_id = None
         self.secondary_limit_order_id = None
         self.secondary_stop_order_id = None
 
@@ -71,5 +72,5 @@ class ArbitrageContainer:
 
     def is_watching_this_order(self, order_id):
         return self.initial_limit_order_id == order_id \
-               or self.secondary_limit_order_id == order_id \
-               or self.secondary_stop_order_id == order_id
+           or self.secondary_limit_order_id == order_id \
+           or self.secondary_stop_order_id == order_id
