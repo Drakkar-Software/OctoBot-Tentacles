@@ -73,7 +73,13 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.registered_plugins = []
         self._init_web_settings()
         self.local_config = None
-        self.reload_config()
+        if interfaces_util.get_bot_api() is None:
+            # should not happen in non-test environment
+            self.logger.error(
+                f"interfaces_util.get_bot_api() is not available at {self.get_name()} constructor"
+            )
+        else:
+            self.reload_config()
 
     async def register_new_exchange_impl(self, exchange_id):
         if exchange_id not in self.registered_exchanges_ids:
