@@ -29,7 +29,7 @@ class DashboardNamespace(websockets.AbstractWebSocketNamespaceNotifier):
 
     @staticmethod
     def _get_profitability():
-        profitability_digits = 4
+        profitability_digits = None
         has_real_trader, has_simulated_trader, \
         real_global_profitability, simulated_global_profitability, \
         real_percent_profitability, simulated_percent_profitability, \
