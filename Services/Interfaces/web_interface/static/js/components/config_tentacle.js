@@ -291,7 +291,7 @@ function initConfigEditor(showWaiter) {
             configEditor.destroy();
         }
         if (canEditConfig()){
-            fix_config_values(parsedConfigValue)
+            fix_config_values(parsedConfigValue, parsedConfigSchema)
         }
         _addGridDisplayOptions(parsedConfigSchema);
         const settingsRoot = $("#configEditor");
