@@ -178,14 +178,27 @@ function handle_numbers(number) {
     return numb.replace(regEx3,'');  // Remove trailing decimal
 }
 
-function fix_config_values(config){
+function fix_config_values(config, schema){
+    ensure_all_config_values(config, schema);
     $.each(config, function (key, val) {
         if(typeof val === "number"){
             config[key] = handle_numbers(val);
         }else if (val instanceof Object){
-            fix_config_values(config[key]);
+            fix_config_values(config[key], undefined);
         }
     });
+}
+
+const ensure_all_config_values = (config, schema) => {
+    if(!isDefined(schema) || typeof schema.properties === "undefined"){
+        return
+    }
+    // ensure each schema element has a value or there might be display issues
+    Object.keys(schema.properties).forEach(key => {
+        if(typeof config[key] === "undefined"){
+            config[key] = schema.properties[key].default;
+        }
+    })
 }
 
 function getValueChangedFromRef(newObject, refObject, allowUndefinedValues=true) {
