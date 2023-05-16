@@ -57,8 +57,9 @@ class CoinbasePro(exchanges.RestExchange):
             return []
         for trade in trades:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
+            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
+                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
+            ]
             trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value \
                 if trade["takerOrMaker"] == trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
                 else trading_enums.TradeOrderType.LIMIT.value
@@ -71,6 +72,7 @@ class CoinbaseProCCXTAdapter(exchanges.CCXTAdapter):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
+            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
+                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
+            ]
         return raw

@@ -63,7 +63,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
                   "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
                   "buy price would be 199 and sell price 201.",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "use_prices_close_to_current_price": True
                 }
             }
@@ -75,7 +75,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
                   "Only used in 'Target profits mode'. "
                   "Example: a buy entry at 300 with a 'Take profit' at 10 will create a sell order at 330.",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": True
                 }
             }
@@ -91,7 +91,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
                   "Only used in 'Target profits mode'. "
                   "Example: a buy entry at 300 with a 'Stop loss' at 10 will create a stop order at 270.",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": True,
                   "use_stop_orders": True,
                 }
@@ -105,7 +105,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             "sell_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in sell trades: Trade with all available funds at each sell order.",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": False
                 }
             }
@@ -119,7 +119,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             "disable_sell_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Disable sell orders (sell market and sell limit).",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": False
                 }
             }
@@ -128,7 +128,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             "disable_buy_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Disable buy orders (buy market and buy limit).",
             editor_options={
-                "dependencies": {
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": False
                 }
             }
@@ -482,7 +482,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             quantity=main_order.origin_quantity,
             price=price,
             side=side,
-            associated_entry_id=main_order.shared_signal_order_id,
+            associated_entry_id=main_order.order_id,
         )
         return (
             await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(

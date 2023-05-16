@@ -835,7 +835,7 @@ async def test_stop_loss_and_take_profit_orders(tools):
     assert stop_order.origin_price == decimal.Decimal("10")
     # stop has been triggered as signal is triggering a buy market order that is instantly filled
     assert stop_order.is_waiting_for_chained_trigger is False
-    assert stop_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -853,7 +853,7 @@ async def test_stop_loss_and_take_profit_orders(tools):
            - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
     assert take_profit_order.origin_price == decimal.Decimal("100000")
     assert take_profit_order.is_waiting_for_chained_trigger
-    assert take_profit_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
 
@@ -872,7 +872,7 @@ async def test_stop_loss_and_take_profit_orders(tools):
            - trading_personal_data.get_fees_for_currency(buy_order.fee, stop_order.quantity_currency)
     assert stop_order.origin_price == decimal.Decimal("123")
     assert stop_order.is_waiting_for_chained_trigger
-    assert stop_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     take_profit_order = buy_order.chained_orders[1]
@@ -881,7 +881,7 @@ async def test_stop_loss_and_take_profit_orders(tools):
            - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
     assert take_profit_order.origin_price == decimal.Decimal("100012")
     assert take_profit_order.is_waiting_for_chained_trigger
-    assert take_profit_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
@@ -937,7 +937,7 @@ async def test_target_profit_mode(tools):
         buy_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_TAKE_PROFIT)
     )
     assert take_profit_order.is_waiting_for_chained_trigger
-    assert take_profit_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
 
@@ -955,7 +955,7 @@ async def test_target_profit_mode(tools):
         buy_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_STOP_LOSS)
     )
     assert stop_order.is_waiting_for_chained_trigger
-    assert stop_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert not stop_order.is_open()
     assert not stop_order.is_created()
     take_profit_order = buy_order.chained_orders[1]
@@ -967,7 +967,7 @@ async def test_target_profit_mode(tools):
         buy_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_TAKE_PROFIT)
     )
     assert take_profit_order.is_waiting_for_chained_trigger
-    assert take_profit_order.associated_entry_ids == [buy_order.shared_signal_order_id]
+    assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)

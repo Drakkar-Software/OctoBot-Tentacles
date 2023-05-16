@@ -218,30 +218,33 @@ class Okx(exchanges.RestExchange):
             super().get_closed_orders, symbol=symbol, since=since, limit=limit, **kwargs
         )
 
-    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         try:
-            kwargs = self._get_okx_order_params(order_id, **kwargs)
-            return await super().get_order(order_id, symbol=symbol, **kwargs)
+            kwargs = self._get_okx_order_params(exchange_order_id, **kwargs)
+            order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+            return order
         except trading_errors.NotSupported:
             if kwargs.get("stop", False):
                 # from ccxt 2.8.4
                 # fetchOrder() does not support stop orders, use fetchOpenOrders() fetchCanceledOrders() or fetchClosedOrders
-                return await self.get_order_from_open_and_closed_orders(order_id, symbol=symbol, **kwargs)
+                return await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol=symbol, **kwargs)
             raise
 
     async def cancel_order(
-            self, order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
     ) -> trading_enums.OrderStatus:
         return await super().cancel_order(
-            order_id, symbol, order_type, **self._get_okx_order_params(order_id, order_type, **kwargs)
+            exchange_order_id, symbol, order_type, **self._get_okx_order_params(exchange_order_id, order_type, **kwargs)
         )
 
-    def _get_okx_order_params(self, order_id, order_type=None, **kwargs):
+    def _get_okx_order_params(self, exchange_order_id, order_type=None, **kwargs):
         params = kwargs or {}
         try:
             if "stop" not in params:
                 order_type = order_type or \
-                             self.exchange_manager.exchange_personal_data.orders_manager.get_order(order_id).order_type
+                             self.exchange_manager.exchange_personal_data.orders_manager.get_order(
+                                 None, exchange_order_id=exchange_order_id
+                             ).order_type
                 params["stop"] = trading_personal_data.is_stop_order(order_type) \
                     or trading_personal_data.is_take_profit_order(order_type)
         except KeyError:
