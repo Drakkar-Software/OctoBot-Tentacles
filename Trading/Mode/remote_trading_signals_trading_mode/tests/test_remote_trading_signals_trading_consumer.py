@@ -97,9 +97,9 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     # now edit, cancel orders and create a new one
     # change StopLossOrder group and cancel SellLimitOrder
     nested_edit_signal, cancel_signal, create_signal = _group_edit_cancel_create_order_signals(
-        orders[0].shared_signal_order_id, "new_group_id", trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
-        orders[0].shared_signal_order_id, "3.356892%", 2000,
-        orders[1].shared_signal_order_id
+        orders[0].order_id, "new_group_id", trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+        orders[0].order_id, "3.356892%", 2000,
+        orders[1].order_id
     )
     await consumer._handle_signal_orders(symbol, nested_edit_signal)
     await consumer._handle_signal_orders(symbol, cancel_signal)
@@ -137,17 +137,17 @@ async def test_handle_signal_orders_no_triggering_order(
     # market order is filled, chained & bundled orders got created
     # same as test_handle_signal_orders: skip other asserts
     assert orders[1].order_group is orders[0].order_group
-    assert orders[0].shared_signal_order_id in exchange_manager.exchange_personal_data.orders_manager.\
-        get_all_active_and_pending_orders_shared_signal_order_id()
-    assert orders[1].shared_signal_order_id in exchange_manager.exchange_personal_data.orders_manager.\
-        get_all_active_and_pending_orders_shared_signal_order_id()
+    assert orders[0].order_id in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_id()
+    assert orders[1].order_id in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_id()
 
     # now edit, cancel orders and create a new one
     # change StopLossOrder group and cancel SellLimitOrder
     _, cancel_signal, _ = _group_edit_cancel_create_order_signals(
-        orders[0].shared_signal_order_id, "new_group_id", trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
-        orders[0].shared_signal_order_id, "3.356892%", 2000,
-        orders[1].shared_signal_order_id
+        orders[0].order_id, "new_group_id", trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
+        orders[0].order_id, "3.356892%", 2000,
+        orders[1].order_id
     )
     cancel_signal.content[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value] = "0"
     await consumer._handle_signal_orders(symbol, cancel_signal)
@@ -155,10 +155,10 @@ async def test_handle_signal_orders_no_triggering_order(
     port_cancel_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
     # order 1 got cancelled, since it's grouped with order 0, both are cancelled
     assert len(port_cancel_orders) ==0
-    assert orders[0].shared_signal_order_id not in exchange_manager.exchange_personal_data.orders_manager.\
-        get_all_active_and_pending_orders_shared_signal_order_id()
-    assert orders[1].shared_signal_order_id not in exchange_manager.exchange_personal_data.orders_manager.\
-        get_all_active_and_pending_orders_shared_signal_order_id()
+    assert orders[0].order_id not in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_id()
+    assert orders[1].order_id not in exchange_manager.exchange_personal_data.orders_manager.\
+        get_all_active_and_pending_orders_id()
 
 
 async def test_handle_signal_orders_reduce_quantity_create_order(local_trader, mocked_buy_market_signal):
@@ -212,8 +212,8 @@ async def test_handle_signal_orders_reduce_quantity_edit_order(local_trader, moc
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: None,
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: mocked_buy_limit_signal.content[
-                trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: mocked_buy_limit_signal.content[
+                trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value
             ],
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
@@ -264,7 +264,7 @@ async def test_handle_signal_create_orders_not_enough_funds_using_min_amount(loc
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
                 trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
@@ -288,13 +288,13 @@ async def test_handle_signal_create_orders_not_enough_funds_using_min_amount(loc
 
     consumer.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY = True
     # re-enable minimal amount config
-    # same shared order id: no order created
+    # same order id: no order created
     await consumer._handle_signal_orders(symbol, limit_signal)
     orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
     assert len(orders) == 1
     assert orders[0] is order_1  # no order created
-    # change shared order id not to skip creation
-    limit_signal.content[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value] = "123"
+    # change order id not to skip creation
+    limit_signal.content[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value] = "123"
     await consumer._handle_signal_orders(symbol, limit_signal)
     orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
     assert len(orders) == 2
@@ -332,7 +332,7 @@ async def test_handle_signal_create_orders_not_enough_available_funds_even_for_m
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
                 trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
@@ -375,7 +375,7 @@ async def test_handle_signal_create_orders_not_enough_total_funds_even_for_min_o
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
                 trading_personal_data.OneCancelsTheOtherOrderGroup.__name__,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "12e7ad8f-10a1-4cd3-bf86-d972226bd079",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
@@ -436,7 +436,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: group_id,
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value: group_type,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: "second wave order",
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: to_group_id,
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: to_group_id,
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [
@@ -462,7 +462,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
                     trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: None,
                     trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value: None,
                     trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-                    trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: to_edit_id,
+                    trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: to_edit_id,
                     trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
                     trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
                     trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
@@ -494,7 +494,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: None,
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: None,
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: to_cancel_id,
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: to_cancel_id,
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
@@ -525,7 +525,7 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: None,
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: "second wave order",
-            trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value: "aaaa-f970-45d9-9ba8-f63da17f17ba",
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "aaaa-f970-45d9-9ba8-f63da17f17ba",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],

@@ -91,8 +91,9 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value]
+            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
+                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
+            ]
             try:
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \

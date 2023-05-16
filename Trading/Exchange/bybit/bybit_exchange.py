@@ -122,23 +122,23 @@ class Bybit(exchanges.RestExchange):
             orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return orders
 
-    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         try:
-            return await super().get_order(order_id, symbol=symbol, **kwargs)
+            return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
         except octobot_trading.errors.FailedRequest:
             if self.ORDER_CATEGORY not in kwargs:
                 kwargs[self.ORDER_CATEGORY] = 1
-                return await super().get_order(order_id, symbol=symbol, **kwargs)
+                return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
             raise
 
     async def cancel_order(
-            self, order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+            self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
     ) -> trading_enums.OrderStatus:
         kwargs = kwargs or {}
         if trading_personal_data.is_stop_order(order_type):
             kwargs[self.ORDER_CATEGORY] = 1
         return await super().cancel_order(
-            order_id, symbol, order_type, **kwargs
+            exchange_order_id, symbol, order_type, **kwargs
         )
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
@@ -168,22 +168,24 @@ class Bybit(exchanges.RestExchange):
             params["triggerDirection"] = 1 if price > current_price else 2
         else:
             params[self.ORDER_CATEGORY] = 1
-        order = await self.connector.client.create_order(
-            symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+        order = self.connector.adapter.adapt_order(
+            await self.connector.client.create_order(
+                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+            )
         )
         return order
 
-    async def _edit_order(self, order_id: str, order_type: trading_enums.TraderOrderType, symbol: str,
+    async def _edit_order(self, exchange_order_id: str, order_type: trading_enums.TraderOrderType, symbol: str,
                           quantity: float, price: float, stop_price: float = None, side: str = None,
                           current_price: float = None, params: dict = None):
         params = params or {}
         if trading_personal_data.is_stop_order(order_type):
-            params["stop_order_id"] = order_id
+            params["stop_order_id"] = exchange_order_id
         if stop_price is not None:
             # params["stop_px"] = stop_price
             # params["stop_loss"] = stop_price
             params["triggerPrice"] = str(stop_price)
-        return await super()._edit_order(order_id, order_type, symbol, quantity=quantity,
+        return await super()._edit_order(exchange_order_id, order_type, symbol, quantity=quantity,
                                          price=price, stop_price=stop_price, side=side,
                                          current_price=current_price, params=params)
 
