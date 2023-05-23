@@ -259,7 +259,7 @@ class WebHookService(services.AbstractService):
             await asyncio.wait_for(authenticator.initialized_event.wait(), authenticator.LOGIN_TIMEOUT)
         try:
             # deployed bot url
-            self.webhook_public_url = f"{authenticator.get_deployment_url()}/api/webhook"
+            self.webhook_public_url = f"{await authenticator.get_deployment_url()}/api/webhook"
             self.connected = True
             return True
         except community_errors.BotError as err:
