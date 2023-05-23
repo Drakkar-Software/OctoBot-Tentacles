@@ -42,5 +42,5 @@ def create_bot():
     new_bot = models.create_new_bot()
     models.select_bot(community.CommunityUserAccount.get_bot_id(new_bot))
     bot = models.get_selected_user_bot()
-    flask.flash(f"Created and selected {bot['name']} device", "success")
+    flask.flash(f"Created and selected {bot['name']} bot", "success")
     return flask.jsonify(bot)

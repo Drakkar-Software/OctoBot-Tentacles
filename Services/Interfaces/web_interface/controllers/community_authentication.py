@@ -17,6 +17,7 @@ import flask
 import flask_wtf
 import wtforms.fields
 
+import octobot.community.errors as community_errors
 import octobot_commons.authentication as authentication
 import octobot_commons.logging as logging
 import octobot_services.interfaces.util as interfaces_util
@@ -52,6 +53,8 @@ def community_login():
                     if added_profiles:
                         flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
                                     f"from your OctoBot account.", "success")
+            except community_errors.EmailValidationRequiredError:
+                flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
             except authentication.FailedAuthentication:
                 flask.flash(f"Invalid email or password", "error")
             except Exception as e:
@@ -91,6 +94,10 @@ def community_register():
             # creation success: redirect to next_url
             if next_url:
                 return flask.redirect(next_url)
+        except community_errors.EmailValidationRequiredError:
+            flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
+            authenticator.logout()
+            return flask.redirect(flask.url_for(f"community_login", **flask.request.args))
         except authentication.AuthenticationError as err:
             flask.flash(f"Error when creating account: {err}", "error")
             authenticator.logout()
