@@ -357,6 +357,12 @@
                         </h2>
                     </div>
                     <div class="card-body deck-container">
+                        {% if "future" in enabled_exchange_types %}
+                        <div class="alert alert-info" role="alert">
+                             <i class="fas fa-star"></i>
+                            Select leverage to use in futures trading from your <a href="{{url_for('config_tentacle', name=get_enabled_tentacles(trading_modes))}}">trading mode configuration</a>.
+                        </div>
+                        {% endif %}
                         <!-- Card deck -->
                         <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.are_compatible_accounts') }}">
                             {% for exchange in config_exchanges %}
