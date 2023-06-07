@@ -1,4 +1,5 @@
-{% macro pair_status_card(pair, status, watched_symbols) -%}
+{% macro pair_status_card(pair, status, watched_symbols, displayed_portfolio, symbols_values, ref_market) -%}
+    {% set symbol = pair.split('/')[0] %}
     <!-- Card -->
     <div class="card card-status-color pair_status_card mb-4 small-size">
 
@@ -14,13 +15,27 @@
     <div class="view overlay animated fadeIn mx-auto pt-2">
       <img class="img-fluid mx-auto currency-image small-image"
            src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
-           alt="{{ pair.split('/')[0] }} :("
-           data-symbol="{{pair.split('/')[0].lower()}}">
+           alt="{{ symbol }} :("
+           data-symbol="{{symbol.lower()}}">
         <a href="{{ url_for('symbol_market_status', exchange_id=status.keys()|list|first if status else '', symbol=pair) }}">
       </a>
     </div>
     <div class="card-body pb-3 px-3">
         <!--Card content-->
+        <div class="row text-center">
+            <div class="col-6">
+                {{ symbol }}
+            </div>
+            <div class="col-6">
+                {{ ref_market }}
+            </div>
+            <div class="col-6 rounded-number">
+                {{ displayed_portfolio[symbol]["total"] if symbol in displayed_portfolio else 0 }}
+            </div>
+            <div class="col-6 rounded-number">
+                {{ symbols_values[symbol] if symbol in symbols_values else 0 }}
+            </div>
+        </div>
         <div class="list-group list-group-flush">
             {% for exchange_id, evaluation in status.items() %}
                 <a class="list-group-item list-group-item-action bg-transparent text-white status hover_anim px-3"

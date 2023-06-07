@@ -230,7 +230,7 @@
                     <div class="card-body">
                         <div class="card-deck">
                             {% for pair, status in pairs_with_status.items() | sort(attribute='0') %}
-                                {{ m_cards.pair_status_card(pair, status, watched_symbols) }}
+                                {{ m_cards.pair_status_card(pair, status, watched_symbols, displayed_portfolio, symbols_values, reference_market) }}
                             {% endfor %}
 
                             <!-- Add new pair Card -->
@@ -242,14 +242,13 @@
                                 </div>
 
                                 <!--Card image-->
-                                <div class="view overlay animated text-center pt-2">
+                                <div class="view overlay animated text-center pt-2 mb-5">
                                   <a href="{{ url_for('profile')+'#panelCurrency' }}">
                                     <i class="fas fa-8x fa-plus-circle fa-3x"></i>
                                   </a>
                                 </div>
 
-
-                                <div class="px-4 pt-4 pb-3">
+                                <div class="px-4 pt-3 pb-3">
                                     <!--Card content-->
                                     <div class="list-group list-group-flush">
                                         <a class="list-group-item list-group-item-action bg-transparent text-white hover_anim"

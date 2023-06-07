@@ -147,6 +147,17 @@ function isMobileDisplay() {
     return $(window).width() < mobile_width_breakpoint;
 }
 
+const handle_rounded_numbers_display = () => {
+    $(".rounded-number").each(function (){
+        const text = $(this).text().trim();
+        if (!isNaN(text)){
+            const value = Number(text);
+            const decimal = value > 1 ? 3 : 8;
+            $(this).text(handle_numbers(round_digits(text, decimal)));
+        }
+    });
+}
+
 function round_digits(number, decimals) {
     const rounded = Number(Math.round(`${number}e${decimals}`) + `e-${decimals}`);
     if(isNaN(rounded)){
