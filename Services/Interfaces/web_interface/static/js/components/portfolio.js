@@ -74,17 +74,6 @@ $(document).ready(function() {
         }, portfolio_update_interval);
     }
 
-    const handle_rounded_numbers_display = () => {
-        $(".rounded-number").each(function (){
-            const text = $(this).text().trim();
-            if (!isNaN(text)){
-                const value = Number(text);
-                const decimal = value > 1 ? 3 : 8;
-                $(this).text(handle_numbers(round_digits(text, decimal)));
-            }
-        });
-    }
-
     const displayPortfolioTable = () => {
         handle_rounded_numbers_display();
         ordersDataTable = $('#holdings-table').DataTable({

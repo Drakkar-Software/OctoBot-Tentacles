@@ -329,5 +329,6 @@ handleClearButton();
 register_notification_callback(ordersNotificationCallback);
 await reloadDisplay(false);
 registerOnTabShownEvents();
+handle_rounded_numbers_display();
 
 });
