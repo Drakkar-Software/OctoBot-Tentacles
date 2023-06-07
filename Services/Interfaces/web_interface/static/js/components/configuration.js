@@ -547,20 +547,15 @@ function updateTradingModeSummary(selectedElement){
 function updateStrategySelector(required_elements){
     const noStrategyInfo = $("#no-strategy-info");
     const strategyConfig = $("#evaluator-config-root");
+    const strategyConfigFooter = $("#evaluator-config-root-footer");
     if (required_elements.length > 1) {
-        if (!noStrategyInfo.hasClass(hidden_class)) {
-            noStrategyInfo.addClass(hidden_class);
-        }
-        if (strategyConfig.hasClass(hidden_class)) {
-            strategyConfig.removeClass(hidden_class);
-        }
+        noStrategyInfo.addClass(hidden_class);
+        strategyConfig.removeClass(hidden_class);
+        strategyConfigFooter.removeClass(hidden_class);
     } else {
-        if (noStrategyInfo.hasClass(hidden_class)) {
-            noStrategyInfo.removeClass(hidden_class);
-        }
-        if (!strategyConfig.hasClass(hidden_class)) {
-            strategyConfig.addClass(hidden_class);
-        }
+        noStrategyInfo.removeClass(hidden_class);
+        strategyConfig.addClass(hidden_class);
+        strategyConfigFooter.addClass(hidden_class);
     }
 }
 
