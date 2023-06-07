@@ -102,7 +102,7 @@
                             data-role="start-trading"
                             data-trading-type="simulated"
                             data-config-url="{{url_for('config')}}"
-                            data-start-url="{{url_for('wait_reboot', onboarding=onboarding, reboot='')}}">
+                            data-start-url="{{url_for('wait_reboot', onboarding=onboarding, trading_delay_info=True, reboot='')}}">
                         Start trading
                     </button>
                 </div>
@@ -126,7 +126,7 @@
                             data-role="start-trading"
                             data-trading-type="real"
                             data-config-url="{{url_for('config')}}"
-                            data-start-url="{{url_for('wait_reboot', onboarding=onboarding, reboot='')}}">
+                            data-start-url="{{url_for('wait_reboot', onboarding=onboarding, trading_delay_info=True, reboot='')}}">
                         Start trading
                     </button>
                 </div>

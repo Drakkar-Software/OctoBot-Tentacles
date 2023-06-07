@@ -23,7 +23,8 @@ import tentacles.Services.Interfaces.web_interface.models as models
 @web_interface.server_instance.route("/wait_reboot")
 @login.login_required_when_activated
 def wait_reboot():
-    next_url = flask.request.args.get("next", flask.url_for("home"))
+    trading_delay_info = flask.request.args.get("trading_delay_info", 'false').lower() == "true"
+    next_url = flask.request.args.get("next", flask.url_for("home", trading_delay_info=trading_delay_info))
     reboot = flask.request.args.get("reboot", "false").lower() == "true"
     onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
 
@@ -33,7 +34,6 @@ def wait_reboot():
             show_nab_bar=not onboarding,
             onboarding=onboarding,
             next_url=next_url,
-
             current_profile_name=models.get_current_profile().name,
         )
         if not models.is_rebooting():
