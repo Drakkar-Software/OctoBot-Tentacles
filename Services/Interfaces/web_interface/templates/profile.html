@@ -329,7 +329,7 @@
                         {% endif %}
                         {% if "future" in enabled_exchange_types %}
                         <div class="alert alert-info" role="alert">
-                             <i class="fas fa-star"></i> Only futures trading pairs can be traded on futures trading exchanges.
+                             <i class="fa-regular fa-lightbulb"></i> Only futures trading pairs can be traded on futures trading exchanges.
                         </div>
                         {% endif %}
                         <!-- Card deck -->
@@ -364,7 +364,7 @@
                     <div class="card-body deck-container">
                         {% if "future" in enabled_exchange_types %}
                         <div class="alert alert-info" role="alert">
-                             <i class="fas fa-star"></i>
+                             <i class="fa-regular fa-lightbulb"></i>
                             Select leverage to use in futures trading from your <a href="{{url_for('config_tentacle', name=get_enabled_tentacles(trading_modes))}}">trading mode configuration</a>.
                         </div>
                         {% endif %}
