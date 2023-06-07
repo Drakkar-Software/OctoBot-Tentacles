@@ -19,39 +19,13 @@
 
 const sidebarNavLinks = $(".sidebar").find(".nav-link[role='tab']:not(.dropdown-toggle)");
 
-
-function activate_tab(tabElement){
-    if(!tabElement.hasClass("active")){
-        // manually handle sidebar navigation to work with nested elements
-        sidebarNavLinks.each(function (){
-            $(this).removeClass("active");
-        })
-        tabElement.tab('show');
-    }
-}
-
 function handle_nested_sidenav(){
     sidebarNavLinks.each(function (){
         $(this).on("click",function (e){
             e.preventDefault();
-            activate_tab($(this));
+            activate_tab($(this), sidebarNavLinks);
         });
     });
-}
-
-function select_first_tab(){
-    let activatedTab = false;
-    const anchor = $(location).attr('hash');
-    if (anchor){
-        const tab = $(`${anchor}-tab`);
-        if (typeof tab !== "undefined") {
-            activate_tab(tab);
-            activatedTab = true;
-        }
-    }
-    if (!activatedTab){
-        activate_tab($("[data-tab='default']"));
-    }
 }
 
 function get_tabs_config(){
@@ -786,7 +760,7 @@ const tradingReferenceMarket = $("#trading_reference-market");
 
 $(document).ready(function() {
     handle_nested_sidenav();
-    select_first_tab();
+    selectFirstTab(sidebarNavLinks);
 
     fetch_currencies();
 

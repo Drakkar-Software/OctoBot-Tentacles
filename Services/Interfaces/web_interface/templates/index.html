@@ -75,7 +75,7 @@
                         </div>
                         <div class="col-2 offset-md-1 text-right px-0">
                             <a class="blue-text"
-                               href="{{url_for('trading')}}"
+                               href="{{url_for('trading', _anchor='panel-pnl')}}"
                                data-toggle="tooltip"
                                title="{{ 'Profit and Loss' if has_pnl_history else 'Profit and Loss: requires trading with a PNL compatible trading mode.'}}">
                                 <i class="fa-solid fa-chart-line"></i>

@@ -416,3 +416,31 @@ const sortTimeFrames = (timeFrames) => {
     timeFrames.sort((a, b) => TimeFramesMinutes[a] - TimeFramesMinutes[b]);
     return timeFrames;
 }
+
+function activate_tab(tabElement, nestedNavBar=undefined){
+    if(!tabElement.hasClass("active")){
+        if(typeof nestedNavBar !== "undefined"){
+            // manually handle sidebar navigation to work with nested elements
+            nestedNavBar.each(function (){
+                $(this).removeClass("active");
+            })
+        }
+        tabElement.tab('show');
+    }
+}
+
+
+function selectFirstTab(nestedNavBar=undefined){
+    let activatedTab = false;
+    const anchor = $(location).attr('hash');
+    if (anchor){
+        const tab = $(`${anchor}-tab`);
+        if (typeof tab !== "undefined") {
+            activate_tab(tab, nestedNavBar);
+            activatedTab = true;
+        }
+    }
+    if (!activatedTab){
+        activate_tab($("[data-tab='default']"), nestedNavBar);
+    }
+}

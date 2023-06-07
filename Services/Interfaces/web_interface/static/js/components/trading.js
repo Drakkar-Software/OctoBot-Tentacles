@@ -318,6 +318,7 @@ const registerTableButtonsEvents = () => {
     });
 }
 
+selectFirstTab();
 registerFilterSelectors();
 registerTableButtonsEvents();
 update_pairs_colors();
