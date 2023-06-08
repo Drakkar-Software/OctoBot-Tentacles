@@ -267,6 +267,15 @@ def _create_candles_data(exchange_manager, symbol, time_frame, historical_candle
     return result_dict
 
 
+def _ensure_time_frame(time_frame: str):
+    try:
+        commons_enums.TimeFrames(time_frame)
+        return time_frame
+    except ValueError:
+        # if timeframe is invalid, use display timefrmae
+        return interface_settings.get_display_timeframe()
+
+
 def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays=True, backtesting=False,
                                     minimal_candles=False, ignore_trades=False, ignore_orders=False):
     bot_api = interfaces_util.get_bot_api()
@@ -276,6 +285,7 @@ def get_currency_price_graph_update(exchange_id, symbol, time_frame, list_arrays
     symbol_id = str(parsed_symbol)
     if time_frame is not None:
         try:
+            time_frame = _ensure_time_frame(time_frame)
             symbol_data = trading_api.get_symbol_data(exchange_manager, symbol_id, allow_creation=False)
             limit = 1 if minimal_candles else -1
             historical_candles = trading_api.get_symbol_historical_candles(symbol_data, time_frame, limit=limit)
