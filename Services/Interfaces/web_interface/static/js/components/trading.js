@@ -318,6 +318,7 @@ const registerTableButtonsEvents = () => {
     });
 }
 
+selectFirstTab();
 registerFilterSelectors();
 registerTableButtonsEvents();
 update_pairs_colors();
@@ -329,5 +330,6 @@ handleClearButton();
 register_notification_callback(ordersNotificationCallback);
 await reloadDisplay(false);
 registerOnTabShownEvents();
+handle_rounded_numbers_display();
 
 });

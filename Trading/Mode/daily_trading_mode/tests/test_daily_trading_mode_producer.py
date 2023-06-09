@@ -103,7 +103,7 @@ async def test_set_state(tools):
     currency = "BTC"
     symbol = "BTC/USDT"
     time_frame = "1h"
-    producer, consumer, trader =tools
+    producer, consumer, trader = tools
 
     producer.final_eval = trading_constants.ZERO
     await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)

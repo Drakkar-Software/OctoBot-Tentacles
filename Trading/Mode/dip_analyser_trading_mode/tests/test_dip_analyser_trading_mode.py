@@ -174,7 +174,7 @@ async def test_create_bottom_order_with_configured_quantity(tools):
     default_expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
         consumer.SOFT_MAX_CURRENCY_RATIO
-    expected_quantity = decimal.Decimal(1) * risk_multiplier * \
+    expected_quantity = market_quantity * risk_multiplier * \
         consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
         decimal.Decimal("0.2")
     assert default_expected_quantity != expected_quantity

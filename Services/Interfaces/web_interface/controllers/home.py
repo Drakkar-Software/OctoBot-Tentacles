@@ -32,6 +32,7 @@ def home():
     if flask.request.args.get("reset_tutorials", "False") == "True":
         flask_util.BrowsingDataProvider.instance().set_first_displays(True)
     if models.accepted_terms():
+        trading_delay_info = flask.request.args.get("trading_delay_info", 'false').lower() == "true"
         in_backtesting = models.get_in_backtesting_mode()
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
             flask_util.BrowsingDataProvider.HOME
@@ -54,6 +55,7 @@ def home():
             watched_symbols=models.get_watched_symbols(),
             backtesting_mode=in_backtesting,
             display_intro=display_intro,
+            display_trading_delay_info=trading_delay_info,
             selected_profile=models.get_current_profile().name,
             reference_unit=interfaces_util.get_reference_market(),
             display_time_frame=display_time_frame,

@@ -23,6 +23,7 @@ import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
 import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.constants as web_constants
 import tentacles.Services.Interfaces.web_interface.login as web_interface_login
 import octobot_services.interfaces as interfaces
 import octobot_trading.util as trading_util
@@ -113,6 +114,11 @@ def context_processor_register():
     def is_in_stating_community_env():
         return identifiers_provider.IdentifiersProvider.ENABLED_ENVIRONMENT is enums.CommunityEnvironments.Staging
 
+    def get_enabled_tentacles(tentacles_info_by_name):
+        for name, info in tentacles_info_by_name:
+            if info[web_constants.ACTIVATION_KEY]:
+                return name
+
     return dict(
         LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
         OCTOBOT_WEBSITE_URL=constants.OCTOBOT_WEBSITE_URL,
@@ -140,12 +146,13 @@ def context_processor_register():
         get_enabled_trader=get_enabled_trader,
         get_filtered_list=get_filtered_list,
         get_current_profile=models.get_current_profile,
+        get_plugin_tabs=get_plugin_tabs,
+        get_enabled_tentacles=get_enabled_tentacles,
         is_real_trading=models.is_real_trading,
         is_supporting_future_trading=is_supporting_future_trading,
         is_login_required=web_interface_login.is_login_required,
         is_authenticated=web_interface_login.is_authenticated,
         is_in_stating_community_env=is_in_stating_community_env,
-        get_plugin_tabs=get_plugin_tabs,
         startup_messages=models.get_startup_messages(),
         are_automations_enabled=models.are_automations_enabled(),
         is_backtesting_enabled=models.is_backtesting_enabled(),

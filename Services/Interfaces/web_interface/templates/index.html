@@ -8,6 +8,14 @@
     </div>
     {% endif %}
     <span id="exchange-specific-data">
+        {% if display_trading_delay_info %}
+            <div class="alert alert-info mt-2" role="alert">
+                <i class="fa-regular fa-lightbulb"></i>
+                A new trading mode has just been selected, OctoBot is now looking for trading opportunities.
+                Depending on the profile settings, a few hours might be required before the first orders are created.
+                Use <a href="backtesting">Backesting</a> to quickly test trading strategies.
+            </div>
+        {% endif %}
         {% if is_in_stating_community_env() %}
         <div class="card mt-2 mt-md-4">
             <div class="card-header"><h2>
@@ -47,12 +55,12 @@
         {% endif %}
         <div class="card mt-2 mt-md-4" id="profitability-display">
             <div class="card-header">
-                <h2>
+                <h4>
                     <div class="row">
-                        <div class="col-12 col-md-4">
+                        <div class="d-none d-md-flex col-md-3">
                             Portfolio value
                         </div>
-                        <div class="col-10 col-md-6">
+                        <div class="col-10 col-md-6 text-md-center">
                             <span class="d-none align-middle"
                                   id="flat-profitability">
                                 <span id="flat-profitability-text">
@@ -65,22 +73,13 @@
                                   title="Portfolio total value change since the first valuation. You can reset it from the portfolio tab."
                             ><span id="profitability-value"></span>%</span>
                         </div>
-                        <div class="col-2 pl-0 text-right">
-                            {% if has_pnl_history %}
+                        <div class="col-2 offset-md-1 text-right px-0">
                             <a class="blue-text"
-                               href="{{url_for('trading')}}"
+                               href="{{url_for('trading', _anchor='panel-pnl')}}"
                                data-toggle="tooltip"
-                               title="Profit and Loss">
+                               title="{{ 'Profit and Loss' if has_pnl_history else 'Profit and Loss: requires trading with a PNL compatible trading mode.'}}">
                                 <i class="fa-solid fa-chart-line"></i>
                             </a>
-                            {% else %}
-                            <span class="disabled-text"
-                               href="{{url_for('trading')}}"
-                               data-toggle="tooltip"
-                               title="Profit and Loss: accessible when trading with PNL compatible trading modes.">
-                                <i class="fa-solid fa-chart-line"></i>
-                            </span>
-                            {% endif %}
                             <a class="blue-text"
                                href="{{url_for('portfolio')}}"
                                data-toggle="tooltip"
@@ -89,7 +88,7 @@
                             </a>
                         </div>
                     </div>
-                </h2>
+                </h4>
             </div>
             <div class="card-body card-text" id="profitability_graph">
                 <div class="w-100">
@@ -109,7 +108,7 @@
             <div class="card-header d-flex justify-content-between" id="all-watched-markets">
                 <div>
 
-                </div><h2>Watched markets</h2>
+                </div><h4>Watched markets</h4>
                 <div>
                     <a class="waves-effect float-right" href="#" id="display-dashboard-settings-modal-label"
                        data-toggle="modal" data-target="#dashboard-settings-modal">

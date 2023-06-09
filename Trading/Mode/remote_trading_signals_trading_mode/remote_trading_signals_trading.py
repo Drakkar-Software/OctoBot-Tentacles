@@ -350,6 +350,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             price=adapted_price,
             side=side,
             tag=order_description[trading_enums.TradingSignalOrdersAttrs.TAG.value],
+            order_id=order_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value],
             group=group,
             fees_currency_side=fees_currency_side,
             reduce_only=reduce_only,
@@ -358,9 +359,6 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if associated_entries and len(associated_entries) > 1:
             for associated_entry in associated_entries[1:]:
                 order.associate_to_entry(associated_entry)
-        order.set_shared_signal_order_id(
-            order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
-        )
         order.update_with_triggering_order_fees = order_description.get(
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value, False
         )
@@ -377,7 +375,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         created_orders = {}
         ignored_orders = set()
         order_description_by_id = {
-            orders_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]: orders_description
+            orders_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value]: orders_description
             for orders_description in orders_descriptions
         }
         fees_currency_side = None
@@ -397,13 +395,13 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 continue
             created_order = await self._create_order(order_description, symbol, created_groups, fees_currency_side)
             if created_order.origin_quantity == trading_constants.ZERO:
-                shared_id = order_description[trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                order_id = order_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value]
                 self.logger.error(f"Impossible to create order: {created_order} "
-                                  f"(id: {shared_id}): not enough funds on the account.")
-                ignored_orders.add(shared_id)
+                                  f"(id: {order_id}): not enough funds on the account.")
+                ignored_orders.add(order_id)
             else:
                 to_create_orders[order_description[
-                    trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                    trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value]
                 ] = (created_order, {})
         for order_description in orders_descriptions:
             if bundled_with := order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value]:
@@ -411,18 +409,25 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                                          fees_currency_side, created_groups, symbol)
         # create orders
         already_handled_order_ids = self.exchange_manager.exchange_personal_data.orders_manager\
-            .get_all_active_and_pending_orders_shared_signal_order_id()
-        for shared_signal_order_id, order_with_param in to_create_orders.items():
-            if shared_signal_order_id in already_handled_order_ids:
-                self.logger.debug(f"Ignored order with shared signal id {shared_signal_order_id}: order already handled")
+            .get_all_active_and_pending_orders_id()
+        for order_id, order_with_param in to_create_orders.items():
+            if order_id in already_handled_order_ids:
+                self.logger.debug(f"Ignored order with order id {order_id}: order already handled")
                 continue
-            created_orders[shared_signal_order_id] = \
+            created_orders[order_id] = \
                 await self.exchange_manager.trader.create_order(order_with_param[0], params=order_with_param[1])
         # handle chained orders
         created_chained_orders_count = 0
         for order_description in orders_descriptions:
             if (chained_to := order_description[trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value]) \
                     and order_description[trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value] is None:
+                order_id = \
+                    order_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value]
+                if order_id in already_handled_order_ids:
+                    self.logger.debug(
+                        f"Ignored order with order id {order_id}: order already handled"
+                    )
+                    continue
                 created_chained_orders_count += \
                     await self._chain_order(order_description, created_orders, ignored_orders, chained_to,
                                             fees_currency_side, created_groups, symbol, order_description_by_id)
@@ -434,12 +439,11 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
     def get_open_order_from_description(self, order_descriptions, symbol):
         found_orders = []
         for order_description in order_descriptions:
-            # filter orders using shared_signal_order_id
+            # filter orders using order_id
             if accurate_orders := [
                 (order_description, order)
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-                if order.shared_signal_order_id == order_description[
-                    trading_enums.TradingSignalOrdersAttrs.SHARED_SIGNAL_ORDER_ID.value]
+                if order.order_id == order_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value]
             ]:
                 found_orders += accurate_orders
                 continue

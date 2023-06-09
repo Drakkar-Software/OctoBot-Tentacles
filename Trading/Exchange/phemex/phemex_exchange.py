@@ -65,19 +65,19 @@ class Phemex(exchanges.RestExchange):
             symbol=symbol, time_frame=time_frame, **kwargs)
         )[-1]
 
-    async def get_order(self, order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        if order := await self.connector.get_order(symbol=symbol, order_id=order_id, **kwargs):
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        if order := await self.connector.get_order(symbol=symbol, exchange_order_id=exchange_order_id, **kwargs):
             return order
         # try from closed orders (get_order is not returning filled or cancelled orders)
-        if order := await self.get_order_from_open_and_closed_orders(order_id, symbol):
+        if order := await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol):
             return order
         # try from trades (get_order is not returning filled or cancelled orders)
-        return await self._get_order_from_trades(symbol, order_id, {})
+        return await self._get_order_from_trades(symbol, exchange_order_id, {})
 
-    async def _get_order_from_trades(self, symbol, order_id, order_to_update):
+    async def _get_order_from_trades(self, symbol, exchange_order_id, order_to_update):
         # usually the last trade is the right one
         for _ in range(3):
-            if (order := await self.get_order_from_trades(symbol, order_id, order_to_update)) is None:
+            if (order := await self.get_order_from_trades(symbol, exchange_order_id, order_to_update)) is None:
                 await asyncio.sleep(3)
             else:
                 return order

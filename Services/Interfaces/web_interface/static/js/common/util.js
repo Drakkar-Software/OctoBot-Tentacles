@@ -147,6 +147,17 @@ function isMobileDisplay() {
     return $(window).width() < mobile_width_breakpoint;
 }
 
+const handle_rounded_numbers_display = () => {
+    $(".rounded-number").each(function (){
+        const text = $(this).text().trim();
+        if (!isNaN(text)){
+            const value = Number(text);
+            const decimal = value > 1 ? 3 : 8;
+            $(this).text(handle_numbers(round_digits(text, decimal)));
+        }
+    });
+}
+
 function round_digits(number, decimals) {
     const rounded = Number(Math.round(`${number}e${decimals}`) + `e-${decimals}`);
     if(isNaN(rounded)){
@@ -178,14 +189,27 @@ function handle_numbers(number) {
     return numb.replace(regEx3,'');  // Remove trailing decimal
 }
 
-function fix_config_values(config){
+function fix_config_values(config, schema){
+    ensure_all_config_values(config, schema);
     $.each(config, function (key, val) {
         if(typeof val === "number"){
             config[key] = handle_numbers(val);
         }else if (val instanceof Object){
-            fix_config_values(config[key]);
+            fix_config_values(config[key], undefined);
         }
     });
+}
+
+const ensure_all_config_values = (config, schema) => {
+    if(!isDefined(schema) || typeof schema.properties === "undefined"){
+        return
+    }
+    // ensure each schema element has a value or there might be display issues
+    Object.keys(schema.properties).forEach(key => {
+        if(typeof config[key] === "undefined"){
+            config[key] = schema.properties[key].default;
+        }
+    })
 }
 
 function getValueChangedFromRef(newObject, refObject, allowUndefinedValues=true) {
@@ -391,4 +415,32 @@ function paginatedSelect2(selectElement, options, pageSize){
 const sortTimeFrames = (timeFrames) => {
     timeFrames.sort((a, b) => TimeFramesMinutes[a] - TimeFramesMinutes[b]);
     return timeFrames;
+}
+
+function activate_tab(tabElement, nestedNavBar=undefined){
+    if(!tabElement.hasClass("active")){
+        if(typeof nestedNavBar !== "undefined"){
+            // manually handle sidebar navigation to work with nested elements
+            nestedNavBar.each(function (){
+                $(this).removeClass("active");
+            })
+        }
+        tabElement.tab('show');
+    }
+}
+
+
+function selectFirstTab(nestedNavBar=undefined){
+    let activatedTab = false;
+    const anchor = $(location).attr('hash');
+    if (anchor){
+        const tab = $(`${anchor}-tab`);
+        if (typeof tab !== "undefined") {
+            activate_tab(tab, nestedNavBar);
+            activatedTab = true;
+        }
+    }
+    if (!activatedTab){
+        activate_tab($("[data-tab='default']"), nestedNavBar);
+    }
 }

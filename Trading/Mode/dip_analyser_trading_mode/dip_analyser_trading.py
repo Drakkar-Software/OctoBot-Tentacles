@@ -275,7 +275,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def create_sell_orders(
-            self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_id
+        self, symbol, timeout, sell_orders_count, quantity, sell_weight, sell_base, buy_order_id
     ):
         current_order = None
         try:
@@ -395,8 +395,8 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return self.sell_targets_by_order_id[order_id]
         except KeyError:
             if not self.sell_targets_by_order_id:
-                self.logger.warning(f"No registered buy orders, therefore no sell target for order with id {order_id}. "
-                                    f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
+                self.logger.warning(f"No registered buy orders, therefore no sell target for order with id "
+                                    f"{order_id}. Using default sell target: {self.DEFAULT_SELL_TARGET}.")
             else:
                 self.logger.warning(f"No sell target for order with id {order_id}. "
                                     f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
@@ -560,9 +560,11 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             sell_quantity = \
                 decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]}") - paid_fees
             price = decimal.Decimal(f"{filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]}")
-            await self._create_sell_order_if_enabled(filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value],
-                                                     sell_quantity,
-                                                     price)
+            await self._create_sell_order_if_enabled(
+                filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value],
+                sell_quantity,
+                price
+            )
 
     async def _create_sell_order_if_enabled(self, order_id, sell_quantity, buy_price):
         if self.exchange_manager.trader.is_enabled:

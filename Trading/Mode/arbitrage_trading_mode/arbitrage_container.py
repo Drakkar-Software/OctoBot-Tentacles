@@ -71,5 +71,5 @@ class ArbitrageContainer:
 
     def is_watching_this_order(self, order_id):
         return self.initial_limit_order_id == order_id \
-               or self.secondary_limit_order_id == order_id \
-               or self.secondary_stop_order_id == order_id
+           or self.secondary_limit_order_id == order_id \
+           or self.secondary_stop_order_id == order_id

@@ -74,6 +74,10 @@ def symbol_market_status():
 @web_interface.server_instance.route("/trading")
 @login.login_required_when_activated
 def trading():
+    displayed_portfolio = models.get_exchange_holdings_per_symbol()
+    has_real_trader, has_simulated_trader = interfaces_util.has_real_and_or_simulated_traders()
+    symbols_values = models.get_symbols_values(displayed_portfolio.keys(), has_real_trader, has_simulated_trader) \
+        if displayed_portfolio else {}
     has_real_trader, _ = interfaces_util.has_real_and_or_simulated_traders()
     exchanges_load = models.get_exchanges_load()
     pnl_symbols = models.get_pnl_history_symbols()
@@ -82,6 +86,8 @@ def trading():
         might_have_positions=models.has_futures_exchange(),
         watched_symbols=models.get_watched_symbols(),
         pairs_with_status=interfaces_util.get_currencies_with_status(),
+        displayed_portfolio=displayed_portfolio,
+        symbols_values=symbols_values,
         has_real_trader=has_real_trader,
         exchanges_load=exchanges_load,
         is_community_feed_connected=models.is_community_feed_connected(),

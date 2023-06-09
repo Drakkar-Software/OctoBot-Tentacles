@@ -56,13 +56,11 @@
         <div class="sidebar-sticky mt-0 pt-0">
             <div class="nav flex-column pt-0 mt-0 mt-md-4" id="v-tab" role="tablist"
                  aria-orientation="vertical">
-                {% if has_pnl_history %}
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex active" data-tab="default" id="panel-pnl-tab" data-toggle="tab"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab={{ 'default' if has_pnl_history else 'other'}} id="panel-pnl-tab" data-toggle="tab"
                    href="#panel-pnl" role="tab" aria-controls="panel-pnl" aria-selected="true">
                     <i class="fa-solid fa-chart-line"></i><span class="d-none d-md-block pl-3">Profit & Loss</span>
                 </a>
-                {% endif %}
-                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex {{'active' if not has_pnl_history else ''}}" id="panel-orders-tab" data-toggle="tab"
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab={{ 'default' if not has_pnl_history else 'other'}} id="panel-orders-tab" data-toggle="tab"
                    href="#panel-orders" role="tab" aria-controls="panel-orders" aria-selected="false">
                     <i class="fa-solid fa-list-ul"></i><span class="d-none d-md-block pl-3">Orders</span>
                 </a>
@@ -91,8 +89,7 @@
     </nav>
     <main role="main" id="main-nav" class="col-md-9 col-lg-10 col-11 ml-auto">
         <div class="tab-content">
-            {% if has_pnl_history %}
-            <div class="tab-pane fade active show" id="panel-pnl" role="tabpanel"
+            <div class="tab-pane fade" id="panel-pnl" role="tabpanel"
                  aria-labelledby="panel-pnl-tab">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between">
@@ -175,8 +172,7 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
-            <div class="tab-pane fade {{'active show' if not has_pnl_history else ''}}" id="panel-orders" role="tabpanel"
+            <div class="tab-pane fade" id="panel-orders" role="tabpanel"
                  aria-labelledby="panel-orders-tab">
                 <div class="card">
                     <div class="card-header">
@@ -234,7 +230,7 @@
                     <div class="card-body">
                         <div class="card-deck">
                             {% for pair, status in pairs_with_status.items() | sort(attribute='0') %}
-                                {{ m_cards.pair_status_card(pair, status, watched_symbols) }}
+                                {{ m_cards.pair_status_card(pair, status, watched_symbols, displayed_portfolio, symbols_values, reference_market) }}
                             {% endfor %}
 
                             <!-- Add new pair Card -->
@@ -246,14 +242,13 @@
                                 </div>
 
                                 <!--Card image-->
-                                <div class="view overlay animated text-center pt-2">
+                                <div class="view overlay animated text-center pt-2 mb-5">
                                   <a href="{{ url_for('profile')+'#panelCurrency' }}">
                                     <i class="fas fa-8x fa-plus-circle fa-3x"></i>
                                   </a>
                                 </div>
 
-
-                                <div class="px-4 pt-4 pb-3">
+                                <div class="px-4 pt-3 pb-3">
                                     <!--Card content-->
                                     <div class="list-group list-group-flush">
                                         <a class="list-group-item list-group-item-action bg-transparent text-white hover_anim"

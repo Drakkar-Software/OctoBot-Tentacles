@@ -211,7 +211,7 @@ async def test_signal_callback(tools):
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
         assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
             consumer.PRICE_KEY: decimal.Decimal("123"),
-            consumer.VOLUME_KEY: decimal.Decimal("10"),
+            consumer.VOLUME_KEY: decimal.Decimal("1.2"),
             consumer.STOP_PRICE_KEY: decimal.Decimal("12"),
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
             consumer.REDUCE_ONLY_KEY: True,

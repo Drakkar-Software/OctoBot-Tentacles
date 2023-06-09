@@ -196,10 +196,15 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="card-footer">
-                            <p class="mb-0">Strategy customization on <a class="btn btn-outline-white btn-md waves-effect"
-                                                                         href="{{ url_for('advanced.evaluator_config') }}">OctoBot
-                                advanced configuration interface</a></p>
+                        <div class="card-footer" id="evaluator-config-root-footer">
+                            <div class="quote px-2 font-weight-bold">
+                                Customize the time frames to trade on in your strategy configuration.
+                            </div>
+                            <p class="mt-3 mb-0"><i class="fab fa-octopus-deploy"></i> Pro tip: customize evaluators to use with your strategy the
+                                <a href="{{ url_for('advanced.evaluator_config') }}">
+                                    advanced evaluators configuration
+                                </a>
+                            </p>
                         </div>
                     </div>
                     <br>
@@ -324,7 +329,7 @@
                         {% endif %}
                         {% if "future" in enabled_exchange_types %}
                         <div class="alert alert-info" role="alert">
-                             <i class="fas fa-star"></i> Only futures trading pairs can be traded on futures trading exchanges.
+                             <i class="fa-regular fa-lightbulb"></i> Only futures trading pairs can be traded on futures trading exchanges.
                         </div>
                         {% endif %}
                         <!-- Card deck -->
@@ -357,6 +362,12 @@
                         </h2>
                     </div>
                     <div class="card-body deck-container">
+                        {% if "future" in enabled_exchange_types %}
+                        <div class="alert alert-info" role="alert">
+                             <i class="fa-regular fa-lightbulb"></i>
+                            Select leverage to use in futures trading from your <a href="{{url_for('config_tentacle', name=get_enabled_tentacles(trading_modes))}}">trading mode configuration</a>.
+                        </div>
+                        {% endif %}
                         <!-- Card deck -->
                         <div class="card-deck config-container" id="exchange-container" update-url="{{ url_for('api.are_compatible_accounts') }}">
                             {% for exchange in config_exchanges %}
