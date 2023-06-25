@@ -116,6 +116,7 @@ FULL_EXCHANGE_LIST = [
     for exchange in set(ccxt.async_support.exchanges)
     if exchange not in REMOVED_CCXT_EXCHANGES
 ]
+AUTO_FILLED_EXCHANGES = None
 
 
 def _get_currency_dict(name, symbol, identifier):
@@ -915,11 +916,15 @@ def _get_filtered_exchange_symbols(symbols):
 
 async def _load_market(exchange, results):
     try:
-        async with getattr(ccxt.async_support, exchange)({'verbose': False}) as exchange_inst:
-            await exchange_inst.load_markets()
-            # filter symbols with a "." or no "/" because bot can't handle them for now
-            markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(exchange_inst.symbols)
-            results.append(markets_by_exchanges[exchange])
+        if exchange in AUTO_FILLED_EXCHANGES:
+            symbols = []    #todo
+        else:
+            async with getattr(ccxt.async_support, exchange)({'verbose': False}) as exchange_inst:
+                await exchange_inst.load_markets()
+                symbols = exchange_inst.symbols
+        # filter symbols with a "." or no "/" because bot can't handle them for now
+        markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(symbols)
+        results.append(markets_by_exchanges[exchange])
     except Exception as e:
         _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
 
@@ -1078,9 +1083,18 @@ def get_exchange_logo(exchange_name):
         try:
             exchange_logos[exchange_name] = {"image": "", "url": ""}
             if isinstance(exchange_name, str) and exchange_name != "Bitcoin":
-                exchange = getattr(ccxt, exchange_name)()
-                exchange_logos[exchange_name]["image"] = exchange.urls["logo"]
-                exchange_logos[exchange_name]["url"] = exchange.urls["www"]
+                if AUTO_FILLED_EXCHANGES is None:
+                    _get_full_exchange_list()
+                exchange_details = interfaces_util.run_in_bot_main_loop(
+                    trading_api.get_exchange_details(
+                        exchange_name,
+                        exchange_name in AUTO_FILLED_EXCHANGES,
+                        interfaces_util.get_edited_tentacles_config(),
+                        interfaces_util.get_bot_api().get_aiohttp_session()
+                    )
+                )
+                exchange_logos[exchange_name]["image"] = exchange_details.logo_url
+                exchange_logos[exchange_name]["url"] = exchange_details.url
         except KeyError:
             pass
     return exchange_logos[exchange_name]
@@ -1165,16 +1179,33 @@ def get_traded_time_frames(exchange_manager, strategies=None, tentacles_setup_co
         if time_frame in strategies_time_frames
     ]
 
+def _get_full_exchange_list(tentacles_setup_config=None):
+    global AUTO_FILLED_EXCHANGES
+    global FULL_EXCHANGE_LIST
+    if AUTO_FILLED_EXCHANGES is None:
+        tentacles_setup_config = tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
+        AUTO_FILLED_EXCHANGES = [
+            exchange_name
+            for exchange_name in trading_api.get_auto_filled_exchange_names(tentacles_setup_config)
+            if exchange_name not in FULL_EXCHANGE_LIST
+        ]
+        FULL_EXCHANGE_LIST = FULL_EXCHANGE_LIST + AUTO_FILLED_EXCHANGES
+    return FULL_EXCHANGE_LIST
+
 
 def get_full_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
     if remove_config_exchanges:
         user_exchanges = [e for e in g_config[commons_constants.CONFIG_EXCHANGES]]
-        full_exchange_list = list(set(FULL_EXCHANGE_LIST) - set(user_exchanges))
+        full_exchange_list = list(set(_get_full_exchange_list()) - set(user_exchanges))
     else:
-        full_exchange_list = FULL_EXCHANGE_LIST
+        full_exchange_list = _get_full_exchange_list()
     # can't handle exchanges containing UPDATED_CONFIG_SEPARATOR character in their name
-    return [exchange for exchange in full_exchange_list if constants.UPDATED_CONFIG_SEPARATOR not in exchange]
+    return [
+        exchange
+        for exchange in full_exchange_list
+        if constants.UPDATED_CONFIG_SEPARATOR not in exchange
+    ]
 
 
 def get_default_exchange():
@@ -1182,18 +1213,29 @@ def get_default_exchange():
 
 
 def get_tested_exchange_list():
-    return [exchange for exchange in trading_constants.TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
+    return [
+        exchange
+        for exchange in trading_constants.TESTED_EXCHANGES
+        if exchange in _get_full_exchange_list()
+    ]
 
 
 def get_simulated_exchange_list():
-    return [exchange for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
+    return [
+        exchange
+        for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES
+        if exchange in _get_full_exchange_list()
+    ]
 
 
 def get_other_exchange_list(remove_config_exchanges=False):
     full_list = get_full_exchange_list(remove_config_exchanges)
-    return [exchange for exchange in full_list
-            if
-            exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
+    return [
+        exchange
+        for exchange in full_list
+        if exchange not in trading_constants.TESTED_EXCHANGES and
+           exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES
+    ]
 
 
 def get_enabled_exchange_types(config_exchanges):
@@ -1217,7 +1259,9 @@ def get_exchanges_details(exchanges_config) -> dict:
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
             "configurable": False if exchange_class is None else exchange_class.is_configurable(),
-            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name),
+            "supported_exchange_types": trading_api.get_supported_exchange_types(
+                exchange_name, tentacles_setup_config
+            ),
             "default_exchange_type": trading_api.get_default_exchange_type(exchange_name),
         }
     return details
