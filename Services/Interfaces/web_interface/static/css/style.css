@@ -527,6 +527,12 @@ a:hover.badge {
     background-color: rgba(238, 93, 80, 0.6);
 }
 
+.exchange-logo {
+    max-width: 85px;
+    height: auto;
+}
+
+
 /* tables */
 table tbody tr,
 table.dataTable,
