@@ -17,6 +17,7 @@ import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
 
 class hollaex(exchanges.RestExchange):
@@ -50,16 +51,19 @@ class hollaex(exchanges.RestExchange):
         )
 
     def get_additional_connector_config(self):
+        return {
+            ccxt_enums.ExchangeColumns.URLS.value: self._get_urls()
+        }
+
+    def _get_urls(self):
         urls = ccxt.hollaex().urls
         custom_urls = {
-            "api": {
+            ccxt_enums.ExchangeColumns.API.value: {
                 self.REST_KEY: self.tentacle_config[self.REST_KEY]
             }
         }
         urls.update(custom_urls)
-        return {
-            'urls': urls
-        }
+        return urls
 
     @classmethod
     def get_name(cls):
