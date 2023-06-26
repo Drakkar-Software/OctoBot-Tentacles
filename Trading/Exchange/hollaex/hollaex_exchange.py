@@ -81,3 +81,13 @@ class hollaex(exchanges.RestExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
+    async def get_closed_orders(self, symbol: str = None, since: int = None,
+                                limit: int = None, **kwargs: dict) -> list:
+        # get_closed_orders sometimes does not return orders use _get_closed_orders_from_my_recent_trades in this case
+        return (
+            await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs) or
+            await self._get_closed_orders_from_my_recent_trades(
+                symbol=symbol, since=since, limit=limit, **kwargs
+            )
+        )
