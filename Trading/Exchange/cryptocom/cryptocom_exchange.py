@@ -18,8 +18,6 @@ import octobot_trading.exchanges as exchanges
 
 class CryptoCom(exchanges.RestExchange):
     DESCRIPTION = ""
-    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
-    # should be fetched using recent trades.
     REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = True  # set True when get_closed_orders is not supported
 
     @classmethod
