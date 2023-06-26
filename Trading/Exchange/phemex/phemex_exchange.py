@@ -58,13 +58,6 @@ class Phemex(exchanges.RestExchange):
         })
         return kwargs
 
-    async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
-                              **kwargs: dict) -> typing.Optional[list]:
-        # get_kline_price is returning the last 100 candles on phemex
-        return (await super().get_kline_price(
-            symbol=symbol, time_frame=time_frame, **kwargs)
-        )[-1]
-
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, exchange_order_id=exchange_order_id, **kwargs):
             return order
