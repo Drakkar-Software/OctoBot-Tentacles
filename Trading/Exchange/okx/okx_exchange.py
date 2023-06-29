@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import time
 import decimal
 import typing
 
@@ -419,9 +418,6 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             contract_size = self.connector.get_contract_size(symbol)
             fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
-        if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
-            fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value]
         self._adapt_order_type(fixed)
         return fixed
 
