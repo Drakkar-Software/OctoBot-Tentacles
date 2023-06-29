@@ -105,12 +105,13 @@ _TENTACLE_CONFIG_CACHE = {}
 
 DEFAULT_EXCHANGE = "binance"
 MERGED_CCXT_EXCHANGES = {
-    result.__name__: merged.__name__
+    result.__name__: [merged_exchange.__name__ for merged_exchange in merged]
     for result, merged in (
-        (ccxt.async_support.kucoin, ccxt.async_support.kucoinfutures),
+        (ccxt.async_support.kucoin, (ccxt.async_support.kucoinfutures, )),
+        (ccxt.async_support.binance, (ccxt.async_support.binanceusdm, ccxt.async_support.binancecoinm)),
     )
 }
-REMOVED_CCXT_EXCHANGES = set(MERGED_CCXT_EXCHANGES.values())
+REMOVED_CCXT_EXCHANGES = set().union(*(set(v) for v in MERGED_CCXT_EXCHANGES.values()))
 FULL_EXCHANGE_LIST = [
     exchange
     for exchange in set(ccxt.async_support.exchanges)
@@ -937,7 +938,8 @@ def _add_merged_exchanges(exchanges):
     extended = list(exchanges)
     for exchange in exchanges:
         if exchange in MERGED_CCXT_EXCHANGES:
-            extended.append(MERGED_CCXT_EXCHANGES[exchange])
+            for merged_exchange in MERGED_CCXT_EXCHANGES[exchange]:
+                extended.append(merged_exchange)
     return extended
 
 
