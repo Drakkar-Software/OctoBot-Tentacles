@@ -60,6 +60,7 @@ def profile():
         flask_util.BrowsingDataProvider.PROFILE
     )
     exchange_symbols = sorted(models.get_symbol_list(enabled_exchanges or config_exchanges))
+    config_symbols = models.format_config_symbols(display_config)
     return flask.render_template(
         'profile.html',
          current_profile=current_profile,
@@ -72,13 +73,13 @@ def profile():
          config_trading=display_config[commons_constants.CONFIG_TRADING],
          config_trader=display_config[commons_constants.CONFIG_TRADER],
          config_trader_simulator=display_config[commons_constants.CONFIG_SIMULATOR],
-         config_symbols=models.format_config_symbols(display_config),
+         config_symbols=config_symbols,
          config_reference_market=display_config[commons_constants.CONFIG_TRADING][
              commons_constants.CONFIG_TRADER_REFERENCE_MARKET],
 
          real_trader_activated=interfaces_util.has_real_and_or_simulated_traders()[0],
 
-         symbol_list_by_type=models.get_all_symbols_list_by_symbol_type(exchange_symbols),
+         symbol_list_by_type=models.get_all_symbols_list_by_symbol_type(exchange_symbols, config_symbols),
          full_symbol_list=models.get_all_symbols_list(),
          evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
          strategy_config=models.get_strategy_config(media_url, missing_tentacles),

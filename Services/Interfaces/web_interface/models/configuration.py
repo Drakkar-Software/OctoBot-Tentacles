@@ -1061,7 +1061,7 @@ def get_all_symbols_list():
     return all_currencies
 
 
-def get_all_symbols_list_by_symbol_type(all_symbols):
+def get_all_symbols_list_by_symbol_type(all_symbols, config_symbols):
     spot = "SPOT trading"
     linear = "Futures trading - linear"
     inverse = "Futures trading - inverse"
@@ -1076,12 +1076,21 @@ def get_all_symbols_list_by_symbol_type(all_symbols):
             if trading_type == inverse:
                 return parsed.is_inverse()
         return False
-    return {
-        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type) ]
+    symbols_by_type = {
+        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type)]
         for trading_type in (
             spot, linear, inverse
         )
     }
+    symbols_in_config = set().union(*(
+        set(currency_details.get('pairs', [])) for currency_details in config_symbols.values()
+    ))
+    if symbols_in_config:
+        listed_symbols = set().union(*(set(symbols) for symbols in symbols_by_type.values()))
+        missing_symbols = symbols_in_config - listed_symbols
+        if missing_symbols:
+            symbols_by_type["Configured (missing on enabled exchanges)"] = list(missing_symbols)
+    return symbols_by_type
 
 
 def get_exchange_logo(exchange_name):
