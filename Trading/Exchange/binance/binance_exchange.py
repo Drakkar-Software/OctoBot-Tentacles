@@ -23,7 +23,9 @@ import octobot_trading.constants as constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
+import octobot_trading.personal_data as trading_personal_data
 
 
 class Binance(exchanges.RestExchange):
@@ -33,6 +35,26 @@ class Binance(exchanges.RestExchange):
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
+
+    SPOT_UNSUPPORTED_ORDERS = [
+        trading_enums.TraderOrderType.STOP_LOSS,
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+        trading_enums.TraderOrderType.TRAILING_STOP,
+        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+    ]
+
+    FUTURES_UNSUPPORTED_ORDERS = [
+        # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+        trading_enums.TraderOrderType.TRAILING_STOP,
+        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+    ]
+
+    SUPPORTED_BUNDLED_ORDERS = {}   # not supported or need custom mechanics with batch orders
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
@@ -96,14 +118,29 @@ class Binance(exchanges.RestExchange):
             config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
         return config
 
+    @classmethod
+    def update_supported_elements(cls, exchange_manager):
+        if exchange_manager.is_future:
+            cls.UNSUPPORTED_ORDERS = cls.FUTURES_UNSUPPORTED_ORDERS
+        else:
+            cls.UNSUPPORTED_ORDERS = cls.SPOT_UNSUPPORTED_ORDERS
+
     async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
             balance = []
             for account_type in self._futures_account_types:
                 balance.append(await self.connector.get_balance(**kwargs, subType=account_type))
             # todo remove this and use both types when exchange-side multi portfolio is enabled
-            return balance[0]   # only returning linear portfolio
+            # there will only be 1 balance as both linear and inverse are not supported simultaneously
+            # (only 1 _futures_account_types is allowed for now)
+            return balance[0]
         return await self.connector.get_balance(**kwargs)
+
+    def get_order_additional_params(self, order) -> dict:
+        params = {}
+        if self.exchange_manager.is_future:
+            params["reduceOnly"] = order.reduce_only
+        return params
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -116,6 +153,25 @@ class Binance(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
+                                                       tp_sl_mode: trading_enums.TakeProfitStopLossMode):
+        """
+        take profit / stop loss mode does not exist on binance futures
+        """
+
+    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        if self.exchange_manager.is_future:
+            params = params or {}
+            params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+            order = self.connector.adapter.adapt_order(
+                await self.connector.client.create_order(
+                    symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+                ),
+                symbol=symbol, quantity=quantity
+            )
+            return order
+        return await super()._create_market_stop_loss_order(symbol, quantity, price, side, current_price, params=params)
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
@@ -153,6 +209,8 @@ class Binance(exchanges.RestExchange):
 
 
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):
+    STOP_MARKET = 'stop_market'
+    STOP_ORDERS = [STOP_MARKET]
 
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
@@ -162,6 +220,19 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
             contract_size = self.connector.get_contract_size(symbol)
             fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
+        self._adapt_order_type(fixed)
+        return fixed
+
+    def _adapt_order_type(self, fixed):
+        if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.TYPE.value, None) in self.STOP_ORDERS:
+            stop_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None)
+            updated_type = trading_enums.TradeOrderType.UNKNOWN.value
+            if stop_price is not None:
+                updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            else:
+                self.logger.error(f"Unknown order type, order: {fixed}")
+            # stop loss and take profits are not tagged as such by ccxt, force it
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
         return fixed
 
     def fix_trades(self, raw, **kwargs):
