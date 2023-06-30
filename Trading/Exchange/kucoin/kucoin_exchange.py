@@ -144,7 +144,8 @@ class Kucoin(exchanges.RestExchange):
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            )
+            ),
+            symbol=symbol, quantity=quantity
         )
         return order
 
