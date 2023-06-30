@@ -23,6 +23,7 @@ import octobot_trading.constants as constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.util as trading_util
 
 
 class Binance(exchanges.RestExchange):
@@ -38,12 +39,41 @@ class Binance(exchanges.RestExchange):
     INVERSE_TYPE = "inverse"
     LINEAR_TYPE = "linear"
 
+    def __init__(self, config, exchange_manager, connector_class=None):
+        self._futures_account_types = self._infer_account_types(exchange_manager)
+        super().__init__(config, exchange_manager, connector_class=connector_class)
+
     @classmethod
     def get_name(cls):
         return 'binance'
 
     def get_adapter_class(self):
         return BinanceCCXTAdapter
+
+    def _infer_account_types(self, exchange_manager):
+        account_types = []
+        symbol_counts = trading_util.get_symbol_types_counts(exchange_manager.config, True)
+        # only enable the trading type with the majority of asked symbols
+        # todo remove this and use both types when exchange-side multi portfolio is enabled
+        linear_count = symbol_counts.get(trading_enums.FutureContractType.LINEAR_PERPETUAL.value, 0)
+        inverse_count = symbol_counts.get(trading_enums.FutureContractType.INVERSE_PERPETUAL.value, 0)
+        if linear_count >= inverse_count:
+            account_types.append(self.LINEAR_TYPE)   # allows to fetch linear markets
+            if inverse_count:
+                exchange_manager.logger.error(
+                    f"For now, due to the inverse and linear portfolio split on Binance Futures, OctoBot only "
+                    f"supports either linear or inverse trading at a time. Ignoring {inverse_count} inverse "
+                    f"futures trading pair as {linear_count} linear futures trading pairs are enabled."
+                )
+        else:
+            account_types.append(self.INVERSE_TYPE)  # allows to fetch inverse markets
+            if linear_count:
+                exchange_manager.logger.error(
+                    f"For now, due to the inverse and linear portfolio split on Binance Futures, OctoBot only "
+                    f"supports either linear or inverse trading at a time. Ignoring {linear_count} linear "
+                    f"futures trading pair as {inverse_count} inverse futures trading pairs are enabled."
+                )
+        return account_types
 
     @classmethod
     def get_supported_exchange_types(cls) -> list:
@@ -55,12 +85,6 @@ class Binance(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
-    def _get_future_account_types(self):
-        return [
-            self.LINEAR_TYPE,   # allows to fetch linear markets
-            self.INVERSE_TYPE   # allows to fetch inverse markets
-        ]
-
     def get_additional_connector_config(self):
         config = {
             ccxt_constants.CCXT_OPTIONS: {
@@ -69,15 +93,15 @@ class Binance(exchanges.RestExchange):
             }
         }
         if self.exchange_manager.is_future:
-            config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._get_future_account_types()
+            config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
         return config
 
-    async def get_balance(self, **kwargs: dict):    #todo handle in different portfolio
+    async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
             balance = []
-            for account_type in self._get_future_account_types():
+            for account_type in self._futures_account_types:
                 balance.append(await self.connector.get_balance(**kwargs, subType=account_type))
-            # pb: meme asset mais pas meme balance
+            # todo remove this and use both types when exchange-side multi portfolio is enabled
             return balance[0]   # only returning linear portfolio
         return await self.connector.get_balance(**kwargs)
 
@@ -97,7 +121,7 @@ class Binance(exchanges.RestExchange):
         positions = []
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
-        for account_type in self._get_future_account_types():
+        for account_type in self._futures_account_types:
             kwargs["subType"] = account_type
             positions += await super().get_positions(symbols=symbols, **kwargs)
         return _filter_positions(positions)
