@@ -106,6 +106,27 @@ class Bybit(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
+    async def initialize_impl(self):
+        await super().initialize_impl()
+        # ensure the authenticated account is not a unified trading account as it is not fully supported
+        await self._check_unified_account()
+
+    async def _check_unified_account(self):
+        if self.connector.client and not self.exchange_manager.exchange_only:
+            try:
+                self.connector.client.check_required_credentials()
+                enable_unified_margin, enable_unified_account = await self.connector.client.is_unified_enabled()
+                if enable_unified_margin or enable_unified_account:
+                    raise octobot_trading.errors.NotSupported(
+                        "Ignoring Bybit exchange: "
+                        "Bybit unified trading accounts are not yet fully supported. To trade on Bybit, please use a "
+                        "standard account. You can easily switch between unified and standard using subaccounts. "
+                        "Transferring funds between subaccounts is free and instant."
+                    )
+            except ccxt.AuthenticationError:
+                # unauthenticated
+                pass
+
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
