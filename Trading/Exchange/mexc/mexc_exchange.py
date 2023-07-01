@@ -13,18 +13,26 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import contextlib
 import decimal
+import time
 import typing
+import ccxt
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 import octobot_commons.symbols as symbols_util
+import octobot_commons.constants as commons_constants
 
 
 class MEXC(exchanges.RestExchange):
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+
+    def __init__(self, config, exchange_manager, connector_class=None):
+        super().__init__(config, exchange_manager, connector_class=connector_class)
+        self.api_handled_symbols = APIHandledSymbols(self, commons_constants.DAYS_TO_SECONDS)
 
     @classmethod
     def get_name(cls):
@@ -61,6 +69,56 @@ class MEXC(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
+                                     side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
+                                     stop_price: decimal.Decimal = None, reduce_only: bool = False,
+                                     params=None) -> dict:
+        async with self._mexc_handled_symbols_filter(symbol):
+            return await super()._create_specific_order(order_type, symbol, quantity,
+                                                        price=price, stop_price=stop_price,
+                                                        side=side, current_price=current_price,
+                                                        reduce_only=reduce_only, params=params)
+
+    @contextlib.asynccontextmanager
+    async def _mexc_handled_symbols_filter(self, symbol):
+        try:
+            yield
+        except ccxt.BadSymbol as err:
+            if self.api_handled_symbols.should_be_updated():
+                await self.api_handled_symbols.update()
+            if symbol not in self.api_handled_symbols.symbols:
+                raise octobot_trading.errors.FailedRequest(
+                    f"{self.get_name()} error: {symbol} trading pair is not available to the API at the moment, "
+                    f"{symbol} is under maintenance. "
+                    f"API available trading pairs are {self.api_handled_symbols.symbols}"
+                )
+            raise err
+
+
+class APIHandledSymbols:
+    """
+    MEXC has pairs that are sometimes tradable from the exchange UI but not from the API. Get the list of
+    currently api tradable symbols from the defaultSymbols endpoint.
+    """
+    
+    def __init__(self, exchange, update_interval):
+        self.symbols = set()
+        self.last_update = 0
+        self._exchange = exchange
+        self._update_interval = update_interval
+
+    def should_be_updated(self):
+        return time.time() - self._update_interval >= self._update_interval
+
+    async def update(self):
+        try:
+            result = await self._exchange.connector.client.spot2PublicGetMarketApiDefaultSymbols()
+            self.symbols = set(result["data"]["symbol"])
+            self.last_update = time.time()
+            self._exchange.logger.info(f"Updated handled symbols, list: {self.symbols}")
+        except Exception as err:
+            self._exchange.logger.exception(err, True, f"Error when fetching api-tradable symbols: {err}")
 
 
 class MEXCCCXTAdapter(exchanges.CCXTAdapter):
