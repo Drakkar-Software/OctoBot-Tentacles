@@ -101,7 +101,7 @@ class APIHandledSymbols:
     MEXC has pairs that are sometimes tradable from the exchange UI but not from the API. Get the list of
     currently api tradable symbols from the defaultSymbols endpoint.
     """
-    
+
     def __init__(self, exchange, update_interval):
         self.symbols = set()
         self.last_update = 0
