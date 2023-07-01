@@ -45,6 +45,24 @@ class Bybit(exchanges.RestExchange):
     }
     SPOT_SUPPORTED_BUNDLED_ORDER = {}
 
+    SPOT_UNSUPPORTED_ORDERS = [
+        trading_enums.TraderOrderType.STOP_LOSS,
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+        trading_enums.TraderOrderType.TRAILING_STOP,
+        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+    ]
+
+    FUTURES_UNSUPPORTED_ORDERS = [
+        # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT,
+        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+        trading_enums.TraderOrderType.TRAILING_STOP,
+        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+    ]
+
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
 
@@ -86,8 +104,10 @@ class Bybit(exchanges.RestExchange):
     def update_supported_elements(cls, exchange_manager):
         if exchange_manager.is_future:
             cls.SUPPORTED_BUNDLED_ORDERS = cls.FUTURES_SUPPORTED_BUNDLED_ORDERS
+            cls.UNSUPPORTED_ORDERS = cls.FUTURES_UNSUPPORTED_ORDERS
         else:
             cls.SUPPORTED_BUNDLED_ORDERS = cls.SPOT_SUPPORTED_BUNDLED_ORDER
+            cls.UNSUPPORTED_ORDERS = cls.SPOT_UNSUPPORTED_ORDERS
 
     def get_adapter_class(self):
         return BybitCCXTAdapter
@@ -184,10 +204,7 @@ class Bybit(exchanges.RestExchange):
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["triggerPrice"] = price
-        if self.exchange_manager.is_future:
-            # Trigger the order when market price rises to triggerPrice or falls to triggerPrice. 1: rise; 2: fall
-            params["triggerDirection"] = 1 if price > current_price else 2
-        else:
+        if not self.exchange_manager.is_future:
             params[self.ORDER_CATEGORY] = 1
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
