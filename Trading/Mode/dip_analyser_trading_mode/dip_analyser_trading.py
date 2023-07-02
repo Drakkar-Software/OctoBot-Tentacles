@@ -285,9 +285,15 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 reduce_only = True
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol, timeout=timeout)
+            max_sell_size = current_symbol_holding
+            if self.exchange_manager.is_future:
+                max_sell_size, is_increasing_position = trading_personal_data.get_futures_max_order_size(
+                    self.exchange_manager, symbol, trading_enums.TradeOrderSide.SELL,
+                    price, False, current_symbol_holding, market_quantity
+                )
             created_orders = []
             orders_should_have_been_created = False
-            sell_max_quantity = decimal.Decimal(min(decimal.Decimal(f"{current_symbol_holding}"), quantity))
+            sell_max_quantity = decimal.Decimal(min(decimal.Decimal(f"{max_sell_size}"), quantity))
             to_create_orders = self._generate_sell_orders(sell_orders_count, sell_max_quantity, sell_weight,
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
