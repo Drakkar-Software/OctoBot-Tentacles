@@ -36,25 +36,36 @@ class Binance(exchanges.RestExchange):
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
 
-    SPOT_UNSUPPORTED_ORDERS = [
-        trading_enums.TraderOrderType.STOP_LOSS,
-        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
-        trading_enums.TraderOrderType.TAKE_PROFIT,
-        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
-        trading_enums.TraderOrderType.TRAILING_STOP,
-        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
-    ]
-
-    FUTURES_UNSUPPORTED_ORDERS = [
-        # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
-        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
-        trading_enums.TraderOrderType.TAKE_PROFIT,
-        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
-        trading_enums.TraderOrderType.TRAILING_STOP,
-        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
-    ]
-
-    SUPPORTED_BUNDLED_ORDERS = {}   # not supported or need custom mechanics with batch orders
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            # not supported or need custom mechanics with batch orders
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
@@ -117,13 +128,6 @@ class Binance(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
         return config
-
-    @classmethod
-    def update_supported_elements(cls, exchange_manager):
-        if exchange_manager.is_future:
-            cls.UNSUPPORTED_ORDERS = cls.FUTURES_UNSUPPORTED_ORDERS
-        else:
-            cls.UNSUPPORTED_ORDERS = cls.SPOT_UNSUPPORTED_ORDERS
 
     async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
