@@ -29,6 +29,10 @@ class HollaexAutofilled(hollaex):
         return list(tentacle_config["auto_filled"]) if tentacle_config else []
 
     @classmethod
+    def init_user_inputs_from_class(cls, inputs: dict) -> None:
+        pass
+
+    @classmethod
     async def get_autofilled_exchange_details(cls, aiohttp_session, tentacle_config, exchange_name):
         kit_details = await aiohttp_session.get(HollaexAutofilled._get_kit_url(tentacle_config, exchange_name))
         return HollaexAutofilled._parse_autofilled_exchange_details(
