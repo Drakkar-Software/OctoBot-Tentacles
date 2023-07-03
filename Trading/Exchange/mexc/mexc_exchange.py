@@ -46,7 +46,8 @@ class MEXC(exchanges.RestExchange):
         # (price should not be sent to market orders). Only used for buy market orders
         return {
             ccxt_constants.CCXT_OPTIONS: {
-                "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
+                "createMarketBuyOrderRequiresPrice": False,  # disable quote conversion
+                "recvWindow": 60000,  # default is 5000, avoid time related issues
             }
         }
 
