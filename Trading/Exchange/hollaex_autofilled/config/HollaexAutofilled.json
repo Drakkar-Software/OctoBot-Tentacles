@@ -1,11 +1,3 @@
 {
-    "auto_filled": {
-        "bitcoinrd": {
-            "url": "https://api.bitcoinrd.do/v2/kit",
-            "websockets": true
-        },
-        "koinkoin": {
-            "url": "https://api.koinkoin.io/v2/kit"
-        }
-    }
+    "auto_filled": {}
 }
