@@ -65,16 +65,35 @@ class Kucoin(exchanges.RestExchange):
 
     SUPPORTS_SET_MARGIN_TYPE = False  # set False when there is no API to switch between cross and isolated margin types
 
-    # order that should be self-managed by OctoBot
-    # can be overridden locally to match exchange support
-    UNSUPPORTED_ORDERS = [
-        trading_enums.TraderOrderType.STOP_LOSS,  # supported
-        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
-        trading_enums.TraderOrderType.TAKE_PROFIT,  # supported
-        trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
-        trading_enums.TraderOrderType.TRAILING_STOP,
-        trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
-    ]
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,  # supported
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
 
     @classmethod
     def get_name(cls):
@@ -144,7 +163,8 @@ class Kucoin(exchanges.RestExchange):
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            )
+            ),
+            symbol=symbol, quantity=quantity
         )
         return order
 

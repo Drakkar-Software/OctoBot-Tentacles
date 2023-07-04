@@ -16,6 +16,7 @@
 import ccxt.pro as ccxt_pro
 import octobot_trading.exchanges as exchanges
 from octobot_trading.enums import WebsocketFeeds as Feeds
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 from ..hollaex.hollaex_exchange import hollaex
 
 
@@ -30,18 +31,27 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
 
     def _create_client(self):
         if not self.additional_config:
-            rest_config = self.exchange_manager.exchange.get_additional_connector_config()
+            additional_connector_config = self.exchange_manager.exchange.get_additional_connector_config()
             try:
-                rest_url = rest_config["urls"]["api"]["rest"]
-                if hollaex.BASE_REST_API not in rest_url:
-                    current_ws_url = ccxt_pro.hollaex().describe()["urls"]["api"]["ws"]
-                    custom_url = rest_url.split("https://")[1]
-                    rest_config["urls"]["api"]["ws"] = current_ws_url.replace(hollaex.BASE_REST_API, custom_url)
+                self._update_urls(additional_connector_config)
                 # use rest exchange additional config if any
-                self.additional_config = self.exchange_manager.exchange.get_additional_connector_config()
+                self.additional_config = additional_connector_config
             except KeyError as err:
                 self.logger.error(f"Error when updating exchange url: {err}")
         super()._create_client()
+
+    def _update_urls(self, additional_connector_config):
+        rest_url = additional_connector_config[ccxt_enums.ExchangeColumns.URLS.value][
+            ccxt_enums.ExchangeColumns.API.value
+        ][ccxt_enums.ExchangeColumns.REST.value]
+        if hollaex.BASE_REST_API not in rest_url:
+            current_ws_url = ccxt_pro.hollaex().describe()[ccxt_enums.ExchangeColumns.URLS.value][
+                ccxt_enums.ExchangeColumns.API.value
+            ][ccxt_enums.ExchangeColumns.WEBSOCKET.value]
+            custom_url = rest_url.split("https://")[1]
+            additional_connector_config[ccxt_enums.ExchangeColumns.URLS.value][
+                ccxt_enums.ExchangeColumns.API.value
+            ][ccxt_enums.ExchangeColumns.WEBSOCKET.value] = current_ws_url.replace(hollaex.BASE_REST_API, custom_url)
 
     @classmethod
     def get_name(cls):

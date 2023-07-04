@@ -105,17 +105,19 @@ _TENTACLE_CONFIG_CACHE = {}
 
 DEFAULT_EXCHANGE = "binance"
 MERGED_CCXT_EXCHANGES = {
-    result.__name__: merged.__name__
+    result.__name__: [merged_exchange.__name__ for merged_exchange in merged]
     for result, merged in (
-        (ccxt.async_support.kucoin, ccxt.async_support.kucoinfutures),
+        (ccxt.async_support.kucoin, (ccxt.async_support.kucoinfutures, )),
+        (ccxt.async_support.binance, (ccxt.async_support.binanceusdm, ccxt.async_support.binancecoinm)),
     )
 }
-REMOVED_CCXT_EXCHANGES = set(MERGED_CCXT_EXCHANGES.values())
+REMOVED_CCXT_EXCHANGES = set().union(*(set(v) for v in MERGED_CCXT_EXCHANGES.values()))
 FULL_EXCHANGE_LIST = [
     exchange
     for exchange in set(ccxt.async_support.exchanges)
     if exchange not in REMOVED_CCXT_EXCHANGES
 ]
+AUTO_FILLED_EXCHANGES = None
 
 
 def _get_currency_dict(name, symbol, identifier):
@@ -915,11 +917,19 @@ def _get_filtered_exchange_symbols(symbols):
 
 async def _load_market(exchange, results):
     try:
-        async with getattr(ccxt.async_support, exchange)({'verbose': False}) as exchange_inst:
-            await exchange_inst.load_markets()
-            # filter symbols with a "." or no "/" because bot can't handle them for now
-            markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(exchange_inst.symbols)
-            results.append(markets_by_exchanges[exchange])
+        if exchange in auto_filled_exchanges():
+            async with trading_api.get_new_ccxt_client(
+                exchange, {}, interfaces_util.get_edited_tentacles_config(), False
+            ) as client:
+                await client.load_markets()
+                symbols = client.symbols
+        else:
+            async with getattr(ccxt.async_support, exchange)({'verbose': False}) as client:
+                await client.load_markets()
+                symbols = client.symbols
+        # filter symbols with a "." or no "/" because bot can't handle them for now
+        markets_by_exchanges[exchange] = _get_filtered_exchange_symbols(symbols)
+        results.append(markets_by_exchanges[exchange])
     except Exception as e:
         _get_logger().exception(e, True, f"error when loading symbol list for {exchange}: {e}")
 
@@ -928,7 +938,8 @@ def _add_merged_exchanges(exchanges):
     extended = list(exchanges)
     for exchange in exchanges:
         if exchange in MERGED_CCXT_EXCHANGES:
-            extended.append(MERGED_CCXT_EXCHANGES[exchange])
+            for merged_exchange in MERGED_CCXT_EXCHANGES[exchange]:
+                extended.append(merged_exchange)
     return extended
 
 
@@ -971,7 +982,9 @@ def get_timeframes_list(exchanges):
     for exchange in exchanges:
         if exchange not in exchange_symbol_fetch_blacklist:
             timeframes_list += interfaces_util.run_in_bot_async_executor(
-                    trading_api.get_ccxt_exchange_available_time_frames(exchange))
+                    trading_api.get_ccxt_exchange_available_time_frames(
+                        exchange, interfaces_util.get_edited_tentacles_config()
+                    ))
     return [commons_enums.TimeFrames(time_frame)
             for time_frame in list(set(timeframes_list))
             if time_frame in allowed_timeframes]
@@ -1048,7 +1061,7 @@ def get_all_symbols_list():
     return all_currencies
 
 
-def get_all_symbols_list_by_symbol_type(all_symbols):
+def get_all_symbols_list_by_symbol_type(all_symbols, config_symbols):
     spot = "SPOT trading"
     linear = "Futures trading - linear"
     inverse = "Futures trading - inverse"
@@ -1063,12 +1076,21 @@ def get_all_symbols_list_by_symbol_type(all_symbols):
             if trading_type == inverse:
                 return parsed.is_inverse()
         return False
-    return {
-        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type) ]
+    symbols_by_type = {
+        trading_type: [symbol for symbol in all_symbols if _is_of_type(symbol, trading_type)]
         for trading_type in (
             spot, linear, inverse
         )
     }
+    symbols_in_config = set().union(*(
+        set(currency_details.get('pairs', [])) for currency_details in config_symbols.values()
+    ))
+    if symbols_in_config:
+        listed_symbols = set().union(*(set(symbols) for symbols in symbols_by_type.values()))
+        missing_symbols = symbols_in_config - listed_symbols
+        if missing_symbols:
+            symbols_by_type["Configured (missing on enabled exchanges)"] = list(missing_symbols)
+    return symbols_by_type
 
 
 def get_exchange_logo(exchange_name):
@@ -1078,9 +1100,16 @@ def get_exchange_logo(exchange_name):
         try:
             exchange_logos[exchange_name] = {"image": "", "url": ""}
             if isinstance(exchange_name, str) and exchange_name != "Bitcoin":
-                exchange = getattr(ccxt, exchange_name)()
-                exchange_logos[exchange_name]["image"] = exchange.urls["logo"]
-                exchange_logos[exchange_name]["url"] = exchange.urls["www"]
+                exchange_details = interfaces_util.run_in_bot_main_loop(
+                    trading_api.get_exchange_details(
+                        exchange_name,
+                        exchange_name in auto_filled_exchanges(),
+                        interfaces_util.get_edited_tentacles_config(),
+                        interfaces_util.get_bot_api().get_aiohttp_session()
+                    )
+                )
+                exchange_logos[exchange_name]["image"] = exchange_details.logo_url
+                exchange_logos[exchange_name]["url"] = exchange_details.url
         except KeyError:
             pass
     return exchange_logos[exchange_name]
@@ -1166,15 +1195,38 @@ def get_traded_time_frames(exchange_manager, strategies=None, tentacles_setup_co
     ]
 
 
-def get_full_exchange_list(remove_config_exchanges=False):
+def auto_filled_exchanges(tentacles_setup_config=None):
+    global AUTO_FILLED_EXCHANGES
+    if AUTO_FILLED_EXCHANGES is None:
+        tentacles_setup_config = tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
+        global FULL_EXCHANGE_LIST
+        AUTO_FILLED_EXCHANGES = [
+            exchange_name
+            for exchange_name in trading_api.get_auto_filled_exchange_names(tentacles_setup_config)
+            if exchange_name not in FULL_EXCHANGE_LIST
+        ]
+        FULL_EXCHANGE_LIST = FULL_EXCHANGE_LIST + AUTO_FILLED_EXCHANGES
+    return AUTO_FILLED_EXCHANGES
+
+
+def get_full_exchange_list(tentacles_setup_config=None):
+    auto_filled_exchanges(tentacles_setup_config)
+    return FULL_EXCHANGE_LIST
+
+
+def get_full_configurable_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
     if remove_config_exchanges:
         user_exchanges = [e for e in g_config[commons_constants.CONFIG_EXCHANGES]]
-        full_exchange_list = list(set(FULL_EXCHANGE_LIST) - set(user_exchanges))
+        full_exchange_list = list(set(get_full_exchange_list()) - set(user_exchanges))
     else:
-        full_exchange_list = FULL_EXCHANGE_LIST
+        full_exchange_list = get_full_exchange_list()
     # can't handle exchanges containing UPDATED_CONFIG_SEPARATOR character in their name
-    return [exchange for exchange in full_exchange_list if constants.UPDATED_CONFIG_SEPARATOR not in exchange]
+    return [
+        exchange
+        for exchange in full_exchange_list
+        if constants.UPDATED_CONFIG_SEPARATOR not in exchange
+    ]
 
 
 def get_default_exchange():
@@ -1182,18 +1234,29 @@ def get_default_exchange():
 
 
 def get_tested_exchange_list():
-    return [exchange for exchange in trading_constants.TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
+    return [
+        exchange
+        for exchange in trading_constants.TESTED_EXCHANGES
+        if exchange in get_full_exchange_list()
+    ]
 
 
 def get_simulated_exchange_list():
-    return [exchange for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES if exchange in FULL_EXCHANGE_LIST]
+    return [
+        exchange
+        for exchange in trading_constants.SIMULATOR_TESTED_EXCHANGES
+        if exchange in get_full_exchange_list()
+    ]
 
 
 def get_other_exchange_list(remove_config_exchanges=False):
-    full_list = get_full_exchange_list(remove_config_exchanges)
-    return [exchange for exchange in full_list
-            if
-            exchange not in trading_constants.TESTED_EXCHANGES and exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES]
+    full_list = get_full_configurable_exchange_list(remove_config_exchanges)
+    return [
+        exchange
+        for exchange in full_list
+        if exchange not in trading_constants.TESTED_EXCHANGES and
+           exchange not in trading_constants.SIMULATOR_TESTED_EXCHANGES
+    ]
 
 
 def get_enabled_exchange_types(config_exchanges):
@@ -1217,7 +1280,9 @@ def get_exchanges_details(exchanges_config) -> dict:
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
             "configurable": False if exchange_class is None else exchange_class.is_configurable(),
-            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name),
+            "supported_exchange_types": trading_api.get_supported_exchange_types(
+                exchange_name, tentacles_setup_config
+            ),
             "default_exchange_type": trading_api.get_default_exchange_type(exchange_name),
         }
     return details

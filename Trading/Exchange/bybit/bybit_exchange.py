@@ -36,14 +36,41 @@ class Bybit(exchanges.RestExchange):
     # way as limit order but with higher fees
     _BYBIT_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.TAKE_PROFIT,
                              trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
-    SUPPORTED_BUNDLED_ORDERS = {}
-    FUTURES_SUPPORTED_BUNDLED_ORDERS = {
-        trading_enums.TraderOrderType.BUY_MARKET: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_MARKET: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.BUY_LIMIT: _BYBIT_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
+
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {
+                trading_enums.TraderOrderType.BUY_MARKET: _BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_MARKET: _BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.BUY_LIMIT: _BYBIT_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_LIMIT: _BYBIT_BUNDLED_ORDERS,
+            },
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
     }
-    SPOT_SUPPORTED_BUNDLED_ORDER = {}
 
     MARK_PRICE_IN_TICKER = True
     FUNDING_IN_TICKER = True
@@ -82,13 +109,6 @@ class Bybit(exchanges.RestExchange):
             ] = False  # disable quote conversion
         return connector_config
 
-    @classmethod
-    def update_supported_elements(cls, exchange_manager):
-        if exchange_manager.is_future:
-            cls.SUPPORTED_BUNDLED_ORDERS = cls.FUTURES_SUPPORTED_BUNDLED_ORDERS
-        else:
-            cls.SUPPORTED_BUNDLED_ORDERS = cls.SPOT_SUPPORTED_BUNDLED_ORDER
-
     def get_adapter_class(self):
         return BybitCCXTAdapter
 
@@ -105,6 +125,27 @@ class Bybit(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
+
+    async def initialize_impl(self):
+        await super().initialize_impl()
+        # ensure the authenticated account is not a unified trading account as it is not fully supported
+        await self._check_unified_account()
+
+    async def _check_unified_account(self):
+        if self.connector.client and not self.exchange_manager.exchange_only:
+            try:
+                self.connector.client.check_required_credentials()
+                enable_unified_margin, enable_unified_account = await self.connector.client.is_unified_enabled()
+                if enable_unified_margin or enable_unified_account:
+                    raise octobot_trading.errors.NotSupported(
+                        "Ignoring Bybit exchange: "
+                        "Bybit unified trading accounts are not yet fully supported. To trade on Bybit, please use a "
+                        "standard account. You can easily switch between unified and standard using subaccounts. "
+                        "Transferring funds between subaccounts is free and instant."
+                    )
+            except ccxt.AuthenticationError:
+                # unauthenticated
+                pass
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
@@ -163,15 +204,13 @@ class Bybit(exchanges.RestExchange):
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["triggerPrice"] = price
-        if self.exchange_manager.is_future:
-            # Trigger the order when market price rises to triggerPrice or falls to triggerPrice. 1: rise; 2: fall
-            params["triggerDirection"] = 1 if price > current_price else 2
-        else:
+        if not self.exchange_manager.is_future:
             params[self.ORDER_CATEGORY] = 1
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            )
+            ),
+            symbol=symbol, quantity=quantity
         )
         return order
 

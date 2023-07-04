@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import time
 import decimal
 import typing
 
@@ -82,7 +81,8 @@ class OkxConnector(ccxt_connector.CCXTConnector):
         return self.adapter.adapt_order(
             await self.client.create_order(
                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            ), symbol=symbol
+            ),
+            symbol=symbol, quantity=quantity
         )
 
 
@@ -96,11 +96,40 @@ class Okx(exchanges.RestExchange):
     # way as limit order but with higher fees
     _OKX_BUNDLED_ORDERS = [trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.TAKE_PROFIT,
                            trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET]
-    SUPPORTED_BUNDLED_ORDERS = {
-        trading_enums.TraderOrderType.BUY_MARKET: _OKX_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_MARKET: _OKX_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.BUY_LIMIT: _OKX_BUNDLED_ORDERS,
-        trading_enums.TraderOrderType.SELL_LIMIT: _OKX_BUNDLED_ORDERS,
+
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on futures
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {
+                trading_enums.TraderOrderType.BUY_MARKET: _OKX_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_MARKET: _OKX_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.BUY_LIMIT: _OKX_BUNDLED_ORDERS,
+                trading_enums.TraderOrderType.SELL_LIMIT: _OKX_BUNDLED_ORDERS,
+            },
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
     }
 
     # Set True when exchange is not returning empty position details when fetching a position with a specified symbol
@@ -419,9 +448,6 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             contract_size = self.connector.get_contract_size(symbol)
             fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
-        if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
-            fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value]
         self._adapt_order_type(fixed)
         return fixed
 

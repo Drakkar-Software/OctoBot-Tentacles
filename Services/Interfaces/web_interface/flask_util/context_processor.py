@@ -67,12 +67,11 @@ def context_processor_register():
             ]
             for symbol_type, symbols in symbol_list_by_type.items()
         }
-        spot = "SPOT trading"
-        if spot in filtered_symbol:
-            filtered_symbol[spot] += [
+        for symbol_type in list(filtered_symbol.keys()):
+            filtered_symbol[symbol_type] += [
                 s
-                for s in config_symbols[currency]["pairs"]
-                if s in symbol_list_by_type[spot] and s not in filtered_symbol[spot]
+                for s in config_symbols[currency][commons_constants.CONFIG_CRYPTO_PAIRS]
+                if s in symbol_list_by_type[symbol_type] and s not in filtered_symbol[symbol_type]
             ]
         return filtered_symbol
 

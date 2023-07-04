@@ -17,6 +17,7 @@ import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
 
 class hollaex(exchanges.RestExchange):
@@ -50,16 +51,19 @@ class hollaex(exchanges.RestExchange):
         )
 
     def get_additional_connector_config(self):
+        return {
+            ccxt_enums.ExchangeColumns.URLS.value: self._get_urls()
+        }
+
+    def _get_urls(self):
         urls = ccxt.hollaex().urls
         custom_urls = {
-            "api": {
+            ccxt_enums.ExchangeColumns.API.value: {
                 self.REST_KEY: self.tentacle_config[self.REST_KEY]
             }
         }
         urls.update(custom_urls)
-        return {
-            'urls': urls
-        }
+        return urls
 
     @classmethod
     def get_name(cls):
@@ -77,3 +81,13 @@ class hollaex(exchanges.RestExchange):
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+
+    async def get_closed_orders(self, symbol: str = None, since: int = None,
+                                limit: int = None, **kwargs: dict) -> list:
+        # get_closed_orders sometimes does not return orders use _get_closed_orders_from_my_recent_trades in this case
+        return (
+            await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs) or
+            await self._get_closed_orders_from_my_recent_trades(
+                symbol=symbol, since=since, limit=limit, **kwargs
+            )
+        )

@@ -14,9 +14,19 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import tentacles.Trading.Exchange.binance as binance_tentacle
+import octobot_trading.enums as trading_enums
 
 
 class BinanceUS(binance_tentacle.Binance):
     @classmethod
     def get_name(cls):
         return 'binanceus'
+
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+        ]

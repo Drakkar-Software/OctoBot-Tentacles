@@ -156,10 +156,13 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
         else:
             try:
                 candles = await self.exchange.get_symbol_prices(symbol_id, time_frame)
-                await self.save_ohlcv(exchange=exchange,
-                                      cryptocurrency=cryptocurrency,
-                                      symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
-                                      timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                if candles:
+                    await self.save_ohlcv(exchange=exchange,
+                                          cryptocurrency=cryptocurrency,
+                                          symbol=symbol.symbol_str, time_frame=time_frame, candle=candles,
+                                          timestamp=[candle[0] + time_frame_sec for candle in candles], multiple=True)
+                else:
+                    self.logger.error(f"No candles for {symbol} on {time_frame} ({exchange})")
             except trading_errors.FailedRequest as err:
                 self.logger.exception(err, False)
                 self.logger.warning(f"Ignored {symbol} {time_frame} candles on {exchange} ({err})")

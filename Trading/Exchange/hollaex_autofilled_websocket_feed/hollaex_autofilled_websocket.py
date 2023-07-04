@@ -13,16 +13,20 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.exchanges as exchanges
+from ..hollaex_autofilled.hollaex_autofilled_exchange import HollaexAutofilled
+from ..hollaex_websocket_feed.hollaex_websocket import HollaexCCXTWebsocketConnector
 
 
-class CryptoCom(exchanges.RestExchange):
-    DESCRIPTION = ""
-    REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = True  # set True when get_closed_orders is not supported
+class HollaexAutofilledCCXTWebsocketConnector(HollaexCCXTWebsocketConnector):
+    def _get_logger_name(self):
+        return f"WebSocket - {self._get_visible_name()}"
+
+    def _get_visible_name(self):
+        return self.exchange_manager.exchange_name
 
     @classmethod
     def get_name(cls):
-        return 'cryptocom'
+        return HollaexAutofilled.get_name()
 
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+    def get_feed_name(self):
+        return HollaexCCXTWebsocketConnector.get_name()

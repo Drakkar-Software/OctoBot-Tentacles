@@ -45,7 +45,7 @@ class DipAnalyserStrategyEvaluator(evaluators.StrategyEvaluator):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.evaluation_time_frame = commons_enums.TimeFrames(
+        self.evaluation_time_frame = self.evaluation_time_frame or commons_enums.TimeFrames(
             self.UI.user_input(
                 evaluator_constants.STRATEGIES_REQUIRED_TIME_FRAME,
                 commons_enums.UserInputTypes.MULTIPLE_OPTIONS,

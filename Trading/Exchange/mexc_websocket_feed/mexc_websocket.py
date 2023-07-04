@@ -14,15 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
+from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.mexc.mexc_exchange as mexc_exchange
 
 
-class CryptoCom(exchanges.RestExchange):
-    DESCRIPTION = ""
-    REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = True  # set True when get_closed_orders is not supported
+class MEXCCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
+    EXCHANGE_FEEDS = {
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
+    }
 
     @classmethod
     def get_name(cls):
-        return 'cryptocom'
+        return mexc_exchange.MEXC.get_name()
 
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+    def get_adapter_class(self, adapter_class):
+        return mexc_exchange.MEXCCCXTAdapter
