@@ -715,11 +715,8 @@ def get_config_activated_evaluators(tentacles_setup_config=None):
 
 
 def has_futures_exchange():
-    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if not (
-                trading_api.get_is_backtesting(exchange_manager)
-                or not trading_api.is_trader_existing_and_enabled(exchange_manager)
-        ) and trading_api.get_exchange_type(exchange_manager) is trading_enums.ExchangeTypes.FUTURE:
+    for exchange_manager in get_live_trading_enabled_exchange_managers():
+        if trading_api.get_exchange_type(exchange_manager) is trading_enums.ExchangeTypes.FUTURE:
             return True
     return False
 
@@ -1490,3 +1487,12 @@ def update_config_currencies(currencies: list, replace: bool=False):
 
 def get_config_required_candles_count(exchange_manager):
     return trading_api.get_required_historical_candles_count(exchange_manager)
+
+
+def get_live_trading_enabled_exchange_managers():
+    return [
+        exchange_manager
+        for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids())
+        if not trading_api.get_is_backtesting(exchange_manager)
+        and trading_api.is_trader_existing_and_enabled(exchange_manager)
+    ]

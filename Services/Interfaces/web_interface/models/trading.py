@@ -25,6 +25,7 @@ import octobot_commons.timestamp_util as timestamp_util
 import octobot_commons.time_frame_manager as time_frame_manager
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
+import tentacles.Services.Interfaces.web_interface.models.configuration as configuration
 
 
 def ensure_valid_exchange_id(exchange_id) -> str:
@@ -113,10 +114,9 @@ def _add_exchange_portfolio(portfolio, exchange, holdings_per_symbol):
 
 def get_exchange_holdings_per_symbol():
     holdings_per_symbol = {}
-    for exchange_manager in interfaces_util.get_exchange_managers():
-        if trading_api.is_trader_existing_and_enabled(exchange_manager):
-            portfolio = trading_api.get_portfolio(exchange_manager)
-            _add_exchange_portfolio(portfolio, trading_api.get_exchange_name(exchange_manager), holdings_per_symbol)
+    for exchange_manager in configuration.get_live_trading_enabled_exchange_managers():
+        portfolio = trading_api.get_portfolio(exchange_manager)
+        _add_exchange_portfolio(portfolio, trading_api.get_exchange_name(exchange_manager), holdings_per_symbol)
     return holdings_per_symbol
 
 
@@ -136,11 +136,7 @@ def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, f
 
 def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp):
     merged_result = sortedcontainers.SortedDict()
-    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if trading_api.get_is_backtesting(exchange_manager) \
-                or not trading_api.is_trader_existing_and_enabled(exchange_manager):
-            # skip backtesting exchanges
-            continue
+    for exchange_manager in configuration.get_live_trading_enabled_exchange_managers():
         for value in _get_exchange_historical_portfolio(
                 exchange_manager, currency, time_frame, from_timestamp, to_timestamp
         ):
@@ -180,11 +176,7 @@ def _get_pnl_history(exchange, quote, symbol, since):
             )
         }
     history = {}
-    for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids()):
-        if trading_api.get_is_backtesting(exchange_manager) \
-                or not trading_api.is_trader_existing_and_enabled(exchange_manager):
-            # skip backtesting exchanges
-            continue
+    for exchange_manager in configuration.get_live_trading_enabled_exchange_managers():
         history[trading_api.get_exchange_name(exchange_manager)] = trading_api.get_completed_pnl_history(
             exchange_manager,
             quote=quote,
