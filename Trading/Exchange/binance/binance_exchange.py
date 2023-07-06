@@ -252,9 +252,12 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
         try:
             parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
             # use one way by default.
-            if parsed[trading_enums.ExchangeConstantsPositionColumns.SIZE.value] == constants.ZERO:
-                parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
-                    trading_enums.PositionMode.ONE_WAY
+            if parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] is None:
+                parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = (
+                    trading_enums.PositionMode.HEDGE if fixed.get(ccxt_enums.ExchangePositionCCXTColumns.HEDGED.value,
+                                                                  True)
+                    else trading_enums.PositionMode.ONE_WAY
+                )
             return parsed
         except decimal.InvalidOperation:
             # on binance, positions might be invalid (ex: LUNAUSD_PERP as None contact size)
