@@ -18,7 +18,12 @@ from tentacles.Services.Interfaces.web_interface.util import flask_util
 from tentacles.Services.Interfaces.web_interface.util.flask_util import (
     get_rest_reply,
 )
+from tentacles.Services.Interfaces.web_interface.util import browser_util
+from tentacles.Services.Interfaces.web_interface.util.browser_util import (
+    open_in_background_browser,
+)
 
 __all__ = [
     "get_rest_reply",
+    "open_in_background_browser",
 ]
