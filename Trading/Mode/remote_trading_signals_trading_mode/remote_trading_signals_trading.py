@@ -18,6 +18,7 @@ import decimal
 import octobot_commons.channels_name as channels_name
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
+import octobot_commons.authentication as authentication
 import octobot_commons.tentacles_management as tentacles_management
 import async_channel.channels as channels
 import octobot_trading.constants as trading_constants
@@ -98,6 +99,9 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 await channel.subscribe_to_product_feed(
                     self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
                 )
+            except (authentication.AuthenticationRequired, authentication.AuthenticationError) as e:
+                self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. Please sign in to "
+                                               f"your OctoBot account to receive trading signals")
             except Exception as e:
                 self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
                                                f"be operating")
