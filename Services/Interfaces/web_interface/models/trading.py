@@ -23,6 +23,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.logging as logging
 import octobot_commons.timestamp_util as timestamp_util
 import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.symbols as commons_symbols
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration
@@ -334,6 +335,7 @@ UNREALIZED_PNL = "unrealized_pnl"
 
 def _dump_order(order, is_simulated):
     try:
+        market = _get_market(order.symbol)
         return {
             SYMBOL: order.symbol,
             TYPE: order.order_type.name.replace("_", " "),
@@ -342,8 +344,8 @@ def _dump_order(order, is_simulated):
             EXCHANGE: order.exchange_manager.exchange.name if order.exchange_manager else '',
             DATE: _convert_timestamp(order.creation_time),
             TIME: order.creation_time,
-            COST: order.total_cost,
-            MARKET: order.market,
+            COST: _convert_amount(order.exchange_manager, order.total_cost, market),
+            MARKET: market,
             SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
             ID: order.order_id,
         }
@@ -365,6 +367,7 @@ def _convert_amount(exchange_manager, amount, currency):
 
 def _dump_trade(trade, is_simulated):
     try:
+        market = _get_market(trade.symbol)
         return {
             SYMBOL: trade.symbol,
             TYPE: trade.trade_type.name.replace("_", " "),
@@ -374,8 +377,8 @@ def _dump_trade(trade, is_simulated):
             DATE: _convert_timestamp(trade.executed_time),
             TIME: trade.executed_time,
             COST: trade.total_cost,
-            REF_MARKET_COST: _convert_amount(trade.exchange_manager, trade.total_cost, trade.market),
-            MARKET: trade.market,
+            REF_MARKET_COST: _convert_amount(trade.exchange_manager, trade.total_cost, market),
+            MARKET: market,
             FEE_COST: trade.fee.get(trading_enums.FeePropertyColumns.COST.value, 0) if trade.fee else 0,
             FEE_CURRENCY: trade.fee.get(trading_enums.FeePropertyColumns.CURRENCY.value, '') if trade.fee else '',
             SIMULATED_OR_REAL: "Simulated" if is_simulated else "Real",
@@ -388,6 +391,11 @@ def _dump_trade(trade, is_simulated):
 
 def get_all_trades_data(independent_backtesting=None):
     return _get_dumped_data(*interfaces_util.get_trades_history(independent_backtesting=independent_backtesting), _dump_trade)
+
+
+def _get_market(symbol_str):
+    symbol = commons_symbols.parse_symbol(symbol_str)
+    return symbol.settlement_asset or symbol.quote
 
 
 def _dump_position(position, is_simulated):
