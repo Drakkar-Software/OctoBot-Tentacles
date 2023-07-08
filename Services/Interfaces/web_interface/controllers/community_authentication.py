@@ -119,9 +119,6 @@ def community_logout():
     if not models.can_logout():
         return flask.redirect(flask.url_for('community'))
     authentication.Authenticator.instance().logout()
-    interfaces_util.run_in_bot_main_loop(
-        authentication.Authenticator.instance().stop_feeds()
-    )
     return flask.redirect(next_url)
 
 
