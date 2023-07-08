@@ -1,6 +1,6 @@
-{% macro backtesting_report() -%}
+{% macro backtesting_report(source) -%}
 
-<span id="backtestingReport" update-url="{{ url_for('backtesting', update_type='backtesting_report', source='backtesting') }}" loading="false" style='display: none;'>
+<span id="backtestingReport" update-url="{{ url_for('backtesting', update_type='backtesting_report', source=source) }}" loading="false" style='display: none;'>
     <div class="card">
         <div class="card-header">
             <h2>
