@@ -260,8 +260,8 @@ class DisplayedElements(display.DisplayTranslator):
             display_element
             for display_element in elements
             if (
-                display_element.get(commons_enums.DBRows.SYMBOL.value, symbol) == symbol
-                and display_element.get(commons_enums.DBRows.TIME_FRAME.value, time_frame) == time_frame
+                display_element.get(commons_enums.DBRows.SYMBOL.value) == symbol
+                and display_element.get(commons_enums.DBRows.TIME_FRAME.value) == time_frame
             ) or (
                 display_element.get(trading_storage.AbstractStorage.ORIGIN_VALUE_KEY, {})
                 .get(trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value, None) == symbol
