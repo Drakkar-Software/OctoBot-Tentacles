@@ -67,7 +67,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=order_quantity,
                     price=order_price
                 )
-                created_order = await self.exchange_manager.trader.create_order(current_order)
+                created_order = await self.trading_mode.create_order(current_order)
                 created_orders.append(created_order)
             if created_orders:
                 return created_orders
