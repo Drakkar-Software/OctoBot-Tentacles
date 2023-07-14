@@ -196,7 +196,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         cancelled_count = 0
         for _, order in self.get_open_order_from_description(orders_descriptions, symbol):
             try:
-                await self.exchange_manager.trader.cancel_order(order)
+                await self._cancel_order_on_exchange(order)
             except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
                 self.logger.warning(f"Skipping order cancel: {err}")
             cancelled_count += 1
@@ -210,7 +210,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             edited_quantity, _, _ = await self._get_quantity_from_signal_percent(
                 order_description, order.side, symbol, order.reduce_only, True
             )
-            await self.exchange_manager.trader.edit_order(
+            await self._edit_order_on_exchange(
                 order,
                 edited_quantity=decimal.Decimal(edited_quantity) if edited_quantity else None,
                 edited_price=decimal.Decimal(edited_price) if edited_price else None,
@@ -419,7 +419,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 self.logger.debug(f"Ignored order with order id {order_id}: order already handled")
                 continue
             created_orders[order_id] = \
-                await self.exchange_manager.trader.create_order(order_with_param[0], params=order_with_param[1])
+                await self._create_order_on_exchange(order_with_param[0], params=order_with_param[1])
         # handle chained orders
         created_chained_orders_count = 0
         for order_description in orders_descriptions:
@@ -537,6 +537,21 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             ))
         except ImportError as e:
             self.logger.exception(e, True, f"Impossible to send notification: {e}")
+
+    # exchange methods: bypass trading modes api to avoid sending signals
+    async def _create_order_on_exchange(self, order, params):
+        await self.exchange_manager.trader.create_order(order, params=params)
+
+    async def _cancel_order_on_exchange(self, order):
+        await self.exchange_manager.trader.cancel_order(order)
+
+    async def _edit_order_on_exchange(self, order, edited_quantity=None, edited_price=None, edited_stop_price=None):
+        await self.exchange_manager.trader.edit_order(
+            order,
+            edited_quantity=edited_quantity,
+            edited_price=edited_price,
+            edited_stop_price=edited_stop_price
+        )
 
 
 class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer):
