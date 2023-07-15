@@ -13,75 +13,33 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
-api = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
-
-from tentacles.Services.Interfaces.web_interface.api import config
-from tentacles.Services.Interfaces.web_interface.api import exchanges
-from tentacles.Services.Interfaces.web_interface.api import feedback
-from tentacles.Services.Interfaces.web_interface.api import metadata
-from tentacles.Services.Interfaces.web_interface.api import trading
-from tentacles.Services.Interfaces.web_interface.api import user_commands
-from tentacles.Services.Interfaces.web_interface.api import bots
-from tentacles.Services.Interfaces.web_interface.api import webhook
+import tentacles.Services.Interfaces.web_interface.api.config
+import tentacles.Services.Interfaces.web_interface.api.exchanges
+import tentacles.Services.Interfaces.web_interface.api.feedback
+import tentacles.Services.Interfaces.web_interface.api.metadata
+import tentacles.Services.Interfaces.web_interface.api.trading
+import tentacles.Services.Interfaces.web_interface.api.user_commands
+import tentacles.Services.Interfaces.web_interface.api.bots
+import tentacles.Services.Interfaces.web_interface.api.webhook
 
 
-from tentacles.Services.Interfaces.web_interface.api.config import (
-    get_config_currency,
-    set_config_currency,
-    change_reference_market_on_config_currencies,
-)
-from tentacles.Services.Interfaces.web_interface.api.exchanges import (
-    are_compatible_accounts,
-    first_exchange_details,
-)
-from tentacles.Services.Interfaces.web_interface.api.metadata import (
-    ping,
-    version,
-    upgrade_version,
-    user_feedback,
-    announcements,
-)
-from tentacles.Services.Interfaces.web_interface.api.trading import (
-    orders,
-    refresh_portfolio,
-    currency_list,
-)
-from tentacles.Services.Interfaces.web_interface.api.user_commands import (
-    user_command,
-)
-from tentacles.Services.Interfaces.web_interface.api.bots import (
-    select_bot,
-    create_bot,
-)
-from tentacles.Services.Interfaces.web_interface.api.webhook import (
-    register_webhook,
-    has_webhook,
-)
-from tentacles.Services.Interfaces.web_interface.api.feedback import (
-    register_submitted_form,
-)
+def register():
+    blueprint = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
+
+    tentacles.Services.Interfaces.web_interface.api.config.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.exchanges.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.feedback.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.metadata.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.trading.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.user_commands.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.bots.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.webhook.register(blueprint)
+
+    return blueprint
+
 
 __all__ = [
-    "are_compatible_accounts",
-    "first_exchange_details",
-    "ping",
-    "version",
-    "upgrade_version",
-    "user_feedback",
-    "announcements",
-    "orders",
-    "refresh_portfolio",
-    "currency_list",
-    "user_command",
-    "get_config_currency",
-    "set_config_currency",
-    "change_reference_market_on_config_currencies",
-    "create_bot",
-    "select_bot",
-    "register_webhook",
-    "has_webhook",
-    "register_submitted_form",
+    "register",
 ]

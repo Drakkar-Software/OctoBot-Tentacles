@@ -15,17 +15,17 @@
 #  License along with this library.
 import flask
 
-import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 
 
-@api.api.route("/register_submitted_form", methods=['POST'])
-@login.login_required_when_activated
-def register_submitted_form():
-    request_data = flask.request.get_json()
-    form_id = request_data["form_id"]
-    user_id = request_data["user_id"]
-    success, message = models.register_user_submitted_form(user_id, form_id)
-    return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
+def register(blueprint):
+    @blueprint.route("/register_submitted_form", methods=['POST'])
+    @login.login_required_when_activated
+    def register_submitted_form():
+        request_data = flask.request.get_json()
+        form_id = request_data["form_id"]
+        user_id = request_data["user_id"]
+        success, message = models.register_user_submitted_form(user_id, form_id)
+        return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)

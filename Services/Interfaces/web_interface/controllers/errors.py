@@ -16,26 +16,25 @@
 import flask
 
 import octobot_commons.logging as bot_logging
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.util as util
 
 APP_JSON_CONTENT_TYPE = "application/json"
 
 
-@web_interface.server_instance.errorhandler(404)
-def not_found(_):
-    if flask.request.content_type == APP_JSON_CONTENT_TYPE:
-        return util.get_rest_reply("We are sorry, but this doesn't exist", 404)
-    return flask.render_template("404.html"), 404
+def register(blueprint):
+    @blueprint.errorhandler(404)
+    def not_found(_):
+        if flask.request.content_type == APP_JSON_CONTENT_TYPE:
+            return util.get_rest_reply("We are sorry, but this doesn't exist", 404)
+        return flask.render_template("404.html"), 404
 
-
-@web_interface.server_instance.errorhandler(500)
-def internal_error(error):
-    bot_logging.get_logger("WebInterfaceErrorHandler").exception(error.original_exception, True,
-                                                                 f"Error when displaying page: "
-                                                                 f"{error.original_exception}")
-    if flask.request.content_type == APP_JSON_CONTENT_TYPE:
-        return util.get_rest_reply(f"We are sorry, but an unexpected error occurred: {error.original_exception} "
-                                   f"({error.original_exception.__class__.__name__})", 500)
-    return flask.render_template("500.html",
-                                 error=error.original_exception), 500
+    @blueprint.errorhandler(500)
+    def internal_error(error):
+        bot_logging.get_logger("WebInterfaceErrorHandler").exception(error.original_exception, True,
+                                                                     f"Error when displaying page: "
+                                                                     f"{error.original_exception}")
+        if flask.request.content_type == APP_JSON_CONTENT_TYPE:
+            return util.get_rest_reply(f"We are sorry, but an unexpected error occurred: {error.original_exception} "
+                                       f"({error.original_exception.__class__.__name__})", 500)
+        return flask.render_template("500.html",
+                                     error=error.original_exception), 500

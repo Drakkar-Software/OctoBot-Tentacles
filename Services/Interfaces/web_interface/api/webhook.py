@@ -15,7 +15,6 @@
 #  License along with this library.
 import flask
 
-import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as logging
 
 
@@ -30,14 +29,15 @@ def has_webhook(callback):
     return callback in _WEBHOOKS_CALLBACKS
 
 
-@api.api.route("/webhook/<identifier>", methods=['POST'])
-def webhook(identifier):
-    try:
-        for callback in _WEBHOOKS_CALLBACKS:
-            try:
-                callback(identifier)
-            except Exception as err:
-                logging.get_logger(__name__).exception(err, True, f"Error when calling webhook: {err}")
-        return '', 200
-    except KeyError:
-        flask.abort(500)
+def register(blueprint):
+    @blueprint.route("/webhook/<identifier>", methods=['POST'])
+    def webhook(identifier):
+        try:
+            for callback in _WEBHOOKS_CALLBACKS:
+                try:
+                    callback(identifier)
+                except Exception as err:
+                    logging.get_logger(__name__).exception(err, True, f"Error when calling webhook: {err}")
+            return '', 200
+        except KeyError:
+            flask.abort(500)

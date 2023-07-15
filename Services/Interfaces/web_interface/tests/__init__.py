@@ -20,7 +20,7 @@ import mock
 import contextlib
 
 import octobot_commons.configuration as configuration
-import tentacles.Services.Interfaces.web_interface.controllers as controllers
+import tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication as octobot_authentication
 import tentacles.Services.Interfaces.web_interface as web_interface
 import octobot_services.interfaces as interfaces
 import octobot_commons.singleton as singleton
@@ -117,11 +117,14 @@ async def check_page_login_redirect(url, session):
         assert resp.status == 200
 
 
-def get_plugins_routes(web_interface_instance, app):
-    all_rules = tuple(rule for rule in app.url_map.iter_rules())
+def get_plugins_routes(web_interface_instance):
+    all_rules = tuple(rule for rule in web_interface_instance.server_instance.url_map.iter_rules())
     plugin_routes = []
     for plugin in web_interface_instance.registered_plugins:
-        plugin_routes += [rule.rule for rule in get_plugin_routes(app, plugin, all_rules)]
+        plugin_routes += [
+            rule.rule
+            for rule in get_plugin_routes(web_interface_instance.server_instance, plugin, all_rules)
+        ]
     return plugin_routes
 
 
@@ -142,7 +145,7 @@ async def login_user_on_session(session):
         "password": PASSWORD,
         "remember_me": False
     }
-    with mock.patch.object(controllers.LoginForm, "validate_on_submit", new=_force_validate_on_submit):
+    with mock.patch.object(octobot_authentication.LoginForm, "validate_on_submit", new=_force_validate_on_submit):
         async with session.post(f"http://localhost:{PORT}/login",
                                 data=login_data) as resp:
             assert resp.status == 200

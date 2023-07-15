@@ -16,21 +16,21 @@
 import flask
 
 import octobot_services.api as services_api
-import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.login as login
 import octobot_services.interfaces.util as interfaces_util
 
 
-@api.api.route("/user_command", methods=['POST'])
-@login.login_required_when_activated
-def user_command():
-    request_data = flask.request.get_json()
-    interfaces_util.run_in_bot_main_loop(
-        services_api.send_user_command(
-            interfaces_util.get_bot_api().get_bot_id(),
-            request_data["subject"],
-            request_data["action"],
-            request_data["data"]
+def register(blueprint):
+    @blueprint.route("/user_command", methods=['POST'])
+    @login.login_required_when_activated
+    def user_command():
+        request_data = flask.request.get_json()
+        interfaces_util.run_in_bot_main_loop(
+            services_api.send_user_command(
+                interfaces_util.get_bot_api().get_bot_id(),
+                request_data["subject"],
+                request_data["action"],
+                request_data["data"]
+            )
         )
-    )
-    return flask.jsonify(request_data)
+        return flask.jsonify(request_data)

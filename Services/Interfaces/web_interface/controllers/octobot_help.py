@@ -15,11 +15,11 @@
 #  License along with this library.
 import flask
 
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@web_interface.server_instance.route("/octobot_help")
-@login.login_required_when_activated
-def octobot_help():
-    return flask.render_template('octobot_help.html')
+def register(blueprint):
+    @blueprint.route("/octobot_help")
+    @login.login_required_when_activated
+    def octobot_help():
+        return flask.render_template('octobot_help.html')
