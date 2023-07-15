@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import os
-import threading
 import socket
 import time
 import flask
@@ -43,11 +42,8 @@ import tentacles.Services.Services_bases as Service_bases
 import octobot_tentacles_manager.api
 
 
-# import web_interface.controllers to register endpoints
-import tentacles.Services.Interfaces.web_interface.controllers
+class WebInterface(services_interfaces.AbstractWebInterface):
 
-
-class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     REQUIRED_SERVICES = [Service_bases.WebService]
     DISPLAY_TIME_FRAME = "display_time_frame"
     DISPLAY_ORDERS = "display_orders"
@@ -62,8 +58,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     }
 
     def __init__(self, config):
-        services_interfaces.AbstractWebInterface.__init__(self, config)
-        threading.Thread.__init__(self, name=self.get_name())
+        super().__init__(config)
         self.logger = self.get_logger()
         self.server_instance = None
         self.host = None
@@ -269,9 +264,8 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         except Exception as e:
             self.logger.warning(f"Impossible to open automatically web interface: {e}")
 
-    async def _inner_start(self) -> bool:
-        threading.Thread.start(self)
-        return True
+    async def _inner_start(self):
+        return self.threaded_start()
 
     async def stop(self):
         if self.websocket_instance is not None:

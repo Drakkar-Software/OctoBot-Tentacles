@@ -20,17 +20,18 @@ import urllib.parse as url_parse
 
 
 CACHE_CONTROL_KEY = 'Cache-Control'
-no_cache_headers = {
-    CACHE_CONTROL_KEY: 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Last-Modified': werk_http.http_date(datetime.datetime.now()),
-}
 
 
 def register_responses_extra_header(flask_app, high_security_level):
     # prepare extra response headers, see after_request
     response_extra_headers = _prepare_response_extra_headers(high_security_level)
+
+    no_cache_headers = {
+        CACHE_CONTROL_KEY: 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': werk_http.http_date(datetime.datetime.now()),
+    }
 
     @flask_app.after_request
     def after_request(response):
