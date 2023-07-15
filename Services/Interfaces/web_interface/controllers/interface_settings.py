@@ -13,31 +13,30 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 
 
-@web_interface.server_instance.route("/watched_symbols")
-@web_interface.server_instance.route('/watched_symbols', methods=['POST'])
-@login.login_required_when_activated
-def watched_symbols():
-    if flask.request.method == 'POST':
-        result = False
-        request_data = flask.request.get_json()
-        symbol = request_data["symbol"]
-        action = request_data["action"]
-        action_desc = "added to"
-        if action == 'add':
-            result = models.add_watched_symbol(symbol)
-        elif action == 'remove':
-            result = models.remove_watched_symbol(symbol)
-            action_desc = "removed from"
-        if result:
-            return util.get_rest_reply(flask.jsonify(f"{symbol} {action_desc} watched markets"))
-        else:
-            return util.get_rest_reply(f'Error: {symbol} not {action_desc} watched markets.', 500)
+def register(blueprint):
+    @blueprint.route("/watched_symbols")
+    @blueprint.route('/watched_symbols', methods=['POST'])
+    @login.login_required_when_activated
+    def watched_symbols():
+        if flask.request.method == 'POST':
+            result = False
+            request_data = flask.request.get_json()
+            symbol = request_data["symbol"]
+            action = request_data["action"]
+            action_desc = "added to"
+            if action == 'add':
+                result = models.add_watched_symbol(symbol)
+            elif action == 'remove':
+                result = models.remove_watched_symbol(symbol)
+                action_desc = "removed from"
+            if result:
+                return util.get_rest_reply(flask.jsonify(f"{symbol} {action_desc} watched markets"))
+            else:
+                return util.get_rest_reply(f'Error: {symbol} not {action_desc} watched markets.', 500)

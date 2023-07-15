@@ -14,20 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import tentacles.Services.Interfaces.web_interface as web_interface
 
-
-def register_template_filters():
+def register_template_filters(app):
     # should only be called after app configuration
 
-    @web_interface.server_instance.template_filter()
+    @app.template_filter()
     def is_dict(value):
         return isinstance(value, dict)
 
-    @web_interface.server_instance.template_filter()
+    @app.template_filter()
     def is_list(value):
         return isinstance(value, list)
 
-    @web_interface.server_instance.template_filter()
+    @app.template_filter()
     def is_bool(value):
         return isinstance(value, bool)

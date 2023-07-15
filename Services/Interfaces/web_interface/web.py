@@ -17,8 +17,11 @@ import os
 import threading
 import socket
 import time
+import flask
+import flask_cors
 import flask_socketio
 from flask_compress import Compress
+from flask_caching import Cache
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
@@ -33,6 +36,9 @@ import tentacles.Services.Interfaces.web_interface.plugins as web_interface_plug
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
 import tentacles.Services.Interfaces.web_interface.util as web_interface_util
 import tentacles.Services.Interfaces.web_interface as web_interface_root
+import tentacles.Services.Interfaces.web_interface.controllers
+import tentacles.Services.Interfaces.web_interface.advanced_controllers
+import tentacles.Services.Interfaces.web_interface.api
 import tentacles.Services.Services_bases as Service_bases
 import octobot_tentacles_manager.api
 
@@ -43,7 +49,6 @@ import tentacles.Services.Interfaces.web_interface.controllers
 
 class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     REQUIRED_SERVICES = [Service_bases.WebService]
-    IS_FLASK_APP_CONFIGURED = False
     DISPLAY_TIME_FRAME = "display_time_frame"
     DISPLAY_ORDERS = "display_orders"
     WATCHED_SYMBOLS = "watched_symbols"
@@ -60,6 +65,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         services_interfaces.AbstractWebInterface.__init__(self, config)
         threading.Thread.__init__(self, name=self.get_name())
         self.logger = self.get_logger()
+        self.server_instance = None
         self.host = None
         self.port = None
         self.websocket_instance = None
@@ -160,21 +166,33 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
     def init_flask_plugins_and_config(self, server_instance):
         # Only setup flask plugins once per flask app (can't call flask setup methods after the 1st request
         # has been received).
+        # Override system configuration content types
+        flask_util.init_content_types()
+        self.server_instance.json = flask_util.FloatDecimalJSONProvider(self.server_instance)
+
+        # Set CORS policy
+        if flask_util.get_user_defined_cors_allowed_origins() != "*":
+            # never allow "*" as allowed origin, prefer not setting it if user did not specifically set origins
+            flask_cors.CORS(self.server_instance, origins=flask_util.get_user_defined_cors_allowed_origins())
+
+        self.server_instance.config['SEND_FILE_MAX_AGE_DEFAULT'] = 604800
+
         if self.dev_mode:
             server_instance.config['TEMPLATES_AUTO_RELOAD'] = True
-        elif not WebInterface.IS_FLASK_APP_CONFIGURED:
-            web_interface_root.cache.init_app(server_instance)
+        else:
+            cache = Cache(config={"CACHE_TYPE": "SimpleCache"})
+            cache.init_app(server_instance)
+
             Compress(server_instance)
 
-        if not WebInterface.IS_FLASK_APP_CONFIGURED:
-            flask_util.register_template_filters()
-            # register session secret key
-            server_instance.secret_key = flask_util.BrowsingDataProvider.instance().get_or_create_session_secret_key()
-            self._handle_login(server_instance)
+        flask_util.register_context_processor(self)
+        flask_util.register_template_filters(server_instance)
+        # register session secret key
+        server_instance.secret_key = flask_util.BrowsingDataProvider.instance().get_or_create_session_secret_key()
+        self._handle_login(server_instance)
 
-            security.register_responses_extra_header(server_instance, True)
+        security.register_responses_extra_header(server_instance, True)
 
-        WebInterface.IS_FLASK_APP_CONFIGURED = True
 
     def _handle_login(self, server_instance):
         self.web_login_manger = login.WebLoginManager(server_instance, self.password_hash)
@@ -184,10 +202,19 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
         self.requires_password = requires_password
         login.set_is_login_required(requires_password)
 
-    def _prepare_websocket(self):
+    def _register_routes(self, server_instance):
+        tentacles.Services.Interfaces.web_interface.controllers.register(server_instance)
+        server_instance.register_blueprint(
+            tentacles.Services.Interfaces.web_interface.api.register()
+        )
+        server_instance.register_blueprint(
+            tentacles.Services.Interfaces.web_interface.advanced_controllers.register()
+        )
+
+    def _prepare_websocket(self, server_instance):
         # handles all namespaces without an explicit error handler
         websocket_instance = flask_socketio.SocketIO(
-            web_interface_root.server_instance,
+            server_instance,
             async_mode="gevent",
             cors_allowed_origins=flask_util.get_user_defined_cors_allowed_origins()
         )
@@ -208,18 +235,21 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             time.sleep(0.05)
 
         try:
-            server_instance = web_interface_root.server_instance
-            self.registered_plugins = web_interface_plugins.register_all_plugins(server_instance,
-                                                                                 web_interface_root.registered_plugins)
+            self.server_instance = flask.Flask(__name__)
+
+            self._register_routes(self.server_instance)
+            self.registered_plugins = web_interface_plugins.register_all_plugins(
+                self.server_instance, self.registered_plugins
+            )
             web_interface_root.update_registered_plugins(self.registered_plugins)
-            self.init_flask_plugins_and_config(server_instance)
-            self.websocket_instance = self._prepare_websocket()
+            self.init_flask_plugins_and_config(self.server_instance)
+            self.websocket_instance = self._prepare_websocket(self.server_instance)
 
             if self.should_open_web_interface:
                 self._open_web_interface_on_browser()
 
             self.started = True
-            self.websocket_instance.run(server_instance,
+            self.websocket_instance.run(self.server_instance,
                                         host=self.host,
                                         port=self.port,
                                         log_output=False,
