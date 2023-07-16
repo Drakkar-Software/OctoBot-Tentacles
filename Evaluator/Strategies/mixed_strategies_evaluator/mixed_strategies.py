@@ -235,8 +235,10 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
         self.allowed_evaluator_types = [evaluators_enums.EvaluatorMatrixTypes.TA.value,
                                         evaluators_enums.EvaluatorMatrixTypes.REAL_TIME.value]
         config = tentacles_manager_api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
-        self.weight_by_time_frames = TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(
-            config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT])
+        if config:
+            self.weight_by_time_frames = TechnicalAnalysisStrategyEvaluator._get_weight_by_time_frames(
+                config[TechnicalAnalysisStrategyEvaluator.TIME_FRAMES_TO_WEIGHT]
+            )
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
