@@ -48,6 +48,9 @@ class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.TICKER: [Feeds.KLINE]
     }
 
+    RECREATE_CLIENT_ON_DISCONNECT = True   # when True, a new ccxt websocket client will replace the previous
+    # one when the exchange is disconnected
+
     @classmethod
     def get_name(cls):
         return kucoin_exchange.Kucoin.get_name()
