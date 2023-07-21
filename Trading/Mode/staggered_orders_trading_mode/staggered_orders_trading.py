@@ -697,7 +697,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
             return []
 
-        orders = []
         selling = side == trading_enums.TradeOrderSide.SELL
 
         currency, market = symbol_util.parse_symbol(self.symbol).base_and_quote()
@@ -706,94 +705,143 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
         if state == self.NEW:
             # create staggered orders
-            funds_to_use = self._get_maximum_traded_funds(allowed_funds,
-                                                          order_limiting_currency_amount,
-                                                          order_limiting_currency,
-                                                          selling,
-                                                          ignore_available_funds)
-            if funds_to_use == 0:
-                return []
-            starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
-            self.flat_spread = trading_personal_data.decimal_adapt_price(self.symbol_market,
-                                                                         current_price * self.spread)
-            self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    funds_to_use, order_limiting_currency, starting_bound, side,
-                                    True, self.mode, order_limiting_currency_amount)
-
+            return self._create_new_orders_bundle(
+                lower_bound, upper_bound, side, current_price, allowed_funds, ignore_available_funds, selling,
+                order_limiting_currency, order_limiting_currency_amount
+            )
         if state == self.FILL:
             # complete missing orders
-            if missing_orders and [o for o in missing_orders if o[1] is side]:
-                max_quant_per_order = order_limiting_currency_amount / len([o for o in missing_orders if o[1] is side])
-                missing_orders_around_spread = []
-                for missing_order_price, missing_order_side in missing_orders:
-                    if missing_order_side == side:
-                        previous_o = None
-                        following_o = None
-                        for o in sorted_orders:
-                            if previous_o is None:
-                                previous_o = o
-                            elif o.origin_price > missing_order_price:
-                                following_o = o
-                                break
-                            else:
-                                previous_o = o
-                        if previous_o.side == following_o.side:
-                            decimal_missing_order_price = decimal.Decimal(str(missing_order_price))
-                            # missing order between similar orders
-                            quantity = min(data_util.mean([previous_o.origin_quantity, following_o.origin_quantity]),
-                                           max_quant_per_order / decimal_missing_order_price)
-                            orders.append(OrderData(missing_order_side, decimal.Decimal(str(quantity)),
-                                                    decimal_missing_order_price, self.symbol, False))
-                            self.logger.debug(f"Creating missing orders not around spread: {orders[-1]} "
-                                              f"for {self.symbol}")
-                        else:
-                            missing_orders_around_spread.append((missing_order_price, missing_order_side))
-
-                if missing_orders_around_spread:
-                    # missing order next to spread
-                    starting_bound = upper_bound if selling else lower_bound
-                    increment_window = self.flat_increment / 2
-                    order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
-                    portfolio_total = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).total
-                    order_limiting_currency_amount = portfolio_total
-                    if order_limiting_currency_available_amount:
-                        orders_count, average_order_quantity = \
-                            self._get_order_count_and_average_quantity(current_price, selling, lower_bound,
-                                                                       upper_bound, portfolio_total,
-                                                                       currency, self.mode)
-
-                        for missing_order_price, missing_order_side in missing_orders_around_spread:
-                            limiting_amount_from_this_order = order_limiting_currency_amount
-                            price = starting_bound
-                            found_order = False
-                            i = 0
-                            while not found_order and i < orders_count:
-                                quantity = self._get_quantity_from_iteration(average_order_quantity, self.mode,
-                                                                             side, i, orders_count,
-                                                                             price, price)
-                                limiting_currency_quantity = quantity if selling else quantity / price
-                                if price is not None and limiting_amount_from_this_order > 0 and \
-                                        price - increment_window <= missing_order_price <= price + increment_window:
-                                    decimal_order_limiting_currency_available_amount = \
-                                        decimal.Decimal(str(order_limiting_currency_available_amount))
-                                    if limiting_currency_quantity > limiting_amount_from_this_order or \
-                                            limiting_currency_quantity > decimal_order_limiting_currency_available_amount:
-                                        limiting_currency_quantity = min(limiting_amount_from_this_order,
-                                                                         decimal_order_limiting_currency_available_amount)
-                                    found_order = True
-                                    if limiting_currency_quantity is not None:
-                                        orders.append(OrderData(side, decimal.Decimal(str(limiting_currency_quantity)),
-                                                                decimal.Decimal(str(price)), self.symbol, False))
-                                        self.logger.debug(f"Creating missing order around spread {orders[-1]} "
-                                                          f"for {self.symbol}")
-                                price = price - self.flat_increment if selling else price + self.flat_increment
-                                limiting_amount_from_this_order -= limiting_currency_quantity
-                                i += 1
-
-        elif state == self.ERROR:
+            return self._fill_missing_orders(
+                lower_bound, upper_bound, side, sorted_orders, current_price, missing_orders, selling,
+                order_limiting_currency, order_limiting_currency_amount, currency
+            )
+        if state == self.ERROR:
             self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} when incompatible "
                               f"order are already in place. Cancel these orders of you want to use this trading mode.")
+        return []
+
+    def _create_new_orders_bundle(
+        self, lower_bound, upper_bound, side, current_price, allowed_funds, ignore_available_funds, selling,
+        order_limiting_currency, order_limiting_currency_amount
+    ):
+        orders = []
+        funds_to_use = self._get_maximum_traded_funds(allowed_funds,
+                                                      order_limiting_currency_amount,
+                                                      order_limiting_currency,
+                                                      selling,
+                                                      ignore_available_funds)
+        if funds_to_use == 0:
+            return []
+        starting_bound = lower_bound * (1 + self.spread / 2) if selling else upper_bound * (1 - self.spread / 2)
+        self.flat_spread = trading_personal_data.decimal_adapt_price(self.symbol_market,
+                                                                     current_price * self.spread)
+        self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
+                                funds_to_use, order_limiting_currency, starting_bound, side,
+                                True, self.mode, order_limiting_currency_amount)
         return orders
+
+    def _fill_missing_orders(
+        self, lower_bound, upper_bound, side, sorted_orders, current_price, missing_orders, selling,
+        order_limiting_currency, order_limiting_currency_amount, currency
+    ):
+        orders = []
+        if missing_orders and [o for o in missing_orders if o[1] is side]:
+            max_quant_per_order = order_limiting_currency_amount / len([o for o in missing_orders if o[1] is side])
+            missing_orders_around_spread = []
+            for missing_order_price, missing_order_side in missing_orders:
+                if missing_order_side == side:
+                    previous_o = None
+                    following_o = None
+                    for o in sorted_orders:
+                        if previous_o is None:
+                            previous_o = o
+                        elif o.origin_price > missing_order_price:
+                            following_o = o
+                            break
+                        else:
+                            previous_o = o
+                    if previous_o.side == following_o.side:
+                        decimal_missing_order_price = decimal.Decimal(str(missing_order_price))
+                        # missing order between similar orders
+                        quantity = self._get_surrounded_missing_order_quantity(
+                            previous_o, following_o, max_quant_per_order, decimal_missing_order_price
+                        )
+                        orders.append(OrderData(missing_order_side, quantity,
+                                                decimal_missing_order_price, self.symbol, False))
+                        self.logger.debug(f"Creating missing orders not around spread: {orders[-1]} "
+                                          f"for {self.symbol}")
+                    else:
+                        missing_orders_around_spread.append((missing_order_price, missing_order_side))
+
+            if missing_orders_around_spread:
+                # missing order next to spread
+                starting_bound = upper_bound if selling else lower_bound
+                increment_window = self.flat_increment / 2
+                order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager,
+                                                                                              order_limiting_currency).available
+                decimal_order_limiting_currency_available_amount = decimal.Decimal(
+                    str(order_limiting_currency_available_amount))
+                # use total or dedicated funds ?
+                # dedicated funds need to take into account filled orders
+                # override in grid to use trades
+                portfolio_total = trading_api.get_portfolio_currency(self.exchange_manager,
+                                                                     order_limiting_currency).total
+                order_limiting_currency_amount = portfolio_total
+                if order_limiting_currency_available_amount:
+                    orders_count, average_order_quantity = \
+                        self._get_order_count_and_average_quantity(
+                            current_price, selling, lower_bound, upper_bound, portfolio_total, currency, self.mode
+                        )
+
+                    for missing_order_price, missing_order_side in missing_orders_around_spread:
+                        limiting_amount_from_this_order = order_limiting_currency_amount
+                        price = starting_bound
+                        found_order = False
+                        i = 0
+                        while not found_order and i < orders_count:
+                            order_quantity = self._get_spread_missing_order_quantity(
+                                average_order_quantity, side, i, orders_count, price, selling,
+                                limiting_amount_from_this_order,
+                                decimal_order_limiting_currency_available_amount
+                            )
+                            if price is not None and limiting_amount_from_this_order > 0 and \
+                                    price - increment_window <= missing_order_price <= price + increment_window:
+                                found_order = True
+                                if order_quantity is not None:
+                                    orders.append(OrderData(side, decimal.Decimal(str(order_quantity)),
+                                                            decimal.Decimal(str(price)), self.symbol, False))
+                                    self.logger.debug(f"Creating missing order around spread {orders[-1]} "
+                                                      f"for {self.symbol}")
+                            price = price - self.flat_increment if selling else price + self.flat_increment
+                            limiting_amount_from_this_order -= order_quantity
+                            i += 1
+        return orders
+
+    def _get_surrounded_missing_order_quantity(
+        self, previous_order, following_order, max_quant_per_order, order_price
+    ):
+        return decimal.Decimal(str(
+            min(
+                data_util.mean([previous_order.origin_quantity, following_order.origin_quantity]),
+                max_quant_per_order / order_price
+            )
+        ))
+
+    def _get_spread_missing_order_quantity(
+        self, average_order_quantity, side, i, orders_count, price, selling, limiting_amount_from_this_order,
+        order_limiting_currency_available_amount
+    ):
+        quantity = self._get_quantity_from_iteration(
+            average_order_quantity, self.mode, side, i, orders_count, price, price
+        )
+        limiting_currency_quantity = quantity if selling else quantity / price
+        if limiting_currency_quantity > limiting_amount_from_this_order or \
+                limiting_currency_quantity > order_limiting_currency_available_amount:
+            return min(
+                limiting_amount_from_this_order,
+                order_limiting_currency_available_amount
+            )
+        return limiting_currency_quantity
 
     def _get_maximum_traded_funds(self, allowed_funds, total_available_funds, currency, selling, ignore_available_funds):
         to_trade_funds = total_available_funds
