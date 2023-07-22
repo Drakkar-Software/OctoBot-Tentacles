@@ -21,6 +21,7 @@ import octobot_commons.enums as commons_enums
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.errors as trading_errors
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
@@ -301,6 +302,11 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         return True
 
     def _apply_default_symbol_config(self) -> bool:
+        if not self.trading_mode.trading_config.get(commons_constants.ALLOW_DEFAULT_CONFIG, True):
+            raise trading_errors.TradingModeIncompatibility(
+                f"{self.trading_mode.get_name()} default configuration is not allowed. "
+                f"Please configure the {self.symbol} settings."
+            )
         self.logger.info(f"Using default configuration for {self.symbol} as no configuration "
                          f"is specified for this pair.")
         # set spread and increment as multipliers of the current price
