@@ -774,7 +774,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
@@ -785,7 +787,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
