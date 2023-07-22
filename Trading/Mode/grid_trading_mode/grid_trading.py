@@ -242,7 +242,6 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self._skip_order_restore_on_recently_closed_orders = False
         self._use_recent_trades_for_order_restore = True
 
-
     def read_config(self):
         self.mode = staggered_orders_trading.StrategyModes.FLAT
         # init decimals from str to remove native float rounding
@@ -403,7 +402,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         if not trades_or_orders:
             return trades_or_orders
         sorted_elements = sorted(trades_or_orders, key=lambda t: t.origin_price)
-        four =  decimal.Decimal("4")
+        four = decimal.Decimal("4")
         increment_lower_bound = - self.flat_increment / four
         increment_higher_bound = self.flat_increment / four
         for first_element_index in range(len(sorted_elements)):
@@ -420,10 +419,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                         # reached other side: take spread into account
                         first_sided_element_price += self.flat_spread
                     delta_increment = (trade_or_order.origin_price - first_sided_element_price) % self.flat_increment
-                    if increment_lower_bound < delta_increment < increment_higher_bound:
+                    if increment_lower_bound < self.flat_increment - delta_increment < increment_higher_bound:
                         grid_trades_or_orders.append(trade_or_order)
                 previous_element = trade_or_order
-            if len(sorted_elements) / len(grid_trades_or_orders) > 0.5:
+            if len(grid_trades_or_orders) / len(sorted_elements) > 0.5:
                 # make sure that we did not miss every grid trade by basing computations on a non grid trade
                 # more than 50% match of grid trades: grid trades are found
                 return grid_trades_or_orders

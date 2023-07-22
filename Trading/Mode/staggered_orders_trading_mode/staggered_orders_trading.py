@@ -115,6 +115,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
+    REQUIRE_TRADES_HISTORY = True   # set True when this trading mode needs the trade history to operate
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -818,7 +819,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                 False))
                                         self.logger.debug(f"Creating missing order around spread {orders[-1]} "
                                                           f"for {self.symbol}")
-                                limiting_amount_from_this_order -= order_quantity
+                                if order_quantity is not None:
+                                    limiting_amount_from_this_order -= order_quantity
                             price = price - self.flat_increment if selling else price + self.flat_increment
                             i += 1
         return orders
@@ -851,7 +853,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         quantity = self._get_quantity_from_iteration(
             average_order_quantity, self.mode, side, i, orders_count, price, price
         )
-        limiting_currency_quantity = quantity if selling else quantity / price
+        if quantity is None:
+            return None
+        limiting_currency_quantity = quantity
         if limiting_currency_quantity > limiting_amount_from_this_order or \
                 limiting_currency_quantity > order_limiting_currency_available_amount:
             return min(
@@ -947,7 +951,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # no decimal.Decimal computation here
         mode = self.mode or None
         spread = None
-        increment = None
+        increment = self.flat_increment or None
         bigger_buys_closer_to_center = None
         first_sell = None
         ratio = None
@@ -1065,7 +1069,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         order_price += increment
 
                     previous_order = order
-            if only_buy or only_sell:
+            if (only_buy or only_sell) and (increment and self.flat_spread):
                 # missing orders between others have been taken into account, now add potential missing orders
                 # on boundaries
                 # make sure that no buy order is missing from previous sell orders (or the opposite)
