@@ -16,7 +16,7 @@
 import dataclasses
 import decimal
 
-import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
@@ -231,12 +231,17 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
     # Disable health check
     HEALTH_CHECK_INTERVAL_SECS = None
     ORDERS_DESC = "grid"
+    RECENT_TRADES_ALLOWED_TIME = 2 * commons_constants.DAYS_TO_SECONDS
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         self.buy_orders_count = self.sell_orders_count = None
         self.sell_price_range = AllowedPriceRange()
         self.buy_price_range = AllowedPriceRange()
         super().__init__(channel, config, trading_mode, exchange_manager)
+        self._expect_missing_orders = True
+        self._skip_order_restore_on_recently_closed_orders = False
+        self._use_recent_trades_for_order_restore = True
+
 
     def read_config(self):
         self.mode = staggered_orders_trading.StrategyModes.FLAT
@@ -248,6 +253,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         # decimal.Decimal operations are supporting int values, no need to convert these into decimal.Decimal
         self.buy_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_BUY_ORDERS_COUNT]
         self.sell_orders_count = self.symbol_trading_config[self.trading_mode.CONFIG_SELL_ORDERS_COUNT]
+        self.operational_depth = self.buy_orders_count + self.sell_orders_count
         self.buy_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_BUY_FUNDS,
                                                                             self.buy_funds)))
         self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
@@ -274,6 +280,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
         if ignore_mirror_orders_only or not self.use_existing_orders_only:
+            # ignoring existing orders ?
             buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
             grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
             async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
@@ -318,19 +325,111 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 return [], []
         existing_orders = order_manager.get_open_orders(self.symbol)
 
-        sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
+        sorted_orders = self._get_grid_trades_or_orders(existing_orders)
+        recent_trades_time = trading_api.get_exchange_current_time(
+            self.exchange_manager) - self.RECENT_TRADES_ALLOWED_TIME
+        recently_closed_trades = trading_api.get_trade_history(self.exchange_manager, symbol=self.symbol,
+                                                               since=recent_trades_time)
+        recently_closed_trades = self._get_grid_trades_or_orders(recently_closed_trades)
 
-        state = self.NEW
-        missing_orders = []
+        lowest_buy = max(trading_constants.ZERO, self.buy_price_range.lower_bound)
+        highest_buy = self.buy_price_range.higher_bound
+        lowest_sell = self.sell_price_range.lower_bound
+        highest_sell = self.sell_price_range.higher_bound
+        if sorted_orders:
+            buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
+            highest_buy = current_price
+            sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
+            lowest_sell = current_price
+            origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
+                sorted_orders, recently_closed_trades
+            )
 
-        buy_orders = self._create_orders(self.buy_price_range.lower_bound, self.buy_price_range.higher_bound,
+            min_max_total_order_price_delta = (
+                self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
+                + self.flat_increment
+            )
+            if buy_orders:
+                lowest_buy = buy_orders[0].origin_price
+                if not sell_orders:
+                    highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
+                    # buy orders only
+                    lowest_sell = highest_buy + self.flat_spread - self.flat_increment
+                    highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
+                else:
+                    # use only open order prices when possible
+                    _highest_sell = sell_orders[-1].origin_price
+                    highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
+            if sell_orders:
+                highest_sell = sell_orders[-1].origin_price
+                if not buy_orders:
+                    lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
+                    # sell orders only
+                    lowest_buy = max(
+                        0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
+                    )
+                    highest_buy = lowest_sell - self.flat_spread + self.flat_increment
+                else:
+                    # use only open order prices when possible
+                    _lowest_buy = buy_orders[0].origin_price
+                    lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
+
+        missing_orders, state, _ = self._analyse_current_orders_situation(
+            sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
+        )
+
+        buy_orders = self._create_orders(lowest_buy, highest_buy,
                                          trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds)
-        sell_orders = self._create_orders(self.sell_price_range.lower_bound, self.sell_price_range.higher_bound,
+                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
+                                         recently_closed_trades)
+        sell_orders = self._create_orders(lowest_sell, highest_sell,
                                           trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds)
+                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
+                                          recently_closed_trades)
 
         return buy_orders, sell_orders
+
+    def _get_origin_orders_count(self, recent_trades, open_orders):
+        origin_created_buy_orders_count = self.buy_orders_count
+        origin_created_sell_orders_count = self.sell_orders_count
+        if recent_trades:
+            buy_orders_count = len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY])
+            buy_trades_count = len([trade for trade in recent_trades if trade.side is trading_enums.TradeOrderSide.BUY])
+            origin_created_buy_orders_count = buy_orders_count + buy_trades_count
+            origin_created_sell_orders_count = len(open_orders) + len(recent_trades) - origin_created_buy_orders_count
+        return origin_created_buy_orders_count, origin_created_sell_orders_count
+
+    def _get_grid_trades_or_orders(self, trades_or_orders):
+        if not trades_or_orders:
+            return trades_or_orders
+        sorted_elements = sorted(trades_or_orders, key=lambda t: t.origin_price)
+        four =  decimal.Decimal("4")
+        increment_lower_bound = - self.flat_increment / four
+        increment_higher_bound = self.flat_increment / four
+        for first_element_index in range(len(sorted_elements)):
+            grid_trades_or_orders = []
+            previous_element = None
+            first_sided_element_price = None
+            for trade_or_order in sorted_elements[first_element_index:]:
+                if first_sided_element_price is None:
+                    first_sided_element_price = trade_or_order.origin_price
+                if previous_element is None:
+                    grid_trades_or_orders.append(trade_or_order)
+                else:
+                    if trade_or_order.side != previous_element.side:
+                        # reached other side: take spread into account
+                        first_sided_element_price += self.flat_spread
+                    delta_increment = (trade_or_order.origin_price - first_sided_element_price) % self.flat_increment
+                    if increment_lower_bound < delta_increment < increment_higher_bound:
+                        grid_trades_or_orders.append(trade_or_order)
+                previous_element = trade_or_order
+            if len(sorted_elements) / len(grid_trades_or_orders) > 0.5:
+                # make sure that we did not miss every grid trade by basing computations on a non grid trade
+                # more than 50% match of grid trades: grid trades are found
+                return grid_trades_or_orders
+        # grid trades are not found, use every trade
+        return sorted_elements
+
 
     def _init_allowed_price_ranges(self, current_price):
         self._set_increment_and_spread(current_price)
@@ -346,34 +445,24 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.logger.error(f"Your flat_spread parameter should always be higher than your flat_increment"
                               f" parameter: average profit is spread-increment. ({self.symbol})")
 
-    def _create_orders(self, lower_bound, upper_bound, side, sorted_orders,
-                       current_price, missing_orders, state, allowed_funds, ignore_available_funds):
-
-        if lower_bound >= upper_bound:
-            self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
-            return []
-
+    def _create_new_orders_bundle(
+        self, lower_bound, upper_bound, side, current_price, allowed_funds, ignore_available_funds, selling,
+        order_limiting_currency, order_limiting_currency_amount
+    ):
         orders = []
-        selling = side == trading_enums.TradeOrderSide.SELL
-
-        currency, market = symbol_util.parse_symbol(self.symbol).base_and_quote()
-        order_limiting_currency = currency if selling else market
-
-        order_limiting_currency_amount = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency).available
-        if state == self.NEW:
-            # create grid orders
-            funds_to_use = self._get_maximum_traded_funds(allowed_funds,
-                                                          order_limiting_currency_amount,
-                                                          order_limiting_currency,
-                                                          selling,
-                                                          ignore_available_funds)
-            if funds_to_use == 0:
-                return []
-            starting_bound = lower_bound if selling else upper_bound
-            self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
-                                    funds_to_use, order_limiting_currency, starting_bound, side, False,
-                                    self.mode, order_limiting_currency_amount)
+        funds_to_use = self._get_maximum_traded_funds(allowed_funds,
+                                                      order_limiting_currency_amount,
+                                                      order_limiting_currency,
+                                                      selling,
+                                                      ignore_available_funds)
+        if funds_to_use == 0:
+            return []
+        starting_bound = lower_bound if selling else upper_bound
+        self._create_new_orders(orders, current_price, selling, lower_bound, upper_bound,
+                                funds_to_use, order_limiting_currency, starting_bound, side, False,
+                                self.mode, order_limiting_currency_amount)
         return orders
+
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
                                               currency, mode):
