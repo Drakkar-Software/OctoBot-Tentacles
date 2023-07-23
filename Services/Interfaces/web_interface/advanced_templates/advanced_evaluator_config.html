@@ -42,6 +42,13 @@
     {% if not current_profile.read_only %}
         <div class="config-root" id="panelEvaluators"><br>
             {{ m_tentacles.missing_tentacles_warning(missing_tentacles) }}
+            <div class="container-fluid alert alert-info mx-0 mt-2" role="alert">
+                <p>
+                    <i class="fa-regular fa-lightbulb"></i>
+                    Select evaluators and configure to use in your profile.
+                    Please note with for some strategies, there might be <i class="fa fa-flag"></i> required evaluators.
+                </p>
+            </div>
             <div class="card">
                 <div class="card-header"><h2>Technical analysis</h2></div>
                 <div class="card-body">
@@ -95,7 +102,9 @@
     {% else %}
         <div class="card">
             <div class="card-body">
-                Current profile is read only. To be able to change evaluator configuration, please duplicate the current profile by using "duplicate" button in <a href={{ url_for('profile') }}>profile page</a>.
+                Current profile is read only. To be able to change the currently enabled evaluators,
+                please duplicate your current profile by using "duplicate" button
+                in <a href={{ url_for('profile') }}>profile page</a> using the "Edit profiles" menu.
             </div>
         </div>
     {% endif %}
