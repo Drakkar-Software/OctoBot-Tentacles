@@ -540,7 +540,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
 
     # exchange methods: bypass trading modes api to avoid sending signals
     async def _create_order_on_exchange(self, order, params):
-        await self.exchange_manager.trader.create_order(order, params=params)
+        return await self.exchange_manager.trader.create_order(order, params=params)
 
     async def _cancel_order_on_exchange(self, order):
         await self.exchange_manager.trader.cancel_order(order)
