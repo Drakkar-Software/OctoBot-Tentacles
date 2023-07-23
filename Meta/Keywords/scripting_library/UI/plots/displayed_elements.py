@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.errors as commons_errors
 import octobot_commons.constants as commons_constants
@@ -22,7 +23,6 @@ import octobot_commons.databases as databases
 import octobot_commons.display as display
 import octobot_backtesting.api as backtesting_api
 import octobot_trading.api as trading_api
-import octobot_trading.storage as trading_storage
 
 
 class DisplayedElements(display.DisplayTranslator):
@@ -234,7 +234,7 @@ class DisplayedElements(display.DisplayTranslator):
         elif table_name == commons_enums.DBTables.ORDERS.value:
             # adapt order details for display
             for display_element in filtered_elements:
-                order_details = display_element[trading_storage.AbstractStorage.ORIGIN_VALUE_KEY]
+                order_details = display_element[trading_constants.STORAGE_ORIGIN_VALUE]
                 side = order_details[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
                 display_element[commons_enums.PlotAttributes.COLOR.value] = "red" \
                     if side == trading_enums.TradeOrderSide.SELL.value else "green"
@@ -263,7 +263,7 @@ class DisplayedElements(display.DisplayTranslator):
                 display_element.get(commons_enums.DBRows.SYMBOL.value) == symbol
                 and display_element.get(commons_enums.DBRows.TIME_FRAME.value) == time_frame
             ) or (
-                display_element.get(trading_storage.AbstractStorage.ORIGIN_VALUE_KEY, {})
+                display_element.get(trading_constants.STORAGE_ORIGIN_VALUE, {})
                 .get(trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value, None) == symbol
             )
         ]

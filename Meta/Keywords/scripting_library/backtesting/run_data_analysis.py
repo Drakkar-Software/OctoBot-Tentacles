@@ -17,8 +17,8 @@ import json
 import sortedcontainers
 
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_trading.exchange_data as trading_exchange_data
-import octobot_trading.storage as trading_storage
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.personal_data.portfolios.portfolio_util as portfolio_util
 import octobot_trading.api as trading_api
@@ -601,7 +601,7 @@ async def plot_orders(meta_database, plotted_element, historical_values=None):
         metadata = await get_metadata(meta_database)
     account_type = trading_api.get_account_type_from_run_metadata(metadata)
     data = [
-        order[trading_storage.OrdersStorage.ORIGIN_VALUE_KEY]
+        order[trading_constants.STORAGE_ORIGIN_VALUE]
         for order in await meta_database.get_orders_db(account_type).all(commons_enums.DBTables.ORDERS.value)
     ]
     key_to_label = {
