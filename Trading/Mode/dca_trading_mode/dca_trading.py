@@ -36,11 +36,6 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
         try:
-            base, market = symbol_util.parse_symbol(symbol).base_and_quote()
-            if market != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
-                self.logger.warning(f"Ignored DCA order creation on {symbol} : it's not a reference market pair.")
-                return []
-
             current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
                 await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol,
                                                                timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
@@ -123,7 +118,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     async def dca_task(self):
         while not self.should_stop:
             try:
-                self.logger.info("DCA task triggered")
+                self.logger.debug("DCA task triggered")
 
                 for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
                         self.exchange_manager.config
@@ -139,8 +134,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         self.task = await asyncio.create_task(self.delayed_start())
 
     async def delayed_start(self):
-        # wait for portfolio to be fetched
-        await asyncio.sleep(3)
+        await self._wait_for_bot_init(self.CONFIG_INIT_TIMEOUT)
         await self.dca_task()
 
     async def _send_alert_notification(self, symbol):
