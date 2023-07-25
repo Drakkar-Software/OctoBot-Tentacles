@@ -869,8 +869,8 @@ async def test_compute_minimum_funds_1():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475.25)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(100))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.049505))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.049505)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds
@@ -881,8 +881,8 @@ async def test_compute_minimum_funds_1():
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
         assert len(orders) == producer.operational_depth
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 26
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 24
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 25
 
 
 async def test_compute_minimum_funds_2():
@@ -899,8 +899,8 @@ async def test_compute_minimum_funds_2():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(str(100)))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.0495))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.0495)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds * decimal.Decimal("0.99999")

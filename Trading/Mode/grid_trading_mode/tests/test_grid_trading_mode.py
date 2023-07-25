@@ -238,12 +238,12 @@ async def test_create_orders_with_default_config():
         assert pf_usd_available_funds >= usd_available_funds
 
 
-async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders():
+async def test_create_orders_without_enough_funds_for_all_orders_16_total_orders():
     symbol = "BTC/USDT"
     async with _get_tools(symbol) as (producer, _, exchange_manager):
 
         producer.sell_funds = decimal.Decimal("0.00006")  # 5 orders
-        producer.buy_funds = decimal.Decimal("0.5")  # 12 orders
+        producer.buy_funds = decimal.Decimal("0.5")  # 11 orders
 
         # set BTC/USD price at 4000 USD
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
@@ -260,12 +260,12 @@ async def test_create_orders_without_enough_funds_for_all_orders_17_total_orders
         # btc_available_funds for reduced because orders are not created
         assert 10 - 0.001 <= btc_available_funds < 10
         assert 1000 - 100 <= usd_available_funds < 1000
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + 12))
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, 5 + 11))
         created_orders = trading_api.get_open_orders(exchange_manager)
         created_buy_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.BUY]
         created_sell_orders = [o for o in created_orders if o.side is trading_enums.TradeOrderSide.SELL]
         assert len(created_buy_orders) < producer.buy_orders_count
-        assert len(created_buy_orders) == 12
+        assert len(created_buy_orders) == 11
         assert len(created_sell_orders) < producer.sell_orders_count
         assert len(created_sell_orders) == 5
         # ensure only orders closest to the current price have been created

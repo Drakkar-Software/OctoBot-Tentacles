@@ -477,7 +477,6 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         orders_count = self.sell_orders_count if selling else self.buy_orders_count
         if self._use_variable_orders_volume(trading_enums.TradeOrderSide.SELL if selling
            else trading_enums.TradeOrderSide.BUY):
-            return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
-                                                       currency, mode)
+            return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings, currency, mode)
         else:
             return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)

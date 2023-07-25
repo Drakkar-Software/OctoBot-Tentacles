@@ -49,6 +49,7 @@ STABLE = "stable_towards_current_price"
 MULTIPLIER = "multiplier"
 
 ONE_PERCENT_DECIMAL = decimal.Decimal("1.01")
+TEN_PERCENT_DECIMAL = decimal.Decimal("1.1")
 
 StrategyModeMultipliersDetails = {
     StrategyModes.FLAT: {
@@ -1196,7 +1197,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                 f"not enough funds.")
             return 0, 0
         if self._use_variable_orders_volume(trading_enums.TradeOrderSide.SELL if selling
-            else trading_enums.TradeOrderSide.BUY):
+           else trading_enums.TradeOrderSide.BUY):
             return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings,
                                                        currency, mode)
         else:
@@ -1220,7 +1221,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 and self.min_max_order_details[self.min_cost] is not None:
             min_quantity = max(self.min_max_order_details[self.min_quantity],
                                self.min_max_order_details[self.min_cost] / current_price)
-            if min_order_quantity < min_quantity:
+            min_quantity = min_quantity * decimal.Decimal(TEN_PERCENT_DECIMAL)    # increase min quantity by 10% to be sure to be
+            # able to create orders in minimal funds conditions
+            adapted_min_order_quantity = trading_personal_data.decimal_adapt_quantity(
+                self.symbol_market, min_order_quantity
+            )
+            adapted_min_quantity = trading_personal_data.decimal_adapt_quantity(self.symbol_market, min_quantity)
+            if adapted_min_order_quantity < adapted_min_quantity:
                 # 1.01 to account for order creation rounding
                 if holdings_in_quote < average_order_quantity * ONE_PERCENT_DECIMAL:
                     return 0, 0
@@ -1229,7 +1236,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         f"{trading_enums.TradeOrderSide.SELL.name if selling else trading_enums.TradeOrderSide.BUY.name} "
                                         f"orders according to exchange's rules. Creating the maximum possible number "
                                         f"of valid orders instead.")
-                    return self._adapt_orders_count_and_quantity(holdings_in_quote, min_quantity, mode)
+                    return self._adapt_orders_count_and_quantity(holdings_in_quote, adapted_min_quantity, mode)
                 else:
                     min_funds = self._get_min_funds(orders_count, min_quantity, self.mode, current_price)
                     self.logger.error(f"Impossible to create {self.symbol} {self.ORDERS_DESC} "
@@ -1304,7 +1311,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if average_cost < min_cost:
                     required_average_quantity = min_cost / current_price
 
-        return orders_count * required_average_quantity
+        return orders_count * required_average_quantity * TEN_PERCENT_DECIMAL
 
     @staticmethod
     def _get_average_quantity_from_exchange_minimal_requirements(exchange_min, mode):
@@ -1314,8 +1321,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     @staticmethod
     def _get_min_max_quantity(average_order_quantity, mode):
-        if mode is None:
-            fdsf=1
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]
         min_quantity = average_order_quantity * (1 - mode_multiplier / 2)
         max_quantity = average_order_quantity * (1 + mode_multiplier / 2)
