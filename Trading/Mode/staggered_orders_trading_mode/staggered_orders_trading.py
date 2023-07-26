@@ -633,7 +633,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.exchange_manager) - self.RECENT_TRADES_ALLOWED_TIME
         recently_closed_trades = trading_api.get_trade_history(self.exchange_manager, symbol=self.symbol,
                                                                since=recent_trades_time)
-        recently_closed_trades = sorted(recently_closed_trades, key=lambda trade: trade.origin_price)
+        recently_closed_trades = sorted(recently_closed_trades, key=lambda trade: trade.executed_price)
 
         missing_orders, state, candidate_flat_increment = self._analyse_current_orders_situation(
             sorted_orders, recently_closed_trades, self.lowest_buy, self.highest_sell, current_price
@@ -883,14 +883,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             is_sell_trade = trade.side == trading_enums.TradeOrderSide.SELL
             if is_sell_trade == selling:
                 # same side
-                if price_window_lower_bound <= trade.origin_price <= price_window_higher_bound:
+                if price_window_lower_bound <= trade.executed_price <= price_window_higher_bound:
                     # found the exact same trade
                     return trade
             else:
                 # different side: use spread to compute mirror order price
                 price_increment = self.flat_spread - self.flat_increment
-                mirror_order_price = (trade.origin_price - price_increment) \
-                    if is_sell_trade else (trade.origin_price + price_increment)
+                mirror_order_price = (trade.executed_price - price_increment) \
+                    if is_sell_trade else (trade.executed_price + price_increment)
                 if price_window_lower_bound <= mirror_order_price <= price_window_higher_bound:
                     # found mirror trade
                     return trade
@@ -1139,7 +1139,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         else:
             inc = self.flat_spread * decimal.Decimal("1.5")
             for trade in recently_closed_trades:
-                if trade.origin_price - inc <= price <= trade.origin_price + inc:
+                if trade.executed_price - inc <= price <= trade.executed_price + inc:
                     return True
         return False
 
