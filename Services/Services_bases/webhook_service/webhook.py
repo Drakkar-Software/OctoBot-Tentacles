@@ -33,7 +33,7 @@ import octobot.community.errors as community_errors
 
 
 class WebHookService(services.AbstractService):
-    CONNECTION_TIMEOUT = 3
+    CONNECTION_TIMEOUT = 8  # can take up to 5s on slow setups
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
@@ -241,7 +241,7 @@ class WebHookService(services.AbstractService):
             start_time = time.time()
             timeout = False
             while self.connected is None and not timeout:
-                time.sleep(0.01)
+                time.sleep(0.1)
                 timeout = time.time() - start_time > self.CONNECTION_TIMEOUT
             if timeout:
                 self.logger.error("Webhook took too long to start, now stopping it.")
@@ -275,7 +275,7 @@ class WebHookService(services.AbstractService):
         return self.use_web_interface_for_webhook or self.webhook_host is not None and self.webhook_port is not None
 
     def get_successful_startup_message(self):
-        webhook_endpoint = f"address: {self.webhook_public_url}"
+        webhook_endpoint = f"ngrok address"
         if self.use_web_interface_for_webhook:
             webhook_endpoint = "web interface webhook api"
         return f"Webhook configured on {webhook_endpoint}", self._is_healthy()
