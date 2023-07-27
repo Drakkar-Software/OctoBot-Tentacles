@@ -15,6 +15,7 @@
 #  License along with this library.
 import contextlib
 
+import numpy
 import pytest
 import os.path
 import asyncio
@@ -647,6 +648,82 @@ async def test_start_after_offline_buy_side_10_filled():
         # offline simulation: orders get filled but not replaced => price got up to more than the max price
         open_orders = trading_api.get_open_orders(exchange_manager)
         offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY][:10]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+
+        # back online: restore orders according to current price
+        # simulate current price as back to average origin buy orders
+        price = offline_filled[len(offline_filled)//2].origin_price + 1
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        # restored orders
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available <= post_portfolio
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # created 5 more sell orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.SELL]) == 25 + 5
+        # restored 5 of the 10 filled buy orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY]) == 19 - 5
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
+
+
+async def test_start_after_offline_with_added_funds():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        # first start: setup orders
+        orders_count = 19 + 25
+
+        price = 100
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+
+        initial_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in original_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        initial_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in original_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        # offline simulation: funds are added
+        def _increase_funds(asset, multiplier):
+            asset.available = asset.available + asset.total * decimal.Decimal(str(multiplier - 1))
+            asset.total = asset.total * decimal.Decimal(str(multiplier))
+            return asset
+
+        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        portfolio["BTC"] = _increase_funds(portfolio["BTC"], 2)
+        portfolio["USDT"] = _increase_funds(portfolio["USDT"], 4)
+
+        # triggering orders will cancel all open orders and recreate grid orders with new funds
+        await producer._ensure_staggered_orders()
+        # one more buy order
+        new_orders_count = orders_count + 1
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == new_orders_count
+
+        updated_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        updated_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        assert initial_buy_orders_average_cost * decimal.Decimal(str(3.5)) < updated_buy_orders_average_cost < \
+               initial_buy_orders_average_cost * decimal.Decimal(str(4.5))
+        assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) < updated_sell_orders_average_cost < \
+               initial_sell_orders_average_cost * decimal.Decimal(str(2.5))
+
+        #todo - with filled orders - with +50% funds
+        raise NotImplementedError
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY][:2]
         for order in offline_filled:
             await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
         post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available

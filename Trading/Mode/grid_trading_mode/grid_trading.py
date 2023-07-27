@@ -383,15 +383,19 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         missing_orders, state, _ = self._analyse_current_orders_situation(
             sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
         )
-
-        buy_orders = self._create_orders(lowest_buy, highest_buy,
-                                         trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
-                                         recently_closed_trades)
-        sell_orders = self._create_orders(lowest_sell, highest_sell,
-                                          trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
-                                          recently_closed_trades)
+        try:
+            buy_orders = self._create_orders(lowest_buy, highest_buy,
+                                             trading_enums.TradeOrderSide.BUY, sorted_orders,
+                                             current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
+                                             recently_closed_trades)
+            sell_orders = self._create_orders(lowest_sell, highest_sell,
+                                              trading_enums.TradeOrderSide.SELL, sorted_orders,
+                                              current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
+                                              recently_closed_trades)
+        except staggered_orders_trading.ForceResetOrdersException:
+            buy_orders, sell_orders, state = await self._reset_orders(
+                sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
+            )
 
         return buy_orders, sell_orders
 
@@ -474,7 +478,6 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                 funds_to_use, order_limiting_currency, starting_bound, side, False,
                                 self.mode, order_limiting_currency_amount)
         return orders
-
 
     def _get_order_count_and_average_quantity(self, current_price, selling, lower_bound, upper_bound, holdings,
                                               currency, mode):
