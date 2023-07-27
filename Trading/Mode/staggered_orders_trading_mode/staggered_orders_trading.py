@@ -808,7 +808,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         max_orders_count = max(orders_count, self.operational_depth)
                         while not (
                             found_order or exceeded_price or
-                            limiting_amount_from_this_order < trading_constants.ZERO or i > max_orders_count
+                            limiting_amount_from_this_order < trading_constants.ZERO or i >= max_orders_count
                         ):
                             if price != 0:
                                 order_quantity = self._get_spread_missing_order_quantity(
