@@ -803,8 +803,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         limiting_amount_from_this_order = order_limiting_currency_amount
                         price = starting_bound - self.flat_increment if selling else starting_bound + self.flat_increment
                         found_order = False
+                        exceeded_price = False
                         i = 0
-                        while not found_order and i < orders_count:
+                        max_orders_count = max(orders_count, self.operational_depth)
+                        while not (
+                            found_order or exceeded_price or
+                            limiting_amount_from_this_order < trading_constants.ZERO or i > max_orders_count
+                        ):
                             if price != 0:
                                 order_quantity = self._get_spread_missing_order_quantity(
                                     average_order_quantity, side, i, orders_count, price, selling,
@@ -821,8 +826,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         self.logger.debug(f"Creating missing order around spread {orders[-1]} "
                                                           f"for {self.symbol}")
                                 if order_quantity is not None:
-                                    limiting_amount_from_this_order -= order_quantity
+                                    used_amount = order_quantity if selling else order_quantity * price
+                                    limiting_amount_from_this_order -= used_amount
                             price = price - self.flat_increment if selling else price + self.flat_increment
+                            if (
+                                selling and price < (missing_order_price - self.flat_increment)
+                            ) or (
+                                (not selling) and price > missing_order_price + self.flat_increment
+                            ):
+                                exceeded_price = True
                             i += 1
         return orders
 
@@ -851,9 +863,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             price, limiting_amount_from_this_order, recent_trades, current_price, selling
         ):
             return quantity
-        quantity = self._get_quantity_from_iteration(
-            average_order_quantity, self.mode, side, i, orders_count, price, price
-        )
+        try:
+            quantity = self._get_quantity_from_iteration(
+                average_order_quantity, self.mode, side, i, orders_count, price, price
+            )
+        except trading_errors.NotSupported:
+            self.logger.error(f"Error when computing restored order quantity: recent trades are required")
+            return None
         if quantity is None:
             return None
         limiting_currency_quantity = quantity
@@ -1274,6 +1290,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if max_iteration == 1:
             quantity = average_order_quantity
         else:
+            if iteration >= max_iteration:
+                raise trading_errors.NotSupported
             iterations_progress = iteration / (max_iteration - 1)
             if StrategyModeMultipliersDetails[mode][side] == INCREASING:
                 multiplier_price_ratio = 1 - iterations_progress
