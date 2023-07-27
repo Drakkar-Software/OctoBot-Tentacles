@@ -22,6 +22,7 @@ import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
+import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
@@ -407,7 +408,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
     def _get_grid_trades_or_orders(self, trades_or_orders):
         if not trades_or_orders:
             return trades_or_orders
-        sorted_elements = sorted(trades_or_orders, key=lambda t: t.origin_price)
+        sorted_elements = sorted(trades_or_orders, key=lambda t: self.get_trade_or_order_price(t))
         four = decimal.Decimal("4")
         increment_lower_bound = - self.flat_increment / four
         increment_higher_bound = self.flat_increment / four
@@ -417,15 +418,16 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             first_sided_element_price = None
             for trade_or_order in sorted_elements[first_element_index:]:
                 if first_sided_element_price is None:
-                    first_sided_element_price = trade_or_order.origin_price
+                    first_sided_element_price = self.get_trade_or_order_price(trade_or_order)
                 if previous_element is None:
                     grid_trades_or_orders.append(trade_or_order)
                 else:
                     if trade_or_order.side != previous_element.side:
                         # reached other side: take spread into account
                         first_sided_element_price += self.flat_spread
-                    delta_increment = (trade_or_order.origin_price - first_sided_element_price) % self.flat_increment
-                    if increment_lower_bound < self.flat_increment - delta_increment < increment_higher_bound:
+                    delta_increment = (self.get_trade_or_order_price(trade_or_order) - first_sided_element_price) \
+                        % self.flat_increment
+                    if increment_lower_bound < delta_increment < increment_higher_bound:
                         grid_trades_or_orders.append(trade_or_order)
                 previous_element = trade_or_order
             if len(grid_trades_or_orders) / len(sorted_elements) > 0.5:
@@ -435,6 +437,11 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         # grid trades are not found, use every trade
         return sorted_elements
 
+    def get_trade_or_order_price(self, trade_or_order):
+        if isinstance(trade_or_order, trading_personal_data.Order):
+            return trade_or_order.origin_price
+        else:
+            return trade_or_order.executed_price
 
     def _init_allowed_price_ranges(self, current_price):
         self._set_increment_and_spread(current_price)
