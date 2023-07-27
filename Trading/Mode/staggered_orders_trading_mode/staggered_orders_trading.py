@@ -43,6 +43,10 @@ class StrategyModes(enum.Enum):
     FLAT = "flat"
 
 
+class ForceResetOrdersException(Exception):
+    pass
+
+
 INCREASING = "increasing_towards_current_price"
 DECREASING = "decreasing_towards_current_price"
 STABLE = "stable_towards_current_price"
@@ -642,17 +646,48 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         highest_buy = min(current_price, self.highest_sell)
         lowest_sell = max(current_price, self.lowest_buy)
-        buy_orders = self._create_orders(self.lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                         current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
-                                         recently_closed_trades)
-        sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                          current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
-                                          recently_closed_trades)
+        try:
+            buy_orders = self._create_orders(self.lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
+                                             current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
+                                             recently_closed_trades)
+            sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
+                                              current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
+                                              recently_closed_trades)
+        except ForceResetOrdersException:
+            buy_orders, sell_orders, state = await self._reset_orders(
+                sorted_orders, self.lowest_buy, highest_buy, lowest_sell, self.highest_sell,
+                current_price, ignore_available_funds
+            )
 
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
         return buy_orders, sell_orders
+
+    async def _reset_orders(
+            self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
+    ):
+        self.logger.info("Resetting orders")
+        await asyncio.gather(*(self.exchange_manager.trader.cancel_order(order) for order in sorted_orders))
+        base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+        self._set_initially_available_funds(
+            base,
+            trading_api.get_portfolio_currency(self.exchange_manager, base).available,
+        )
+        self._set_initially_available_funds(
+            quote,
+            trading_api.get_portfolio_currency(self.exchange_manager, quote).available,
+        )
+        state = self.NEW
+        buy_orders = self._create_orders(
+            lowest_buy, highest_buy, trading_enums.TradeOrderSide.BUY, sorted_orders,
+            current_price, [], state, self.buy_funds, ignore_available_funds, []
+        )
+        sell_orders = self._create_orders(
+            lowest_sell, highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
+            current_price, [], state, self.sell_funds, ignore_available_funds, []
+        )
+        return buy_orders, sell_orders, state
 
     def _set_increment_and_spread(self, current_price, candidate_flat_increment=None):
         origin_flat_increment = self.flat_increment
@@ -719,14 +754,37 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
         if state == self.FILL:
             # complete missing orders
-            return self._fill_missing_orders(
+            orders = self._fill_missing_orders(
                 lower_bound, upper_bound, side, sorted_orders, current_price, missing_orders, selling,
                 order_limiting_currency, order_limiting_currency_amount, currency, recent_trades
             )
+            self._ensure_used_funds(allowed_funds, orders, sorted_orders, selling, order_limiting_currency)
+            return orders
         if state == self.ERROR:
             self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} when incompatible "
                               f"order are already in place. Cancel these orders of you want to use this trading mode.")
         return []
+
+    def _ensure_used_funds(self, allowed_funds, new_orders, open_orders, selling, order_limiting_currency):
+        existing_orders_funds = sum(
+            o.origin_quantity if selling else o.total_cost
+            for o in open_orders
+            if o.side is (trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY)
+        )
+        new_orders_funds = sum(
+            o.quantity if selling else o.quantity * o.price
+            for o in new_orders
+            if o.side is (trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY)
+        )
+        used_funds = existing_orders_funds + new_orders_funds
+        max_delta = decimal.Decimal("0.6")
+        funds = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency)
+        max_funds = funds.available + existing_orders_funds
+        if allowed_funds > 0:
+            max_funds = allowed_funds
+        if used_funds < max_funds * max_delta:
+            # bigger orders can be created
+            raise ForceResetOrdersException
 
     def _create_new_orders_bundle(
         self, lower_bound, upper_bound, side, current_price, allowed_funds, ignore_available_funds, selling,
