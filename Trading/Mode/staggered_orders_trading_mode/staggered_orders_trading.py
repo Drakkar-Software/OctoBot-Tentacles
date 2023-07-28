@@ -111,6 +111,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_ALLOW_INSTANT_FILL = "allow_instant_fill"
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
     CONFIG_MIRROR_ORDER_DELAY = "mirror_order_delay"
+    CONFIG_ALLOW_FUNDS_REDISPATCH = "allow_funds_redispatch"
     CONFIG_STARTING_PRICE = "starting_price"
     CONFIG_BUY_FUNDS = "buy_funds"
     CONFIG_SELL_FUNDS = "sell_funds"
@@ -332,6 +333,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     # the same funds due to async between producers and consumers and the possibility to trade multiple pairs with
     # shared quote or base
     AVAILABLE_FUNDS = {}
+    FUNDS_INCREASE_RATIO_THRESHOLD = decimal.Decimal("0.5")  # ratio bellow with funds will be reallocated:
+    # used to track new funds and update orders accordingly
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -351,6 +354,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.sell_volume_per_order = self.buy_volume_per_order = self.starting_price = trading_constants.ZERO
         self.mirror_orders_tasks = []
         self.mirroring_pause_task = None
+        self.allow_order_funds_redispatch = False
         self._expect_missing_orders = False
         self._skip_order_restore_on_recently_closed_orders = True
         self._use_recent_trades_for_order_restore = False
@@ -653,6 +657,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             sell_orders = self._create_orders(lowest_sell, self.highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
                                               current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
                                               recently_closed_trades)
+            if state is self.FILL:
+                self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
         except ForceResetOrdersException:
             buy_orders, sell_orders, state = await self._reset_orders(
                 sorted_orders, self.lowest_buy, highest_buy, lowest_sell, self.highest_sell,
@@ -665,7 +671,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return buy_orders, sell_orders
 
     async def _reset_orders(
-            self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
+        self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
     ):
         self.logger.info("Resetting orders")
         await asyncio.gather(*(self.exchange_manager.trader.cancel_order(order) for order in sorted_orders))
@@ -688,6 +694,108 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             current_price, [], state, self.sell_funds, ignore_available_funds, []
         )
         return buy_orders, sell_orders, state
+
+    def _ensure_used_funds(self, new_buy_orders, new_sell_orders, existing_orders, recently_closed_trades):
+        if not self.allow_order_funds_redispatch:
+            return
+        updated_orders = sorted(
+            new_buy_orders + new_sell_orders + existing_orders, key=lambda t: self.get_trade_or_order_price(t)
+        )
+        if (not updated_orders) or (recently_closed_trades and self._skip_order_restore_on_recently_closed_orders):
+            return
+        if len(updated_orders) >= self.operational_depth:
+            # can bigger orders be created ?
+            if self._get_max_theoretical_orders_count() > self.operational_depth:
+                # has virtual order: not supported
+                return
+            self._ensure_full_funds_usage(updated_orders)
+        else:
+            # missing orders
+            first_order = updated_orders[0]
+            max_orders_count = self.operational_depth
+            if (
+                (
+                    first_order.side is trading_enums.TradeOrderSide.BUY
+                    and (self.get_trade_or_order_price(first_order) - self.flat_increment <= trading_constants.ZERO)
+                ) or (
+                    first_order.side is trading_enums.TradeOrderSide.SELL
+                    and (
+                        self.get_trade_or_order_price(first_order) - self.flat_spread + self.flat_increment
+                        <= trading_constants.ZERO
+                    )
+                )
+            ):
+                # can't create lower price orders
+                # update max order count
+                existing_buy_orders_count = len(
+                    [o for o in existing_orders if o.side is trading_enums.TradeOrderSide.BUY]
+                )
+                if max_buy_orders := self._get_max_buy_orders():
+                    # ignore invalid orders in orders count
+                    max_orders_count = max_orders_count - max(0, max_buy_orders - existing_buy_orders_count)
+            if min(self._get_max_theoretical_orders_count(), max_orders_count) > len(updated_orders):
+                # more orders can be created
+                # raise ForceResetOrdersException
+                self._ensure_full_funds_usage(updated_orders)
+            else:
+                # can bigger orders be created ?
+                self._ensure_full_funds_usage(updated_orders)
+
+    def _get_max_theoretical_orders_count(self):
+        return math.floor(
+            (self.highest_sell - self.lowest_buy - self.flat_spread + self.flat_increment) / self.flat_increment
+        )
+
+    def _get_max_buy_orders(self):
+        return trading_constants.ZERO
+
+    def _ensure_full_funds_usage(self, orders):
+        base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+        total_locked_base, total_locked_quote = self._get_locked_funds(orders)
+        max_buy_funds = trading_api.get_portfolio_currency(self.exchange_manager, quote).available + total_locked_quote
+        if self.buy_funds:
+            max_buy_funds = min(max_buy_funds, self.buy_funds)
+        max_sell_funds = trading_api.get_portfolio_currency(self.exchange_manager, base).available + total_locked_base
+        if self.sell_funds:
+            max_sell_funds = min(max_sell_funds, self.sell_funds)
+        used_buy_funds = 0
+        used_sell_funds = 0
+        for order in orders:
+            locked_base, locked_quote = self._get_order_locked_funds(order)
+            buying = order.side is trading_enums.TradeOrderSide.BUY
+            if (used_buy_funds + locked_quote < max_buy_funds) and (buying or used_sell_funds >= max_sell_funds):
+                used_buy_funds += locked_quote
+            elif used_sell_funds < max_sell_funds:
+                used_sell_funds += locked_base
+        if (
+            used_buy_funds < max_buy_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
+            or used_sell_funds < max_sell_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
+        ):
+            # bigger orders can be created
+            raise ForceResetOrdersException
+
+    def get_trade_or_order_price(self, trade_or_order):
+        if isinstance(trade_or_order, trading_personal_data.Order):
+            return trade_or_order.origin_price
+        if isinstance(trade_or_order, OrderData):
+            return trade_or_order.price
+        else:
+            return trade_or_order.executed_price
+
+    def _get_locked_funds(self, orders):
+        locked_base = locked_quote = trading_constants.ZERO
+        for order in orders:
+            order_locked_base, order_locked_quote = self._get_order_locked_funds(order)
+            if order.side is trading_enums.TradeOrderSide.BUY:
+                locked_quote += order_locked_quote
+            else:
+                locked_base += order_locked_base
+        return locked_base, locked_quote
+
+    def _get_order_locked_funds(self, order):
+        quantity = order.quantity if isinstance(order, OrderData) else order.origin_quantity
+        price = order.price if isinstance(order, OrderData) else order.origin_price
+        return quantity, quantity * price
 
     def _set_increment_and_spread(self, current_price, candidate_flat_increment=None):
         origin_flat_increment = self.flat_increment
@@ -758,33 +866,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 lower_bound, upper_bound, side, sorted_orders, current_price, missing_orders, selling,
                 order_limiting_currency, order_limiting_currency_amount, currency, recent_trades
             )
-            self._ensure_used_funds(allowed_funds, orders, sorted_orders, selling, order_limiting_currency)
             return orders
         if state == self.ERROR:
             self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} when incompatible "
                               f"order are already in place. Cancel these orders of you want to use this trading mode.")
         return []
-
-    def _ensure_used_funds(self, allowed_funds, new_orders, open_orders, selling, order_limiting_currency):
-        existing_orders_funds = sum(
-            o.origin_quantity if selling else o.total_cost
-            for o in open_orders
-            if o.side is (trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY)
-        )
-        new_orders_funds = sum(
-            o.quantity if selling else o.quantity * o.price
-            for o in new_orders
-            if o.side is (trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY)
-        )
-        used_funds = existing_orders_funds + new_orders_funds
-        max_delta = decimal.Decimal("0.6")
-        funds = trading_api.get_portfolio_currency(self.exchange_manager, order_limiting_currency)
-        max_funds = funds.available + existing_orders_funds
-        if allowed_funds > 0:
-            max_funds = allowed_funds
-        if used_funds < max_funds * max_delta:
-            # bigger orders can be created
-            raise ForceResetOrdersException
 
     def _create_new_orders_bundle(
         self, lower_bound, upper_bound, side, current_price, allowed_funds, ignore_available_funds, selling,
@@ -1325,6 +1411,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     def _adapt_orders_count_and_quantity(self, holdings, min_quantity, mode):
         # called when there are enough funds for at least one order but too many orders are requested
         min_average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
+        if 2 * holdings > min_average_quantity >= holdings:
+            return 1, min_average_quantity
         max_orders_count = math.floor(holdings / min_average_quantity)
         if max_orders_count > 0:
             # count remaining holdings if any
@@ -1347,6 +1435,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         delta = max_quantity - min_quantity
         if max_iteration == 1:
             quantity = average_order_quantity
+            scaled_quantity = quantity
         else:
             if iteration >= max_iteration:
                 raise trading_errors.NotSupported
@@ -1359,22 +1448,29 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 multiplier_price_ratio = 0
             if price <= 0:
                 return None
-            quantity_with_delta = (min_quantity +
+            quantity = (min_quantity +
                                    (decimal.Decimal(str(delta)) * decimal.Decimal(str(multiplier_price_ratio))))
             # when self.quote_volume_per_order is set, keep the same volume everywhere
-            quantity = quantity_with_delta * (starting_bound / price if self._use_variable_orders_volume(side)
-                                              else trading_constants.ONE)
+            scaled_quantity = quantity * (starting_bound / price if self._use_variable_orders_volume(side)
+                                          else trading_constants.ONE)
 
         # reduce last order quantity to avoid python float representation issues
         if iteration == max_iteration - 1 and self._use_variable_orders_volume(side):
+            scaled_quantity = scaled_quantity * decimal.Decimal("0.999")
             quantity = quantity * decimal.Decimal("0.999")
+        if self._is_valid_order_quantity_for_exchange(scaled_quantity, price):
+            return scaled_quantity
+        if self._is_valid_order_quantity_for_exchange(quantity, price):
+            return quantity
+        return None
 
-        if self.min_max_order_details[self.min_quantity] and quantity < self.min_max_order_details[self.min_quantity]:
-            return None
+    def _is_valid_order_quantity_for_exchange(self, quantity, price):
+        if self.min_max_order_details[self.min_quantity] and (quantity < self.min_max_order_details[self.min_quantity]):
+            return False
         cost = quantity * price
-        if self.min_max_order_details[self.min_cost] and cost < self.min_max_order_details[self.min_cost]:
-            return None
-        return quantity
+        if self.min_max_order_details[self.min_cost] and (cost < self.min_max_order_details[self.min_cost]):
+            return False
+        return True
 
     def _get_min_funds(self, orders_count, min_order_quantity, mode, current_price):
         mode_multiplier = StrategyModeMultipliersDetails[mode][MULTIPLIER]

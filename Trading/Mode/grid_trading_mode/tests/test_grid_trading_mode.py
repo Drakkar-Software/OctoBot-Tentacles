@@ -54,6 +54,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
     mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    mode.producers[0].allow_order_funds_redispatch = True
     return mode, mode.producers[0]
 
 
@@ -671,7 +672,77 @@ async def test_start_after_offline_buy_side_10_filled():
         _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
 
 
-async def test_start_after_offline_with_added_funds():
+async def test_start_after_offline_with_added_funds_increasing_orders_count():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        producer.sell_funds = decimal.Decimal("0.00005")  # 4 sell orders
+        producer.buy_funds = decimal.Decimal("0.005")  # 4 buy orders
+
+        # first start: setup orders
+        orders_count = 4 + 4
+
+        price = 100
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+
+        initial_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in original_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        initial_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in original_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        previous_orders = original_orders
+        # 1. offline simulation: nothing happens: orders are not replaced
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        assert all(order.is_open() for order in previous_orders)
+
+        # 2. offline simulation: funds are added (here config changed)
+        producer.sell_funds = decimal.Decimal("0.0001")  # 9 sell orders
+        # triggering orders will cancel all open orders and recreate grid orders with new funds
+        await producer._ensure_staggered_orders()
+        # one more buy order
+        new_orders_count = orders_count + 5
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == new_orders_count
+        # replaced orders
+        assert new_orders[0] is not original_orders[0]
+        assert all(order.is_cancelled() for order in original_orders)
+
+        updated_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        updated_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        # use approx same order size
+        assert initial_buy_orders_average_cost * decimal.Decimal(str(0.9)) < \
+               updated_buy_orders_average_cost < \
+               initial_buy_orders_average_cost * decimal.Decimal(str(1.1))
+        assert initial_sell_orders_average_cost * decimal.Decimal(str(0.9)) < \
+               updated_sell_orders_average_cost < \
+               initial_sell_orders_average_cost * decimal.Decimal(str(1.1))
+
+        # 3. offline simulation: funds are added (here config changed)
+        producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
+        producer.buy_funds = decimal.Decimal("0.01")  # 9 sell orders
+        # triggering orders will cancel all open orders and recreate grid orders with new funds
+        await producer._ensure_staggered_orders()
+        # one more buy order
+        new_orders_count = 34
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == new_orders_count
+        # replaced orders
+        assert new_orders[0] is not original_orders[0]
+        assert all(order.is_cancelled() for order in original_orders)
+
+
+async def test_start_after_offline_with_added_funds_increasing_order_sizes():
     symbol = "BTC/USDT"
     async with _get_tools(symbol) as (producer, _, exchange_manager):
         # first start: setup orders
@@ -702,11 +773,12 @@ async def test_start_after_offline_with_added_funds():
 
         # triggering orders will cancel all open orders and recreate grid orders with new funds
         await producer._ensure_staggered_orders()
-        # one more buy order
-        new_orders_count = orders_count + 1
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
         new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
-        assert len(new_orders) == new_orders_count
+        assert len(new_orders) == orders_count
+        # replaced orders
+        assert new_orders[0] is not original_orders[0]
+        assert all(order.is_cancelled() for order in original_orders)
 
         updated_buy_orders_average_cost = numpy.mean(
             [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY]
@@ -714,37 +786,89 @@ async def test_start_after_offline_with_added_funds():
         updated_sell_orders_average_cost = numpy.mean(
             [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.SELL]
         )
-        assert initial_buy_orders_average_cost * decimal.Decimal(str(3.5)) < updated_buy_orders_average_cost < \
+        assert initial_buy_orders_average_cost * decimal.Decimal(str(3.5)) < \
+               updated_buy_orders_average_cost < \
                initial_buy_orders_average_cost * decimal.Decimal(str(4.5))
-        assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) < updated_sell_orders_average_cost < \
+        assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) < \
+               updated_sell_orders_average_cost < \
                initial_sell_orders_average_cost * decimal.Decimal(str(2.5))
 
-        #todo - with filled orders - with +50% funds
-        raise NotImplementedError
-        # offline simulation: orders get filled but not replaced => price got up to more than the max price
-        open_orders = trading_api.get_open_orders(exchange_manager)
-        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY][:2]
+        # increase again (2x BTC)
+        portfolio["BTC"] = _increase_funds(portfolio["BTC"], 2)
+        previous_orders = new_orders
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == orders_count
+        # replaced orders
+        assert new_orders[0] is not previous_orders[0]
+        assert all(order.is_cancelled() for order in previous_orders)
+
+        updated_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        updated_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        assert initial_buy_orders_average_cost * decimal.Decimal(str(3.5)) < \
+               updated_buy_orders_average_cost < \
+               initial_buy_orders_average_cost * decimal.Decimal(str(4.5))
+        assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) * decimal.Decimal(2) \
+               < updated_sell_orders_average_cost < \
+               initial_sell_orders_average_cost * decimal.Decimal(str(2.5)) * decimal.Decimal(2)
+
+        # increase again (1.1x BTC)
+        portfolio["BTC"] = _increase_funds(portfolio["BTC"], decimal.Decimal("1.1"))
+        previous_orders = new_orders
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == orders_count
+        # did not replace orders funds increase is not significant enough
+        assert new_orders[0] is previous_orders[0]
+        assert all(order.is_open() for order in previous_orders)
+
+        # increase again (12x USDT)
+        portfolio["USDT"] = _increase_funds(portfolio["USDT"], decimal.Decimal("12"))
+        previous_orders = new_orders
+        producer.allow_order_funds_redispatch = False
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == orders_count
+        # did not replace orders: allow_order_funds_redispatch is False
+        assert new_orders[0] is previous_orders[0]
+        assert all(order.is_open() for order in previous_orders)
+        producer.allow_order_funds_redispatch = True
+
+        # fill orders before check
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        offline_filled = [o for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY][:2]
         for order in offline_filled:
             await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
         post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
         assert pre_portfolio < post_portfolio
         assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
-
-        # back online: restore orders according to current price
-        # simulate current price as back to average origin buy orders
-        price = offline_filled[len(offline_filled)//2].origin_price + 1
-        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         await producer._ensure_staggered_orders()
-        # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USDT").available
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available <= post_portfolio
-        open_orders = trading_api.get_open_orders(exchange_manager)
-        # created 5 more sell orders
-        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.SELL]) == 25 + 5
-        # restored 5 of the 10 filled buy orders
-        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY]) == 19 - 5
-        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
+        new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(new_orders) == orders_count
+        # replaced orders
+        assert new_orders[0] is not previous_orders[0]
+        assert all(order.is_cancelled() for order in previous_orders if order not in offline_filled)
+
+        updated_buy_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        )
+        updated_sell_orders_average_cost = numpy.mean(
+            [o.total_cost for o in new_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        )
+        assert initial_buy_orders_average_cost * decimal.Decimal(str(3.5)) * decimal.Decimal(12) < \
+               updated_buy_orders_average_cost < \
+               initial_buy_orders_average_cost * decimal.Decimal(str(4.5)) * decimal.Decimal(12)
+        assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) * decimal.Decimal(2) \
+               < updated_sell_orders_average_cost < \
+               initial_sell_orders_average_cost * decimal.Decimal(str(2.5)) * decimal.Decimal(2)
 
 
 async def _wait_for_orders_creation(orders_count=1):
