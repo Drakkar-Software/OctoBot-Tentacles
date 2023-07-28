@@ -673,7 +673,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
     ):
         self.logger.info("Resetting orders")
-        await asyncio.gather(*(self.exchange_manager.trader.cancel_order(order) for order in sorted_orders))
+        await asyncio.gather(*(self.trading_mode.cancel_order(order) for order in sorted_orders))
         base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
         self._set_initially_available_funds(
             base,
