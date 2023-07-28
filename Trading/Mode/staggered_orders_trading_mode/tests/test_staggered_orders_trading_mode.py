@@ -52,6 +52,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
     mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    mode.producers[0].allow_order_funds_redispatch = True
     test_trading_modes.set_ready_to_start(mode.producers[0])
     return mode, mode.producers[0]
 
@@ -522,11 +523,11 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     btc_holdings = 400
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)

@@ -277,6 +277,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                        self.use_existing_orders_only)
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
                                                                  self.mirror_order_delay)
+        self.allow_order_funds_redispatch = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_ALLOW_FUNDS_REDISPATCH, self.allow_order_funds_redispatch
+        )
 
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
@@ -392,7 +395,13 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                               trading_enums.TradeOrderSide.SELL, sorted_orders,
                                               current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
                                               recently_closed_trades)
+            if state is self.FILL:
+                self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
         except staggered_orders_trading.ForceResetOrdersException:
+            lowest_buy = max(trading_constants.ZERO, self.buy_price_range.lower_bound)
+            highest_buy = self.buy_price_range.higher_bound
+            lowest_sell = self.sell_price_range.lower_bound
+            highest_sell = self.sell_price_range.higher_bound
             buy_orders, sell_orders, state = await self._reset_orders(
                 sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
             )
@@ -441,12 +450,6 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         # grid trades are not found, use every trade
         return sorted_elements
 
-    def get_trade_or_order_price(self, trade_or_order):
-        if isinstance(trade_or_order, trading_personal_data.Order):
-            return trade_or_order.origin_price
-        else:
-            return trade_or_order.executed_price
-
     def _init_allowed_price_ranges(self, current_price):
         self._set_increment_and_spread(current_price)
         first_sell_price = current_price + (self.flat_spread / 2)
@@ -490,3 +493,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             return self._ensure_average_order_quantity(orders_count, current_price, selling, holdings, currency, mode)
         else:
             return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)
+
+    def _get_max_buy_orders(self):
+        return self.buy_orders_count
+
+    def _get_max_theoretical_orders_count(self):
+        return self.buy_orders_count + self.sell_orders_count
