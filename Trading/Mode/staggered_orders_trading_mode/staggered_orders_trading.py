@@ -597,10 +597,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # already on exchange): only initialize increment and order fill events will do the rest
             self._set_increment_and_spread(current_price)
         else:
-            async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-                buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
-                staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-                await self._create_not_virtual_orders(staggered_orders, current_price)
+            buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
+            staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
+            await self._create_not_virtual_orders(staggered_orders, current_price)
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
