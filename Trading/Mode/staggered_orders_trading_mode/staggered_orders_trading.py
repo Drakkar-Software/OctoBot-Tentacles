@@ -25,6 +25,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
+import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchange_channel as exchanges_channel
@@ -333,6 +334,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     # the same funds due to async between producers and consumers and the possibility to trade multiple pairs with
     # shared quote or base
     AVAILABLE_FUNDS = {}
+    GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID = {}
     FUNDS_INCREASE_RATIO_THRESHOLD = decimal.Decimal("0.5")  # ratio bellow with funds will be reallocated:
     # used to track new funds and update orders accordingly
 
@@ -451,9 +453,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.mirroring_pause_task.cancel()
         for task in self.mirror_orders_tasks:
             task.cancel()
-        if self.exchange_manager and self.exchange_manager.id in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
-            # remove self.exchange_manager.id from available funds
-            StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
+        if self.exchange_manager:
+            if self.exchange_manager.id in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
+                # remove self.exchange_manager.id from available funds
+                StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
+            if self.exchange_manager.id in StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID:
+                # remove self.exchange_manager.id from available funds
+                StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID.pop(
+                    self.exchange_manager.id, None
+                )
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
@@ -597,9 +605,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # already on exchange): only initialize increment and order fill events will do the rest
             self._set_increment_and_spread(current_price)
         else:
-            buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
-            staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-            await self._create_not_virtual_orders(staggered_orders, current_price)
+            async with self._generate_orders_lock():
+                # use exchange level lock to prevent funds double spend
+                buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
+                staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
+                await self._create_not_virtual_orders(staggered_orders, current_price)
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
@@ -1565,3 +1575,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     # syntax: "async with xxx.get_lock():"
     def get_lock(self):
         return self.lock
+
+    def _generate_orders_lock(self):
+        try:
+            return StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID[self.exchange_manager.id]
+        except KeyError:
+            lock = asyncio_tools.RLock()
+            StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID[self.exchange_manager.id] = lock
+            return lock

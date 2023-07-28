@@ -284,9 +284,11 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
         if ignore_mirror_orders_only or not self.use_existing_orders_only:
-            buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
-            grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-            await self._create_not_virtual_orders(grid_orders, current_price)
+            async with self._generate_orders_lock():
+                # use exchange level lock to prevent funds double spend
+                buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
+                grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
+                await self._create_not_virtual_orders(grid_orders, current_price)
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
