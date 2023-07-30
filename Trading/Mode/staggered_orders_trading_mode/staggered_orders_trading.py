@@ -711,52 +711,20 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             new_buy_orders + new_sell_orders + existing_orders, key=lambda t: self.get_trade_or_order_price(t)
         )
         if (not updated_orders) or (recently_closed_trades and self._skip_order_restore_on_recently_closed_orders):
+            # nothing to check
             return
-        if len(updated_orders) >= self.operational_depth:
-            # can bigger orders be created ?
-            if self._get_max_theoretical_orders_count() > self.operational_depth:
-                # has virtual order: not supported
-                return
-            self._ensure_full_funds_usage(updated_orders)
+        if (len(updated_orders) >= self.operational_depth
+                and self._get_max_theoretical_orders_count() > self.operational_depth):
+            # has virtual order: not supported
+            return
         else:
-            # missing orders
-            first_order = updated_orders[0]
-            max_orders_count = self.operational_depth
-            if (
-                (
-                    first_order.side is trading_enums.TradeOrderSide.BUY
-                    and (self.get_trade_or_order_price(first_order) - self.flat_increment <= trading_constants.ZERO)
-                ) or (
-                    first_order.side is trading_enums.TradeOrderSide.SELL
-                    and (
-                        self.get_trade_or_order_price(first_order) - self.flat_spread + self.flat_increment
-                        <= trading_constants.ZERO
-                    )
-                )
-            ):
-                # can't create lower price orders
-                # update max order count
-                existing_buy_orders_count = len(
-                    [o for o in existing_orders if o.side is trading_enums.TradeOrderSide.BUY]
-                )
-                if max_buy_orders := self._get_max_buy_orders():
-                    # ignore invalid orders in orders count
-                    max_orders_count = max_orders_count - max(0, max_buy_orders - existing_buy_orders_count)
-            if min(self._get_max_theoretical_orders_count(), max_orders_count) > len(updated_orders):
-                # more orders can be created
-                # raise ForceResetOrdersException
-                self._ensure_full_funds_usage(updated_orders)
-            else:
-                # can bigger orders be created ?
-                self._ensure_full_funds_usage(updated_orders)
+            # can more or bigger orders be created ?
+            self._ensure_full_funds_usage(updated_orders)
 
     def _get_max_theoretical_orders_count(self):
         return math.floor(
             (self.highest_sell - self.lowest_buy - self.flat_spread + self.flat_increment) / self.flat_increment
         )
-
-    def _get_max_buy_orders(self):
-        return trading_constants.ZERO
 
     def _ensure_full_funds_usage(self, orders):
         base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()

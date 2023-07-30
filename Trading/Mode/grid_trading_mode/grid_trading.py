@@ -494,8 +494,5 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         else:
             return self._get_orders_count_from_fixed_volume(selling, current_price, holdings, orders_count)
 
-    def _get_max_buy_orders(self):
-        return self.buy_orders_count
-
     def _get_max_theoretical_orders_count(self):
         return self.buy_orders_count + self.sell_orders_count
