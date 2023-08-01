@@ -117,52 +117,30 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                 )
             if side is trading_enums.TradeOrderSide.BUY:
-                entry_order_type = trading_enums.TraderOrderType.BUY_MARKET \
+                initial_entry_order_type = trading_enums.TraderOrderType.BUY_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.BUY_LIMIT
             else:
-                entry_order_type = trading_enums.TraderOrderType.SELL_MARKET \
+                initial_entry_order_type = trading_enums.TraderOrderType.SELL_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.SELL_LIMIT
             # initial entry
-            for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
-                    quantity,
-                    initial_entry_price,
-                    symbol_market):
-                orders_should_have_been_created = True
-                current_order = trading_personal_data.create_order_instance(
-                    trader=self.exchange_manager.trader,
-                    order_type= entry_order_type,
-                    symbol=symbol,
-                    current_price=price,
-                    quantity=order_quantity,
-                    price=order_price
-                )
-                created_order = await self.trading_mode.create_order(current_order)
-                created_orders.append(created_order)
+            orders_should_have_been_created = await self._create_entry_order(
+                initial_entry_order_type, quantity, initial_entry_price,
+                symbol_market, symbol, created_orders
+            )
             # secondary entries
             if self.trading_mode.secondary_entry_orders_count > 0:
-                for i in self.trading_mode.secondary_entry_orders_count:
+                secondary_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+                    if side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+                for i in range(self.trading_mode.secondary_entry_orders_count):
                     multiplier = (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
                     secondary_target_price = initial_entry_price * (
                         (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
                         (1 + multiplier)
                     )
-                    for order_quantity, order_price in \
-                        trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
-                            secondary_quantity,
-                            secondary_target_price,
-                            symbol_market
-                        ):
-                        orders_should_have_been_created = True
-                        current_order = trading_personal_data.create_order_instance(
-                            trader=self.exchange_manager.trader,
-                            order_type=entry_order_type,
-                            symbol=symbol,
-                            current_price=price,
-                            quantity=order_quantity,
-                            price=order_price
-                        )
-                        created_order = await self.trading_mode.create_order(current_order)
-                        created_orders.append(created_order)
+                    await self._create_entry_order(
+                        secondary_order_type, secondary_quantity, secondary_target_price,
+                        symbol_market, symbol, created_orders
+                    )
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -177,6 +155,106 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.error(f"Failed to create order : {e}. Order: "
                               f"{current_order if current_order else None}")
             self.logger.exception(e, False)
+            return []
+
+    async def _create_entry_order(self, order_type, quantity, price, symbol_market, symbol, created_orders):
+        for order_quantity, order_price in \
+                trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+                    quantity,
+                    price,
+                    symbol_market
+                ):
+            current_order = trading_personal_data.create_order_instance(
+                trader=self.exchange_manager.trader,
+                order_type=order_type,
+                symbol=symbol,
+                current_price=price,
+                quantity=order_quantity,
+                price=order_price
+            )
+            if created_order := await self._create_with_exit_orders(current_order, price, symbol_market):
+                created_orders.append(created_order)
+                return True
+        return False
+
+    async def _create_with_exit_orders(self, current_order, entry_price, symbol_market):
+        params = {}
+        chained_orders = []
+        exit_side = trading_enums.TradeOrderSide.SELL if current_order.side is trading_enums.TradeOrderSide.BUY \
+            else trading_enums.TradeOrderSide.BUY
+        exit_multiplier_side_flag = 1 if exit_side is trading_enums.TradeOrderSide.SELL else -1
+        total_exists_count = 1 + self.trading_mode.secondary_exit_orders_count
+        can_bundle_exit_orders = total_exists_count == 1
+        stop_price = entry_price * (
+            trading_constants.ONE - (
+                self.trading_mode.self.stop_loss_price_multiplier * exit_multiplier_side_flag
+            )
+        )
+        first_sell_price = entry_price * (
+            trading_constants.ONE + (
+                self.trading_mode.exit_limit_orders_price_multiplier * exit_multiplier_side_flag
+            )
+        )
+        last_sell_price = entry_price * (
+            trading_constants.ONE + (
+                self.trading_mode.secondary_exit_orders_price_multiplier *
+                (1 + self.trading_mode.secondary_exit_orders_count) * exit_multiplier_side_flag
+            )
+        )
+        # split entry into multiple exits if necessary (and possible)
+        for i, exit_quantity in self._split_entry_quantity(
+            current_order, total_exists_count,
+            min(stop_price, first_sell_price, last_sell_price),
+            max(stop_price, first_sell_price, last_sell_price),
+            symbol_market
+        ):
+            # stop loss
+            if self.trading_mode.use_stop_loss:
+                stop_price = trading_personal_data.decimal_adapt_price(symbol_market, stop_price)
+                param_update, chained_order = await self.register_chained_order(
+                    current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side,
+                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
+                )
+                params.update(param_update)
+                chained_orders.append(chained_order)
+
+            # take profit
+            take_profit_multiplier = self.trading_mode.exit_limit_orders_price_multiplier \
+                if i == 1 else self.trading_mode.secondary_exit_orders_price_multiplier * i
+            take_profit_price = trading_personal_data.decimal_adapt_price(
+                symbol_market,
+                entry_price * (
+                    trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
+                )
+            )
+            take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+                if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+            param_update, chained_order = await self.register_chained_order(
+                current_order, take_profit_price, take_profit_order_type, None,
+                quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
+            )
+            params.update(param_update)
+            chained_orders.append(chained_order)
+        if len(chained_orders) > 1:
+            oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+            for order in chained_orders:
+                order.add_to_order_group(oco_group)
+        return await self.trading_mode.create_order(current_order, params=params or None)
+
+    @staticmethod
+    def _split_entry_quantity(entry_order, target_exits_count, lowest_price, highest_price, symbol_market):
+        if target_exits_count == 1:
+            return 1, entry_order.origin_quantity
+        adapted_sell_orders_count, increment = trading_personal_data.get_split_orders_count_and_increment(
+            lowest_price, highest_price, entry_order.origin_quantity, target_exits_count, symbol_market
+        )
+        if adapted_sell_orders_count:
+            return [
+                (i + 1, entry_order.origin_quantity / adapted_sell_orders_count)
+                for i in range(adapted_sell_orders_count)
+            ]
+        else:
             return []
 
     async def can_create_order(self, symbol, state):
