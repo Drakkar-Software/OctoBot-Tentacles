@@ -1,3 +1,6 @@
 {
-    "period_length": 14
+    "long_threshold": 70,
+    "period_length": 14,
+    "short_threshold": 30,
+    "trend_change_identifier": true
 }
