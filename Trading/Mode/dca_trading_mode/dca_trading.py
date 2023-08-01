@@ -187,7 +187,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         can_bundle_exit_orders = total_exists_count == 1
         stop_price = entry_price * (
             trading_constants.ONE - (
-                self.trading_mode.self.stop_loss_price_multiplier * exit_multiplier_side_flag
+                self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
             )
         )
         first_sell_price = entry_price * (
@@ -245,7 +245,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     @staticmethod
     def _split_entry_quantity(entry_order, target_exits_count, lowest_price, highest_price, symbol_market):
         if target_exits_count == 1:
-            return 1, entry_order.origin_quantity
+            return [(1, entry_order.origin_quantity)]
         adapted_sell_orders_count, increment = trading_personal_data.get_split_orders_count_and_increment(
             lowest_price, highest_price, entry_order.origin_quantity, target_exits_count, symbol_market
         )
@@ -298,7 +298,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 evaluations.append(evaluators_api.get_value(evaluated_strategy_node))
 
         if evaluations:
-            state = trading_enums.EvaluatorStates.LONG
+            state = trading_enums.EvaluatorStates.NEUTRAL
             if all(
                 evaluation == -1
                 for evaluation in evaluations
@@ -312,18 +312,30 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.final_eval = evaluations
             await self.trigger_dca_for_symbol(cryptocurrency=cryptocurrency, symbol=symbol, state=state)
 
+    @classmethod
+    def get_should_cancel_loaded_orders(cls) -> bool:
+        """
+        Called by cancel_symbol_open_orders => return true if OctoBot should cancel all orders for a symbol including
+        orders already existing when OctoBot started up
+        """
+        return True
+
     async def trigger_dca_for_symbol(self, cryptocurrency, symbol, state):
         self.state = state
         self.logger.debug(
             f"{symbol} DCA task triggered on {self.exchange_manager.exchange_name}, state: {self.state.value}"
         )
         if self.state is not trading_enums.EvaluatorStates.NEUTRAL:
+            # cancel existing DCA orders from previous signals
+            await self.cancel_symbol_open_orders(symbol)
             # call orders creation from consumers
-            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                                 symbol=symbol,
-                                                 time_frame=None,
-                                                 final_note=None,
-                                                 state=state)
+            await self.submit_trading_evaluation(
+                cryptocurrency=cryptocurrency,
+                symbol=symbol,
+                time_frame=None,
+                final_note=None,
+                state=state
+            )
 
             # send_notification
             if not self.exchange_manager.is_backtesting:
@@ -443,7 +455,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             self.UI.user_input(
                 DCATradingModeConsumer.ENTRY_LIMIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
                 float(self.entry_limit_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
-                min_val=0, max_val=1,
+                min_val=0,
                 title="Limit entry percent difference: Price difference in percent to compute the entry price from "
                       "when using limit orders. "
                       "Example: 10 on a 2000 USDT price buy would create a buy limit price at 1800 USDT or "
@@ -500,7 +512,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             self.UI.user_input(
                 DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
                 float(self.exit_limit_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
-                min_val=0, max_val=1,
+                min_val=0,
                 title="Limit exit percent difference: Price difference in percent to compute the exit price from "
                       "after an entry is filled. "
                       "Example: 10 on a 2000 USDT filled price buy would create a sell limit price at 2200 USDT.",
