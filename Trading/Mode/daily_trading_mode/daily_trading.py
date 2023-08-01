@@ -449,7 +449,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             ) if stop_price.is_nan() else stop_price
             side = trading_enums.TradeOrderSide.SELL \
                 if current_order.side is trading_enums.TradeOrderSide.BUY else trading_enums.TradeOrderSide.BUY
-            param_update, chained_order = await self._register_chained_order(
+            param_update, chained_order = await self.register_chained_order(
                 current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, side
             )
             params.update(param_update)
@@ -461,7 +461,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             ) if take_profit_price.is_nan() else take_profit_price
             order_type = trading_enums.TraderOrderType.SELL_LIMIT \
                 if current_order.side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.BUY_LIMIT
-            param_update, chained_order = await self._register_chained_order(
+            param_update, chained_order = await self.register_chained_order(
                 current_order, take_profit_price, order_type, None
             )
             params.update(param_update)
@@ -472,24 +472,6 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
         return await self.trading_mode.create_order(current_order, params=params or None)
-
-    async def _register_chained_order(self, main_order, price, order_type, side):
-        chained_order = trading_personal_data.create_order_instance(
-            trader=self.trader,
-            order_type=order_type,
-            symbol=main_order.symbol,
-            current_price=price,
-            quantity=main_order.origin_quantity,
-            price=price,
-            side=side,
-            associated_entry_id=main_order.order_id,
-        )
-        return (
-            await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
-                main_order, chained_order, True
-            ),
-            chained_order
-        )
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         try:
