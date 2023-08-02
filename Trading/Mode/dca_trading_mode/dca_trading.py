@@ -59,10 +59,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER = DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
     USE_SECONDARY_EXIT_ORDERS = "use_secondary_exit_orders"
     SECONDARY_EXIT_ORDERS_COUNT = "secondary_exit_orders_count"
-    SECONDARY_EXIT_ORDERS_AMOUNT = "secondary_exit_orders_amount"
     SECONDARY_EXIT_ORDERS_PRICE_PERCENT = "secondary_exit_orders_price_percent"
     DEFAULT_SECONDARY_EXIT_ORDERS_COUNT = 0
-    DEFAULT_SECONDARY_EXIT_ORDERS_AMOUNT = ""
     DEFAULT_SECONDARY_EXIT_ORDERS_PRICE_MULTIPLIER = DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
 
     USE_STOP_LOSSES = "use_stop_losses"
@@ -72,12 +70,11 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         current_order = None
         try:
-            current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
-                await trading_personal_data.get_pre_order_data(self.exchange_manager, symbol=symbol,
-                                                               timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
-
+            price = await trading_personal_data.get_up_to_date_price(
+                self.exchange_manager, symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
+            )
+            symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
             created_orders = []
-            orders_should_have_been_created = False
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
             if state is trading_enums.EvaluatorStates.NEUTRAL:
                 raise trading_errors.NotSupported(state)
@@ -98,6 +95,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
 
                 if self.trading_mode.secondary_entry_orders_amount:
+                    # compute secondary orders quantity before locking quantity from initial order
                     secondary_quantity = await script_keywords.get_amount_from_input_amount(
                         context=ctx,
                         input_amount=self.trading_mode.secondary_entry_orders_amount,
@@ -113,7 +111,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 trading_personal_data.decimal_adapt_price(
                     symbol_market,
                     price * (
-                        1 - self.trading_mode.entry_limit_orders_price_multiplier if side is trading_enums.TradeOrderSide.BUY
+                        1 - self.trading_mode.entry_limit_orders_price_multiplier
+                        if side is trading_enums.TradeOrderSide.BUY
                         else 1 + self.trading_mode.entry_limit_orders_price_multiplier
                     )
                 )
@@ -438,7 +437,6 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.exit_limit_orders_price_multiplier = DCATradingModeConsumer.DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER
         self.use_secondary_exit_orders = False
         self.secondary_exit_orders_count = DCATradingModeConsumer.DEFAULT_SECONDARY_EXIT_ORDERS_COUNT
-        self.secondary_exit_orders_amount = DCATradingModeConsumer.DEFAULT_SECONDARY_EXIT_ORDERS_AMOUNT
         self.secondary_exit_orders_price_multiplier = DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
 
         self.use_stop_loss = False
@@ -609,6 +607,16 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
         return False
+
+    @classmethod
+    def get_supported_exchange_types(cls) -> list:
+        """
+        :return: The list of supported exchange types
+        """
+        return [
+            trading_enums.ExchangeTypes.SPOT,
+            trading_enums.ExchangeTypes.FUTURE,
+        ]
 
     def get_current_state(self) -> (str, float):
         return (
