@@ -187,7 +187,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         exit_side = trading_enums.TradeOrderSide.SELL if entry_order.side is trading_enums.TradeOrderSide.BUY \
             else trading_enums.TradeOrderSide.BUY
         exit_multiplier_side_flag = 1 if exit_side is trading_enums.TradeOrderSide.SELL else -1
-        total_exists_count = 1 + self.trading_mode.secondary_exit_orders_count
+        total_exists_count = 1 + (
+            self.trading_mode.secondary_exit_orders_count if self.trading_mode.use_secondary_exit_orders else 0
+        )
         stop_price = entry_price * (
             trading_constants.ONE - (
                 self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
@@ -375,14 +377,20 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                             symbol=self.symbol,
                             state=trading_enums.EvaluatorStates.VERY_LONG
                         )
-
+                if self.exchange_manager.is_backtesting:
+                    self.logger.error(
+                        f"{self.trading_mode.trigger_mode.value} trigger is not supporting backtesting for now. Please "
+                        f"configure another trigger mode to use {self.trading_mode.get_name()} in backtesting."
+                    )
+                    return
                 await asyncio.sleep(self.trading_mode.minutes_before_next_buy)
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
     async def inner_start(self) -> None:
         await super().inner_start()
-        self.task = asyncio.create_task(self.delayed_start())
+        if self.trading_mode.trigger_mode is TriggerMode.TIME_BASED:
+            self.task = asyncio.create_task(self.delayed_start())
 
     def get_channels_registration(self):
         registration_channels = []
