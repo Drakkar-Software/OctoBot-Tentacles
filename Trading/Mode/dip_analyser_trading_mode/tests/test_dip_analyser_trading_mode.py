@@ -57,7 +57,7 @@ async def tools():
             await _stop(trader.exchange_manager)
 
 
-async def _test_run_independent_backtestings_with_memory_check():
+async def test_run_independent_backtestings_with_memory_check():
     """
     Should always be called first here to avoid other tests' related memory check issues
     """
@@ -756,9 +756,9 @@ async def _get_tools(symbol="BTC/USDT"):
         matrix_id=None,
         data_files=[os.path.join(test_config.TEST_CONFIG_FOLDER,
                                  "AbstractExchangeHistoryCollector_1586017993.616272.data")])
-    exchange_manager.exchange = exchanges.ExchangeSimulator(exchange_manager.config,
-                                                  exchange_manager,
-                                                  backtesting)
+    exchange_manager.exchange = exchanges.ExchangeSimulator(
+        exchange_manager.config, exchange_manager, backtesting
+    )
     await exchange_manager.exchange.initialize()
     for exchange_channel_class_type in [exchanges_channel.ExchangeChannel, exchanges_channel.TimeFrameExchangeChannel]:
         await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
