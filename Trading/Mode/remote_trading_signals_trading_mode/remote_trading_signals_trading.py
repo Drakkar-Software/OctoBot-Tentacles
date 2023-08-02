@@ -298,8 +298,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if chained_order.origin_quantity == trading_constants.ZERO:
             self.logger.warning(f"Ignored chained order: {chained_order}: not enough funds")
             return 0
-        await chained_order.set_as_chained_order(base_order, False, {}, chained_order.update_with_triggering_order_fees)
-        base_order.add_chained_order(chained_order)
+        await self.exchange_manager.trader.chain_order(
+            base_order, chained_order, chained_order.update_with_triggering_order_fees, False
+        )
         if base_order.state is not None and base_order.is_filled() and chained_order.should_be_created():
             await personal_data.create_as_chained_order(chained_order)
             return 1

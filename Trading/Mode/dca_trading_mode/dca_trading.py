@@ -106,7 +106,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_total_holding=False,
                     )
             else:
-                self.logger.error(f"Missing {side.value} order quantity")
+                self.logger.error(f"Missing {side.value} entry order quantity")
                 return []
             initial_entry_price = price if self.trading_mode.use_market_entry_orders else \
                 trading_personal_data.decimal_adapt_price(
@@ -131,16 +131,19 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if self.trading_mode.secondary_entry_orders_count > 0:
                 secondary_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
                     if side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
-                for i in range(self.trading_mode.secondary_entry_orders_count):
-                    multiplier = (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
-                    secondary_target_price = initial_entry_price * (
-                        (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
-                        (1 + multiplier)
-                    )
-                    await self._create_entry_order(
-                        secondary_order_type, secondary_quantity, secondary_target_price,
-                        symbol_market, symbol, created_orders
-                    )
+                if not secondary_quantity:
+                    self.logger.error(f"Missing {secondary_order_type.value} secondary order quantity")
+                else:
+                    for i in range(self.trading_mode.secondary_entry_orders_count):
+                        multiplier = (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
+                        secondary_target_price = initial_entry_price * (
+                            (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
+                            (1 + multiplier)
+                        )
+                        await self._create_entry_order(
+                            secondary_order_type, secondary_quantity, secondary_target_price,
+                            symbol_market, symbol, created_orders
+                        )
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -172,19 +175,17 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity=order_quantity,
                 price=order_price
             )
-            if created_order := await self._create_with_exit_orders(current_order, price, symbol_market):
+            if created_order := await self._create_entry_with_chained_exit_orders(current_order, price, symbol_market):
                 created_orders.append(created_order)
                 return True
         return False
 
-    async def _create_with_exit_orders(self, current_order, entry_price, symbol_market):
+    async def _create_entry_with_chained_exit_orders(self, current_order, entry_price, symbol_market):
         params = {}
-        chained_orders = []
         exit_side = trading_enums.TradeOrderSide.SELL if current_order.side is trading_enums.TradeOrderSide.BUY \
             else trading_enums.TradeOrderSide.BUY
         exit_multiplier_side_flag = 1 if exit_side is trading_enums.TradeOrderSide.SELL else -1
         total_exists_count = 1 + self.trading_mode.secondary_exit_orders_count
-        can_bundle_exit_orders = total_exists_count == 1
         stop_price = entry_price * (
             trading_constants.ONE - (
                 self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
@@ -202,12 +203,15 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             )
         )
         # split entry into multiple exits if necessary (and possible)
-        for i, exit_quantity in self._split_entry_quantity(
+        exit_quantities = self._split_entry_quantity(
             current_order, total_exists_count,
             min(stop_price, first_sell_price, last_sell_price),
             max(stop_price, first_sell_price, last_sell_price),
             symbol_market
-        ):
+        )
+        can_bundle_exit_orders = len(exit_quantities) == 1
+        for i, exit_quantity in exit_quantities:
+            order_couple = []
             # stop loss
             if self.trading_mode.use_stop_loss:
                 stop_price = trading_personal_data.decimal_adapt_price(symbol_market, stop_price)
@@ -216,7 +220,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
                 )
                 params.update(param_update)
-                chained_orders.append(chained_order)
+                order_couple.append(chained_order)
 
             # take profit
             take_profit_multiplier = self.trading_mode.exit_limit_orders_price_multiplier \
@@ -234,12 +238,12 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
             )
             params.update(param_update)
-            chained_orders.append(chained_order)
-        if len(chained_orders) > 1:
-            oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
-            for order in chained_orders:
-                order.add_to_order_group(oco_group)
+            order_couple.append(chained_order)
+            if len(order_couple) > 1:
+                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                for order in order_couple:
+                    order.add_to_order_group(oco_group)
         return await self.trading_mode.create_order(current_order, params=params or None)
 
     @staticmethod
@@ -498,7 +502,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 }
             )
         )) / trading_constants.ONE_HUNDRED
-        self.UI.user_input(
+        self.secondary_entry_orders_amount = self.UI.user_input(
             DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT, commons_enums.UserInputTypes.TEXT, "", inputs,
             title=f"Secondary entry orders amount: {trading_modes.get_order_amount_value_desc()}",
             other_schema_values={"minLength": 0},
@@ -524,9 +528,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             title="Enable secondary exit orders: Split each filled entry order into into multiple exit orders using "
                   "different prices."
         )
-        self.secondary_entry_orders_count = self.UI.user_input(
+        self.secondary_exit_orders_count = self.UI.user_input(
             DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
-            self.secondary_entry_orders_count, inputs,
+            self.secondary_exit_orders_count, inputs,
             title="Secondary exit orders count: Number of secondary limit orders to create additionally to "
                   "the initial exit order. When enabled, the entry filled amount is split into each exit orders.",
             editor_options={
@@ -574,6 +578,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         return False
 
     def get_current_state(self) -> (str, float):
-        return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, \
-               ",".join([str(e) for e in self.producers[0].final_eval] if self.producers[0].final_eval else
-                        self.producers[0].final_eval)
+        return (
+            super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name,
+            ",".join([str(e) for e in self.producers[0].final_eval]) if self.producers[0].final_eval
+            else self.producers[0].final_eval
+         )
