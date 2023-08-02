@@ -54,6 +54,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     DEFAULT_SECONDARY_ENTRY_ORDERS_AMOUNT = ""
     DEFAULT_SECONDARY_ENTRY_ORDERS_PRICE_MULTIPLIER = DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
 
+    USE_TAKE_PROFIT_EXIT_ORDERS = "use_take_profit_exit_orders"
     EXIT_LIMIT_ORDERS_PRICE_PERCENT = "exit_limit_orders_price_percent"
     DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER = DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
     USE_SECONDARY_EXIT_ORDERS = "use_secondary_exit_orders"
@@ -223,22 +224,23 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 order_couple.append(chained_order)
 
             # take profit
-            take_profit_multiplier = self.trading_mode.exit_limit_orders_price_multiplier \
-                if i == 1 else self.trading_mode.secondary_exit_orders_price_multiplier * i
-            take_profit_price = trading_personal_data.decimal_adapt_price(
-                symbol_market,
-                entry_price * (
-                    trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
+            if self.trading_mode.use_take_profit_exit_orders:
+                take_profit_multiplier = self.trading_mode.exit_limit_orders_price_multiplier \
+                    if i == 1 else self.trading_mode.secondary_exit_orders_price_multiplier * i
+                take_profit_price = trading_personal_data.decimal_adapt_price(
+                    symbol_market,
+                    entry_price * (
+                        trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
+                    )
                 )
-            )
-            take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
-                if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
-            param_update, chained_order = await self.register_chained_order(
-                current_order, take_profit_price, take_profit_order_type, None,
-                quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
-            )
-            params.update(param_update)
-            order_couple.append(chained_order)
+                take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+                    if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+                param_update, chained_order = await self.register_chained_order(
+                    current_order, take_profit_price, take_profit_order_type, None,
+                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
+                )
+                params.update(param_update)
+                order_couple.append(chained_order)
             if len(order_couple) > 1:
                 oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
                     .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
@@ -330,20 +332,32 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{symbol} DCA task triggered on {self.exchange_manager.exchange_name}, state: {self.state.value}"
         )
         if self.state is not trading_enums.EvaluatorStates.NEUTRAL:
-            # cancel existing DCA orders from previous signals
-            await self.cancel_symbol_open_orders(symbol)
-            # call orders creation from consumers
-            await self.submit_trading_evaluation(
-                cryptocurrency=cryptocurrency,
-                symbol=symbol,
-                time_frame=None,
-                final_note=None,
-                state=state
-            )
+            await self._process_entries(cryptocurrency, symbol, state)
+            await self._process_exits(cryptocurrency, symbol, state)
 
-            # send_notification
-            if not self.exchange_manager.is_backtesting:
-                await self._send_alert_notification(symbol, state)
+    async def _process_entries(self, cryptocurrency, symbol, state):
+        entry_side = trading_enums.TradeOrderSide.BUY if state in (
+            trading_enums.EvaluatorStates.LONG, trading_enums.EvaluatorStates.VERY_LONG
+        ) else trading_enums.TradeOrderSide.SELL
+        if entry_side is trading_enums.TradeOrderSide.SELL:
+            self.logger.debug(f"{entry_side.value} entry side not supported for now. Ignored state: {state.value})")
+            return
+        # cancel existing DCA orders from previous signals
+        await self.cancel_symbol_open_orders(symbol, entry_side)
+        # call orders creation from consumers
+        await self.submit_trading_evaluation(
+            cryptocurrency=cryptocurrency,
+            symbol=symbol,
+            time_frame=None,
+            final_note=None,
+            state=state
+        )
+        # send_notification
+        await self._send_alert_notification(symbol, state, "entry")
+
+    async def _process_exits(self, cryptocurrency, symbol, state):
+        # todo implement signal based exits
+        pass
 
     async def dca_task(self):
         while not self.should_stop:
@@ -383,7 +397,9 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         )
         await self.dca_task()
 
-    async def _send_alert_notification(self, symbol, state):
+    async def _send_alert_notification(self, symbol, state, step):
+        if self.exchange_manager.is_backtesting:
+            return
         try:
             import octobot_services.api as services_api
             import octobot_services.enums as services_enum
@@ -392,7 +408,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 action = "BUYING"
             elif state in (trading_enums.EvaluatorStates.SHORT, trading_enums.EvaluatorStates.VERY_SHORT):
                 action = "SELLING"
-            title = f"DCA trigger for : #{symbol}"
+            title = f"DCA {step} trigger for : #{symbol}"
             alert = f"{action} on {self.exchange_manager.exchange_name}"
             await services_api.send_notification(services_api.create_notification(
                 alert, title=title, markdown_text=alert,
@@ -418,6 +434,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.secondary_entry_orders_amount = DCATradingModeConsumer.DEFAULT_SECONDARY_ENTRY_ORDERS_AMOUNT
         self.secondary_entry_orders_price_multiplier = DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
 
+        self.use_take_profit_exit_orders = False
         self.exit_limit_orders_price_multiplier = DCATradingModeConsumer.DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER
         self.use_secondary_exit_orders = False
         self.secondary_exit_orders_count = DCATradingModeConsumer.DEFAULT_SECONDARY_EXIT_ORDERS_COUNT
@@ -440,7 +457,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             )
         )
         self.minutes_before_next_buy = int(self.UI.user_input(
-            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 60, inputs,
+            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 10080, inputs,
             min_val=1,
             title="Tigger period: Minutes to wait between each transaction. Examples: 60 for 1 hour, 1440 for 1 day, "
                   "10080 for 1 week or 43200 for 1 month.",
@@ -512,6 +529,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 }
             }
         )
+        self.use_take_profit_exit_orders = self.UI.user_input(
+            DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
+            self.use_take_profit_exit_orders, inputs,
+            title="Enable take profit exit orders: Automatically create take profit exit orders "
+                  "when entries are filled."
+        )
         self.exit_limit_orders_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
@@ -520,13 +543,23 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 title="Limit exit percent difference: Price difference in percent to compute the exit price from "
                       "after an entry is filled. "
                       "Example: 10 on a 2000 USDT filled price buy would create a sell limit price at 2200 USDT.",
+                editor_options={
+                    commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                        DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS: True
+                    }
+                }
             )
         )) / trading_constants.ONE_HUNDRED
         self.use_secondary_exit_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_SECONDARY_EXIT_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
             self.use_secondary_exit_orders, inputs,
             title="Enable secondary exit orders: Split each filled entry order into into multiple exit orders using "
-                  "different prices."
+                  "different prices.",
+            editor_options={
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                    DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS: True
+                }
+            }
         )
         self.secondary_exit_orders_count = self.UI.user_input(
             DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
@@ -556,7 +589,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )) / trading_constants.ONE_HUNDRED
         self.use_stop_loss = self.UI.user_input(
             DCATradingModeConsumer.USE_STOP_LOSSES, commons_enums.UserInputTypes.BOOLEAN, self.use_stop_loss, inputs,
-            title="Enable stop losses: Create a stop loss alongside exit orders.",
+            title="Enable stop losses: Create stop losses when entries are filled.",
         )
         self.stop_loss_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
