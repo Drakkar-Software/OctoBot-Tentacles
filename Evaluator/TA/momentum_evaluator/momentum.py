@@ -375,7 +375,7 @@ class EMAMomentumEvaluator(evaluators.TAEvaluator):
     def init_user_inputs(self, inputs: dict) -> None:
         self.period_length = self.UI.user_input(
             "period_length", enums.UserInputTypes.INT, self.period_length, inputs,
-            min_val=1, title="Period: Bollinger bands period length."
+            min_val=1, title="Period: Moving Average period length."
         )
         self.price_threshold_percent = self.UI.user_input(
             "price_threshold_percent", enums.UserInputTypes.FLOAT, self.price_threshold_multiplier, inputs,
