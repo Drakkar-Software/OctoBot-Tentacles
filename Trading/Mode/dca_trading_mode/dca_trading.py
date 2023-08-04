@@ -263,7 +263,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         )
         if adapted_sell_orders_count:
             return [
-                (i + 1, quantity / adapted_sell_orders_count)
+                (
+                    i + 1,
+                    trading_personal_data.decimal_adapt_quantity(symbol_market, quantity / adapted_sell_orders_count)
+                )
                 for i in range(adapted_sell_orders_count)
             ]
         else:
