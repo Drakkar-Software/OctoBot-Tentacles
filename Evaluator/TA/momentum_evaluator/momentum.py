@@ -33,8 +33,8 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         super().__init__(tentacles_setup_config)
         self.pertinence = 1
         self.period_length = 14
-        self.short_threshold = 30
-        self.long_threshold = 70
+        self.short_threshold = 70
+        self.long_threshold = 30
         self.is_trend_change_identifier = True
         self.short_term_averages = [7, 5, 4, 3, 2, 1]
         self.long_term_averages = [40, 30, 20, 15, 10]
@@ -112,7 +112,7 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
                     elif rsi_v[-1] <= self.long_threshold:
                         self.eval_note = -1
                 updated_value = True
-        if not updated_value:
+        if not self.is_trend_change_identifier and not updated_value:
             self.eval_note = 0
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
