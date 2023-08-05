@@ -121,9 +121,9 @@ async def test_run_independent_backtestings_with_memory_check():
             "social_evaluators_notification_timeout": 3600
         },
         TA.RSIMomentumEvaluator.get_name(): {
-            "long_threshold": 70,
+            "long_threshold": 30,
             "period_length": 14,
-            "short_threshold": 30,
+            "short_threshold": 70,
             "trend_change_identifier": False
         },
         TA.EMAMomentumEvaluator.get_name(): {
@@ -410,6 +410,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # 3 take profit (initial + 2 additional)
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = True
+        mode.use_secondary_exit_orders = True
         mode.secondary_exit_orders_count = 2
         await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
         create_order_mock.assert_called_once_with(entry_order, params=None)
@@ -453,6 +454,32 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
+
+        # chained stop loss
+        # 3 take profit (initial + 2 additional)
+        mode.use_stop_loss = True
+        mode.use_take_profit_exit_orders = True
+        # disable use_secondary_exit_orders
+        mode.use_secondary_exit_orders = False
+        mode.secondary_exit_orders_count = 2    # disabled
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.reset_mock()
+        assert len(entry_order.chained_orders) == 2  # 1 take profit and one stop loss: no secondary exit is allowed
+        stop_losses = [
+            order
+            for order in entry_order.chained_orders
+            if isinstance(order, trading_personal_data.StopLossOrder)
+        ]
+        take_profits = [
+            order
+            for order in entry_order.chained_orders
+            if isinstance(order, trading_personal_data.SellLimitOrder)
+        ]
+        # ensure only stop losses and take profits in chained orders
+        assert len(stop_losses) == 1
+        assert len(take_profits) == 1
+        assert stop_losses[0].origin_quantity == take_profits[0].origin_quantity == entry_order.origin_quantity
 
 
 async def test_create_entry_order(tools):
