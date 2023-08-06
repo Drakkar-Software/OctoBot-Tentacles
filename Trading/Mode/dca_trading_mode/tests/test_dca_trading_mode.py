@@ -251,7 +251,6 @@ async def test_process_entries(tools):
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
         # short state: not yet supported
         submit_trading_evaluation_mock.assert_not_called()
-        cancel_symbol_open_orders_mock.assert_not_called()
         _send_alert_notification_mock.assert_not_called()
 
         for state in (trading_enums.EvaluatorStates.LONG, trading_enums.EvaluatorStates.VERY_LONG):
@@ -264,9 +263,7 @@ async def test_process_entries(tools):
                 final_note=None,
                 state=state
             )
-            cancel_symbol_open_orders_mock.assert_called_once_with("symbol", trading_enums.TradeOrderSide.BUY)
             _send_alert_notification_mock.assert_called_once_with("symbol", state, "entry")
-            cancel_symbol_open_orders_mock.reset_mock()
             _send_alert_notification_mock.reset_mock()
             submit_trading_evaluation_mock.reset_mock()
 
@@ -523,37 +520,54 @@ async def test_create_new_orders(tools):
     mode.secondary_entry_orders_count = 0
     symbol = mode.symbol
 
+    def _create_basic_order(side):
+        created_order = trading_personal_data.Order(trader)
+        created_order.symbol = symbol
+        created_order.side = side
+        created_order.origin_quantity = decimal.Decimal("0.1")
+        created_order.origin_price = decimal.Decimal("1000")
+        return created_order
+
     async def _create_entry_order(_, __, ___, ____, _____, created_orders, ______):
-        created_orders.append("created_order")
-        return "created_order"
+        created_order = _create_basic_order(trading_enums.TradeOrderSide.BUY)
+        created_orders.append(created_order)
+        return created_order
 
     with mock.patch.object(
         consumer, "_create_entry_order", mock.AsyncMock(side_effect=_create_entry_order)
-    ) as _create_entry_order_mock:
+    ) as _create_entry_order_mock, mock.patch.object(
+        mode, "cancel_order", mock.AsyncMock()
+    ) as cancel_order_mock:
         # neutral state
         assert await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        cancel_order_mock.assert_not_called()
         _create_entry_order_mock.assert_not_called()
         # no configured amount
         mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = ""
         assert await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value) == []
+        cancel_order_mock.assert_not_called()
         _create_entry_order_mock.assert_not_called()
         # no configured secondary amount
         mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "12%"
         mode.secondary_entry_orders_amount = ""
         await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        cancel_order_mock.assert_not_called()
         _create_entry_order_mock.assert_called_once()
         _create_entry_order_mock.reset_mock()
 
         # with secondary orders but no configured secondary amount
         mode.secondary_entry_orders_count = 4
         await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        cancel_order_mock.assert_not_called()
         # only called once: missing secondary quantity prevents secondary orders creation
         _create_entry_order_mock.assert_called_once()
         _create_entry_order_mock.reset_mock()
 
         mode.use_market_entry_orders = False
+        mode.use_secondary_entry_orders = True
         mode.secondary_entry_orders_amount = "20q"
         await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        cancel_order_mock.assert_not_called()
         # called as many times as there are orders to create
         assert _create_entry_order_mock.call_count == 1 + 4
         # ensure each secondary order has a lower price
@@ -573,12 +587,51 @@ async def test_create_new_orders(tools):
 
         mode.use_market_entry_orders = True
         await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.VERY_LONG.value)
+        cancel_order_mock.assert_not_called()
         # called as many times as there are orders to create
         assert _create_entry_order_mock.call_count == 1 + 4
         for i, call in enumerate(_create_entry_order_mock.mock_calls):
             expected_type = trading_enums.TraderOrderType.BUY_MARKET \
                 if i == 0 else trading_enums.TraderOrderType.BUY_LIMIT
             assert call.args[0] is expected_type
+        _create_entry_order_mock.reset_mock()
+
+        # with existing orders: cancel them
+        existing_orders = [
+            _create_basic_order(trading_enums.TradeOrderSide.BUY),
+            _create_basic_order(trading_enums.TradeOrderSide.BUY),
+            _create_basic_order(trading_enums.TradeOrderSide.SELL),
+        ]
+        for order in existing_orders:
+            await trader.exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(order)
+
+        assert trader.exchange_manager.exchange_personal_data.orders_manager.get_all_orders(symbol=symbol) == \
+               existing_orders
+        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        assert cancel_order_mock.call_count == 2
+        assert cancel_order_mock.mock_calls[0].args[0] == existing_orders[0]
+        assert cancel_order_mock.mock_calls[1].args[0] == existing_orders[1]
+        cancel_order_mock.reset_mock()
+        # called as many times as there are orders to create
+        assert _create_entry_order_mock.call_count == 1 + 4
+        _create_entry_order_mock.reset_mock()
+
+        # without enough funds to create every secondary order
+        mode.secondary_entry_orders_count = 30  # can't create 30 orders, each using 100 USD of available funds
+        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        assert cancel_order_mock.call_count == 2   # still cancel open orders
+        assert cancel_order_mock.mock_calls[0].args[0] == existing_orders[0]
+        assert cancel_order_mock.mock_calls[1].args[0] == existing_orders[1]
+        portfolio = trading_api.get_portfolio(trader.exchange_manager)
+        order_example = _create_basic_order(trading_enums.TradeOrderSide.BUY)
+        # ensure used all funds
+        assert portfolio["USDT"].available / _create_entry_order_mock.call_count == \
+               order_example.origin_quantity * order_example.origin_price
+        cancel_order_mock.reset_mock()
+        # called as many times as there are orders to create
+        # 10 orders out of 30 got skipped
+        assert _create_entry_order_mock.call_count == 1 + 19
+        _create_entry_order_mock.reset_mock()
 
 
 async def _check_open_orders_count(trader, count):

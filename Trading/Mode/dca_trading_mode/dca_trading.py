@@ -49,7 +49,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     SECONDARY_ENTRY_ORDERS_COUNT = "secondary_entry_orders_count"
     SECONDARY_ENTRY_ORDERS_AMOUNT = "secondary_entry_orders_amount"
     SECONDARY_ENTRY_ORDERS_PRICE_PERCENT = "secondary_entry_orders_price_percent"
-    DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.05")   # 5% by default
+    DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER = decimal.Decimal("0.05")  # 5% by default
     DEFAULT_SECONDARY_ENTRY_ORDERS_COUNT = 0
     DEFAULT_SECONDARY_ENTRY_ORDERS_AMOUNT = ""
     DEFAULT_SECONDARY_ENTRY_ORDERS_PRICE_MULTIPLIER = DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER
@@ -70,10 +70,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_new_orders(self, symbol, _, state, **kwargs):
         current_order = None
         try:
-            price = await trading_personal_data.get_up_to_date_price(
-                self.exchange_manager, symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
-            )
-            symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+            current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
+                await trading_personal_data.get_pre_order_data(
+                    self.exchange_manager, symbol=symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
+                )
             created_orders = []
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
             if state is trading_enums.EvaluatorStates.NEUTRAL.value:
@@ -81,6 +81,21 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side = trading_enums.TradeOrderSide.BUY if state in (
                 trading_enums.EvaluatorStates.LONG.value, trading_enums.EvaluatorStates.VERY_LONG.value
             ) else trading_enums.TradeOrderSide.SELL
+            if self.exchange_manager.is_future:
+                # on futures, current_symbol_holding = current_market_holding = market_quantity
+                initial_available_funds, _ = trading_personal_data.get_futures_max_order_size(
+                    self.exchange_manager, symbol, side,
+                    price, False, current_symbol_holding, market_quantity
+                )
+            else:
+                initial_available_funds = current_market_holding \
+                    if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
+            # cancel existing DCA orders from previous iterations
+            existing_orders = [
+                order
+                for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+                if not (order.is_cancelled() or order.is_closed()) and side is order.side
+            ]
 
             secondary_quantity = None
             if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
@@ -94,7 +109,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     use_total_holding=False,
                 )
 
-                if self.trading_mode.secondary_entry_orders_amount:
+                if self.trading_mode.use_secondary_entry_orders and self.trading_mode.secondary_entry_orders_amount:
                     # compute secondary orders quantity before locking quantity from initial order
                     secondary_quantity = await script_keywords.get_amount_from_input_amount(
                         context=ctx,
@@ -135,8 +150,22 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     self.logger.error(f"Missing {secondary_order_type.value} secondary order quantity")
                 else:
                     for i in range(self.trading_mode.secondary_entry_orders_count):
-                        multiplier = (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
-                        secondary_target_price = initial_entry_price * (
+                        remaining_funds = initial_available_funds - sum(
+                            (order.origin_quantity * order.origin_price) if side is trading_enums.TradeOrderSide.BUY
+                            else order.origin_quantity
+                            for order in created_orders
+                        )
+                        if remaining_funds < ((secondary_quantity * initial_entry_price)
+                            if side is trading_enums.TradeOrderSide.BUY else secondary_quantity):
+                            self.logger.debug(
+                                f"Not enough available funds to create {symbol} {i + 1}/"
+                                f"{self.trading_mode.secondary_entry_orders_count} secondary order with quantity of "
+                                f"{secondary_quantity} on {self.exchange_manager.exchange_name}"
+                            )
+                            continue
+                        multiplier = self.trading_mode.entry_limit_orders_price_multiplier + \
+                                     (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
+                        secondary_target_price = price * (
                             (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
                             (1 + multiplier)
                         )
@@ -145,6 +174,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             symbol_market, symbol, created_orders, price
                         )
             if created_orders:
+                for order in existing_orders:
+                    # now that new orders are created, cancel previous ones of any
+                    await self.trading_mode.cancel_order(order)
                 return created_orders
             if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
@@ -161,7 +193,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def _create_entry_order(
-        self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
     ):
         for order_quantity, order_price in \
                 trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
@@ -191,20 +223,20 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.trading_mode.secondary_exit_orders_count if self.trading_mode.use_secondary_exit_orders else 0
         )
         stop_price = entry_price * (
-            trading_constants.ONE - (
+                trading_constants.ONE - (
                 self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
-            )
+        )
         )
         first_sell_price = entry_price * (
-            trading_constants.ONE + (
+                trading_constants.ONE + (
                 self.trading_mode.exit_limit_orders_price_multiplier * exit_multiplier_side_flag
-            )
+        )
         )
         last_sell_price = entry_price * (
-            trading_constants.ONE + (
+                trading_constants.ONE + (
                 self.trading_mode.secondary_exit_orders_price_multiplier *
                 (1 + self.trading_mode.secondary_exit_orders_count) * exit_multiplier_side_flag
-            )
+        )
         )
         # split entry into multiple exits if necessary (and possible)
         exit_quantities = self._split_entry_quantity(
@@ -232,11 +264,11 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if i == 1 else (
                         self.trading_mode.exit_limit_orders_price_multiplier +
                         self.trading_mode.secondary_exit_orders_price_multiplier * i
-                    )
+                )
                 take_profit_price = trading_personal_data.decimal_adapt_price(
                     symbol_market,
                     entry_price * (
-                        trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
+                            trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
                     )
                 )
                 take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
@@ -276,14 +308,14 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         can_create_order_result = await super().can_create_order(symbol, state)
         if not can_create_order_result:
             market = symbol_util.parse_symbol(symbol).quote
-            self.logger.error(f"Can't create order : not enough balance. Please get more {market}.")
+            self.logger.debug(f"Can't create order : not enough balance. Please get more {market}.")
         return can_create_order_result
 
 
 class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     MINUTES_BEFORE_NEXT_BUY = "minutes_before_next_buy"
     TRIGGER_MODE = "trigger_mode"
-    
+
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
         self.task = None
@@ -315,25 +347,17 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if evaluations:
             state = trading_enums.EvaluatorStates.NEUTRAL
             if all(
-                evaluation == -1
-                for evaluation in evaluations
+                    evaluation == -1
+                    for evaluation in evaluations
             ):
                 state = trading_enums.EvaluatorStates.VERY_LONG
             elif all(
-                evaluation == 1
-                for evaluation in evaluations
+                    evaluation == 1
+                    for evaluation in evaluations
             ):
                 state = trading_enums.EvaluatorStates.VERY_SHORT
             self.final_eval = evaluations
             await self.trigger_dca(cryptocurrency=cryptocurrency, symbol=symbol, state=state)
-
-    @classmethod
-    def get_should_cancel_loaded_orders(cls) -> bool:
-        """
-        Called by cancel_symbol_open_orders => return true if OctoBot should cancel all orders for a symbol including
-        orders already existing when OctoBot started up
-        """
-        return True
 
     async def trigger_dca(self, cryptocurrency, symbol, state):
         self.state = state
@@ -351,8 +375,6 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if entry_side is trading_enums.TradeOrderSide.SELL:
             self.logger.debug(f"{entry_side.value} entry side not supported for now. Ignored state: {state.value})")
             return
-        # cancel existing DCA orders from previous signals
-        await self.cancel_symbol_open_orders(symbol, entry_side)
         # call orders creation from consumers
         await self.submit_trading_evaluation(
             cryptocurrency=cryptocurrency,
@@ -477,7 +499,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                   "10080 for 1 week or 43200 for 1 month.",
             editor_options={
                 commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
-                  DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value
+                    DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value
                 }
             }
         ))
@@ -493,7 +515,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 min_val=0,
                 title="Limit entry percent difference: Price difference in percent to compute the entry price from "
                       "when using limit orders. "
-                      "Example: 10 on a 2000 USDT price buy would create a buy limit price at 1800 USDT or "
+                      "Example: 10 on a 2000 USDT price would create a buy limit price at 1800 USDT or "
                       "a sell limit price at 2200 USDT.",
                 editor_options={
                     commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
@@ -524,8 +546,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 float(self.secondary_entry_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
                 title="Secondary entry orders price interval percent: Price difference in percent to compute the "
                       "price of secondary entry orders compared to the price of the initial entry order. "
-                      "Example: 10 on a 1800 USDT entry buy price would create secondary entry buy orders "
-                      "at 1600 USDT, 1400 USDT and so on.",
+                      "Example: 10 on a 1800 USDT entry buy (with an asset price of 2000) would "
+                      "create secondary entry buy orders at 1600 USDT, 1400 USDT and so on.",
                 editor_options={
                     commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                         DCATradingModeConsumer.USE_SECONDARY_ENTRY_ORDERS: True
@@ -614,7 +636,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                       " 15 will create a stop order at 1700.",
                 editor_options={
                     commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
-                      DCATradingModeConsumer.USE_STOP_LOSSES: True
+                        DCATradingModeConsumer.USE_STOP_LOSSES: True
                     }
                 }
             )
@@ -639,4 +661,4 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name,
             ",".join([str(e) for e in self.producers[0].final_eval]) if self.producers[0].final_eval
             else self.producers[0].final_eval
-         )
+        )
