@@ -55,7 +55,7 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
             "short_threshold", enums.UserInputTypes.FLOAT, self.short_threshold, inputs,
             min_val=0,
             title="Short threshold: RSI value from with to send a short (sell) signal. "
-                  "Evaluates as 1 when this value is reached or exceeded.",
+                  "Evaluates as 1 when the current RSI value is equal or higher.",
             editor_options={
                 enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "trend_change_identifier": False
@@ -66,7 +66,7 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
             "long_threshold", enums.UserInputTypes.FLOAT, self.long_threshold, inputs,
             min_val=0,
             title="Long threshold: RSI value from with to send a long (buy) signal. "
-                  "Evaluates as -1 when this value is reached or exceeded.",
+                  "Evaluates as -1 when the current RSI value is equal or lower.",
             editor_options={
                 enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "trend_change_identifier": False
