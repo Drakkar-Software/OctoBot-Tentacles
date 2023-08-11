@@ -277,6 +277,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                            created_groups, symbol, order_description_by_id):
         try:
             base_order = created_orders[chained_to]
+            if base_order is None:
+                # when an error occurred when creating the initial order
+                raise KeyError
         except KeyError as e:
             if chained_to in ignored_orders:
                 self.logger.error(f"Ignored order chained to id {chained_to}: "
