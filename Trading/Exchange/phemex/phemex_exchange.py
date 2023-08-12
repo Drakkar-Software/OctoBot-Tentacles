@@ -26,6 +26,8 @@ import octobot_trading.enums as trading_enums
 class Phemex(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     @classmethod
     def get_name(cls):
         return 'phemex'
@@ -75,9 +77,6 @@ class Phemex(exchanges.RestExchange):
             else:
                 return order
         raise KeyError("Order id not found in trades. Impossible to build order from trades history")
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
 
 class PhemexCCXTAdapter(exchanges.CCXTAdapter):

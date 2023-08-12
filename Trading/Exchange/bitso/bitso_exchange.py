@@ -20,10 +20,9 @@ class Bitso(exchanges.RestExchange):
     DESCRIPTION = ""
 
     DEFAULT_MAX_LIMIT = 500
+    FIX_MARKET_STATUS = True
+
 
     @classmethod
     def get_name(cls):
         return 'bitso'
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

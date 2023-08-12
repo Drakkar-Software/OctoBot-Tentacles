@@ -88,6 +88,10 @@ class OkxConnector(ccxt_connector.CCXTConnector):
 
 class Okx(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
+    ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+
     DEFAULT_CONNECTOR_CLASS = OkxConnector
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
 
@@ -162,10 +166,6 @@ class Okx(exchanges.RestExchange):
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            adapt_for_contract_size=True)   # todo check
 
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])

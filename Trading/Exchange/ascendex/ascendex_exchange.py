@@ -27,6 +27,8 @@ class AscendEx(exchanges.RestExchange):
     BUY_STR = "Buy"
     SELL_STR = "Sell"
 
+    FIX_MARKET_STATUS = True
+
     ACCOUNTS = {
         trading_enums.AccountTypes.CASH: 'cash',
         trading_enums.AccountTypes.MARGIN: 'margin',
@@ -46,9 +48,6 @@ class AscendEx(exchanges.RestExchange):
 
     def parse_account(self, account):
         return trading_enums.AccountTypes[account.lower()]
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On AscendEx, account recent trades is available under fetch_closed_orders

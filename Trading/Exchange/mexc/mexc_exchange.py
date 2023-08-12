@@ -28,6 +28,9 @@ import octobot_commons.constants as commons_constants
 
 
 class MEXC(exchanges.RestExchange):
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     def __init__(self, config, exchange_manager, connector_class=None):
@@ -50,10 +53,6 @@ class MEXC(exchanges.RestExchange):
                 "recvWindow": 60000,  # default is 5000, avoid time related issues
             }
         }
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,

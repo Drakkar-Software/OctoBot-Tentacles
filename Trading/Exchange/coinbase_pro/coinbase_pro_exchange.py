@@ -21,15 +21,14 @@ import octobot_trading.exchanges as exchanges
 class CoinbasePro(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 100  # value from https://docs.pro.coinbase.com/#pagination
 
+    FIX_MARKET_STATUS = True
+
     @classmethod
     def get_name(cls):
         return 'coinbasepro'
 
     def get_adapter_class(self):
         return CoinbaseProCCXTAdapter
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         return self._uniformize_trades(await super().get_my_recent_trades(symbol=symbol,
