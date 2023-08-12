@@ -24,6 +24,9 @@ import octobot_trading.errors
 
 class Coinex(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
+
     MAX_PAGINATION_LIMIT: int = 100
 
     @classmethod
@@ -41,9 +44,6 @@ class Coinex(exchanges.RestExchange):
                 "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
             }
         }
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,

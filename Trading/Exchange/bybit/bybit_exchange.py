@@ -31,6 +31,8 @@ import octobot_trading.errors
 class Bybit(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     # Bybit default take profits are market orders
     # note: use BUY_MARKET and SELL_MARKET since in reality those are conditional market orders, which behave the same
     # way as limit order but with higher fees
@@ -146,9 +148,6 @@ class Bybit(exchanges.RestExchange):
             except ccxt.AuthenticationError:
                 # unauthenticated
                 pass
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:

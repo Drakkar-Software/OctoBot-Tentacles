@@ -22,6 +22,9 @@ import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
+
     BASE_REST_API = "api.hollaex.com"
     REST_KEY = "rest"
     HAS_WEBSOCKETS_KEY = "has_websockets"
@@ -78,9 +81,6 @@ class hollaex(exchanges.RestExchange):
         if limit is None:
             limit = self.DEFAULT_MAX_LIMIT
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_closed_orders(self, symbol: str = None, since: int = None,
                                 limit: int = None, **kwargs: dict) -> list:

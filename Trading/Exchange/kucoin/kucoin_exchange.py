@@ -52,6 +52,10 @@ def _kucoin_retrier(f):
 
 
 class Kucoin(exchanges.RestExchange):
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+    ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
@@ -116,12 +120,6 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        # on futures, market status gives limits in contracts, convert it to currency units
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True,
-                                            adapt_for_contract_size=True)
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):

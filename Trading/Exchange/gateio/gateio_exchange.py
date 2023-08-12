@@ -21,6 +21,9 @@ import octobot_trading.enums as trading_enums
 class GateIO(exchanges.RestExchange):
     ORDERS_LIMIT = 100
 
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+
     @classmethod
     def get_name(cls):
         return 'gateio'
@@ -34,10 +37,6 @@ class GateIO(exchanges.RestExchange):
                                              limit=min(self.ORDERS_LIMIT, limit) 
                                                    if limit is not None else None,
                                              **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
 
 class GateioCCXTAdapter(exchanges.CCXTAdapter):
