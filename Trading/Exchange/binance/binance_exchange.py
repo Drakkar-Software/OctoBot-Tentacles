@@ -19,13 +19,11 @@ import typing
 import ccxt
 
 import octobot_trading.enums as trading_enums
-import octobot_trading.constants as constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
-import octobot_trading.personal_data as trading_personal_data
 
 
 class Binance(exchanges.RestExchange):
@@ -82,6 +80,10 @@ class Binance(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return BinanceCCXTAdapter
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        raw_balance = await self.connector.client.fetch_balance()
+        return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
 
     def _infer_account_types(self, exchange_manager):
         account_types = []
