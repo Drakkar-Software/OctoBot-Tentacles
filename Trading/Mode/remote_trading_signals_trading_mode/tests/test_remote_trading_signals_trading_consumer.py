@@ -111,7 +111,7 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert isinstance(orders[0], trading_personal_data.StopLossOrder)
     assert isinstance(orders[0].order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)    # not balance group anymore
     assert orders[0].order_group.name == "new_group_id"
-    assert orders[0].origin_quantity == decimal.Decimal("0.339282105005844")    # changed quantity
+    assert orders[0].origin_quantity == decimal.Decimal("0.3392821050783528672")    # changed quantity according to fees
     assert orders[0].origin_price == decimal.Decimal("2000")    # changed price
     assert isinstance(orders[1], trading_personal_data.BuyLimitOrder)   # not sell order (sell is cancelled)
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
