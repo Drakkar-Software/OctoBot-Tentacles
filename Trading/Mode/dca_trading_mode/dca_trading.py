@@ -143,7 +143,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 symbol_market, symbol, created_orders, price
             )
             # secondary entries
-            if self.trading_mode.secondary_entry_orders_count > 0:
+            if self.trading_mode.use_secondary_entry_orders and self.trading_mode.secondary_entry_orders_count > 0:
                 secondary_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
                     if side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
                 if not secondary_quantity:
