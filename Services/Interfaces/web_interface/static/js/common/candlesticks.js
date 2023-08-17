@@ -112,7 +112,7 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
             const marketsElement = $("#loadingMarketsDiv");
             marketsElement.removeClass(disabled_item_class);
             setTimeout(function(){
-                get_watched_symbol_price_graph(element, callback, no_data_callback, time_frame, displayOrders);
+                get_watched_symbol_price_graph(element, callback, no_data_callback, time_frame, display_orders);
             }, 1000);
         }
     });
@@ -227,11 +227,12 @@ const _getOrderColor = (orderDesc, side) => {
     return side === "sell" ? sell_color : buy_color
 }
 
-function create_orders(orders, trader, lastTime){
+function create_orders(orders, trader, firstTime, lastTime){
+    const firstDate = new Date(`20${firstTime}`)
     if (isDefined(orders) && isDefined(orders.time) && orders.time.length > 0) {
         return orders.time.map((x, index) => {
             return {
-              x: [x, lastTime],
+              x: [new Date(`20${x}`) >= firstDate ? x : firstTime, lastTime],
               y: [orders.price[index], orders.price[index]],
               mode: 'lines+markers',
               text: orders.description[index],
@@ -410,7 +411,8 @@ function create_or_update_candlestick_graph(element_id, symbol_price_data, symbo
             simulator_trades = isSimulated ? create_trades(trades, "Simulator") : [];
         }
         const lastTime = price_trace.x[price_trace.x.length - 1];
-        plotted_orders = create_orders(orders, isSimulated ? "Simulator": "Real trader", lastTime);
+        const firstTime = price_trace.x[0];
+        plotted_orders = create_orders(orders, isSimulated ? "Simulator": "Real trader", firstTime, lastTime);
 
         const data = [volume_trace, price_trace, real_trader_trades, simulator_trades, ...plotted_orders];
         const plotlyConfig = {
