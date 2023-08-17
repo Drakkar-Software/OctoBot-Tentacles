@@ -81,11 +81,6 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
         except (KeyError, TypeError):
             pass
 
-    def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw, **kwargs)
-        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return fixed
-
     def fix_trades(self, raw, **kwargs):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
