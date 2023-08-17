@@ -1464,10 +1464,10 @@ def reload_tentacle_config(tentacle_name):
         raise
 
 
-def update_config_currencies(currencies: list, replace: bool=False):
+def update_config_currencies(currencies: dict, replace: bool=False):
     """
-    Update the configured currencies list
-    :param currencies: currencies list
+    Update the configured currencies dict
+    :param currencies: currencies dict
     :param replace: replace the current list
     :return: bool, str
     """
@@ -1475,8 +1475,26 @@ def update_config_currencies(currencies: list, replace: bool=False):
     message = "Currencies list updated"
     try:
         config_currencies = interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES]
-        config_currencies = currencies if replace else \
-            configuration.merge_dictionaries_by_appending_keys(config_currencies, currencies, merge_sub_array=True)
+        # prevent format issues
+        checked_currencies = {
+            currency: {
+                commons_constants.CONFIG_CRYPTO_PAIRS: values[commons_constants.CONFIG_CRYPTO_PAIRS],
+                commons_constants.CONFIG_ENABLED_OPTION: values.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+            }
+            for currency, values in currencies.items()
+            if (
+                isinstance(values.get(commons_constants.CONFIG_ENABLED_OPTION, True), bool)
+                and commons_constants.CONFIG_CRYPTO_PAIRS in values
+                and isinstance(values[commons_constants.CONFIG_CRYPTO_PAIRS], list)
+                and all(isinstance(pair, str) for pair in commons_constants.CONFIG_CRYPTO_PAIRS)
+            )
+        }
+        interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES] = (
+            checked_currencies if replace
+            else configuration.merge_dictionaries_by_appending_keys(
+                config_currencies, checked_currencies, merge_sub_array=True
+            )
+        )
         interfaces_util.get_edited_config(dict_only=False).save()
     except Exception as e:
         message = f"Error while updating currencies list: {e}"
