@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import time
 import sortedcontainers
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
@@ -52,8 +53,11 @@ def get_all_watched_time_frames():
     return time_frame_manager.sort_time_frames(list(set(time_frames)))
 
 
-def get_initializing_currencies_prices_set():
+def get_initializing_currencies_prices_set(fetch_timeout):
     initializing_currencies = set()
+    # if fetch_timeout is > 0 and prices are still missing after fetch_timeout, ignore them
+    if fetch_timeout and time.time() > interfaces_util.get_bot_api().get_start_time() + fetch_timeout:
+        return initializing_currencies
     for exchange_manager in interfaces_util.get_exchange_managers():
         initializing_currencies = initializing_currencies.union(
             trading_api.get_initializing_currencies_prices(exchange_manager))
