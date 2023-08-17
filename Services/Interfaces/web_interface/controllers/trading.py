@@ -38,7 +38,9 @@ def register(blueprint):
 
         displayed_portfolio_value = portfolio_real_current_value if has_real_trader else portfolio_simulated_current_value
         reference_market = interfaces_util.get_reference_market()
-        initializing_currencies_prices_set = models.get_initializing_currencies_prices_set()
+        initializing_currencies_prices_set = models.get_initializing_currencies_prices_set(
+            commons_constants.HOURS_TO_SECONDS
+        )
 
         return flask.render_template('portfolio.html',
                                      has_real_trader=has_real_trader,
