@@ -13,11 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import collections
 import logging
 import abc
 import os.path
 
 import octobot_commons.logging as bot_logging
+import octobot_commons.timestamp_util as timestamp_util
 
 
 class Notifier:
@@ -50,6 +52,7 @@ from tentacles.Services.Interfaces.web_interface.web import WebInterface
 for logger in ('engineio.server', 'socketio.server', 'geventwebsocket.handler'):
     logging.getLogger(logger).setLevel(logging.WARNING)
 
+notifications_history = collections.deque(maxlen=1000)
 notifications = []
 
 TIME_AXIS_TITLE = "Time"
@@ -114,17 +117,24 @@ def send_order_update(dict_order, exchange_id, symbol):
 
 
 async def add_notification(level, title, message, sound=None):
-    notifications.append({
+    notification = {
         "Level": level.value,
         "Title": title,
-        "Message": message,
-        "Sound": sound
-    })
+        "Message": message.replace("<br>", " "),
+        "Sound": sound,
+        "Time": timestamp_util.get_now_time()
+    }
+    notifications.append(notification)
+    notifications_history.append(notification)
     send_general_notifications()
 
 
 def get_notifications():
     return notifications
+
+
+def get_notifications_history() -> list:
+    return list(notifications_history)
 
 
 def get_logs():

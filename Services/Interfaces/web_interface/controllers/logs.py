@@ -31,7 +31,8 @@ def register(blueprint):
     def logs():
         web_interface.flush_errors_count()
         return flask.render_template("logs.html",
-                                     logs=web_interface.get_logs())
+                                     logs=web_interface.get_logs(),
+                                     notifications=web_interface.get_notifications_history())
     
     
     @blueprint.route("/export_logs")
