@@ -500,6 +500,57 @@ async def test_start_after_offline_filled_orders_with_recent_trades():
         _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
 
 
+async def test_start_after_offline_filled_orders_close_to_price_with_recent_trades():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        # first start: setup orders
+        producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
+        producer.buy_funds = decimal.Decimal("10000")  # 25 buy orders
+        producer.flat_spread = decimal.Decimal("200")
+        producer.flat_increment = decimal.Decimal("75")
+        orders_count = 25 + 25
+
+        initial_price = 29247.16
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, initial_price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+
+        # offline simulation: orders get filled but not replaced => price got up to 110 and not down to 90, now is 96s
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        offline_filled_orders = [o for o in open_orders if o.origin_price == decimal.Decimal('29147.16')]
+        assert len(offline_filled_orders) == 1
+        offline_filled = offline_filled_orders[0]
+        await _fill_order(offline_filled, exchange_manager, trigger_update_callback=False, producer=producer)
+        # offline_filled is a buy order: now have mode BTC
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - 1
+
+        # back online: restore orders according to current price => create sell missing order
+        price = 29127.16
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        # restored orders
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available < post_portfolio
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        _check_created_orders(producer, open_orders, initial_price)
+        new_orders = [o for o in open_orders if o.origin_price == decimal.Decimal('29272.16')]
+        assert len(new_orders) == 1
+        new_order = new_orders[0]
+        assert new_order.side is trading_enums.TradeOrderSide.SELL
+        # offline_filled - fees
+        trade = trading_api.get_trade_history(exchange_manager)[0]
+        fees = trade.fee[trading_enums.FeePropertyColumns.COST.value]
+        symbol_market = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        assert new_order.origin_quantity == \
+               trading_personal_data.decimal_adapt_quantity(symbol_market, offline_filled.origin_quantity - fees)
+
+
 async def test_start_after_offline_full_sell_side_filled_orders_with_recent_trades():
     symbol = "BTC/USDT"
     async with _get_tools(symbol) as (producer, _, exchange_manager):
@@ -914,8 +965,11 @@ def _check_created_orders(producer, orders, initial_price):
                 assert order.origin_price == previous_order.origin_price + producer.flat_spread
         previous_order = order
     min_price = max(
-        0, initial_price - producer.flat_spread / 2 - (producer.flat_increment * (producer.buy_orders_count - 1))
+        0,
+        decimal.Decimal(str(initial_price)) - producer.flat_spread / 2
+        - (producer.flat_increment * (producer.buy_orders_count - 1))
     )
-    max_price = initial_price + producer.flat_spread / 2 + (producer.flat_increment * (producer.sell_orders_count - 1))
+    max_price = decimal.Decimal(str(initial_price)) + producer.flat_spread / 2 + \
+                (producer.flat_increment * (producer.sell_orders_count - 1))
     assert min_price <= sorted_orders[0].origin_price <= max_price
     assert min_price <= sorted_orders[-1].origin_price <= max_price

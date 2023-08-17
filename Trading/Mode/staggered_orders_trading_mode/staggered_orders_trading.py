@@ -1135,7 +1135,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                 else:
                                     inferred_spread = self.flat_spread or self.spread * increment / self.increment
                                     missing_orders_count = (delta_spread - inferred_spread) / increment
-                                    if float(missing_orders_count) > 1 * 1.2:
+                                    # should be 0 when no order is missing
+                                    if float(missing_orders_count) > 0.5:
                                         # missing orders around spread point: symmetrical orders were not created when
                                         # orders were filled => re-create them
                                         next_missing_order_price = previous_order.origin_price + increment
