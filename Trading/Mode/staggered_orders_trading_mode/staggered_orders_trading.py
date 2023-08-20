@@ -378,6 +378,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.single_pair_setup = len(self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]) <= 1
         self.mirror_order_delay = self.buy_funds = self.sell_funds = 0
         self.allowed_mirror_orders = asyncio.Event()
+        self.health_check_interval_secs = self.__class__.HEALTH_CHECK_INTERVAL_SECS
         self.healthy = False
 
         try:
@@ -487,10 +488,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 can_create_orders = False
         if not self.should_stop:
             if can_create_orders:
-                # a None self.HEALTH_CHECK_INTERVAL_SECS disables health check
-                if self.HEALTH_CHECK_INTERVAL_SECS is not None:
+                # a None self.health_check_interval_secs disables health check
+                if self.health_check_interval_secs is not None:
                     self.scheduled_health_check = asyncio.get_event_loop().call_later(
-                        self.HEALTH_CHECK_INTERVAL_SECS,
+                        self.health_check_interval_secs,
                         self._schedule_order_refresh
                     )
             else:
@@ -538,6 +539,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             async with self.get_lock(), self.trading_mode_trigger():
                 if self.exchange_manager.trader.is_enabled:
                     await self._handle_staggered_orders(current_price, ignore_mirror_orders_only, ignore_available_funds)
+                    self.logger.debug(f"{self.symbol} orders updated on {self.exchange_name}")
 
     async def order_filled_callback(self, filled_order):
         # create order on the order side
@@ -989,7 +991,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 average_order_quantity, self.mode, side, i, orders_count, price, price
             )
         except trading_errors.NotSupported:
-            self.logger.error(f"Error when computing restored order quantity: recent trades are required")
+            self.logger.warning(f"Error when computing restored order quantity: recent trades are required")
             return None
         if quantity is None:
             return None
