@@ -168,6 +168,14 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. "
                   "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
         )
+        self.UI.user_input( 
+            self.CONFIG_ALLOW_FUNDS_REDISPATCH, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ALLOW_FUNDS_REDISPATCH], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Auto-dispatch new funds: when checked, new available funds will be dispatched into existing "
+                  "orders when additional funds become available. Funds redispatch check happens once a day "
+                  "around your OctoBot start time.",
+        )
 
     def get_default_pair_config(self, symbol, flat_spread, flat_increment) -> dict:
         return {
@@ -184,7 +192,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           self.CONFIG_REINVEST_PROFITS: False,
           self.CONFIG_MIRROR_ORDER_DELAY: 0,
           self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
-          self.CONFIG_USE_EXISTING_ORDERS_ONLY: False
+          self.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
+          self.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
         }
 
     def get_mode_producer_classes(self) -> list:
@@ -280,6 +289,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.allow_order_funds_redispatch = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_ALLOW_FUNDS_REDISPATCH, self.allow_order_funds_redispatch
         )
+        if self.allow_order_funds_redispatch:
+            # check every day that funds should not be redispatched and of orders are missing
+            self.health_check_interval_secs = commons_constants.DAYS_TO_SECONDS
 
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
