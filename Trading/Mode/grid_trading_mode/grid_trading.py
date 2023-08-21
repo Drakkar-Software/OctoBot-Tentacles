@@ -22,7 +22,6 @@ import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
-import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 
 
