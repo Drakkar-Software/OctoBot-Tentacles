@@ -742,12 +742,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         for order in orders:
             locked_base, locked_quote = self._get_order_locked_funds(order)
             buying = order.side is trading_enums.TradeOrderSide.BUY
-            if (used_buy_funds + locked_quote < max_buy_funds) and (buying or used_sell_funds >= max_sell_funds):
+            if (
+                (used_buy_funds + locked_quote <= max_buy_funds)
+                and (buying or used_sell_funds + locked_base > max_sell_funds)
+            ):
                 used_buy_funds += locked_quote
-            elif used_sell_funds < max_sell_funds:
+            else:
                 used_sell_funds += locked_base
         if (
-            used_buy_funds < max_buy_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
+            # reset if buy or sell funds are underused and sell funds are not overused
+            (used_buy_funds < max_buy_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD and
+             not used_sell_funds > max_sell_funds)
             or used_sell_funds < max_sell_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
         ):
             # bigger orders can be created
@@ -909,8 +914,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 # missing order next to spread
                 starting_bound = upper_bound if selling else lower_bound
                 increment_window = self.flat_increment / 2
-                order_limiting_currency_available_amount = trading_api.get_portfolio_currency(self.exchange_manager,
-                                                                                              order_limiting_currency).available
+                order_limiting_currency_available_amount = trading_api.get_portfolio_currency(
+                    self.exchange_manager, order_limiting_currency
+                ).available
                 decimal_order_limiting_currency_available_amount = decimal.Decimal(
                     str(order_limiting_currency_available_amount))
                 portfolio_total = trading_api.get_portfolio_currency(self.exchange_manager,
@@ -937,7 +943,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                 order_quantity = self._get_spread_missing_order_quantity(
                                     average_order_quantity, side, i, orders_count, price, selling,
                                     limiting_amount_from_this_order,
-                                    decimal_order_limiting_currency_available_amount, recent_trades, current_price
+                                    decimal_order_limiting_currency_available_amount, recent_trades, sorted_orders,
+                                    current_price
                                 )
                                 if price is not None and limiting_amount_from_this_order > 0 and \
                                         price - increment_window <= missing_order_price <= price + increment_window:
@@ -980,8 +987,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _get_spread_missing_order_quantity(
         self, average_order_quantity, side, i, orders_count, price, selling, limiting_amount_from_this_order,
-        order_limiting_currency_available_amount, recent_trades, current_price
+        order_limiting_currency_available_amount, recent_trades, sorted_orders, current_price
     ):
+        if sorted_orders:
+            if quantity := self._get_quantity_from_existing_orders(
+                price, sorted_orders, selling
+            ):
+                return quantity
         if quantity := self._get_quantity_from_recent_trades(
             price, limiting_amount_from_this_order, recent_trades, current_price, selling
         ):
@@ -991,7 +1003,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 average_order_quantity, self.mode, side, i, orders_count, price, price
             )
         except trading_errors.NotSupported:
-            self.logger.warning(f"Error when computing restored order quantity: recent trades are required")
+            if quantity := self._get_quantity_from_existing_boundary_orders(
+                price, sorted_orders, selling
+            ):
+                self.logger.info(
+                    f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
+                    f"order at price: {price}: recent trades are not available."
+                )
+                return quantity
+            self.logger.error(
+                f"Error when computing restored order quantity for {'sell' if selling else 'buy'} order at "
+                f"price: {price}: recent trades or active orders are required."
+            )
             return None
         if quantity is None:
             return None
@@ -1003,6 +1026,31 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 order_limiting_currency_available_amount
             )
         return limiting_currency_quantity
+
+    def _get_quantity_from_existing_orders(self, price, sorted_orders, selling):
+        increment_window = self.flat_increment / 4
+        price_window_lower_bound = price - increment_window
+        price_window_higher_bound = price + increment_window
+        for order in sorted_orders:
+            if price_window_lower_bound <= order.origin_price <= price_window_higher_bound and (
+                order.side is (trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY)
+            ):
+                return order.origin_quantity
+        return None
+
+    def _get_quantity_from_existing_boundary_orders(self, price, sorted_orders, selling):
+        # Should be the last attempt: compute price from existing orders using cost
+        # of the 1st order on target side and compute linear quantity. Use boundary order as it has the most chances
+        # to remain according to the initial orders costs (compared to an average that could contain results of trades
+        # from the order side, which cost might not be balanced with the current order side)
+        example_order = sorted_orders[-1] if selling else sorted_orders[0]
+        target_side = trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
+        if example_order.side is not target_side:
+            # an order from the same side is required
+            return None
+        target_cost = example_order.total_cost
+        # use linear equivalent of the target cost
+        return target_cost / price
 
     def _get_quantity_from_recent_trades(self, price, max_quantity, recent_trades, current_price, selling):
         if not self._use_recent_trades_for_order_restore or not recent_trades:
