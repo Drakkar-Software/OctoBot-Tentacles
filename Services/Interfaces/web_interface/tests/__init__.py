@@ -26,7 +26,15 @@ import octobot_commons.constants as commons_constants
 
 import octobot_services.interfaces as interfaces
 import octobot.community as community
-import octobot.community.supabase_backend.configuration_storage as configuration_storage
+try:
+    import octobot.community.supabase_backend.configuration_storage as configuration_storage
+except ImportError:
+    # todo remove once supabase migration is complete
+    configuration_storage = mock.Mock(
+        SyncConfigurationStorage=mock.Mock(
+            _save_value_in_config=mock.Mock()
+        )
+    )
 import octobot.automation as automation
 
 import tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication as octobot_authentication
