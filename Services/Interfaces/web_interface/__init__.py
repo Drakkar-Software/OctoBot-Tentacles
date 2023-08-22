@@ -13,20 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import collections
 import logging
 import abc
 import os.path
-import flask
-import flask_cors
-from flask_caching import Cache
 
-import tentacles.Services.Interfaces.web_interface.api as api
 import octobot_commons.logging as bot_logging
-
-server_instance = flask.Flask(__name__)
-server_instance.config['SEND_FILE_MAX_AGE_DEFAULT'] = 604800
-cache = Cache(config={"CACHE_TYPE": "SimpleCache"})
+import octobot_commons.timestamp_util as timestamp_util
 
 
 class Notifier:
@@ -50,31 +43,16 @@ DATA_COLLECTOR_NOTIFICATION_KEY = "data_collector_notifications"
 STRATEGY_OPTIMIZER_NOTIFICATION_KEY = "strategy_optimizer_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
-import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
-
-# Override system configuration content types
-flask_util.init_content_types()
-server_instance.json = flask_util.FloatDecimalJSONProvider(server_instance)
-
-# Set CORS policy
-if flask_util.get_user_defined_cors_allowed_origins() != "*":
-    # never allow "*" as allowed origin, prefer not setting it if user did not specifically set origins
-    flask_cors.CORS(server_instance, origins=flask_util.get_user_defined_cors_allowed_origins())
 
 # Make WebInterface visible to imports
 from tentacles.Services.Interfaces.web_interface.web import WebInterface
 
-import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
-
-server_instance.register_blueprint(advanced_controllers.advanced)
-server_instance.register_blueprint(api.api)
 
 # disable server logging
-loggers = ['engineio.server', 'socketio.server', 'geventwebsocket.handler']
-for logger in loggers:
+for logger in ('engineio.server', 'socketio.server', 'geventwebsocket.handler'):
     logging.getLogger(logger).setLevel(logging.WARNING)
 
-registered_plugins = []
+notifications_history = collections.deque(maxlen=1000)
 notifications = []
 
 TIME_AXIS_TITLE = "Time"
@@ -86,22 +64,20 @@ def dir_last_updated(folder):
                    for f in files))
 
 
-LAST_UPDATED_STATIC_FILES = dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))
+LAST_UPDATED_STATIC_FILES = 0
 
 
 def update_registered_plugins(plugins):
     global LAST_UPDATED_STATIC_FILES
     last_update_time = float(LAST_UPDATED_STATIC_FILES)
     for plugin in plugins:
-        if plugin not in registered_plugins:
-            registered_plugins.append(plugin)
-            if plugin.static_folder:
-                last_update_time = max(last_update_time, float(dir_last_updated(plugin.static_folder)))
+        if plugin.static_folder:
+            last_update_time = max(
+                last_update_time,
+                float(dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))),
+                float(dir_last_updated(plugin.static_folder))
+            )
     LAST_UPDATED_STATIC_FILES = last_update_time
-
-
-# register flask utilities
-import tentacles.Services.Interfaces.web_interface.flask_util
 
 
 def flush_notifications():
@@ -141,17 +117,24 @@ def send_order_update(dict_order, exchange_id, symbol):
 
 
 async def add_notification(level, title, message, sound=None):
-    notifications.append({
+    notification = {
         "Level": level.value,
         "Title": title,
-        "Message": message,
-        "Sound": sound
-    })
+        "Message": message.replace("<br>", " "),
+        "Sound": sound,
+        "Time": timestamp_util.get_now_time()
+    }
+    notifications.append(notification)
+    notifications_history.append(notification)
     send_general_notifications()
 
 
 def get_notifications():
     return notifications
+
+
+def get_notifications_history() -> list:
+    return list(notifications_history)
 
 
 def get_logs():

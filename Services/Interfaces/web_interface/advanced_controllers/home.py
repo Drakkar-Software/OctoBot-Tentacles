@@ -13,15 +13,14 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
-import tentacles.Services.Interfaces.web_interface.advanced_controllers as advanced_controllers
 import tentacles.Services.Interfaces.web_interface.login as login
 
 
-@advanced_controllers.advanced.route("/")
-@advanced_controllers.advanced.route("/home")
-@login.login_required_when_activated
-def home():
-    return flask.render_template('advanced_index.html')
+def register(blueprint):
+    @blueprint.route("/")
+    @blueprint.route("/home")
+    @login.login_required_when_activated
+    def home():
+        return flask.render_template('advanced_index.html')

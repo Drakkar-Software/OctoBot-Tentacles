@@ -25,6 +25,9 @@ import octobot_trading.errors
 class Bitget(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+
     @classmethod
     def get_name(cls):
         return 'bitget'
@@ -56,10 +59,6 @@ class Bitget(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
 
 class BitgetCCXTAdapter(exchanges.CCXTAdapter):

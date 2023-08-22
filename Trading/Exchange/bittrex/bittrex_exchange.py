@@ -20,15 +20,14 @@ import octobot_trading.exchanges as exchanges
 class Bittrex(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     SUPPORTED_ORDER_BOOK_LIMITS = [1, 25, 500]
     DEFAULT_ORDER_BOOK_LIMIT = 25
 
     @classmethod
     def get_name(cls):
         return 'bittrex'
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:

@@ -18,6 +18,7 @@ import decimal
 import octobot_commons.channels_name as channels_name
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
+import octobot_commons.authentication as authentication
 import octobot_commons.tentacles_management as tentacles_management
 import async_channel.channels as channels
 import octobot_trading.constants as trading_constants
@@ -98,6 +99,9 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
                 await channel.subscribe_to_product_feed(
                     self.trading_config[common_constants.CONFIG_TRADING_SIGNALS_STRATEGY]
                 )
+            except (authentication.AuthenticationRequired, authentication.AuthenticationError) as e:
+                self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. Please sign in to "
+                                               f"your OctoBot account to receive trading signals")
             except Exception as e:
                 self.logger.exception(e, True, f"Error while subscribing to signal feed: {e}. This trading mode won't "
                                                f"be operating")
@@ -192,7 +196,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         cancelled_count = 0
         for _, order in self.get_open_order_from_description(orders_descriptions, symbol):
             try:
-                await self.exchange_manager.trader.cancel_order(order)
+                await self._cancel_order_on_exchange(order)
             except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
                 self.logger.warning(f"Skipping order cancel: {err}")
             cancelled_count += 1
@@ -206,7 +210,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             edited_quantity, _, _ = await self._get_quantity_from_signal_percent(
                 order_description, order.side, symbol, order.reduce_only, True
             )
-            await self.exchange_manager.trader.edit_order(
+            await self._edit_order_on_exchange(
                 order,
                 edited_quantity=decimal.Decimal(edited_quantity) if edited_quantity else None,
                 edited_price=decimal.Decimal(edited_price) if edited_price else None,
@@ -273,6 +277,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                            created_groups, symbol, order_description_by_id):
         try:
             base_order = created_orders[chained_to]
+            if base_order is None:
+                # when an error occurred when creating the initial order
+                raise KeyError
         except KeyError as e:
             if chained_to in ignored_orders:
                 self.logger.error(f"Ignored order chained to id {chained_to}: "
@@ -294,9 +301,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         if chained_order.origin_quantity == trading_constants.ZERO:
             self.logger.warning(f"Ignored chained order: {chained_order}: not enough funds")
             return 0
-        await chained_order.set_as_chained_order(base_order, False, {}, chained_order.update_with_triggering_order_fees)
-        base_order.add_chained_order(chained_order)
-        if base_order.is_filled() and chained_order.should_be_created():
+        await self.exchange_manager.trader.chain_order(
+            base_order, chained_order, chained_order.update_with_triggering_order_fees, False
+        )
+        if base_order.state is not None and base_order.is_filled() and chained_order.should_be_created():
             await personal_data.create_as_chained_order(chained_order)
             return 1
         return 0
@@ -415,7 +423,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 self.logger.debug(f"Ignored order with order id {order_id}: order already handled")
                 continue
             created_orders[order_id] = \
-                await self.exchange_manager.trader.create_order(order_with_param[0], params=order_with_param[1])
+                await self._create_order_on_exchange(order_with_param[0], params=order_with_param[1])
         # handle chained orders
         created_chained_orders_count = 0
         for order_description in orders_descriptions:
@@ -533,6 +541,21 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             ))
         except ImportError as e:
             self.logger.exception(e, True, f"Impossible to send notification: {e}")
+
+    # exchange methods: bypass trading modes api to avoid sending signals
+    async def _create_order_on_exchange(self, order, params):
+        return await self.exchange_manager.trader.create_order(order, params=params)
+
+    async def _cancel_order_on_exchange(self, order):
+        await self.exchange_manager.trader.cancel_order(order)
+
+    async def _edit_order_on_exchange(self, order, edited_quantity=None, edited_price=None, edited_stop_price=None):
+        await self.exchange_manager.trader.edit_order(
+            order,
+            edited_quantity=edited_quantity,
+            edited_price=edited_price,
+            edited_stop_price=edited_stop_price
+        )
 
 
 class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer):

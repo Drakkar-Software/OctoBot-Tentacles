@@ -52,6 +52,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
     mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    mode.producers[0].allow_order_funds_redispatch = True
     test_trading_modes.set_ready_to_start(mode.producers[0])
     return mode, mode.producers[0]
 
@@ -522,11 +523,11 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     btc_holdings = 400
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
@@ -774,7 +775,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
@@ -785,7 +788,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
@@ -865,8 +870,8 @@ async def test_compute_minimum_funds_1():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475.25)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(100))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.049505))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.049505)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds
@@ -877,8 +882,8 @@ async def test_compute_minimum_funds_1():
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
         assert len(orders) == producer.operational_depth
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 26
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 24
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 25
 
 
 async def test_compute_minimum_funds_2():
@@ -895,8 +900,8 @@ async def test_compute_minimum_funds_2():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(str(100)))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.0495))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.0495)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds * decimal.Decimal("0.99999")

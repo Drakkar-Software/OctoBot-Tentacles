@@ -21,7 +21,7 @@ from tentacles.Services.Interfaces.web_interface.flask_util.content_types_manage
 
 from tentacles.Services.Interfaces.web_interface.flask_util import context_processor
 from tentacles.Services.Interfaces.web_interface.flask_util.context_processor import (
-    context_processor_register,
+    register_context_processor,
 )
 
 from tentacles.Services.Interfaces.web_interface.flask_util import file_services
@@ -52,7 +52,7 @@ from tentacles.Services.Interfaces.web_interface.flask_util.browsing_data_provid
 
 __all__ = [
     "init_content_types",
-    "context_processor_register",
+    "register_context_processor",
     "send_and_remove_file",
     "register_template_filters",
     "FloatDecimalJSONProvider",

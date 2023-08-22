@@ -20,12 +20,11 @@ import octobot_trading.exchanges as exchanges
 class Hitbtc(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     @classmethod
     def get_name(cls):
         return 'hitbtc'
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, sort='DESC', **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)

@@ -23,6 +23,8 @@ import octobot_trading.errors
 
 
 class Huobi(exchanges.RestExchange):
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
 
     @classmethod
     def get_name(cls):
@@ -39,10 +41,6 @@ class Huobi(exchanges.RestExchange):
                 "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
             }
         }
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,

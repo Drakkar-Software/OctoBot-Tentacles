@@ -69,10 +69,26 @@
         class="bg-warning-dark"
     {% endif %}
     >
-        <td scope="row">{{ log["Time"] }}</td>
+        <td>{{ log["Time"] }}</td>
         <td>{{ log["Level"] }}</td>
         <td>{{ log["Source"] }}</td>
         <td>{{ log["Message"] }}</td>
+    </tr>
+{%- endmacro %}
+
+{% macro notifications_tr(notification) -%}
+    <tr
+    {% if "ERROR" in notification["Level"] %}
+        class="bg-danger"
+    {% endif %}
+    {% if "WARNING" in notification["Level"] %}
+        class="bg-warning-dark"
+    {% endif %}
+    >
+        <td>{{ notification["Time"] }}</td>
+        <td>{{ notification["Title"] }}</td>
+        <td>{{ notification["Message"] }}</td>
+        <td>{{ notification["Level"] }}</td>
     </tr>
 {%- endmacro %}
 

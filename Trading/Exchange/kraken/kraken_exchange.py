@@ -20,6 +20,8 @@ import octobot_trading.errors
 class Kraken(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     RECENT_TRADE_FIXED_LIMIT = 1000
 
     def __init__(self, config, exchange_manager):
@@ -30,9 +32,6 @@ class Kraken(exchanges.RestExchange):
     @classmethod
     def get_name(cls):
         return 'kraken'
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, **kwargs):
         if limit is not None and limit != self.RECENT_TRADE_FIXED_LIMIT:

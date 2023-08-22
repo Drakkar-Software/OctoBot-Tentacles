@@ -13,11 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import aiohttp
 import asyncio
 
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.tests as web_interface_tests
 
 
@@ -27,25 +25,25 @@ class AbstractPluginTester:
     URL_BLACK_LIST = []
 
     async def test_browse_all_pages_no_required_password(self):
-        async with web_interface_tests.get_web_interface(False):
+        async with web_interface_tests.get_web_interface(False) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await asyncio.gather(
                     *[web_interface_tests.check_page_no_login_redirect(
                         f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
                         session)
-                        for rule in self._get_rules()])
+                        for rule in self._get_rules(web_interface_instance)])
 
     async def test_browse_all_pages_required_password_without_login(self):
-        async with web_interface_tests.get_web_interface(True):
+        async with web_interface_tests.get_web_interface(True) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await asyncio.gather(
                     *[web_interface_tests.check_page_login_redirect(
                         f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
                         session)
-                        for rule in self._get_rules()])
+                        for rule in self._get_rules(web_interface_instance)])
 
     async def test_browse_all_pages_required_password_with_login(self):
-        async with web_interface_tests.get_web_interface(True):
+        async with web_interface_tests.get_web_interface(True) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await web_interface_tests.login_user_on_session(session)
                 # correctly display pages: session is logged in
@@ -53,18 +51,18 @@ class AbstractPluginTester:
                     *[web_interface_tests.check_page_no_login_redirect(
                         f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
                         session)
-                        for rule in self._get_rules()])
+                        for rule in self._get_rules(web_interface_instance)])
             async with aiohttp.ClientSession() as unauthenticated_session:
                 # redirect to login page: session is not logged in
                 await asyncio.gather(
                     *[web_interface_tests.check_page_login_redirect(
                         f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
                         unauthenticated_session)
-                        for rule in self._get_rules()])
+                        for rule in self._get_rules(web_interface_instance)])
 
-    def _get_rules(self):
+    def _get_rules(self, web_interface_instance):
         rules = web_interface_tests.get_all_plugin_rules(
-            web_interface.server_instance,
+            web_interface_instance.server_instance,
             self.PLUGIN,
             self.URL_BLACK_LIST
         )

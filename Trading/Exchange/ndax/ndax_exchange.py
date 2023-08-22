@@ -20,6 +20,8 @@ import octobot_trading.enums as trading_enums
 class Ndax(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    FIX_MARKET_STATUS = True
+
     DEFAULT_MAX_LIMIT = 500
 
     @classmethod
@@ -31,7 +33,4 @@ class Ndax(exchanges.RestExchange):
         if limit is None:
             limit = self.DEFAULT_MAX_LIMIT
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 

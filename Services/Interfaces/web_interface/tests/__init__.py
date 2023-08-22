@@ -20,13 +20,26 @@ import mock
 import contextlib
 
 import octobot_commons.configuration as configuration
-import tentacles.Services.Interfaces.web_interface.controllers as controllers
-import tentacles.Services.Interfaces.web_interface as web_interface
-import octobot_services.interfaces as interfaces
 import octobot_commons.singleton as singleton
 import octobot_commons.authentication as authentication
+import octobot_commons.constants as commons_constants
+
+import octobot_services.interfaces as interfaces
 import octobot.community as community
+try:
+    import octobot.community.supabase_backend.configuration_storage as configuration_storage
+except ImportError:
+    # todo remove once supabase migration is complete
+    configuration_storage = mock.Mock(
+        SyncConfigurationStorage=mock.Mock(
+            _save_value_in_config=mock.Mock()
+        )
+    )
 import octobot.automation as automation
+
+import tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication as octobot_authentication
+import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.web_interface as web_interface
 
 
 PORT = 5555
@@ -74,21 +87,25 @@ def _start_web_interface(interface):
 async def get_web_interface(require_password):
     web_interface_instance = None
     try:
-        web_interface_instance = web_interface.WebInterface({})
-        web_interface_instance.port = PORT
-        web_interface_instance.should_open_web_interface = False
-        web_interface_instance.set_requires_password(require_password)
-        web_interface_instance.password_hash = configuration.get_password_hash(PASSWORD)
-        interfaces.AbstractInterface.bot_api = (await _init_bot()).octobot_api
-        with mock.patch.object(web_interface_instance, "_register_on_channels", new=mock.AsyncMock()):
-            threading.Thread(target=_start_web_interface, args=(web_interface_instance,)).start()
-            # ensure web interface had time to start or it can't be stopped at the moment
-            launch_time = time.time()
-            while not web_interface_instance.started and time.time() - launch_time < MAX_START_TIME:
-                await asyncio.sleep(0.3)
-            if not web_interface_instance.started:
-                raise RuntimeError("Web interface did not start in time")
-            yield web_interface_instance
+        with mock.patch.object(configuration_storage.SyncConfigurationStorage, "_save_value_in_config", mock.Mock()):
+            web_interface_instance = web_interface.WebInterface({})
+            web_interface_instance.port = PORT
+            web_interface_instance.should_open_web_interface = False
+            web_interface_instance.set_requires_password(require_password)
+            web_interface_instance.password_hash = configuration.get_password_hash(PASSWORD)
+            bot = await _init_bot()
+            interfaces.AbstractInterface.bot_api = bot.octobot_api
+            first_exchange = next(iter(bot.config[commons_constants.CONFIG_EXCHANGES]))
+            with mock.patch.object(web_interface_instance, "_register_on_channels", new=mock.AsyncMock()), \
+                 mock.patch.object(models, "get_current_exchange", mock.Mock(return_value=first_exchange)):
+                threading.Thread(target=_start_web_interface, args=(web_interface_instance,)).start()
+                # ensure web interface had time to start or it can't be stopped at the moment
+                launch_time = time.time()
+                while not web_interface_instance.started and time.time() - launch_time < MAX_START_TIME:
+                    await asyncio.sleep(0.3)
+                if not web_interface_instance.started:
+                    raise RuntimeError("Web interface did not start in time")
+                yield web_interface_instance
     finally:
         if web_interface_instance is not None:
             await web_interface_instance.stop()
@@ -117,11 +134,14 @@ async def check_page_login_redirect(url, session):
         assert resp.status == 200
 
 
-def get_plugins_routes(web_interface_instance, app):
-    all_rules = tuple(rule for rule in app.url_map.iter_rules())
+def get_plugins_routes(web_interface_instance):
+    all_rules = tuple(rule for rule in web_interface_instance.server_instance.url_map.iter_rules())
     plugin_routes = []
     for plugin in web_interface_instance.registered_plugins:
-        plugin_routes += [rule.rule for rule in get_plugin_routes(app, plugin, all_rules)]
+        plugin_routes += [
+            rule.rule
+            for rule in get_plugin_routes(web_interface_instance.server_instance, plugin, all_rules)
+        ]
     return plugin_routes
 
 
@@ -142,7 +162,7 @@ async def login_user_on_session(session):
         "password": PASSWORD,
         "remember_me": False
     }
-    with mock.patch.object(controllers.LoginForm, "validate_on_submit", new=_force_validate_on_submit):
+    with mock.patch.object(octobot_authentication.LoginForm, "validate_on_submit", new=_force_validate_on_submit):
         async with session.post(f"http://localhost:{PORT}/login",
                                 data=login_data) as resp:
             assert resp.status == 200

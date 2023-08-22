@@ -13,34 +13,33 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
 import flask
 
 import octobot.community as community
-import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 
 
-@api.api.route("/select_bot", methods=['POST'])
-@login.login_required_when_activated
-def select_bot():
-    if not models.can_select_bot():
-        return util.get_rest_reply(flask.jsonify("Can't select bot on this setup"), 500)
-    models.select_bot(flask.request.get_json())
-    bot = models.get_selected_user_bot()
-    flask.flash(f"Selected {bot['name']} bot", "success")
-    return flask.jsonify(bot)
+def register(blueprint):
+    @blueprint.route("/select_bot", methods=['POST'])
+    @login.login_required_when_activated
+    def select_bot():
+        if not models.can_select_bot():
+            return util.get_rest_reply(flask.jsonify("Can't select bot on this setup"), 500)
+        models.select_bot(flask.request.get_json())
+        bot = models.get_selected_user_bot()
+        flask.flash(f"Selected {bot['name']} bot", "success")
+        return flask.jsonify(bot)
 
 
-@api.api.route("/create_bot", methods=['POST'])
-@login.login_required_when_activated
-def create_bot():
-    if not models.can_select_bot():
-        return util.get_rest_reply(flask.jsonify("Can't create bot on this setup"), 500)
-    new_bot = models.create_new_bot()
-    models.select_bot(community.CommunityUserAccount.get_bot_id(new_bot))
-    bot = models.get_selected_user_bot()
-    flask.flash(f"Created and selected {bot['name']} device", "success")
-    return flask.jsonify(bot)
+    @blueprint.route("/create_bot", methods=['POST'])
+    @login.login_required_when_activated
+    def create_bot():
+        if not models.can_select_bot():
+            return util.get_rest_reply(flask.jsonify("Can't create bot on this setup"), 500)
+        new_bot = models.create_new_bot()
+        models.select_bot(community.CommunityUserAccount.get_bot_id(new_bot))
+        bot = models.get_selected_user_bot()
+        flask.flash(f"Created and selected {bot['name']} bot", "success")
+        return flask.jsonify(bot)

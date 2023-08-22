@@ -8,6 +8,10 @@ $(document).ready(function() {
           // order by time: most recent first
           "order": [[ 0, "desc" ]]
       });
+      $('#notifications_datatable').DataTable({
+          // order by time: most recent first
+          "order": [[ 0, "desc" ]]
+      });
     });
     handleLogsExporter();
 });

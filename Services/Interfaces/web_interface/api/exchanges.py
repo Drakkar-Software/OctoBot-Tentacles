@@ -15,31 +15,31 @@
 #  License along with this library.
 import flask
 
-import tentacles.Services.Interfaces.web_interface.api as api
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 
 
-@api.api.route("/are_compatible_accounts", methods=['POST'])
-@login.login_required_when_activated
-def are_compatible_accounts():
-    request_data = flask.request.get_json()
-    return flask.jsonify(models.are_compatible_accounts(request_data))
+def register(blueprint):
+    @blueprint.route("/are_compatible_accounts", methods=['POST'])
+    @login.login_required_when_activated
+    def are_compatible_accounts():
+        request_data = flask.request.get_json()
+        return flask.jsonify(models.are_compatible_accounts(request_data))
 
 
-@api.api.route("/first_exchange_details")
-@login.login_required_when_activated
-def first_exchange_details():
-    exchange_name = flask.request.args.get('exchange_name', None)
-    try:
-        exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data(exchange_name)
-        return util.get_rest_reply(
-            {
-                "exchange_name": exchange_name,
-                "exchange_id": exchange_id
-            },
-            200
-        )
-    except KeyError as e:
-        return util.get_rest_reply(str(e), 404)
+    @blueprint.route("/first_exchange_details")
+    @login.login_required_when_activated
+    def first_exchange_details():
+        exchange_name = flask.request.args.get('exchange_name', None)
+        try:
+            exchange_manager, exchange_name, exchange_id = models.get_first_exchange_data(exchange_name)
+            return util.get_rest_reply(
+                {
+                    "exchange_name": exchange_name,
+                    "exchange_id": exchange_id
+                },
+                200
+            )
+        except KeyError as e:
+            return util.get_rest_reply(str(e), 404)

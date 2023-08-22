@@ -189,7 +189,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                         current_price=arbitrage_container.own_exchange_price,
                                                                         quantity=order_quantity,
                                                                         price=order_price)
-            created_order = await self.exchange_manager.trader.create_order(current_order)
+            created_order = await self.trading_mode.create_order(current_order)
             created_orders.append(created_order)
             arbitrage_container.initial_limit_order_id = created_order.order_id
             self.open_arbitrages.append(arbitrage_container)
@@ -225,7 +225,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 group=oco_group,
                 associated_entry_id=entry_id
             )
-            created_order = await self.exchange_manager.trader.create_order(current_order)
+            created_order = await self.trading_mode.create_order(current_order)
             created_orders.append(created_order)
             arbitrage_container.secondary_limit_order_id = created_order.order_id
 
@@ -245,7 +245,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if now_selling else trading_enums.TradeOrderSide.BUY,
                     associated_entry_id=entry_id,
                 )
-                await self.exchange_manager.trader.create_order(current_order)
+                await self.trading_mode.create_order(current_order)
                 arbitrage_container.secondary_stop_order_id = current_order.order_id
             return created_orders
 
@@ -502,10 +502,10 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def _cancel_order(self, arbitrage_container) -> bool:
         try:
-            if await self.exchange_manager.trader.cancel_order(
-                    self.exchange_manager.exchange_personal_data.orders_manager.get_order(
-                        arbitrage_container.initial_limit_order_id
-                    )
+            if await self.trading_mode.cancel_order(
+                self.exchange_manager.exchange_personal_data.orders_manager.get_order(
+                    arbitrage_container.initial_limit_order_id
+                )
             ):
                 self.logger.info(f"Arbitrage opportunity expired: cancelled initial order on "
                                  f"{self.exchange_manager.exchange_name} for {self.trading_mode.symbol} at"

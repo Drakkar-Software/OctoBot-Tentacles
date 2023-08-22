@@ -17,33 +17,72 @@ import flask
 import flask_wtf
 import wtforms.fields
 
+import octobot.community.errors as community_errors
 import octobot_commons.authentication as authentication
 import octobot_commons.logging as logging
 import octobot_services.interfaces.util as interfaces_util
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
 
-@web_interface.server_instance.route('/community_login', methods=['GET', 'POST'])
-@login.login_required_when_activated
-def community_login():
-    next_url = flask.request.args.get("next", None)
-    after_login_action = flask.request.args.get("after_login_action", None)
-    authenticator = authentication.Authenticator.instance()
-    logged_in_email = None
-    form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
-    try:
-        logged_in_email = authenticator.get_logged_in_email()
-    except authentication.AuthenticationRequired:
-        pass
-    except Exception as e:
-        flask.flash(f"Error when contacting the community server: {e}", "error")
-    if logged_in_email is None:
+def register(blueprint):
+    @blueprint.route('/community_login', methods=['GET', 'POST'])
+    @login.login_required_when_activated
+    def community_login():
+        next_url = flask.request.args.get("next", None)
+        after_login_action = flask.request.args.get("after_login_action", None)
+        authenticator = authentication.Authenticator.instance()
+        logged_in_email = None
+        form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
+        try:
+            logged_in_email = authenticator.get_logged_in_email()
+        except authentication.AuthenticationRequired:
+            pass
+        except Exception as e:
+            flask.flash(f"Error when contacting the community server: {e}", "error")
+        if logged_in_email is None:
+            if form.validate_on_submit():
+                try:
+                    interfaces_util.run_in_bot_main_loop(
+                        authenticator.login(form.email.data, form.password.data),
+                        log_exceptions=False
+                    )
+                    logged_in_email = form.email.data
+                    if after_login_action == "sync_account":
+                        added_profiles = models.sync_community_account()
+                        if added_profiles:
+                            flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
+                                        f"from your OctoBot account.", "success")
+                except community_errors.EmailValidationRequiredError:
+                    flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
+                except authentication.FailedAuthentication:
+                    flask.flash(f"Invalid email or password", "error")
+                except Exception as e:
+                    logging.get_logger("CommunityAuthentication").exception(e, False)
+                    flask.flash(f"Error during authentication: {e}", "error")
+        if flask.request.method == 'POST' and next_url:
+            return flask.redirect(next_url)
+        return flask.render_template('community_login.html',
+                                     form=form,
+                                     current_logged_in_email=logged_in_email,
+                                     current_bots_stats=models.get_current_octobots_stats(),
+                                     next_url=next_url or flask.url_for('community'))
+
+
+    @blueprint.route('/community_register', methods=['GET', 'POST'])
+    @login.login_required_when_activated
+    def community_register():
+        if not models.can_logout():
+            return flask.redirect(flask.url_for('community'))
+        next_url = flask.request.args.get("next", None)
+        after_login_action = flask.request.args.get("after_login_action", None)
+        authenticator = authentication.Authenticator.instance()
+        form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
+        logged_in_email = None
         if form.validate_on_submit():
             try:
                 interfaces_util.run_in_bot_main_loop(
-                    authenticator.login(form.email.data, form.password.data),
+                    authenticator.register(form.email.data, form.password.data),
                     log_exceptions=False
                 )
                 logged_in_email = form.email.data
@@ -52,70 +91,35 @@ def community_login():
                     if added_profiles:
                         flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
                                     f"from your OctoBot account.", "success")
-            except authentication.FailedAuthentication:
-                flask.flash(f"Invalid email or password", "error")
+                # creation success: redirect to next_url
+                if next_url:
+                    return flask.redirect(next_url)
+            except community_errors.EmailValidationRequiredError:
+                flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
+                authenticator.logout()
+                return flask.redirect(flask.url_for(f"community_login", **flask.request.args))
+            except authentication.AuthenticationError as err:
+                flask.flash(f"Error when creating account: {err}", "error")
+                authenticator.logout()
             except Exception as e:
                 logging.get_logger("CommunityAuthentication").exception(e, False)
-                flask.flash(f"Error during authentication: {e}", "error")
-    if flask.request.method == 'POST' and next_url:
+                flask.flash(f"Unexpected error when creating account: {e}", "error")
+                authenticator.logout()
+        return flask.render_template('community_register.html',
+                                     form=form,
+                                     current_logged_in_email=logged_in_email,
+                                     current_bots_stats=models.get_current_octobots_stats(),
+                                     next_url=next_url or flask.url_for('community'))
+
+
+    @blueprint.route("/community_logout")
+    @login.login_required_when_activated
+    def community_logout():
+        next_url = flask.request.args.get("next", flask.url_for("community_login"))
+        if not models.can_logout():
+            return flask.redirect(flask.url_for('community'))
+        authentication.Authenticator.instance().logout()
         return flask.redirect(next_url)
-    return flask.render_template('community_login.html',
-                                 form=form,
-                                 current_logged_in_email=logged_in_email,
-                                 current_bots_stats=models.get_current_octobots_stats(),
-                                 next_url=next_url or flask.url_for('community'))
-
-
-@web_interface.server_instance.route('/community_register', methods=['GET', 'POST'])
-@login.login_required_when_activated
-def community_register():
-    if not models.can_logout():
-        return flask.redirect(flask.url_for('community'))
-    next_url = flask.request.args.get("next", None)
-    after_login_action = flask.request.args.get("after_login_action", None)
-    authenticator = authentication.Authenticator.instance()
-    form = CommunityLoginForm(flask.request.form) if flask.request.form else CommunityLoginForm()
-    logged_in_email = None
-    if form.validate_on_submit():
-        try:
-            interfaces_util.run_in_bot_main_loop(
-                authenticator.register(form.email.data, form.password.data),
-                log_exceptions=False
-            )
-            logged_in_email = form.email.data
-            if after_login_action == "sync_account":
-                added_profiles = models.sync_community_account()
-                if added_profiles:
-                    flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
-                                f"from your OctoBot account.", "success")
-            # creation success: redirect to next_url
-            if next_url:
-                return flask.redirect(next_url)
-        except authentication.AuthenticationError as err:
-            flask.flash(f"Error when creating account: {err}", "error")
-            authenticator.logout()
-        except Exception as e:
-            logging.get_logger("CommunityAuthentication").exception(e, False)
-            flask.flash(f"Unexpected error when creating account: {e}", "error")
-            authenticator.logout()
-    return flask.render_template('community_register.html',
-                                 form=form,
-                                 current_logged_in_email=logged_in_email,
-                                 current_bots_stats=models.get_current_octobots_stats(),
-                                 next_url=next_url or flask.url_for('community'))
-
-
-@web_interface.server_instance.route("/community_logout")
-@login.login_required_when_activated
-def community_logout():
-    next_url = flask.request.args.get("next", flask.url_for("community_login"))
-    if not models.can_logout():
-        return flask.redirect(flask.url_for('community'))
-    authentication.Authenticator.instance().logout()
-    interfaces_util.run_in_bot_main_loop(
-        authentication.Authenticator.instance().stop_feeds()
-    )
-    return flask.redirect(next_url)
 
 
 class CommunityLoginForm(flask_wtf.FlaskForm):

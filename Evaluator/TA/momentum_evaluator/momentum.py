@@ -33,6 +33,9 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         super().__init__(tentacles_setup_config)
         self.pertinence = 1
         self.period_length = 14
+        self.short_threshold = 70
+        self.long_threshold = 30
+        self.is_trend_change_identifier = True
         self.short_term_averages = [7, 5, 4, 3, 2, 1]
         self.long_term_averages = [40, 30, 20, 15, 10]
 
@@ -40,8 +43,36 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         """
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
-        self.period_length = self.UI.user_input("period_length", enums.UserInputTypes.INT, self.period_length,
-                                                inputs, min_val=0, title="RSI period length")
+        self.period_length = self.UI.user_input(
+            "period_length", enums.UserInputTypes.INT, self.period_length, inputs, min_val=0, title="RSI period length"
+        )
+
+        self.is_trend_change_identifier = self.UI.user_input(
+            "trend_change_identifier", enums.UserInputTypes.BOOLEAN, self.is_trend_change_identifier, inputs,
+            title="Trend identifier: Identify RSI trend changes and evaluate the trend changes strength",
+        )
+        self.short_threshold = self.UI.user_input(
+            "short_threshold", enums.UserInputTypes.FLOAT, self.short_threshold, inputs,
+            min_val=0,
+            title="Short threshold: RSI value from with to send a short (sell) signal. "
+                  "Evaluates as 1 when the current RSI value is equal or higher.",
+            editor_options={
+                enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                  "trend_change_identifier": False
+                }
+            }
+        )
+        self.long_threshold = self.UI.user_input(
+            "long_threshold", enums.UserInputTypes.FLOAT, self.long_threshold, inputs,
+            min_val=0,
+            title="Long threshold: RSI value from with to send a long (buy) signal. "
+                  "Evaluates as -1 when the current RSI value is equal or lower.",
+            editor_options={
+                enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                  "trend_change_identifier": False
+                }
+            }
+        )
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
@@ -51,33 +82,38 @@ class RSIMomentumEvaluator(evaluators.TAEvaluator):
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
+        updated_value = False
         if candle_data is not None and len(candle_data) > self.period_length:
             rsi_v = tulipy.rsi(candle_data, period=self.period_length)
-
             if len(rsi_v) and not math.isnan(rsi_v[-1]):
-                long_trend = EvaluatorUtil.TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
-                short_trend = EvaluatorUtil.TrendAnalysis.get_trend(rsi_v, self.short_term_averages)
+                if self.is_trend_change_identifier:
+                    long_trend = EvaluatorUtil.TrendAnalysis.get_trend(rsi_v, self.long_term_averages)
+                    short_trend = EvaluatorUtil.TrendAnalysis.get_trend(rsi_v, self.short_term_averages)
 
-                # check if trend change
-                if short_trend > 0 > long_trend:
-                    # trend changed to up
-                    self.set_eval_note(-short_trend)
+                    # check if trend change
+                    if short_trend > 0 > long_trend:
+                        # trend changed to up
+                        self.set_eval_note(-short_trend)
 
-                elif long_trend > 0 > short_trend:
-                    # trend changed to down
-                    self.set_eval_note(short_trend)
+                    elif long_trend > 0 > short_trend:
+                        # trend changed to down
+                        self.set_eval_note(short_trend)
 
-                # use RSI current value
-                last_rsi_value = rsi_v[-1]
-                if last_rsi_value > 50:
-                    self.set_eval_note(rsi_v[-1] / 200)
+                    # use RSI current value
+                    last_rsi_value = rsi_v[-1]
+                    if last_rsi_value > 50:
+                        self.set_eval_note(rsi_v[-1] / 200)
+                    else:
+                        self.set_eval_note((rsi_v[-1] - 100) / 200)
                 else:
-                    self.set_eval_note((rsi_v[-1] - 100) / 200)
-                await self.evaluation_completed(cryptocurrency, symbol, time_frame,
-                                                eval_time=evaluators_util.get_eval_time(full_candle=candle,
-                                                                                        time_frame=time_frame))
-                return
-        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+                    self.eval_note = 0
+                    if rsi_v[-1] >= self.short_threshold:
+                        self.eval_note = 1
+                    elif rsi_v[-1] <= self.long_threshold:
+                        self.eval_note = -1
+                updated_value = True
+        if not self.is_trend_change_identifier and not updated_value:
+            self.eval_note = 0
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
@@ -322,6 +358,52 @@ class BBMomentumEvaluator(evaluators.TAEvaluator):
                 # down the middle band
                 elif current_middle > current_value:
                     self.eval_note = -1 * math.pow((current_middle - current_value) / delta_low, 2)
+        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                time_frame=time_frame))
+
+
+# EMA
+class EMAMomentumEvaluator(evaluators.TAEvaluator):
+
+    def __init__(self, tentacles_setup_config):
+        super().__init__(tentacles_setup_config)
+        self.period_length = 21
+        self.price_threshold_percent = 2
+        self.price_threshold_multiplier = self.price_threshold_percent / 100
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.period_length = self.UI.user_input(
+            "period_length", enums.UserInputTypes.INT, self.period_length, inputs,
+            min_val=1, title="Period: Moving Average period length."
+        )
+        self.price_threshold_percent = self.UI.user_input(
+            "price_threshold_percent", enums.UserInputTypes.FLOAT, self.price_threshold_multiplier, inputs,
+            min_val=0,
+            title="Price threshold: Percent difference between the current price and current EMA value from "
+                  "which to trigger a long or short signal. "
+                  "Example with EMA value=200, Price threshold=5: a short signal will fire when price is above or "
+                  "equal to 210 and a long signal will when price is bellow or equal to 190",
+        )
+        self.price_threshold_multiplier = self.price_threshold_percent / 100
+
+    async def ohlcv_callback(self, exchange: str, exchange_id: str,
+                             cryptocurrency: str, symbol: str, time_frame, candle, inc_in_construction_data):
+        candle_data = trading_api.get_symbol_close_candles(self.get_exchange_symbol_data(exchange, exchange_id, symbol),
+                                                           time_frame,
+                                                           self.period_length,
+                                                           include_in_construction=inc_in_construction_data)
+        await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
+
+    async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
+        self.eval_note = 0
+        if len(candle_data) >= self.period_length:
+            # compute ema
+            ema_values = tulipy.ema(candle_data, self.period_length)
+            if candle_data[-1] >= (ema_values[-1] * (1 + self.price_threshold_multiplier)):
+                self.eval_note = 1
+            elif candle_data[-1] <= (ema_values[-1] * (1 - self.price_threshold_multiplier)):
+                self.eval_note = -1
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
