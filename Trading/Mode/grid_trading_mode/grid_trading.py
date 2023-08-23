@@ -346,8 +346,15 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = self._get_grid_trades_or_orders(existing_orders)
-        recent_trades_time = trading_api.get_exchange_current_time(
-            self.exchange_manager) - self.RECENT_TRADES_ALLOWED_TIME
+        oldest_existing_order_creation_time = min(
+            order.creation_time for order in sorted_orders
+        ) if sorted_orders else 0
+        recent_trades_time = max(
+            trading_api.get_exchange_current_time(
+                self.exchange_manager
+            ) - self.RECENT_TRADES_ALLOWED_TIME,
+            oldest_existing_order_creation_time
+        )
         recently_closed_trades = trading_api.get_trade_history(self.exchange_manager, symbol=self.symbol,
                                                                since=recent_trades_time)
         recently_closed_trades = self._get_grid_trades_or_orders(recently_closed_trades)
