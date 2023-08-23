@@ -290,7 +290,7 @@ class Okx(exchanges.RestExchange):
 
     def _is_oco_order(self, params):
         return all(
-            oco_order_param in params
+            oco_order_param in (params or {})
             for oco_order_param in (
                 self.connector.adapter.OKX_STOP_LOSS_PRICE,
                 self.connector.adapter.OKX_TAKE_PROFIT_PRICE
