@@ -720,7 +720,7 @@ async def test_start_with_existing_valid_orders():
         post_available = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(to_cancel)
 
-        producer.RECENT_TRADES_ALLOWED_TIME = 0
+        producer.RECENT_TRADES_ALLOWED_TIME = -1
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         # restored orders
@@ -821,7 +821,7 @@ async def test_start_after_offline_filled_orders():
         price = 96
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         # force not use recent trades
-        producer.RECENT_TRADES_ALLOWED_TIME = 0
+        producer.RECENT_TRADES_ALLOWED_TIME = -1
         await producer._ensure_staggered_orders()
         # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))

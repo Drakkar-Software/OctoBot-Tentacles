@@ -901,7 +901,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         # missing order between similar orders
                         quantity = self._get_surrounded_missing_order_quantity(
                             previous_o, following_o, max_quant_per_order, decimal_missing_order_price, recent_trades,
-                            current_price
+                            current_price, sorted_orders
                         )
                         orders.append(OrderData(missing_order_side, quantity,
                                                 decimal_missing_order_price, self.symbol, False))
@@ -929,6 +929,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         )
 
                     for missing_order_price, missing_order_side in missing_orders_around_spread:
+                        added_missing_order = False
                         limiting_amount_from_this_order = order_limiting_currency_amount
                         price = starting_bound - self.flat_increment if selling else starting_bound + self.flat_increment
                         found_order = False
@@ -937,7 +938,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         max_orders_count = max(orders_count, self.operational_depth)
                         while not (
                             found_order or exceeded_price or
-                            limiting_amount_from_this_order < trading_constants.ZERO or i >= max_orders_count
+                            limiting_amount_from_this_order < trading_constants.ZERO or
+                            i >= max_orders_count
                         ):
                             if price != 0:
                                 order_quantity = self._get_spread_missing_order_quantity(
@@ -953,6 +955,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         orders.append(OrderData(side, decimal.Decimal(str(order_quantity)),
                                                                 decimal.Decimal(str(missing_order_price)), self.symbol,
                                                                 False))
+                                        added_missing_order = True
                                         self.logger.debug(f"Creating missing order around spread {orders[-1]} "
                                                           f"for {self.symbol}")
                                 if order_quantity is not None:
@@ -966,12 +969,22 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                             ):
                                 exceeded_price = True
                             i += 1
+                        if not added_missing_order:
+                            self.logger.warning(
+                                f"Missing order not restored: price {missing_order_price} side: {missing_order_side}"
+                            )
         return orders
 
     def _get_surrounded_missing_order_quantity(
-        self, previous_order, following_order, max_quant_per_order, order_price, recent_trades, current_price
+        self, previous_order, following_order, max_quant_per_order, order_price, recent_trades,
+            current_price, sorted_orders
     ):
         selling = previous_order.side == trading_enums.TradeOrderSide.SELL
+        if sorted_orders:
+            if quantity := self._get_quantity_from_existing_orders(
+                order_price, sorted_orders, selling
+            ):
+                return quantity
         quantity_from_trades = self._get_quantity_from_recent_trades(
             order_price, max_quant_per_order, recent_trades, current_price, selling
         )
@@ -987,7 +1000,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _get_spread_missing_order_quantity(
         self, average_order_quantity, side, i, orders_count, price, selling, limiting_amount_from_this_order,
-        order_limiting_currency_available_amount, recent_trades, sorted_orders, current_price
+        order_limiting_currency_available_amount, recent_trades, sorted_orders,
+        current_price
     ):
         if sorted_orders:
             if quantity := self._get_quantity_from_existing_orders(
