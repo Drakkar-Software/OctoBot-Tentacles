@@ -167,6 +167,14 @@ class Okx(exchanges.RestExchange):
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        accounts = await self.connector.client.fetch_accounts()
+        try:
+            return accounts[0]["id"]
+        except IndexError:
+            # should never happen as at least one account should be available
+            return None
+
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])
         if not sub_account_list:
