@@ -232,9 +232,11 @@ class Okx(exchanges.RestExchange):
             return regular_orders
         # add order types of order (different param in api endpoint)
         other_orders = []
-        for order_type in self._get_used_order_types():
-            kwargs["ordType"] = order_type
-            other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
+        if self.exchange_manager.is_future:
+            # stop orders are futures only for now
+            for order_type in self._get_used_order_types():
+                kwargs["ordType"] = order_type
+                other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + other_orders
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
