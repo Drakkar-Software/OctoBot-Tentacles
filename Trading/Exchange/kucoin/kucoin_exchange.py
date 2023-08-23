@@ -198,6 +198,10 @@ class Kucoin(exchanges.RestExchange):
 
     @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        if limit is None:
+            # default is 50, The maximum cannot exceed 1000
+            # https://www.kucoin.com/docs/rest/futures-trading/orders/get-order-list
+            limit = 200
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         # add untriggered stop orders (different api endpoint)
         kwargs["stop"] = True
