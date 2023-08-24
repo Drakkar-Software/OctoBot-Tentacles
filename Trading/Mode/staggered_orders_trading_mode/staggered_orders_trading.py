@@ -113,6 +113,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
     CONFIG_MIRROR_ORDER_DELAY = "mirror_order_delay"
     CONFIG_ALLOW_FUNDS_REDISPATCH = "allow_funds_redispatch"
+    COMPENSATE_FOR_MISSED_MIRROR_ORDER = "compensate_for_missed_mirror_order"
     CONFIG_STARTING_PRICE = "starting_price"
     CONFIG_BUY_FUNDS = "buy_funds"
     CONFIG_SELL_FUNDS = "sell_funds"
@@ -233,8 +234,13 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
 
     async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
                                            update_type, is_from_bot):
-        if order[
-            trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value and is_from_bot:
+        if (
+            order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value
+            and order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] in (
+                trading_enums.TradeOrderType.LIMIT.value
+            )
+            and is_from_bot
+        ):
             async with self.producers[0].get_lock():
                 await self.producers[0].order_filled_callback(order)
 
@@ -285,12 +291,21 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                     order_data.price,
                     symbol_market):
                 selling = order_data.side == trading_enums.TradeOrderSide.SELL
+                market_available = trading_api.get_portfolio_currency(self.exchange_manager, market).available
                 if selling:
-                    if trading_api.get_portfolio_currency(self.exchange_manager, currency).available < order_quantity:
+                    available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
+                    if available < order_quantity:
+                        self.logger.error(f"Skipping order creation: not enough {currency}: available: {available}, "
+                                          f"required: {order_quantity}")
                         return []
-                elif trading_api.get_portfolio_currency(self.exchange_manager, market).available < order_quantity * order_price:
+                elif market_available < order_quantity * order_price:
+                    self.logger.error(
+                        f"Skipping order creation: not enough {market}: available: {market_available}, "
+                        f"required: {order_quantity * order_price}"
+                    )
                     return []
-                order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT
+                order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling \
+                    else trading_enums.TraderOrderType.BUY_LIMIT
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=order_type,
@@ -323,6 +338,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     min_price = "min_price"
     max_price = "max_price"
     PRICE_FETCHING_TIMEOUT = 60
+    MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT = 60
     # health check once every 3 days
     HEALTH_CHECK_INTERVAL_SECS = commons_constants.DAYS_TO_SECONDS * 3
     # recent filled allowed time delay to consider as pending order_filled callback
@@ -360,6 +376,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self._expect_missing_orders = False
         self._skip_order_restore_on_recently_closed_orders = True
         self._use_recent_trades_for_order_restore = False
+        self.compensate_for_missed_mirror_order = False
 
         self.healthy = False
 
@@ -818,6 +835,93 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f" parameter: average profit is spread-increment. ({self.symbol})")
         if self.lowest_buy >= self.highest_sell:
             self.logger.error(f"Your lower_bound should always be lower than your upper_bound ({self.symbol})")
+
+    async def _handle_missed_mirror_orders_fills(self, sorted_trades, missing_orders, current_price):
+        if not self.compensate_for_missed_mirror_order or not sorted_trades or not missing_orders:
+            return
+        trades_with_missing_mirror_order_fills = self._find_missing_mirror_order_fills(sorted_trades, missing_orders)
+        if not trades_with_missing_mirror_order_fills:
+            return
+        await self._pack_and_balance_missing_orders(trades_with_missing_mirror_order_fills, current_price)
+
+    async def _pack_and_balance_missing_orders(self, trades_with_missing_mirror_order_fills, current_price):
+        base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+        to_create_order_quantity = sum(
+            (trade.executed_quantity - trading_personal_data.get_fees_for_currency(trade.fee, base))
+            * (-1 if trade.side is trading_enums.TradeOrderSide.BUY else 1)
+            for trade in trades_with_missing_mirror_order_fills
+        )
+        if to_create_order_quantity == trading_constants.ZERO:
+            return
+        # create a market order to balance funds
+        order_type = trading_enums.TraderOrderType.SELL_MARKET if to_create_order_quantity < trading_constants.ZERO \
+            else trading_enums.TraderOrderType.BUY_MARKET
+        symbol_market = self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False)
+        order_amount = trading_personal_data.decimal_adapt_quantity(symbol_market, abs(to_create_order_quantity))
+        if order_amount == trading_constants.ZERO:
+            self.logger.error(
+                f"No enough computed funds to recreate packed missing mirror order balancing order on {self.symbol}"
+            )
+            return
+        currency_available, market_available, market_quantity = \
+            trading_personal_data.get_portfolio_amounts(self.exchange_manager, self.symbol, current_price)
+        limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
+            else market_quantity
+        if order_amount > limiting_amount:
+            self.logger.error(f"No enough available funds to packed missing mirror order balancing "
+                              f"order on {self.symbol}. "
+                              f"Required {float(order_amount)}, available {float(limiting_amount)}")
+            return
+        self.logger.info(
+            f"{len(trades_with_missing_mirror_order_fills)} missed order fills on {self.symbol}, "
+            f"creating a {order_type.value} order of size {float(order_amount)} to compensate"
+        )
+
+        balancing_order = trading_personal_data.create_order_instance(
+            trader=self.exchange_manager.trader,
+            order_type=order_type,
+            symbol=self.symbol,
+            current_price=current_price,
+            quantity=order_amount,
+            price=current_price,
+            reduce_only=False,
+        )
+        created_order = await self.trading_mode.create_order(balancing_order)
+        # wait for order to be filled
+        if created_order.is_open():
+            if created_order.state is None:
+                self.logger.error(f"None state on created order, impossible to wait for fill, order: {created_order}")
+            else:
+                try:
+                    await created_order.state.wait_for_next_state(self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT)
+                except asyncio.TimeoutError:
+                    self.logger.error(f"Timeout while waiting for rebalance marker order fill, order {created_order}")
+        if created_order.is_open():
+            self.logger.error(f"Rebalance marker order is still open, order {created_order}")
+        else:
+            self.logger.info("Successfully rebalanced funds after missed mirror orders.")
+
+    def _find_missing_mirror_order_fills(self, sorted_trades, missing_orders):
+        trades_with_missing_mirror_order_fills = []
+        price_increment = self.flat_spread - self.flat_increment
+        price_window = self.flat_increment / decimal.Decimal(4)
+        for missing_order_price, missing_order_side in missing_orders:
+            # each missing order should have is mirror side equivalent in recently_closed_trades
+            # when it is not the case, a fill is missing
+            now_selling = missing_order_side is trading_enums.TradeOrderSide.BUY
+            mirror_order_price = missing_order_price + price_increment if now_selling \
+                else missing_order_price - price_increment
+            for trade in sorted_trades:
+                lower_window = trade.executed_price - price_window
+                higher_window = trade.executed_price + price_window
+                if lower_window < mirror_order_price < higher_window and trade.side is not missing_order_side:
+                    # found mirror order fill
+                    break
+                if lower_window < missing_order_price < higher_window and trade.side is missing_order_side:
+                    # found missing order in trades before mirror order: a mirror order is missing
+                    trades_with_missing_mirror_order_fills.append(trade)
+                    break
+        return trades_with_missing_mirror_order_fills
 
     def _analyse_current_orders_situation(self, sorted_orders, recently_closed_trades, lower_bound, higher_bound, current_price):
         if not sorted_orders:
