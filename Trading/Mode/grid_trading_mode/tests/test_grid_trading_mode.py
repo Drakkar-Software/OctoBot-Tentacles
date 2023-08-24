@@ -104,6 +104,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         producer.flat_increment = decimal.Decimal(5)
         producer.buy_orders_count = 25
         producer.sell_orders_count = 25
+        producer.compensate_for_missed_mirror_order = True
         test_trading_modes.set_ready_to_start(producer)
 
         yield producer, mode.get_trading_mode_consumers()[0], exchange_manager
@@ -766,6 +767,110 @@ async def test_start_after_offline_buy_side_10_filled():
         # restored 5 of the 10 filled buy orders
         assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY]) == 19 - 5
         _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
+
+
+async def test_start_after_offline_x_filled_and_price_back_should_sell_to_recreate_buy():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        orders_count = 25 + 25
+
+        price = decimal.Decimal(200)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+        pre_btc_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pre_usdt_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+
+        # offline simulation: orders get filled but not replaced => price moved to 150
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        offline_filled = [
+            o
+            for o in open_orders
+            if o.side == trading_enums.TradeOrderSide.BUY and o.origin_price >= decimal.Decimal("150")
+        ]
+        # this is 10 orders
+        assert len(offline_filled) == 10
+        max_filled_order_price = max(o.origin_price for o in offline_filled)
+        assert max_filled_order_price == decimal.Decimal(195)
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        post_btc_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        post_usdt_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        # buy orders filled: BTC increased
+        assert pre_btc_portfolio < post_btc_portfolio
+        # no sell order filled, available USDT is constant
+        assert pre_usdt_portfolio == post_usdt_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+
+        # back online: restore orders according to current price
+        # simulate current price as back to 180: should quickly sell BTC bought between 150 and 180 to be able to
+        # create buy orders between 150 and 180
+        price = decimal.Decimal(180)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        # restored orders
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available <= post_btc_portfolio
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # created 4 additional sell orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.SELL]) == 25 + 4
+        # restored 6 out of 10 filled buy orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY]) == 25 - 10 + 6
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 200)
+
+
+async def test_start_after_offline_x_filled_and_price_back_should_buy_to_recreate_sell():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        orders_count = 25 + 25
+
+        price = decimal.Decimal(200)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+        pre_btc_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        pre_usdt_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+
+        # offline simulation: orders get filled but not replaced => price moved to 150
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        offline_filled = [
+            o
+            for o in open_orders
+            if o.side == trading_enums.TradeOrderSide.SELL and o.origin_price <= decimal.Decimal("250")
+        ]
+        # this is 10 orders
+        assert len(offline_filled) == 10
+        max_filled_order_price = max(o.origin_price for o in offline_filled)
+        assert max_filled_order_price == decimal.Decimal(250)
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        post_btc_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        post_usdt_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        # buy orders filled: available BTC is constant
+        assert pre_btc_portfolio == post_btc_portfolio
+        # no sell order filled, available USDT increased
+        assert pre_usdt_portfolio <= post_usdt_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+
+        # back online: restore orders according to current price
+        # simulate current price as back to 220: should quickly buy BTC sold between 250 and 220 to be able to
+        # create sell orders between 220 and 250
+        price = decimal.Decimal(220)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        # restored orders
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USDT").available <= post_usdt_portfolio
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # restored 6 out of 10 sell orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.SELL]) == 25 - 10 + 6
+        # created 4 additional buy orders
+        assert len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY]) == 25 + 4
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 200)
 
 
 async def test_start_after_offline_with_added_funds_increasing_orders_count():
