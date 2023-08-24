@@ -772,6 +772,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
              not used_sell_funds > max_sell_funds)
             or used_sell_funds < max_sell_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
         ):
+            self.logger.info(
+                f"Triggering order reset: used_buy_funds={used_buy_funds}, max_buy_funds={max_buy_funds} "
+                f"used_sell_funds={used_sell_funds} max_sell_funds={max_sell_funds}"
+            )
             # bigger orders can be created
             raise ForceResetOrdersException
 
