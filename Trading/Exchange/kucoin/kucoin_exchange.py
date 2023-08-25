@@ -157,6 +157,7 @@ class Kucoin(exchanges.RestExchange):
             # we are on the master account
             return account_id
         except ccxt.AuthenticationError:
+            # when api key is wrong
             raise
         except ccxt.ExchangeError:
             # ExchangeError('kucoin This user is not a master user')
