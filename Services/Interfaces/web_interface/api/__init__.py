@@ -24,6 +24,11 @@ import tentacles.Services.Interfaces.web_interface.api.user_commands
 import tentacles.Services.Interfaces.web_interface.api.bots
 import tentacles.Services.Interfaces.web_interface.api.webhook
 
+from tentacles.Services.Interfaces.web_interface.api.webhook import (
+    has_webhook,
+    register_webhook
+)
+
 
 def register():
     blueprint = flask.Blueprint('api', __name__, url_prefix='/api', template_folder="")
@@ -41,5 +46,7 @@ def register():
 
 
 __all__ = [
+    "has_webhook",
+    "register_webhook",
     "register",
 ]
