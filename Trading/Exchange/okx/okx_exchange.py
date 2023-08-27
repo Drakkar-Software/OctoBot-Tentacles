@@ -167,6 +167,14 @@ class Okx(exchanges.RestExchange):
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        accounts = await self.connector.client.fetch_accounts()
+        try:
+            return accounts[0]["id"]
+        except IndexError:
+            # should never happen as at least one account should be available
+            return None
+
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])
         if not sub_account_list:
@@ -232,9 +240,11 @@ class Okx(exchanges.RestExchange):
             return regular_orders
         # add order types of order (different param in api endpoint)
         other_orders = []
-        for order_type in self._get_used_order_types():
-            kwargs["ordType"] = order_type
-            other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
+        if self.exchange_manager.is_future:
+            # stop orders are futures only for now
+            for order_type in self._get_used_order_types():
+                kwargs["ordType"] = order_type
+                other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + other_orders
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
@@ -290,7 +300,7 @@ class Okx(exchanges.RestExchange):
 
     def _is_oco_order(self, params):
         return all(
-            oco_order_param in params
+            oco_order_param in (params or {})
             for oco_order_param in (
                 self.connector.adapter.OKX_STOP_LOSS_PRICE,
                 self.connector.adapter.OKX_TAKE_PROFIT_PRICE

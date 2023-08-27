@@ -291,6 +291,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         if self.allow_order_funds_redispatch:
             # check every day that funds should not be redispatched and of orders are missing
             self.health_check_interval_secs = commons_constants.DAYS_TO_SECONDS
+        self.compensate_for_missed_mirror_order = self.symbol_trading_config.get(
+            self.trading_mode.COMPENSATE_FOR_MISSED_MIRROR_ORDER, self.compensate_for_missed_mirror_order
+        )
 
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
@@ -346,11 +349,24 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = self._get_grid_trades_or_orders(existing_orders)
-        recent_trades_time = trading_api.get_exchange_current_time(
-            self.exchange_manager) - self.RECENT_TRADES_ALLOWED_TIME
-        recently_closed_trades = trading_api.get_trade_history(self.exchange_manager, symbol=self.symbol,
-                                                               since=recent_trades_time)
-        recently_closed_trades = self._get_grid_trades_or_orders(recently_closed_trades)
+        oldest_existing_order_creation_time = min(
+            order.creation_time for order in sorted_orders
+        ) if sorted_orders else 0
+        recent_trades_time = max(
+            trading_api.get_exchange_current_time(
+                self.exchange_manager
+            ) - self.RECENT_TRADES_ALLOWED_TIME,
+            oldest_existing_order_creation_time
+        )
+        # list of trades orders from the most recent one to the oldest one
+        recently_closed_trades = sorted([
+            trade
+            for trade in trading_api.get_trade_history(
+                self.exchange_manager, symbol=self.symbol, since=recent_trades_time
+            )
+            # non limit orders are not to be taken into account
+            if trade.trade_type in (trading_enums.TraderOrderType.BUY_LIMIT, trading_enums.TraderOrderType.SELL_LIMIT)
+        ], key=lambda t: -t.executed_time)
 
         lowest_buy = max(trading_constants.ZERO, self.buy_price_range.lower_bound)
         highest_buy = self.buy_price_range.higher_bound
@@ -397,6 +413,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         missing_orders, state, _ = self._analyse_current_orders_situation(
             sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
         )
+        await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
             buy_orders = self._create_orders(lowest_buy, highest_buy,
                                              trading_enums.TradeOrderSide.BUY, sorted_orders,
@@ -406,6 +423,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                               trading_enums.TradeOrderSide.SELL, sorted_orders,
                                               current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
                                               recently_closed_trades)
+
             if state is self.FILL:
                 self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
         except staggered_orders_trading.ForceResetOrdersException:

@@ -17,13 +17,12 @@ import asyncio
 import time
 import decimal
 import typing
+import ccxt
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
-import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
@@ -121,6 +120,51 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
+        # updated: 23/08/2023
+        try:
+            account_id = None
+            subaccount_id = None
+            sub_accounts = await self.connector.client.private_get_sub_accounts()
+            for account in sub_accounts["data"]:
+                if account["subUserId"]:
+                    subaccount_id = account["subName"]
+                else:
+                    # only subaccounts have a subUserId: if this condition is True, we are on the main account
+                    account_id = account["subName"]
+            if subaccount_id:
+                # there is at least a subaccount: ensure the current account is the main account as there is no way
+                # to know the id of the current account (only a list of existing accounts)
+                subaccount_api_key_details = await self.connector.client.private_get_sub_api_key(
+                    {"subName": subaccount_id}
+                )
+                if "data" not in subaccount_api_key_details or "msg" in subaccount_api_key_details:
+                    # subaccounts can't fetch other accounts data, if this is False, we are on a subaccount
+                    self.logger.error(
+                        f"kucoin api changed: it is now possible to call private_get_sub_accounts on subaccounts. "
+                        f"kucoin get_account_id has to be updated. "
+                        f"sub_accounts={sub_accounts} subaccount_api_key_details={subaccount_api_key_details}"
+                    )
+                    return constants.DEFAULT_ACCOUNT_ID
+            if account_id is None:
+                self.logger.error(
+                    f"kucoin api changed: can't fetch master account account_id. "
+                    f"kucoin get_account_id has to be updated."
+                    f"sub_accounts={sub_accounts}"
+                )
+                account_id = constants.DEFAULT_ACCOUNT_ID
+            # we are on the master account
+            return account_id
+        except ccxt.AuthenticationError:
+            # when api key is wrong
+            raise
+        except ccxt.ExchangeError:
+            # ExchangeError('kucoin This user is not a master user')
+            # raised when calling this endpoint with a subaccount
+            return constants.DEFAULT_ACCOUNT_ID
+
+
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         if "since" in kwargs:
@@ -198,10 +242,17 @@ class Kucoin(exchanges.RestExchange):
 
     @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        if limit is None:
+            # default is 50, The maximum cannot exceed 1000
+            # https://www.kucoin.com/docs/rest/futures-trading/orders/get-order-list
+            limit = 200
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        # add untriggered stop orders (different api endpoint)
-        kwargs["stop"] = True
-        stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        stop_orders = []
+        if self.exchange_manager.is_future:
+            # stop ordes are futures only for now
+            # add untriggered stop orders (different api endpoint)
+            kwargs["stop"] = True
+            stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + stop_orders
 
     @_kucoin_retrier
