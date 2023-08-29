@@ -34,7 +34,7 @@ jobs:
         OCTOBOT_DEFAULT_BRANCH: dev
       run: |
         echo "GITHUB_REF=$GITHUB_REF"
-        TARGET_BRANCH=$([ "$GITHUB_HEAD_REF" == "" ] && echo ${GITHUB_REF##*/} || echo "$GITHUB_HEAD_REF")
+        TARGET_BRANCH="0.4.53"
         git clone -q $OCTOBOT_GH_REPO -b ${TARGET_BRANCH} || git clone -q $OCTOBOT_GH_REPO -b $OCTOBOT_DEFAULT_BRANCH
         cd OctoBot
         git status
@@ -54,10 +54,7 @@ jobs:
       run: |
         echo "GITHUB_REF=$env:GITHUB_REF"
         $env:TARGET_BRANCH = $env:GITHUB_REF
-        If ((Test-Path env:GITHUB_HEAD_REF) -and -not ([string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF))) {
-          echo "using GITHUB_HEAD_REF"
-          $env:TARGET_BRANCH = $env:GITHUB_HEAD_REF
-        }
+        $env:TARGET_BRANCH = "0.4.53"
         echo "TARGET_BRANCH=$env:TARGET_BRANCH"
         If ($env:TARGET_BRANCH -notcontains "refs/tags/") {
           $env:TENTACLES_URL_TAG = "latest"
