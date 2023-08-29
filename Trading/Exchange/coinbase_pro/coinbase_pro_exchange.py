@@ -71,7 +71,4 @@ class CoinbaseProCCXTAdapter(exchanges.CCXTAdapter):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
-            ]
         return raw
