@@ -1386,6 +1386,14 @@ def get_current_exchange():
         return DEFAULT_EXCHANGE
 
 
+def get_sandbox_exchanges() -> list:
+    return [
+        trading_api.get_exchange_name(exchange_manager)
+        for exchange_manager in interfaces_util.get_exchange_managers()
+        if trading_api.get_exchange_manager_is_sandboxed(exchange_manager)
+    ]
+
+
 def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:
     """
     Change the base currency from old to new for all configured pair

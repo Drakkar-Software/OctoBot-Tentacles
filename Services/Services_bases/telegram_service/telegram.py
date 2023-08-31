@@ -28,7 +28,7 @@ class TelegramService(services.AbstractService):
     CONNECT_TIMEOUT = 7  # default is 5, use 7 to take slow connections into account
     CHAT_ID = "chat-id"
     LOGGERS = ["telegram._bot", "telegram.ext.Updater", "telegram.ext.ExtBot",
-               "hpack.hpack", "hpack.table", "httpx._client"]
+               "hpack.hpack", "hpack.table"]
 
     def __init__(self):
         super().__init__()
