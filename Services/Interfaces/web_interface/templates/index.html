@@ -107,8 +107,20 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between" id="all-watched-markets">
                 <div>
-
-                </div><h4>Watched markets</h4>
+                    {% if sandbox_exchanges %}
+                    <h5>
+                        <span class="badge badge-warning"
+                              id="sandbox-badge"
+                              data-toggle="tooltip"
+                              title="{{ sandbox_exchanges | join(' and ')}} testnet / sandbox is enabled. This means that
+                              your OctoBot is trading using testnet prices and accounts, which
+                              might not be representative of real markets. Use the trading simulator to test a trading
+                              strategy in real conditions."
+                        >{{sandbox_exchanges[0] | capitalize}} sandbox</span>
+                    </h5>
+                    {% endif %}
+                </div>
+                <h4>Watched markets</h4>
                 <div>
                     <a class="waves-effect float-right" href="#" id="display-dashboard-settings-modal-label"
                        data-toggle="modal" data-target="#dashboard-settings-modal">
