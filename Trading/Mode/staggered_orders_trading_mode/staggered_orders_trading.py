@@ -296,13 +296,15 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                     available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
                     if available < order_quantity:
                         self.logger.error(
-                            f"Skipping {order_data.side.value} order creation at {float(order_data.price)}: "
+                            f"Skipping {order_data.symbol} {order_data.side.value} order creation of "
+                            f"{order_quantity} at {float(order_price)}: "
                             f"not enough {currency}: available: {available}, required: {order_quantity}"
                         )
                         return []
                 elif market_available < order_quantity * order_price:
                     self.logger.error(
-                        f"Skipping {order_data.side.value} order creation at {float(order_data.price)}: "
+                        f"Skipping {order_data.symbol} {order_data.side.value} order creation of "
+                        f"{order_quantity} at {float(order_price)}: "
                         f"not enough {market}: available: {market_available}, required: {order_quantity * order_price}"
                     )
                     return []
@@ -866,7 +868,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_amount = trading_personal_data.decimal_adapt_quantity(symbol_market, abs(to_create_order_quantity))
         if order_amount == trading_constants.ZERO:
             self.logger.error(
-                f"No enough computed funds to recreate packed missing mirror order balancing order on {self.symbol}"
+                f"No enough computed funds to recreate packed missed mirror order balancing order on {self.symbol}"
             )
             return
         currency_available, market_available, market_quantity = \
@@ -874,7 +876,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
             else market_quantity
         if order_amount > limiting_amount:
-            self.logger.error(f"No enough available funds to packed missing mirror order balancing "
+            self.logger.error(f"No enough available funds to create missed mirror order balancing "
                               f"order on {self.symbol}. "
                               f"Required {float(order_amount)}, available {float(limiting_amount)}")
             return
@@ -1114,35 +1116,38 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_limiting_currency_available_amount, recent_trades, sorted_orders,
         current_price
     ):
+        quantity = None
         if sorted_orders:
-            if quantity := self._get_quantity_from_existing_orders(
+            quantity = self._get_quantity_from_existing_orders(
                 price, sorted_orders, selling
-            ):
-                return quantity
-        if quantity := self._get_quantity_from_recent_trades(
-            price, limiting_amount_from_this_order, recent_trades, current_price, selling
-        ):
-            return quantity
-        try:
-            quantity = self._get_quantity_from_iteration(
-                average_order_quantity, self.mode, side, i, orders_count, price, price
             )
-        except trading_errors.NotSupported:
-            if quantity := self._get_quantity_from_existing_boundary_orders(
-                price, sorted_orders, selling
-            ):
-                self.logger.info(
-                    f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
-                    f"order at {price}: no equivalent order for in recent trades (recent trades: {recent_trades})."
+        if not quantity:
+            quantity = self._get_quantity_from_recent_trades(
+                price, limiting_amount_from_this_order, recent_trades, current_price, selling
+            )
+        if not quantity:
+            try:
+                quantity = self._get_quantity_from_iteration(
+                    average_order_quantity, self.mode, side, i, orders_count, price, price
                 )
-                return quantity
-            self.logger.error(
-                f"Error when computing restored order quantity for {'sell' if selling else 'buy'} order at "
-                f"price: {price}: recent trades or active orders are required."
-            )
-            return None
+            except trading_errors.NotSupported:
+                quantity = self._get_quantity_from_existing_boundary_orders(
+                    price, sorted_orders, selling
+                )
+                if quantity:
+                    self.logger.info(
+                        f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
+                        f"order at {price}: no equivalent order for in recent trades (recent trades: {recent_trades})."
+                    )
+                else:
+                    self.logger.error(
+                        f"Error when computing restored order quantity for {'sell' if selling else 'buy'} order at "
+                        f"price: {price}: recent trades or active orders are required."
+                    )
+                    return None
         if quantity is None:
             return None
+        # always ensure ideal quantity is available
         limiting_currency_quantity = quantity
         if limiting_currency_quantity > limiting_amount_from_this_order or \
                 limiting_currency_quantity > order_limiting_currency_available_amount:
