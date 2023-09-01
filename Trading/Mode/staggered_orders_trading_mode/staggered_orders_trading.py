@@ -295,13 +295,15 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 if selling:
                     available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
                     if available < order_quantity:
-                        self.logger.error(f"Skipping order creation: not enough {currency}: available: {available}, "
-                                          f"required: {order_quantity}")
+                        self.logger.error(
+                            f"Skipping {order_data.side.value} order creation at {float(order_data.price)}: "
+                            f"not enough {currency}: available: {available}, required: {order_quantity}"
+                        )
                         return []
                 elif market_available < order_quantity * order_price:
                     self.logger.error(
-                        f"Skipping order creation: not enough {market}: available: {market_available}, "
-                        f"required: {order_quantity * order_price}"
+                        f"Skipping {order_data.side.value} order creation at {float(order_data.price)}: "
+                        f"not enough {market}: available: {market_available}, required: {order_quantity * order_price}"
                     )
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling \
@@ -878,7 +880,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             return
         self.logger.info(
             f"{len(trades_with_missing_mirror_order_fills)} missed order fills on {self.symbol}, "
-            f"creating a {order_type.value} order of size {float(order_amount)} to compensate"
+            f"creating a {order_type.value} order of size {float(order_amount)} to compensate. "
+            f"Missed fills: {[trade.to_dict() for trade in trades_with_missing_mirror_order_fills]}"
         )
 
         balancing_order = trading_personal_data.create_order_instance(
@@ -1130,7 +1133,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             ):
                 self.logger.info(
                     f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
-                    f"order at price: {price}: recent trades are not available."
+                    f"order at {price}: no equivalent order for in recent trades (recent trades: {recent_trades})."
                 )
                 return quantity
             self.logger.error(
