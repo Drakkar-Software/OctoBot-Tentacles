@@ -413,6 +413,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         missing_orders, state, _ = self._analyse_current_orders_situation(
             sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
         )
+        if missing_orders:
+            self.logger.info(
+                f"{len(missing_orders)} missing {self.symbol} orders on {self.exchange_name}: {missing_orders}"
+            )
         await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
             buy_orders = self._create_orders(lowest_buy, highest_buy,
