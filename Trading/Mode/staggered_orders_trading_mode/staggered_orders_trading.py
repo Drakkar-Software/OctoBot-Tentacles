@@ -1137,7 +1137,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if quantity:
                     self.logger.info(
                         f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
-                        f"order at {price}: no equivalent order for in recent trades (recent trades: {recent_trades})."
+                        f"order at {price}: no equivalent order for in recent trades (recent trades: "
+                        f"{[str(t) for t in recent_trades]})."
                     )
                 else:
                     self.logger.error(
