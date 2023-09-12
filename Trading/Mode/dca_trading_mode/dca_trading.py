@@ -224,19 +224,19 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         )
         stop_price = entry_price * (
                 trading_constants.ONE - (
-                self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
-        )
+                    self.trading_mode.stop_loss_price_multiplier * exit_multiplier_side_flag
+                )
         )
         first_sell_price = entry_price * (
                 trading_constants.ONE + (
-                self.trading_mode.exit_limit_orders_price_multiplier * exit_multiplier_side_flag
-        )
+                    self.trading_mode.exit_limit_orders_price_multiplier * exit_multiplier_side_flag
+                )
         )
         last_sell_price = entry_price * (
                 trading_constants.ONE + (
-                self.trading_mode.secondary_exit_orders_price_multiplier *
-                (1 + self.trading_mode.secondary_exit_orders_count) * exit_multiplier_side_flag
-        )
+                    self.trading_mode.secondary_exit_orders_price_multiplier *
+                    (1 + self.trading_mode.secondary_exit_orders_count) * exit_multiplier_side_flag
+                )
         )
         # split entry into multiple exits if necessary (and possible)
         exit_quantities = self._split_entry_quantity(
@@ -264,7 +264,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if i == 1 else (
                         self.trading_mode.exit_limit_orders_price_multiplier +
                         self.trading_mode.secondary_exit_orders_price_multiplier * i
-                )
+                    )
                 take_profit_price = trading_personal_data.decimal_adapt_price(
                     symbol_market,
                     entry_price * (
@@ -291,7 +291,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         if target_exits_count == 1:
             return [(1, quantity)]
         adapted_sell_orders_count, increment = trading_personal_data.get_split_orders_count_and_increment(
-            lowest_price, highest_price, quantity, target_exits_count, symbol_market
+            lowest_price, highest_price, quantity, target_exits_count, symbol_market, False
         )
         if adapted_sell_orders_count:
             return [
