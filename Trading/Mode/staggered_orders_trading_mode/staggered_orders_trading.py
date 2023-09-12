@@ -359,6 +359,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID = {}
     FUNDS_INCREASE_RATIO_THRESHOLD = decimal.Decimal("0.5")  # ratio bellow with funds will be reallocated:
     # used to track new funds and update orders accordingly
+    ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO = decimal.Decimal("0.5")
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -875,6 +876,19 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_type = trading_enums.TraderOrderType.SELL_MARKET if to_create_order_quantity < trading_constants.ZERO \
             else trading_enums.TraderOrderType.BUY_MARKET
         target_amount = abs(to_create_order_quantity)
+        currency_available, market_available, market_quantity = \
+            trading_personal_data.get_portfolio_amounts(self.exchange_manager, self.symbol, current_price)
+        limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
+            else market_quantity
+        if target_amount > limiting_amount:
+            # use limiting_amount if delta from order_amount is bellow allowed threshold
+            delta = target_amount - limiting_amount
+            try:
+                if delta / target_amount < self.ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO:
+                    target_amount = limiting_amount
+            except (decimal.DivisionByZero, decimal.InvalidOperation):
+                # leave as is
+                pass
         to_create_details = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             target_amount,
             current_price,
@@ -888,10 +902,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
             return
         for order_amount, order_price in to_create_details:
-            currency_available, market_available, market_quantity = \
-                trading_personal_data.get_portfolio_amounts(self.exchange_manager, self.symbol, order_price)
-            limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
-                else market_quantity
             if order_amount > limiting_amount:
                 limiting_currency = base if order_type is trading_enums.TraderOrderType.SELL_MARKET \
                     else quote
