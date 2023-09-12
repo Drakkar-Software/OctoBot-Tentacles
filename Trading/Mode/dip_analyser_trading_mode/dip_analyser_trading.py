@@ -417,7 +417,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         volume_with_price = []
         sell_max = sell_base * self.PRICE_WEIGH_TO_PRICE_PERCENT[sell_weight]
         adapted_sell_orders_count, increment = trading_personal_data.get_split_orders_count_and_increment(
-            sell_base, sell_max, quantity, sell_orders_count, symbol_market
+            sell_base, sell_max, quantity, sell_orders_count, symbol_market, True
         )
         if adapted_sell_orders_count:
             order_volume = quantity / adapted_sell_orders_count
