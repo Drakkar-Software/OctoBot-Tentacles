@@ -295,7 +295,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 if selling:
                     available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
                     if available < order_quantity:
-                        self.logger.error(
+                        self.logger.warning(
                             f"Skipping {order_data.symbol} {order_data.side.value} "
                             f"[{self.exchange_manager.exchange_name}] order creation of "
                             f"{order_quantity} at {float(order_price)}: "
@@ -303,7 +303,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                         )
                         return []
                 elif market_available < order_quantity * order_price:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Skipping {order_data.symbol} {order_data.side.value} "
                         f"[{self.exchange_manager.exchange_name}] order creation of "
                         f"{order_quantity} at {float(order_price)}: "
