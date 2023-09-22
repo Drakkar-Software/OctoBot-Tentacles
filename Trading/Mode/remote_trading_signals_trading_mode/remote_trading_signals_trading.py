@@ -456,13 +456,20 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 found_orders += accurate_orders
                 continue
             # 2nd chance: use order type and price as these are kept between bot restarts (loaded from exchange)
-            found_orders += [
+            orders = [
                 (order_description, order)
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
                 if (order.origin_price == order_description[trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value] or
                     order.origin_price == order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value])
                     and self._is_compatible_order_type(order, order_description)
             ]
+            if orders:
+                found_orders += orders
+            else:
+                self.logger.error(
+                    f"Order not found on {self.exchange_manager.exchange_name} open orders, "
+                    f"description: {order_description}"
+                )
         return found_orders
 
     def _is_compatible_order_type(self, order, order_description):
