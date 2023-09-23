@@ -119,7 +119,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details on ${getWebsiteLink("/guides/#trading_modes", "the OctoBot guide")}.`
+                    intro: `More details on ${getDocsLink("/configuration/profiles", "the profiles guide")}.`
                 },
             ]
         }
@@ -242,7 +242,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details the ${getWebsiteLink("/guides/#backtesting", "backtesting guide")}.`
+                    intro: `More details the ${getDocsLink("/advanced_usage/backtesting-and-strategy-optimization", "backtesting guide")}.`
                 },
             ]
         }
