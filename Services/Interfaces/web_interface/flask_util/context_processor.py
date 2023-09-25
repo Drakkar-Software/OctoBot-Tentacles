@@ -127,6 +127,7 @@ def register_context_processor(web_interface_instance):
             OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
             OCTOBOT_CLOUD_URL=constants.OCTOBOT_CLOUD_URL,
             OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
+            OCTOBOT_COMMUNITY_LANDING_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_LANDING_URL,
             OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
             CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
             IS_DEMO=constants.IS_DEMO,
