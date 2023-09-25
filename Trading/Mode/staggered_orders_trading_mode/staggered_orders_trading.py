@@ -295,13 +295,19 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 if selling:
                     available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
                     if available < order_quantity:
-                        self.logger.error(f"Skipping order creation: not enough {currency}: available: {available}, "
-                                          f"required: {order_quantity}")
+                        self.logger.warning(
+                            f"Skipping {order_data.symbol} {order_data.side.value} "
+                            f"[{self.exchange_manager.exchange_name}] order creation of "
+                            f"{order_quantity} at {float(order_price)}: "
+                            f"not enough {currency}: available: {available}, required: {order_quantity}"
+                        )
                         return []
                 elif market_available < order_quantity * order_price:
-                    self.logger.error(
-                        f"Skipping order creation: not enough {market}: available: {market_available}, "
-                        f"required: {order_quantity * order_price}"
+                    self.logger.warning(
+                        f"Skipping {order_data.symbol} {order_data.side.value} "
+                        f"[{self.exchange_manager.exchange_name}] order creation of "
+                        f"{order_quantity} at {float(order_price)}: "
+                        f"not enough {market}: available: {market_available}, required: {order_quantity * order_price}"
                     )
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling \
@@ -353,6 +359,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID = {}
     FUNDS_INCREASE_RATIO_THRESHOLD = decimal.Decimal("0.5")  # ratio bellow with funds will be reallocated:
     # used to track new funds and update orders accordingly
+    ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO = decimal.Decimal("0.5")
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -850,60 +857,100 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     async def _pack_and_balance_missing_orders(self, trades_with_missing_mirror_order_fills, current_price):
         base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+        self.logger.info(
+            f"Packing {len(trades_with_missing_mirror_order_fills)} missed [{self.exchange_manager.exchange_name}] "
+            f"mirror orders, trades {[trade.to_dict() for trade in trades_with_missing_mirror_order_fills]}"
+        )
         to_create_order_quantity = sum(
             (trade.executed_quantity - trading_personal_data.get_fees_for_currency(trade.fee, base))
             * (-1 if trade.side is trading_enums.TradeOrderSide.BUY else 1)
             for trade in trades_with_missing_mirror_order_fills
+        )
+        self.logger.info(
+            f"Packed {len(trades_with_missing_mirror_order_fills)} missed [{self.exchange_manager.exchange_name}] "
+            f"balancing quantity into: {to_create_order_quantity} {base}"
         )
         if to_create_order_quantity == trading_constants.ZERO:
             return
         # create a market order to balance funds
         order_type = trading_enums.TraderOrderType.SELL_MARKET if to_create_order_quantity < trading_constants.ZERO \
             else trading_enums.TraderOrderType.BUY_MARKET
-        symbol_market = self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False)
-        order_amount = trading_personal_data.decimal_adapt_quantity(symbol_market, abs(to_create_order_quantity))
-        if order_amount == trading_constants.ZERO:
-            self.logger.error(
-                f"No enough computed funds to recreate packed missing mirror order balancing order on {self.symbol}"
-            )
-            return
+        target_amount = abs(to_create_order_quantity)
         currency_available, market_available, market_quantity = \
             trading_personal_data.get_portfolio_amounts(self.exchange_manager, self.symbol, current_price)
         limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
             else market_quantity
-        if order_amount > limiting_amount:
-            self.logger.error(f"No enough available funds to packed missing mirror order balancing "
-                              f"order on {self.symbol}. "
-                              f"Required {float(order_amount)}, available {float(limiting_amount)}")
+        if target_amount > limiting_amount:
+            # use limiting_amount if delta from order_amount is bellow allowed threshold
+            delta = target_amount - limiting_amount
+            try:
+                if delta / target_amount < self.ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO:
+                    target_amount = limiting_amount
+            except (decimal.DivisionByZero, decimal.InvalidOperation):
+                # leave as is
+                pass
+        to_create_details = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+            target_amount,
+            current_price,
+            self.symbol_market
+        )
+        if not to_create_details:
+            self.logger.error(
+                f"No enough computed funds to recreate packed missed [{self.exchange_manager.exchange_name}] "
+                f"mirror order balancing order on {self.symbol}: target_amount: {target_amount} is not enough "
+                f"for exchange minimal trading amounts rules"
+            )
             return
-        self.logger.info(
-            f"{len(trades_with_missing_mirror_order_fills)} missed order fills on {self.symbol}, "
-            f"creating a {order_type.value} order of size {float(order_amount)} to compensate"
-        )
+        for order_amount, order_price in to_create_details:
+            if order_amount > limiting_amount:
+                limiting_currency = base if order_type is trading_enums.TraderOrderType.SELL_MARKET \
+                    else quote
+                other_amount = currency_available if order_type is trading_enums.TraderOrderType.BUY_MARKET \
+                    else market_quantity
+                other_currency = base if order_type is trading_enums.TraderOrderType.BUY_MARKET \
+                    else quote
+                self.logger.error(
+                    f"No enough available funds to create missed [{self.exchange_manager.exchange_name}] mirror "
+                    f"order {order_type.value} balancing order on {self.symbol}. "
+                    f"Required {float(order_amount)} {limiting_currency}, available {float(limiting_amount)} "
+                    f"{limiting_currency} ({other_currency} available: {other_amount})"
+                )
+                return
+            self.logger.info(
+                f"{len(trades_with_missing_mirror_order_fills)} missed [{self.exchange_manager.exchange_name}] order "
+                f"fills on {self.symbol}, creating a {order_type.value} order of {float(order_amount)} {base} "
+                f"to compensate."
+            )
 
-        balancing_order = trading_personal_data.create_order_instance(
-            trader=self.exchange_manager.trader,
-            order_type=order_type,
-            symbol=self.symbol,
-            current_price=current_price,
-            quantity=order_amount,
-            price=current_price,
-            reduce_only=False,
-        )
-        created_order = await self.trading_mode.create_order(balancing_order)
-        # wait for order to be filled
-        if created_order.is_open():
-            if created_order.state is None:
-                self.logger.error(f"None state on created order, impossible to wait for fill, order: {created_order}")
+            balancing_order = trading_personal_data.create_order_instance(
+                trader=self.exchange_manager.trader,
+                order_type=order_type,
+                symbol=self.symbol,
+                current_price=order_price,
+                quantity=order_amount,
+                price=order_price,
+                reduce_only=False,
+            )
+            created_order = await self.trading_mode.create_order(balancing_order)
+            # wait for order to be filled
+            if created_order.is_open():
+                if created_order.state is None:
+                    self.logger.error(
+                        f"None state on created order, impossible to wait for fill, order: {created_order}"
+                    )
+                else:
+                    try:
+                        await created_order.state.wait_for_next_state(
+                            self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT
+                        )
+                    except asyncio.TimeoutError:
+                        self.logger.error(
+                            f"Timeout while waiting for rebalance marker order fill, order {created_order}"
+                        )
+            if created_order.is_open():
+                self.logger.error(f"Rebalance marker order is still open, order {created_order}")
             else:
-                try:
-                    await created_order.state.wait_for_next_state(self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT)
-                except asyncio.TimeoutError:
-                    self.logger.error(f"Timeout while waiting for rebalance marker order fill, order {created_order}")
-        if created_order.is_open():
-            self.logger.error(f"Rebalance marker order is still open, order {created_order}")
-        else:
-            self.logger.info("Successfully rebalanced funds after missed mirror orders.")
+                self.logger.info("Successfully rebalanced funds after missed mirror orders.")
 
     def _find_missing_mirror_order_fills(self, sorted_trades, missing_orders):
         trades_with_missing_mirror_order_fills = []
@@ -1111,35 +1158,39 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_limiting_currency_available_amount, recent_trades, sorted_orders,
         current_price
     ):
+        quantity = None
         if sorted_orders:
-            if quantity := self._get_quantity_from_existing_orders(
+            quantity = self._get_quantity_from_existing_orders(
                 price, sorted_orders, selling
-            ):
-                return quantity
-        if quantity := self._get_quantity_from_recent_trades(
-            price, limiting_amount_from_this_order, recent_trades, current_price, selling
-        ):
-            return quantity
-        try:
-            quantity = self._get_quantity_from_iteration(
-                average_order_quantity, self.mode, side, i, orders_count, price, price
             )
-        except trading_errors.NotSupported:
-            if quantity := self._get_quantity_from_existing_boundary_orders(
-                price, sorted_orders, selling
-            ):
-                self.logger.info(
-                    f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
-                    f"order at price: {price}: recent trades are not available."
+        if not quantity:
+            quantity = self._get_quantity_from_recent_trades(
+                price, limiting_amount_from_this_order, recent_trades, current_price, selling
+            )
+        if not quantity:
+            try:
+                quantity = self._get_quantity_from_iteration(
+                    average_order_quantity, self.mode, side, i, orders_count, price, price
                 )
-                return quantity
-            self.logger.error(
-                f"Error when computing restored order quantity for {'sell' if selling else 'buy'} order at "
-                f"price: {price}: recent trades or active orders are required."
-            )
-            return None
+            except trading_errors.NotSupported:
+                quantity = self._get_quantity_from_existing_boundary_orders(
+                    price, sorted_orders, selling
+                )
+                if quantity:
+                    self.logger.info(
+                        f"Using boundary orders to compute restored order quantity for {'sell' if selling else 'buy'} "
+                        f"order at {price}: no equivalent order for in recent trades (recent trades: "
+                        f"{[str(t) for t in recent_trades]})."
+                    )
+                else:
+                    self.logger.error(
+                        f"Error when computing restored order quantity for {'sell' if selling else 'buy'} order at "
+                        f"price: {price}: recent trades or active orders are required."
+                    )
+                    return None
         if quantity is None:
             return None
+        # always ensure ideal quantity is available
         limiting_currency_quantity = quantity
         if limiting_currency_quantity > limiting_amount_from_this_order or \
                 limiting_currency_quantity > order_limiting_currency_available_amount:

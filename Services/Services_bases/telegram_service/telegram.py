@@ -28,7 +28,7 @@ class TelegramService(services.AbstractService):
     CONNECT_TIMEOUT = 7  # default is 5, use 7 to take slow connections into account
     CHAT_ID = "chat-id"
     LOGGERS = ["telegram._bot", "telegram.ext.Updater", "telegram.ext.ExtBot",
-               "hpack.hpack", "hpack.table", "httpx._client"]
+               "hpack.hpack", "hpack.table"]
 
     def __init__(self):
         super().__init__()
@@ -67,7 +67,7 @@ class TelegramService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_WEBSITE_URL}/guides/#telegram"
+        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/telegram-interface"
 
     @staticmethod
     def is_setup_correctly(config):

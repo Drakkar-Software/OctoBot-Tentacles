@@ -127,6 +127,7 @@ class Kucoin(exchanges.RestExchange):
             account_id = None
             subaccount_id = None
             sub_accounts = await self.connector.client.private_get_sub_accounts()
+            has_subaccounts = bool(sub_accounts["data"])
             for account in sub_accounts["data"]:
                 if account["subUserId"]:
                     subaccount_id = account["subName"]
@@ -147,7 +148,7 @@ class Kucoin(exchanges.RestExchange):
                         f"sub_accounts={sub_accounts} subaccount_api_key_details={subaccount_api_key_details}"
                     )
                     return constants.DEFAULT_ACCOUNT_ID
-            if account_id is None:
+            if has_subaccounts and account_id is None:
                 self.logger.error(
                     f"kucoin api changed: can't fetch master account account_id. "
                     f"kucoin get_account_id has to be updated."
@@ -155,14 +156,14 @@ class Kucoin(exchanges.RestExchange):
                 )
                 account_id = constants.DEFAULT_ACCOUNT_ID
             # we are on the master account
-            return account_id
+            return account_id or constants.DEFAULT_ACCOUNT_ID
         except ccxt.AuthenticationError:
             # when api key is wrong
             raise
         except ccxt.ExchangeError:
             # ExchangeError('kucoin This user is not a master user')
             # raised when calling this endpoint with a subaccount
-            return constants.DEFAULT_ACCOUNT_ID
+            return constants.DEFAULT_SUBACCOUNT_ID
 
 
     @_kucoin_retrier

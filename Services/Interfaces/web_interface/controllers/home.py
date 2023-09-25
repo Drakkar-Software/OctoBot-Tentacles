@@ -41,6 +41,7 @@ def register(blueprint):
             all_time_frames = models.get_all_watched_time_frames()
             display_time_frame = models.get_display_timeframe()
             display_orders = models.get_display_orders()
+            sandbox_exchanges = models.get_sandbox_exchanges()
             try:
                 user_id = models.get_user_account_id()
                 display_feedback_form = form_to_display and not models.has_filled_form(form_to_display)
@@ -63,6 +64,7 @@ def register(blueprint):
                 user_id=user_id,
                 form_to_display=form_to_display,
                 display_feedback_form=display_feedback_form,
+                sandbox_exchanges=sandbox_exchanges
             )
         else:
             return flask.redirect(flask.url_for("terms"))
