@@ -193,7 +193,7 @@ def get_forced_profile() -> profiles.Profile:
             authentication.Authenticator.instance().get_startup_info(),
             log_exceptions=False
         )
-        if startup_info.forced_profile:
+        if startup_info.forced_profile_url:
             return get_current_profile()
     except community.BotError:
         pass
