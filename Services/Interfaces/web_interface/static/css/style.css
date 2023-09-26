@@ -344,6 +344,14 @@ a.nav-link.active.primary-pill:hover{
     min-height: 4rem;
 }
 
+.cloud-logo-2x {
+    max-height: 8rem;
+}
+
+.cloud-logo-4x {
+    max-height: 14rem;
+}
+
 /* elegant-color white-text */
 
 /* Theme */

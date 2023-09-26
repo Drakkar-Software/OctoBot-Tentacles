@@ -16,6 +16,54 @@
                 Use <a href="backtesting">Backesting</a> to quickly test trading strategies.
             </div>
         {% endif %}
+        <div class="card mt-2 mt-md-4 d-none d-md-block">
+            <div class="card-header">
+                <h4>
+                The new OctoBot cloud is now live !
+                </h4>
+            </div>
+            <div class="card-body row mx-0 py-0">
+                <div class="col-12 col-md-2 col-lg-1 py-3">
+                    <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=production_announcements&utm_content=dashboard_logo">
+                        <img class="img-fluid cloud-logo"
+                             src="{{url_for('static', filename='img/community/octobot-cloud.png')}}" alt="OctoBot cloud">
+                    </a>
+                </div>
+                <div class="col-8 col-lg-7 col-xl-4 card-text py-3">
+                    The updated <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=production_announcements&utm_content=dashboard" target="_blank" rel="noopener">octobot.cloud</a>
+                    is much more than before ! Now with OctoBot cloud, you can:
+                    <ul>
+                        <li>
+                            Use trading strategies in the <strong>simplest way possible</strong>.
+                        </li>
+                        <li>
+                            Apply as many trading strategies as you want <strong>for free</strong>
+                        </li>
+                        <li>
+                            Easily find and use the best strategies made by the community <span class="badge badge-light">coming soon</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="d-none d-xl-flex col-2">
+                    <a class="mx-auto" target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=production_announcements&utm_content=dashboard_illustration">
+                        <img class="img-fluid cloud-logo-2x"
+                             src="{{url_for('static', filename='img/community/cloud_dark.png')}}" alt="OctoBot cloud">
+                    </a>
+                </div>
+                <div class="col-12 col-lg-4 col-xl-5 card-text py-3">
+                    <p>
+                         Find more information the recent changes and future plans on
+                        <a href="https://blog.octobot.online/introducing-the-new-octobot-cloud" target="_blank" rel="noopener"> our blog</a>.
+                    </p>
+                    <p>
+                        Please note that you will need to click "Forgot your password?" to set your password when first
+                        logging in to
+                        <a href="{{OCTOBOT_COMMUNITY_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=production_announcements&utm_content=dashboard" target="_blank" rel="noopener">
+                        the new OctoBot cloud</a> using your current OctoBot account.
+                    </p>
+                </div>
+            </div>
+        </div>
         {% if is_in_stating_community_env() %}
         <div class="card mt-2 mt-md-4">
             <div class="card-header"><h2>
@@ -25,26 +73,9 @@
             <div class="card-body card-text">
                 <div class="alert alert-info">
                     When the beta environment is enabled, you will be connected to the "in development"
-                    version of OctoBot cloud (<a href="{{OCTOBOT_COMMUNITY_URL}}">{{OCTOBOT_COMMUNITY_URL}})</a>. The beta OctoBot cloud has its own accounts and products.
+                    version of OctoBot cloud (<a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=beta_program&utm_content=dashboard">{{OCTOBOT_COMMUNITY_LANDING_URL}})</a>.
+                    The beta OctoBot cloud has its own accounts and products.
                     Please login using your beta account.
-                </div>
-                <div>
-                    <div>
-                        Beta tentacles with early access features might be available.
-                    </div>
-                    <div>
-                        <button class="btn btn-primary waves-effect" id="install-beta-tentacles"
-                                update-url="{{url_for('advanced.install_official_tentacle_packages', use_beta_tentacles=True)}}">
-                            Install / Update beta tentacles
-                        </button>
-                        <button class="btn btn-outline-primary waves-effect" id="install-regular-tentacles"
-                                update-url="{{url_for('advanced.install_official_tentacle_packages', use_beta_tentacles=False)}}">
-                            Reinstall regular tentacles
-                        </button>
-                    </div>
-                    <div class='progress' id='packages_action_progess_bar' style='display: none;'>
-                        <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%;'></div>
-                    </div>
                 </div>
             </div>
             <div class="card-footer">
