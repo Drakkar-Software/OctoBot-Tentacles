@@ -128,7 +128,7 @@ class WebHookService(services.AbstractService):
         return feed_name in self.service_feed_webhooks
 
     @staticmethod
-    def connect(port, protocol="http") -> str:
+    def connect(port, protocol="http") -> ngrok.NgrokTunnel:
         """
         Create a new ngrok tunnel
         :param port: the tunnel local port
@@ -155,14 +155,17 @@ class WebHookService(services.AbstractService):
 
     def _prepare_webhook_server(self):
         try:
-            self.webhook_server = gevent.pywsgi.WSGIServer((self.webhook_host, self.webhook_port),
-                                                           self.webhook_app,
-                                                           log=None)
+            self.logger.debug(f"Starting local webhook server at {self.webhook_host}:{self.webhook_port}")
+            self.webhook_server = gevent.pywsgi.WSGIServer(
+                (self.webhook_host, self.webhook_port),
+                self.webhook_app,
+                log=None
+            )
             self.webhook_server_context = self.webhook_app.app_context()
             self.webhook_server_context.push()
         except OSError as e:
             self.webhook_server = None
-            self.get_logger().exception(e, False, f"Fail to start webhook : {e}")
+            self.logger.exception(e, False, f"Fail to start webhook : {e}")
 
     def _register_webhook_routes(self, blueprint) -> None:
         @blueprint.route('/')
