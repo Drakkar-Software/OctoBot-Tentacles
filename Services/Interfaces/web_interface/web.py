@@ -188,7 +188,6 @@ class WebInterface(services_interfaces.AbstractWebInterface):
 
         security.register_responses_extra_header(server_instance, True)
 
-
     def _handle_login(self, server_instance):
         self.web_login_manger = login.WebLoginManager(server_instance, self.password_hash)
         login.set_is_login_required(self.requires_password)
