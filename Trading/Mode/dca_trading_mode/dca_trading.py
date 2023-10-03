@@ -396,10 +396,10 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
                         self.exchange_manager.config
                 ).items():
-                    if self.symbol in pairs:
+                    if self.trading_mode.symbol in pairs:
                         await self.trigger_dca(
                             cryptocurrency=cryptocurrency,
-                            symbol=self.symbol,
+                            symbol=self.trading_mode.symbol,
                             state=trading_enums.EvaluatorStates.VERY_LONG
                         )
                 if self.exchange_manager.is_backtesting:
@@ -502,7 +502,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                     DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value
                 }
             }
-        ))
+        )) * commons_constants.MINUTE_TO_SECONDS
         trading_modes.user_select_order_amount(self, inputs, include_sell=False)
         self.use_market_entry_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
