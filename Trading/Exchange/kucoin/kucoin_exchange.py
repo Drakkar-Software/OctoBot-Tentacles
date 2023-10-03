@@ -23,6 +23,7 @@ import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
@@ -165,6 +166,24 @@ class Kucoin(exchanges.RestExchange):
             # raised when calling this endpoint with a subaccount
             return constants.DEFAULT_SUBACCOUNT_ID
 
+    def get_market_status(self, symbol, price_example=None, with_fixer=True):
+        """
+        local override to take "minFunds" into account
+        "minFunds	the minimum spot and margin trading amounts" https://docs.kucoin.com/#get-symbols-list
+        """
+        market_status = super().get_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+        min_funds = market_status.get(ccxt_constants.CCXT_INFO, {}).get("minFunds")
+        if min_funds is not None:
+            # should only be for spot and margin, use it if available anyway
+            limit_costs = market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST.value
+            ]
+            # use max (most restrictive) value
+            limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value] = min(
+                limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value],
+                float(min_funds)
+            )
+        return market_status
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
