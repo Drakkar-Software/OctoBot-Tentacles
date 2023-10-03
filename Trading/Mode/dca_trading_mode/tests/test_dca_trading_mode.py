@@ -18,6 +18,7 @@ import pytest_asyncio
 import os.path
 import mock
 import decimal
+import asyncio
 
 import async_channel.util as channel_util
 
@@ -208,6 +209,65 @@ async def test_init_config_values(tools):
 
     assert mode.use_stop_loss is True
     assert mode.stop_loss_price_multiplier == decimal.Decimal("0.1")
+
+
+async def test_inner_start(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    with mock.patch.object(producer, "dca_task", mock.AsyncMock()) as dca_task_mock, \
+         mock.patch.object(producer, "get_channels_registration", mock.Mock(return_value=[])):
+        # evaluator based
+        mode.trigger_mode = dca_trading.TriggerMode.MAXIMUM_EVALUATORS_SIGNALS_BASED
+        await producer.inner_start()
+        for _ in range(10):
+            await asyncio_tools.wait_asyncio_next_cycle()
+        dca_task_mock.assert_not_called()
+
+        # time based
+        mode.trigger_mode = dca_trading.TriggerMode.TIME_BASED
+        await producer.inner_start()
+        for _ in range(10):
+            await asyncio_tools.wait_asyncio_next_cycle()
+        dca_task_mock.assert_called_once()
+
+
+async def test_dca_task(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    calls = []
+    try:
+        def _on_trigger(**kwargs):
+            if len(calls):
+                # now stop
+                producer.should_stop = True
+            calls.append(kwargs)
+        producer.exchange_manager.is_backtesting = True
+        with mock.patch.object(asyncio, "sleep", mock.AsyncMock()) as sleep_mock:
+            # backtesting: trigger only once
+            with mock.patch.object(producer, "trigger_dca", mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
+                await producer.dca_task()
+                assert trigger_dca_mock.call_count == 1
+                assert trigger_dca_mock.mock_calls[0].kwargs == {
+                    "cryptocurrency": "Bitcoin",
+                    "symbol": "BTC/USDT",
+                    "state": trading_enums.EvaluatorStates.VERY_LONG
+                }
+                sleep_mock.assert_not_called()
+
+            calls.clear()
+            # live: loop trigger
+            producer.exchange_manager.is_backtesting = False
+            with mock.patch.object(producer, "trigger_dca", mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
+                await producer.dca_task()
+                assert trigger_dca_mock.call_count == 2
+                assert trigger_dca_mock.mock_calls[0].kwargs == {
+                    "cryptocurrency": "Bitcoin",
+                    "symbol": "BTC/USDT",
+                    "state": trading_enums.EvaluatorStates.VERY_LONG
+                }
+                assert sleep_mock.call_count == 2
+                assert sleep_mock.mock_calls[0].args == (10080 * commons_constants.MINUTE_TO_SECONDS, )
+                assert sleep_mock.mock_calls[1].args == (10080 * commons_constants.MINUTE_TO_SECONDS, )
+    finally:
+        producer.exchange_manager.is_backtesting = True
 
 
 async def test_trigger_dca(tools):
