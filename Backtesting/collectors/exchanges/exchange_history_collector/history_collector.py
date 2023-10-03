@@ -184,6 +184,12 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                 raise errors.DataCollectorError("start_timestamp is higher than end_timestamp")
 
     async def get_first_candle_timestamp(self, ideal_start_timestamp, symbol, time_frame):
-        return (
-            await self.exchange.get_symbol_prices(str(symbol), time_frame, limit=1, since=ideal_start_timestamp)
-        )[0][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+        try:
+            return (
+                await self.exchange.get_symbol_prices(str(symbol), time_frame, limit=1, since=ideal_start_timestamp)
+            )[0][commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+        except (trading_errors.FailedRequest, IndexError) as err:
+            raise errors.DataCollectorError(
+                f"Impossible to initialize {self.exchange_name} data collector: {err}. This means that {symbol} "
+                f"for the {time_frame.value} time frame is not supported in this context on {self.exchange_name}."
+            )
