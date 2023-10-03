@@ -408,7 +408,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                         f"configure another trigger mode to use {self.trading_mode.get_name()} in backtesting."
                     )
                     return
-                await asyncio.sleep(self.trading_mode.minutes_before_next_buy)
+                await asyncio.sleep(self.trading_mode.minutes_before_next_buy * commons_constants.MINUTE_TO_SECONDS)
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
@@ -502,7 +502,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                     DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value
                 }
             }
-        )) * commons_constants.MINUTE_TO_SECONDS
+        ))
         trading_modes.user_select_order_amount(self, inputs, include_sell=False)
         self.use_market_entry_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
