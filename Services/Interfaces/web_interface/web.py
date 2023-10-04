@@ -260,8 +260,8 @@ class WebInterface(services_interfaces.AbstractWebInterface):
             web_interface_util.open_in_background_browser(
                 f"http://{socket.gethostbyname(socket.gethostname())}:{self.port}"
             )
-        except Exception as e:
-            self.logger.warning(f"Impossible to open automatically web interface: {e}")
+        except Exception as err:
+            self.logger.warning(f"Impossible to open automatically web interface: {err} ({err.__class__.__name__})")
 
     async def _inner_start(self):
         return self.threaded_start()
