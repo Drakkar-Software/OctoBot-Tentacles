@@ -32,6 +32,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
 import octobot_trading.errors as trading_errors
+import octobot_trading.exchanges.util.exchange_util as exchange_util
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.modes.script_keywords as script_keywords
 
@@ -662,3 +663,11 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             ",".join([str(e) for e in self.producers[0].final_eval]) if self.producers[0].final_eval
             else self.producers[0].final_eval
         )
+
+    async def optimize_initial_portfolio(self, sellable_assets: list):
+        target_asset = exchange_util.get_common_traded_quote(self.exchange_manager)
+        if target_asset is None:
+            self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
+            return
+        self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
+        await trading_modes.convert_to_target_asset(self, sellable_assets, target_asset)
