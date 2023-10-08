@@ -220,15 +220,18 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         :return: the commands dict
         """
         return {
-            GridTradingMode.USER_COMMAND_CREATE_ORDERS: {
-                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
-            },
-            GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION: {
-                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
-            },
-            GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING: {
-                GridTradingMode.USER_COMMAND_TRADING_PAIR: "text",
-                GridTradingMode.USER_COMMAND_PAUSE_TIME: "number"
+            **super().get_user_commands(),
+            **{
+                GridTradingMode.USER_COMMAND_CREATE_ORDERS: {
+                    GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
+                },
+                GridTradingMode.USER_COMMAND_STOP_ORDERS_CREATION: {
+                    GridTradingMode.USER_COMMAND_TRADING_PAIR: "text"
+                },
+                GridTradingMode.USER_COMMAND_PAUSE_ORDER_MIRRORING: {
+                    GridTradingMode.USER_COMMAND_TRADING_PAIR: "text",
+                    GridTradingMode.USER_COMMAND_PAUSE_TIME: "number"
+                }
             }
         }
 

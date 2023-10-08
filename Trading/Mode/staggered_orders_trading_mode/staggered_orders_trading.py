@@ -124,6 +124,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
     REQUIRE_TRADES_HISTORY = True   # set True when this trading mode needs the trade history to operate
+    SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True  # set True when self._optimize_initial_portfolio is implemented
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -250,6 +251,9 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
 
     def set_default_config(self):
         raise RuntimeError(f"Impossible to start {self.get_name()} without a valid configuration file.")
+
+    async def optimize_initial_portfolio(self, sellable_assets: list):
+        print("optimize_initial_portfolio")
 
 
 class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
