@@ -33,6 +33,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.errors as trading_errors
+import octobot_trading.exchanges.util.exchange_util as exchange_util
 
 
 class StrategyModes(enum.Enum):
@@ -252,8 +253,92 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     def set_default_config(self):
         raise RuntimeError(f"Impossible to start {self.get_name()} without a valid configuration file.")
 
-    async def optimize_initial_portfolio(self, sellable_assets: list):
-        print("optimize_initial_portfolio")
+    async def optimize_initial_portfolio(self, sellable_assets: list) -> list:
+        if not self.producers:
+            # nothing to do
+            return []
+        producer = self.producers[0]
+        common_quote = exchange_util.get_common_traded_quote(self.exchange_manager)
+        if common_quote is None:
+            self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
+            return []
+        portfolio = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+        # first acquire trading mode lock to be sure we are not in during init phase
+        async with producer.trading_mode_trigger():
+            if producer.producer_exchange_wide_lock(self.exchange_manager).locked():
+                # already locked by another trading mode instance: this other trading mode will do the rebalancing
+                self.logger.info(
+                    f"Skipping portfolio optimization for trading mode with symbol {self.symbol}: "
+                    f"portfolio optimization already initialized"
+                )
+                return []
+            async with producer.producer_exchange_wide_lock(self.exchange_manager):
+                self.logger.info(f"Starting portfolio optimization using trading mode with symbol {self.symbol}")
+                self.logger.info(f"Optimizing portfolio: cancelling existing open orders on "
+                                 f"{self.exchange_manager.exchange_config.traded_symbol_pairs}")
+                to_sell_assets = set(sellable_assets)
+                pair_bases = set()
+                configured_pairs = []
+                # 1. cancel open orders
+                cancelled_orders = []
+                for symbol in self.exchange_manager.exchange_config.traded_symbol_pairs:
+                    if producer.get_symbol_trading_config(symbol) is not None:
+                        configured_pairs.append(symbol)
+                        pair_bases.add(symbol_util.parse_symbol(symbol).base)
+                        for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
+                            symbol=symbol
+                        ):
+                            if not (order.is_cancelled() or order.is_closed()):
+                                cancelled = await self.cancel_order(order) and cancelled
+                                cancelled_orders.append(order)
+
+                # 2. convert assets to sell funds into target assets
+                to_sell_assets = to_sell_assets.union(pair_bases)
+                self.logger.info(f"Optimizing portfolio: selling {to_sell_assets} to buy {common_quote}")
+                # need portfolio available to be up-to-date with cancelled orders
+                part_1_orders = await trading_modes.convert_assets_to_target_asset(
+                    self, list(to_sell_assets), common_quote
+                )
+                if part_1_orders:
+                    await asyncio.gather(
+                        *[
+                            trading_personal_data.wait_for_order_fill(
+                                order, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+                            ) for order in part_1_orders
+                        ]
+                    )
+
+                # 3. compute necessary funds for each configured_pairs
+                trading_pairs_count = len(pair_bases)
+                # need portfolio available to be up-to-date with balancing orders
+                kept_quote_amount = portfolio.portfolio[common_quote].available / decimal.Decimal(2)
+                converted_quote_amount_per_symbol = (
+                    (portfolio.portfolio[common_quote].available - kept_quote_amount) /
+                    decimal.Decimal(trading_pairs_count)
+                )
+
+                # 4. buy assets
+                part_2_orders = []
+                tickers = {}
+                for base in pair_bases:
+                    self.logger.info(
+                        f"Optimizing portfolio: buying {base} with "
+                        f"{float(converted_quote_amount_per_symbol)} {common_quote}"
+                    )
+                    orders, tickers = await trading_modes.convert_asset_to_target_asset(
+                        self, common_quote, base, asset_amount=converted_quote_amount_per_symbol, tickers=tickers
+                    )
+                    part_2_orders += orders
+                if part_2_orders:
+                    await asyncio.gather(
+                        *[
+                            trading_personal_data.wait_for_order_fill(
+                                order, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+                            ) for order in part_2_orders
+                        ]
+                    )
+                await trading_modes.notify_portfolio_optimization_complete()
+                return [cancelled_orders, part_1_orders, part_2_orders]
 
 
 class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
@@ -360,7 +445,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     # the same funds due to async between producers and consumers and the possibility to trade multiple pairs with
     # shared quote or base
     AVAILABLE_FUNDS = {}
-    GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID = {}
     FUNDS_INCREASE_RATIO_THRESHOLD = decimal.Decimal("0.5")  # ratio bellow with funds will be reallocated:
     # used to track new funds and update orders accordingly
     ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO = decimal.Decimal("0.5")
@@ -435,11 +519,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.healthy = True
 
     def _load_symbol_trading_config(self) -> bool:
+        config = self.get_symbol_trading_config(self.symbol)
+        if config is None:
+            return False
+        self.symbol_trading_config = config
+        return True
+
+    def get_symbol_trading_config(self, symbol):
         for config in self.trading_mode.trading_config[self.trading_mode.CONFIG_PAIR_SETTINGS]:
-            if config[self.trading_mode.CONFIG_PAIR] == self.symbol:
-                self.symbol_trading_config = config
-                return True
-        return False
+            if config[self.trading_mode.CONFIG_PAIR] == symbol:
+                return config
+        return None
 
     def read_config(self):
         mode = ""
@@ -486,11 +576,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             if self.exchange_manager.id in StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS:
                 # remove self.exchange_manager.id from available funds
                 StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
-            if self.exchange_manager.id in StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID:
-                # remove self.exchange_manager.id from available funds
-                StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID.pop(
-                    self.exchange_manager.id, None
-                )
         await super().stop()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
@@ -635,7 +720,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # already on exchange): only initialize increment and order fill events will do the rest
             self._set_increment_and_spread(current_price)
         else:
-            async with self._generate_orders_lock():
+            async with self.producer_exchange_wide_lock(self.exchange_manager):
                 # use exchange level lock to prevent funds double spend
                 buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
                 staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
@@ -937,24 +1022,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
             created_order = await self.trading_mode.create_order(balancing_order)
             # wait for order to be filled
-            if created_order.is_open():
-                if created_order.state is None:
-                    self.logger.error(
-                        f"None state on created order, impossible to wait for fill, order: {created_order}"
-                    )
-                else:
-                    try:
-                        await created_order.state.wait_for_next_state(
-                            self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT
-                        )
-                    except asyncio.TimeoutError:
-                        self.logger.error(
-                            f"Timeout while waiting for rebalance marker order fill, order {created_order}"
-                        )
-            if created_order.is_open():
-                self.logger.error(f"Rebalance marker order is still open, order {created_order}")
-            else:
-                self.logger.info("Successfully rebalanced funds after missed mirror orders.")
+            await trading_personal_data.wait_for_order_fill(
+                created_order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+            )
 
     def _find_missing_mirror_order_fills(self, sorted_trades, missing_orders):
         trades_with_missing_mirror_order_fills = []
@@ -1771,11 +1841,3 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     # syntax: "async with xxx.get_lock():"
     def get_lock(self):
         return self.lock
-
-    def _generate_orders_lock(self):
-        try:
-            return StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID[self.exchange_manager.id]
-        except KeyError:
-            lock = asyncio_tools.RLock()
-            StaggeredOrdersTradingModeProducer.GENERATE_ORDERS_LOCKS_BY_EXCHANGE_ID[self.exchange_manager.id] = lock
-            return lock

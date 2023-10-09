@@ -664,10 +664,26 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             else self.producers[0].final_eval
         )
 
-    async def optimize_initial_portfolio(self, sellable_assets: list):
+    async def optimize_initial_portfolio(self, sellable_assets: list) -> list:
+        if not self.producers:
+            # nothing to do
+            return []
         target_asset = exchange_util.get_common_traded_quote(self.exchange_manager)
         if target_asset is None:
             self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
-            return
-        self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
-        await trading_modes.convert_to_target_asset(self, sellable_assets, target_asset)
+            return []
+        async with self.producers[0].trading_mode_trigger():
+            if self.producers[0].producer_exchange_wide_lock(self.exchange_manager).locked():
+                # already locked by another trading mode instance: this other trading mode will do the rebalancing
+                self.logger.info(
+                    f"Skipping portfolio optimization for trading mode with symbol {self.symbol}: "
+                    f"portfolio optimization already in progress"
+                )
+                return []
+            async with self.producers[0].producer_exchange_wide_lock(self.exchange_manager):
+                self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
+                created_orders = await trading_modes.convert_assets_to_target_asset(self, sellable_assets, target_asset)
+                if not created_orders:
+                    self.logger.info("Optimizing portfolio: no order to create")
+            await trading_modes.notify_portfolio_optimization_complete()
+            return [created_orders]
