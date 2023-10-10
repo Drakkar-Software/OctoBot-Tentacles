@@ -161,8 +161,11 @@ class Kucoin(exchanges.RestExchange):
         except ccxt.AuthenticationError:
             # when api key is wrong
             raise
-        except ccxt.ExchangeError:
+        except ccxt.ExchangeError as err:
             # ExchangeError('kucoin This user is not a master user')
+            if "not a master user" not in str(err):
+                self.logger.error(f"kucoin api changed: subaccount error on account id is now: '{err}' "
+                                  f"instead of 'kucoin This user is not a master user'")
             # raised when calling this endpoint with a subaccount
             return constants.DEFAULT_SUBACCOUNT_ID
 

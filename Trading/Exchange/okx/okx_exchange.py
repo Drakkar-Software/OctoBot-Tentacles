@@ -22,6 +22,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 
@@ -163,6 +164,17 @@ class Okx(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
+
+    def get_additional_connector_config(self):
+        config = {
+            ccxt_constants.CCXT_OPTIONS: {}
+        }
+        if self.exchange_manager.is_spot_only:
+            # only fetch spot markets
+            config[ccxt_constants.CCXT_OPTIONS] = {
+                "fetchMarkets": ["spot"]
+            }
+        return config
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
