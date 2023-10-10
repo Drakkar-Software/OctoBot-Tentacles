@@ -675,14 +675,14 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             else self.producers[0].final_eval
         )
 
-    async def optimize_initial_portfolio(self, sellable_assets: list) -> list:
+    async def optimize_initial_portfolio(self, sellable_assets: list, tickers: dict = None) -> (list, dict):
         if not self.producers:
             # nothing to do
-            return []
+            return [], tickers
         target_asset = exchange_util.get_common_traded_quote(self.exchange_manager)
         if target_asset is None:
             self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
-            return []
+            return [], tickers
         async with self.producers[0].trading_mode_trigger():
             if self.producers[0].producer_exchange_wide_lock(self.exchange_manager).locked():
                 # already locked by another trading mode instance: this other trading mode will do the rebalancing
@@ -690,11 +690,13 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                     f"Skipping portfolio optimization for trading mode with symbol {self.symbol}: "
                     f"portfolio optimization already in progress"
                 )
-                return []
+                return [], tickers
             async with self.producers[0].producer_exchange_wide_lock(self.exchange_manager):
                 self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
-                created_orders = await trading_modes.convert_assets_to_target_asset(self, sellable_assets, target_asset)
+                created_orders, tickers = await trading_modes.convert_assets_to_target_asset(
+                    self, sellable_assets, target_asset, tickers
+                )
                 if not created_orders:
                     self.logger.info("Optimizing portfolio: no order to create")
             await trading_modes.notify_portfolio_optimization_complete()
-            return [created_orders]
+            return created_orders, tickers
