@@ -81,8 +81,8 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
     def get_mode_consumer_classes(self) -> list:
         return [RemoteTradingSignalsModeConsumer]
 
-    async def create_producers(self) -> list:
-        producers = await super().create_producers()
+    async def create_producers(self, auto_start) -> list:
+        producers = await super().create_producers(auto_start)
         return producers + await self._subscribe_to_signal_feed()
 
     async def _subscribe_to_signal_feed(self):
