@@ -14,5 +14,6 @@
     "use_secondary_entry_orders": false,
     "use_secondary_exit_orders": false,
     "use_stop_losses": false,
-    "use_take_profit_exit_orders": false
+    "use_take_profit_exit_orders": false,
+    "cancel_open_orders_at_each_entry": true
 }

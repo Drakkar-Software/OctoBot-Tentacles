@@ -90,12 +90,15 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             else:
                 initial_available_funds = current_market_holding \
                     if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
-            # cancel existing DCA orders from previous iterations
-            existing_orders = [
-                order
-                for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-                if not (order.is_cancelled() or order.is_closed()) and side is order.side
-            ]
+            
+            existing_orders = []
+            if self.trading_mode.cancel_open_orders_at_each_entry:
+                # cancel existing DCA orders from previous iterations
+                existing_orders = [
+                    order
+                    for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+                    if not (order.is_cancelled() or order.is_closed()) and side is order.side
+                ]
 
             secondary_quantity = None
             if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
@@ -315,6 +318,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     MINUTES_BEFORE_NEXT_BUY = "minutes_before_next_buy"
     TRIGGER_MODE = "trigger_mode"
+    CANCEL_OPEN_ORDERS_AT_EACH_ENTRY = "cancel_open_orders_at_each_entry"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -480,6 +484,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.use_stop_loss = False
         self.stop_loss_price_multiplier = DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER
 
+        self.cancel_open_orders_at_each_entry = True
+
     def init_user_inputs(self, inputs: dict) -> None:
         """
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
@@ -641,6 +647,11 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 }
             )
         )) / trading_constants.ONE_HUNDRED
+
+        self.cancel_open_orders_at_each_entry = self.UI.user_input(
+            DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN, self.cancel_open_orders_at_each_entry, inputs,
+            title="Cancel open orders on each entry: cancel existing orders from previous iteration on each entry.",
+        )
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
