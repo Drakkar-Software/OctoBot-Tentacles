@@ -32,6 +32,17 @@ or a % of available holdings associated to all configured trading pairs assets (
 When not specified, orders volume and price are automatically computed based on the current 
 asset price and holdings.
 
+It also takes cancel order signal with the following format:
+``` bash
+EXCHANGE=binance
+SYMBOL=ETHBTC
+ORDER_TYPE=CANCEL
+```
+
+Additional cancel parameters are available:
+- `PARAM_SIDE` is the side of the order to cancel, it can be `buy` or `sell` to only cancel buy or sell orders.
+
+
 Additional data in the Trading View signal data will not be processed.
 
 This Trading mode is not using any strategy or evaluator and won't create stop losses.

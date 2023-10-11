@@ -44,6 +44,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SELL_SIGNAL = "sell"
     MARKET_SIGNAL = "market"
     LIMIT_SIGNAL = "limit"
+    CANCEL_SIGNAL = "cancel"
+    SIDE_PARAM_KEY = "SIDE"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -219,6 +221,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             else:
                 state = trading_enums.EvaluatorStates.VERY_LONG if self.trading_mode.USE_MARKET_ORDERS \
                     else trading_enums.EvaluatorStates.LONG
+        elif side == TradingViewSignalsTradingMode.CANCEL_SIGNAL:
+            state = trading_enums.EvaluatorStates.NEUTRAL
         else:
             self.logger.error(f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, "
                               f"full data= {parsed_data}")
@@ -280,3 +284,12 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 # send_notification
                 if not self.exchange_manager.is_backtesting:
                     await self._send_alert_notification(symbol, new_state)
+            elif self.trading_mode.consumers:
+                cancel_order_raw_side = order_data.get(
+                    TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
+                        TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
+                cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
+                                    else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+
+                # cancel open orders
+                await self.cancel_symbol_open_orders(symbol, side=cancel_order_side)
