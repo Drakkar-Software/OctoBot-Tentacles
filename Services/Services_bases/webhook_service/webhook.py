@@ -42,6 +42,7 @@ class WebHookService(services.AbstractService):
         return {
             services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
+            services_constants.CONFIG_NGROK_DOMAIN: "[Optional] The ngrok subdomain.",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP: used for webhook when ngrok is not enabled.",
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port: used for webhook when ngrok is not enabled."
         }
@@ -52,6 +53,7 @@ class WebHookService(services.AbstractService):
         return {
             services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
+            services_constants.CONFIG_NGROK_DOMAIN: "",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
         }
@@ -62,6 +64,7 @@ class WebHookService(services.AbstractService):
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
         self.ngrok_enabled = True
+        self.ngrok_domain = None
 
         self.service_feed_webhooks = {}
         self.service_feed_auth_callbacks = {}
@@ -128,14 +131,14 @@ class WebHookService(services.AbstractService):
         return feed_name in self.service_feed_webhooks
 
     @staticmethod
-    def connect(port, protocol="http") -> ngrok.NgrokTunnel:
+    def connect(port, protocol="http", domain=None)-> ngrok.NgrokTunnel:
         """
         Create a new ngrok tunnel
         :param port: the tunnel local port
         :param protocol: the protocol to use
         :return: the ngrok url
         """
-        return ngrok.connect(port, protocol)
+        return ngrok.connect(port, protocol, domain=domain)
 
     def subscribe_feed(self, service_feed_name, service_feed_callback, auth_callback) -> None:
         """
@@ -203,6 +206,8 @@ class WebHookService(services.AbstractService):
             ngrok.set_auth_token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
                     services_constants.CONFIG_NGROK_TOKEN])
+        self.ngrok_domain = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK].get(
+            services_constants.CONFIG_NGROK_DOMAIN, None)
         try:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           self.config[services_constants.CONFIG_CATEGORY_SERVICES]
@@ -224,7 +229,7 @@ class WebHookService(services.AbstractService):
             self._register_webhook_routes(self.webhook_app)
             self.webhook_public_url = f"http://{self.webhook_host}:{self.webhook_port}/webhook"
             if self.ngrok_enabled:
-                self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
+                self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http", domain=self.ngrok_domain)
                 self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
             if self.webhook_server:
                 self.connected = True
