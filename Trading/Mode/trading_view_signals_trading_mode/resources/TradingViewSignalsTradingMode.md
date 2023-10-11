@@ -40,7 +40,7 @@ ORDER_TYPE=CANCEL
 ```
 
 Additional cancel parameters are available:
-- `PARAM_SIDE` is the side of the order to cancel, it can be `buy` or `sell` to only cancel buy or sell orders.
+- `PARAM_SIDE` is the side of the orders to cancel, it can be `buy` or `sell` to only cancel buy or sell orders.
 
 
 Additional data in the Trading View signal data will not be processed.
