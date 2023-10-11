@@ -37,6 +37,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.modes
 
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -692,6 +693,18 @@ async def test_create_new_orders(tools):
         # 10 orders out of 30 got skipped
         assert _create_entry_order_mock.call_count == 1 + 19
         _create_entry_order_mock.reset_mock()
+
+
+async def test_single_exchange_process_optimize_initial_portfolio(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+
+    with mock.patch.object(
+        octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["order_1"])
+    ) as convert_assets_to_target_asset_mock:
+        orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
+        convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
+        assert orders == ["order_1"]
 
 
 async def _check_open_orders_count(trader, count):
