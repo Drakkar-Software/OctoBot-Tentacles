@@ -22,18 +22,25 @@ import decimal
 import contextlib
 
 import async_channel.util as channel_util
+
 import octobot_tentacles_manager.api as tentacles_manager_api
+
 import octobot_backtesting.api as backtesting_api
+
 import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.constants as commons_constants
 import octobot_commons.tests.test_config as test_config
+
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
+import octobot_trading.modes
+
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
+
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.test_exchanges as test_exchanges
@@ -1337,6 +1344,53 @@ async def test_ensure_current_price_in_limit_parameters():
             assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is False
             _log_window_error_or_warning_mock.reset_mock()
             assert producer.already_errored_on_out_of_window_price is True
+
+
+async def test_single_exchange_process_optimize_initial_portfolio():
+    async with _get_tools("BTC/USD") as tools:
+        producer, _, exchange_manager = tools
+        mode = producer.trading_mode
+        exchange_manager.exchange_config.traded_symbol_pairs = ["BTC/USD"]
+        exchange_manager.client_symbols = ["BTC/USD"]
+
+        initial_portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        assert initial_portfolio["BTC"].available == decimal.Decimal("10")
+        assert initial_portfolio["USD"].available == decimal.Decimal("1000")
+
+        limit_buy = trading_personal_data.BuyLimitOrder(exchange_manager.trader)
+        limit_buy.update(order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                         symbol="BTC/USD",
+                         current_price=decimal.Decimal(str(50)),
+                         quantity=decimal.Decimal(str(2)),
+                         price=decimal.Decimal(str(50)))
+        await exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(limit_buy)
+
+        orders = await mode.single_exchange_process_optimize_initial_portfolio(
+            ["BTC", "ETH"], "USD", {"BTC/USD": {trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: 1000}}
+        )
+        cancelled_orders, part_1_orders, part_2_orders = [orders[0], orders[1], orders[2]]
+
+        assert len(cancelled_orders) == 1
+        assert cancelled_orders[0] is limit_buy
+
+        assert len(part_1_orders) == 1
+        part_1_order = part_1_orders[0]
+        assert isinstance(part_1_order, trading_personal_data.SellMarketOrder)
+        assert part_1_order.created_last_price == decimal.Decimal("1000")
+        assert part_1_order.origin_quantity == decimal.Decimal("10")    # 10 BTC to sell into 10 000 USD
+        assert part_1_order.status == trading_enums.OrderStatus.FILLED
+
+        assert part_2_orders
+        part_2_order = part_2_orders[0]
+        assert isinstance(part_2_order, trading_personal_data.BuyMarketOrder)
+        assert part_2_order.created_last_price == decimal.Decimal("1000")
+        assert part_2_order.origin_quantity == decimal.Decimal("5.545")    # 50% of funds
+        assert part_2_order.status == trading_enums.OrderStatus.FILLED
+
+        # check portfolio is rebalanced
+        final_portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        assert final_portfolio["BTC"].available == decimal.Decimal('5.539455')  # 5.545 - fees
+        assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
 async def _wait_for_orders_creation(orders_count=1):

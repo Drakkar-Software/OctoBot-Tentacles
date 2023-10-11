@@ -253,58 +253,41 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     def set_default_config(self):
         raise RuntimeError(f"Impossible to start {self.get_name()} without a valid configuration file.")
 
-    async def optimize_initial_portfolio(self, sellable_assets: list, tickers: dict) -> list:
-        if not self.producers:
-            # nothing to do
-            return []
-        producer = self.producers[0]
-        common_quote = exchange_util.get_common_traded_quote(self.exchange_manager)
-        if common_quote is None:
-            self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
-            return []
+    async def single_exchange_process_optimize_initial_portfolio(
+        self, sellable_assets, target_asset: str, tickers: dict
+    ) -> list:
         portfolio = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-        # first acquire trading mode lock to be sure we are not in during init phase
-        async with producer.trading_mode_trigger():
-            if producer.producer_exchange_wide_lock(self.exchange_manager).locked():
-                # already locked by another trading mode instance: this other trading mode will do the rebalancing
-                self.logger.info(
-                    f"Skipping portfolio optimization for trading mode with symbol {self.symbol}: "
-                    f"portfolio optimization already initialized"
-                )
-                return []
-            async with producer.producer_exchange_wide_lock(self.exchange_manager):
-                self.logger.info(f"Starting portfolio optimization using trading mode with symbol {self.symbol}")
-                pair_bases = set()
-                # 1. cancel open orders
-                try:
-                    cancelled_orders = await self._cancel_associated_orders(producer, pair_bases)
-                except Exception as err:
-                    self.logger.exception(err, True, f"Error during portfolio optimization cancel orders step: {err}")
-                    cancelled_orders = []
+        producer = self.producers[0]
+        pair_bases = set()
+        # 1. cancel open orders
+        try:
+            cancelled_orders = await self._cancel_associated_orders(producer, pair_bases)
+        except Exception as err:
+            self.logger.exception(err, True, f"Error during portfolio optimization cancel orders step: {err}")
+            cancelled_orders = []
 
-                # 2. convert assets to sell funds into target assets
-                try:
-                    part_1_orders = await self._convert_assets_into_target(
-                        producer, pair_bases, common_quote, set(sellable_assets), tickers
-                    )
-                except Exception as err:
-                    self.logger.exception(
-                        err, True, f"Error during portfolio optimization convert into target step: {err}"
-                    )
-                    part_1_orders = []
+        # 2. convert assets to sell funds into target assets
+        try:
+            part_1_orders = await self._convert_assets_into_target(
+                producer, pair_bases, target_asset, set(sellable_assets), tickers
+            )
+        except Exception as err:
+            self.logger.exception(
+                err, True, f"Error during portfolio optimization convert into target step: {err}"
+            )
+            part_1_orders = []
 
-                # 3. compute necessary funds for each configured_pairs
-                converted_quote_amount_per_symbol = self._get_converted_quote_amount_per_symbol(
-                    portfolio, pair_bases, common_quote
-                )
+        # 3. compute necessary funds for each configured_pairs
+        converted_quote_amount_per_symbol = self._get_converted_quote_amount_per_symbol(
+            portfolio, pair_bases, target_asset
+        )
 
-                # 4. buy assets
-                part_2_orders = await self._buy_assets(
-                    producer, pair_bases, common_quote, converted_quote_amount_per_symbol, tickers
-                )
+        # 4. buy assets
+        part_2_orders = await self._buy_assets(
+            producer, pair_bases, target_asset, converted_quote_amount_per_symbol, tickers
+        )
 
-                await trading_modes.notify_portfolio_optimization_complete()
-                return [cancelled_orders, part_1_orders, part_2_orders]
+        return [cancelled_orders, part_1_orders, part_2_orders]
 
     async def _cancel_associated_orders(self, producer, pair_bases) -> list:
         cancelled_orders = []
@@ -314,7 +297,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             if producer.get_symbol_trading_config(symbol) is not None:
                 pair_bases.add(symbol_util.parse_symbol(symbol).base)
                 for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
-                        symbol=symbol
+                    symbol=symbol
                 ):
                     if not (order.is_cancelled() or order.is_closed()):
                         await self.cancel_order(order)
