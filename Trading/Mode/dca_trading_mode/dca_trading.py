@@ -652,7 +652,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
 
         self.cancel_open_orders_at_each_entry = self.UI.user_input(
             DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN, self.cancel_open_orders_at_each_entry, inputs,
-            title="Cancel open orders on each entry: cancel existing orders from previous iteration on each entry.",
+            title="Cancel open orders on each entry: Cancel existing orders from previous iteration on each entry.",
         )
 
     @classmethod
