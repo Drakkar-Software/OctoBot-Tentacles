@@ -163,8 +163,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         try:
             await self._handle_signal_orders(symbol, data)
         except errors.MissingMinimalExchangeTradeVolume:
-            self.logger.info(f"Not enough funds to create a new order: {self.exchange_manager.exchange_name} "
-                             f"exchange minimal order volume has not been reached.")
+            self.logger.info(self.get_minimal_funds_error(symbol, final_note))
         except Exception as e:
             self.logger.exception(e, True, f"Error when handling remote signal orders: {e}")
 
