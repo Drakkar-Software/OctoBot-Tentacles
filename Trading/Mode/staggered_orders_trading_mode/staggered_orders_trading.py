@@ -1454,10 +1454,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         # missing orders around spread point: symmetrical orders were not created when
                                         # orders were filled => re-create them
                                         next_missing_order_price = previous_order.origin_price + increment
-                                        spread_lower_boundary = self.current_price
+                                        spread_lower_boundary = order.origin_price - inferred_spread
 
                                         # re-create buy orders starting from the closest buy up to spread
-                                        while next_missing_order_price < spread_lower_boundary:
+                                        while next_missing_order_price < self.current_price and \
+                                                next_missing_order_price <= spread_lower_boundary:
                                             # missing buy order
                                             if not self._is_just_closed_order(next_missing_order_price,
                                                                               recently_closed_trades):

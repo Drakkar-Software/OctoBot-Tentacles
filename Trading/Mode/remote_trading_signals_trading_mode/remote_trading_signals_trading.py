@@ -197,7 +197,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             try:
                 await self._cancel_order_on_exchange(order)
             except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
-                self.logger.warning(f"Skipping order cancel: {err}")
+                self.logger.warning(f"Skipping order cancel: {err} ({err.__class__.__name__})")
             cancelled_count += 1
         return cancelled_count
 
