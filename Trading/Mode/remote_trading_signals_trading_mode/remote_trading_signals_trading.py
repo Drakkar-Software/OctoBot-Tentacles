@@ -81,8 +81,8 @@ class RemoteTradingSignalsTradingMode(trading_modes.AbstractTradingMode):
     def get_mode_consumer_classes(self) -> list:
         return [RemoteTradingSignalsModeConsumer]
 
-    async def create_producers(self) -> list:
-        producers = await super().create_producers()
+    async def create_producers(self, auto_start) -> list:
+        producers = await super().create_producers(auto_start)
         return producers + await self._subscribe_to_signal_feed()
 
     async def _subscribe_to_signal_feed(self):
@@ -163,8 +163,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         try:
             await self._handle_signal_orders(symbol, data)
         except errors.MissingMinimalExchangeTradeVolume:
-            self.logger.info(f"Not enough funds to create a new order: {self.exchange_manager.exchange_name} "
-                             f"exchange minimal order volume has not been reached.")
+            self.logger.info(self.get_minimal_funds_error(symbol, final_note))
         except Exception as e:
             self.logger.exception(e, True, f"Error when handling remote signal orders: {e}")
 
@@ -198,7 +197,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             try:
                 await self._cancel_order_on_exchange(order)
             except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
-                self.logger.warning(f"Skipping order cancel: {err}")
+                self.logger.warning(f"Skipping order cancel: {err} ({err.__class__.__name__})")
             cancelled_count += 1
         return cancelled_count
 
@@ -275,15 +274,20 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
 
     async def _chain_order(self, order_description, created_orders, ignored_orders, chained_to, fees_currency_side,
                            created_groups, symbol, order_description_by_id):
+        failed_order_creation = False
         try:
             base_order = created_orders[chained_to]
             if base_order is None:
                 # when an error occurred when creating the initial order
+                failed_order_creation = True
                 raise KeyError
         except KeyError as e:
-            if chained_to in ignored_orders:
-                self.logger.error(f"Ignored order chained to id {chained_to}: "
-                                  f"associated master order has not been created")
+            if chained_to in ignored_orders or failed_order_creation:
+                message = f"Ignored order chained to id {chained_to}: associated master order has not been created"
+                if failed_order_creation:
+                    self.logger.info(message)
+                else:
+                    self.logger.error(message)
             else:
                 self.logger.error(
                     f"Ignored chained order from {order_description}. Chained orders have to be sent in the same "

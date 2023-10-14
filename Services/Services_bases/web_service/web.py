@@ -16,12 +16,14 @@
 
 import os
 import socket
-import uuid
 
 import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
+
+
+LOCAL_HOST_IP = "127.0.0.1"
 
 
 class WebService(services.AbstractService):
@@ -118,14 +120,26 @@ class WebService(services.AbstractService):
         if self.web_app:
             self.web_app.stop()
 
-    def _get_web_server_url(self):
+    def _get_web_server_port(self):
         try:
-            port = os.getenv(services_constants.ENV_WEB_PORT,
-                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEB][
-                                 services_constants.CONFIG_WEB_PORT])
+            return os.getenv(
+                services_constants.ENV_WEB_PORT,
+                self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEB][
+                    services_constants.CONFIG_WEB_PORT]
+            )
         except KeyError:
-            port = os.getenv(services_constants.ENV_WEB_PORT, services_constants.DEFAULT_SERVER_PORT)
-        return f"{os.getenv(services_constants.ENV_WEB_ADDRESS, socket.gethostbyname(socket.gethostname()))}:{port}"
+            return os.getenv(services_constants.ENV_WEB_PORT, services_constants.DEFAULT_SERVER_PORT)
+
+    def _get_web_server_url(self):
+        port = self._get_web_server_port()
+        try:
+            return f"{os.getenv(services_constants.ENV_WEB_ADDRESS, socket.gethostbyname(socket.gethostname()))}:{port}"
+        except OSError as err:
+            self.logger.warning(
+                f"Impossible to find local web interface url, using default instead: {err} ({err.__class__.__name__})"
+            )
+        # use localhost by default
+        return f"{LOCAL_HOST_IP}:{port}"
 
     def get_successful_startup_message(self):
         return f"Interface successfully initialized and accessible at: http://{self._get_web_server_url()}.", True

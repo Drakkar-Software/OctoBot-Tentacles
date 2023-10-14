@@ -47,9 +47,9 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal):
     with mock.patch.object(consumer, "_handle_signal_orders",
                            new=mock.AsyncMock(side_effect=errors.MissingMinimalExchangeTradeVolume)) \
          as _handle_signal_orders_mock:
-        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
                                          "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol", "data")
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
         consumer.logger.info.assert_called_once()
         consumer.logger.exception.assert_not_called()
         consumer.logger.info.reset_mock()
@@ -57,9 +57,9 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal):
     with mock.patch.object(consumer, "_handle_signal_orders",
                            new=mock.AsyncMock(side_effect=RuntimeError)) \
          as _handle_signal_orders_mock:
-        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
                                          "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol", "data")
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
         consumer.logger.info.assert_not_called()
         consumer.logger.exception.assert_called_once()
 

@@ -32,6 +32,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
 import octobot_trading.errors as trading_errors
+import octobot_trading.exchanges.util.exchange_util as exchange_util
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.modes.script_keywords as script_keywords
 
@@ -90,12 +91,15 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             else:
                 initial_available_funds = current_market_holding \
                     if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
-            # cancel existing DCA orders from previous iterations
-            existing_orders = [
-                order
-                for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-                if not (order.is_cancelled() or order.is_closed()) and side is order.side
-            ]
+            
+            existing_orders = []
+            if self.trading_mode.cancel_open_orders_at_each_entry:
+                # cancel existing DCA orders from previous iterations
+                existing_orders = [
+                    order
+                    for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+                    if not (order.is_cancelled() or order.is_closed()) and side is order.side
+                ]
 
             secondary_quantity = None
             if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
@@ -315,6 +319,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     MINUTES_BEFORE_NEXT_BUY = "minutes_before_next_buy"
     TRIGGER_MODE = "trigger_mode"
+    CANCEL_OPEN_ORDERS_AT_EACH_ENTRY = "cancel_open_orders_at_each_entry"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -458,6 +463,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [DCATradingModeProducer]
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
+    SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -479,6 +485,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
 
         self.use_stop_loss = False
         self.stop_loss_price_multiplier = DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER
+
+        self.cancel_open_orders_at_each_entry = True
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -642,6 +650,11 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             )
         )) / trading_constants.ONE_HUNDRED
 
+        self.cancel_open_orders_at_each_entry = self.UI.user_input(
+            DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN, self.cancel_open_orders_at_each_entry, inputs,
+            title="Cancel open orders on each entry: Cancel existing orders from previous iteration on each entry.",
+        )
+
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
         return False
@@ -661,4 +674,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name,
             ",".join([str(e) for e in self.producers[0].final_eval]) if self.producers[0].final_eval
             else self.producers[0].final_eval
+        )
+
+    async def single_exchange_process_optimize_initial_portfolio(
+        self, sellable_assets, target_asset: str, tickers: dict
+    ) -> list:
+        self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
+        return await trading_modes.convert_assets_to_target_asset(
+            self, sellable_assets, target_asset, tickers
         )

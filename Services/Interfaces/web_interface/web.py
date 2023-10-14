@@ -188,7 +188,6 @@ class WebInterface(services_interfaces.AbstractWebInterface):
 
         security.register_responses_extra_header(server_instance, True)
 
-
     def _handle_login(self, server_instance):
         self.web_login_manger = login.WebLoginManager(server_instance, self.password_hash)
         login.set_is_login_required(self.requires_password)
@@ -261,8 +260,8 @@ class WebInterface(services_interfaces.AbstractWebInterface):
             web_interface_util.open_in_background_browser(
                 f"http://{socket.gethostbyname(socket.gethostname())}:{self.port}"
             )
-        except Exception as e:
-            self.logger.warning(f"Impossible to open automatically web interface: {e}")
+        except Exception as err:
+            self.logger.warning(f"Impossible to open automatically web interface: {err} ({err.__class__.__name__})")
 
     async def _inner_start(self):
         return self.threaded_start()

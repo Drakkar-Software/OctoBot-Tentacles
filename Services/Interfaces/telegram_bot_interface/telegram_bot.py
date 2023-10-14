@@ -307,7 +307,12 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
     @staticmethod
     def handle_polling_error(error):
         if isinstance(error, (telegram.error.NetworkError, telegram.error.Conflict)):
-            error_message = f"Telegram bot error: {error} ({error.__class__.__name__})"
+            if isinstance(error, telegram.error.Conflict):
+                error_message = f"The configured Telegram bot is already connected to a different " \
+                                f"software. Please create a different Telegram bot for each of your simultaneous " \
+                                f"OctoBots ({error})"
+            else:
+                error_message = f"Telegram bot error: {error} ({error.__class__.__name__})"
             if TelegramBotInterface.get_error_log_level(error) is logging.ERROR:
                 TelegramBotInterface.get_logger().error(error_message)
             elif TelegramBotInterface.get_error_log_level(error) is logging.WARNING:
