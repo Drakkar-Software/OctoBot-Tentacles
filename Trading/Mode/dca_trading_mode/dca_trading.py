@@ -32,7 +32,6 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
 import octobot_trading.errors as trading_errors
-import octobot_trading.exchanges.util.exchange_util as exchange_util
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.modes.script_keywords as script_keywords
 
@@ -46,6 +45,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     AMOUNT_TO_BUY_IN_REF_MARKET = "amount_to_buy_in_reference_market"
     ENTRY_LIMIT_ORDERS_PRICE_PERCENT = "entry_limit_orders_price_percent"
     USE_MARKET_ENTRY_ORDERS = "use_market_entry_orders"
+    USE_INIT_ENTRY_ORDERS = "use_init_entry_orders"
     USE_SECONDARY_ENTRY_ORDERS = "use_secondary_entry_orders"
     SECONDARY_ENTRY_ORDERS_COUNT = "secondary_entry_orders_count"
     SECONDARY_ENTRY_ORDERS_AMOUNT = "secondary_entry_orders_amount"
@@ -349,20 +349,34 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                                                      evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE):
                 evaluations.append(evaluators_api.get_value(evaluated_strategy_node))
 
-        if evaluations:
+        is_forced_init_entry = self._should_trigger_init_entry()
+        if evaluations or is_forced_init_entry:
             state = trading_enums.EvaluatorStates.NEUTRAL
-            if all(
-                    evaluation == -1
-                    for evaluation in evaluations
+            if is_forced_init_entry:
+                self.logger.info(
+                    f"Triggering {self.trading_mode.symbol} init entries [{self.exchange_manager.exchange_name}]"
+                )
+                state = trading_enums.EvaluatorStates.VERY_LONG
+            elif all(
+                evaluation == -1
+                for evaluation in evaluations
             ):
                 state = trading_enums.EvaluatorStates.VERY_LONG
             elif all(
-                    evaluation == 1
-                    for evaluation in evaluations
+                evaluation == 1
+                for evaluation in evaluations
             ):
                 state = trading_enums.EvaluatorStates.VERY_SHORT
             self.final_eval = evaluations
-            await self.trigger_dca(cryptocurrency=cryptocurrency, symbol=symbol, state=state)
+            try:
+                await self.trigger_dca(cryptocurrency=cryptocurrency, symbol=symbol, state=state)
+            finally:
+                self.trading_mode.are_initialization_orders_pending = False
+
+    def _should_trigger_init_entry(self):
+        if self.trading_mode.enable_initialization_entry:
+            return self.trading_mode.are_initialization_orders_pending
+        return False
 
     async def trigger_dca(self, cryptocurrency, symbol, state):
         self.state = state
@@ -467,6 +481,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
+        self.enable_initialization_entry = False
         self.use_market_entry_orders = False
         self.trigger_mode = TriggerMode.TIME_BASED
         self.minutes_before_next_buy = None
@@ -487,6 +502,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.stop_loss_price_multiplier = DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER
 
         self.cancel_open_orders_at_each_entry = True
+
+        # enable initialization orders
+        self.are_initialization_orders_pending = True
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -511,9 +529,21 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 }
             }
         ))
+        self.enable_initialization_entry = self.UI.user_input(
+            DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
+            self.enable_initialization_entry, inputs,
+            title="Enable initialization entry orders: Automatically trigger entry orders "
+                  "when starting OctoBot, regardless of initial evaluator values.",
+            editor_options={
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                    DCATradingModeProducer.TRIGGER_MODE: TriggerMode.MAXIMUM_EVALUATORS_SIGNALS_BASED.value
+                }
+            }
+        )
         trading_modes.user_select_order_amount(self, inputs, include_sell=False)
         self.use_market_entry_orders = self.UI.user_input(
-            DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
+            self.use_market_entry_orders, inputs,
             title="Use market orders instead of limit orders."
         )
         self.entry_limit_orders_price_multiplier = decimal.Decimal(str(
