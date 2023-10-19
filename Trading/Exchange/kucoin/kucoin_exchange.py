@@ -182,7 +182,7 @@ class Kucoin(exchanges.RestExchange):
                 trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST.value
             ]
             # use max (most restrictive) value
-            limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value] = min(
+            limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value] = max(
                 limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value],
                 float(min_funds)
             )
