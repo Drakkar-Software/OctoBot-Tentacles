@@ -283,9 +283,13 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         )
 
         # 4. buy assets
-        part_2_orders = await self._buy_assets(
-            producer, pair_bases, target_asset, converted_quote_amount_per_symbol, tickers
-        )
+        if converted_quote_amount_per_symbol == trading_constants.ZERO:
+            self.logger.warning(f"No {target_asset} in portfolio after optimization.")
+            part_2_orders = []
+        else:
+            part_2_orders = await self._buy_assets(
+                producer, pair_bases, target_asset, converted_quote_amount_per_symbol, tickers
+            )
 
         return [cancelled_orders, part_1_orders, part_2_orders]
 
@@ -347,12 +351,15 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     def _get_converted_quote_amount_per_symbol(self, portfolio, pair_bases, common_quote) -> decimal.Decimal:
         trading_pairs_count = len(pair_bases)
         # need portfolio available to be up-to-date with balancing orders
-        kept_quote_amount = portfolio.portfolio[common_quote].available / decimal.Decimal(2)
         try:
+            kept_quote_amount = portfolio.portfolio[common_quote].available / decimal.Decimal(2)
             return (
                 (portfolio.portfolio[common_quote].available - kept_quote_amount) /
                 decimal.Decimal(trading_pairs_count)
             )
+        except KeyError:
+            # no common_quote in portfolio
+            return trading_constants.ZERO
         except (decimal.DivisionByZero, decimal.InvalidOperation):
             # no pair_bases
             return trading_constants.ZERO
