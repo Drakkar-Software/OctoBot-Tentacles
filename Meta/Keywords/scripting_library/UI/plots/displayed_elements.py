@@ -168,6 +168,7 @@ class DisplayedElements(display.DisplayTranslator):
                         size = None
                     if dataset[0].get(commons_enums.PlotAttributes.SHAPE.value, None) is None:
                         shape = None
+                    line_shape = dataset[0].get("line_shape", None)
                     own_yaxis = dataset[0].get(commons_enums.PlotAttributes.OWN_YAXIS.value, False)
                     for data in dataset:
                         if x is not None:
@@ -211,6 +212,7 @@ class DisplayedElements(display.DisplayTranslator):
                         text=text,
                         x_type="date",
                         y_type=y_type,
+                        line_shape=line_shape,
                         mode=data.get(commons_enums.PlotAttributes.MODE.value, None),
                         own_yaxis=own_yaxis,
                         color=color,
@@ -308,6 +310,7 @@ class DisplayedElements(display.DisplayTranslator):
         kind = cached_value_metadata[commons_enums.PlotAttributes.KIND.value]
         mode = cached_value_metadata[commons_enums.PlotAttributes.MODE.value]
         own_yaxis = cached_value_metadata[commons_enums.PlotAttributes.OWN_YAXIS.value]
+        line_shape = cached_value_metadata["line_shape"]
         condition = cached_value_metadata.get("condition", None)
         try:
             cache_database = databases.CacheDatabase(cache_file)
@@ -342,6 +345,7 @@ class DisplayedElements(display.DisplayTranslator):
                                             commons_enums.PlotAttributes.KIND.value: kind,
                                             commons_enums.PlotAttributes.MODE.value: mode,
                                             commons_enums.PlotAttributes.OWN_YAXIS.value: own_yaxis,
+                                            "line_shape": line_shape,
                                         })
                                 else:
                                     plotted_values.append({
@@ -350,6 +354,7 @@ class DisplayedElements(display.DisplayTranslator):
                                         commons_enums.PlotAttributes.KIND.value: kind,
                                         commons_enums.PlotAttributes.MODE.value: mode,
                                         commons_enums.PlotAttributes.OWN_YAXIS.value: own_yaxis,
+                                        "line_shape": line_shape,
                                     })
                     except KeyError:
                         pass
