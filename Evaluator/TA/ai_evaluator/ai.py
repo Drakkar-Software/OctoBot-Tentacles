@@ -31,8 +31,10 @@ import tentacles.Services.Services_bases.gpt_service as gpt_service
 
 
 class GPTEvaluator(evaluators.TAEvaluator):
+    GLOBAL_VERSION = 1
     PREPROMPT = "Predict: {up or down} {confidence%} (no other information)"
     PASSED_DATA_LEN = 10
+    MAX_CONFIDENCE_PERCENT = 100
     HIGH_CONFIDENCE_PERCENT = 80
     MEDIUM_CONFIDENCE_PERCENT = 50
     LOW_CONFIDENCE_PERCENT = 30
@@ -53,6 +55,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
         self.indicator = None
         self.source = None
         self.period = None
+        self.max_confidence_threshold = 0
         self.gpt_model = gpt_service.GPTService.DEFAULT_MODEL
         self.is_backtesting = False
         self.min_allowed_timeframe = os.getenv("MIN_GPT_TIMEFRAME", None)
@@ -65,12 +68,20 @@ class GPTEvaluator(evaluators.TAEvaluator):
         except ValueError:
             self.logger.error(f"Invalid timeframe configuration: unknown timeframe: '{self.min_allowed_timeframe}'")
         self.allow_reevaluations = os_util.parse_boolean_environment_var("ALLOW_GPT_REEVALUATIONS", "True")
+        self.services_config = None
 
     def enable_reevaluation(self) -> bool:
         """
         Override when artificial re-evaluations from the evaluator channel can be disabled
         """
         return self.allow_reevaluations
+
+    @classmethod
+    def get_signals_history_type(cls):
+        """
+        Override when this evaluator uses a specific type of signal history
+        """
+        return commons_enums.SignalHistoryTypes.GPT
 
     async def load_and_save_user_inputs(self, bot_id: str) -> dict:
         """
@@ -100,6 +111,11 @@ class GPTEvaluator(evaluators.TAEvaluator):
             self.period, inputs, min_val=1,
             title="Period: length of the indicator period."
         )
+        self.max_confidence_threshold = self.UI.user_input(
+            "max_confidence_threshold", enums.UserInputTypes.INT,
+            self.max_confidence_threshold, inputs, min_val=0, max_val=100,
+            title="Maximum confidence threshold: % confidence value starting from which to return 1 or -1."
+        )
         if len(self.GPT_MODELS) > 1 and self.enable_model_selector:
             self.gpt_model = self.UI.user_input(
                 "GPT model", enums.UserInputTypes.OPTIONS, gpt_service.GPTService.DEFAULT_MODEL,
@@ -112,7 +128,9 @@ class GPTEvaluator(evaluators.TAEvaluator):
             self.GPT_MODELS = [gpt_service.GPTService.DEFAULT_MODEL]
             if self.enable_model_selector and not self.is_backtesting:
                 try:
-                    service = await services_api.get_service(gpt_service.GPTService, self.is_backtesting)
+                    service = await services_api.get_service(
+                        gpt_service.GPTService, self.is_backtesting, self.services_config
+                    )
                     self.GPT_MODELS = service.models
                 except Exception as err:
                     self.logger.exception(err, True, f"Impossible to fetch GPT models: {err}")
@@ -138,13 +156,14 @@ class GPTEvaluator(evaluators.TAEvaluator):
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         if self._check_timeframe(time_frame):
             try:
+                candle_time = candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
                 computed_data = self.call_indicator(candle_data)
                 reduced_data = computed_data[-self.PASSED_DATA_LEN:]
                 formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
-                prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame)
+                prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame, candle_time)
                 cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
                 prediction_side = self._parse_prediction_side(cleaned_prediction)
-                if prediction_side == 0:
+                if prediction_side == 0 and not self.is_backtesting:
                     self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
                     return
                 confidence = self._parse_confidence(cleaned_prediction) / 100
@@ -171,20 +190,35 @@ class GPTEvaluator(evaluators.TAEvaluator):
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
 
-    async def ask_gpt(self, preprompt, inputs, symbol, time_frame) -> str:
+    async def ask_gpt(self, preprompt, inputs, symbol, time_frame, candle_time) -> str:
         try:
-            service = await services_api.get_service(gpt_service.GPTService, self.is_backtesting)
+            service = await services_api.get_service(
+                gpt_service.GPTService,
+                self.is_backtesting,
+                {} if self.is_backtesting else self.services_config
+            )
             resp = await service.get_chat_completion(
                 [
                     service.create_message("system", preprompt),
                     service.create_message("user", inputs),
                 ],
-                model=self.gpt_model if self.enable_model_selector else None
+                model=self.gpt_model if self.enable_model_selector else None,
+                exchange=self.exchange_name,
+                symbol=symbol,
+                time_frame=time_frame,
+                version=self.get_version(),
+                candle_open_time=candle_time,
+                use_stored_signals=self.is_backtesting
             )
             self.logger.info(f"GPT's answer is '{resp}' for {symbol} on {time_frame} with input: {inputs}")
             return resp
         except services_errors.CreationError as err:
             raise evaluators_errors.UnavailableEvaluatorError(f"Impossible to get ChatGPT prediction: {err}") from err
+        except Exception as err:
+            print(err)
+
+    def get_version(self):
+        return f"{self.gpt_model}-{self.source}-{self.indicator}-{self.period}-{self.GLOBAL_VERSION}"
 
     def call_indicator(self, candle_data):
         return data_util.drop_nan(self.INDICATORS[self.indicator](candle_data, self.period))
@@ -216,14 +250,20 @@ class GPTEvaluator(evaluators.TAEvaluator):
         up with 70% confidence
         up with high confidence
         """
+        value = self.LOW_CONFIDENCE_PERCENT
         if "%" in cleaned_prediction:
             percent_index = cleaned_prediction.index("%")
-            return float(cleaned_prediction[:percent_index].split(" ")[-1])
-        if "high" in cleaned_prediction:
-            return self.HIGH_CONFIDENCE_PERCENT
-        if "medium" in cleaned_prediction or "intermediate" in cleaned_prediction:
-            return self.MEDIUM_CONFIDENCE_PERCENT
-        if "low" in cleaned_prediction:
-            return self.LOW_CONFIDENCE_PERCENT
-        self.logger.warning(f"Impossible to parse confidence in {cleaned_prediction}. Using low confidence")
-        return self.LOW_CONFIDENCE_PERCENT
+            value = float(cleaned_prediction[:percent_index].split(" ")[-1])
+        elif "high" in cleaned_prediction:
+            value = self.HIGH_CONFIDENCE_PERCENT
+        elif "medium" in cleaned_prediction or "intermediate" in cleaned_prediction:
+            value = self.MEDIUM_CONFIDENCE_PERCENT
+        elif "low" in cleaned_prediction:
+            value = self.LOW_CONFIDENCE_PERCENT
+        elif not cleaned_prediction:
+            value = 0
+        else:
+            self.logger.warning(f"Impossible to parse confidence in {cleaned_prediction}. Using low confidence")
+        if value >= self.max_confidence_threshold:
+            return self.MAX_CONFIDENCE_PERCENT
+        return value
