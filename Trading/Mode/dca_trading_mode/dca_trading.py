@@ -124,7 +124,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_total_holding=False,
                     )
             else:
-                self.logger.error(f"Missing {side.value} entry order quantity")
+                self.logger.error(
+                        f"Missing {side.value} entry order quantity in {self.trading_mode.get_name()} configuration"
+                        f", please set the \"Amount per buy order\" value.")
                 return []
             initial_entry_price = price if self.trading_mode.use_market_entry_orders else \
                 trading_personal_data.decimal_adapt_price(
@@ -151,7 +153,11 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 secondary_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
                     if side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
                 if not secondary_quantity:
-                    self.logger.error(f"Missing {secondary_order_type.value} secondary order quantity")
+                    self.logger.error(
+                        f"Missing {side.value} secondary entry order quantity in {self.trading_mode.get_name()} "
+                        f"configuration, please set the \"Secondary entry orders amount\" value "
+                        f"when enabling secondary entry orders."
+                    )
                 else:
                     for i in range(self.trading_mode.secondary_entry_orders_count):
                         remaining_funds = initial_available_funds - sum(
