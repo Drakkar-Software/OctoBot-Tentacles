@@ -227,7 +227,7 @@ class GPTService(services.AbstractService):
         self.stored_signals.clear()
 
     def _supported_history_url(self):
-        return f"{community.IdentifiersProvider.COMMUNITY_LANDING_URL}/chat-gpt-trading"
+        return f"{community.IdentifiersProvider.COMMUNITY_LANDING_URL}/features/chatgpt-trading"
 
     def _ensure_rate_limit(self):
         if self.last_consumed_token_date != datetime.date.today():
