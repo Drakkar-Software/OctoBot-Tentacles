@@ -153,42 +153,43 @@ class GPTEvaluator(evaluators.TAEvaluator):
         await self.evaluate(cryptocurrency, symbol, time_frame, candle_data, candle)
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle_data, candle):
-        self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if self._check_timeframe(time_frame):
-            try:
-                candle_time = candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
-                computed_data = self.call_indicator(candle_data)
-                reduced_data = computed_data[-self.PASSED_DATA_LEN:]
-                formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
-                prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame, candle_time)
-                cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
-                prediction_side = self._parse_prediction_side(cleaned_prediction)
-                if prediction_side == 0 and not self.is_backtesting:
-                    self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
-                    return
-                confidence = self._parse_confidence(cleaned_prediction) / 100
-                self.eval_note = prediction_side * confidence
-            except services_errors.InvalidRequestError as e:
-                self.logger.error(f"Invalid GPT request: {e}")
-            except services_errors.RateLimitError as e:
-                self.logger.error(f"Too many requests: {e}")
-            except services_errors.UnavailableInBacktestingError:
-                # error already logged error for backtesting in use_backtesting_init_timeout
-                pass
-            except evaluators_errors.UnavailableEvaluatorError as e:
-                self.logger.exception(e, True, f"Evaluation error: {e}")
-            except tulipy.lib.InvalidOptionError as e:
-                self.logger.warning(
-                    f"Error when computing {self.indicator} on {self.period} period with {len(candle_data)} "
-                    f"candles: {e}"
-                )
-                self.logger.exception(e, False)
-        else:
-            self.logger.debug(f"Ignored {time_frame} time frame as the shorted allowed time frame is "
-                              f"{self.min_allowed_timeframe}")
-        await self.evaluation_completed(cryptocurrency, symbol, time_frame,
-                                        eval_time=evaluators_util.get_eval_time(full_candle=candle,
-                                                                                time_frame=time_frame))
+        async with self.async_evaluation():
+            self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
+            if self._check_timeframe(time_frame):
+                try:
+                    candle_time = candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+                    computed_data = self.call_indicator(candle_data)
+                    reduced_data = computed_data[-self.PASSED_DATA_LEN:]
+                    formatted_data = ", ".join(str(datum).replace('[', '').replace(']', '') for datum in reduced_data)
+                    prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame, candle_time)
+                    cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
+                    prediction_side = self._parse_prediction_side(cleaned_prediction)
+                    if prediction_side == 0 and not self.is_backtesting:
+                        self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
+                        return
+                    confidence = self._parse_confidence(cleaned_prediction) / 100
+                    self.eval_note = prediction_side * confidence
+                except services_errors.InvalidRequestError as e:
+                    self.logger.error(f"Invalid GPT request: {e}")
+                except services_errors.RateLimitError as e:
+                    self.logger.error(f"Too many requests: {e}")
+                except services_errors.UnavailableInBacktestingError:
+                    # error already logged error for backtesting in use_backtesting_init_timeout
+                    pass
+                except evaluators_errors.UnavailableEvaluatorError as e:
+                    self.logger.exception(e, True, f"Evaluation error: {e}")
+                except tulipy.lib.InvalidOptionError as e:
+                    self.logger.warning(
+                        f"Error when computing {self.indicator} on {self.period} period with {len(candle_data)} "
+                        f"candles: {e}"
+                    )
+                    self.logger.exception(e, False)
+            else:
+                self.logger.debug(f"Ignored {time_frame} time frame as the shorted allowed time frame is "
+                                  f"{self.min_allowed_timeframe}")
+            await self.evaluation_completed(cryptocurrency, symbol, time_frame,
+                                            eval_time=evaluators_util.get_eval_time(full_candle=candle,
+                                                                                    time_frame=time_frame))
 
     async def ask_gpt(self, preprompt, inputs, symbol, time_frame, candle_time) -> str:
         try:
@@ -214,11 +215,11 @@ class GPTEvaluator(evaluators.TAEvaluator):
             return resp
         except services_errors.CreationError as err:
             raise evaluators_errors.UnavailableEvaluatorError(f"Impossible to get ChatGPT prediction: {err}") from err
-        except Exception as err:
-            print(err)
 
     def get_version(self):
-        return f"{self.gpt_model}-{self.source}-{self.indicator}-{self.period}-{self.GLOBAL_VERSION}"
+        # later on, identify by its specs
+        # return f"{self.gpt_model}-{self.source}-{self.indicator}-{self.period}-{self.GLOBAL_VERSION}"
+        return "0.0.0"
 
     def call_indicator(self, candle_data):
         return data_util.drop_nan(self.INDICATORS[self.indicator](candle_data, self.period))
