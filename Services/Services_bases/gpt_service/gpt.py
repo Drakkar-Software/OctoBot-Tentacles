@@ -25,7 +25,7 @@ import octobot_services.errors as errors
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
-import octobot_commons.os_util as os_util
+import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.tree as tree
 
@@ -175,7 +175,7 @@ class GPTService(services.AbstractService):
     ):
         for ts in (min_timestamp, max_timestamp):
             if self._get_signal_from_stored_signals(
-                exchange, symbol, time_frame.value, version, self._get_open_candle_timestamp(time_frame, ts)
+                exchange, symbol, time_frame.value, version, time_frame_manager.get_last_timeframe_time(time_frame, ts)
             ) == "":
                 return False
         return True
@@ -185,11 +185,16 @@ class GPTService(services.AbstractService):
     ):
         signals_by_candle_open_time = await authenticator.get_gpt_signals_history(
             exchange_name, symbol, time_frame,
-            self._get_open_candle_timestamp(time_frame, min_timestamp),
-            self._get_open_candle_timestamp(time_frame, max_timestamp),
+            time_frame_manager.get_last_timeframe_time(time_frame, min_timestamp),
+            time_frame_manager.get_last_timeframe_time(time_frame, max_timestamp),
             version
         )
-        if not signals_by_candle_open_time:
+        if signals_by_candle_open_time:
+            self.logger.info(
+                f"Fetched {len(signals_by_candle_open_time)} ChatGPT signals "
+                f"history for {symbol} {time_frame} on {exchange_name}."
+            )
+        else:
             self.logger.error(
                 f"No ChatGPT signal history for {symbol} on {time_frame.value} for {exchange_name} with {version}. "
                 f"Please check {self._supported_history_url()} to get the list of supported signals history."
@@ -197,6 +202,10 @@ class GPTService(services.AbstractService):
         self.store_signal_history(
             exchange_name, symbol, time_frame, version, signals_by_candle_open_time
         )
+
+    @staticmethod
+    def is_setup_correctly(config):
+        return True
 
     async def fetch_gpt_history(
         self, exchange_name: str, symbols: list, time_frames: list,
@@ -213,10 +222,6 @@ class GPTService(services.AbstractService):
         ]
         if coros:
             await asyncio.gather(*coros)
-
-    def _get_open_candle_timestamp(self, time_frame: commons_enums.TimeFrames, base_timestamp: float):
-        tf_seconds = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
-        return base_timestamp - (base_timestamp % tf_seconds)
 
     def clear_signal_history(self):
         self.stored_signals.clear()
