@@ -110,9 +110,8 @@ def register(blueprint):
             return util.get_rest_reply(flask.jsonify(data))
         if action == "duplicate":
             profile_id = flask.request.args.get("profile_id")
-            new_profile = models.duplicate_profile(profile_id)
-            models.select_profile(new_profile.profile_id)
-            flask.flash(f"New profile successfully created and selected.", "success")
+            models.duplicate_profile(profile_id)
+            flask.flash(f"New profile successfully created.", "success")
             return util.get_rest_reply(flask.jsonify("Profile created"))
         if action == "use_as_live":
             profile_id = flask.request.args.get("profile_id")
