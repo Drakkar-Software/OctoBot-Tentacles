@@ -39,8 +39,7 @@ class DisplayedElements(display.DisplayTranslator):
     }
 
     async def fill_from_database(self, trading_mode, database_manager, exchange_name, symbol, time_frame, exchange_id,
-                                 with_inputs=True):
-
+                                 with_inputs=True, symbols=None, time_frames=None):
         async with databases.MetaDatabase.database(database_manager) as meta_db:
             graphs_by_parts = {}
             inputs = []
@@ -52,6 +51,10 @@ class DisplayedElements(display.DisplayTranslator):
             run_db = meta_db.get_run_db()
             metadata_rows = await run_db.all(commons_enums.DBTables.METADATA.value)
             metadata = metadata_rows[0] if metadata_rows else None
+            if symbols is not None:
+                symbols.extend(metadata[commons_enums.BacktestingMetadata.SYMBOLS.value])
+            if time_frames is not None:
+                time_frames.extend(metadata[commons_enums.BacktestingMetadata.TIME_FRAMES.value])
             account_type = trading_api.get_account_type_from_run_metadata(metadata) \
                 if database_manager.is_backtesting() \
                 else trading_api.get_account_type_from_exchange_manager(
