@@ -37,7 +37,8 @@ def test_indicators(GPT_evaluator):
 def test_get_candles_data_api(GPT_evaluator):
     for source in GPT_evaluator.SOURCES:
         GPT_evaluator.source = source
-        assert isinstance(GPT_evaluator.get_candles_data_api(), types.FunctionType)
+        if GPT_evaluator.source not in GPT_evaluator.get_unformated_sources():
+            assert isinstance(GPT_evaluator.get_candles_data_api(), types.FunctionType)
 
 
 def test_parse_prediction_side(GPT_evaluator):
@@ -57,3 +58,7 @@ def test_parse_confidence(GPT_evaluator):
     assert GPT_evaluator._parse_confidence("up 54.33%") == 54.33
     assert GPT_evaluator._parse_confidence("down 70% confidence blablabla") == 70
     assert GPT_evaluator._parse_confidence("Prediction: down 70%") == 70
+    GPT_evaluator.min_confidence_threshold = 60
+    assert GPT_evaluator._parse_confidence("up 70%") == 100
+    assert GPT_evaluator._parse_confidence("up 60%") == 100
+    assert GPT_evaluator._parse_confidence("up 59%") == 59
