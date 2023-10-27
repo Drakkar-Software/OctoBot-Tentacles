@@ -55,7 +55,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
         self.indicator = None
         self.source = None
         self.period = None
-        self.min_confidence_threshold = 0
+        self.min_confidence_threshold = 100
         self.gpt_model = gpt_service.GPTService.DEFAULT_MODEL
         self.is_backtesting = False
         self.min_allowed_timeframe = os.getenv("MIN_GPT_TIMEFRAME", None)
