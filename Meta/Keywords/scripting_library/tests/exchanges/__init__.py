@@ -36,7 +36,7 @@ async def fake_backtesting(backtesting_config):
         config=backtesting_config,
         exchange_ids=[],
         matrix_id="",
-        backtesting_files=[]
+        backtesting_files=[],
     )
 
 

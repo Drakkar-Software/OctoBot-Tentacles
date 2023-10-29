@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import asyncio
 import os
 import openai
 import logging
@@ -21,10 +22,19 @@ import datetime
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot_services.errors as errors
+
+import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
+import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.authentication as authentication
+import octobot_commons.tree as tree
+
 import octobot.constants as constants
+import octobot.community as community
 
 
 class GPTService(services.AbstractService):
+    BACKTESTING_ENABLED = True
     DEFAULT_MODEL = "gpt-3.5-turbo"
 
     def get_fields_description(self):
@@ -46,6 +56,7 @@ class GPTService(services.AbstractService):
         logging.getLogger("openai").setLevel(logging.WARNING)
         self._env_secret_key = os.getenv(services_constants.ENV_OPENAI_SECRET_KEY, None)
         self.model = os.getenv(services_constants.ENV_GPT_MODEL, self.DEFAULT_MODEL)
+        self.stored_signals: tree.BaseTree = tree.BaseTree()
         self.models = []
         self.daily_tokens_limit = int(os.getenv(services_constants.ENV_GPT_DAILY_TOKENS_LIMIT, 0))
         self.consumed_daily_tokens = 1
@@ -63,6 +74,27 @@ class GPTService(services.AbstractService):
         n=1,
         stop=None,
         temperature=0.5,
+        exchange: str = None,
+        symbol: str = None,
+        time_frame: str = None,
+        version: str = None,
+        candle_open_time: float = None,
+        use_stored_signals: bool = False,
+    ) -> str:
+        if use_stored_signals:
+            return self._get_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
+        if self.use_stored_signals_only():
+            return await self._fetch_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
+        return await self._get_signal_from_gpt(messages, model, max_tokens, n, stop, temperature)
+
+    async def _get_signal_from_gpt(
+        self,
+        messages,
+        model=None,
+        max_tokens=3000,
+        n=1,
+        stop=None,
+        temperature=0.5
     ):
         self._ensure_rate_limit()
         try:
@@ -87,6 +119,116 @@ class GPTService(services.AbstractService):
                 f"Unexpected error when running request with model {model}: {err}"
             ) from err
 
+    def _get_signal_from_stored_signals(
+        self,
+        exchange: str,
+        symbol: str,
+        time_frame: str,
+        version: str,
+        candle_open_time: float,
+    ):
+        try:
+            return self.stored_signals.get_node([exchange, symbol, time_frame, version, candle_open_time]).node_value
+        except tree.NodeExistsError:
+            return ""
+
+    async def _fetch_signal_from_stored_signals(
+        self,
+        exchange: str,
+        symbol: str,
+        time_frame: str,
+        version: str,
+        candle_open_time: float,
+    ) -> str:
+        authenticator = authentication.Authenticator.instance()
+        try:
+            return await authenticator.get_gpt_signal(
+                exchange, symbol, commons_enums.TimeFrames(time_frame), candle_open_time, version
+            )
+        except Exception as err:
+            self.logger.exception(err, True, f"Error when fetching gpt signal: {err}")
+
+    def store_signal_history(
+        self,
+        exchange: str,
+        symbol: str,
+        time_frame: commons_enums.TimeFrames,
+        version: str,
+        signals_by_candle_open_time,
+    ):
+        tf = time_frame.value
+        for candle_open_time, signal in signals_by_candle_open_time.items():
+            self.stored_signals.set_node_at_path(
+                signal,
+                str,
+                [exchange, symbol, tf, version, candle_open_time]
+            )
+
+    def has_signal_history(
+        self,
+        exchange: str,
+        symbol: str,
+        time_frame: commons_enums.TimeFrames,
+        min_timestamp: float,
+        max_timestamp: float,
+        version: str
+    ):
+        for ts in (min_timestamp, max_timestamp):
+            if self._get_signal_from_stored_signals(
+                exchange, symbol, time_frame.value, version, time_frame_manager.get_last_timeframe_time(time_frame, ts)
+            ) == "":
+                return False
+        return True
+
+    async def _fetch_and_store_history(
+        self, authenticator, exchange_name, symbol, time_frame, version, min_timestamp: float, max_timestamp: float
+    ):
+        signals_by_candle_open_time = await authenticator.get_gpt_signals_history(
+            exchange_name, symbol, time_frame,
+            time_frame_manager.get_last_timeframe_time(time_frame, min_timestamp),
+            time_frame_manager.get_last_timeframe_time(time_frame, max_timestamp),
+            version
+        )
+        if signals_by_candle_open_time:
+            self.logger.info(
+                f"Fetched {len(signals_by_candle_open_time)} ChatGPT signals "
+                f"history for {symbol} {time_frame} on {exchange_name}."
+            )
+        else:
+            self.logger.error(
+                f"No ChatGPT signal history for {symbol} on {time_frame.value} for {exchange_name} with {version}. "
+                f"Please check {self._supported_history_url()} to get the list of supported signals history."
+            )
+        self.store_signal_history(
+            exchange_name, symbol, time_frame, version, signals_by_candle_open_time
+        )
+
+    @staticmethod
+    def is_setup_correctly(config):
+        return True
+
+    async def fetch_gpt_history(
+        self, exchange_name: str, symbols: list, time_frames: list,
+        version: str, start_timestamp: float, end_timestamp: float
+    ):
+        authenticator = authentication.Authenticator.instance()
+        coros = [
+            self._fetch_and_store_history(
+                authenticator, exchange_name, symbol, time_frame, version, start_timestamp, end_timestamp
+            )
+            for symbol in symbols
+            for time_frame in time_frames
+            if not self.has_signal_history(exchange_name, symbol, time_frame, start_timestamp, end_timestamp, version)
+        ]
+        if coros:
+            await asyncio.gather(*coros)
+
+    def clear_signal_history(self):
+        self.stored_signals.clear()
+
+    def _supported_history_url(self):
+        return f"{community.IdentifiersProvider.COMMUNITY_LANDING_URL}/features/chatgpt-trading"
+
     def _ensure_rate_limit(self):
         if self.last_consumed_token_date != datetime.date.today():
             self.consumed_daily_tokens = 0
@@ -101,7 +243,7 @@ class GPTService(services.AbstractService):
         self.logger.debug(f"Consumed {consumed_tokens} tokens. {self.consumed_daily_tokens} consumed tokens today.")
 
     def check_required_config(self, config):
-        if self._env_secret_key is not None:
+        if self._env_secret_key is not None or self.use_stored_signals_only():
             return True
         try:
             return bool(config[services_constants.CONIG_OPENAI_SECRET_KEY])
@@ -110,6 +252,8 @@ class GPTService(services.AbstractService):
 
     def has_required_configuration(self):
         try:
+            if self.use_stored_signals_only():
+                return True
             return self.check_required_config(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(services_constants.CONFIG_GPT, {})
             )
@@ -121,7 +265,7 @@ class GPTService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/chatgpt-interface"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/chatgpt"
 
     def get_type(self) -> None:
         return services_constants.CONFIG_GPT
@@ -140,6 +284,9 @@ class GPTService(services.AbstractService):
 
     async def prepare(self) -> None:
         try:
+            if self.use_stored_signals_only():
+                self.logger.info(f"Skipping models fetch as self.use_stored_signals_only() is True")
+                return
             fetched_models = await openai.Model.alist(api_key=self._get_api_key())
             self.models = [d["id"] for d in fetched_models["data"]]
             if self.model not in self.models:
@@ -151,11 +298,15 @@ class GPTService(services.AbstractService):
             self.logger.error(f"Unexpected error when checking api key: {err}")
 
     def _is_healthy(self):
-        return self._get_api_key() and self.models
+        return self.use_stored_signals_only() or (self._get_api_key() and self.models)
 
     def get_successful_startup_message(self):
-        return f"GPT configured and ready. {len(self.models)} AI models are available. Using {self.model}.", \
+        return f"GPT configured and ready. {len(self.models)} AI models are available. " \
+               f"Using {'stored signals' if self.use_stored_signals_only() else self.models}.", \
             self._is_healthy()
+
+    def use_stored_signals_only(self):
+        return not self.config
 
     async def stop(self):
         pass
