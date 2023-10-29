@@ -190,9 +190,10 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                                         quantity=order_quantity,
                                                                         price=order_price)
             created_order = await self.trading_mode.create_order(current_order)
-            created_orders.append(created_order)
-            arbitrage_container.initial_limit_order_id = created_order.order_id
-            self.open_arbitrages.append(arbitrage_container)
+            if created_order is not None:
+                created_orders.append(created_order)
+                arbitrage_container.initial_limit_order_id = created_order.order_id
+                self.open_arbitrages.append(arbitrage_container)
             # only create one order per arbitrage
             return created_orders
 
