@@ -119,7 +119,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details on ${getDocsLink("/configuration/profiles", "the profiles guide")}.`
+                    intro: `More details on ${getDocsLink("/octobot-configuration/profiles?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=profiles_intro", "the profiles guide")}.`
                 },
             ]
         }
@@ -202,7 +202,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details on ${getDocsLink("/usage/understanding-profitability", "the OctoBot docs")}.`
+                    intro: `More details on ${getDocsLink("/octobot-usage/understanding-profitability?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=dashboard_intro", "the OctoBot docs")}.`
                 },
             ]
         }
@@ -222,7 +222,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details on supported exchanges in the ${getExchangesDocsLink("", "OctoBot exchanges docs")}.`
+                    intro: `More details on supported exchanges in the ${getExchangesDocsLink("?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=exchanges_config", "OctoBot exchanges docs")}.`
                 },
             ]
         }
@@ -242,7 +242,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details the ${getDocsLink("/advanced_usage/backtesting-and-strategy-optimization", "backtesting guide")}.`
+                    intro: `More details the ${getDocsLink("/octobot-advanced-usage/backtesting-and-strategy-optimization?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=backtesting_intro", "backtesting guide")}.`
                 },
             ]
         }

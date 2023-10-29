@@ -119,7 +119,7 @@ class WebHookService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/webhooks/using-a-webhook-with-octobot"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/tradingview/using-a-webhook"
 
     def get_type(self) -> None:
         return services_constants.CONFIG_WEBHOOK
