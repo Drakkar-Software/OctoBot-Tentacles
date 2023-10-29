@@ -1,5 +1,8 @@
 {
-    "indicator": "No indicator: the raw value of the selected source",
-    "period": 2,
-    "source": "Close"
+    "GPT_model": "gpt-3.5-turbo",
+    "indicator": "No indicator: raw candles price data",
+    "max_confidence_threshold": 60,
+    "min_confidence_threshold": 80,
+    "period": 20,
+    "source": "Full candle (For no indicator only)"
 }
