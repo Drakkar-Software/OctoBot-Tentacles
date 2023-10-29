@@ -265,7 +265,7 @@ class GPTService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/chatgpt-interface"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/chatgpt"
 
     def get_type(self) -> None:
         return services_constants.CONFIG_GPT

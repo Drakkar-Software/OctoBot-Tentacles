@@ -5,7 +5,7 @@ This repository contains default evaluators, strategies, utilitary modules, inte
 
 Modules in this tentacles are installed in the **Default** folder of the associated module types
 
-To add custom tentacles to your OctoBot, see the [dedicated docs page](https://developer.octobot.info/tentacles/customize-your-octobot).
+To add custom tentacles to your OctoBot, see the [dedicated docs page](https://www.octobot.cloud/guides/octobot-tentacles-development/customize-your-octobot?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=octobot_tentacles_readme).
 
 ## Contributing to the official OctoBot Tentacles:
 1. Create your own fork of this repo

@@ -60,7 +60,7 @@ class WebService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/interfaces/web-interface"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/web"
 
     @staticmethod
     def is_setup_correctly(config):
