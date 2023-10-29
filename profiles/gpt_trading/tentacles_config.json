@@ -2,10 +2,10 @@
     "tentacle_activation": {
         "Evaluator": {
             "GPTEvaluator": true,
-            "TechnicalAnalysisStrategyEvaluator": true
+            "SimpleStrategyEvaluator": true
         },
         "Trading": {
-            "DailyTradingMode": true
+            "DCATradingMode": true
         }
     }
 }
