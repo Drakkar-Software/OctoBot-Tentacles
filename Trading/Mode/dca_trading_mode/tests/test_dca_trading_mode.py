@@ -26,6 +26,7 @@ import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.enums as commons_enum
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as commons_symbols
 
 import octobot_backtesting.api as backtesting_api
 
@@ -215,7 +216,7 @@ async def test_init_config_values(tools):
 async def test_inner_start(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
     with mock.patch.object(producer, "dca_task", mock.AsyncMock()) as dca_task_mock, \
-         mock.patch.object(producer, "get_channels_registration", mock.Mock(return_value=[])):
+            mock.patch.object(producer, "get_channels_registration", mock.Mock(return_value=[])):
         # evaluator based
         mode.trigger_mode = dca_trading.TriggerMode.MAXIMUM_EVALUATORS_SIGNALS_BASED
         await producer.inner_start()
@@ -240,10 +241,12 @@ async def test_dca_task(tools):
                 # now stop
                 producer.should_stop = True
             calls.append(kwargs)
+
         producer.exchange_manager.is_backtesting = True
         with mock.patch.object(asyncio, "sleep", mock.AsyncMock()) as sleep_mock:
             # backtesting: trigger only once
-            with mock.patch.object(producer, "trigger_dca", mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
+            with mock.patch.object(producer, "trigger_dca",
+                                   mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
                 await producer.dca_task()
                 assert trigger_dca_mock.call_count == 1
                 assert trigger_dca_mock.mock_calls[0].kwargs == {
@@ -256,7 +259,8 @@ async def test_dca_task(tools):
             calls.clear()
             # live: loop trigger
             producer.exchange_manager.is_backtesting = False
-            with mock.patch.object(producer, "trigger_dca", mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
+            with mock.patch.object(producer, "trigger_dca",
+                                   mock.AsyncMock(side_effect=_on_trigger)) as trigger_dca_mock:
                 await producer.dca_task()
                 assert trigger_dca_mock.call_count == 2
                 assert trigger_dca_mock.mock_calls[0].kwargs == {
@@ -265,8 +269,8 @@ async def test_dca_task(tools):
                     "state": trading_enums.EvaluatorStates.VERY_LONG
                 }
                 assert sleep_mock.call_count == 2
-                assert sleep_mock.mock_calls[0].args == (10080 * commons_constants.MINUTE_TO_SECONDS, )
-                assert sleep_mock.mock_calls[1].args == (10080 * commons_constants.MINUTE_TO_SECONDS, )
+                assert sleep_mock.mock_calls[0].args == (10080 * commons_constants.MINUTE_TO_SECONDS,)
+                assert sleep_mock.mock_calls[1].args == (10080 * commons_constants.MINUTE_TO_SECONDS,)
     finally:
         producer.exchange_manager.is_backtesting = True
 
@@ -275,7 +279,7 @@ async def test_trigger_dca(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(producer, "_process_entries", mock.AsyncMock()) as _process_entries_mock, \
-         mock.patch.object(producer, "_process_exits", mock.AsyncMock()) as _process_exits_mock:
+            mock.patch.object(producer, "_process_exits", mock.AsyncMock()) as _process_exits_mock:
         await producer.trigger_dca("crypto", "symbol", trading_enums.EvaluatorStates.NEUTRAL)
         assert producer.state is trading_enums.EvaluatorStates.NEUTRAL
         # neutral is not triggering anything
@@ -299,9 +303,9 @@ async def test_process_entries(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(producer, "submit_trading_evaluation", mock.AsyncMock()) as submit_trading_evaluation_mock, \
-         mock.patch.object(producer, "cancel_symbol_open_orders", mock.AsyncMock()) as cancel_symbol_open_orders_mock, \
-         mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock:
-
+            mock.patch.object(producer, "cancel_symbol_open_orders",
+                              mock.AsyncMock()) as cancel_symbol_open_orders_mock, \
+            mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock:
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.NEUTRAL)
         # neutral state: does not create orders
         submit_trading_evaluation_mock.assert_not_called()
@@ -393,7 +397,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         price=entry_price
     )
     with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda *args, **kwargs: args[0])) \
-         as create_order_mock:
+            as create_order_mock:
         # no chained stop loss
         # no take profit
         mode.use_stop_loss = False
@@ -519,7 +523,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         mode.use_take_profit_exit_orders = True
         # disable use_secondary_exit_orders
         mode.use_secondary_exit_orders = False
-        mode.secondary_exit_orders_count = 2    # disabled
+        mode.secondary_exit_orders_count = 2  # disabled
         await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
         create_order_mock.assert_called_once_with(entry_order, params=None)
         create_order_mock.reset_mock()
@@ -550,7 +554,7 @@ async def test_create_entry_order(tools):
     quantity = decimal.Decimal("42")
     current_price = decimal.Decimal("22222")
     with mock.patch.object(
-        consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value=None)
+            consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value=None)
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
@@ -559,7 +563,7 @@ async def test_create_entry_order(tools):
         _create_entry_with_chained_exit_orders_mock.assert_called_once()
         assert created_orders == []
     with mock.patch.object(
-        consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value="created_order")
+            consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value="created_order")
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
@@ -595,7 +599,7 @@ async def test_create_new_orders(tools):
         return created_order
 
     with mock.patch.object(
-        consumer, "_create_entry_order", mock.AsyncMock(side_effect=_create_entry_order)
+            consumer, "_create_entry_order", mock.AsyncMock(side_effect=_create_entry_order)
     ) as _create_entry_order_mock, mock.patch.object(
         mode, "cancel_order", mock.AsyncMock()
     ) as cancel_order_mock:
@@ -635,9 +639,9 @@ async def test_create_new_orders(tools):
         previous_price = None
         for i, call in enumerate(_create_entry_order_mock.mock_calls):
             if i == 0:
-                assert call.args[1] == decimal.Decimal('0.24')    # initial quantity
+                assert call.args[1] == decimal.Decimal('0.24')  # initial quantity
             else:
-                assert call.args[1] == decimal.Decimal('0.02')    # secondary quantity
+                assert call.args[1] == decimal.Decimal('0.02')  # secondary quantity
             assert call.args[0] is trading_enums.TraderOrderType.BUY_LIMIT
             call_price = call.args[2]
             if previous_price is None:
@@ -680,7 +684,7 @@ async def test_create_new_orders(tools):
         # without enough funds to create every secondary order
         mode.secondary_entry_orders_count = 30  # can't create 30 orders, each using 100 USD of available funds
         await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
-        assert cancel_order_mock.call_count == 2   # still cancel open orders
+        assert cancel_order_mock.call_count == 2  # still cancel open orders
         assert cancel_order_mock.mock_calls[0].args[0] == existing_orders[0]
         assert cancel_order_mock.mock_calls[1].args[0] == existing_orders[1]
         portfolio = trading_api.get_portfolio(trader.exchange_manager)
@@ -695,12 +699,84 @@ async def test_create_new_orders(tools):
         _create_entry_order_mock.reset_mock()
 
 
+async def test_create_new_orders_fully_used_portfolio(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.use_secondary_entry_orders = True
+    mode.secondary_entry_orders_count = 1
+    mode.secondary_entry_orders_amount = "8%t"
+    mode.use_market_entry_orders = False
+    mode.cancel_open_orders_at_each_entry = False
+    mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "8%t"
+
+    mode.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol("DOGE/USDT"),
+        commons_symbols.parse_symbol("LINK/USDT")
+    ]
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+    portfolio["USDT"].available = decimal.Decimal("79.98463886")
+    portfolio["USDT"].total = decimal.Decimal("1000")
+    portfolio.pop("USD", None)
+    portfolio.pop("BTC", None)
+
+    trading_api.force_set_mark_price(trader.exchange_manager, "DOGE/USDT", 0.06852)
+    trading_api.force_set_mark_price(trader.exchange_manager, "LINK/USDT", 11.0096)
+    converter = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter
+    converter.update_last_price("DOGE/USDT", decimal.Decimal("0.06852"))
+    converter.update_last_price("LINK/USDT", decimal.Decimal("11.0096"))
+
+    def _get_market_status(symbol, **kwargs):
+        # example from kucoin on 1st nov 2023
+        if symbol == "DOGE/USDT":
+            return {
+                'limits': {
+                    'amount': {'max': 10000000000.0, 'min': 10.0},
+                    'cost': {'max': 99999999.0, 'min': 0.1},
+                    'leverage': {'max': None, 'min': None},
+                    'price': {'max': None, 'min': None}
+                },
+                'precision': {'amount': 4, 'price': 5}
+            }
+        if symbol == "LINK/USDT":
+            return {
+                'limits': {
+                    'amount': {'max': 10000000000.0, 'min': 0.001},
+                    'cost': {'max': 99999999.0, 'min': 0.1},
+                    'leverage': {'max': None, 'min': None},
+                    'price': {'max': None, 'min': None}
+                },
+                'precision': {'amount': 4, 'price': 4}
+            }
+
+    async def _create_order(order, **kwargs):
+        await order.initialize(is_from_exchange_data=True, enable_associated_orders_creation=False)
+        return order
+
+    with mock.patch.object(
+            trader.exchange_manager.exchange, "get_market_status", mock.Mock(side_effect=_get_market_status)
+    ) as get_market_status_mock, mock.patch.object(
+            mode, "create_order", mock.AsyncMock(side_effect=_create_order)
+    ) as create_order_mock:
+        orders_1, orders_2 = await asyncio.gather(
+            consumer.create_new_orders("DOGE/USDT", None, trading_enums.EvaluatorStates.LONG.value),
+            consumer.create_new_orders("LINK/USDT", None, trading_enums.EvaluatorStates.LONG.value),
+        )
+        assert orders_1
+        assert len(orders_1) == 1
+        get_market_status_mock.reset_mock()
+        assert orders_2
+        assert len(orders_2) == 1
+
+        total_cost = orders_1[0].total_cost + orders_2[0].total_cost
+        assert total_cost <= decimal.Decimal("79.98463886")
+
+
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
 
     with mock.patch.object(
-        octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["order_1"])
+            octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["order_1"])
     ) as convert_assets_to_target_asset_mock:
         orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
         convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
