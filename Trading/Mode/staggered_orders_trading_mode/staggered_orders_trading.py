@@ -1395,12 +1395,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if quantity is not None:
                     orders.append(OrderData(side, quantity, price, self.symbol, virtual_orders))
         if not orders:
-            advise = "change change the strategy settings to make less but bigger orders." \
+            message = "change change the strategy settings to make less but bigger orders." \
                 if self._use_variable_orders_volume(side) else \
                 f"reduce {'buy' if side is trading_enums.TradeOrderSide.BUY else 'sell'} the orders volume."
-            self.logger.error(f"Not enough {order_limiting_currency} to create {side.name} orders. "
-                              f"For the strategy to work better, add {order_limiting_currency} funds or "
-                              f"{advise}")
+            # Todo: send it as visible notification to the user instead of warning/error
+            self.logger.warning(
+                f"Not enough {order_limiting_currency} to create {side.name} orders. "
+                f"For the strategy to work better, add {order_limiting_currency} funds or "
+                f"{message}"
+            )
         else:
             # register the locked orders funds
             if not self._is_initially_available_funds_set(order_limiting_currency):
