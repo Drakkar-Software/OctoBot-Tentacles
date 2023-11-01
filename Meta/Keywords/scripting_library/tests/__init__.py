@@ -44,7 +44,6 @@ def null_context():
         None,
         None,
         None,
-        None,
     )
     yield context
 
@@ -58,7 +57,6 @@ async def mock_context(backtesting_trader):
         trader_inst,
         mock.Mock(),
         "BTC/USDT",
-        mock.Mock(),
         mock.Mock(),
         mock.Mock(),
         mock.Mock(),
