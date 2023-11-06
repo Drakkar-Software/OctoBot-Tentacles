@@ -14,13 +14,25 @@ entries and exit conditions in a simple, yet very powerful way.
 create a take profit at your price target. 
 - You can enable stop losses protect your holdings once an entry is filled.
 - It is also possible to split entries and exits into multiple orders at regular price intervals to profit even more 
-from the dollar cost averaging effect. 
-
+from the dollar cost averaging effect.
 
 Over the long term, dollar cost averaging can help lower your investment costs and boost your returns by optimizing 
 entry and exit prices according to your goals.
 
-**When using default configuration**, DCA Trading mode will buy 50$ (or unit of the quote currency: USDT for BTC/USDT) 
-each week.
+_Note: When using default configuration, DCA Trading mode will buy 50$ (or unit of the quote currency: USDT for BTC/USDT) 
+each week._
+
+<div class="text-center">
+    <div>
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/519pwSV1uwE?si=MT9e1Gqp9WWw45Z" 
+    title="Build your own Smart DCA strategy" frameborder="0" allow="accelerometer; autoplay; 
+    clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+    </div>
+    Build your own Smart DCA strategy
+</div>
+
 
 _This trading mode supports PNL history when take profit exit orders are enabled._
