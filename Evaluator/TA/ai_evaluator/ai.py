@@ -157,11 +157,12 @@ class GPTEvaluator(evaluators.TAEvaluator):
                     candle_time = candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
                     computed_data = self.call_indicator(candle_data)
                     formatted_data = self.get_formatted_data(computed_data)
-                    prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame, candle_time)
+                    prediction = await self.ask_gpt(self.PREPROMPT, formatted_data, symbol, time_frame, candle_time) \
+                        or ""
                     cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
                     prediction_side = self._parse_prediction_side(cleaned_prediction)
                     if prediction_side == 0 and not self.is_backtesting:
-                        self.logger.error(f"Error when reading GPT answer: {cleaned_prediction}")
+                        self.logger.error(f"Error when reading GPT answer, answer: '{cleaned_prediction}'")
                         return
                     confidence = self._parse_confidence(cleaned_prediction) / 100
                     self.eval_note = prediction_side * confidence
@@ -213,7 +214,10 @@ class GPTEvaluator(evaluators.TAEvaluator):
                 candle_open_time=candle_time,
                 use_stored_signals=self.is_backtesting
             )
-            self.logger.info(f"GPT's answer is '{resp}' for {symbol} on {time_frame} with input: {inputs}")
+            self.logger.info(
+                f"GPT's answer is '{resp}' for {symbol} on {time_frame} with input: {inputs} "
+                f"and candle_time: {candle_time}"
+            )
             return resp
         except services_errors.CreationError as err:
             raise evaluators_errors.UnavailableEvaluatorError(f"Impossible to get ChatGPT prediction: {err}") from err
