@@ -17,6 +17,7 @@ import logging
 import telegram
 import telegram.ext
 import telegram.request
+import telegram.error
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
@@ -122,7 +123,12 @@ class TelegramService(services.AbstractService):
 
     async def _stop_bot(self):
         if self.telegram_app.updater.running:
-            await self.telegram_app.updater.stop()
+            # await self.telegram_app.updater.shutdown()
+            try:
+                await self.telegram_app.updater.stop()
+            except telegram.error.TimedOut as err:
+                # can happen, ignore error
+                self.logger.debug(f"Ignored {err} when stopping telegram bot")
         if self.telegram_app.running:
             await self.telegram_app.stop()
         if self.telegram_app.post_stop:
