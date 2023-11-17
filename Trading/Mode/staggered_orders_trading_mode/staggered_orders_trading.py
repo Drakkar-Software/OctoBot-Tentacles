@@ -25,7 +25,6 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
-import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchange_channel as exchanges_channel
@@ -33,7 +32,6 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.errors as trading_errors
-import octobot_trading.exchanges.util.exchange_util as exchange_util
 
 
 class StrategyModes(enum.Enum):
@@ -437,6 +435,11 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 # disable instant fill to avoid looping order fill in simulator
                 current_order.allow_instant_fill = False
                 created_order = await self.trading_mode.create_order(current_order)
+            if not created_order:
+                self.logger.warning(
+                    f"No order created for {order_data}: incompatible with exchange minimum rules. "
+                    f"Limits: {symbol_market[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]}"
+                )
         except trading_errors.MissingFunds as e:
             raise e
         except Exception as e:
