@@ -118,7 +118,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_SELL_FUNDS = "sell_funds"
     CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
-    CONFIG_REINVEST_PROFITS = "reinvest_profits"
+    CONFIG_IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
@@ -189,10 +189,10 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                   "is filled. This can generate extra profits on quick market moves.",
         )
         self.UI.user_input(
-            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
-                  "size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange "
+            title="Ignore exchange fees: when checked, exchange fees won't be considered when creating mirror orders. "
+                  "When unchecked, a part of the total volume will be reduced to take exchange "
                   "fees into account.",
         )
         self.UI.user_input(
@@ -509,7 +509,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.symbol_trading_config = None
 
         self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
-            self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
+            self.ignore_exchange_fees = self.use_fixed_volume_for_mirror_orders = False
         self.mode = self.spread \
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
@@ -581,8 +581,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             self.buy_funds)))
         self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
                                                                              self.sell_funds)))
-        self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
-                                                               self.reinvest_profits)
+        # tmp: ensure "reinvest_profits" legacy param still works
+        self.ignore_exchange_fees = self.symbol_trading_config.get("reinvest_profits", self.ignore_exchange_fees)
+        # end tmp
+        self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
+                                                                   self.ignore_exchange_fees)
 
     async def start(self) -> None:
         await super().start()
@@ -730,7 +733,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # buying => adapt order quantity
             new_order_quantity = filled_price / target_price * filled_volume
         # use max possible volume
-        if self.reinvest_profits:
+        if self.ignore_exchange_fees:
             return new_order_quantity
         # remove exchange fees
         if paid_fees:

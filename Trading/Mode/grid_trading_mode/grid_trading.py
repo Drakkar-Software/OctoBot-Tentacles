@@ -137,12 +137,12 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
-            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN,
-            default_config[self.CONFIG_REINVEST_PROFITS], inputs,
+            self.CONFIG_IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_IGNORE_EXCHANGE_FEES], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
-                  "size mirror orders. When unchecked, a part of the total volume will be reduced to take "
-                  "exchange fees into account. WARNING: incompatible with fixed volume on mirror orders.",
+            title="Ignore exchange fees: when checked, exchange fees won't be considered when creating mirror orders. "
+                  "When unchecked, a part of the total volume will be reduced to take exchange "
+                  "fees into account.",
         )
         self.UI.user_input(
             self.CONFIG_MIRROR_ORDER_DELAY, commons_enums.UserInputTypes.FLOAT,
@@ -157,7 +157,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for "
-                  "mirror orders. WARNING: incompatible with profits reinvesting.",
+                  "mirror orders. WARNING: incompatible with 'Ignore exchange fees'.",
         )
         self.UI.user_input(
             self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN,
@@ -188,7 +188,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           self.CONFIG_STARTING_PRICE: 0,
           self.CONFIG_BUY_VOLUME_PER_ORDER: 0,
           self.CONFIG_SELL_VOLUME_PER_ORDER: 0,
-          self.CONFIG_REINVEST_PROFITS: False,
+          self.CONFIG_IGNORE_EXCHANGE_FEES: False,
           self.CONFIG_MIRROR_ORDER_DELAY: 0,
           self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
           self.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
@@ -278,8 +278,11 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                                        self.buy_volume_per_order)))
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
-        self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
-                                                               self.reinvest_profits)
+        # tmp: ensure "reinvest_profits" legacy param still works
+        self.ignore_exchange_fees = self.symbol_trading_config.get("reinvest_profits", self.ignore_exchange_fees)
+        # end tmp
+        self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
+                                                                   self.ignore_exchange_fees)
         self.use_fixed_volume_for_mirror_orders = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS,
             self.use_fixed_volume_for_mirror_orders
