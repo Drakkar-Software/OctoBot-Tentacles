@@ -1152,31 +1152,70 @@ async def test_compute_mirror_order_volume():
         # no fixed volumes
         producer.reinvest_profits = producer.use_fixed_volume_for_mirror_orders = False
         # 1% max fees
-        producer.max_fees = 0.01
+        producer.max_fees = decimal.Decimal("0.01")
         # take exchange fees into account
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2 * (1 - producer.max_fees)
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 2 * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) * (1 - producer.max_fees)
+        # with given fees
+        fees = {
+            trading_enums.FeePropertyColumns.COST.value: decimal.Decimal("0.032"),
+            trading_enums.FeePropertyColumns.CURRENCY.value: "BTC"
+        }
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) - decimal.Decimal("0.032")
+        fees = {
+            trading_enums.FeePropertyColumns.COST.value: decimal.Decimal("2.3"),
+            trading_enums.FeePropertyColumns.CURRENCY.value: "USD"
+        }
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) - (decimal.Decimal("2.3") / decimal.Decimal("100"))
 
         # with profits reinvesting
         producer.reinvest_profits = True
         # consider fees already taken, sell everything
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80)
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 2
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80"))
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80"))
 
         # with fixed volumes
         producer.reinvest_profits = False
         producer.sell_volume_per_order = 3
         # consider fees already taken, sell everything
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), fees
+        ) == 3
         # buy order
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), None
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) * (1 - producer.max_fees)
         producer.buy_volume_per_order = 5
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 5
 
         # with fixed volumes and profits reinvesting
         producer.reinvest_profits = True
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 3
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 5
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 5
 
 
 async def test_create_order():
