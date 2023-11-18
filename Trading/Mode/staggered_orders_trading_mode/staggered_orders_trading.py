@@ -118,7 +118,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_SELL_FUNDS = "sell_funds"
     CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
-    CONFIG_REINVEST_PROFITS = "reinvest_profits"
+    CONFIG_IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
@@ -189,10 +189,10 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                   "is filled. This can generate extra profits on quick market moves.",
         )
         self.UI.user_input(
-            self.CONFIG_REINVEST_PROFITS, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Reinvest profits: when checked, profits will be included in mirror orders resulting in maximum "
-                  "size mirror orders. When unchecked, a part of the total volume will be reduced to take exchange "
+            title="Ignore exchange fees: when checked, exchange fees won't be considered when creating mirror orders. "
+                  "When unchecked, a part of the total volume will be reduced to take exchange "
                   "fees into account.",
         )
         self.UI.user_input(
@@ -509,7 +509,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.symbol_trading_config = None
 
         self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
-            self.reinvest_profits = self.use_fixed_volume_for_mirror_orders = False
+            self.ignore_exchange_fees = self.use_fixed_volume_for_mirror_orders = False
         self.mode = self.spread \
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
@@ -581,8 +581,11 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             self.buy_funds)))
         self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
                                                                              self.sell_funds)))
-        self.reinvest_profits = self.symbol_trading_config.get(self.trading_mode.CONFIG_REINVEST_PROFITS,
-                                                               self.reinvest_profits)
+        # tmp: ensure "reinvest_profits" legacy param still works
+        self.ignore_exchange_fees = self.symbol_trading_config.get("reinvest_profits", self.ignore_exchange_fees)
+        # end tmp
+        self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
+                                                                   self.ignore_exchange_fees)
 
     async def start(self) -> None:
         await super().start()
@@ -704,7 +707,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
         filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
         price = filled_price + price_increment if now_selling else filled_price - price_increment
-        volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume)
+        fee = filled_order[trading_enums.ExchangeConstantsOrderColumns.FEE.value]
+        volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume, fee)
         new_order = OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)
         self.logger.debug(f"Creating mirror order: {new_order} after filled order: {filled_order}")
         if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
@@ -717,7 +721,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 self._lock_portfolio_and_create_order_when_possible(new_order, filled_price)
             ))
 
-    def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume):
+    def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume, paid_fees: dict):
         # use target volumes if set
         if self.sell_volume_per_order != trading_constants.ZERO and now_selling:
             return self.sell_volume_per_order
@@ -729,12 +733,23 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             # buying => adapt order quantity
             new_order_quantity = filled_price / target_price * filled_volume
         # use max possible volume
-        if self.reinvest_profits:
+        if self.ignore_exchange_fees:
             return new_order_quantity
         # remove exchange fees
-        quantity_change = self.max_fees
-        quantity = new_order_quantity * (1 - quantity_change)
-        return quantity
+        if paid_fees:
+            base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+            fees_in_base = trading_personal_data.get_fees_for_currency(paid_fees, base)
+            fees_in_base += trading_personal_data.get_fees_for_currency(paid_fees, quote) / filled_price
+            if fees_in_base == trading_constants.ZERO:
+                self.logger.debug(
+                    f"Zero fees for trade on {self.symbol}"
+                )
+        else:
+            self.logger.debug(
+                f"No fees given to compute {self.symbol} mirror order size, using default ratio of {self.max_fees}"
+            )
+            fees_in_base = new_order_quantity * self.max_fees
+        return new_order_quantity - fees_in_base
 
     async def _lock_portfolio_and_create_order_when_possible(self, new_order, filled_price):
         await asyncio.wait_for(self.allowed_mirror_orders.wait(), timeout=None)
@@ -1335,7 +1350,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if trade is None:
             return None
         now_selling = trade.side == trading_enums.TradeOrderSide.BUY
-        return self._compute_mirror_order_volume(now_selling, trade.executed_price, price, trade.executed_quantity)
+        return self._compute_mirror_order_volume(
+            now_selling, trade.executed_price, price, trade.executed_quantity, trade.fee
+        )
 
     def _get_associated_trade(self, price, trades, selling):
         increment_window = self.flat_increment / 4
