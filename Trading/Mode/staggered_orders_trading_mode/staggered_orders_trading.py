@@ -737,7 +737,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
             fees_in_base = trading_personal_data.get_fees_for_currency(paid_fees, base)
             fees_in_base += trading_personal_data.get_fees_for_currency(paid_fees, quote) / filled_price
+            if fees_in_base == trading_constants.ZERO:
+                self.logger.debug(
+                    f"Zero fees for trade on {self.symbol}"
+                )
         else:
+            self.logger.debug(
+                f"No fees given to compute {self.symbol} mirror order size, using default ratio of {self.max_fees}"
+            )
             fees_in_base = new_order_quantity * self.max_fees
         return new_order_quantity - fees_in_base
 
