@@ -26,6 +26,7 @@ import pyngrok.exception
 import octobot_commons.logging as bot_logging
 import octobot_commons.configuration as configuration
 import octobot_commons.authentication as authentication
+import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
@@ -206,8 +207,11 @@ class WebHookService(services.AbstractService):
             ngrok.set_auth_token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
                     services_constants.CONFIG_NGROK_TOKEN])
-        self.ngrok_domain = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK].get(
-            services_constants.CONFIG_NGROK_DOMAIN, None)
+        self.ngrok_domain = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK]\
+            .get(services_constants.CONFIG_NGROK_DOMAIN, None)
+        if self.ngrok_domain in commons_constants.DEFAULT_CONFIG_VALUES:
+            # ignore default values
+            self.ngrok_domain = None
         try:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           self.config[services_constants.CONFIG_CATEGORY_SERVICES]
@@ -235,7 +239,7 @@ class WebHookService(services.AbstractService):
                 self.connected = True
                 self.webhook_server.serve_forever()
         except pyngrok.exception.PyngrokNgrokError as e:
-            self.logger.error(f"Error when starting webhook service: Your ngrock.com token might be invalid. ({e})")
+            self.logger.error(f"Error when starting webhook service: Your ngrok.com token might be invalid. ({e})")
         except Exception as e:
             self.logger.exception(e, True, f"Error when running webhook service: ({e})")
         self.connected = False
