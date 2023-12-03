@@ -1,6 +1,4 @@
-{% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
-
-{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, can_logout) -%}
+{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL) -%}
 <div class="card">
     <div class="card-header d-flex justify-content-between flex-wrap">
         <div>
@@ -11,17 +9,11 @@
         <div>
             <span class="float-right">
                 <span class="float-right">
-                    <a class="btn btn-primary"
+                    <a class="btn btn-outline-primary"
                        target="_blank" rel="noopener"
                        href="{{OCTOBOT_COMMUNITY_URL}}/strategies">
                        View on OctoBot cloud
                     </a>
-                    {% if can_logout %}
-                    <a class="btn btn-outline-primary waves-effect"
-                       href="{{ url_for('community_logout')}}">
-                        logout
-                    </a>
-                    {% endif %}
                 </span>
             </span>
         </div>
@@ -43,7 +35,7 @@
                 {% for strategy in strategies %}
                     <tr>
                         <td>
-                            <a class="text-light" href="{{OCTOBOT_COMMUNITY_URL}}/strategies/{{strategy.slug}}" target="_blank">
+                            <a class="text-light" href="{{ strategy.get_url() }}" target="_blank">
                                 <div class="row">
                                     <div class="col-4 pr-1">
                                         <img class="img-fluid package_row_image"
@@ -69,10 +61,13 @@
                             {{ strategy.attributes['risk'] }}
                         </td>
                         <td>
-                            <button update-url="{{ '' }}"
+                            <button update-url="{{ url_for('profiles_management', action='download') }}"
                                     role="button" class="btn btn-link px-1 m-1"
-                                    data-toggle="tooltip" data-placement="top" title="Install on this OctoBot"
-                                    data-strategy-slug="{{strategy.slug}}"
+                                    data-toggle="tooltip" data-placement="top" title="Add to OctoBot"
+                                    data-role="install-strategy"
+                                    data-strategy-id="{{strategy.id}}"
+                                    data-strategy-name="{{strategy.content['name_translations']['en-US'] | capitalize}}"
+                                    data-strategy-url="{{strategy.get_url()}}"
                             >
                                 <i class="fa fa-2x fa-download px-2 text-light strategy_action"></i>
                             </button>

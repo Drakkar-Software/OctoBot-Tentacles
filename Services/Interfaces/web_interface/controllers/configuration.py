@@ -21,6 +21,7 @@ from datetime import datetime
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
 import octobot_commons.enums as commons_enums
+import octobot_commons.authentication as authentication
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -138,9 +139,18 @@ def register(blueprint):
                 flask.flash(f"Error when importing profile: {err}.", "danger")
             return flask.redirect(next_url)
         if action == "download":
-            url = flask.request.form['inputProfileLink']
+            url = flask.request.form.get('inputProfileLink')
+            strategy_id = flask.request.json.get('strategy_id')
+            name = flask.request.json.get('name')
+            strategy_url = flask.request.json.get('url')
             try:
-                new_profile = models.download_and_import_profile(url)
+                if url:
+                    new_profile = models.download_and_import_profile(url)
+                else:
+                    if None in (strategy_id, name, strategy_url):
+                        raise RuntimeError("Both strategy_id, name and url are required to import a strategy")
+                    authenticator = authentication.Authenticator.instance()
+                    new_profile = models.import_strategy_as_profile(authenticator, strategy_id, name, strategy_url)
                 flask.flash(f"{new_profile.name} profile successfully imported.", "success")
             except FileNotFoundError:
                 flask.flash(f"Invalid profile url {url}", "danger")
