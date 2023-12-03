@@ -16,6 +16,8 @@
 import os
 import json
 import secrets
+import time
+
 import octobot_commons.singleton as singleton
 import octobot_commons.logging as logging
 import octobot_commons.constants as constants
@@ -33,6 +35,9 @@ class BrowsingDataProvider(singleton.Singleton):
     PROFILE = "profile"
     AUTOMATIONS = "automations"
     PROFILE_SELECTOR = "profile_selector"
+    CACHE_EXPIRATION = constants.DAYS_TO_SECONDS * 14   # use 14 days cache maximum
+    TIMESTAMP = "timestamp"
+    VALUE = "value"
 
     def __init__(self):
         self.browsing_data = {}
@@ -87,10 +92,10 @@ class BrowsingDataProvider(singleton.Singleton):
             self.dump_saved_data()
 
     def get_all_currencies(self):
-        return self.browsing_data[self.ALL_CURRENCIES]
+        return self._get_expiring_cached_value(self.ALL_CURRENCIES)
 
     def set_all_currencies(self, all_currencies):
-        self.browsing_data[self.ALL_CURRENCIES] = all_currencies
+        self._set_expiring_cached_value(self.ALL_CURRENCIES, all_currencies)
         self.dump_saved_data()
 
     def _get_session_secret_key(self):
@@ -115,15 +120,21 @@ class BrowsingDataProvider(singleton.Singleton):
             self.SESSION_SEC_KEY: self._create_session_secret_key(),
             self.FIRST_DISPLAY: {},
             self.CURRENCY_LOGO: {},
-            self.ALL_CURRENCIES: []
+            self.ALL_CURRENCIES: self._create_expiring_cached_value([]),
         }
+
+    def _apply_saved_data(self, read_data):
+        if not isinstance(read_data[self.ALL_CURRENCIES], dict):
+            # ensure previous version compatibility
+            read_data[self.ALL_CURRENCIES] = self._get_default_data()[self.ALL_CURRENCIES]
+        self.browsing_data.update(read_data)
 
     def _load_saved_data(self):
         self.browsing_data = self._get_default_data()
         read_data = {}
         try:
             read_data = json_util.read_file(self._get_file())
-            self.browsing_data.update(read_data)
+            self._apply_saved_data(read_data)
         except FileNotFoundError:
             pass
         except Exception as err:
@@ -141,3 +152,20 @@ class BrowsingDataProvider(singleton.Singleton):
 
     def _get_file(self):
         return os.path.join(constants.USER_FOLDER, f"{self.__class__.__name__}_data.json")
+
+    def _get_expiring_cached_value(self, key):
+        self._ensure_cache_expiration(key)
+        return self.browsing_data[key][self.VALUE]
+
+    def _set_expiring_cached_value(self, key, value):
+        self.browsing_data[key] = self._create_expiring_cached_value(value)
+
+    def _create_expiring_cached_value(self, value):
+        return {
+            self.TIMESTAMP: time.time(),
+            self.VALUE: value,
+        }
+
+    def _ensure_cache_expiration(self, key):
+        if time.time() - self.browsing_data[key][self.TIMESTAMP] > self.CACHE_EXPIRATION:
+            self.browsing_data[key] = self._get_default_data()[key]
