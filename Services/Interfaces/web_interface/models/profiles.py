@@ -168,6 +168,18 @@ def import_profile(profile_path, name, profile_url=None):
     return profile
 
 
+def import_strategy_as_profile(authenticator, strategy_id: str, name: str, strategy_url: str):
+    profile_data = interfaces_util.run_in_bot_main_loop(authenticator.get_strategy_profile_data(strategy_id))
+    profile = profiles.import_profile_data_as_profile(
+        profile_data,
+        constants.PROFILE_FILE_SCHEMA,
+        name=name,
+        origin_url=strategy_url,
+    )
+    interfaces_util.get_edited_config(dict_only=False).load_profiles()
+    return profile
+
+
 def download_and_import_profile(profile_url):
     name = profile_url.split('/')[-1]
     if "?" in name:

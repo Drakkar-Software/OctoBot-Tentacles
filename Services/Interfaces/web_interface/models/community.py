@@ -37,7 +37,7 @@ def get_account_tentacles_packages(authenticator):
 
 
 def get_cloud_strategies(authenticator) -> list[octobot_community.StrategyData]:
-    return interfaces_util.run_in_bot_async_executor(authenticator.get_strategies())
+    return interfaces_util.run_in_bot_main_loop(authenticator.get_strategies())
 
 
 def get_preview_tentacles_packages(url_for):
