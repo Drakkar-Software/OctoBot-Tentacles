@@ -1,0 +1,87 @@
+{% import "components/community/tentacles_package_row.html" as tentacles_package_row %}
+
+{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, can_logout) -%}
+<div class="card">
+    <div class="card-header d-flex justify-content-between flex-wrap">
+        <div>
+            <h2>
+                OctoBot cloud strategies
+            </h2>
+        </div>
+        <div>
+            <span class="float-right">
+                <span class="float-right">
+                    <a class="btn btn-primary"
+                       target="_blank" rel="noopener"
+                       href="{{OCTOBOT_COMMUNITY_URL}}/strategies">
+                       View on OctoBot cloud
+                    </a>
+                    {% if can_logout %}
+                    <a class="btn btn-outline-primary waves-effect"
+                       href="{{ url_for('community_logout')}}">
+                        logout
+                    </a>
+                    {% endif %}
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="strategies">
+            <table class="table table-striped table-responsive-md 'table-hover'}} ">
+                <thead>
+                    <tr class="">
+                        <th scope="col">Strategy</th>
+                        <th scope="col">1 month Results</th>
+                        <th scope="col">Traded coins</th>
+                        <th scope="col">Exchange</th>
+                        <th scope="col">Risk level</th>
+                        <th scope="col">Install</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for strategy in strategies %}
+                    <tr>
+                        <td>
+                            <a class="text-light" href="{{OCTOBOT_COMMUNITY_URL}}/strategies/{{strategy.slug}}" target="_blank">
+                                <div class="row">
+                                    <div class="col-4 pr-1">
+                                        <img class="img-fluid package_row_image"
+                                             src="{{strategy.logo_url}}"
+                                             alt="Strategy illustration">
+                                    </div>
+                                    <div class="col-8 text-left my-auto pl-0 font-weight-bold">
+                                        {{strategy.content['name_translations']['en-US'] | capitalize}}
+                                    </div>
+                                </div>
+                            </a>
+                        </td>
+                        <td class="">
+                            {{ strategy.results.get_max("1m") | round(2) }}%
+                        </td>
+                        <td class="">
+                            {{ strategy.attributes['coins'] | join(', ') }}
+                        </td>
+                        <td class="">
+                            {{ strategy.attributes['exchanges'] | join(', ') }}
+                        </td>
+                        <td class="">
+                            {{ strategy.attributes['risk'] }}
+                        </td>
+                        <td>
+                            <button update-url="{{ '' }}"
+                                    role="button" class="btn btn-link px-1 m-1"
+                                    data-toggle="tooltip" data-placement="top" title="Install on this OctoBot"
+                                    data-strategy-slug="{{strategy.slug}}"
+                            >
+                                <i class="fa fa-2x fa-download px-2 text-light strategy_action"></i>
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{%- endmacro %}
