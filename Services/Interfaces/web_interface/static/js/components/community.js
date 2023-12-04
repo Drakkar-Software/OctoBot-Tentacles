@@ -35,22 +35,33 @@ function registerPackagesEvents(){
         const data = {
             "strategy_id": element.data("strategy-id"),
             "name": element.data("strategy-name"),
-            "url": element.data("strategy-url"),
+            "description": element.data("description"),
         };
-        console.log(data)
         disablePackagesOperations();
         send_and_interpret_bot_update(data, update_url, element, packagesOperationSuccessCallback, packagesOperationErrorCallback);
     });
 }
 
+function selectProfile(profileId) {
+    if(profileId.length){
+        const changeProfileURL = $("#cloud-strategies-selector").data("select-profile-url").replace("PROFILE_ID", profileId);
+        window.location.replace(changeProfileURL);
+    }
+}
+
 function packagesOperationSuccessCallback(updated_data, update_url, dom_root_element, msg, status){
     disablePackagesOperations(false);
-    create_alert("success", "Packages operation succeed", msg);
+    const postInstallActions = dom_root_element.data("post-install-action")
+    if(postInstallActions === "select-profile"){
+        selectProfile(msg.profile_id)
+    }else{
+        create_alert("success", "Strategy operation", msg.text);
+    }
 }
 
 function packagesOperationErrorCallback(updated_data, update_url, dom_root_element, result, status, error){
     disablePackagesOperations(false);
-    create_alert("error", "Error when managing packages: "+result.responseText, "");
+    create_alert("error", "Error during strategy operation: "+result.responseText, "");
 }
 
 function displayBotSelectorWhenNoSelectedBot(){

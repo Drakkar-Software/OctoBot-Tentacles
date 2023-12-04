@@ -60,7 +60,7 @@ _TUTORIALS = {
                 {
                     title: 'Community',
                     element: document.querySelector('#main-nav-community'),
-                    intro: 'Access your OctoBot account and the OctoBot community stats.'
+                    intro: 'Access OctoBot cloud strategies, your OctoBot account and the community stats.'
                 },
                 {
                     title: 'Customize your dashboard',

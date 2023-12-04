@@ -40,6 +40,10 @@ def get_cloud_strategies(authenticator) -> list[octobot_community.StrategyData]:
     return interfaces_util.run_in_bot_main_loop(authenticator.get_strategies())
 
 
+def get_cloud_strategy(authenticator, strategy_id: str) -> octobot_community.StrategyData:
+    return interfaces_util.run_in_bot_main_loop(authenticator.get_strategy(strategy_id))
+
+
 def get_preview_tentacles_packages(url_for):
     c1 = octobot_community.CommunityTentaclesPackage(
         "AI candles analyser",
