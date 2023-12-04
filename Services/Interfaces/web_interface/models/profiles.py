@@ -168,13 +168,20 @@ def import_profile(profile_path, name, profile_url=None):
     return profile
 
 
-def import_strategy_as_profile(authenticator, strategy_id: str, name: str, strategy_url: str):
-    profile_data = interfaces_util.run_in_bot_main_loop(authenticator.get_strategy_profile_data(strategy_id))
-    profile = profiles.import_profile_data_as_profile(
-        profile_data,
-        constants.PROFILE_FILE_SCHEMA,
-        name=name,
-        origin_url=strategy_url,
+def import_strategy_as_profile(authenticator, strategy: community.StrategyData, name: str, description: str):
+    profile_data = interfaces_util.run_in_bot_main_loop(authenticator.get_strategy_profile_data(strategy.id))
+
+    profile = interfaces_util.run_in_bot_main_loop(
+        profiles.import_profile_data_as_profile(
+            profile_data,
+            constants.PROFILE_FILE_SCHEMA,
+            interfaces_util.get_bot_api().get_aiohttp_session(),
+            name=name,
+            description=description,
+            risk=strategy.get_risk(),
+            origin_url=strategy.get_url(),
+            logo_url=strategy.logo_url,
+        )
     )
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
     return profile

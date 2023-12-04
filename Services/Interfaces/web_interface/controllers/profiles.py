@@ -32,6 +32,7 @@ def register(blueprint):
     def profiles_selector():
         reboot = flask.request.args.get("reboot", "false").lower() == "true"
         onboarding = flask.request.args.get("onboarding", 'false').lower() == "true"
+        use_cloud = flask.request.args.get("use_cloud", 'false').lower() == "true"
         models.wait_for_login_if_processing()
 
         # skip profile selector when forced profile
@@ -51,12 +52,12 @@ def register(blueprint):
         logged_in_email = None
         form = community_authentication.CommunityLoginForm(flask.request.form) \
             if flask.request.form else community_authentication.CommunityLoginForm()
+        authenticator = authentication.Authenticator.instance()
         try:
-            authenticator = authentication.Authenticator.instance()
             logged_in_email = authenticator.get_logged_in_email()
         except (authentication.AuthenticationRequired, authentication.UnavailableError):
             pass
-
+        cloud_strategies = models.get_cloud_strategies(authenticator)
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
             flask_util.BrowsingDataProvider.PROFILE_SELECTOR
         )
@@ -65,6 +66,7 @@ def register(blueprint):
             show_nab_bar=not onboarding,
             onboarding=onboarding,
             read_only=True,
+            use_cloud=use_cloud,
             reboot=reboot,
             display_intro=display_intro,
 
@@ -76,6 +78,8 @@ def register(blueprint):
             current_profile=current_profile,
             profiles=profiles.values(),
             profiles_tentacles_details=models.get_profiles_tentacles_details(profiles),
+
+            cloud_strategies=cloud_strategies,
 
             evaluator_config=models.get_evaluator_detailed_config(media_url, missing_tentacles),
             strategy_config=models.get_strategy_config(media_url, missing_tentacles),

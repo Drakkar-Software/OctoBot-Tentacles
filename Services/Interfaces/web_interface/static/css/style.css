@@ -48,6 +48,12 @@ html, body {
     }
 }
 
+@media screen and (min-width: 992px) {  /*equivalent of bootstrap -lg filter*/
+    .w-lg-50 {
+        width: 50% !important;
+    }
+}
+
 body:before {
     content: "";
     position: fixed;

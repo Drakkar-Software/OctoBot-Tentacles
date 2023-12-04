@@ -273,7 +273,7 @@ get_filtered_list, read_only=False) %}
                         class="btn btn-primary waves-effect duplicate-profile px-3">
                     <i class="fas fa-copy" aria-hidden="true"></i> <span class="d-none d-md-inline">Duplicate</span>
                 </button>
-                {% if current_profile.profile_id != profile.profile_id and not profile.read_only %}
+                {% if current_profile.profile_id != profile.profile_id and (profile.imported or not profile.read_only) %}
                 <button class="btn btn-outline-danger px-3 waves-effect remove-profile-button"
                         id="removeProfile{{profile.profile_id}}"
                         data-profile-id="{{profile.profile_id}}"
