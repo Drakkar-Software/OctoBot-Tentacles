@@ -165,17 +165,6 @@ class Okx(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
-    def get_additional_connector_config(self):
-        config = {
-            ccxt_constants.CCXT_OPTIONS: {}
-        }
-        if self.exchange_manager.is_spot_only:
-            # only fetch spot markets
-            config[ccxt_constants.CCXT_OPTIONS] = {
-                "fetchMarkets": ["spot"]
-            }
-        return config
-
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 

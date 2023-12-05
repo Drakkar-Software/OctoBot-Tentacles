@@ -285,7 +285,7 @@ class GPTService(services.AbstractService):
     async def prepare(self) -> None:
         try:
             if self.use_stored_signals_only():
-                self.logger.info(f"Skipping models fetch as self.use_stored_signals_only() is True")
+                self.logger.info(f"Skipping GPT - OpenAI models fetch as self.use_stored_signals_only() is True")
                 return
             fetched_models = await openai.Model.alist(api_key=self._get_api_key())
             self.models = [d["id"] for d in fetched_models["data"]]
