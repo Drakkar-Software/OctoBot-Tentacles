@@ -143,9 +143,13 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             else:
                 initial_entry_order_type = trading_enums.TraderOrderType.SELL_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.SELL_LIMIT
+            adapted_entry_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_funds
+            )
             # initial entry
             orders_should_have_been_created = await self._create_entry_order(
-                initial_entry_order_type, quantity, initial_entry_price,
+                initial_entry_order_type, adapted_entry_quantity, initial_entry_price,
                 symbol_market, symbol, created_orders, price
             )
             # secondary entries
@@ -165,8 +169,16 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             else order.origin_quantity
                             for order in created_orders
                         )
-                        if remaining_funds < ((secondary_quantity * initial_entry_price)
-                            if side is trading_enums.TradeOrderSide.BUY else secondary_quantity):
+                        adapted_secondary_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                            self.exchange_manager, symbol, initial_entry_order_type, secondary_quantity,
+                            initial_entry_price,
+                            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, remaining_funds
+                        )
+                        skip_other_orders = adapted_secondary_quantity != secondary_quantity
+                        if skip_other_orders or remaining_funds < (
+                            (secondary_quantity * initial_entry_price)
+                            if side is trading_enums.TradeOrderSide.BUY else secondary_quantity
+                        ):
                             self.logger.debug(
                                 f"Not enough available funds to create {symbol} {i + 1}/"
                                 f"{self.trading_mode.secondary_entry_orders_count} secondary order with quantity of "
@@ -174,7 +186,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             )
                             continue
                         multiplier = self.trading_mode.entry_limit_orders_price_multiplier + \
-                                     (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
+                            (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
                         secondary_target_price = price * (
                             (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
                             (1 + multiplier)
@@ -203,7 +215,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def _create_entry_order(
-            self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+        self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
     ):
         for order_quantity, order_price in \
                 trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(

@@ -397,28 +397,33 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
         created_order = None
         currency, market = symbol_util.parse_symbol(order_data.symbol).base_and_quote()
         try:
+            base_available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
+            quote_available = trading_api.get_portfolio_currency(self.exchange_manager, market).available
+            selling = order_data.side == trading_enums.TradeOrderSide.SELL
+            quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                self.exchange_manager, order_data.symbol, trading_enums.TraderOrderType.BUY_LIMIT, order_data.quantity,
+                order_data.price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+                order_data.side, ((base_available / order_data.price) if selling else quote_available)
+            )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
-                    order_data.quantity,
+                    quantity,
                     order_data.price,
                     symbol_market):
-                selling = order_data.side == trading_enums.TradeOrderSide.SELL
-                market_available = trading_api.get_portfolio_currency(self.exchange_manager, market).available
                 if selling:
-                    available = trading_api.get_portfolio_currency(self.exchange_manager, currency).available
-                    if available < order_quantity:
+                    if base_available < order_quantity:
                         self.logger.warning(
                             f"Skipping {order_data.symbol} {order_data.side.value} "
                             f"[{self.exchange_manager.exchange_name}] order creation of "
                             f"{order_quantity} at {float(order_price)}: "
-                            f"not enough {currency}: available: {available}, required: {order_quantity}"
+                            f"not enough {currency}: available: {base_available}, required: {order_quantity}"
                         )
                         return []
-                elif market_available < order_quantity * order_price:
+                elif quote_available < order_quantity * order_price:
                     self.logger.warning(
                         f"Skipping {order_data.symbol} {order_data.side.value} "
                         f"[{self.exchange_manager.exchange_name}] order creation of "
                         f"{order_quantity} at {float(order_price)}: "
-                        f"not enough {market}: available: {market_available}, required: {order_quantity * order_price}"
+                        f"not enough {market}: available: {quote_available}, required: {order_quantity * order_price}"
                     )
                     return []
                 order_type = trading_enums.TraderOrderType.SELL_LIMIT if selling \
@@ -1021,6 +1026,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             except (decimal.DivisionByZero, decimal.InvalidOperation):
                 # leave as is
                 pass
+        target_amount = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+            self.exchange_manager, self.symbol, order_type, target_amount,
+            current_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+            trading_enums.TradeOrderSide.BUY if order_type is trading_enums.TraderOrderType.BUY_MARKET
+            else trading_enums.TradeOrderSide.SELL, limiting_amount / current_price
+        )
         to_create_details = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             target_amount,
             current_price,
