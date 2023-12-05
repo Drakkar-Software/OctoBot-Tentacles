@@ -31,19 +31,6 @@ class Bingx(exchanges.RestExchange):
     def get_name(cls) -> str:
         return 'bingx'
 
-    async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
-        if self.exchange_manager.is_spot_only:
-            # not supported in spot, format ticker from kline instead
-            kline = await self.get_kline_price(symbol, octobot_commons.enums.TimeFrames.ONE_DAY)
-            return self.connector.adapter.adapt_ticker_from_kline(kline[0], symbol)
-        return await super().get_price_ticker(symbol, **kwargs)
-
-    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[list]:
-        if self.exchange_manager.is_spot_only:
-            # not supported in spot
-            return []
-        return await self.connector.get_all_currencies_price_ticker(**kwargs)
-
 
 class BingxCCXTAdapter(exchanges.CCXTAdapter):
     pass

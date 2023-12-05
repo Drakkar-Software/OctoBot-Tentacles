@@ -127,8 +127,6 @@ class Binance(exchanges.RestExchange):
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
             }
         }
-        if self.exchange_manager.is_future:
-            config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
         return config
 
     async def get_balance(self, **kwargs: dict):

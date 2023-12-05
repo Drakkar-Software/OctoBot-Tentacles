@@ -25,7 +25,7 @@ import octobot_commons.symbols as commons_symbols
 
 
 class Coinbase(exchanges.RestExchange):
-    MAX_PAGINATION_LIMIT: int = 299
+    MAX_PAGINATION_LIMIT: int = 300
     REQUIRES_AUTHENTICATION = True
 
     FIX_MARKET_STATUS = True
