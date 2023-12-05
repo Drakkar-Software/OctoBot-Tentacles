@@ -771,6 +771,69 @@ async def test_create_new_orders_fully_used_portfolio(tools):
         assert total_cost <= decimal.Decimal("79.98463886")
 
 
+async def test_create_new_buy_orders_fees_in_quote(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.use_secondary_entry_orders = True
+    mode.secondary_entry_orders_count = 1
+    mode.secondary_entry_orders_amount = "8%t"
+    mode.use_market_entry_orders = False
+    mode.cancel_open_orders_at_each_entry = False
+    mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "8%t"
+
+    mode.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol("DOGE/USDT"),
+        commons_symbols.parse_symbol("LINK/USDT")
+    ]
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+    portfolio["USDT"].available = decimal.Decimal("279.98463886")
+    portfolio["USDT"].total = decimal.Decimal("1000")
+    portfolio.pop("USD", None)
+    portfolio.pop("BTC", None)
+
+    trading_api.force_set_mark_price(trader.exchange_manager, "DOGE/USDT", 0.06852)
+    trading_api.force_set_mark_price(trader.exchange_manager, "LINK/USDT", 11.0096)
+    converter = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter
+    converter.update_last_price("DOGE/USDT", decimal.Decimal("0.06852"))
+    converter.update_last_price("LINK/USDT", decimal.Decimal("11.0096"))
+
+
+    def _get_fees_currency(base, quote, order_type):
+        # force quote fees
+        return quote
+
+    def _read_fees_from_config(fees):
+        # use 20% fees
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value] = 0.2
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value] = 0.2
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value] = 0.2
+
+    async def _create_order(order, **kwargs):
+        await order.initialize(is_from_exchange_data=True, enable_associated_orders_creation=False)
+        return order
+
+    with mock.patch.object(
+        mode, "create_order", mock.AsyncMock(side_effect=_create_order)
+    ) as create_order_mock, mock.patch.object(
+        trader.exchange_manager.exchange.connector, "_get_fees_currency",
+        mock.Mock(side_effect=_get_fees_currency)
+    ) as _get_fees_currency_mock, mock.patch.object(
+        trader.exchange_manager.exchange.connector, "_read_fees_from_config",
+        mock.Mock(side_effect=_read_fees_from_config)
+    ) as _get_fees_currency_mock:
+        orders_1, orders_2 = await asyncio.gather(
+            consumer.create_new_orders("DOGE/USDT", None, trading_enums.EvaluatorStates.LONG.value),
+            consumer.create_new_orders("LINK/USDT", None, trading_enums.EvaluatorStates.LONG.value),
+        )
+        assert orders_1
+        assert len(orders_1) == 2
+        assert orders_2
+        assert len(orders_2) == 1   # secondary order skipped because not enough funds after fees account
+
+        total_cost = orders_1[0].total_cost + orders_1[1].total_cost + orders_2[0].total_cost
+        assert total_cost <= decimal.Decimal("225.98463886")  # took fees into account
+
+
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
