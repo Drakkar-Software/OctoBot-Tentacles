@@ -13,6 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
+
+import octobot_commons.enums
+import octobot_commons.constants
 import octobot_trading.exchanges as exchanges
 
 
@@ -22,10 +26,24 @@ class Bitfinex(exchanges.RestExchange):
     # https://docs.bitfinex.com/reference#rest-public-book
     SUPPORTED_ORDER_BOOK_LIMITS = [1, 25, 100]
     DEFAULT_ORDER_BOOK_LIMIT = 25
+    DEFAULT_CANDLE_LIMIT = 500
 
     @classmethod
     def get_name(cls):
         return 'bitfinex2'
+
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
+        if "since" not in kwargs:
+            # prevent bitfinex from getting candles from 2014
+            tf_seconds = octobot_commons.enums.TimeFramesMinutes[time_frame] * \
+                octobot_commons.constants.MINUTE_TO_SECONDS
+            kwargs["since"] = (self.get_exchange_current_time() - tf_seconds * limit) \
+                * octobot_commons.constants.MSECONDS_TO_SECONDS
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+
+    async def get_kline_price(self, symbol: str, time_frame: octobot_commons.enums.TimeFrames,
+                              **kwargs: dict) -> typing.Optional[list]:
+        return (await self.get_symbol_prices(symbol, time_frame, limit=1))[-1:]
 
     async def get_order_book(self, symbol, limit=DEFAULT_ORDER_BOOK_LIMIT, **kwargs):
         if limit is None or limit not in self.SUPPORTED_ORDER_BOOK_LIMITS:

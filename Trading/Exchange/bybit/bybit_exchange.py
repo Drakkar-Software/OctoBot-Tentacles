@@ -91,6 +91,9 @@ class Bybit(exchanges.RestExchange):
 
     # Order category. 0：normal order by default; 1：TP/SL order, Required for TP/SL order.
     ORDER_CATEGORY = "orderCategory"
+    STOP_ORDERS_FILTER = "stop"
+    SPOT_STOP_ORDERS_FILTER = "StopOrder"
+    ORDER_FILTER = "orderFilter"
 
     def __init__(self, config, exchange_manager, connector_class=None):
         super().__init__(config, exchange_manager, connector_class=connector_class)
@@ -158,25 +161,25 @@ class Bybit(exchanges.RestExchange):
         if not self.exchange_manager.is_future:
             kwargs = kwargs or {}
             # include stop orders
-            kwargs[self.ORDER_CATEGORY] = 1
+            kwargs[self.ORDER_FILTER] = self.SPOT_STOP_ORDERS_FILTER
             orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return orders
 
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        try:
-            return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
-        except octobot_trading.errors.FailedRequest:
-            if self.ORDER_CATEGORY not in kwargs:
-                kwargs[self.ORDER_CATEGORY] = 1
-                return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
-            raise
+        order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+        if order is None and not self.exchange_manager.is_future:
+            kwargs = kwargs or {}
+            # try stop orders
+            kwargs[self.ORDER_FILTER] = self.SPOT_STOP_ORDERS_FILTER
+            order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+        return order
 
     async def cancel_order(
             self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
     ) -> trading_enums.OrderStatus:
         kwargs = kwargs or {}
         if trading_personal_data.is_stop_order(order_type):
-            kwargs[self.ORDER_CATEGORY] = 1
+            kwargs[self.ORDER_FILTER] = self.SPOT_STOP_ORDERS_FILTER
         return await super().cancel_order(
             exchange_order_id, symbol, order_type, **kwargs
         )
@@ -200,11 +203,19 @@ class Bybit(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
+    def _get_stop_trigger_direction(self, side):
+        if side == trading_enums.TradeOrderSide.SELL.value:
+            return "bellow"
+        return "above"
+
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         params = params or {}
         params["triggerPrice"] = price
-        if not self.exchange_manager.is_future:
-            params[self.ORDER_CATEGORY] = 1
+        if self.exchange_manager.is_future:
+            # BybitCCXTAdapter.BYBIT_TRIGGER_ABOVE_KEY required on future stop orders
+            params[BybitCCXTAdapter.BYBIT_TRIGGER_ABOVE_KEY] = self._get_stop_trigger_direction(side)
+        # else:
+        #     params[self.ORDER_CATEGORY] = 1
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
@@ -228,12 +239,6 @@ class Bybit(exchanges.RestExchange):
                                          current_price=current_price, params=params)
 
     async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
-        if trading_personal_data.is_stop_order(order_type):
-            get_order_params = get_order_params or {}
-            if self.exchange_manager.is_future:
-                get_order_params["stop"] = True
-            else:
-                get_order_params[self.ORDER_CATEGORY] = 1
         return await super()._verify_order(created_order, order_type, symbol, price, side,
                                            get_order_params=get_order_params)
 
@@ -360,15 +365,21 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                         == trading_enums.TradeOrderSide.BUY.value:
                     try:
                         quantity = self.connector.exchange_manager.exchange.order_quantity_by_amount[
-                            kwargs.get("quantity")
+                            kwargs.get("quantity", fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value))
                         ]
                         self.connector.exchange_manager.exchange.order_quantity_by_id[
                             fixed[ccxt_enums.ExchangeOrderCCXTColumns.ID.value]
                         ] = quantity
                     except KeyError:
-                        quantity = self.connector.exchange_manager.exchange.order_quantity_by_id[
-                            fixed[ccxt_enums.ExchangeOrderCCXTColumns.ID.value]
-                        ]
+                        try:
+                            quantity = self.connector.exchange_manager.exchange.order_quantity_by_id[
+                                fixed[ccxt_enums.ExchangeOrderCCXTColumns.ID.value]]
+                        except KeyError:
+                            amount = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value)
+                            price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.AVERAGE.value,
+                                              fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.PRICE.value)
+                                              )
+                            quantity = amount / (price if price else 1)
                     if fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None or \
                             fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] < quantity * 0.999:
                         # when order status is PARTIALLY_FILLED_CANCELED but is actually filled
@@ -381,22 +392,18 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def _adapt_order_type(self, fixed):
-        order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
-        if stop_order_type := order_info.get("stopOrderType", None):
-            if "StopLoss" in stop_order_type or "Stop" in stop_order_type:
+        if fixed.get("triggerPrice", None):
+            if fixed.get("takeProfitPrice", None):
+                # take profit are not tagged as such by ccxt, force it
+                # check take profit first as takeProfitPrice is also set for stop losses
+                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
+                    trading_enums.TradeOrderType.TAKE_PROFIT.value
+            elif fixed.get("stopPrice", None):
                 # stop loss are not tagged as such by ccxt, force it
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
                     trading_enums.TradeOrderType.STOP_LOSS.value
-            elif "TakeProfit" in stop_order_type:
-                # take profit are not tagged as such by ccxt, force it
-                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                    trading_enums.TradeOrderType.TAKE_PROFIT.value
-        elif not self.connector.exchange_manager.is_future:
-            order_category = order_info.get(self.connector.exchange_manager.exchange.ORDER_CATEGORY, None)
-            if order_category == "1":
-                # can't identify take profits, use stop loss
-                fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
-                    trading_enums.TradeOrderType.STOP_LOSS.value
+            else:
+                self.logger.error(f"Unknown trigger order: {fixed}")
         return fixed
 
     def fix_ticker(self, raw, **kwargs):
