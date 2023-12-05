@@ -1300,21 +1300,27 @@ def get_compatibility_result(exchange_name, auth_success, compatible_account, su
 
 async def _fetch_is_compatible_account(exchange_name, to_check_config,
                                        compatibility_results, is_sponsoring, is_supporter):
-    is_compatible, auth_success, error = await trading_api.is_compatible_account(
-        exchange_name,
-        to_check_config,
-        interfaces_util.get_edited_tentacles_config(),
-        to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
-    )
-    compatibility_results[exchange_name] = get_compatibility_result(
-        exchange_name,
-        auth_success,
-        is_compatible,
-        is_supporter,
-        True,
-        is_sponsoring,
-        error
-    )
+    try:
+        is_compatible, auth_success, error = await trading_api.is_compatible_account(
+            exchange_name,
+            to_check_config,
+            interfaces_util.get_edited_tentacles_config(),
+            to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+        )
+        compatibility_results[exchange_name] = get_compatibility_result(
+            exchange_name,
+            auth_success,
+            is_compatible,
+            is_supporter,
+            True,
+            is_sponsoring,
+            error
+        )
+    except Exception as err:
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(
+            err, True, f"Error when checking {exchange_name} exchange credentials: {err}"
+        )
+
 
 
 def are_compatible_accounts(exchange_details: dict) -> dict:
