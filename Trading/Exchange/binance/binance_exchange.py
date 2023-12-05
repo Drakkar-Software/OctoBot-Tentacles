@@ -129,9 +129,6 @@ class Binance(exchanges.RestExchange):
         }
         if self.exchange_manager.is_future:
             config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
-        elif self.exchange_manager.is_spot_only:
-            # only fetch spot markets
-            config[ccxt_constants.CCXT_OPTIONS]["fetchMarkets"] = ["spot"]
         return config
 
     async def get_balance(self, **kwargs: dict):

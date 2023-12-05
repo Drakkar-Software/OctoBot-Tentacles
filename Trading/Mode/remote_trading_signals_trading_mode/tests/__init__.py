@@ -54,6 +54,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
         # use backtesting not to spam exchanges apis
         exchange_manager.is_simulated = True
         exchange_manager.is_backtesting = True
+        exchange_manager.use_cached_markets = False
         backtesting = backtesting or await backtesting_api.initialize_backtesting(
             config,
             exchange_ids=[exchange_manager.id],
