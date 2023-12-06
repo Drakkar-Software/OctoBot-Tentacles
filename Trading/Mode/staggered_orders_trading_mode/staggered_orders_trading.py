@@ -706,8 +706,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                               f"{details}.")
             return
         if self.flat_spread is None:
+            if not self.increment:
+                self.logger.error(f"Impossible to create symmetrical order for {self.symbol}: "
+                                  f"self.flat_spread is None and self.increment is {self.increment}.")
             self.flat_spread = trading_personal_data.decimal_adapt_price(
-                self.symbol_market, self.spread * self.flat_increment / self.increment)
+                self.symbol_market, self.spread * self.flat_increment / self.increment
+            )
         price_increment = self.flat_spread - self.flat_increment
         filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
         filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
@@ -887,7 +891,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     def _get_max_theoretical_orders_count(self):
         return math.floor(
             (self.highest_sell - self.lowest_buy - self.flat_spread + self.flat_increment) / self.flat_increment
-        )
+        ) if self.flat_increment else 0
 
     def _ensure_full_funds_usage(self, orders):
         base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
@@ -1686,7 +1690,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         else:
             order_distance = (upper_bound - self.flat_spread / 2) - lower_bound
         order_count_divisor = self.flat_increment
-        orders_count = math.floor(order_distance / order_count_divisor + 1)
+        orders_count = math.floor(order_distance / order_count_divisor + 1) if order_count_divisor else 0
         if orders_count < 1:
             self.logger.warning(f"Impossible to create {'sell' if selling else 'buy'} orders for {currency}: "
                                 f"not enough funds.")
@@ -1704,11 +1708,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _get_orders_count_from_fixed_volume(self, selling, current_price, holdings, orders_count):
         volume_in_currency = self.sell_volume_per_order if selling else current_price * self.buy_volume_per_order
-        orders_count = min(math.floor(holdings / volume_in_currency), orders_count)
+        orders_count = min(math.floor(holdings / volume_in_currency), orders_count) if volume_in_currency else 0
         return orders_count, self.sell_volume_per_order if selling else self.buy_volume_per_order
 
     def _ensure_average_order_quantity(self, orders_count, current_price, selling,
                                        holdings, currency, mode):
+        if not (orders_count and current_price):
+            # avoid div by 0
+            self.logger.warning(
+                f"Can't compute average order quantity: orders_count={orders_count} and current_price={current_price}"
+            )
+            return 0, 0
         holdings_in_quote = holdings if selling else holdings / current_price
         average_order_quantity = holdings_in_quote / orders_count
         min_order_quantity, max_order_quantity = self._get_min_max_quantity(average_order_quantity, self.mode)
@@ -1748,7 +1758,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         min_average_quantity = self._get_average_quantity_from_exchange_minimal_requirements(min_quantity, mode)
         if 2 * holdings > min_average_quantity >= holdings:
             return 1, min_average_quantity
-        max_orders_count = math.floor(holdings / min_average_quantity)
+        max_orders_count = math.floor(holdings / min_average_quantity) if min_average_quantity else 0
         if max_orders_count > 0:
             # count remaining holdings if any
             average_quantity = min_average_quantity + \
