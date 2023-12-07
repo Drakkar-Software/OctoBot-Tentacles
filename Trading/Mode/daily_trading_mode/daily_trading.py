@@ -98,6 +98,18 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             }
         )
         self.UI.user_input(
+            "target_profits_mode_enable_position_increase", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            title="[Target profits mode] Enable futures position increase: Allow to increase a previously open "
+                  "position when receiving a new signal. "
+                  "Only used in 'Target profits mode' when trading futures. "
+                  "Example: increase a $100 LONG position to $150 by adding $50 more when a new LONG signal is received.",
+            editor_options={
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                  "target_profits_mode": True
+                }
+            }
+        )
+        self.UI.user_input(
             "buy_with_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in buy trades: Trade with all available funds at each buy order.",
         )
@@ -224,6 +236,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self.TARGET_PROFIT_STOP_LOSS = decimal.Decimal(str(
             trading_config.get("target_profits_mode_stop_loss") or 2.5
         )) / trading_constants.ONE_HUNDRED
+        self.TARGET_PROFIT_ENABLE_POSITION_INCREASE = trading_config.get(
+            "target_profits_mode_enable_position_increase", False
+        )
         self.BUY_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("buy_with_maximum_size_orders", False)
         self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("sell_with_maximum_size_orders", False)
         self.DISABLE_SELL_ORDERS = trading_config.get("disable_sell_orders", False)
@@ -509,18 +524,23 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             )
             max_buy_size = market_quantity
             max_sell_size = current_symbol_holding
-            increasing_position = state in (trading_enums.EvaluatorStates.VERY_LONG.value,
-                                            trading_enums.EvaluatorStates.LONG.value)
+            spot_increasing_position = state in (trading_enums.EvaluatorStates.VERY_LONG.value,
+                                                 trading_enums.EvaluatorStates.LONG.value)
             if self.exchange_manager.is_future:
                 # on futures, current_symbol_holding = current_market_holding = market_quantity
-                max_buy_size, increasing_position = trading_personal_data.get_futures_max_order_size(
+                max_buy_size, buy_increasing_position = trading_personal_data.get_futures_max_order_size(
                     self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
                     price, False, current_symbol_holding, market_quantity
                 )
-                max_sell_size, increasing_position = trading_personal_data.get_futures_max_order_size(
+                max_sell_size, sell_increasing_position = trading_personal_data.get_futures_max_order_size(
                     self.exchange_manager, symbol, trading_enums.TradeOrderSide.SELL,
                     price, False, current_symbol_holding, market_quantity
                 )
+                # take the right value depending on if we are in a buy or sell condition
+                increasing_position = buy_increasing_position if spot_increasing_position else sell_increasing_position
+            else:
+                increasing_position = spot_increasing_position
+
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             # use stop loss when reducing the position and stop are enabled or when the user explicitly asks for one
@@ -533,10 +553,25 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
             )
             is_reducing_position = not increasing_position
-            if is_reducing_position and self.USE_TARGET_PROFIT_MODE:
-                self.logger.debug("Ignored reducing position signal as Target Profit Mode is enabled. "
-                                  "Positions are reduced from chained orders that are created at entry time.")
-                return []
+            if self.USE_TARGET_PROFIT_MODE:
+                if is_reducing_position:
+                    self.logger.debug("Ignored reducing position signal as Target Profit Mode is enabled. "
+                                      "Positions are reduced from chained orders that are created at entry time.")
+                    return []
+                elif not self.TARGET_PROFIT_ENABLE_POSITION_INCREASE:
+                    if self.exchange_manager.is_future:
+                        current_position = self.exchange_manager.exchange_personal_data.positions_manager\
+                            .get_symbol_position(
+                                symbol,
+                                trading_enums.PositionSide.BOTH
+                            )
+                        if not current_position.is_idle():
+                            self.logger.debug(
+                                f"Ignored increasing position signal on {symbol} as Mode 'Enable futures "
+                                f"position increase' is disabled."
+                            )
+                            return []
+
             use_stop_orders = is_reducing_position and (self.USE_STOP_ORDERS or not user_stop_price.is_nan())
             # use stop loss when increasing the position and the user explicitly asks for one
             use_chained_take_profit_orders = increasing_position and (
@@ -780,8 +815,9 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                                                      evaluators_api.get_type(evaluated_strategy_node),
                                                      evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE):
                 evaluation += evaluators_api.get_value(
-                    evaluated_strategy_node)  # TODO * evaluated_strategies.get_pertinence()
-                strategies_analysis_note_counter += 1  # TODO evaluated_strategies.get_pertinence()
+                    evaluated_strategy_node
+                )
+                strategies_analysis_note_counter += 1
 
         if strategies_analysis_note_counter > 0:
             self.final_eval = decimal.Decimal(str(evaluation / strategies_analysis_note_counter))
