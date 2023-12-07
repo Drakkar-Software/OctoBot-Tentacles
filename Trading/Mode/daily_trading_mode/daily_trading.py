@@ -866,9 +866,12 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-                if self.trading_mode.consumers and not self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
-                    # cancel open orders when not on target profit mode
-                    await self.cancel_symbol_open_orders(symbol)
+                if self.trading_mode.consumers:
+                    if self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
+                        await self._cancel_position_opening_orders(symbol)
+                    else:
+                        # cancel open orders when not on target profit mode
+                        await self.cancel_symbol_open_orders(symbol)
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
@@ -880,6 +883,16 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 # send_notification
                 if not self.exchange_manager.is_backtesting:
                     await self._send_alert_notification(symbol, new_state)
+
+    async def _cancel_position_opening_orders(self, symbol):
+        if self.exchange_manager.trader.is_enabled:
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol):
+                if (
+                    not (order.is_cancelled() or order.is_closed())
+                    # orders with chained orders and no "triggered by" are "position opening"
+                    and order.chained_orders and order.triggered_by is None
+                ):
+                    await self.trading_mode.cancel_order(order)
 
     async def _send_alert_notification(self, symbol, new_state):
         try:

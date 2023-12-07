@@ -28,6 +28,7 @@ import octobot_commons.tests.test_config as test_config
 import octobot_trading.constants as trading_constants
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
+import octobot_trading.exchange_data as exchange_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges as exchanges
@@ -87,6 +88,72 @@ async def tools():
         consumer.MAX_CURRENCY_RATIO = 1
 
         # set BTC/USDT price at 7009.194999999998 USDT
+        last_btc_price = 7009.194999999998
+        trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
+
+        yield exchange_manager, trader, symbol, consumer, decimal.Decimal(str(last_btc_price))
+    finally:
+        if exchange_manager:
+            try:
+                await _stop(exchange_manager)
+            except Exception as err:
+                print(f"error when stopping exchange manager: {err}")
+
+
+@pytest_asyncio.fixture
+async def future_tools():
+    tentacles_manager_api.reload_tentacle_info()
+    exchange_manager = None
+    try:
+        symbol = "BTC/USDT:USDT"
+        config = test_config.load_test_config()
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
+            "SUB"] = 0.000000000000000000005
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO][
+            "BNB"] = 0.000000000000000000005
+        config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
+        exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
+        exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
+
+        # use backtesting not to spam exchanges apis
+        exchange_manager.is_spot_only = False
+        exchange_manager.is_future = True
+        exchange_manager.is_simulated = True
+        exchange_manager.is_backtesting = True
+        exchange_manager.use_cached_markets = False
+        backtesting = await backtesting_api.initialize_backtesting(
+            config,
+            exchange_ids=[exchange_manager.id],
+            matrix_id=None,
+            data_files=[
+                os.path.join(test_config.TEST_CONFIG_FOLDER, "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+        exchange_manager.exchange = exchanges.ExchangeSimulator(exchange_manager.config,
+                                                                exchange_manager,
+                                                                backtesting)
+        await exchange_manager.exchange.initialize()
+        for exchange_channel_class_type in [exchanges_channel.ExchangeChannel, exchanges_channel.TimeFrameExchangeChannel]:
+            await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
+                                                             exchange_manager=exchange_manager)
+
+        contract = exchange_data.FutureContract(
+            pair=symbol,
+            margin_type=trading_enums.MarginType.ISOLATED,
+            contract_type=trading_enums.FutureContractType.LINEAR_PERPETUAL,
+            current_leverage=trading_constants.ONE,
+            maximum_leverage=trading_constants.ONE_HUNDRED
+        )
+        exchange_manager.exchange.set_pair_future_contract(symbol, contract)
+        trader = exchanges.TraderSimulator(config, exchange_manager)
+        await trader.initialize()
+
+        mode = Mode.DailyTradingMode(config, exchange_manager)
+        await mode.initialize()
+        # add mode to exchange manager so that it can be stopped and freed from memory
+        exchange_manager.trading_modes.append(mode)
+        consumer = mode.get_trading_mode_consumers()[0]
+        consumer.MAX_CURRENCY_RATIO = 1
+
+        # set BTC/USDT:USDT price at 7009.194999999998 USDT
         last_btc_price = 7009.194999999998
         trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
 
@@ -979,3 +1046,81 @@ async def test_target_profit_mode(tools):
     state = trading_enums.EvaluatorStates.SHORT.value
     orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state)
     assert orders == []
+
+
+async def test_target_profit_mode_futures_trading(future_tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = future_tools
+
+    # with BTC/USDT
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
+        last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(10 + 1000 / last_btc_price))
+    consumer.USE_TARGET_PROFIT_MODE = True
+    consumer.TARGET_PROFIT_ENABLE_POSITION_INCREASE = True
+    _, _, _, _, symbol_market = await trading_personal_data.get_pre_order_data(
+        exchange_manager, symbol=symbol, timeout=1
+    )
+
+    # take profit and stop loss / long signal
+    consumer.TARGET_PROFIT_TAKE_PROFIT = decimal.Decimal(str(10))
+    consumer.TARGET_PROFIT_STOP_LOSS = decimal.Decimal(str(2.5))
+    consumer.USE_STOP_ORDERS = True
+    long_orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.LONG.value)
+    buy_order = long_orders[0]
+    assert isinstance(buy_order, trading_personal_data.BuyLimitOrder)
+    assert len(buy_order.chained_orders) == 2
+    take_profit_order = buy_order.chained_orders[1]
+    stop_loss_order = buy_order.chained_orders[0]
+    assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+    assert isinstance(stop_loss_order, trading_personal_data.StopLossOrder)
+    assert take_profit_order.side is trading_enums.TradeOrderSide.SELL
+    assert take_profit_order.origin_quantity == buy_order.origin_quantity
+    assert take_profit_order.origin_price == trading_personal_data.decimal_adapt_price(
+        symbol_market,
+        buy_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_TAKE_PROFIT)
+    )
+    assert stop_loss_order.side is trading_enums.TradeOrderSide.SELL
+    assert stop_loss_order.origin_quantity == buy_order.origin_quantity
+    assert stop_loss_order.origin_price == trading_personal_data.decimal_adapt_price(
+        symbol_market,
+        buy_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_STOP_LOSS)
+    )
+
+    # take profit and stop loss / short signal
+    short_orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value)
+    sell_order = short_orders[0]
+    assert isinstance(sell_order, trading_personal_data.SellLimitOrder)
+    assert len(sell_order.chained_orders) == 2
+    take_profit_order = sell_order.chained_orders[1]
+    stop_loss_order = sell_order.chained_orders[0]
+    assert isinstance(take_profit_order, trading_personal_data.BuyLimitOrder)
+    assert isinstance(stop_loss_order, trading_personal_data.StopLossOrder)
+    assert take_profit_order.side is trading_enums.TradeOrderSide.BUY
+    assert take_profit_order.origin_quantity == sell_order.origin_quantity
+    assert take_profit_order.origin_price == trading_personal_data.decimal_adapt_price(
+        symbol_market,
+        sell_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_TAKE_PROFIT)
+    )
+    assert stop_loss_order.side is trading_enums.TradeOrderSide.BUY
+    assert stop_loss_order.origin_quantity == sell_order.origin_quantity
+    assert stop_loss_order.origin_price == trading_personal_data.decimal_adapt_price(
+        symbol_market,
+        sell_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_STOP_LOSS)
+    )
+    current_position = exchange_manager.exchange_personal_data.positions_manager \
+        .get_symbol_position(
+        symbol,
+        trading_enums.PositionSide.BOTH
+    )
+    assert current_position.is_idle()
+    await sell_order.on_fill(force_fill=True)
+    assert not current_position.is_idle()
+    short_orders_2 = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value)
+    # created order
+    assert len(short_orders_2) == 1
+
+    consumer.TARGET_PROFIT_ENABLE_POSITION_INCREASE = False
+    short_orders_2 = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value)
+    # did not create order as increasing position is disabled
+    assert short_orders_2 == []
