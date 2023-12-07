@@ -543,14 +543,10 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             # no funding info in ticker
             return {}
         fixed = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
-        # no previous funding time of rate on okx
         next_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
-        # only the next scheduled funding rate is available: use it for last value
-        next_funding_rate = fixed[trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value]
         fixed.update({
+            # patch LAST_FUNDING_TIME in tentacle
             trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME,
-            trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: next_funding_rate,
-            trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: next_funding_rate,
+                max(next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME, 0)
         })
         return fixed
