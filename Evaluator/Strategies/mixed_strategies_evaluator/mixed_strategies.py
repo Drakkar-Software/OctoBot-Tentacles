@@ -49,7 +49,7 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
         """
         super().init_user_inputs(inputs)
         self.UI.user_input(commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, commons_enums.UserInputTypes.INT,
-                        500, inputs, min_val=200,
+                        500, inputs, min_val=1,
                         title="Initialization candles count: the number of historical candles to fetch from "
                               "exchanges when OctoBot is starting.")
         self.social_evaluators_default_timeout = \
