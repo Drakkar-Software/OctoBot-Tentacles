@@ -504,28 +504,27 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 return {}
             # no data in fixed when coming from ticker
             funding_dict = fixed[ccxt_constants.CCXT_INFO]
-            funding_next_timestamp = float(
-                funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0)
+            funding_next_timestamp = self.get_uniformized_timestamp(
+                float(funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0))
+            )
+            funding_rate = decimal.Decimal(
+                str(funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN))
             )
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                    funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
-                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)),
+                    max(funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME, 0),
+                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: funding_rate,
                 trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value: funding_next_timestamp,
-                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: constants.NaN
+                trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: funding_rate
             })
         else:
             funding_next_timestamp = float(
                 funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value, 0)
             )
+            # patch LAST_FUNDING_TIME in tentacle
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                    funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME,
-                trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: decimal.Decimal(
-                    funding_dict.get(ccxt_constants.CCXT_INFO, {})
-                    .get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_RATE.value, constants.NaN)
-                ),
+                    max(funding_next_timestamp - self.BYBIT_DEFAULT_FUNDING_TIME, 0)
             })
         return funding_dict
 
