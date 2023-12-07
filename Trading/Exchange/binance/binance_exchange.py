@@ -289,7 +289,7 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
             # patch LAST_FUNDING_TIME in tentacle
             funding_dict.update({
                 trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                    funding_next_timestamp - self.BINANCE_DEFAULT_FUNDING_TIME
+                    max(funding_next_timestamp - self.BINANCE_DEFAULT_FUNDING_TIME, 0)
             })
         return funding_dict
 
