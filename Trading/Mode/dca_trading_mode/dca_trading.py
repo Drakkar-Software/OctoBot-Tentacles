@@ -293,8 +293,11 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
                     )
                 )
-                take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+                take_profit_order_type = self.exchange_manager.trader.get_take_profit_order_type(
+                    entry_order,
+                    trading_enums.TraderOrderType.BUY_LIMIT
                     if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+                )
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, take_profit_price, take_profit_order_type, None,
                     quantity=exit_quantity, allow_bundling=can_bundle_exit_orders

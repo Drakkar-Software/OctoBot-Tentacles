@@ -442,27 +442,34 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     ):
         params = {}
         chained_orders = []
+        is_long = current_order.side is trading_enums.TradeOrderSide.BUY
+        exit_side = trading_enums.TradeOrderSide.SELL if is_long else trading_enums.TradeOrderSide.BUY
         if use_stop_loss_orders:
             stop_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
-                current_order.origin_price * (trading_constants.ONE - self.TARGET_PROFIT_STOP_LOSS)
+                current_order.origin_price * (
+                    trading_constants.ONE + (self.TARGET_PROFIT_STOP_LOSS * (-1 if is_long else 1))
+                )
             ) if stop_price.is_nan() else stop_price
-            side = trading_enums.TradeOrderSide.SELL \
-                if current_order.side is trading_enums.TradeOrderSide.BUY else trading_enums.TradeOrderSide.BUY
             param_update, chained_order = await self.register_chained_order(
-                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, side
+                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side
             )
             params.update(param_update)
             chained_orders.append(chained_order)
         if use_take_profit_orders:
             take_profit_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
-                current_order.origin_price * (trading_constants.ONE + self.TARGET_PROFIT_TAKE_PROFIT)
+                current_order.origin_price * (
+                    trading_constants.ONE + (self.TARGET_PROFIT_TAKE_PROFIT * (1 if is_long else -1))
+                )
             ) if take_profit_price.is_nan() else take_profit_price
-            order_type = trading_enums.TraderOrderType.SELL_LIMIT \
-                if current_order.side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.BUY_LIMIT
+            order_type = self.exchange_manager.trader.get_take_profit_order_type(
+                current_order,
+                trading_enums.TraderOrderType.SELL_LIMIT if exit_side is trading_enums.TradeOrderSide.SELL
+                else trading_enums.TraderOrderType.BUY_LIMIT
+            )
             param_update, chained_order = await self.register_chained_order(
-                current_order, take_profit_price, order_type, None
+                current_order, take_profit_price, order_type, exit_side
             )
             params.update(param_update)
             chained_orders.append(chained_order)
