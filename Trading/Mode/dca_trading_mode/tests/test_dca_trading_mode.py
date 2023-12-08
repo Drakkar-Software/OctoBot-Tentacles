@@ -846,6 +846,115 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
         assert orders == ["order_1"]
 
 
+async def test_single_exchange_process_health_check(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    exchange_manager = trader.exchange_manager
+    with mock.patch.object(producer, "dca_task", mock.AsyncMock()):  # prevent auto dca task
+
+        portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        converter = trader.exchange_manager.exchange_personal_data.portfolio_manager.\
+            portfolio_value_holder.value_converter
+        converter.update_last_price(mode.symbol, decimal.Decimal("1000"))
+
+        origin_portfolio_USDT = portfolio["USDT"].total
+
+        # no traded symbols: no orders
+        exchange_manager.exchange_config.traded_symbols = []
+        assert await mode.single_exchange_process_health_check([], {}) == []
+        assert portfolio["USDT"].total == origin_portfolio_USDT
+
+        # with traded symbols: 1 order as BTC is not already in a sell order
+        exchange_manager.exchange_config.traded_symbols = [commons_symbols.parse_symbol(mode.symbol)]
+
+        # no self.use_take_profit_exit_orders or self.use_stop_loss
+        mode.use_take_profit_exit_orders = False
+        mode.use_stop_loss = False
+        assert await mode.single_exchange_process_health_check([], {}) == []
+
+        # no health check in backtesting
+        exchange_manager.is_backtesting = True
+        assert await mode.single_exchange_process_health_check([], {}) == []
+        exchange_manager.is_backtesting = False
+
+        # use_take_profit_exit_orders is True: health check can proceed
+        mode.use_take_profit_exit_orders = True
+        orders = await mode.single_exchange_process_health_check([], {})
+        assert len(orders) == 1
+        sell_order = orders[0]
+        assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
+        assert sell_order.symbol == mode.symbol
+        assert sell_order.origin_quantity == decimal.Decimal(10)
+        assert portfolio["BTC"].total == trading_constants.ZERO
+        after_btc_usdt_portfolio = portfolio["USDT"].total
+        assert after_btc_usdt_portfolio > origin_portfolio_USDT
+
+        # now that BTC is sold, calling it again won't create any order
+        assert await mode.single_exchange_process_health_check([], {}) == []
+
+        # add ETH in portfolio: will also be sold but is bellow threshold
+        converter.update_last_price("ETH/USDT", decimal.Decimal("100"))
+        exchange_manager.client_symbols.append("ETH/USDT")
+        exchange_manager.exchange_config.traded_symbols.append(commons_symbols.parse_symbol("ETH/USDT"))
+        eth_holdings = decimal.Decimal(2)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        assert await mode.single_exchange_process_health_check([], {}) == []
+
+        # more ETH: sell
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        orders = await mode.single_exchange_process_health_check([], {})
+        assert len(orders) == 1
+        sell_order = orders[0]
+        assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
+        assert sell_order.symbol == "ETH/USDT"
+        assert sell_order.origin_quantity == eth_holdings
+        assert portfolio["ETH"].total == trading_constants.ZERO
+        after_eth_usdt_portfolio = portfolio["USDT"].total
+        assert after_eth_usdt_portfolio > after_btc_usdt_portfolio
+
+        # add ETH to be sold but already in sell order: do not sell the part in sell orders
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        existing_sell_order = trading_personal_data.SellLimitOrder(trader)
+        existing_sell_order.origin_quantity = decimal.Decimal(45)
+        existing_sell_order.symbol = "ETH/USDT"
+        await exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(existing_sell_order)
+        orders = await mode.single_exchange_process_health_check([], {})
+        assert len(orders) == 1
+        sell_order = orders[0]
+        assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
+        assert sell_order.symbol == "ETH/USDT"
+        assert sell_order.origin_quantity == eth_holdings - decimal.Decimal(45)
+        assert portfolio["ETH"].total == decimal.Decimal(45)
+        after_eth_usdt_portfolio = portfolio["USDT"].total
+        assert after_eth_usdt_portfolio > after_btc_usdt_portfolio
+
+        # add ETH to be sold but already in chained sell order: do not sell the part in chained sell orders
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        chained_sell_order = trading_personal_data.SellLimitOrder(trader)
+        chained_sell_order.origin_quantity = decimal.Decimal(10)
+        chained_sell_order.symbol = "ETH/USDT"
+        orders = await mode.single_exchange_process_health_check([chained_sell_order], {})
+        assert len(orders) == 1
+        sell_order = orders[0]
+        assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
+        assert sell_order.symbol == "ETH/USDT"
+        assert sell_order.origin_quantity == eth_holdings - decimal.Decimal(45) - decimal.Decimal(10)
+        assert portfolio["ETH"].total == decimal.Decimal(45) + decimal.Decimal(10)
+        after_eth_usdt_portfolio = portfolio["USDT"].total
+        assert after_eth_usdt_portfolio > after_btc_usdt_portfolio
+
+        # add ETH to be sold but already in chained sell order: do not sell the part in chained sell orders:
+        # sell orders make it bellow threshold: no market sell created
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        chained_sell_order = trading_personal_data.SellLimitOrder(trader)
+        chained_sell_order.origin_quantity = decimal.Decimal(55)
+        chained_sell_order.symbol = "ETH/USDT"
+        assert await mode.single_exchange_process_health_check([chained_sell_order], {}) == []
+
+
 async def _check_open_orders_count(trader, count):
     assert len(trading_api.get_open_orders(trader.exchange_manager)) == count
 

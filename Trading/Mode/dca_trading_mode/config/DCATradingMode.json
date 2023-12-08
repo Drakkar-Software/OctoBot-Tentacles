@@ -15,5 +15,7 @@
     "use_secondary_exit_orders": false,
     "use_stop_losses": false,
     "use_take_profit_exit_orders": false,
-    "cancel_open_orders_at_each_entry": true
+    "cancel_open_orders_at_each_entry": true,
+    "enable_health_check": false,
+    "health_check_orphan_funds_threshold": 15
 }
