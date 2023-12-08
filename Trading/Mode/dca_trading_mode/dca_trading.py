@@ -33,6 +33,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
 import octobot_trading.errors as trading_errors
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes.script_keywords as script_keywords
 
 
@@ -499,6 +500,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [DCATradingModeProducer]
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
     SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True
+    SUPPORTS_HEALTH_CHECK = True
+    HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO = decimal.Decimal("0.15")  # 15%
+    HEALTH_CHECK_FILL_ORDERS_TIMEOUT = 20
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -734,3 +738,73 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         return await trading_modes.convert_assets_to_target_asset(
             self, sellable_assets, target_asset, tickers
         )
+
+    async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
+        created_orders = []
+        common_quote = trading_exchanges.get_common_traded_quote(self.exchange_manager)
+        for asset, amount in self._get_lost_funds_to_sell(common_quote, chained_orders):
+            # sell lost funds
+            self.logger.info(
+                f"Health check: selling {amount} {asset} into {common_quote}"
+            )
+            try:
+                created_orders += await trading_modes.convert_asset_to_target_asset(
+                    self, asset, common_quote, tickers, asset_amount=amount
+                )
+            except Exception as err:
+                self.logger.exception(
+                    err, True, f"Error when creating order to sell {asset} into {common_quote}: {err}"
+                )
+        if created_orders:
+            await asyncio.gather(
+                *[
+                    trading_personal_data.wait_for_order_fill(
+                        order, self.HEALTH_CHECK_FILL_ORDERS_TIMEOUT, True
+                    ) for order in created_orders
+                ]
+            )
+        return created_orders
+
+    def _get_lost_funds_to_sell(self, common_quote: str, chained_orders: list) -> list[(str, decimal.Decimal)]:
+        asset_and_amount = []
+        value_holder = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+        traded_base_assets = set(
+            symbol.base
+            for symbol in self.exchange_manager.exchange_config.traded_symbols
+        )
+        sell_orders = [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders() + chained_orders
+            if order.side is trading_enums.TradeOrderSide.SELL
+        ]
+        orphan_asset_values_by_asset = {}
+        total_traded_assets_value = value_holder.value_converter.evaluate_value(
+            common_quote,
+            self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                common_quote
+            ).total,
+            init_price_fetchers=False
+        )
+        for asset in traded_base_assets:
+            holdings = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                asset
+            ).total
+            holdings_value = value_holder.value_converter.evaluate_value(
+                asset, holdings, init_price_fetchers=False
+            )
+            total_traded_assets_value += holdings_value
+            holdings_in_sell_orders = sum(
+                order.origin_quantity
+                for order in sell_orders
+                if symbol_util.parse_symbol(order.symbol).base == asset
+            )
+            orphan_amount = holdings - holdings_in_sell_orders
+            if orphan_amount and orphan_amount > 0:
+                orphan_asset_values_by_asset[asset] = (holdings_value * orphan_amount / holdings, orphan_amount)
+
+        for asset, value_and_orphan_amount in orphan_asset_values_by_asset.items():
+            value, orphan_amount = value_and_orphan_amount
+            ratio = value / total_traded_assets_value
+            if ratio > self.HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO:
+                asset_and_amount.append((asset, orphan_amount))
+        return asset_and_amount

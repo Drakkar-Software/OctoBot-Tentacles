@@ -42,6 +42,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     USER_COMMAND_PAUSE_ORDER_MIRRORING = "pause orders mirroring"
     USER_COMMAND_TRADING_PAIR = "trading pair"
     USER_COMMAND_PAUSE_TIME = "pause length in seconds"
+    SUPPORTS_HEALTH_CHECK = False   # WIP   # set True when self.health_check is implemented
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
