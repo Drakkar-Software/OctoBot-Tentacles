@@ -20,5 +20,7 @@
     "use_secondary_entry_orders": true,
     "use_secondary_exit_orders": true,
     "use_stop_losses": false,
-    "use_take_profit_exit_orders": true
+    "use_take_profit_exit_orders": true,
+    "enable_health_check": false,
+    "health_check_orphan_funds_threshold": 15
 }
