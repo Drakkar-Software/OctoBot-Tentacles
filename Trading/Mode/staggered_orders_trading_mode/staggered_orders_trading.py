@@ -32,6 +32,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.errors as trading_errors
+import octobot_trading.exchanges.util as exchange_util
 
 
 class StrategyModes(enum.Enum):
@@ -119,11 +120,13 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_SELL_VOLUME_PER_ORDER = "sell_volume_per_order"
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
+    ENABLE_UPWARDS_PRICE_FOLLOW = "enable_upwards_price_follow"
     CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
     REQUIRE_TRADES_HISTORY = True   # set True when this trading mode needs the trade history to operate
     SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True  # set True when self._optimize_initial_portfolio is implemented
+    SUPPORTS_HEALTH_CHECK = False   # set True when self.health_check is implemented
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -250,6 +253,23 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
 
     def set_default_config(self):
         raise RuntimeError(f"Impossible to start {self.get_name()} without a valid configuration file.")
+
+    async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
+        created_orders = []
+        if await self._should_rebalance_orders():
+            target_asset = exchange_util.get_common_traded_quote(self.exchange_manager)
+            created_orders += await self.single_exchange_process_optimize_initial_portfolio([], target_asset, tickers)
+            for producer in self.producers:
+                await producer.trigger_staggered_orders_creation()
+        return created_orders
+
+    async def _should_rebalance_orders(self):
+        for producer in self.producers:
+            if producer.enable_upwards_price_follow:
+                # trigger rebalance when current price is beyond the highest sell order
+                if await producer.is_price_beyond_boundaries():
+                    return True
+        return False
 
     async def single_exchange_process_optimize_initial_portfolio(
         self, sellable_assets, target_asset: str, tickers: dict
@@ -515,6 +535,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
         self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
             self.ignore_exchange_fees = self.use_fixed_volume_for_mirror_orders = False
+        self.enable_upwards_price_follow = True
         self.mode = self.spread \
             = self.increment = self.operational_depth \
             = self.lowest_buy = self.highest_sell \
@@ -591,6 +612,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # end tmp
         self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
                                                                    self.ignore_exchange_fees)
+        self.enable_upwards_price_follow = self.symbol_trading_config.get(
+            self.trading_mode.ENABLE_UPWARDS_PRICE_FOLLOW, self.enable_upwards_price_follow
+        )
 
     async def start(self) -> None:
         await super().start()
@@ -616,6 +640,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # nothing to do: this is not a strategy related trading mode
         pass
+
+    async def is_price_beyond_boundaries(self):
+        open_orders = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
+        price = await trading_personal_data.get_up_to_date_price(
+            self.exchange_manager, self.symbol, timeout=self.PRICE_FETCHING_TIMEOUT
+        )
+        max_order_price = max(
+            order.origin_price for order in open_orders
+        )
+        # price is above max order price
+        if max_order_price < price and self.enable_upwards_price_follow:
+            return True
 
     def _schedule_order_refresh(self):
         # schedule order creation / health check
