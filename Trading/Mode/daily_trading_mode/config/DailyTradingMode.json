@@ -11,6 +11,7 @@
     "use_prices_close_to_current_price": false,
     "close_to_current_price_difference": 0.005,
     "target_profits_mode_take_profit": 5,
+    "target_profits_mode_enable_position_increase": false,
     "use_stop_orders": true,
     "target_profits_mode_stop_loss": 2.5,
     "buy_with_maximum_size_orders": false,
