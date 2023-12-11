@@ -28,7 +28,9 @@ class BingxCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
 
     @classmethod
     def get_name(cls):
-        return bingx_exchange.Bingx.get_name()
+        # disabled as too unstable for now (using ccxt 4.1.82)
+        # => feeds are disconnecting and not reconnecting
+        return f"{bingx_exchange.Bingx.get_name()}-disabled"
 
     def get_adapter_class(self, adapter_class):
         return bingx_exchange.BingxCCXTAdapter
