@@ -21,6 +21,7 @@ from datetime import datetime
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
 import octobot_commons.enums as commons_enums
+import octobot_commons.authentication as authentication
 import octobot_services.constants as services_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
@@ -42,7 +43,7 @@ def register(blueprint):
             models.select_profile(selected_profile)
             current_profile = models.get_current_profile()
             flask.flash(
-                f"Switched to {current_profile.name} profile", "success"
+                f"Selected the {current_profile.name} profile", "success"
             )
         else:
             current_profile = models.get_current_profile()
@@ -138,14 +139,37 @@ def register(blueprint):
                 flask.flash(f"Error when importing profile: {err}.", "danger")
             return flask.redirect(next_url)
         if action == "download":
-            url = flask.request.form['inputProfileLink']
+            url = flask.request.form.get('inputProfileLink')
+            strategy_id = flask.request.json.get('strategy_id')
+            name = flask.request.json.get('name')
+            description = flask.request.json.get('description')
+            profile_id = ""
             try:
-                new_profile = models.download_and_import_profile(url)
-                flask.flash(f"{new_profile.name} profile successfully imported.", "success")
+                if url:
+                    new_profile = models.download_and_import_profile(url)
+                else:
+                    if None in (strategy_id, name):
+                        raise RuntimeError("Both strategy_id and name are required to import a strategy")
+                    authenticator = authentication.Authenticator.instance()
+                    strategy = models.get_cloud_strategy(authenticator, strategy_id)
+                    new_profile = models.import_strategy_as_profile(
+                        authenticator, strategy, name, description
+                    )
+                    profile_id = new_profile.profile_id
+                message = f"{new_profile.name} profile successfully imported."
+                success = True
             except FileNotFoundError:
-                flask.flash(f"Invalid profile url {url}", "danger")
+                message = f"Invalid profile url {url}"
+                success = False
             except Exception as err:
-                flask.flash(f"Error when importing profile: {err}", "danger")
+                message = f"Error when importing profile: {err}"
+                success = False
+            if flask.request.method == "POST":
+                return util.get_rest_reply(
+                    flask.jsonify({"text": message, "profile_id": profile_id}),
+                    code=200 if success else 400
+                )
+            flask.flash(f"{message}", "success" if success else "danger")
             return flask.redirect(next_url)
         if action == "export":
             profile_id = flask.request.args.get("profile_id")

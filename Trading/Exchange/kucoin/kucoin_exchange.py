@@ -431,9 +431,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             # no funding info in ticker
             return {}
         funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
-        # from super().parse_funding_rate
         previous_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value]
         fixed.update({
+            # patch NEXT_FUNDING_TIME in tentacle
             trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
                 previous_funding_timestamp + self.KUCOIN_DEFAULT_FUNDING_TIME,
         })

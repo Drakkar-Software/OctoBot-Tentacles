@@ -18,6 +18,8 @@ import typing
 
 import ccxt
 
+import octobot_commons.constants as commons_constants
+
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
@@ -127,11 +129,6 @@ class Binance(exchanges.RestExchange):
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
             }
         }
-        if self.exchange_manager.is_future:
-            config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
-        elif self.exchange_manager.is_spot_only:
-            # only fetch spot markets
-            config[ccxt_constants.CCXT_OPTIONS]["fetchMarkets"] = ["spot"]
         return config
 
     async def get_balance(self, **kwargs: dict):
@@ -220,6 +217,7 @@ class Binance(exchanges.RestExchange):
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     STOP_MARKET = 'stop_market'
     STOP_ORDERS = [STOP_MARKET]
+    BINANCE_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
@@ -273,6 +271,27 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
         parsed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \
             fixed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value]
         return parsed
+
+    def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
+        """
+        Binance last funding time is not provided
+        To obtain the last_funding_time :
+        => timestamp(next_funding_time) - timestamp(BINANCE_DEFAULT_FUNDING_TIME)
+        """
+        if from_ticker:
+            # no funding info in ticker
+            return {}
+        else:
+            funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+            funding_next_timestamp = float(
+                funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value, 0)
+            )
+            # patch LAST_FUNDING_TIME in tentacle
+            funding_dict.update({
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                    max(funding_next_timestamp - self.BINANCE_DEFAULT_FUNDING_TIME, 0)
+            })
+        return funding_dict
 
 
 def _filter_positions(positions):

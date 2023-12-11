@@ -232,6 +232,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
                     price, False, current_symbol_holding, market_quantity
                 )
+
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             orders_should_have_been_created = False
@@ -240,6 +241,11 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             limit_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 price if self.USE_BUY_MARKET_ORDERS_VALUE else self.get_limit_price(price)
+            )
+            quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_MARKET, quantity,
+                price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+                trading_enums.TradeOrderSide.BUY, max_buy_size
             )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,

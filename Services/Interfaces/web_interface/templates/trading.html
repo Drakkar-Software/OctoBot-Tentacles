@@ -134,6 +134,11 @@
                     <div class="card-body">
                         {{ waiter("pnl-waiter", "Loading Profit and Loss") }}
                         <div class="w-100">
+                            {% if might_have_positions %}
+                            <div class="alert alert-info mt-4">
+                                When trading futures, PNL might be incorrect. The team is working on fixing this issue.
+                            </div>
+                            {% endif %}
                             <div class="d-flex justify-content-between">
                                 <h4>
                                     <span id="match-trades-count" class="badge font-size-90 badge-success"></span>

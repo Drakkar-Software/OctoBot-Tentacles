@@ -36,20 +36,16 @@ def register(blueprint):
             flask.flash(f"Error when contacting the community server: {e}", "error")
         if logged_in_email is None and not use_preview:
             return flask.redirect('community_login')
-        tentacles_packages = models.get_account_tentacles_packages(authenticator) if logged_in_email else []
-        default_image = flask.url_for('static', filename="img/community/tentacles_packages_previews/octobot.png")
+        strategies = models.get_cloud_strategies(authenticator)
         return flask.render_template(
             'community.html',
-            use_preview=use_preview,
-            preview_tentacles_packages=models.get_preview_tentacles_packages(flask.url_for),
             current_logged_in_email=logged_in_email,
             role=authenticator.user_account.supports.support_role,
             is_donor=bool(authenticator.user_account.supports.is_donor()),
-            tentacles_packages=tentacles_packages,
+            strategies=strategies,
             current_bots_stats=models.get_current_octobots_stats(),
             all_user_bots=models.get_all_user_bots(),
             selected_user_bot=models.get_selected_user_bot(),
-            default_tentacles_package_image=default_image,
             can_logout=models.can_logout(),
             can_select_bot=models.can_select_bot(),
         )

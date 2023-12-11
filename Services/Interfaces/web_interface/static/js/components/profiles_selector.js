@@ -33,5 +33,4 @@ $(document).ready(function() {
     }
 
     ensureModals();
-    startTutorialIfNecessary("profile_selector");
 });

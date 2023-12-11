@@ -33,6 +33,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
 import octobot_trading.errors as trading_errors
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes.script_keywords as script_keywords
 
 
@@ -143,9 +144,13 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             else:
                 initial_entry_order_type = trading_enums.TraderOrderType.SELL_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.SELL_LIMIT
+            adapted_entry_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_funds
+            )
             # initial entry
             orders_should_have_been_created = await self._create_entry_order(
-                initial_entry_order_type, quantity, initial_entry_price,
+                initial_entry_order_type, adapted_entry_quantity, initial_entry_price,
                 symbol_market, symbol, created_orders, price
             )
             # secondary entries
@@ -165,8 +170,16 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             else order.origin_quantity
                             for order in created_orders
                         )
-                        if remaining_funds < ((secondary_quantity * initial_entry_price)
-                            if side is trading_enums.TradeOrderSide.BUY else secondary_quantity):
+                        adapted_secondary_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                            self.exchange_manager, symbol, initial_entry_order_type, secondary_quantity,
+                            initial_entry_price,
+                            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, remaining_funds
+                        )
+                        skip_other_orders = adapted_secondary_quantity != secondary_quantity
+                        if skip_other_orders or remaining_funds < (
+                            (secondary_quantity * initial_entry_price)
+                            if side is trading_enums.TradeOrderSide.BUY else secondary_quantity
+                        ):
                             self.logger.debug(
                                 f"Not enough available funds to create {symbol} {i + 1}/"
                                 f"{self.trading_mode.secondary_entry_orders_count} secondary order with quantity of "
@@ -174,7 +187,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             )
                             continue
                         multiplier = self.trading_mode.entry_limit_orders_price_multiplier + \
-                                     (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
+                            (i + 1) * self.trading_mode.secondary_entry_orders_price_multiplier
                         secondary_target_price = price * (
                             (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
                             (1 + multiplier)
@@ -203,7 +216,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
 
     async def _create_entry_order(
-            self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+        self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
     ):
         for order_quantity, order_price in \
                 trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
@@ -281,8 +294,11 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
                     )
                 )
-                take_profit_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
+                take_profit_order_type = self.exchange_manager.trader.get_take_profit_order_type(
+                    entry_order,
+                    trading_enums.TraderOrderType.BUY_LIMIT
                     if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+                )
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, take_profit_price, take_profit_order_type, None,
                     quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
@@ -326,6 +342,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     MINUTES_BEFORE_NEXT_BUY = "minutes_before_next_buy"
     TRIGGER_MODE = "trigger_mode"
     CANCEL_OPEN_ORDERS_AT_EACH_ENTRY = "cancel_open_orders_at_each_entry"
+    HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD = "health_check_orphan_funds_threshold"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -484,6 +501,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [DCATradingModeProducer]
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
     SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True
+    SUPPORTS_HEALTH_CHECK = True
+    DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD = decimal.Decimal("0.15")  # 15%
+    HEALTH_CHECK_FILL_ORDERS_TIMEOUT = 20
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -508,6 +528,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.stop_loss_price_multiplier = DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER
 
         self.cancel_open_orders_at_each_entry = True
+        self.health_check_orphan_funds_threshold = self.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD
 
         # enable initialization orders
         self.are_initialization_orders_pending = True
@@ -687,9 +708,35 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )) / trading_constants.ONE_HUNDRED
 
         self.cancel_open_orders_at_each_entry = self.UI.user_input(
-            DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN, self.cancel_open_orders_at_each_entry, inputs,
+            DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN,
+            self.cancel_open_orders_at_each_entry, inputs,
             title="Cancel open orders on each entry: Cancel existing orders from previous iteration on each entry.",
         )
+
+        self.is_health_check_enabled = self.UI.user_input(
+            self.ENABLE_HEALTH_CHECK, commons_enums.UserInputTypes.BOOLEAN,
+            self.is_health_check_enabled, inputs,
+            title="Health check: when enabled, OctoBot will automatically sell traded assets that are not associated "
+                  "to a sell order and that represent at least the 'Health check threshold' part of the "
+                  "portfolio. Health check can be useful to avoid inactive funds, for example if a buy order got "
+                  "filled but no sell order was created. Requires a common quote market for each traded pair. "
+                  "Warning: will sell any asset associated to a trading pair that is not covered by a sell order, "
+                  "even if not bought by OctoBot or this trading mode.",
+        )
+        self.health_check_orphan_funds_threshold = decimal.Decimal(str(
+            self.UI.user_input(
+                DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD, commons_enums.UserInputTypes.FLOAT,
+                float(self.health_check_orphan_funds_threshold * trading_constants.ONE_HUNDRED), inputs,
+                title="Health check threshold: Minimum % of the portfolio taken by a traded asset that is not in "
+                      "sell orders. Assets above this threshold will be sold for the common quote market during "
+                      "Health check.",
+                editor_options={
+                    commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                        self.ENABLE_HEALTH_CHECK: True
+                    }
+                }
+            )
+        )) / trading_constants.ONE_HUNDRED
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
@@ -719,3 +766,91 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         return await trading_modes.convert_assets_to_target_asset(
             self, sellable_assets, target_asset, tickers
         )
+
+    async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
+        common_quote = trading_exchanges.get_common_traded_quote(self.exchange_manager)
+        if (
+            self.exchange_manager.is_backtesting
+            or common_quote is None
+            or not (self.use_take_profit_exit_orders or self.use_stop_loss)
+        ):
+            # skipped when:
+            # - backtesting
+            # - common_quote is unset
+            # - not using take profit or stop losses, health check should not be used
+            return []
+        created_orders = []
+        for asset, amount in self._get_lost_funds_to_sell(common_quote, chained_orders):
+            # sell lost funds
+            self.logger.info(
+                f"Health check: selling {amount} {asset} into {common_quote} on {self.exchange_manager.exchange_name}"
+            )
+            try:
+                asset_orders = await trading_modes.convert_asset_to_target_asset(
+                    self, asset, common_quote, tickers, asset_amount=amount
+                )
+                if not asset_orders:
+                    self.logger.info(
+                        f"Health check: Not enough funds to create an order according to exchanges rules using "
+                        f"{amount} {asset} into {common_quote} on {self.exchange_manager.exchange_name}"
+                    )
+                else:
+                    created_orders.extend(asset_orders)
+            except Exception as err:
+                self.logger.exception(
+                    err, True, f"Error when creating order to sell {asset} into {common_quote}: {err}"
+                )
+        if created_orders:
+            await asyncio.gather(
+                *[
+                    trading_personal_data.wait_for_order_fill(
+                        order, self.HEALTH_CHECK_FILL_ORDERS_TIMEOUT, True
+                    ) for order in created_orders
+                ]
+            )
+        return created_orders
+
+    def _get_lost_funds_to_sell(self, common_quote: str, chained_orders: list) -> list[(str, decimal.Decimal)]:
+        asset_and_amount = []
+        value_holder = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+        traded_base_assets = set(
+            symbol.base
+            for symbol in self.exchange_manager.exchange_config.traded_symbols
+        )
+        sell_orders = [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders() + chained_orders
+            if order.side is trading_enums.TradeOrderSide.SELL
+        ]
+        orphan_asset_values_by_asset = {}
+        total_traded_assets_value = value_holder.value_converter.evaluate_value(
+            common_quote,
+            self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                common_quote
+            ).total,
+            target_currency=common_quote,
+            init_price_fetchers=False
+        )
+        for asset in traded_base_assets:
+            holdings = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                asset
+            ).total
+            holdings_value = value_holder.value_converter.evaluate_value(
+                asset, holdings, target_currency=common_quote, init_price_fetchers=False
+            )
+            total_traded_assets_value += holdings_value
+            holdings_in_sell_orders = sum(
+                order.origin_quantity
+                for order in sell_orders
+                if symbol_util.parse_symbol(order.symbol).base == asset
+            )
+            orphan_amount = holdings - holdings_in_sell_orders
+            if orphan_amount and orphan_amount > 0:
+                orphan_asset_values_by_asset[asset] = (holdings_value * orphan_amount / holdings, orphan_amount)
+
+        for asset, value_and_orphan_amount in orphan_asset_values_by_asset.items():
+            value, orphan_amount = value_and_orphan_amount
+            ratio = value / total_traded_assets_value
+            if ratio > self.health_check_orphan_funds_threshold:
+                asset_and_amount.append((asset, orphan_amount))
+        return asset_and_amount

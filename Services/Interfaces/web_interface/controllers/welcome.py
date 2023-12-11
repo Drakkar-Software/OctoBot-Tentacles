@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Tentacles
+#  Drakkar-Software OctoBot-Interfaces
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -13,11 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import tentacles.Trading.Exchange.huobipro.huobipro_exchange as huobipro_exchange
-import tentacles.Trading.Exchange.huobi_websocket_feed.huobi_websocket as huobi_websocket
+import flask
+
+import tentacles.Services.Interfaces.web_interface.login as login
 
 
-class HuobiProCCXTWebsocketConnector(huobi_websocket.HuobiCCXTWebsocketConnector):
-    @classmethod
-    def get_name(cls):
-        return huobipro_exchange.HuobiPro.get_name()
+def register(blueprint):
+    @blueprint.route("/welcome")
+    @login.login_required_when_activated
+    def welcome():
+        return flask.render_template("welcome.html")

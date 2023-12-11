@@ -55,6 +55,7 @@ async def tools(symbol="BTC/USDT"):
         # use backtesting not to spam exchanges apis
         exchange_manager.is_simulated = True
         exchange_manager.is_backtesting = True
+        exchange_manager.use_cached_markets = False
         backtesting = await backtesting_api.initialize_backtesting(
             config,
             exchange_ids=[exchange_manager.id],

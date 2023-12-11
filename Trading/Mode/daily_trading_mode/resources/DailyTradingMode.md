@@ -18,12 +18,13 @@ and create new ones according to its new state.
 In this mode, both buy and sell orders will be exclusively created upon strategy and evaluator signals.
 
 ### Target profits mode
-On Target profits mode, the DailyTradingMode will only listen for LONG signals 
-(or position-increasing signals when trading futures). When such a signal is received, it will create an entry order 
+On Target profits mode, the DailyTradingMode will only listen for LONG signals when trading spot 
+and position-increasing signals when trading futures, which means both SHORT and LONG. When such a signal is received, it will create an entry order 
 that will be followed by a take profit (and possibly a stop-loss) when filled. In this mode, only entry signals are 
 defined by your strategy and evaluator configuration as take profit and stop loss targets are defined in 
 the Target profits mode configuration.  
 *Using the DailyTradingMode in Target profits mode is compatible with PNL history.*
 
 ### About futures trading  
-The **Target profits** mode is more adapted to futures trading.
+The **Target profits** mode is more adapted to futures trading as it creates take profits and stop losses (when enabled) 
+to close created positions.

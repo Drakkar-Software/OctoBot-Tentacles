@@ -129,6 +129,7 @@ def register_context_processor(web_interface_instance):
             OCTOBOT_COMMUNITY_LANDING_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_LANDING_URL,
             OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
             CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
+            LOCALE=constants.DEFAULT_LOCALE,
             IS_DEMO=constants.IS_DEMO,
             IS_CLOUD=constants.IS_CLOUD_ENV,
             CAN_INSTALL_TENTACLES=constants.CAN_INSTALL_TENTACLES,

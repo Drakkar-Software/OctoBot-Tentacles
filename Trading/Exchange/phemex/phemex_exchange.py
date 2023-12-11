@@ -25,7 +25,7 @@ import octobot_trading.enums as trading_enums
 
 class Phemex(exchanges.RestExchange):
     DESCRIPTION = ""
-
+    ALLOWED_OHLCV_LIMITS = [5, 10, 50, 100, 500, 1000]
     FIX_MARKET_STATUS = True
 
     @classmethod
@@ -34,6 +34,23 @@ class Phemex(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return PhemexCCXTAdapter
+
+    def _get_adapted_limit(self, limit):
+        prev = self.ALLOWED_OHLCV_LIMITS[0]
+        for adapted in self.ALLOWED_OHLCV_LIMITS:
+            if adapted > limit:
+                return prev
+            prev = adapted
+        return prev
+
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
+        if limit not in self.ALLOWED_OHLCV_LIMITS:
+            limit = self._get_adapted_limit(limit)
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+
+    async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
+                              **kwargs: dict) -> typing.Optional[list]:
+        return (await self.get_symbol_prices(symbol, time_frame, limit=5))[-1:]
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
