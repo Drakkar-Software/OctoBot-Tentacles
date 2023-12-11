@@ -183,8 +183,9 @@ class GPTService(services.AbstractService):
     async def _fetch_and_store_history(
         self, authenticator, exchange_name, symbol, time_frame, version, min_timestamp: float, max_timestamp: float
     ):
+        # no need to fetch a particular exchange
         signals_by_candle_open_time = await authenticator.get_gpt_signals_history(
-            exchange_name, symbol, time_frame,
+            None, symbol, time_frame,
             time_frame_manager.get_last_timeframe_time(time_frame, min_timestamp),
             time_frame_manager.get_last_timeframe_time(time_frame, max_timestamp),
             version
@@ -192,11 +193,11 @@ class GPTService(services.AbstractService):
         if signals_by_candle_open_time:
             self.logger.info(
                 f"Fetched {len(signals_by_candle_open_time)} ChatGPT signals "
-                f"history for {symbol} {time_frame} on {exchange_name}."
+                f"history for {symbol} {time_frame} on any exchange."
             )
         else:
             self.logger.error(
-                f"No ChatGPT signal history for {symbol} on {time_frame.value} for {exchange_name} with {version}. "
+                f"No ChatGPT signal history for {symbol} on {time_frame.value} for any exchange with {version}. "
                 f"Please check {self._supported_history_url()} to get the list of supported signals history."
             )
         self.store_signal_history(
