@@ -377,12 +377,17 @@ def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp, 
         profile = profiles_model.get_profile(profile_id)
         tentacles_setup_config = profiles_model.get_tentacles_setup_config_from_profile(profile)
         strategies = configuration_model.get_config_activated_strategies(tentacles_setup_config)
-        time_frames = [
-            tf
-            for tf in configuration_model.get_traded_time_frames(
-                exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
-            ) or (commons_enums.TimeFrames.ONE_MINUTE,)
-        ]
+        time_frames = list(set(
+            [
+                tf
+                for tf in configuration_model.get_traded_time_frames(
+                    exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
+                ) or (commons_enums.TimeFrames.ONE_MINUTE,)
+            ] + [
+                commons_enums.TimeFrames(tf)
+                for tf in profile.extra_backtesting_time_frames
+            ]
+        ))
         exchange_symbols = trading_api.get_all_exchange_symbols(exchange_manager)
         profile_symbols = trading_api.get_config_symbols(profile.config, True)
         symbols = [

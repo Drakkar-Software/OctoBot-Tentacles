@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import copy
 import os
 import json
 import time
@@ -52,6 +53,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
                          start_timestamp=start_timestamp, end_timestamp=end_timestamp)
         self.exchange_type = None
         self.exchange_manager = None
+        self.fetch_exchange_manager = None
         self.file_name = data.get_backtesting_file_name(self.__class__,
                                                         self.get_permanent_file_identifier,
                                                         data_format=data_format)
@@ -114,6 +116,19 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         try:
             self.exchange_manager = trading_api.get_exchange_manager_from_exchange_id(self.exchange_id)
 
+            # use a secondary exchange manager to fetch candles to fix ccxt pagination issues
+            # seen on ccxt 4.1.82
+            other_config = copy.copy(self.config)
+            other_config[commons_constants.CONFIG_TIME_FRAME] = []   # any value here to avoid crashing
+            self.fetch_exchange_manager = await trading_api.create_exchange_builder(other_config, self.exchange_name) \
+                .is_simulated() \
+                .is_rest_only() \
+                .is_exchange_only() \
+                .is_future(self.exchange_manager.is_future) \
+                .disable_trading_mode() \
+                .use_tentacles_setup_config(self.tentacles_setup_config) \
+                .build()
+
             await self.adapt_timestamps()
 
             # create/update description
@@ -164,6 +179,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         if should_stop_database:
             await self.database.stop()
             self.finalize_database()
+        await self.fetch_exchange_manager.stop()
         self.exchange_manager = None
         self.in_progress = False
         self.finished = True
@@ -213,7 +229,7 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
         last_progress = 0
         symbol_id = str(symbol)
         async for candles in trading_api.get_historical_ohlcv(
-            self.exchange_manager, symbol_id, time_frame, start_time, end_time
+            self.fetch_exchange_manager, symbol_id, time_frame, start_time, end_time
         ):
             await self.save_ohlcv(
                     exchange=exchange,
@@ -406,8 +422,8 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
             return candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0] * 1000
         except KeyError:
             # symbol or timeframe not available in live exchange
-            fetched_candles = await self.exchange_manager.exchange.get_symbol_prices(
-                str(symbol), time_frame, since=ideal_start_timestamp
+            fetched_candles = await self.fetch_exchange_manager.exchange.get_symbol_prices(
+                str(symbol), time_frame, limit=1, since=ideal_start_timestamp
             )
             if not fetched_candles:
                 return None
