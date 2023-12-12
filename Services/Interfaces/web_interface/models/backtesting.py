@@ -180,7 +180,9 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                 interfaces_util.run_in_bot_main_loop(
                     octobot_api.stop_independent_backtesting(previous_independent_backtesting)
                 )
+            profile = profiles_model.get_current_profile()
             if profile_id is not None:
+                profile = profiles_model.get_profile(profile_id)
                 config = profiles_model.get_profile(profile_id).config
                 tentacles_setup_config = profiles_model.get_tentacles_setup_config_from_profile_id(profile_id)
             else:
@@ -195,6 +197,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
             exchange_type, contract_type = _parse_trading_type(trading_type)
             config[commons_constants.CONFIG_EXCHANGE_TYPE] = exchange_type
             config[commons_constants.CONFIG_CONTRACT_TYPE] = contract_type
+            config[commons_constants.CONFIG_REQUIRED_EXTRA_TIMEFRAMES] = profile.extra_backtesting_time_frames
             tools[constants.BOT_TOOLS_BACKTESTING_SOURCE] = source
             if is_optimizer_running and files is None:
                 files = [get_data_files_from_current_bot(exchange_id, start_timestamp, end_timestamp,
@@ -374,12 +377,17 @@ def create_snapshot_data_collector(exchange_id, start_timestamp, end_timestamp, 
         profile = profiles_model.get_profile(profile_id)
         tentacles_setup_config = profiles_model.get_tentacles_setup_config_from_profile(profile)
         strategies = configuration_model.get_config_activated_strategies(tentacles_setup_config)
-        time_frames = [
-            tf
-            for tf in configuration_model.get_traded_time_frames(
-                exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
-            ) or (commons_enums.TimeFrames.ONE_MINUTE,)
-        ]
+        time_frames = list(set(
+            [
+                tf
+                for tf in configuration_model.get_traded_time_frames(
+                    exchange_manager, strategies=strategies, tentacles_setup_config=tentacles_setup_config
+                ) or (commons_enums.TimeFrames.ONE_MINUTE,)
+            ] + [
+                commons_enums.TimeFrames(tf)
+                for tf in profile.extra_backtesting_time_frames
+            ]
+        ))
         exchange_symbols = trading_api.get_all_exchange_symbols(exchange_manager)
         profile_symbols = trading_api.get_config_symbols(profile.config, True)
         symbols = [
