@@ -453,12 +453,6 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
-        if self.connector.exchange_manager.is_future \
-                and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
-            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-            contract_size = self.connector.get_contract_size(symbol)
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
         self._adapt_order_type(fixed)
         return fixed
 
