@@ -384,13 +384,8 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, **kwargs)
-        if self.connector.exchange_manager.is_future \
-                and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
-            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-            contract_size = self.connector.get_contract_size(symbol)
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
-        if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+        if self.connector.exchange_manager.is_future and \
+                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
