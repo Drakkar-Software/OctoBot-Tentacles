@@ -1,9 +1,10 @@
 {% extends "layout.html" %}
 {% set active_page = "home" %}
 {% block body %}
+    <br>
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
     {% if not IS_CLOUD %}
-    <div class="d-none alert alert-success text-center mt-2" role="alert">
+    <div class="d-none alert alert-success text-center my-2" role="alert">
         <h5 class="d-none d-sm-inline"><span class="d-none d-md-inline"><i class="far fa-bell"></i> Good news ! </span>OctoBot version <span update-url="{{ url_for('api.upgrade_version') }}" id="upgradeVersion"></span> is available.</h5><button route="{{ url_for('commands', cmd='update') }}" type="button" class="btn btn-warning waves-effect">Upgrade now <i class="fas fa-cloud-download-alt"></i></button>
     </div>
     {% endif %}
@@ -17,7 +18,7 @@
             </div>
         {% endif %}
         {% if is_in_stating_community_env() %}
-        <div class="card mt-2 mt-md-4">
+        <div class="card my-2 my-md-4">
             <div class="card-header"><h2>
                 Welcome to the OctoBot beta environment
                 </h2>
@@ -36,7 +37,7 @@
             </div>
         </div>
         {% endif %}
-        <div class="card mt-2 mt-md-4" id="profitability-display">
+        <div class="card" id="profitability-display">
             <div class="card-header">
                 <h4>
                     <div class="row">
@@ -78,7 +79,7 @@
                     <div id="portfolio_historyChart"
                          data-url="{{url_for('api.historical_portfolio_value', currency=reference_unit, time_frame='')}}"
                          data-reference-market="{{reference_unit}}"
-                         class="h-100 w-100">
+                         class="w-100">
                     </div>
                 </div>
             </div>
