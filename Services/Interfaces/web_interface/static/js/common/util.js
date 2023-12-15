@@ -147,6 +147,10 @@ function isMobileDisplay() {
     return $(window).width() < mobile_width_breakpoint;
 }
 
+function isMediumDisplay() {
+    return $(window).width() < medium_width_breakpoint;
+}
+
 const handle_rounded_numbers_display = () => {
     $(".rounded-number").each(function (){
         const text = $(this).text().trim();

@@ -24,10 +24,11 @@ $(document).ready(function() {
         const success = (updated_data, update_url, dom_root_element, msg, status) => {
             const graphDiv = $(`#profitability_graph`);
             const defaultDiv = $(`#no_profitability_graph`);
+            const height = isMobileDisplay()? 250 : isMediumDisplay() ? 450 : undefined;
             if(msg.length > 1){
                 graphDiv.removeClass(hidden_class);
                 defaultDiv.addClass(hidden_class);
-                create_line_chart(document.getElementById(element_id), msg, title, 'white', update);
+                create_line_chart(document.getElementById(element_id), msg, title, 'white', update, height);
             }else{
                 graphDiv.addClass(hidden_class);
                 defaultDiv.removeClass(hidden_class);

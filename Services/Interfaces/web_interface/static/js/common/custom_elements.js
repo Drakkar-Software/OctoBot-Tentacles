@@ -93,7 +93,7 @@ function create_doughnut_chart(element, data, title, fontColor='white', animate=
     });
 }
 
-function create_line_chart(element, data, title, fontColor='white', update=true){
+function create_line_chart(element, data, title, fontColor='white', update=true, height=undefined){
     const trace = {
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.value),
@@ -105,6 +105,7 @@ function create_line_chart(element, data, title, fontColor='white', update=true)
     const minDisplayY = Math.max(0, minY - ((maxDisplayY - minY) / 2));
     const layout = {
         title: title,
+        height: height,
         dragmode: isMobileDisplay() ? false : 'zoom',
         margin: {
             l: 30,
