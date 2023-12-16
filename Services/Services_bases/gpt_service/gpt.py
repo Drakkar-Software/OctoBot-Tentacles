@@ -36,6 +36,7 @@ import octobot.community as community
 class GPTService(services.AbstractService):
     BACKTESTING_ENABLED = True
     DEFAULT_MODEL = "gpt-3.5-turbo"
+    NO_TOKEN_LIMIT_VALUE = -1
 
     def get_fields_description(self):
         if self._env_secret_key is None:
@@ -58,7 +59,11 @@ class GPTService(services.AbstractService):
         self.model = os.getenv(services_constants.ENV_GPT_MODEL, self.DEFAULT_MODEL)
         self.stored_signals: tree.BaseTree = tree.BaseTree()
         self.models = []
-        self.daily_tokens_limit = int(os.getenv(services_constants.ENV_GPT_DAILY_TOKENS_LIMIT, 0))
+        self._env_daily_token_limit = int(os.getenv(
+            services_constants.ENV_GPT_DAILY_TOKENS_LIMIT,
+            self.NO_TOKEN_LIMIT_VALUE)
+        )
+        self._daily_tokens_limit = self._env_daily_token_limit
         self.consumed_daily_tokens = 1
         self.last_consumed_token_date = None
 
@@ -227,6 +232,14 @@ class GPTService(services.AbstractService):
     def clear_signal_history(self):
         self.stored_signals.clear()
 
+    def allow_token_limit_update(self):
+        return self._env_daily_token_limit == self.NO_TOKEN_LIMIT_VALUE
+
+    def apply_daily_token_limit_if_possible(self, updated_limit: int):
+        # do not allow updating daily_tokens_limit when set from environment variables
+        if self.allow_token_limit_update():
+            self._daily_tokens_limit = updated_limit
+
     def _supported_history_url(self):
         return f"{community.IdentifiersProvider.COMMUNITY_LANDING_URL}/features/chatgpt-trading"
 
@@ -234,10 +247,12 @@ class GPTService(services.AbstractService):
         if self.last_consumed_token_date != datetime.date.today():
             self.consumed_daily_tokens = 0
             self.last_consumed_token_date = datetime.date.today()
-        if not self.daily_tokens_limit:
+        if self._daily_tokens_limit == self.NO_TOKEN_LIMIT_VALUE:
             return
-        if self.consumed_daily_tokens >= self.daily_tokens_limit:
-            raise errors.RateLimitError("Daily rate limit reached")
+        if self.consumed_daily_tokens >= self._daily_tokens_limit:
+            raise errors.RateLimitError(
+                f"Daily rate limit reached (used {self.consumed_daily_tokens} out of {self._daily_tokens_limit})"
+            )
 
     def _update_token_usage(self, consumed_tokens):
         self.consumed_daily_tokens += consumed_tokens
