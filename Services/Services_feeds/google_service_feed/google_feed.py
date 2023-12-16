@@ -33,6 +33,10 @@ class GoogleServiceFeedChannel(services_channel.AbstractServiceFeedChannel):
 class TrendTopic:
     def __init__(self, refresh_time, keywords, category=0, time_frame="today 5-y", geo="", grop=""):
         self.keywords = keywords
+        self.sanitized_keywords = [
+            keyword.replace(" ", "+")
+            for keyword in keywords
+        ]
         self.category = category
         self.time_frame = time_frame
         self.geo = geo
@@ -72,7 +76,8 @@ class GoogleServiceFeed(service_feeds.AbstractServiceFeed):
         return max(0, closest_wakeup - time.time())
 
     async def _get_topic_trend(self, topic):
-        await self.trends_req_builder.async_build_payload(kw_list=topic.keywords,
+        self.logger.debug(f"Fetching trend on {topic.keywords} over {topic.time_frame}")
+        await self.trends_req_builder.async_build_payload(kw_list=topic.sanitized_keywords,
                                                           cat=topic.category,
                                                           timeframe=topic.time_frame,
                                                           geo=topic.geo,
