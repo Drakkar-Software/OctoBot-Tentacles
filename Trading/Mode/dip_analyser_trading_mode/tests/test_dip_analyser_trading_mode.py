@@ -103,24 +103,51 @@ async def test_create_limit_bottom_order(tools):
     market_quantity = decimal.Decimal("2")
     volume_weight = decimal.Decimal("1")
     risk_multiplier = decimal.Decimal("1.1")
-    await producer._create_bottom_order(1, volume_weight, 1)
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 1))
-    await asyncio_tools.wait_asyncio_next_cycle()
 
-    order = trading_api.get_open_orders(trader.exchange_manager)[0]
-    assert isinstance(order, trading_personal_data.BuyLimitOrder)
-    expected_quantity = market_quantity * risk_multiplier * \
-        consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
-        consumer.SOFT_MAX_CURRENCY_RATIO
-    assert order.origin_quantity == expected_quantity
+    market_status = producer.exchange_manager.exchange.get_market_status(producer.trading_mode.symbol, with_fixer=False)
+    _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
 
-    expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
-    assert order.origin_price == expected_price
-    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
+    def _decimal_adapt_order_quantity_because_fees(
+        exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
+        price: decimal.Decimal,
+        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
+        quote_available_funds: decimal.Decimal
+    ):
+        return quantity
 
-    assert order.order_id in consumer.sell_targets_by_order_id
+    with mock.patch.object(
+            trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+            mock.Mock(side_effect=_decimal_adapt_order_quantity_because_fees)
+    ) as decimal_adapt_order_quantity_because_fees_mock:
+        await producer._create_bottom_order(1, volume_weight, 1)
+        # create as task to allow creator's queue to get processed
+        await asyncio.create_task(_check_open_orders_count(trader, 1))
+        await asyncio_tools.wait_asyncio_next_cycle()
+
+        order = trading_api.get_open_orders(trader.exchange_manager)[0]
+        adapted_args = list(decimal_adapt_order_quantity_because_fees_mock.mock_calls[0].args)
+        adapted_args[3] = trading_personal_data.decimal_adapt_quantity(market_status, adapted_args[3])
+        adapted_args[4] = trading_personal_data.decimal_adapt_price(market_status, adapted_args[4])
+        assert adapted_args == [
+            producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+            order.origin_quantity,
+            order.origin_price,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+            decimal.Decimal('2000')
+        ]
+
+        assert isinstance(order, trading_personal_data.BuyLimitOrder)
+        expected_quantity = market_quantity * risk_multiplier * \
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+            consumer.SOFT_MAX_CURRENCY_RATIO
+        assert order.origin_quantity == expected_quantity
+
+        expected_price = price * consumer.LIMIT_PRICE_MULTIPLIER
+        assert order.origin_price == expected_price
+        portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+        assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
+
+        assert order.order_id in consumer.sell_targets_by_order_id
 
 
 async def test_create_market_bottom_order(tools):
@@ -133,24 +160,51 @@ async def test_create_market_bottom_order(tools):
     consumer.USE_BUY_MARKET_ORDERS_VALUE = True
     trades = trading_api.get_trade_history(trader.exchange_manager)
     assert trades == []
-    await producer._create_bottom_order(1, volume_weight, 1)
-    # create as task to allow creator's queue to get processed (market order is instantly filled)
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
-    await asyncio_tools.wait_asyncio_next_cycle()
 
-    trade = trading_api.get_trade_history(trader.exchange_manager)[0]
-    assert trade.trade_type == trading_enums.TraderOrderType.BUY_MARKET
-    expected_quantity = market_quantity * risk_multiplier * \
-        consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
-        consumer.SOFT_MAX_CURRENCY_RATIO
-    assert trade.origin_quantity == expected_quantity
+    market_status = producer.exchange_manager.exchange.get_market_status(producer.trading_mode.symbol, with_fixer=False)
+    _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
 
-    # no price multiplier used as it is a market order (use market price)
-    assert trade.origin_price == price
-    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
-    assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
+    def _decimal_adapt_order_quantity_because_fees(
+        exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
+        price: decimal.Decimal,
+        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
+        quote_available_funds: decimal.Decimal
+    ):
+        return quantity
 
-    assert trade.origin_order_id in consumer.sell_targets_by_order_id
+    with mock.patch.object(
+            trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+            mock.Mock(side_effect=_decimal_adapt_order_quantity_because_fees)
+    ) as decimal_adapt_order_quantity_because_fees_mock:
+        await producer._create_bottom_order(1, volume_weight, 1)
+        # create as task to allow creator's queue to get processed (market order is instantly filled)
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        await asyncio_tools.wait_asyncio_next_cycle()
+
+        trade = trading_api.get_trade_history(trader.exchange_manager)[0]
+        adapted_args = list(decimal_adapt_order_quantity_because_fees_mock.mock_calls[0].args)
+        adapted_args[3] = trading_personal_data.decimal_adapt_quantity(market_status, adapted_args[3])
+        adapted_args[4] = trading_personal_data.decimal_adapt_price(market_status, adapted_args[4])
+        assert adapted_args == [
+            producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_MARKET,
+            trade.origin_quantity,
+            trade.origin_price,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+            decimal.Decimal('2000')
+        ]
+
+        assert trade.trade_type == trading_enums.TraderOrderType.BUY_MARKET
+        expected_quantity = market_quantity * risk_multiplier * \
+            consumer.VOLUME_WEIGH_TO_VOLUME_PERCENT[volume_weight] * \
+            consumer.SOFT_MAX_CURRENCY_RATIO
+        assert trade.origin_quantity == expected_quantity
+
+        # no price multiplier used as it is a market order (use market price)
+        assert trade.origin_price == price
+        portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+        assert portfolio.get_currency_portfolio("USDT").available > trading_constants.ZERO
+
+        assert trade.origin_order_id in consumer.sell_targets_by_order_id
 
 
 async def test_create_bottom_order_with_configured_quantity(tools):
