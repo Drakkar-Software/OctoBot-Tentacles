@@ -1066,11 +1066,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             except (decimal.DivisionByZero, decimal.InvalidOperation):
                 # leave as is
                 pass
+        buying = order_type is trading_enums.TraderOrderType.BUY_MARKET
         target_amount = trading_personal_data.decimal_adapt_order_quantity_because_fees(
             self.exchange_manager, self.symbol, order_type, target_amount,
             current_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-            trading_enums.TradeOrderSide.BUY if order_type is trading_enums.TraderOrderType.BUY_MARKET
-            else trading_enums.TradeOrderSide.SELL, limiting_amount / current_price
+            trading_enums.TradeOrderSide.BUY if buying else trading_enums.TradeOrderSide.SELL,
+            market_available if buying else currency_available
         )
         to_create_details = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             target_amount,
