@@ -1230,90 +1230,145 @@ async def test_create_order():
         producer.symbol_market = symbol_market
         producer._refresh_symbol_data(symbol_market)
 
-        # SELL
+        _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
+        def _decimal_adapt_order_quantity_because_fees(
+            exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
+            price: decimal.Decimal,
+            taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
+            quote_available_funds: decimal.Decimal
+        ):
+            return quantity
 
-        # not enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(10)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
-        assert created_order == []
+        with mock.patch.object(
+                trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+                mock.Mock(side_effect=_decimal_adapt_order_quantity_because_fees)
+        ) as decimal_adapt_order_quantity_because_fees_mock:
 
-        # just enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(9)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
+            # SELL
 
-        # not enough quantity anymore
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal("0.0001")
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
-        assert created_orders == []
+            # enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            assert created_order.origin_quantity == quantity
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
+                created_order.origin_quantity,
+                created_order.origin_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
+                decimal.Decimal("0.1")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
 
-        # BUY
+            # not enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(10)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
+                decimal.Decimal('10'), decimal.Decimal('100'),
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
+                decimal.Decimal("0.09")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order == []
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
-        assert created_order is not None
+            # just enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(9)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
 
-        # not enough quantity in portfolio
-        price = decimal.Decimal(585)
-        quantity = decimal.Decimal(2)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
-        assert created_orders == []
+            # not enough quantity anymore
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal("0.0001")
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
+            assert created_orders == []
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(40)
-        quantity = decimal.Decimal(2)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 820
+            # BUY
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(205)
-        quantity = decimal.Decimal(4)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
-        assert created_order is not None
+            # enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+                created_order.origin_quantity,
+                created_order.origin_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+                decimal.Decimal("1000")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
+            assert created_order is not None
 
-        # not enough quantity in portfolio anymore
-        price = decimal.Decimal(205)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
-        assert created_orders == []
+            # not enough quantity in portfolio
+            price = decimal.Decimal(585)
+            quantity = decimal.Decimal(2)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+                decimal.Decimal('2'), decimal.Decimal('585'),
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+                decimal.Decimal("900")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
+            assert created_orders == []
+
+            # enough quantity in portfolio
+            price = decimal.Decimal(40)
+            quantity = decimal.Decimal(2)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 820
+
+            # enough quantity in portfolio
+            price = decimal.Decimal(205)
+            quantity = decimal.Decimal(4)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
+            assert created_order is not None
+
+            # not enough quantity in portfolio anymore
+            price = decimal.Decimal(205)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
+            assert created_orders == []
 
 
 async def test_create_new_orders():

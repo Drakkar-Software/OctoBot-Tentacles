@@ -237,14 +237,16 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             created_orders = []
             orders_should_have_been_created = False
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
+            order_type = trading_enums.TraderOrderType.BUY_MARKET \
+                if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT
             quantity = await self._get_buy_quantity_from_weight(ctx, volume_weight, max_buy_size, base)
             limit_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 price if self.USE_BUY_MARKET_ORDERS_VALUE else self.get_limit_price(price)
             )
             quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
-                self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_MARKET, quantity,
-                price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+                self.exchange_manager, symbol, order_type, quantity,
+                limit_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
                 trading_enums.TradeOrderSide.BUY, current_market_holding
             )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
@@ -254,8 +256,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
-                    order_type=trading_enums.TraderOrderType.BUY_MARKET
-                    if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT,
+                    order_type=order_type,
                     symbol=symbol,
                     current_price=price,
                     quantity=order_quantity,

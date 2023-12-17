@@ -421,7 +421,9 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
             quote_available = trading_api.get_portfolio_currency(self.exchange_manager, market).available
             selling = order_data.side == trading_enums.TradeOrderSide.SELL
             quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
-                self.exchange_manager, order_data.symbol, trading_enums.TraderOrderType.BUY_LIMIT, order_data.quantity,
+                self.exchange_manager, order_data.symbol,
+                trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT,
+                order_data.quantity,
                 order_data.price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
                 order_data.side, ((base_available / order_data.price) if selling else quote_available)
             )
