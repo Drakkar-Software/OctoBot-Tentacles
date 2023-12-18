@@ -177,7 +177,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                 await TelegramBotInterface._send_message(
                     update, f"_Pausing..._{interfaces_bots.EOL}`I'm cancelling my orders.`"
                 )
-                self.set_command_pause()
+                await self.set_command_pause()
 
     @staticmethod
     async def command_ping(update: telegram.Update, _: telegram.ext.ContextTypes.DEFAULT_TYPE):
@@ -200,8 +200,9 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
     @staticmethod
     async def command_profitability(update: telegram.Update, _: telegram.ext.ContextTypes.DEFAULT_TYPE):
         if TelegramBotInterface._is_valid_user(update):
-            await TelegramBotInterface._send_message(update, interfaces_bots.AbstractBotInterface.get_command_profitability(
-                markdown=True))
+            await TelegramBotInterface._send_message(
+                update, interfaces_bots.AbstractBotInterface.get_command_profitability(markdown=True)
+            )
 
     @staticmethod
     async def command_fees(update: telegram.Update, _: telegram.ext.ContextTypes.DEFAULT_TYPE):
@@ -214,7 +215,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
     async def command_sell_all_currencies(update: telegram.Update, _: telegram.ext.ContextTypes.DEFAULT_TYPE):
         if TelegramBotInterface._is_valid_user(update):
             await TelegramBotInterface._send_message(
-                update, f"`{interfaces_bots.AbstractBotInterface.get_command_sell_all_currencies()}`"
+                update, f"`{await interfaces_bots.AbstractBotInterface.get_command_sell_all_currencies()}`"
             )
 
     @staticmethod
@@ -225,7 +226,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
                 await TelegramBotInterface._send_message(update, "`Require a currency in parameter of this command.`")
             else:
                 await TelegramBotInterface._send_message(
-                    update, f"`{interfaces_bots.AbstractBotInterface.get_command_sell_all(currency)}`"
+                    update, f"`{await interfaces_bots.AbstractBotInterface.get_command_sell_all(currency)}`"
                 )
 
     @staticmethod
@@ -254,7 +255,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
         if TelegramBotInterface._is_valid_user(update):
             result = "Refresh"
             try:
-                interfaces_bots.AbstractBotInterface.set_command_portfolios_refresh()
+                await interfaces_bots.AbstractBotInterface.set_command_portfolios_refresh()
                 await TelegramBotInterface._send_message(update, f"`{result} successful`")
             except Exception as e:
                 await TelegramBotInterface._send_message(update, f"`{result} failure: {e}`")

@@ -74,8 +74,10 @@ async def test_all_commands():
         assert len(bot_interface.get_command_open_orders()) > 50
         assert len(bot_interface.get_command_fees()) > 50
         assert "Decimal" not in bot_interface.get_command_fees()
-        assert "Nothing to sell" in bot_interface.get_command_sell_all_currencies()
-        assert "Nothing to sell for BTC" in bot_interface.get_command_sell_all("BTC")
+        assert "Nothing to sell" in await bot_interface.get_command_sell_all_currencies()
+        assert "Nothing to sell for BTC" in await bot_interface.get_command_sell_all("BTC")
+        with pytest.raises(RuntimeError):
+            await bot_interface.set_command_portfolios_refresh()
         assert len(bot_interface.get_command_portfolio()) > 50
         assert "Decimal" not in bot_interface.get_command_portfolio()
         assert len(bot_interface.get_command_profitability()) > 50
@@ -85,3 +87,4 @@ async def test_all_commands():
                    for elem in
                    [interfaces.AbstractInterface.project_name, interfaces.AbstractInterface.project_version])
         assert "Hello, I'm OctoBot" in bot_interface.get_command_start()
+        assert await bot_interface.set_command_pause() is None
