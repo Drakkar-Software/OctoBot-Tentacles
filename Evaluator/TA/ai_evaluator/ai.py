@@ -48,7 +48,9 @@ class GPTEvaluator(evaluators.TAEvaluator):
         "Detrended Price Oscillator": tulipy.dpo,
     }
     SOURCES = ["Open", "High", "Low", "Close", "Volume", "Full candle (For no indicator only)"]
+    ALLOW_GPT_REEVALUATION_ENV = "ALLOW_GPT_REEVALUATIONS"
     GPT_MODELS = []
+    ALLOW_TOKEN_LIMIT_UPDATE = False
 
     def __init__(self, tentacles_setup_config):
         super().__init__(tentacles_setup_config)
@@ -67,7 +69,8 @@ class GPTEvaluator(evaluators.TAEvaluator):
                     commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(self.min_allowed_timeframe)]
         except ValueError:
             self.logger.error(f"Invalid timeframe configuration: unknown timeframe: '{self.min_allowed_timeframe}'")
-        self.allow_reevaluations = os_util.parse_boolean_environment_var("ALLOW_GPT_REEVALUATIONS", "True")
+        self.allow_reevaluations = os_util.parse_boolean_environment_var(self.ALLOW_GPT_REEVALUATION_ENV, "True")
+        self.gpt_tokens_limit = gpt_service.GPTService.NO_TOKEN_LIMIT_VALUE
         self.services_config = None
 
     def enable_reevaluation(self) -> bool:
@@ -122,6 +125,21 @@ class GPTEvaluator(evaluators.TAEvaluator):
                 inputs, options=list(self.GPT_MODELS),
                 title="GPT Model: the GPT model to use."
             )
+        if os_util.parse_boolean_environment_var(self.ALLOW_GPT_REEVALUATION_ENV, "True"):
+            self.allow_reevaluations = self.UI.user_input(
+                "allow_reevaluation", enums.UserInputTypes.BOOLEAN, self.allow_reevaluations,
+                inputs,
+                title="Allow Reevaluation: send a ChatGPT request when realtime evaluators trigger a "
+                      "global reevaluation Use latest available value otherwise. "
+                      "Warning: enabling this can lead to a large amount of GPT requests and consumed tokens."
+            )
+        if self.ALLOW_TOKEN_LIMIT_UPDATE:
+            self.gpt_tokens_limit = self.UI.user_input(
+                "max_gpt_tokens", enums.UserInputTypes.INT,
+                self.gpt_tokens_limit, inputs, min_val=gpt_service.GPTService.NO_TOKEN_LIMIT_VALUE,
+                title=f"OpenAI token limit: maximum daily number of tokens to consume with a given OctoBot instance. "
+                      f"Use {gpt_service.GPTService.NO_TOKEN_LIMIT_VALUE} to remove the limit."
+            )
 
     async def _init_GPT_models(self):
         if not self.GPT_MODELS:
@@ -132,6 +150,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
                         gpt_service.GPTService, self.is_backtesting, self.services_config
                     )
                     self.GPT_MODELS = service.models
+                    self.ALLOW_TOKEN_LIMIT_UPDATE = service.allow_token_limit_update()
                 except Exception as err:
                     self.logger.exception(err, True, f"Impossible to fetch GPT models: {err}")
 
@@ -169,7 +188,10 @@ class GPTEvaluator(evaluators.TAEvaluator):
                 except services_errors.InvalidRequestError as e:
                     self.logger.error(f"Invalid GPT request: {e}")
                 except services_errors.RateLimitError as e:
-                    self.logger.error(f"Too many requests: {e}")
+                    self.logger.error(f"Impossible to get ChatGPT evaluation for {symbol} on {time_frame}: "
+                                      f"No remaining free tokens for today : {e}. To prevent this, you can reduce the "
+                                      f"amount of traded pairs, use larger time frames or increase the maximum "
+                                      f"allowed tokens.")
                 except services_errors.UnavailableInBacktestingError:
                     # error already logged error for backtesting in use_backtesting_init_timeout
                     pass
@@ -201,6 +223,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
                 self.is_backtesting,
                 {} if self.is_backtesting else self.services_config
             )
+            service.apply_daily_token_limit_if_possible(self.gpt_tokens_limit)
             resp = await service.get_chat_completion(
                 [
                     service.create_message("system", preprompt),

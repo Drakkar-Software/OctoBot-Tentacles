@@ -15,6 +15,7 @@
 #  License along with this library.
 import decimal
 import math
+import mock
 import pytest
 import os.path
 import copy
@@ -190,115 +191,159 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
 
     # portfolio: "BTC": 10 "USD": 1000
     # order from neutral state
-    assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, decimal.Decimal(str(0.5)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, trading_constants.ZERO, trading_enums.EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.5)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
-    assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
+    _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
 
-    # valid sell limit order (price adapted)
-    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.65)), trading_enums.EvaluatorStates.SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, trading_personal_data.SellLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == decimal.Decimal(str(7062.64011187))
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == trading_enums.TraderOrderType.SELL_LIMIT
-    assert order.side == trading_enums.TradeOrderSide.SELL
-    assert order.status == trading_enums.OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == trading_constants.ZERO
-    assert order.origin_quantity == decimal.Decimal(str(7.6))
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.chained_orders == []
-    assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
+    def _decimal_adapt_order_quantity_because_fees(
+        exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
+        price: decimal.Decimal,
+        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
+        quote_available_funds: decimal.Decimal
+    ):
+        return quantity
 
-    trading_mode_test_toolkit.check_order_limits(order, market_status)
+    with mock.patch.object(
+            trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+            mock.Mock(side_effect=_decimal_adapt_order_quantity_because_fees)
+    ) as decimal_adapt_order_quantity_because_fees_mock:
+        assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, decimal.Decimal(str(0.5)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, trading_constants.ZERO, trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.5)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        assert await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.NEUTRAL.value) == []
+        # neutral state
+        decimal_adapt_order_quantity_because_fees_mock.assert_not_called()
 
-    trading_mode_test_toolkit.check_oco_order_group(order,
-                                                    trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
-                                                    market_status)
+        # valid sell limit order (price adapted)
+        orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.65)), trading_enums.EvaluatorStates.SHORT.value)
+        # short state
+        decimal_adapt_order_quantity_because_fees_mock.assert_not_called()
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, trading_personal_data.SellLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == decimal.Decimal(str(7062.64011187))
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == trading_enums.TraderOrderType.SELL_LIMIT
+        assert order.side == trading_enums.TradeOrderSide.SELL
+        assert order.status == trading_enums.OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == trading_constants.ZERO
+        assert order.origin_quantity == decimal.Decimal(str(7.6))
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.chained_orders == []
+        assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
-    # valid buy limit order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, trading_personal_data.BuyLimitOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == decimal.Decimal(str(6955.74988812))
-    assert order.created_last_price == last_btc_price
-    assert order.order_type == trading_enums.TraderOrderType.BUY_LIMIT
-    assert order.side == trading_enums.TradeOrderSide.BUY
-    assert order.status == trading_enums.OrderStatus.OPEN
-    assert order.exchange_manager == exchange_manager
-    assert order.trader == trader
-    assert order.fee is None
-    assert order.filled_price == trading_constants.ZERO
-    assert order.origin_quantity == decimal.Decimal(str(0.12554936))
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.order_group is None
-    assert order.chained_orders == []
+        trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    trading_mode_test_toolkit.check_order_limits(order, market_status)
+        trading_mode_test_toolkit.check_oco_order_group(order,
+                                                        trading_enums.TraderOrderType.STOP_LOSS, decimal.Decimal(str(6658.73524999)),
+                                                        market_status)
 
-    truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
+        # valid buy limit order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.65)), trading_enums.EvaluatorStates.LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        # long state
+        adapted_args = list(decimal_adapt_order_quantity_because_fees_mock.mock_calls[0].args)
+        adapted_args[3] = trading_personal_data.decimal_adapt_quantity(market_status, adapted_args[3])
+        adapted_args[4] = trading_personal_data.decimal_adapt_price(market_status, adapted_args[4])
+        assert adapted_args == [
+            exchange_manager, order.symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+            order.origin_quantity,
+            order.origin_price,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+            decimal.Decimal(2000)
+        ]
+        decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+        assert isinstance(order, trading_personal_data.BuyLimitOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == decimal.Decimal(str(6955.74988812))
+        assert order.created_last_price == last_btc_price
+        assert order.order_type == trading_enums.TraderOrderType.BUY_LIMIT
+        assert order.side == trading_enums.TradeOrderSide.BUY
+        assert order.status == trading_enums.OrderStatus.OPEN
+        assert order.exchange_manager == exchange_manager
+        assert order.trader == trader
+        assert order.fee is None
+        assert order.filled_price == trading_constants.ZERO
+        assert order.origin_quantity == decimal.Decimal(str(0.12554936))
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.order_group is None
+        assert order.chained_orders == []
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.VERY_LONG.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, trading_personal_data.BuyMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == trading_enums.TraderOrderType.BUY_MARKET
-    assert order.side == trading_enums.TradeOrderSide.BUY
-    assert order.status == trading_enums.OrderStatus.FILLED
-    # order has been cleared
-    assert order.exchange_manager is None
-    assert order.trader is None
-    assert order.fee
-    assert order.filled_price == decimal.Decimal(str(7009.19499999))
-    assert order.origin_quantity == decimal.Decimal(str(0.11573814))
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.order_group is None
-    assert order.chained_orders == []
+        trading_mode_test_toolkit.check_order_limits(order, market_status)
 
-    trading_mode_test_toolkit.check_order_limits(order, market_status)
+        truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
-    # valid buy market order with (price and quantity adapted)
-    orders = await consumer.create_new_orders(symbol, trading_constants.ONE,
-                                              trading_enums.EvaluatorStates.VERY_SHORT.value)
-    assert len(orders) == 1
-    order = orders[0]
-    assert isinstance(order, trading_personal_data.SellMarketOrder)
-    assert order.currency == "BTC"
-    assert order.symbol == "BTC/USDT"
-    assert order.origin_price == truncated_last_price
-    assert order.created_last_price == truncated_last_price
-    assert order.order_type == trading_enums.TraderOrderType.SELL_MARKET
-    assert order.side == trading_enums.TradeOrderSide.SELL
-    assert order.status == trading_enums.OrderStatus.FILLED
-    assert order.exchange_manager is None
-    assert order.trader is None
-    assert order.fee
-    assert order.filled_price == decimal.Decimal(str(7009.19499999))
-    assert order.origin_quantity == decimal.Decimal(str(2.5156224))
-    assert order.filled_quantity == order.origin_quantity
-    assert order.simulated is True
-    assert order.order_group is None
-    assert order.chained_orders == []
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.VERY_LONG.value)
+        assert len(orders) == 1
+        order = orders[0]
+        # very long state
+        adapted_args = list(decimal_adapt_order_quantity_because_fees_mock.mock_calls[0].args)
+        adapted_args[3] = trading_personal_data.decimal_adapt_quantity(market_status, adapted_args[3])
+        adapted_args[4] = trading_personal_data.decimal_adapt_price(market_status, adapted_args[4])
+        assert adapted_args == [
+            exchange_manager, order.symbol, trading_enums.TraderOrderType.BUY_MARKET,
+            order.origin_quantity,
+            order.origin_price,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+            decimal.Decimal('1126.7100532264623968')
+        ]
+        decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+        assert isinstance(order, trading_personal_data.BuyMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == trading_enums.TraderOrderType.BUY_MARKET
+        assert order.side == trading_enums.TradeOrderSide.BUY
+        assert order.status == trading_enums.OrderStatus.FILLED
+        # order has been cleared
+        assert order.exchange_manager is None
+        assert order.trader is None
+        assert order.fee
+        assert order.filled_price == decimal.Decimal(str(7009.19499999))
+        assert order.origin_quantity == decimal.Decimal(str(0.11573814))
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.order_group is None
+        assert order.chained_orders == []
 
-    trading_mode_test_toolkit.check_order_limits(order, market_status)
+        trading_mode_test_toolkit.check_order_limits(order, market_status)
+
+        # valid buy market order with (price and quantity adapted)
+        orders = await consumer.create_new_orders(symbol, trading_constants.ONE,
+                                                  trading_enums.EvaluatorStates.VERY_SHORT.value)
+        # very short state
+        decimal_adapt_order_quantity_because_fees_mock.assert_not_called()
+        assert len(orders) == 1
+        order = orders[0]
+        assert isinstance(order, trading_personal_data.SellMarketOrder)
+        assert order.currency == "BTC"
+        assert order.symbol == "BTC/USDT"
+        assert order.origin_price == truncated_last_price
+        assert order.created_last_price == truncated_last_price
+        assert order.order_type == trading_enums.TraderOrderType.SELL_MARKET
+        assert order.side == trading_enums.TradeOrderSide.SELL
+        assert order.status == trading_enums.OrderStatus.FILLED
+        assert order.exchange_manager is None
+        assert order.trader is None
+        assert order.fee
+        assert order.filled_price == decimal.Decimal(str(7009.19499999))
+        assert order.origin_quantity == decimal.Decimal(str(2.5156224))
+        assert order.filled_quantity == order.origin_quantity
+        assert order.simulated is True
+        assert order.order_group is None
+        assert order.chained_orders == []
+
+        trading_mode_test_toolkit.check_order_limits(order, market_status)
 
 
 async def test_valid_create_new_orders_ref_market_as_quote(tools):
