@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import logging
 import os.path as path
 import ccxt
 import ccxt.async_support
@@ -922,6 +923,7 @@ async def _load_market(exchange, results):
                 symbols = client.symbols
         else:
             async with getattr(ccxt.async_support, exchange)({'verbose': False}) as client:
+                client.logger.setLevel(logging.INFO)    # prevent log of each request (huge on market statuses)
                 await client.load_markets()
                 symbols = client.symbols
         # filter symbols with a "." or no "/" because bot can't handle them for now
