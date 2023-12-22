@@ -33,6 +33,7 @@ import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.constants as trading_constants
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
@@ -678,8 +679,23 @@ async def test_start_after_offline_full_sell_side_filled_orders_price_back():
         # simulate current price as back to average origin sell orders
         price = offline_filled[len(offline_filled)//2].origin_price
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+
+        def _get_fees_for_currency(fee, currency):
+            if currency == "USDT":
+                return decimal.Decimal("0.022")
+            return trading_constants.ZERO
+
         with _assert_missing_orders_count(producer, len(offline_filled)):
-            await producer._ensure_staggered_orders()
+            with _assert_adapt_order_quantity_because_fees(_get_fees_for_currency) \
+                as adapt_order_quantity_because_fees_mock:
+                await producer._ensure_staggered_orders()
+                adapt_order_quantity_because_fees_mock.assert_called_once_with(
+                    producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_MARKET,
+                    decimal.Decimal('0.25714721'),
+                    decimal.Decimal('165'),
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+                    decimal.Decimal('1104.16879661120')
+                )
         # restored orders (and create up to 50 orders as all orders can be created)
         assert producer.operational_depth > orders_count
         await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
@@ -765,8 +781,18 @@ async def test_start_after_offline_buy_side_10_filled():
         # simulate current price as back to average origin buy orders
         price = offline_filled[len(offline_filled)//2].origin_price + 1
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+
         with _assert_missing_orders_count(producer, len(offline_filled)):
-            await producer._ensure_staggered_orders()
+            with _assert_adapt_order_quantity_because_fees(None) \
+                as adapt_order_quantity_because_fees_mock:
+                await producer._ensure_staggered_orders()
+                adapt_order_quantity_because_fees_mock.assert_called_once_with(
+                    producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.SELL_MARKET,
+                    decimal.Decimal('0.00320847831'),
+                    decimal.Decimal('71'),
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
+                    decimal.Decimal('9.33582078738')
+                )
         # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
         assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USDT").available
@@ -1186,6 +1212,24 @@ async def test_start_after_offline_with_added_funds_increasing_order_sizes():
         assert initial_sell_orders_average_cost * decimal.Decimal(str(1.5)) * decimal.Decimal(2) \
                < updated_sell_orders_average_cost < \
                initial_sell_orders_average_cost * decimal.Decimal(str(2.5)) * decimal.Decimal(2)
+
+
+@contextlib.contextmanager
+def _assert_adapt_order_quantity_because_fees(get_fees_for_currency=False):
+    _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
+
+    with mock.patch.object(
+        trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+        mock.Mock(side_effect=_origin_decimal_adapt_order_quantity_because_fees)
+    ) as decimal_adapt_order_quantity_because_fees_mock:
+        if get_fees_for_currency is None:
+            yield decimal_adapt_order_quantity_because_fees_mock
+        else:
+            with mock.patch.object(
+                trading_personal_data, "get_fees_for_currency",
+                mock.Mock(side_effect=get_fees_for_currency)
+            ):
+                yield decimal_adapt_order_quantity_because_fees_mock
 
 
 @contextlib.contextmanager

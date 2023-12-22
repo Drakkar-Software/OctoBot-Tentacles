@@ -1065,16 +1065,23 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             try:
                 if delta / target_amount < self.ALLOWED_MISSED_MIRRORED_ORDERS_ADAPT_DELTA_RATIO:
                     target_amount = limiting_amount
+                    self.logger.info(f"Adapted balancing quantity according to available amount. Using {target_amount}")
             except (decimal.DivisionByZero, decimal.InvalidOperation):
                 # leave as is
                 pass
         buying = order_type is trading_enums.TraderOrderType.BUY_MARKET
-        target_amount = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+        fees_adapted_target_amount = trading_personal_data.decimal_adapt_order_quantity_because_fees(
             self.exchange_manager, self.symbol, order_type, target_amount,
             current_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
             trading_enums.TradeOrderSide.BUY if buying else trading_enums.TradeOrderSide.SELL,
             market_available if buying else currency_available
         )
+        if fees_adapted_target_amount != target_amount:
+            self.logger.info(
+                f"Adapted balancing quantity to compy with exchange fees. Using {fees_adapted_target_amount} "
+                f"instead of {target_amount}"
+            )
+            target_amount = fees_adapted_target_amount
         to_create_details = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             target_amount,
             current_price,
@@ -1143,6 +1150,19 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     # found missing order in trades before mirror order: a mirror order is missing
                     trades_with_missing_mirror_order_fills.append(trade)
                     break
+
+        if trades_with_missing_mirror_order_fills:
+
+            def _printable_trade(trade):
+                return f"{trade.executed_quantity}@{trade.executed_price}"
+
+            self.logger.info(
+                f"Found {len(trades_with_missing_mirror_order_fills)} {self.symbol} missing order fills based "
+                f"on {len(sorted_trades)} "
+                f"trades. Missing fills: {[_printable_trade(t) for t in trades_with_missing_mirror_order_fills]}, "
+                f"trades: {[_printable_trade(t) for t in trades_with_missing_mirror_order_fills]} "
+                f"[{self.exchange_manager.exchange_name}]"
+            )
         return trades_with_missing_mirror_order_fills
 
     def _analyse_current_orders_situation(self, sorted_orders, recently_closed_trades, lower_bound, higher_bound, current_price):
