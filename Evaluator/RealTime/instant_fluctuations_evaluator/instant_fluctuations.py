@@ -27,7 +27,8 @@ import octobot_evaluators.util as evaluators_util
 class InstantFluctuationsEvaluator(evaluators.RealTimeEvaluator):
     """
     Idea: moves are lasting approx 12min
-    Check the last 12 candles and compute mean closing prices as well as mean volume with a gradually narrower interval to
+    Check the last 12 candles and compute mean closing prices as
+    well as mean volume with a gradually narrower interval to
     compute the strength or weakness of the move
     """
 
@@ -188,6 +189,7 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
         self.last_moving_average_values = {}
         self.period = 6
         self.time_frame = None
+        self.price_threshold = 0.05
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -200,7 +202,12 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
                                inputs, options=[tf.value for tf in commons_enums.TimeFrames],
                                title="Time frame: The time frame to observe in order to spot changes.")
         self.period = self.UI.user_input("period", commons_enums.UserInputTypes.INT, 6, inputs,
-                                      min_val=1, title="Period: the EMA period length to use.")
+                                         min_val=1, title="Period: the EMA period length to use.")
+        self.price_threshold = self.UI.user_input(
+            "threshold", commons_enums.UserInputTypes.FLOAT, self.price_threshold * 100, inputs, min_val=0,
+            title="Price threshold: price difference in percent from the current moving average value starting "
+                  "from which to trigger an evaluation."
+        ) / 100
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str,
                              cryptocurrency: str, symbol: str, time_frame, candle):
@@ -232,18 +239,23 @@ class InstantMAEvaluator(evaluators.RealTimeEvaluator):
         if last_ma_value == 0:
             self.eval_note = 0
         else:
-            current_ratio = last_price / last_ma_value
-            if current_ratio > 1:
-                # last_price > last_ma_value => sell ? => eval_note > 0
-                if current_ratio >= 2:
-                    self.eval_note = 1
-                else:
-                    self.eval_note = current_ratio - 1
-            elif current_ratio < 1:
-                # last_price < last_ma_value => buy ? => eval_note < 0
-                self.eval_note = -1 * (1 - current_ratio)
-            else:
+            lower_threshold = last_ma_value * (1 - self.price_threshold)
+            upper_threshold = last_ma_value * (1 + self.price_threshold)
+            if lower_threshold < last_price < upper_threshold:
                 self.eval_note = 0
+            else:
+                current_ratio = last_price / last_ma_value
+                if current_ratio > 1:
+                    # last_price > last_ma_value => sell ? => eval_note > 0
+                    if current_ratio >= 2:
+                        self.eval_note = 1
+                    else:
+                        self.eval_note = current_ratio - 1
+                elif current_ratio < 1:
+                    # last_price < last_ma_value => buy ? => eval_note < 0
+                    self.eval_note = -1 * (1 - current_ratio)
+                else:
+                    self.eval_note = 0
 
         await self.evaluation_completed(cryptocurrency, symbol, self.available_time_frame,
                                         eval_time=time)
