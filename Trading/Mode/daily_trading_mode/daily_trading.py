@@ -102,7 +102,9 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             title="[Target profits mode] Enable futures position increase: Allow to increase a previously open "
                   "position when receiving a new signal. "
                   "Only used in 'Target profits mode' when trading futures. "
-                  "Example: increase a $100 LONG position to $150 by adding $50 more when a new LONG signal is received.",
+                  "Example: increase a $100 LONG position to $150 by adding $50 more when a new LONG signal is "
+                  "received. WARNING: enabling this option can lead to liquidation price changes as positions "
+                  "build up and end up liquidating a position before initial stop loss prices are reached.",
             editor_options={
                 commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
                   "target_profits_mode": True
