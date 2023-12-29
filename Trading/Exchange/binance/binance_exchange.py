@@ -85,7 +85,13 @@ class Binance(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         raw_balance = await self.connector.client.fetch_balance()
-        return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+        try:
+            return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+        except KeyError:
+            if self.exchange_manager.is_future:
+                raise NotImplementedError("get_account_id is not implemented on binance futures account")
+            # should not happen in spot
+            raise
 
     def _infer_account_types(self, exchange_manager):
         account_types = []
