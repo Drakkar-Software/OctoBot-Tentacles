@@ -123,13 +123,14 @@ class Kucoin(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
-        # updated: 23/08/2023
+        # updated: 29/12/2023
         try:
             account_id = None
             subaccount_id = None
             sub_accounts = await self.connector.client.private_get_sub_accounts()
-            has_subaccounts = bool(sub_accounts["data"])
-            for account in sub_accounts["data"]:
+            accounts = sub_accounts.get("data", {}).get("items", {})
+            has_subaccounts = bool(accounts)
+            for account in accounts:
                 if account["subUserId"]:
                     subaccount_id = account["subName"]
                 else:
