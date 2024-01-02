@@ -245,9 +245,12 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self.SELL_WITH_MAXIMUM_SIZE_ORDERS = trading_config.get("sell_with_maximum_size_orders", False)
         self.DISABLE_SELL_ORDERS = trading_config.get("disable_sell_orders", False)
         self.DISABLE_BUY_ORDERS = trading_config.get("disable_buy_orders", False)
-        self.MAX_CURRENCY_RATIO = trading_config.get("max_currency_percent", None)
+        self.MAX_CURRENCY_RATIO = trading_config.get("max_currency_percent", None) or None
         if self.MAX_CURRENCY_RATIO is not None:
-            self.MAX_CURRENCY_RATIO = decimal.Decimal(str(self.MAX_CURRENCY_RATIO)) / trading_constants.ONE_HUNDRED
+            try:
+                self.MAX_CURRENCY_RATIO = decimal.Decimal(str(self.MAX_CURRENCY_RATIO)) / trading_constants.ONE_HUNDRED
+            except decimal.InvalidOperation:
+                self.MAX_CURRENCY_RATIO = None
 
     def flush(self):
         super().flush()
