@@ -216,7 +216,13 @@
                         <div class="card-header">
                             <h2>
                                 Profile strategy configuration
-                                <span href="" class="badge badge-dark waves-effect align-top" data-role="current-profile-selector">read only</span>
+                                <span
+                                    href=""
+                                    class="badge badge-dark waves-effect align-top"
+                                    data-role="current-profile-selector"
+                                    data-toggle="tooltip"
+                                    title="Duplicate this profile to select other trading modes or evaluators"
+                                >read only</span>
                                 <a class="float-right blue-text" data-intro="profile">
                                     <i class="fa-solid fa-question"></i>
                                 </a>
@@ -240,7 +246,17 @@
                                                 <div class="col">
                                                     <div class="alert alert-info" role="alert">
                                                         <h4 class="alert-heading">Trading modes</h4>
-                                                        Trading modes are responsible for creating, updating or cancelling orders. They can use strategy(ies) to receive signals and create orders accordingly.
+                                                        <p>
+                                                            Trading modes are responsible for creating, updating or cancelling orders.
+                                                            They can use strategy(ies) to receive signals and create orders accordingly.
+                                                        </p>
+                                                        <p>
+                                                            Lean more about OctoBot trading modes on
+                                                            <a target="_blank" rel="noopener"
+                                                               href="{{OCTOBOT_DOCS_URL}}/octobot-trading-modes/trading-modes?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=read_only_profile">
+                                                                the trading modes guides
+                                                            </a>.
+                                                        </p>
                                                     </div>
                                                   </div>
                                             </div>

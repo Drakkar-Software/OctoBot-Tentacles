@@ -76,32 +76,32 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.4, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a light price weight signal.",
+            title="Volume multiplier for a buy order on a light volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a medium price weight signal.",
+            title="Volume multiplier for a buy order on a medium volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a heavy price weight signal.",
+            title="Volume multiplier for a buy order on a heavy volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a light volume weight signal.",
+            title="Price multiplier for the top sell order in a light price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.07, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a medium volume weight signal.",
+            title="Price multiplier for the top sell order in a medium price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.1, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a heavy volume weight signal.",
+            title="Price multiplier for the top sell order in a heavy price weight signal.",
         )
 
     @classmethod

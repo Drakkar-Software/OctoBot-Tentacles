@@ -12,6 +12,10 @@ A LONG state will trigger a buy order. A SHORT state will trigger a sell order.
     clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
+To know more, checkout the 
+<a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/daily-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=DailyTradingModeDocs">
+full Daily trading mode guide</a>.
+
 ### Default mode
 On Default mode, the DailyTradingMode will cancel previously created open orders 
 and create new ones according to its new state. 
