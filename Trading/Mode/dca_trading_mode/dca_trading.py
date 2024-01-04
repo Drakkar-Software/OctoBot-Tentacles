@@ -548,7 +548,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.minutes_before_next_buy = int(self.UI.user_input(
             DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 10080, inputs,
             min_val=1,
-            title="Tigger period: Minutes to wait between each transaction. Examples: 60 for 1 hour, 1440 for 1 day, "
+            title="Trigger period: Minutes to wait between each transaction. Examples: 60 for 1 hour, 1440 for 1 day, "
                   "10080 for 1 week or 43200 for 1 month.",
             editor_options={
                 commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
@@ -832,11 +832,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             init_price_fetchers=False
         )
         for asset in traded_base_assets:
-            holdings = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
-                asset
-            ).total
+            asset_holding = \
+                self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                    asset
+                )
             holdings_value = value_holder.value_converter.evaluate_value(
-                asset, holdings, target_currency=common_quote, init_price_fetchers=False
+                asset, asset_holding.total, target_currency=common_quote, init_price_fetchers=False
             )
             total_traded_assets_value += holdings_value
             holdings_in_sell_orders = sum(
@@ -844,9 +845,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 for order in sell_orders
                 if symbol_util.parse_symbol(order.symbol).base == asset
             )
-            orphan_amount = holdings - holdings_in_sell_orders
+            # do not consider more than the available amounts
+            orphan_amount = min(asset_holding.total - holdings_in_sell_orders, asset_holding.available)
             if orphan_amount and orphan_amount > 0:
-                orphan_asset_values_by_asset[asset] = (holdings_value * orphan_amount / holdings, orphan_amount)
+                orphan_asset_values_by_asset[asset] = (
+                    holdings_value * orphan_amount / asset_holding.total, orphan_amount
+                )
 
         for asset, value_and_orphan_amount in orphan_asset_values_by_asset.items():
             value, orphan_amount = value_and_orphan_amount

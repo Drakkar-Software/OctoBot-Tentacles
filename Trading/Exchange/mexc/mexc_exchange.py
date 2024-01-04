@@ -84,13 +84,13 @@ class MEXC(exchanges.RestExchange):
     async def _mexc_handled_symbols_filter(self, symbol):
         try:
             yield
-        except ccxt.BadSymbol as err:
+        except (ccxt.BadSymbol, ccxt.BadRequest) as err:
             if self.api_handled_symbols.should_be_updated():
                 await self.api_handled_symbols.update()
             if symbol not in self.api_handled_symbols.symbols:
                 raise octobot_trading.errors.FailedRequest(
                     f"{self.get_name()} error: {symbol} trading pair is not available to the API at the moment, "
-                    f"{symbol} is under maintenance. "
+                    f"{symbol} is under maintenance ({err}). "
                     f"API available trading pairs are {self.api_handled_symbols.symbols}"
                 )
             raise err

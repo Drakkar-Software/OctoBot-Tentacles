@@ -1,6 +1,10 @@
 Places a fixed amount of buy and sell orders at fixed intervals to profit from any market move. When an order is filled,
 a mirror order is instantly created and generates profit when completed.
 
+To know more, checkout the 
+<a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/grid-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=GridTradingModeDocs">
+full Grid trading mode guide</a>.
+
 #### Default configuration
 When left unspecified for a trading pair, the grid will be initialized with a spread
 of 1.5% of the current price and an increment of 0.5% and a maximum of 20 buy and sell orders.
