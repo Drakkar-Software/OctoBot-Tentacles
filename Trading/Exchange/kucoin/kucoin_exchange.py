@@ -34,8 +34,9 @@ def _kucoin_retrier(f):
         for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
-            except octobot_trading.errors.FailedRequest as e:
-                if Kucoin.INSTANT_RETRY_ERROR_CODE in str(e):
+            except octobot_trading.errors.FailedRequest:
+                rest_exchange = args[0]  # self
+                if Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
