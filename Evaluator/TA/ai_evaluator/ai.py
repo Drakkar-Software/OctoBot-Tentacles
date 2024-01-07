@@ -181,7 +181,10 @@ class GPTEvaluator(evaluators.TAEvaluator):
                     cleaned_prediction = prediction.strip().replace("\n", "").replace(".", "").lower()
                     prediction_side = self._parse_prediction_side(cleaned_prediction)
                     if prediction_side == 0 and not self.is_backtesting:
-                        self.logger.error(f"Error when reading GPT answer, answer: '{cleaned_prediction}'")
+                        self.logger.warning(
+                            f"Ignored ChatGPT answer for {symbol} {time_frame}, answer: '{cleaned_prediction}': "
+                            f"missing prediction or % accuracy."
+                        )
                         return
                     confidence = self._parse_confidence(cleaned_prediction) / 100
                     self.eval_note = prediction_side * confidence
