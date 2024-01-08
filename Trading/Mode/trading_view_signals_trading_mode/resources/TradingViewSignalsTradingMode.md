@@ -44,7 +44,7 @@ Orders can be cancelled using the following format:
 ``` bash
 EXCHANGE=binance
 SYMBOL=ETHBTC
-ORDER_TYPE=CANCEL
+SIGNAL=CANCEL
 ```
 
 Additional cancel parameters:
