@@ -95,6 +95,41 @@ class MEXC(exchanges.RestExchange):
                 )
             raise err
 
+    async def get_open_orders(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return self._filter_orders(
+            await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs),
+            True
+        )
+
+    async def get_closed_orders(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return self._filter_orders(
+            await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs),
+            False
+        )
+
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        try:
+            return await super().get_order(
+                exchange_order_id, symbol=symbol, **kwargs
+            )
+        except octobot_trading.errors.FailedRequest as err:
+            if "Order does not exist" in str(err):
+                return None
+            raise
+
+    def _filter_orders(self, orders: list, open_only: bool) -> list:
+        return [
+            order
+            for order in orders
+            if (
+                open_only and order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+                == trading_enums.OrderStatus.OPEN.value
+            ) or (
+                not open_only and order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+                != trading_enums.OrderStatus.OPEN.value
+            )
+        ]
+
 
 class APIHandledSymbols:
     """
