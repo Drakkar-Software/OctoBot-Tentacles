@@ -13,3 +13,22 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot_trading.exchanges as exchanges
+from octobot_trading.enums import WebsocketFeeds as Feeds
+import tentacles.Trading.Exchange.htx.htx_exchange as htx_exchange
+
+
+class HtxCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
+    EXCHANGE_FEEDS = {
+        Feeds.TRADES: True,
+        Feeds.KLINE: True,
+        Feeds.TICKER: True,
+        Feeds.CANDLE: True,
+    }
+
+    @classmethod
+    def get_name(cls):
+        return htx_exchange.Htx.get_name()
+
+    def get_adapter_class(self, adapter_class):
+        return htx_exchange.HtxCCXTAdapter
