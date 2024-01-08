@@ -1,1 +1,0 @@
-from .bittrex_websocket import BittrexCCXTWebsocketConnector
