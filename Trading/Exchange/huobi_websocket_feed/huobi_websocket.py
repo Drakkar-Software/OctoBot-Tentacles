@@ -13,22 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.exchanges as exchanges
-from octobot_trading.enums import WebsocketFeeds as Feeds
 import tentacles.Trading.Exchange.huobi.huobi_exchange as huobi_exchange
+import tentacles.Trading.Exchange.htx_websocket_feed.htx_websocket as htx_websocket
 
 
-class HuobiCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
-    EXCHANGE_FEEDS = {
-        Feeds.TRADES: True,
-        Feeds.KLINE: True,
-        Feeds.TICKER: True,
-        Feeds.CANDLE: True,
-    }
-
+class HuobiCCXTWebsocketConnector(htx_websocket.HtxCCXTWebsocketConnector):
+    # kept for legacy support (users using huobi instead of HTX)
     @classmethod
     def get_name(cls):
         return huobi_exchange.Huobi.get_name()
 
-    def get_adapter_class(self, adapter_class):
-        return huobi_exchange.HuobiCCXTAdapter
