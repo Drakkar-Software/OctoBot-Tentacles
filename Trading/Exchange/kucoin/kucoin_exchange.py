@@ -209,6 +209,11 @@ class Kucoin(exchanges.RestExchange):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
 
+    @_kucoin_retrier
+    async def get_order_book(self, symbol, limit=20, **kwargs):
+        # override default limit to be kucoin complient
+        return super().get_order_book(symbol, limit=limit, **kwargs)
+
     def should_log_on_ddos_exception(self, exception) -> bool:
         """
         Override when necessary
@@ -386,12 +391,19 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, **kwargs)
+        self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
         self._adapt_order_type(fixed)
+        return fixed
+
+    def fix_trades(self, raw, **kwargs):
+        fixed = super().fix_trades(raw, **kwargs)
+        for trade in fixed:
+            self._ensure_fees(trade)
         return fixed
 
     def _adapt_order_type(self, fixed):

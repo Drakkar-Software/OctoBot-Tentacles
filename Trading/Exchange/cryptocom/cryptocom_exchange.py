@@ -21,8 +21,6 @@ class CryptoCom(exchanges.RestExchange):
 
     FIX_MARKET_STATUS = True
 
-    REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = True  # set True when get_closed_orders is not supported
-
     @classmethod
     def get_name(cls):
         return 'cryptocom'

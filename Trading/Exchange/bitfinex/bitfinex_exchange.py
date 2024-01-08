@@ -18,6 +18,7 @@ import typing
 import octobot_commons.enums
 import octobot_commons.constants
 import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
 
 
 class Bitfinex(exchanges.RestExchange):
@@ -31,6 +32,9 @@ class Bitfinex(exchanges.RestExchange):
     @classmethod
     def get_name(cls):
         return 'bitfinex2'
+
+    def get_adapter_class(self):
+        return BitfinexCCXTAdapter
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
         if "since" not in kwargs:
@@ -50,3 +54,12 @@ class Bitfinex(exchanges.RestExchange):
             self.logger.debug(f"Trying to get_order_book with limit not {self.SUPPORTED_ORDER_BOOK_LIMITS} : ({limit})")
             limit = self.DEFAULT_ORDER_BOOK_LIMIT
         return await super().get_recent_trades(symbol=symbol, limit=limit, **kwargs)
+
+
+class BitfinexCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
+            fixed.get(trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value) or self.connector.client.seconds()
+        return fixed
