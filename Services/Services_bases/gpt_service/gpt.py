@@ -24,7 +24,6 @@ import octobot_services.services as services
 import octobot_services.errors as errors
 
 import octobot_commons.enums as commons_enums
-import octobot_commons.constants as commons_constants
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.tree as tree
@@ -92,6 +91,9 @@ class GPTService(services.AbstractService):
             return await self._fetch_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
         return await self._get_signal_from_gpt(messages, model, max_tokens, n, stop, temperature)
 
+    def _get_client(self) -> openai.AsyncOpenAI:
+        return openai.AsyncOpenAI(api_key=self._get_api_key())
+
     async def _get_signal_from_gpt(
         self,
         messages,
@@ -104,8 +106,7 @@ class GPTService(services.AbstractService):
         self._ensure_rate_limit()
         try:
             model = model or self.model
-            completions = await openai.ChatCompletion.acreate(
-                api_key=self._get_api_key(),
+            completions = await self._get_client().chat.completions.create(
                 model=model,
                 max_tokens=max_tokens,
                 n=n,
@@ -113,9 +114,9 @@ class GPTService(services.AbstractService):
                 temperature=temperature,
                 messages=messages
             )
-            self._update_token_usage(completions['usage']['total_tokens'])
-            return completions["choices"][0]["message"]["content"]
-        except openai.error.InvalidRequestError as err:
+            self._update_token_usage(completions.usage.total_tokens)
+            return completions.choices[0].message.content
+        except openai.BadRequestError as err:
             raise errors.InvalidRequestError(
                 f"Error when running request with model {model} (invalid request): {err}"
             ) from err
@@ -303,12 +304,12 @@ class GPTService(services.AbstractService):
             if self.use_stored_signals_only():
                 self.logger.info(f"Skipping GPT - OpenAI models fetch as self.use_stored_signals_only() is True")
                 return
-            fetched_models = await openai.Model.alist(api_key=self._get_api_key())
-            self.models = [d["id"] for d in fetched_models["data"]]
+            fetched_models = await self._get_client().models.list()
+            self.models = [d.id for d in fetched_models.data]
             if self.model not in self.models:
                 self.logger.warning(f"Warning: selected '{self.model}' model is not in GPT available models. "
                                     f"Available models are: {self.models}")
-        except openai.error.AuthenticationError as err:
+        except openai.AuthenticationError as err:
             self.logger.error(f"Error when checking api key: {err}")
         except Exception as err:
             self.logger.error(f"Unexpected error when checking api key: {err}")
