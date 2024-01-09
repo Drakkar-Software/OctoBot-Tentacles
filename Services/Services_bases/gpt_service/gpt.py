@@ -22,6 +22,7 @@ import datetime
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot_services.errors as errors
+import octobot_services.util
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.time_frame_manager as time_frame_manager
@@ -30,6 +31,9 @@ import octobot_commons.tree as tree
 
 import octobot.constants as constants
 import octobot.community as community
+
+
+octobot_services.util.patch_openai_proxies()
 
 
 class GPTService(services.AbstractService):
