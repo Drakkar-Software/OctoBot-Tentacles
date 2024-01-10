@@ -136,7 +136,10 @@
                     <div id="graph-symbol-price"></div>
                 </div>
                 {% if not watched_symbols %}
-                    <div class="card-footer">No watched markets: using a default one. You can add <a href="#"><i class="far fa-star text-white" aria-label="Watched markets star"></i></a> watched markets in the <a href="{{ url_for('trading') }}">trading section</a>.</div>
+                    <div class="card-footer">No watched markets: using a default one. You can add
+                        <a href="#"><i class="far fa-star text-white" aria-label="Watched markets star"></i></a>
+                        watched markets in the <a href="{{ url_for('trading', _anchor='panel-market-status') }}">trading section</a>.
+                    </div>
                 {% endif %}
             {% endif %}
         </div>
@@ -164,7 +167,7 @@
                         <input type="checkbox" class="custom-control-input" id="displayOrderToggle" {{'checked' if display_orders}}  data-update-url="{{url_for('api.display_config')}}">
                         <label class="custom-control-label" for="displayOrderToggle">Display orders</label>
                     </div>
-                    <div class="font-italic">Add and remove watched symbols from the <a href="{{url_for('trading')}}">trading tab</a>.</div>
+                    <div class="font-italic">Add and remove watched symbols from the <a href="{{ url_for('trading', _anchor='panel-market-status') }}">trading tab</a>.</div>
                   </div>
               </div>
             </div>
