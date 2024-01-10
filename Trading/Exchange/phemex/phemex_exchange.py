@@ -16,6 +16,7 @@
 import asyncio
 import decimal
 import typing
+import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -77,6 +78,15 @@ class Phemex(exchanges.RestExchange):
         })
         return kwargs
 
+    async def cancel_order(
+            self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        order_status = await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
+        if order_status == trading_enums.OrderStatus.PENDING_CANCEL:
+            # cancelled orders can't be fetched, consider as cancelled
+            order_status = trading_enums.OrderStatus.CANCELED
+        return order_status
+
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, exchange_order_id=exchange_order_id, **kwargs):
             return order
@@ -93,7 +103,7 @@ class Phemex(exchanges.RestExchange):
                 await asyncio.sleep(3)
             else:
                 return order
-        raise KeyError("Order id not found in trades. Impossible to build order from trades history")
+        raise ccxt.OrderNotFound("Order id not found in trades. Impossible to build order from trades history")
 
 
 class PhemexCCXTAdapter(exchanges.CCXTAdapter):
