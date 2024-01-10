@@ -124,6 +124,9 @@ class GPTService(services.AbstractService):
             raise errors.InvalidRequestError(
                 f"Error when running request with model {model} (invalid request): {err}"
             ) from err
+        except openai.AuthenticationError as err:
+            self.logger.error(f"Invalid OpenAI api key: {err}")
+            self.creation_error_message = err
         except Exception as err:
             raise errors.InvalidRequestError(
                 f"Unexpected error when running request with model {model}: {err}"
@@ -314,7 +317,8 @@ class GPTService(services.AbstractService):
                 self.logger.warning(f"Warning: selected '{self.model}' model is not in GPT available models. "
                                     f"Available models are: {self.models}")
         except openai.AuthenticationError as err:
-            self.logger.error(f"Error when checking api key: {err}")
+            self.logger.error(f"Invalid OpenAI api key: {err}")
+            self.creation_error_message = err
         except Exception as err:
             self.logger.error(f"Unexpected error when checking api key: {err}")
 
