@@ -289,7 +289,6 @@ class Kucoin(exchanges.RestExchange):
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
 
-    @_kucoin_retrier
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -301,6 +300,19 @@ class Kucoin(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    # add retried to _create_order_with_retry to avoid catching error in self._order_operation context manager
+    @_kucoin_retrier
+    async def _create_order_with_retry(self, order_type, symbol, quantity: decimal.Decimal,
+                                       price: decimal.Decimal, stop_price: decimal.Decimal,
+                                       side: trading_enums.TradeOrderSide,
+                                       current_price: decimal.Decimal,
+                                       reduce_only: bool, params) -> dict:
+        return await super()._create_order_with_retry(
+            order_type=order_type, symbol=symbol, quantity=quantity, price=price,
+            stop_price=stop_price, side=side, current_price=current_price,
+            reduce_only=reduce_only, params=params
+        )
 
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
