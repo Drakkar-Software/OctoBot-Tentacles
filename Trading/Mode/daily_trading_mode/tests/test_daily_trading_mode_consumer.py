@@ -1132,9 +1132,11 @@ async def test_target_profit_mode_futures_trading(future_tools):
         buy_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_STOP_LOSS)
     )
 
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "100q"
     # take profit and stop loss / short signal
     short_orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value)
     sell_order = short_orders[0]
+    assert sell_order.origin_quantity == decimal.Decimal('0.01426697')  # 0.01739031 without 100q config
     assert isinstance(sell_order, trading_personal_data.SellLimitOrder)
     assert len(sell_order.chained_orders) == 2
     take_profit_order = sell_order.chained_orders[1]

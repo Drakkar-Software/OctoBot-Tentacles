@@ -51,6 +51,7 @@ function load_report(report, should_alert=False) {
         const url = reportDiv.attr(update_url_attr);
         $.get(url, (data) => {
             if ("report" in data) {
+                let error_message = "";
                 const globalReport = data["report"]
                 const botReport = globalReport["bot_report"]
                 report.show();
@@ -63,7 +64,7 @@ function load_report(report, should_alert=False) {
                 let profitability = profitabilities.join(", ");
                 const errors_count = globalReport["errors_count"];
                 if ("error" in globalReport || errors_count > 0) {
-                    let error_message = "Warning: error(s) during backtesting";
+                    error_message = "Warning: error(s) during backtesting";
                     if ("error" in globalReport) {
                         error_message += " " + globalReport["error"];
                     }
@@ -71,7 +72,6 @@ function load_report(report, should_alert=False) {
                         error_message += " " + errors_count + " error(s)";
                     }
                     error_message += ", more details in logs.";
-                    profitability = profitability + " " + error_message;
                     if (should_alert) {
                         create_alert("error", error_message, "");
                     }
@@ -87,7 +87,7 @@ function load_report(report, should_alert=False) {
                     });
                 });
                 const all_profitability = symbol_reports.join(", ");
-                $("#bProf").html(`${round_digits(profitability, 4)}%`);
+                $("#bProf").html(`${round_digits(profitability, 4)}% ${error_message}`);
                 const avg_profitabilities = [];
                 $.each(botReport["market_average_profitability"], function (exchange, market_average_profitability) {
                     const exch = show_exchanges ? `${exchange}: ` : "";

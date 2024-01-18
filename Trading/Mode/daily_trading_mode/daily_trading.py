@@ -151,7 +151,7 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
             "max_currency_percent", commons_enums.UserInputTypes.FLOAT, 100, inputs,
             min_val=0, max_val=100,
             title="Maximum currency percent: Maximum portfolio % to allocate on a given currency. "
-                  "Used to compute buy order amounts.",
+                  "Used to compute buy order amounts. Ignored when 'Amount per buy/entry order' is set.",
         )
 
     @classmethod
@@ -186,6 +186,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
+    TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE = trading_enums.TradeOrderSide.BUY
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -310,8 +311,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         if increasing_position and self.BUY_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
         # check configured quantity
-        if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
-                                                                       trading_enums.TradeOrderSide.BUY):
+        if user_amount := trading_modes.get_user_selected_order_amount(
+            self.trading_mode,
+            self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE
+            if self.USE_TARGET_PROFIT_MODE else trading_enums.TradeOrderSide.BUY
+        ):
             return await script_keywords.get_amount_from_input_amount(
                 context=ctx,
                 input_amount=user_amount,
@@ -352,8 +356,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         # check all in orders
         if not increasing_position and self.SELL_WITH_MAXIMUM_SIZE_ORDERS:
             return quantity
-        if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
-                                                                       trading_enums.TradeOrderSide.SELL):
+        if user_amount := trading_modes.get_user_selected_order_amount(
+            self.trading_mode,
+            self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE
+            if self.USE_TARGET_PROFIT_MODE else trading_enums.TradeOrderSide.SELL
+        ):
             return await script_keywords.get_amount_from_input_amount(
                 context=ctx,
                 input_amount=user_amount,
@@ -392,7 +399,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     async def _get_market_quantity_from_risk(self, ctx, eval_note, quantity, quote, selling, increasing_position):
         # check configured quantity
-        side = trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
+        side = self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE if self.USE_TARGET_PROFIT_MODE else (
+            trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
+        )
         if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode, side):
             return await script_keywords.get_amount_from_input_amount(
                 context=ctx,
