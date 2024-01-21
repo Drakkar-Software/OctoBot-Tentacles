@@ -136,7 +136,14 @@ function handle_date_selection(){
     endDate[0].min = newStartDate;
 }
 
-const dataFilesTable = $('#dataFilesTable').DataTable({"order": [[ 2, 'desc' ]], "destroy": true});
+const dataFilesTable = $('#dataFilesTable').DataTable({
+    "order": [[ 2, 'desc' ]],
+    "columnDefs": [
+      { "width": "20%", "targets": 2 },
+      { "width": "8%", "targets": 5 },
+    ],
+    "destroy": true
+});
 const syncDataOnlyDiv = $("#synchronized-data-only-div");
 const syncDataOnlyCheckbox = $("#synchronized-data-only-checkbox");
 const startDate = $("#startDate");

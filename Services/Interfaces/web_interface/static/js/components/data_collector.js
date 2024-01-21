@@ -47,7 +47,13 @@ function delete_error_callback(updated_data, update_url, dom_root_element, resul
 
 function reload_table(){
     $("#collector_data").load(location.href.split("?")[0] + " #collector_data",function(){
-        dataFilesTable = $('#dataFilesTable').DataTable({"order": []});
+        dataFilesTable = $('#dataFilesTable').DataTable({
+            "order": [],
+            "columnDefs": [
+              { "width": "20%", "targets": 1 },
+              { "width": "8%", "targets": 4 },
+            ],
+        });
         handle_data_files_buttons();
         dataFilesTable.on("draw.dt", function(){
             handle_data_files_buttons();
