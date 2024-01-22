@@ -242,7 +242,7 @@ _TUTORIALS = {
                 },
                 {
                     title: 'See also',
-                    intro: `More details the ${getDocsLink("/octobot-advanced-usage/backtesting-and-strategy-optimization?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=backtesting_intro", "backtesting guide")}.`
+                    intro: `More details the ${getDocsLink("/octobot-usage/backtesting?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=backtesting_intro", "backtesting guide")}.`
                 },
             ]
         }
