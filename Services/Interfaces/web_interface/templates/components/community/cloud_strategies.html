@@ -1,4 +1,5 @@
 {% import 'components/community/cloud_strategies_selector.html' as m_cloud_strategies_selector %}
+{% import 'components/community/octobot_cloud_description.html' as octobot_cloud_description %}
 
 {% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE) -%}
 <div class="card">
@@ -26,6 +27,13 @@
                     <li>
                         Trade with your exchange account or with a virtual portfolio using paper trading
                     </li>
+                    <li>
+                         Deploy your OctoBot on the cloud from <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/trading-bot?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_link">
+                             octobot.cloud/trading-bot </a>
+                         and enjoy your OctoBot from anywhere while benefiting
+                        from cloud exclusive features such as the built-in TradingView integration, free ChatGPT evaluations and the
+                        <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/{{LOCALE}}/guides/octobot-usage/strategy-designer?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_link" target="_blank" rel="noopener">Strategy Designer</a>.
+                    </li>
                 </ul>
             </div>
             <div class="d-none d-xl-flex col-2">
@@ -42,6 +50,11 @@
                 <p>
                     Explore the OctoBot cloud strategies using the <a href="{{OCTOBOT_COMMUNITY_URL}}/strategies?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">strategy explorer</a>.
                 </p>
+
+                <a href="{{ url_for('about') }}"
+                   class="btn btn-sm btn-outline-info waves-effect">
+                    <i class="fa fa-arrow-right"></i> Learn more on OctoBot cloud
+                </a>
             </div>
         </div>
     </div>
