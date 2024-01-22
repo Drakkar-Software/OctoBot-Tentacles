@@ -1,4 +1,4 @@
-{% macro backtesting_report(source) -%}
+{% macro backtesting_report(source, OCTOBOT_DOCS_URL) -%}
 
 <span id="backtestingReport" update-url="{{ url_for('backtesting', update_type='backtesting_report', source=source) }}" loading="false" style='display: none;'>
     <div class="card">
@@ -53,6 +53,11 @@
                 <table id="result-trades"
                      class="w-100 table-striped table-responsive-sm">
                 </table>
+            </div>
+
+            <div class="alert mb-0 text-right">
+                Learn more details on how backtesting works in OctoBot on
+                <a class="" target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}/octobot-usage/backtesting?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=backtesting_footer">the backtesting guide</a>.
             </div>
         </div>
 
