@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "about" %}
 {% import 'macros/text.html' as m_text %}
+{% import "components/community/octobot_cloud_description.html" as octobot_cloud_description %}
 
 {% block body %}
 <br>
@@ -27,45 +28,7 @@
         <h2>Get more from OctoBot using OctoBot cloud</h2>
     </div>
     <div class="card-body py-0">
-        <div class="row">
-            <div class="col-12 col-md-2 col-xl-1 d-flex">
-                <div class="m-auto">
-                    <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=about_logo">
-                        <img class="img-fluid cloud-logo-4x"
-                             src="{{url_for('static', filename='img/community/octobot-cloud.png')}}" alt="OctoBot cloud">
-                    </a>
-                </div>
-            </div>
-            <div class="col-12 col-md-10 col-lg-6 col-xl-7 pt-4">
-                With
-                <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=about" target="_blank" rel="noopener">
-                OctoBot cloud</a>, you can:
-                    <ul>
-                        <li>
-                            Use trading strategies in the <strong>simplest way possible</strong>.
-                        </li>
-                        <li>
-                            Apply as many trading strategies as you want <strong>for free</strong>
-                        </li>
-                        <li>
-                            Easily find and use the best strategies made by the community <span class="badge badge-light">coming soon</span>
-                        </li>
-                        <li>
-                            Deploy your OctoBot on the cloud and enjoy your OctoBot from anywhere while benefiting
-                            from cloud exclusive features such as the <a href="https://www.octobot.cloud/en/blog/strategy-designer-revamp?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=about" target="_blank" rel="noopener">strategy designer</a>.
-                        </li>
-                    </ul>
-                <p>
-                    Check out OctoBot cloud on <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=about">octobot.cloud</a>.
-                </p>
-            </div>
-            <div class="d-none d-lg-flex col-lg-4">
-                <a class="mx-auto" target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=about_illustration">
-                    <img class="img-fluid cloud-logo-4x"
-                         src="{{url_for('static', filename='img/community/cloud_dark.png')}}" alt="OctoBot cloud">
-                </a>
-            </div>
-        </div>
+        {{ octobot_cloud_description.octobot_cloud_description(OCTOBOT_COMMUNITY_LANDING_URL, LOCALE) }}
     </div>
 </div>
 <br>
