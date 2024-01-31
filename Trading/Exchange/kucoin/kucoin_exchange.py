@@ -40,13 +40,14 @@ def _kucoin_retrier(f):
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
-                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args} kwargs={kwargs}) "
+                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args[1:]} kwargs={kwargs}) "
                         f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}."
                     )
                 else:
                     raise
         raise octobot_trading.errors.FailedRequest(
-            f"Failed request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} retries due "
+            f"Failed Kucoin request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} "
+            f"retries on {f.__name__}(args={args[1:]} kwargs={kwargs}) due "
             f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code"
         )
     return wrapper
@@ -214,6 +215,14 @@ class Kucoin(exchanges.RestExchange):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
 
+    @_kucoin_retrier
+    async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
+        return await super().get_price_ticker(symbol, **kwargs)
+
+    @_kucoin_retrier
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
+        return await super().get_all_currencies_price_ticker(**kwargs)
+
     def should_log_on_ddos_exception(self, exception) -> bool:
         """
         Override when necessary
@@ -313,6 +322,10 @@ class Kucoin(exchanges.RestExchange):
             stop_price=stop_price, side=side, current_price=current_price,
             reduce_only=reduce_only, params=params
         )
+
+    @_kucoin_retrier
+    async def get_my_recent_trades(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
 
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
