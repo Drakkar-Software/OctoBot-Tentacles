@@ -415,10 +415,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                     f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
             return self.DEFAULT_SELL_TARGET
 
-    @staticmethod
-    def get_limit_price(price):
+    def get_limit_price(self, price):
         # buy very close from current price
-        return price * DipAnalyserTradingModeConsumer.LIMIT_PRICE_MULTIPLIER
+        return price * self.LIMIT_PRICE_MULTIPLIER
 
     def _generate_sell_orders(self, sell_orders_count, quantity, sell_weight, sell_base, symbol_market):
         volume_with_price = []
