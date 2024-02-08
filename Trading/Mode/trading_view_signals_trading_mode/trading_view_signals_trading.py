@@ -76,11 +76,6 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                   "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
                   "buy price would be 199 and sell price 201.",
         )
-        self.USE_MARKET_ORDERS = self.UI.user_input(
-            "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
-            title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
-                  "are set using the Fixed limit prices difference value.",
-        )
         self.CANCEL_PREVIOUS_ORDERS = self.UI.user_input(
             "cancel_previous_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             title="Cancel previous orders: If enabled, cancel other orders associated to the same symbol when "
@@ -107,8 +102,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     def get_mode_consumer_classes(self) -> list:
         return [TradingViewSignalsModeConsumer]
 
-    async def create_consumers(self) -> list:
-        consumers = await super().create_consumers()
+    async def _get_feed_consumers(self):
         parsed_symbol = symbol_util.parse_symbol(self.symbol)
         self.str_symbol = str(parsed_symbol)
         self.merged_simple_symbol = parsed_symbol.merged_str_base_and_quote_only_symbol(market_separator="")
@@ -120,7 +114,11 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             )]
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return consumers + feed_consumer
+        return feed_consumer
+
+    async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
+        return consumers + await self._get_feed_consumers()
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
@@ -256,7 +254,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             target_price=target_price,
         )
 
-    async def signal_callback(self, parsed_data):
+    async def signal_callback(self, parsed_data: dict):
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
