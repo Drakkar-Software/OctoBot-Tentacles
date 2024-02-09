@@ -23,7 +23,9 @@ function disablePackagesOperations(should_lock=true){
 
 function reloadTable(){
     $('.table').each(function () {
-        $(this).DataTable();
+        $(this).DataTable({
+            paging: false
+        });
     });
     registerPackagesEvents();
 }
