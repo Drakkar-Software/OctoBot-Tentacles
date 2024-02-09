@@ -188,6 +188,10 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             trading_enums.EvaluatorStates.NEUTRAL: 0,
         }
 
+    def get_channels_registration(self):
+        # do not register on matrix or candles channels
+        return []
+
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Ignore matrix calls
         pass
@@ -282,12 +286,18 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 # send_notification
                 if not self.exchange_manager.is_backtesting:
                     await self._send_alert_notification(symbol, new_state)
-            elif self.trading_mode.consumers:
-                cancel_order_raw_side = order_data.get(
-                    TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
-                        TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
-                cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
-                                    else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+            else:
+                await self.cancel_orders_from_order_data(symbol, order_data)
 
-                # cancel open orders
-                await self.cancel_symbol_open_orders(symbol, side=cancel_order_side)
+    async def cancel_orders_from_order_data(self, symbol: str, order_data) -> bool:
+        if not self.trading_mode.consumers:
+            return False
+
+        cancel_order_raw_side = order_data.get(
+            TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
+                TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
+        cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
+                            else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+
+        # cancel open orders
+        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side)

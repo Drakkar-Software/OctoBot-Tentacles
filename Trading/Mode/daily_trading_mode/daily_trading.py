@@ -186,6 +186,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
+    CREATE_ORDER_DATA_PARAM = "data"
     TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE = trading_enums.TradeOrderSide.BUY
 
     def __init__(self, trading_mode):
@@ -517,7 +518,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             final_note = decimal.Decimal(str(final_note))
             if final_note.is_nan():
                 return []
-        data = kwargs.get("data", {})
+        data = kwargs.get(self.CREATE_ORDER_DATA_PARAM, {})
         user_price = data.get(self.PRICE_KEY, trading_constants.ZERO)
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
         user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
