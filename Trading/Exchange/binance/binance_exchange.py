@@ -141,12 +141,12 @@ class Binance(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             balance = []
             for account_type in self._futures_account_types:
-                balance.append(await self.connector.get_balance(**kwargs, subType=account_type))
+                balance.append(await super().get_balance(**kwargs, subType=account_type))
             # todo remove this and use both types when exchange-side multi portfolio is enabled
             # there will only be 1 balance as both linear and inverse are not supported simultaneously
             # (only 1 _futures_account_types is allowed for now)
             return balance[0]
-        return await self.connector.get_balance(**kwargs)
+        return await super().get_balance(**kwargs)
 
     def get_order_additional_params(self, order) -> dict:
         params = {}

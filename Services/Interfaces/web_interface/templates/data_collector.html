@@ -173,7 +173,7 @@
                 <tr class="selectable_datafile">
                     <td>{{", ".join(description.symbols)}}</td>
                     {% if description.start_timestamp %}
-                        <td data-order="{{description.timestamp}}">{{description.start_date}}<br>to<br>{{description.end_date}}</td>
+                        <td data-order="{{description.timestamp}}">{{description.start_date}} to {{description.end_date}}</td>
                         <td>Full</td>
                     {% else %}
                         <td data-order="{{description.timestamp}}">{{description.date}}</td>
