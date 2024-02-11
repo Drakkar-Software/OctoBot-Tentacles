@@ -24,7 +24,7 @@
                                      alt="Strategy illustration">
                             </div>
                             <div class="col-8 text-left my-auto pl-0 font-weight-bold">
-                                {{strategy.content['name_translations'][locale] | capitalize}}
+                                {{strategy.get_name(locale) | capitalize}}
                                 <i class="fas fa-external-link-alt"></i>
                             </div>
                         </div>
@@ -46,10 +46,10 @@
                     {% if strategy.category %}
                         {% if strategy.category.get_url() %}
                             <a href="{{strategy.category.get_url()}}" target="_blank" class="text-light">
-                                {{ strategy.category.name_translations[locale] }} <i class="fas fa-external-link-alt"></i>
+                                {{ strategy.get_name(locale) }} <i class="fas fa-external-link-alt"></i>
                             </a>
                         {% else %}
-                            {{ strategy.category.name_translations[locale] }}
+                            {{ strategy.get_name(locale) }}
                         {% endif %}
                     {% endif %}
                 </td>
@@ -59,7 +59,7 @@
                             data-toggle="tooltip" data-placement="top" title="{{'Use this strategy' if post_install_action else 'Add to OctoBot'}}"
                             data-role="install-strategy"
                             data-strategy-id="{{strategy.id}}"
-                            data-strategy-name="{{strategy.content['name_translations'][locale] | capitalize}}"
+                            data-strategy-name="{{strategy.get_name(locale) | capitalize}}"
                             data-description="{{strategy.content['description_translations'][locale]}}"
                                 data-post-install-action="{{post_install_action}}"
                     >
