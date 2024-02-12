@@ -38,12 +38,14 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
+    TAG_KEY = "TAG"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
     MARKET_SIGNAL = "market"
     LIMIT_SIGNAL = "limit"
+    STOP_SIGNAL = "stop"
     CANCEL_SIGNAL = "cancel"
     SIDE_PARAM_KEY = "SIDE"
 
@@ -209,7 +211,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             parsed_side = trading_enums.TradeOrderSide.SELL.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
-            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+            elif order_type in (TradingViewSignalsTradingMode.LIMIT_SIGNAL, TradingViewSignalsTradingMode.STOP_SIGNAL):
                 state = trading_enums.EvaluatorStates.SHORT
             else:
                 state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
@@ -218,7 +220,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             parsed_side = trading_enums.TradeOrderSide.BUY.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_LONG
-            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+            elif order_type in (TradingViewSignalsTradingMode.LIMIT_SIGNAL, TradingViewSignalsTradingMode.STOP_SIGNAL):
                 state = trading_enums.EvaluatorStates.LONG
             else:
                 state = trading_enums.EvaluatorStates.VERY_LONG if self.trading_mode.USE_MARKET_ORDERS \
@@ -236,10 +238,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                                                                                 target_price),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
+            TradingViewSignalsModeConsumer.TAG_KEY:
+                parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -297,7 +302,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
                 TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
         cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
-                            else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+            else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+        cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
 
         # cancel open orders
-        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side)
+        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side, tag=cancel_order_tag)

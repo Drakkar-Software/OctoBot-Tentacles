@@ -188,8 +188,34 @@ async def test_signal_callback(tools):
             consumer.PRICE_KEY: trading_constants.ZERO,
             consumer.VOLUME_KEY: trading_constants.ZERO,
             consumer.STOP_PRICE_KEY: decimal.Decimal(math.nan),
+            consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.REDUCE_ONLY_KEY: False,
+            consumer.TAG_KEY: None,
+            consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
+        })
+        _set_state_mock.reset_mock()
+
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "SELL",
+            mode.ORDER_TYPE_SIGNAL: "stop",
+            mode.STOP_PRICE_KEY: 25000,
+            mode.VOLUME_KEY: "12%",
+            mode.TAG_KEY: "stop_1_tag"
+        })
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.await_args[0][1] == symbol
+        assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
+        assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
+            consumer.PRICE_KEY: trading_constants.ZERO,
+            consumer.VOLUME_KEY: decimal.Decimal("1.2"),
+            consumer.STOP_PRICE_KEY: decimal.Decimal("25000"),
+            consumer.STOP_ONLY: True,
+            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
+            consumer.REDUCE_ONLY_KEY: False,
+            consumer.TAG_KEY: "stop_1_tag",
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
         _set_state_mock.reset_mock()
@@ -214,8 +240,10 @@ async def test_signal_callback(tools):
             consumer.PRICE_KEY: decimal.Decimal("123"),
             consumer.VOLUME_KEY: decimal.Decimal("1.2"),
             consumer.STOP_PRICE_KEY: decimal.Decimal("12"),
+            consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
             consumer.REDUCE_ONLY_KEY: True,
+            consumer.TAG_KEY: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
                 "Plop": False,
