@@ -1289,7 +1289,7 @@ def get_exchanges_details(exchanges_config) -> dict:
 
 
 def get_compatibility_result(exchange_name, auth_success, compatible_account, supporter_account,
-                             configured_account, supporting_exchange, error_message):
+                             configured_account, supporting_exchange, error_message, exchange_type):
     return {
         "exchange": exchange_name,
         "auth_success": auth_success,
@@ -1297,19 +1297,55 @@ def get_compatibility_result(exchange_name, auth_success, compatible_account, su
         "supporter_account": supporter_account,
         "configured_account": configured_account,
         "supporting_exchange": supporting_exchange,
+        "exchange_type": exchange_type,
         "error_message": error_message
     }
+
+
+async def _check_account_with_other_exchange_type_if_possible(
+    exchange_name: str, checked_config: dict, tentacles_setup_config, is_sandboxed: bool, supported_types: list
+):
+    is_compatible = False
+    auth_success = False
+    error = ""
+    ignored_type = checked_config.get(commons_constants.CONFIG_EXCHANGE_TYPE, commons_constants.DEFAULT_EXCHANGE_TYPE)
+    for supported_type in supported_types:
+        if supported_type.value == ignored_type:
+            continue
+        checked_config[commons_constants.CONFIG_EXCHANGE_TYPE] = supported_type.value
+        is_compatible, auth_success, error = await trading_api.is_compatible_account(
+            exchange_name,
+            checked_config,
+            tentacles_setup_config,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+        )
+        if auth_success:
+            return is_compatible, auth_success, error
+    # failed auth
+    return is_compatible, auth_success, error,
 
 
 async def _fetch_is_compatible_account(exchange_name, to_check_config,
                                        compatibility_results, is_sponsoring, is_supporter):
     try:
+        checked_config = copy.deepcopy(to_check_config)
+        tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
         is_compatible, auth_success, error = await trading_api.is_compatible_account(
             exchange_name,
-            to_check_config,
-            interfaces_util.get_edited_tentacles_config(),
-            to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+            checked_config,
+            tentacles_setup_config,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
         )
+        if not auth_success:
+            supported_types = trading_api.get_supported_exchange_types(exchange_name, tentacles_setup_config)
+            if len(supported_types) > 1:
+                is_compatible, auth_success, error = await _check_account_with_other_exchange_type_if_possible(
+                    exchange_name,
+                    checked_config,
+                    interfaces_util.get_edited_tentacles_config(),
+                    checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False),
+                    supported_types
+                )
         compatibility_results[exchange_name] = get_compatibility_result(
             exchange_name,
             auth_success,
@@ -1317,7 +1353,8 @@ async def _fetch_is_compatible_account(exchange_name, to_check_config,
             is_supporter,
             True,
             is_sponsoring,
-            error
+            error,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_TYPE, commons_constants.DEFAULT_EXCHANGE_TYPE)
         )
     except Exception as err:
         bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(
@@ -1359,7 +1396,11 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
                 is_supporter,
                 is_configured,
                 is_sponsoring,
-                error
+                error,
+                to_check_config.get(
+                    commons_constants.CONFIG_EXCHANGE_TYPE,
+                    commons_constants.DEFAULT_EXCHANGE_TYPE
+                )
             )
     if check_coro:
         async def gather_wrapper(coros):
