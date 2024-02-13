@@ -20,7 +20,8 @@ import ccxt
 import ccxt.async_support
 import copy
 import requests.adapters
-import requests.packages.urllib3.util.retry
+import urllib3.util.retry
+
 import aiohttp
 import gc
 
@@ -1030,8 +1031,7 @@ def get_all_symbols_list():
         try:
             # inspired from https://github.com/man-c/pycoingecko
             session = requests.Session()
-            retries = requests.packages.urllib3.util.retry.Retry(total=3, backoff_factor=0.5,
-                                                                 status_forcelist=[502, 503, 504])
+            retries = urllib3.util.retry.Retry(total=3, backoff_factor=0.5, status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
             # first fetch top 250 currencies then add all currencies and their ids
             for url in (f"{constants.CURRENCIES_LIST_URL}1", constants.ALL_SYMBOLS_URL):
