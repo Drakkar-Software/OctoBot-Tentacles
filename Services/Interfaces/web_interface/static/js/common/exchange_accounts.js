@@ -24,6 +24,13 @@ function register_exchanges_checks(check_existing_accounts){
         const warnDetails = $(exchangeCard.find("[data-role=account-warning-details]"));
 
         warnDetailsWrapper.addClass(hidden_class);
+        const exchangeType = exchangeData["exchange_type"]
+        const newToolTip = `Login successful using ${exchangeType} account`
+        // both have to be changed
+        validIcon.attr("title", newToolTip)
+        validIcon.attr("data-original-title", newToolTip)
+
+
         if(exchangeData["supporting_exchange"]){
             if(exchangeData["auth_success"]){
                 supportingIcon.removeClass(hidden_class);
