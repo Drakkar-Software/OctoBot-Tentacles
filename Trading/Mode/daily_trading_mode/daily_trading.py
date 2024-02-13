@@ -571,6 +571,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
             )
             create_stop_only = data.get(self.STOP_ONLY, False)
+            if create_stop_only and (not user_stop_price or user_stop_price.is_nan()):
+                self.logger.error("Stop price is required to create a stop order")
+                return []
             is_reducing_position = not increasing_position
             if self.USE_TARGET_PROFIT_MODE:
                 if is_reducing_position:
