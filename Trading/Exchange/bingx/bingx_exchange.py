@@ -28,22 +28,6 @@ class Bingx(exchanges.RestExchange):
     def get_name(cls) -> str:
         return 'bingx'
 
-    def _fix_market_status(self, market_status, remove_price_limits=False):  # todo move to adapter
-        """
-        Overrite if necessary
-        """
-        # on bingx, amounts are precisions in the right unit, do not patch precision
-
-        if remove_price_limits:
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
-
-        return market_status
-
     async def get_account_id(self, **kwargs: dict) -> str:
         resp = await self.connector.client.accountV1PrivateGetUid()
         return resp["data"]["uid"]
@@ -65,3 +49,16 @@ class BingxCCXTAdapter(exchanges.CCXTAdapter):
         except KeyError:
             pass
         return fixed
+
+    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
+        # on bingx, amounts are precisions in the right unit, do not patch precision
+        market_status = raw
+        if remove_price_limits:
+            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
+            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
+
+        return market_status

@@ -166,8 +166,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 else:
                     for i in range(self.trading_mode.secondary_entry_orders_count):
                         remaining_funds = initial_available_funds - sum(
-                            (order.origin_quantity * order.origin_price) if side is trading_enums.TradeOrderSide.BUY
-                            else order.origin_quantity
+                            trading_personal_data.get_locked_funds(order)
                             for order in created_orders
                         )
                         adapted_secondary_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
@@ -230,7 +229,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 symbol=symbol,
                 current_price=current_price,
                 quantity=order_quantity,
-                price=price
+                price=order_price
             )
             if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
                 created_orders.append(created_order)
