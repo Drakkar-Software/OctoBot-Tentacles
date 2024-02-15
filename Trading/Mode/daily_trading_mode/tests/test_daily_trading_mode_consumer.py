@@ -923,7 +923,7 @@ async def ensure_smaller_orders(consumer, symbol, trader):
         await trading_mode_test_toolkit.fill_orders(orders4, trader)
 
 
-async def test_stop_loss_and_take_profit_orders(tools):
+async def test_chained_stop_loss_and_take_profit_orders(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
 
     # with BTC/USDT
@@ -937,10 +937,12 @@ async def test_stop_loss_and_take_profit_orders(tools):
     data = {
         consumer.STOP_PRICE_KEY: decimal.Decimal("10"),
         consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.TAG_KEY: "super"
     }
     orders_with_stop = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
     buy_order = orders_with_stop[0]
     assert len(buy_order.chained_orders) == 1
+    assert buy_order.tag == "super"
     stop_order = buy_order.chained_orders[0]
     assert isinstance(stop_order, trading_personal_data.StopLossOrder)
     assert stop_order.origin_quantity == decimal.Decimal("0.01") \
@@ -949,6 +951,7 @@ async def test_stop_loss_and_take_profit_orders(tools):
     # stop has been triggered as signal is triggering a buy market order that is instantly filled
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.associated_entry_ids == [buy_order.order_id]
+    assert stop_order.tag == "super"
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -1021,6 +1024,51 @@ async def test_stop_loss_and_take_profit_orders(tools):
     assert stop_loss.origin_price == decimal.Decimal("123")
     assert stop_loss.origin_quantity == decimal.Decimal("0.01") \
            - trading_personal_data.get_fees_for_currency(sell_limit.fee, stop_loss.quantity_currency)
+
+
+async def test_create_stop_loss_orders(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+
+    # with BTC/USDT
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
+        last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(10 + 1000 / last_btc_price))
+
+    state = trading_enums.EvaluatorStates.SHORT.value
+    data = {
+        consumer.STOP_PRICE_KEY: decimal.Decimal("10"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.STOP_ONLY: True
+    }
+    created_orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.6)), state, data=data)
+    assert len(created_orders) == 1
+    stop_order = created_orders[0]
+    assert isinstance(stop_order, trading_personal_data.StopLossOrder)
+    assert stop_order.origin_quantity == decimal.Decimal("0.01")
+    assert stop_order.origin_price == decimal.Decimal("10")
+    assert stop_order.side is trading_enums.TradeOrderSide.SELL
+    assert stop_order.is_waiting_for_chained_trigger is False
+    assert stop_order.tag is None
+    assert stop_order.is_open()
+
+    state = trading_enums.EvaluatorStates.LONG.value
+    data = {
+        consumer.STOP_PRICE_KEY: decimal.Decimal("5"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.STOP_ONLY: True,
+        consumer.TAG_KEY: "plop1"
+    }
+    created_orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-0.6)), state, data=data)
+    assert len(created_orders) == 1
+    stop_order = created_orders[0]
+    assert isinstance(stop_order, trading_personal_data.StopLossOrder)
+    assert stop_order.origin_quantity == decimal.Decimal("0.01")
+    assert stop_order.origin_price == decimal.Decimal("5")
+    assert stop_order.side is trading_enums.TradeOrderSide.BUY
+    assert stop_order.is_waiting_for_chained_trigger is False
+    assert stop_order.tag == "plop1"
+    assert stop_order.is_open()
 
 
 async def test_target_profit_mode(tools):

@@ -184,8 +184,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     VOLUME_KEY = "VOLUME"
     STOP_PRICE_KEY = "STOP_PRICE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
+    STOP_ONLY = "STOP_ONLY"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
+    TAG_KEY = "TAG"
     ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
+    CREATE_ORDER_DATA_PARAM = "data"
     TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE = trading_enums.TradeOrderSide.BUY
 
     def __init__(self, trading_mode):
@@ -467,7 +470,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self, current_order,
         use_take_profit_orders, take_profit_price,
         use_stop_loss_orders, stop_price,
-        symbol_market
+        symbol_market, tag
     ):
         params = {}
         chained_orders = []
@@ -481,7 +484,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
             ) if stop_price.is_nan() else stop_price
             param_update, chained_order = await self.register_chained_order(
-                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side
+                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side, tag=tag
             )
             params.update(param_update)
             chained_orders.append(chained_order)
@@ -498,7 +501,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 else trading_enums.TraderOrderType.BUY_LIMIT
             )
             param_update, chained_order = await self.register_chained_order(
-                current_order, take_profit_price, order_type, exit_side
+                current_order, take_profit_price, order_type, exit_side, tag=tag
             )
             params.update(param_update)
             chained_orders.append(chained_order)
@@ -517,10 +520,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             final_note = decimal.Decimal(str(final_note))
             if final_note.is_nan():
                 return []
-        data = kwargs.get("data", {})
+        data = kwargs.get(self.CREATE_ORDER_DATA_PARAM, {})
         user_price = data.get(self.PRICE_KEY, trading_constants.ZERO)
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
         user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
+        tag = data.get(self.TAG_KEY, None)
         exchange_creation_params = data.get(self.ORDER_EXCHANGE_CREATION_PARAMS, {})
         current_order = None
         orders_should_have_been_created = False
@@ -566,6 +570,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 symbol_market,
                 data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
             )
+            create_stop_only = data.get(self.STOP_ONLY, False)
+            if create_stop_only and (not user_stop_price or user_stop_price.is_nan()):
+                self.logger.error("Stop price is required to create a stop order")
+                return []
             is_reducing_position = not increasing_position
             if self.USE_TARGET_PROFIT_MODE:
                 if is_reducing_position:
@@ -617,12 +625,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price=order_price,
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
+                        tag=tag,
                     )
                     if current_order := await self._create_order(
                         current_order,
                         use_chained_take_profit_orders, user_take_profit_price,
                         use_chained_stop_loss_orders, user_stop_price,
-                        symbol_market
+                        symbol_market, tag
                     ):
                         created_orders.append(current_order)
 
@@ -634,10 +643,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
                                                                                             symbol_market,
                                                                                             max_sell_size)
-                limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
-                                                                        user_price or
-                                                                        (price * self._get_limit_price_from_risk(
-                                                                            final_note)))
+                limit_price = user_stop_price if create_stop_only else trading_personal_data.decimal_adapt_price(
+                    symbol_market, user_price or (price * self._get_limit_price_from_risk(final_note))
+                )
                 for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                         quantity,
                         limit_price,
@@ -652,19 +660,24 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price=order_price,
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
+                        tag=tag,
                     )
-                    if updated_limit := await self._create_order(
+                    updated_limit = None
+                    if create_stop_only or (updated_limit := await self._create_order(
                         current_order,
                         use_chained_take_profit_orders, user_take_profit_price,
                         use_chained_stop_loss_orders, user_stop_price,
-                        symbol_market
-                    ):
-                        created_orders.append(updated_limit)
+                        symbol_market, tag
+                    )):
+                        if updated_limit:
+                            created_orders.append(updated_limit)
                         # ensure limit order was not instantly filled
-                        if use_stop_orders and updated_limit.is_open():
-                            oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                                .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
-                            updated_limit.add_to_order_group(oco_group)
+                        if create_stop_only or (use_stop_orders and updated_limit and updated_limit.is_open()):
+                            oco_group = None
+                            if updated_limit:
+                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                                updated_limit.add_to_order_group(oco_group)
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(True)
                             ) if user_stop_price.is_nan() else user_stop_price
@@ -679,8 +692,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                 reduce_only=True,
                                 group=oco_group,
                                 exchange_creation_params=exchange_creation_params,
+                                tag=tag,
                             )
-                            await self.trading_mode.create_order(current_order)
+                            created_stop = await self.trading_mode.create_order(current_order)
+                            if create_stop_only:
+                                created_orders.append(created_stop)
 
             elif state == trading_enums.EvaluatorStates.NEUTRAL.value:
                 return []
@@ -690,10 +706,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     ctx, final_note, max_buy_size, base, increasing_position
                 ) \
                     if user_volume == 0 else user_volume
-                limit_price = trading_personal_data.decimal_adapt_price(symbol_market,
-                                                                        user_price or
-                                                                        (price * self._get_limit_price_from_risk(
-                                                                            final_note)))
+                limit_price = user_stop_price if create_stop_only else trading_personal_data.decimal_adapt_price(
+                    symbol_market, user_price or (price * self._get_limit_price_from_risk(final_note))
+                )
                 quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                     self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT, quantity,
                     limit_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
@@ -713,19 +728,24 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price=order_price,
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
+                        tag=tag,
                     )
-                    if updated_limit := await self._create_order(
+                    updated_limit = None
+                    if create_stop_only or (updated_limit := await self._create_order(
                         current_order,
                         use_chained_take_profit_orders, user_take_profit_price,
                         use_chained_stop_loss_orders, user_stop_price,
-                        symbol_market
-                    ):
-                        created_orders.append(updated_limit)
+                        symbol_market, tag
+                    )):
+                        if updated_limit:
+                            created_orders.append(updated_limit)
                         # ensure limit order was not instantly filled
-                        if use_stop_orders and updated_limit.is_open():
-                            oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                                .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
-                            updated_limit.add_to_order_group(oco_group)
+                        if create_stop_only or (use_stop_orders and updated_limit and updated_limit.is_open()):
+                            oco_group = None
+                            if updated_limit:
+                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
+                                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                                updated_limit.add_to_order_group(oco_group)
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(False)
                             ) if user_stop_price.is_nan() else user_stop_price
@@ -740,8 +760,12 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                 reduce_only=True,
                                 group=oco_group,
                                 exchange_creation_params=exchange_creation_params,
+                                tag=tag,
                             )
                             await self.trading_mode.create_order(current_order)
+                            created_stop = await self.trading_mode.create_order(current_order)
+                            if create_stop_only:
+                                created_orders.append(created_stop)
 
             elif state == trading_enums.EvaluatorStates.VERY_LONG.value and not self.DISABLE_BUY_ORDERS:
                 quantity = await self._get_market_quantity_from_risk(
@@ -767,12 +791,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         price=order_price,
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
+                        tag=tag,
                     )
                     if current_order := await self._create_order(
                         current_order,
                         use_chained_take_profit_orders, user_take_profit_price,
                         use_chained_stop_loss_orders, user_stop_price,
-                        symbol_market
+                        symbol_market, tag
                     ):
                         created_orders.append(current_order)
             if created_orders:

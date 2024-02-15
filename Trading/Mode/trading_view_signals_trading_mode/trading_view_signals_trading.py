@@ -38,12 +38,14 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
+    TAG_KEY = "TAG"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
     MARKET_SIGNAL = "market"
     LIMIT_SIGNAL = "limit"
+    STOP_SIGNAL = "stop"
     CANCEL_SIGNAL = "cancel"
     SIDE_PARAM_KEY = "SIDE"
 
@@ -76,11 +78,6 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                   "(used if fixed limit prices is enabled). For a 200 USD price and 0.005 in difference: "
                   "buy price would be 199 and sell price 201.",
         )
-        self.USE_MARKET_ORDERS = self.UI.user_input(
-            "use_market_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
-            title="Use market orders: If enabled, placed orders will be market orders only. Otherwise order prices "
-                  "are set using the Fixed limit prices difference value.",
-        )
         self.CANCEL_PREVIOUS_ORDERS = self.UI.user_input(
             "cancel_previous_orders", commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             title="Cancel previous orders: If enabled, cancel other orders associated to the same symbol when "
@@ -107,8 +104,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     def get_mode_consumer_classes(self) -> list:
         return [TradingViewSignalsModeConsumer]
 
-    async def create_consumers(self) -> list:
-        consumers = await super().create_consumers()
+    async def _get_feed_consumers(self):
         parsed_symbol = symbol_util.parse_symbol(self.symbol)
         self.str_symbol = str(parsed_symbol)
         self.merged_simple_symbol = parsed_symbol.merged_str_base_and_quote_only_symbol(market_separator="")
@@ -120,7 +116,11 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             )]
         else:
             self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
-        return consumers + feed_consumer
+        return feed_consumer
+
+    async def create_consumers(self) -> list:
+        consumers = await super().create_consumers()
+        return consumers + await self._get_feed_consumers()
 
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
@@ -190,6 +190,10 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             trading_enums.EvaluatorStates.NEUTRAL: 0,
         }
 
+    def get_channels_registration(self):
+        # do not register on matrix or candles channels
+        return []
+
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Ignore matrix calls
         pass
@@ -207,7 +211,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             parsed_side = trading_enums.TradeOrderSide.SELL.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_SHORT
-            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+            elif order_type in (TradingViewSignalsTradingMode.LIMIT_SIGNAL, TradingViewSignalsTradingMode.STOP_SIGNAL):
                 state = trading_enums.EvaluatorStates.SHORT
             else:
                 state = trading_enums.EvaluatorStates.VERY_SHORT if self.trading_mode.USE_MARKET_ORDERS \
@@ -216,7 +220,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             parsed_side = trading_enums.TradeOrderSide.BUY.value
             if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL:
                 state = trading_enums.EvaluatorStates.VERY_LONG
-            elif order_type == TradingViewSignalsTradingMode.LIMIT_SIGNAL:
+            elif order_type in (TradingViewSignalsTradingMode.LIMIT_SIGNAL, TradingViewSignalsTradingMode.STOP_SIGNAL):
                 state = trading_enums.EvaluatorStates.LONG
             else:
                 state = trading_enums.EvaluatorStates.VERY_LONG if self.trading_mode.USE_MARKET_ORDERS \
@@ -234,10 +238,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                                                                                 target_price),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY:
                 decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan))),
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
+            TradingViewSignalsModeConsumer.TAG_KEY:
+                parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -256,7 +263,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             target_price=target_price,
         )
 
-    async def signal_callback(self, parsed_data):
+    async def signal_callback(self, parsed_data: dict):
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
@@ -284,12 +291,19 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 # send_notification
                 if not self.exchange_manager.is_backtesting:
                     await self._send_alert_notification(symbol, new_state)
-            elif self.trading_mode.consumers:
-                cancel_order_raw_side = order_data.get(
-                    TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
-                        TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
-                cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
-                                    else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+            else:
+                await self.cancel_orders_from_order_data(symbol, order_data)
 
-                # cancel open orders
-                await self.cancel_symbol_open_orders(symbol, side=cancel_order_side)
+    async def cancel_orders_from_order_data(self, symbol: str, order_data) -> bool:
+        if not self.trading_mode.consumers:
+            return False
+
+        cancel_order_raw_side = order_data.get(
+            TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
+                TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
+        cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
+            else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
+        cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
+
+        # cancel open orders
+        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side, tag=cancel_order_tag)
