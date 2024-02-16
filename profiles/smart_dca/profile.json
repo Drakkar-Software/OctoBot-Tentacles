@@ -4,7 +4,7 @@
             "Bitcoin": {
                 "enabled": true,
                 "pairs": [
-                    "BTC/BUSD"
+                    "BTC/USDT"
                 ]
             }
         },
@@ -26,12 +26,12 @@
             },
             "starting-portfolio": {
                 "BTC": 0,
-                "BUSD": 1000,
+                "USDT": 1000,
                 "ETH": 0
             }
         },
         "trading": {
-            "reference-market": "BUSD",
+            "reference-market": "USDT",
             "risk": 0.5
         }
     },
