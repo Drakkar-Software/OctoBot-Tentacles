@@ -144,7 +144,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
                      parsed_data[self.SYMBOL_KEY] == self.str_symbol):
-                await self.producers[0].signal_callback(parsed_data)
+                await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
         except KeyError as e:
             self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
                               f"Signal: \"{signal_data}\"")
@@ -263,15 +263,14 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             target_price=target_price,
         )
 
-    async def signal_callback(self, parsed_data: dict):
+    async def signal_callback(self, parsed_data: dict, ctx):
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
-        ctx = script_keywords.get_base_context(self.trading_mode)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
         # Use daily trading mode state system
-        await self._set_state(self.trading_mode.cryptocurrency, self.trading_mode.symbol, state, order_data)
+        await self._set_state(self.trading_mode.cryptocurrency, ctx.symbol, state, order_data)
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
         async with self.trading_mode_trigger():
