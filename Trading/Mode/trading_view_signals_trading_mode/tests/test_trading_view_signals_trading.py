@@ -32,6 +32,7 @@ import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.test_exchanges as test_exchanges
@@ -109,12 +110,16 @@ async def _stop(exchange_manager):
 
 async def test_trading_view_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
-    with mock.patch.object(producer, "signal_callback", mock.AsyncMock()) as signal_callback_mock:
+    context = script_keywords.get_base_context(producer.trading_mode)
+    with mock.patch.object(producer, "signal_callback", mock.AsyncMock()) as signal_callback_mock, \
+         mock.patch.object(script_keywords, "get_base_context", mock.Mock(return_value=context)) \
+         as get_base_context_mock:
         # invalid data
         data = ""
         await mode._trading_view_signal_callback({"metadata": data})
         signal_callback_mock.assert_not_awaited()
         signal_callback_mock.reset_mock()
+        get_base_context_mock.assert_not_called()
 
         # invalid symbol
         data = f"""
@@ -125,6 +130,7 @@ async def test_trading_view_signal_callback(tools):
         await mode._trading_view_signal_callback({"metadata": data})
         signal_callback_mock.assert_not_awaited()
         signal_callback_mock.reset_mock()
+        get_base_context_mock.assert_not_called()
 
         # minimal signal
         data = f"""
@@ -137,8 +143,10 @@ async def test_trading_view_signal_callback(tools):
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: symbol,
             mode.SIGNAL_KEY: "BUY",
-        })
+        }, context)
         signal_callback_mock.reset_mock()
+        get_base_context_mock.assert_called_once()
+        get_base_context_mock.reset_mock()
 
         # minimal signal
         signal = f"""
@@ -151,8 +159,10 @@ async def test_trading_view_signal_callback(tools):
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: symbol,
             mode.SIGNAL_KEY: "BUY",
-        })
+        }, context)
         signal_callback_mock.reset_mock()
+        get_base_context_mock.assert_called_once()
+        get_base_context_mock.reset_mock()
 
         # other signals
         signal = f"""
@@ -169,18 +179,21 @@ async def test_trading_view_signal_callback(tools):
             mode.SIGNAL_KEY: "BUY",
             "HEELLO": True,
             "PLOP": False,
-        })
+        }, context)
         signal_callback_mock.reset_mock()
+        get_base_context_mock.assert_called_once()
+        get_base_context_mock.reset_mock()
 
 
 async def test_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
+    context = script_keywords.get_base_context(producer.trading_mode)
     with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock:
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",
             mode.SIGNAL_KEY: "BUY",
-        })
+        }, context)
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.VERY_LONG
@@ -204,7 +217,7 @@ async def test_signal_callback(tools):
             mode.STOP_PRICE_KEY: 25000,
             mode.VOLUME_KEY: "12%",
             mode.TAG_KEY: "stop_1_tag"
-        })
+        }, context)
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
@@ -232,7 +245,7 @@ async def test_signal_callback(tools):
             mode.TAKE_PROFIT_PRICE_KEY: "22222",
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
-        })
+        }, context)
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
