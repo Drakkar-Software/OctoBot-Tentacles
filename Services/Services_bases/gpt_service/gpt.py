@@ -24,6 +24,7 @@ import octobot_services.services as services
 import octobot_services.errors as errors
 import octobot_services.util
 
+import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
@@ -58,7 +59,7 @@ class GPTService(services.AbstractService):
     def __init__(self):
         super().__init__()
         logging.getLogger("openai").setLevel(logging.WARNING)
-        self._env_secret_key = os.getenv(services_constants.ENV_OPENAI_SECRET_KEY, None)
+        self._env_secret_key = os.getenv(services_constants.ENV_OPENAI_SECRET_KEY, None) or None
         self.model = os.getenv(services_constants.ENV_GPT_MODEL, self.DEFAULT_MODEL)
         self.stored_signals: tree.BaseTree = tree.BaseTree()
         self.models = []
@@ -270,7 +271,8 @@ class GPTService(services.AbstractService):
         if self._env_secret_key is not None or self.use_stored_signals_only():
             return True
         try:
-            return bool(config[services_constants.CONIG_OPENAI_SECRET_KEY])
+            config_key = config[services_constants.CONIG_OPENAI_SECRET_KEY]
+            return bool(config_key) and config_key not in commons_constants.DEFAULT_CONFIG_VALUES
         except KeyError:
             return False
 
