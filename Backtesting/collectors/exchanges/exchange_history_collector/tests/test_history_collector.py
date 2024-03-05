@@ -21,6 +21,7 @@ import asyncio
 
 import octobot_commons.databases as databases
 import octobot_commons.symbols as commons_symbols
+import octobot_backtesting.data as data
 import octobot_backtesting.enums as enums
 import octobot_backtesting.errors as errors
 import octobot_trading.enums as trading_enums
@@ -53,6 +54,8 @@ async def data_collector(exchange_name, tentacles_setup_config, symbols, time_fr
             os.remove(collector_instance.file_path)
         if collector_instance.temp_file_path and os.path.isfile(collector_instance.temp_file_path):
             os.remove(collector_instance.temp_file_path)
+        if collector_instance.metadata_file_path and os.path.isfile(collector_instance.metadata_file_path):
+            os.remove(collector_instance.metadata_file_path)
 
 
 @contextlib.asynccontextmanager
@@ -78,9 +81,11 @@ async def test_collect_valid_data():
         assert collector.exchange_manager is None
         assert isinstance(collector.exchange, tentacles_exchanges.Binance)
         assert collector.file_path is not None
+        assert collector.metadata_file_path is not None
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.temp_file_path)
         assert os.path.isfile(collector.file_path)
+        assert os.path.isfile(collector.metadata_file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
             # use > to take into account new possible candles since collect max time is not specified
@@ -101,7 +106,10 @@ async def test_collect_invalid_data():
         assert collector.exchange_manager is None
         assert collector.exchange is not None
         assert collector.file_path is not None
+        assert collector.metadata_file_path is not None
         assert collector.temp_file_path is not None
+        assert not os.path.isfile(collector.file_path)
+        assert not os.path.isfile(collector.metadata_file_path)
         assert not os.path.isfile(collector.temp_file_path)
 
 
@@ -116,8 +124,10 @@ async def test_collect_valid_date_range():
         assert collector.exchange_manager is None
         assert isinstance(collector.exchange, tentacles_exchanges.Binance)
         assert collector.file_path is not None
+        assert collector.metadata_file_path is not None
         assert collector.temp_file_path is not None
         assert os.path.isfile(collector.file_path)
+        assert os.path.isfile(collector.metadata_file_path)
         assert not os.path.isfile(collector.temp_file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
@@ -146,8 +156,10 @@ async def test_collect_invalid_date_range():
         assert collector.exchange_manager is None
         assert isinstance(collector.exchange, tentacles_exchanges.Binance)
         assert collector.file_path is not None
+        assert collector.metadata_file_path is not None
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.file_path)
+        assert not os.path.isfile(collector.metadata_file_path)
         assert not os.path.isfile(collector.temp_file_path)
 
 
@@ -164,8 +176,10 @@ async def test_collect_multi_pair():
         assert collector.exchange_manager is None
         assert isinstance(collector.exchange, tentacles_exchanges.Binance)
         assert collector.file_path is not None
+        assert collector.metadata_file_path is not None
         assert collector.temp_file_path is not None
         assert not os.path.isfile(collector.temp_file_path)
+        assert os.path.isfile(collector.metadata_file_path)
         assert os.path.isfile(collector.file_path)
         async with collector_database(collector) as database:
             ohlcv = await database.select(enums.ExchangeDataTables.OHLCV)
@@ -173,7 +187,8 @@ async def test_collect_multi_pair():
             assert len(ohlcv) > 19316
             h_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, time_frame="4h")
             assert len(h_ohlcv) == len(symbols) * BINANCE_MAX_CANDLES_COUNT
-            symbols_description = json.loads((await database.select(enums.DataTables.DESCRIPTION))[0][3])
+            symbols_description = data.get_metadata_description(collector.metadata_file_path)\
+                [enums.DataFormatKeys.SYMBOLS.value]
             assert all(symbol in symbols_description for symbol in symbols)
             eth_btc_ohlcv = await database.select(enums.ExchangeDataTables.OHLCV, symbol="ETH/BTC")
             assert len(eth_btc_ohlcv) > 6760
@@ -200,4 +215,5 @@ async def test_stop_collect():
         assert collector.finished
         assert collector.exchange_manager is None
         assert not os.path.isfile(collector.temp_file_path)
+        assert not os.path.isfile(collector.metadata_file_path)
         assert not os.path.isfile(collector.file_path)

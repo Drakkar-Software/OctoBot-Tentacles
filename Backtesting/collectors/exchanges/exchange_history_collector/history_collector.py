@@ -68,9 +68,6 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
 
             await self.check_timestamps()
 
-            # create description
-            await self._create_description()
-
             self.total_steps = len(self.time_frames) * len(self.symbols)
             self.in_progress = True
 
@@ -87,6 +84,8 @@ class ExchangeHistoryDataCollector(collector.AbstractExchangeHistoryCollector):
                         f"[{time_frame_index}/{len(self.time_frames)}] Collecting {symbol} history on {time_frame}...")
                     await self.get_ohlcv_history(self.exchange_name, symbol, time_frame)
                     await self.get_kline_history(self.exchange_name, symbol, time_frame)
+            # create description
+            await self._create_description()
         except Exception as err:
             await self.database.stop()
             should_stop_database = False
