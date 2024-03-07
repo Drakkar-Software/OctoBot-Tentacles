@@ -31,25 +31,30 @@ import octobot_trading.enums as trading_enums
 
 def _kucoin_retrier(f):
     async def wrapper(*args, **kwargs):
+        last_error = None
         for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
-            except (octobot_trading.errors.FailedRequest, ccxt.ExchangeError):
+            except (octobot_trading.errors.FailedRequest, ccxt.ExchangeError) as err:
+                last_error = err
                 rest_exchange = args[0]  # self
                 if Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
                         f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args[1:]} kwargs={kwargs}) "
-                        f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}."
+                        f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}, "
+                        f"error: {err} ({last_error.__class__.__name__})."
                     )
                 else:
                     raise
+        last_error = last_error or RuntimeError("Unknown Kucoin error")  # to be able to "raise from" in next line
         raise octobot_trading.errors.FailedRequest(
             f"Failed Kucoin request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} "
             f"retries on {f.__name__}(args={args[1:]} kwargs={kwargs}) due "
-            f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code"
-        )
+            f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code. "
+            f"Last error: {last_error} ({last_error.__class__.__name__})"
+        ) from last_error
     return wrapper
 
 
