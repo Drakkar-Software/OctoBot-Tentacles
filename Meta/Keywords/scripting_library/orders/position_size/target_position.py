@@ -44,8 +44,8 @@ async def get_target_position(
         order_size = target_size - exchange_private_data.open_position_size(context)
 
     # in target position, we always provide the position size we want to end up with
-    elif target_position_type is script_keywords.QuantityType.DELTA or target_position_type is \
-            script_keywords.QuantityType.FLAT:
+    elif target_position_type in (script_keywords.QuantityType.DELTA, script_keywords.QuantityType.DELTA_BASE) \
+            or target_position_type is script_keywords.QuantityType.FLAT:
         order_size = target_position_value - exchange_private_data.open_position_size(context)
         if target == order_size:
             # no order to create
