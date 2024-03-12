@@ -39,6 +39,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
     TAG_KEY = "TAG"
+    EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
@@ -245,6 +246,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
+            TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
+                parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -297,6 +300,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         if not self.trading_mode.consumers:
             return False
 
+        exchange_ids = order_data.get(TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS, None)
         cancel_order_raw_side = order_data.get(
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
                 TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
@@ -305,4 +309,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
 
         # cancel open orders
-        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side, tag=cancel_order_tag)
+        return await self.cancel_symbol_open_orders(
+            symbol, side=cancel_order_side, tag=cancel_order_tag, exchange_order_ids=exchange_ids
+        )
