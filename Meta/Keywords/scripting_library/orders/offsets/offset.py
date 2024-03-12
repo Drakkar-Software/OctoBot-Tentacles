@@ -26,7 +26,7 @@ async def get_offset(context, offset_in, side=None):
         raise errors.InvalidArgumentError("offset is required")
     offset_type, offset_value = script_keywords.parse_quantity(offset_in)
 
-    if offset_type is script_keywords.QuantityType.DELTA:
+    if offset_type in (script_keywords.QuantityType.DELTA, script_keywords.QuantityType.DELTA_BASE):
         current_price_val = decimal.Decimal(await exchange_public_data.current_live_price(context))
         return current_price_val + offset_value  # offset should be negative when wanting to buy bellow current price
 
