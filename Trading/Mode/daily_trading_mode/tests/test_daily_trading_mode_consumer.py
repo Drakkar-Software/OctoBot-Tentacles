@@ -181,7 +181,6 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
 
     # change reference market to USDT
     exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
-    exchange_manager.exchange_personal_data.portfolio_manager.reference_market = "USDT"
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
         symbol] = last_btc_price
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
@@ -281,10 +280,16 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
 
         truncated_last_price = trading_personal_data.decimal_trunc_with_n_decimal_digits(last_btc_price, 8)
 
-        # valid buy market order with (price and quantity adapted)
-        orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.VERY_LONG.value)
+        # valid buy market order with (price and quantity adapted) using user_given quantity (which is adapted as well)
+        orders = await consumer.create_new_orders(
+            symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.VERY_LONG.value,
+            data={
+                consumer.VOLUME_KEY: decimal.Decimal('0.0123')
+            }
+        )
         assert len(orders) == 1
         order = orders[0]
+        assert order.origin_quantity == decimal.Decimal('0.0123')
         # very long state
         adapted_args = list(decimal_adapt_order_quantity_because_fees_mock.mock_calls[0].args)
         adapted_args[3] = trading_personal_data.decimal_adapt_quantity(market_status, adapted_args[3])
@@ -310,7 +315,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
         assert order.trader is None
         assert order.fee
         assert order.filled_price == decimal.Decimal(str(7009.19499999))
-        assert order.origin_quantity == decimal.Decimal(str(0.11573814))
+        assert order.origin_quantity == decimal.Decimal('0.0123')
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
         assert order.order_group is None
@@ -337,7 +342,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
         assert order.trader is None
         assert order.fee
         assert order.filled_price == decimal.Decimal(str(7009.19499999))
-        assert order.origin_quantity == decimal.Decimal(str(2.5156224))
+        assert order.origin_quantity == decimal.Decimal('2.4122877')
         assert order.filled_quantity == order.origin_quantity
         assert order.simulated is True
         assert order.order_group is None
