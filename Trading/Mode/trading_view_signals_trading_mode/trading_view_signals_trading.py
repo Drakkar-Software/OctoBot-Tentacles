@@ -30,6 +30,8 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
+    TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
+
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
@@ -123,6 +125,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         consumers = await super().create_consumers()
         return consumers + await self._get_feed_consumers()
 
+    def _adapt_symbol(self, parsed_data):
+        if self.SYMBOL_KEY not in parsed_data:
+            return
+        symbol = parsed_data[self.SYMBOL_KEY]
+        for suffix in self.TRADINGVIEW_FUTURES_SUFFIXES:
+            if symbol.endswith(suffix):
+                parsed_data[self.SYMBOL_KEY] = symbol.split(suffix)[0]
+                return
+
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
         signal_data = data.get("metadata", "")
@@ -141,6 +152,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             except IndexError:
                 self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
+        self._adapt_symbol(parsed_data)
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
