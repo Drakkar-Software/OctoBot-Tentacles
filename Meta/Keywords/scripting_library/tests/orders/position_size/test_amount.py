@@ -45,7 +45,7 @@ async def test_get_amount(null_context):
                               mock.AsyncMock(return_value=decimal.Decimal(1))) \
          as script_keywords_adapt_amount_to_holdings_mock:
         with mock.patch.object(dsl, "parse_quantity",
-                               mock.Mock(return_value=(script_keywords.QuantityType.DELTA, decimal.Decimal(2)))) \
+                               mock.Mock(return_value=(script_keywords.QuantityType.DELTA_BASE, decimal.Decimal(2)))) \
                 as parse_quantity_mock:
             assert await amount.get_amount(null_context, "1", "buy", target_price=constants.ONE) == decimal.Decimal(1)
             adapt_amount_to_holdings_mock.assert_called_once_with(null_context, decimal.Decimal(2), "buy",

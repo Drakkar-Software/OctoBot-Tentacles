@@ -101,7 +101,7 @@ async def _get_order_percents(context, order_amount, order_target_position, inpu
         quantity_type, quantity = script_keywords.parse_quantity(order_amount)
         if quantity_type in (script_keywords.QuantityType.PERCENT, script_keywords.QuantityType.AVAILABLE_PERCENT):
             order_pf_percent = order_amount
-        elif quantity_type is script_keywords.QuantityType.DELTA:
+        elif quantity_type in (script_keywords.QuantityType.DELTA, script_keywords.QuantityType.DELTA_BASE):
             percent = await script_keywords.get_order_size_portfolio_percent(
                 context, quantity, input_side, symbol
             )

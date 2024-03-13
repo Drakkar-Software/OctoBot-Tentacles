@@ -205,6 +205,7 @@ async def test_signal_callback(tools):
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
+            consumer.EXCHANGE_ORDER_IDS: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
         _set_state_mock.reset_mock()
@@ -216,7 +217,8 @@ async def test_signal_callback(tools):
             mode.ORDER_TYPE_SIGNAL: "stop",
             mode.STOP_PRICE_KEY: 25000,
             mode.VOLUME_KEY: "12%",
-            mode.TAG_KEY: "stop_1_tag"
+            mode.TAG_KEY: "stop_1_tag",
+            consumer.EXCHANGE_ORDER_IDS: None,
         }, context)
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
@@ -229,6 +231,7 @@ async def test_signal_callback(tools):
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: "stop_1_tag",
+            consumer.EXCHANGE_ORDER_IDS: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
         _set_state_mock.reset_mock()
@@ -243,6 +246,7 @@ async def test_signal_callback(tools):
             mode.ORDER_TYPE_SIGNAL: "LiMiT",
             mode.STOP_PRICE_KEY: "12",
             mode.TAKE_PROFIT_PRICE_KEY: "22222",
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
         }, context)
@@ -257,6 +261,7 @@ async def test_signal_callback(tools):
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
                 "Plop": False,

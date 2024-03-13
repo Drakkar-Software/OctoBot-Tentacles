@@ -30,6 +30,8 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
+    TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
+
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
@@ -39,6 +41,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
     TAG_KEY = "TAG"
+    EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
@@ -122,6 +125,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         consumers = await super().create_consumers()
         return consumers + await self._get_feed_consumers()
 
+    def _adapt_symbol(self, parsed_data):
+        if self.SYMBOL_KEY not in parsed_data:
+            return
+        symbol = parsed_data[self.SYMBOL_KEY]
+        for suffix in self.TRADINGVIEW_FUTURES_SUFFIXES:
+            if symbol.endswith(suffix):
+                parsed_data[self.SYMBOL_KEY] = symbol.split(suffix)[0]
+                return
+
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
         signal_data = data.get("metadata", "")
@@ -140,6 +152,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             except IndexError:
                 self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
+        self._adapt_symbol(parsed_data)
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
@@ -245,6 +258,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
+            TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
+                parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -297,6 +312,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         if not self.trading_mode.consumers:
             return False
 
+        exchange_ids = order_data.get(TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS, None)
         cancel_order_raw_side = order_data.get(
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
                 TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
@@ -305,4 +321,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
 
         # cancel open orders
-        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side, tag=cancel_order_tag)
+        return await self.cancel_symbol_open_orders(
+            symbol, side=cancel_order_side, tag=cancel_order_tag, exchange_order_ids=exchange_ids
+        )

@@ -25,7 +25,7 @@ async def withdraw(context, amount, currency):
 
     if amount_type is script_keywords.QuantityType.UNKNOWN or amount_value <= 0:
         raise trading_errors.InvalidArgumentError("amount cant be zero or negative")
-    if amount_type is script_keywords.QuantityType.DELTA:
+    if amount_type in (script_keywords.QuantityType.DELTA, script_keywords.QuantityType.DELTA_BASE):
         # nothing to do
         pass
     elif amount_type is script_keywords.QuantityType.PERCENT:
