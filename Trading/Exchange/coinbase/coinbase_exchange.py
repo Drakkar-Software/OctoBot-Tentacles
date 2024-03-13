@@ -19,6 +19,7 @@ import decimal
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
@@ -80,6 +81,46 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                 ).quote
         except (KeyError, TypeError):
             pass
+
+    def fix_order(self, raw, **kwargs):
+        """
+        Handle 'order_type': 'UNKNOWN_ORDER_TYPE in coinbase order response (translated into None in ccxt order type)
+        ex:
+        {'info': {'order_id': 'd7471b4e-960e-4c92-bdbf-755cb92e176b', 'product_id': 'AAVE-USD',
+        'user_id': '9868efd7-90e1-557c-ac0e-f6b943d471ad', 'order_configuration': {'limit_limit_gtc':
+        {'base_size': '6.798', 'limit_price': '110.92', 'post_only': False}}, 'side': 'BUY',
+        'client_order_id': '465ead64-6272-4e92-97e2-59653de3ca24', 'status': 'OPEN', 'time_in_force':
+        'GOOD_UNTIL_CANCELLED', 'created_time': '2024-03-02T03:04:11.070126Z', 'completion_percentage':
+        '0', 'filled_size': '0', 'average_filled_price': '0', 'fee': '', 'number_of_fills': '0', 'filled_value': '0',
+        'pending_cancel': False, 'size_in_quote': False, 'total_fees': '0', 'size_inclusive_of_fees': False,
+        'total_value_after_fees': '757.05029664', 'trigger_status': 'INVALID_ORDER_TYPE', 'order_type':
+        'UNKNOWN_ORDER_TYPE', 'reject_reason': 'REJECT_REASON_UNSPECIFIED', 'settled': False, 'product_type':
+        'SPOT', 'reject_message': '', 'cancel_message': '', 'order_placement_source': 'RETAIL_ADVANCED',
+        'outstanding_hold_amount': '757.05029664', 'is_liquidation': False, 'last_fill_time': None,
+        'edit_history': [], 'leverage': '', 'margin_type': 'UNKNOWN_MARGIN_TYPE'}, 'clientOrderId':
+        '465ead64-6272-4e92-97e2-59653de3ca24', 'timestamp': 1709348651.07, 'datetime': '2024-03-02T03:04:11.070126Z',
+        'lastTradeTimestamp': None, 'symbol': 'AAVE/USD', 'type': None, 'timeInForce': 'GTC', 'postOnly': False,
+        'side': 'buy', 'price': 110.92, 'stopPrice': None, 'triggerPrice': None, 'amount': 6.798, 'filled': 0.0,
+        'remaining': 6.798, 'cost': 0.0, 'average': None, 'status': 'open', 'fee': {'cost': '0', 'currency': 'USD',
+        'exchange_original_cost': '0', 'is_from_exchange': True}, 'trades': [],
+        'fees': [{'cost': 0.0, 'currency': 'USD'}], 'lastUpdateTimestamp': None, 'reduceOnly': None,
+        'takeProfitPrice': None, 'stopLossPrice': None, 'exchange_id': 'd7471b4e-960e-4c92-bdbf-755cb92e176b'}
+        """
+        fixed = super().fix_order(raw, **kwargs)
+        if fixed[ccxt_enums.ExchangeOrderCCXTColumns.TYPE.value] is None:
+            if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value] is not None:
+                # stop price set: stop order
+                order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            elif fixed[ccxt_enums.ExchangeOrderCCXTColumns.PRICE.value] is None:
+                # price not set: market order
+                order_type = trading_enums.TradeOrderType.MARKET.value
+            else:
+                # price is set and stop price is not: limit order
+                order_type = trading_enums.TradeOrderType.LIMIT.value
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
+        if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "PENDING":
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CREATION.value
+        return fixed
 
     def fix_trades(self, raw, **kwargs):
         raw = super().fix_trades(raw, **kwargs)
