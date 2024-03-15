@@ -278,7 +278,7 @@ async def test_signal_callback(tools):
             mode.REDUCE_ONLY_KEY: True,
             mode.ORDER_TYPE_SIGNAL: "LiMiT",
             mode.STOP_PRICE_KEY: "-10%",  # price - 10%
-            mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333b",   # price  + 120.333333333333333
+            mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
