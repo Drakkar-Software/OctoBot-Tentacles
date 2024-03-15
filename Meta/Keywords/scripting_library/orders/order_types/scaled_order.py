@@ -16,8 +16,7 @@
 
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.create_order as create_order
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
-import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
-
+import octobot_trading.modes.script_keywords as script_keywords
 
 async def scaled_limit(
         context,
@@ -69,8 +68,8 @@ async def scaled_limit(
     else:
         raise RuntimeError("Either use side with amount or target_position for scaled orders.")
 
-    scale_from_price = await offsets.get_offset(context, scale_from, side=side)
-    scale_to_price = await offsets.get_offset(context, scale_to, side=side)
+    scale_from_price = await script_keywords.get_price_with_offset(context, scale_from, side=side)
+    scale_to_price = await script_keywords.get_price_with_offset(context, scale_to, side=side)
     order_prices = []
     if distribution == "linear":
         if scale_from_price >= scale_to_price:

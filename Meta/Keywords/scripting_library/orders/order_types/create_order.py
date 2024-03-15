@@ -23,7 +23,6 @@ import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Meta.Keywords.scripting_library.settings as settings
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
-import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
 import tentacles.Meta.Keywords.scripting_library.orders.chaining as chaining
 import tentacles.Meta.Keywords.scripting_library.orders.grouping as grouping
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_private_data as exchange_private_data
@@ -78,8 +77,12 @@ async def create_order_instance(
         min_offset_val, max_offset_val, order_limit_offset, limit_offset_val = \
             await _get_order_details(context, order_type_name, side, order_offset, reduce_only, order_limit_offset)
 
-        stop_loss_price = None if stop_loss_offset is None else await offsets.get_offset(context, stop_loss_offset)
-        take_profit_price = None if take_profit_offset is None else await offsets.get_offset(context, take_profit_offset)
+        stop_loss_price = None if stop_loss_offset is None else await script_keywords.get_price_with_offset(
+            context, stop_loss_offset
+        )
+        take_profit_price = None if take_profit_offset is None else await script_keywords.get_price_with_offset(
+            context, take_profit_offset
+        )
         # round down when not reduce only and up when reduce only to avoid letting small positions open
         truncate = not reduce_only
         return await _create_order(context=context, symbol=symbol, order_quantity=order_quantity,
@@ -187,13 +190,13 @@ async def _get_order_details(context, order_type_name, side, order_offset, reduc
     if order_type_name == "market":
         order_type = trading_enums.TraderOrderType.SELL_MARKET if side == trading_enums.TradeOrderSide.SELL.value \
             else trading_enums.TraderOrderType.BUY_MARKET
-        order_price = await offsets.get_offset(context, "0")
+        order_price = await script_keywords.get_price_with_offset(context, "0")
         final_side = None  # needs to be None
 
     elif order_type_name == "limit":
         order_type = trading_enums.TraderOrderType.SELL_LIMIT if side == trading_enums.TradeOrderSide.SELL.value \
             else trading_enums.TraderOrderType.BUY_LIMIT
-        order_price = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
         final_side = None  # needs to be None
         # todo post only
 
@@ -203,26 +206,26 @@ async def _get_order_details(context, order_type_name, side, order_offset, reduc
         order_type = trading_enums.TraderOrderType.STOP_LOSS
         final_side = trading_enums.TradeOrderSide.SELL if side == trading_enums.TradeOrderSide.SELL.value \
             else trading_enums.TradeOrderSide.BUY
-        order_price = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
         reduce_only = True
 
     # should be conditional order on the exchange
     elif order_type_name == "stop_market":
         order_type = None  # todo
-        order_price = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
 
     # has a trigger price and a offset where the limit gets placed when triggered -
     # conditional order on exchange possible?
     elif order_type_name == "stop_limit":
         order_type = None  # todo
-        order_price = await offsets.get_offset(context, order_offset)
-        order_limit_offset = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
+        order_limit_offset = await script_keywords.get_price_with_offset(context, order_offset)
         # todo post only
 
     # trailling orders
     # should be a real trailing stop loss on the exchange - short and long
     elif order_type_name == "trailing_stop_loss":
-        order_price = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
         order_type = None  # todo
         reduce_only = True
         trailing_method = "continuous"
@@ -230,7 +233,7 @@ async def _get_order_details(context, order_type_name, side, order_offset, reduc
 
     # todo should use trailing on exchange if available or replace order on exchange
     elif order_type_name == "trailing_market":
-        order_price = await offsets.get_offset(context, order_offset)
+        order_price = await script_keywords.get_price_with_offset(context, order_offset)
         trailing_method = "continuous"
         order_type = trading_enums.TraderOrderType.TRAILING_STOP
         final_side = trading_enums.TradeOrderSide.SELL if side == trading_enums.TradeOrderSide.SELL.value \
@@ -242,10 +245,10 @@ async def _get_order_details(context, order_type_name, side, order_offset, reduc
         final_side = trading_enums.TradeOrderSide.SELL if side == trading_enums.TradeOrderSide.SELL.value \
             else trading_enums.TradeOrderSide.BUY
         trailing_method = "continuous"
-        min_offset_val = await offsets.get_offset(context, order_offset)
+        min_offset_val = await script_keywords.get_price_with_offset(context, order_offset)
         # todo If the price changes such that the order becomes more than maxOffset away from the
         #  price, then the order will be moved to minOffset away again.
-        max_offset_val = await offsets.get_offset(context, order_offset)
+        max_offset_val = await script_keywords.get_price_with_offset(context, order_offset)
         # todo post only
 
     return order_type, order_price, final_side, reduce_only, trailing_method, \

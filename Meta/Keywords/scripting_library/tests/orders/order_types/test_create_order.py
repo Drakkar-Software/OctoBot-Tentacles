@@ -21,13 +21,12 @@ import os
 
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.create_order as create_order
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
-import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
 import tentacles.Meta.Keywords.scripting_library.orders.grouping as grouping
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as errors
 import octobot_trading.constants as trading_constants
 import octobot_trading.personal_data as trading_personal_data
-import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
+import octobot_trading.modes.script_keywords as script_keywords
 
 from tentacles.Meta.Keywords.scripting_library.tests import event_loop, null_context, mock_context, symbol_market, \
     skip_if_octobot_trading_mocking_disabled
@@ -46,7 +45,7 @@ async def test_create_order_instance(mock_context):
             mock.patch.object(create_order, "_get_order_details",
                               mock.AsyncMock(return_value=(1, 2, 3, 4, 5, 6, 7, 8, 9))) \
             as _get_order_details_mock, \
-            mock.patch.object(offsets, "get_offset", mock.AsyncMock(return_value=42)) as get_offset_mock, \
+            mock.patch.object(script_keywords, "get_price_with_offset", mock.AsyncMock(return_value=42)) as get_offset_mock, \
             mock.patch.object(create_order, "_create_order", mock.AsyncMock()) as _create_order_mock:
         with mock.patch.object(create_order, "_paired_order_is_closed", mock.Mock(return_value=True)) \
              as _paired_order_is_closed_mock:
@@ -219,7 +218,7 @@ async def test_get_order_quantity_and_side(null_context):
 
 async def test_get_order_details(null_context):
     ten = decimal.Decimal(10)
-    with mock.patch.object(offsets, "get_offset", mock.AsyncMock(return_value=ten)) as get_offset_mock:
+    with mock.patch.object(script_keywords, "get_price_with_offset", mock.AsyncMock(return_value=ten)) as get_offset_mock:
 
         async def _test_market(side, expected_order_type):
             order_type, order_price, side, _, _, _, _, _, _ = await create_order._get_order_details(

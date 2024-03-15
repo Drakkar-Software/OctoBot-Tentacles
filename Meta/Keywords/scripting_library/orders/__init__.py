@@ -15,7 +15,6 @@
 #  License along with this library.
 
 
-from .offsets import *
 from .order_types import *
 from .position_size import *
 from .order_tags import *
