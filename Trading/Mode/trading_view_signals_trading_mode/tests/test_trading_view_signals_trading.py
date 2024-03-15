@@ -269,6 +269,39 @@ async def test_signal_callback(tools):
         })
         _set_state_mock.reset_mock()
 
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "SelL",
+            mode.PRICE_KEY: "123@",  # price = 123
+            mode.VOLUME_KEY: "1b",  # base amount
+            mode.REDUCE_ONLY_KEY: True,
+            mode.ORDER_TYPE_SIGNAL: "LiMiT",
+            mode.STOP_PRICE_KEY: "-10%",  # price - 10%
+            mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333b",   # price  + 120.333333333333333
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            "PARAM_TAG_1": "ttt",
+            "PARAM_Plop": False,
+        }, context)
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.await_args[0][1] == symbol
+        assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
+        assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
+            consumer.PRICE_KEY: decimal.Decimal("123"),
+            consumer.VOLUME_KEY: decimal.Decimal("1"),
+            consumer.STOP_PRICE_KEY: decimal.Decimal("6308.27549999"),
+            consumer.STOP_ONLY: False,
+            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("7129.52833333"),
+            consumer.REDUCE_ONLY_KEY: True,
+            consumer.TAG_KEY: None,
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
+                "TAG_1": "ttt",
+                "Plop": False,
+            },
+        })
+        _set_state_mock.reset_mock()
+
 
 def compare_dict_with_nan(d_1, d_2):
     try:
