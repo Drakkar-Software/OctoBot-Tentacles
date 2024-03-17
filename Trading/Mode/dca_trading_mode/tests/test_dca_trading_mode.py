@@ -458,6 +458,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert len(entry_order.chained_orders) == 2
         stop_loss = entry_order.chained_orders[0]
         take_profit = entry_order.chained_orders[1]
+        assert stop_loss.origin_quantity == entry_order.origin_quantity
+        assert take_profit.origin_quantity == entry_order.origin_quantity
         assert isinstance(stop_loss, trading_personal_data.StopLossOrder)
         assert isinstance(stop_loss.state, trading_personal_data.PendingCreationChainedOrderState)
         assert isinstance(take_profit, trading_personal_data.SellLimitOrder)

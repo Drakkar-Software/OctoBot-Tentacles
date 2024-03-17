@@ -32,6 +32,7 @@ import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
+import octobot_trading.errors as errors
 import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.config as test_utils_config
@@ -111,78 +112,96 @@ async def _stop(exchange_manager):
 async def test_trading_view_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
-    with mock.patch.object(producer, "signal_callback", mock.AsyncMock()) as signal_callback_mock, \
-         mock.patch.object(script_keywords, "get_base_context", mock.Mock(return_value=context)) \
+    with mock.patch.object(script_keywords, "get_base_context", mock.Mock(return_value=context)) \
          as get_base_context_mock:
-        # invalid data
-        data = ""
-        await mode._trading_view_signal_callback({"metadata": data})
-        signal_callback_mock.assert_not_awaited()
-        signal_callback_mock.reset_mock()
-        get_base_context_mock.assert_not_called()
+        # ensure exception is caught
+        with mock.patch.object(
+                producer, "signal_callback", mock.AsyncMock(side_effect=errors.MissingFunds)
+        ) as signal_callback_mock:
+            signal = f"""
+                EXCHANGE={exchange_manager.exchange_name}
+                SYMBOL={symbol}
+                SIGNAL=BUY
+            """
+            await mode._trading_view_signal_callback({"metadata": signal})
+            signal_callback_mock.assert_awaited_once()
+            get_base_context_mock.assert_called_once()
+            get_base_context_mock.reset_mock()
 
-        # invalid symbol
-        data = f"""
-        EXCHANGE={exchange_manager.exchange_name}
-        SYMBOL={symbol}PLOP
-        SIGNAL=BUY
-        """
-        await mode._trading_view_signal_callback({"metadata": data})
-        signal_callback_mock.assert_not_awaited()
-        signal_callback_mock.reset_mock()
-        get_base_context_mock.assert_not_called()
+        with mock.patch.object(producer, "signal_callback", mock.AsyncMock()) as signal_callback_mock:
+            # invalid data
+            data = ""
+            await mode._trading_view_signal_callback({"metadata": data})
+            signal_callback_mock.assert_not_awaited()
+            signal_callback_mock.reset_mock()
+            get_base_context_mock.assert_not_called()
 
-        # minimal signal
-        data = f"""
-        EXCHANGE={exchange_manager.exchange_name}
-        SYMBOL={symbol}
-        SIGNAL=BUY
-        """
-        await mode._trading_view_signal_callback({"metadata": data})
-        signal_callback_mock.assert_awaited_once_with({
-            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
-            mode.SYMBOL_KEY: symbol,
-            mode.SIGNAL_KEY: "BUY",
-        }, context)
-        signal_callback_mock.reset_mock()
-        get_base_context_mock.assert_called_once()
-        get_base_context_mock.reset_mock()
+            # invalid symbol
+            data = f"""
+            EXCHANGE={exchange_manager.exchange_name}
+            SYMBOL={symbol}PLOP
+            SIGNAL=BUY
+            """
+            await mode._trading_view_signal_callback({"metadata": data})
+            signal_callback_mock.assert_not_awaited()
+            signal_callback_mock.reset_mock()
+            get_base_context_mock.assert_not_called()
 
-        # minimal signal
-        signal = f"""
+            # minimal signal
+            data = f"""
             EXCHANGE={exchange_manager.exchange_name}
             SYMBOL={symbol}
             SIGNAL=BUY
-        """
-        await mode._trading_view_signal_callback({"metadata": signal})
-        signal_callback_mock.assert_awaited_once_with({
-            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
-            mode.SYMBOL_KEY: symbol,
-            mode.SIGNAL_KEY: "BUY",
-        }, context)
-        signal_callback_mock.reset_mock()
-        get_base_context_mock.assert_called_once()
-        get_base_context_mock.reset_mock()
+            """
+            await mode._trading_view_signal_callback({"metadata": data})
+            signal_callback_mock.assert_awaited_once_with({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: symbol,
+                mode.SIGNAL_KEY: "BUY",
+            }, context)
+            signal_callback_mock.reset_mock()
+            get_base_context_mock.assert_called_once()
+            get_base_context_mock.reset_mock()
 
-        # other signals
-        signal = f"""
-            EXCHANGE={exchange_manager.exchange_name}
-            SYMBOL={commons_symbols.parse_symbol(symbol).merged_str_base_and_quote_only_symbol(market_separator="")}
-            SIGNAL=BUY
-            HEELLO=True
-            PLOP=faLse
-        """
-        await mode._trading_view_signal_callback({"metadata": signal})
-        signal_callback_mock.assert_awaited_once_with({
-            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
-            mode.SYMBOL_KEY: commons_symbols.parse_symbol(symbol).merged_str_base_and_quote_only_symbol(market_separator=""),
-            mode.SIGNAL_KEY: "BUY",
-            "HEELLO": True,
-            "PLOP": False,
-        }, context)
-        signal_callback_mock.reset_mock()
-        get_base_context_mock.assert_called_once()
-        get_base_context_mock.reset_mock()
+            # minimal signal
+            signal = f"""
+                EXCHANGE={exchange_manager.exchange_name}
+                SYMBOL={symbol}
+                SIGNAL=BUY
+            """
+            await mode._trading_view_signal_callback({"metadata": signal})
+            signal_callback_mock.assert_awaited_once_with({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: symbol,
+                mode.SIGNAL_KEY: "BUY",
+            }, context)
+            signal_callback_mock.reset_mock()
+            get_base_context_mock.assert_called_once()
+            get_base_context_mock.reset_mock()
+
+            # other signals
+            signal = f"""
+                EXCHANGE={exchange_manager.exchange_name}
+                SYMBOL={commons_symbols.parse_symbol(symbol).merged_str_base_and_quote_only_symbol(
+                market_separator=""
+            )}
+                SIGNAL=BUY
+                HEELLO=True
+                PLOP=faLse
+            """
+            await mode._trading_view_signal_callback({"metadata": signal})
+            signal_callback_mock.assert_awaited_once_with({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: commons_symbols.parse_symbol(symbol).merged_str_base_and_quote_only_symbol(
+                    market_separator=""
+                ),
+                mode.SIGNAL_KEY: "BUY",
+                "HEELLO": True,
+                "PLOP": False,
+            }, context)
+            signal_callback_mock.reset_mock()
+            get_base_context_mock.assert_called_once()
+            get_base_context_mock.reset_mock()
 
 
 async def test_signal_callback(tools):
@@ -268,6 +287,56 @@ async def test_signal_callback(tools):
             },
         })
         _set_state_mock.reset_mock()
+
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "SelL",
+            mode.PRICE_KEY: "123@",  # price = 123
+            mode.VOLUME_KEY: "1b",  # base amount
+            mode.REDUCE_ONLY_KEY: True,
+            mode.ORDER_TYPE_SIGNAL: "LiMiT",
+            mode.STOP_PRICE_KEY: "-10%",  # price - 10%
+            mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            "PARAM_TAG_1": "ttt",
+            "PARAM_Plop": False,
+        }, context)
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.await_args[0][1] == symbol
+        assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
+        assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
+            consumer.PRICE_KEY: decimal.Decimal("123"),
+            consumer.VOLUME_KEY: decimal.Decimal("1"),
+            consumer.STOP_PRICE_KEY: decimal.Decimal("6308.27549999"),
+            consumer.STOP_ONLY: False,
+            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("7129.52833333"),
+            consumer.REDUCE_ONLY_KEY: True,
+            consumer.TAG_KEY: None,
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
+                "TAG_1": "ttt",
+                "Plop": False,
+            },
+        })
+        _set_state_mock.reset_mock()
+
+        with pytest.raises(errors.MissingFunds):
+            await producer.signal_callback({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: "unused",
+                mode.SIGNAL_KEY: "SelL",
+                mode.PRICE_KEY: "123000q",  # price = 123
+                mode.VOLUME_KEY: "11111b",  # base amount: not enough funds
+                mode.REDUCE_ONLY_KEY: True,
+                mode.ORDER_TYPE_SIGNAL: "LiMiT",
+                mode.STOP_PRICE_KEY: "-10%",  # price - 10%
+                mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
+                mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+                "PARAM_TAG_1": "ttt",
+                "PARAM_Plop": False,
+            }, context)
+        _set_state_mock.assert_not_called()
 
 
 def compare_dict_with_nan(d_1, d_2):
