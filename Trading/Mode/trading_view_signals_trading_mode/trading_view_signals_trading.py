@@ -25,6 +25,7 @@ import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
+import octobot_trading.errors as trading_errors
 import octobot_trading.modes.script_keywords as script_keywords
 
 
@@ -158,6 +159,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
                      parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+        except trading_errors.MissingFunds as e:
+            self.logger.error(f"Error when handling trading view signal: not enough funds: {e}")
         except KeyError as e:
             self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
                               f"Signal: \"{signal_data}\"")
@@ -290,6 +293,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,
+            allow_holdings_adaptation=False,    # raise when not enough funds to create an order according to user input
         )
 
     async def signal_callback(self, parsed_data: dict, ctx):
