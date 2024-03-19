@@ -187,6 +187,9 @@ class Binance(exchanges.RestExchange):
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
+        if "fetchPositions" not in kwargs:
+            # use fetch_account_positions endpoint
+            kwargs["fetchPositions"] = "account"
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
         for account_type in self._futures_account_types:
