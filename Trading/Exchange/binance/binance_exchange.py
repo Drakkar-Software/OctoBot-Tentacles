@@ -17,6 +17,7 @@ import decimal
 import typing
 
 import ccxt
+from ccxt.base.precise import Precise
 
 import octobot_commons.constants as commons_constants
 
@@ -26,6 +27,69 @@ import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
+
+
+def _disabled_binance_empty_position_filter(f):
+    async def wrapper(*args, **kwargs):
+        # Algo order prevent bundled orders from working as they require to use the regular order api
+        # Since the regular order api works for limit and market orders as well, us it all the time
+        # Algo api is used for stop losses.
+        # This ccxt issue will remain as long as privatePostTradeOrderAlgo will be used for each order with a
+        # stopLossPrice or takeProfitPrice even when both are set (which make it an invalid okx algo order)
+        connector = args[0]
+        client = connector.client
+        self = client
+
+        def parse_account_positions(account):
+            # should be the same as binance.parse_account_positions except that empty positions are not filtered out
+            positions = self.safe_list(account, 'positions')
+            assets = self.safe_list(account, 'assets', [])
+            balances = {}
+            for i in range(0, len(assets)):
+                entry = assets[i]
+                currencyId = self.safe_string(entry, 'asset')
+                code = self.safe_currency_code(currencyId)
+                crossWalletBalance = self.safe_string(entry, 'crossWalletBalance')
+                crossUnPnl = self.safe_string(entry, 'crossUnPnl')
+                balances[code] = {
+                    'crossMargin': Precise.string_add(crossWalletBalance, crossUnPnl),
+                    'crossWalletBalance': crossWalletBalance,
+                }
+            result = []
+            for i in range(0, len(positions)):
+                position = positions[i]
+                marketId = self.safe_string(position, 'symbol')
+                market = self.safe_market(marketId, None, None, 'contract')
+                code = market['quote'] if market['linear'] else market['base']
+                maintenanceMargin = self.safe_string(position, 'maintMargin')
+                # check for maintenance margin so empty positions are not returned
+                # LOCAL OVERRIDE
+                # if (maintenanceMargin != '0') and (maintenanceMargin != '0.00000000'):    # DISABLED
+                # END LOCAL OVERRIDE
+                # sometimes not all the codes are correctly returned...
+                if code in balances:
+                    parsed = self.parse_account_position(self.extend(position, {
+                        'crossMargin': balances[code]['crossMargin'],
+                        'crossWalletBalance': balances[code]['crossWalletBalance'],
+                    }), market)
+                    result.append(parsed)
+            return result
+
+        origin_parse_account_positions = client.parse_account_positions
+        client.parse_account_positions = parse_account_positions
+        try:
+            return await f(*args, **kwargs)
+        finally:
+            client.parse_account_positions = origin_parse_account_positions
+    return wrapper
+
+
+class BinanceConnector(ccxt_connector.CCXTConnector):
+
+    @_disabled_binance_empty_position_filter
+    async def get_positions(self, symbols=None, **kwargs: dict) -> list:
+        return await super().get_positions(symbols=symbols, **kwargs)
 
 
 class Binance(exchanges.RestExchange):
@@ -35,6 +99,7 @@ class Binance(exchanges.RestExchange):
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
+    DEFAULT_CONNECTOR_CLASS = BinanceConnector
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -133,6 +198,7 @@ class Binance(exchanges.RestExchange):
             ccxt_constants.CCXT_OPTIONS: {
                 "quoteOrderQty": False,  # disable quote conversion
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
+                "fetchPositions": "account",    # required to fetch empty positions as well
             }
         }
         return config
@@ -187,9 +253,6 @@ class Binance(exchanges.RestExchange):
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
-        if "fetchPositions" not in kwargs:
-            # use fetch_account_positions endpoint
-            kwargs["fetchPositions"] = "account"
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
         for account_type in self._futures_account_types:
@@ -254,6 +317,10 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     def parse_position(self, fixed, force_empty=False, **kwargs):
         try:
             parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
+            parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
+                trading_enums.MarginType(
+                    fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
+                )
             # use one way by default.
             if parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] is None:
                 parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = (

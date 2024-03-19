@@ -322,6 +322,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
     BYBIT_BANKRUPTCY_PRICE = "bustPrice"
     BYBIT_CLOSING_FEE = "occClosingFee"
     BYBIT_MODE = "positionIdx"
+    BYBIT_TRADE_MODE = "tradeMode"
     BYBIT_REALIZED_PNL = "RealisedPnl"
     BYBIT_ONE_WAY = "MergedSingle"
     BYBIT_ONE_WAY_DIGIT = "0"
@@ -427,6 +428,8 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
             mode = trading_enums.PositionMode.ONE_WAY
             if raw_mode == self.BYBIT_HEDGE or raw_mode in self.BYBIT_HEDGE_DIGITS:
                 mode = trading_enums.PositionMode.HEDGE
+            trade_mode = raw_position_info.get(self.BYBIT_TRADE_MODE)
+            margin_type = trading_enums.MarginType.ISOLATED if trade_mode == "1" else trading_enums.MarginType.CROSS
             original_side = fixed.get(ccxt_enums.ExchangePositionCCXTColumns.SIDE.value)
 
             side = trading_enums.PositionSide.BOTH
@@ -450,10 +453,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                     self.connector.client.safe_value(fixed,
                                                      ccxt_enums.ExchangePositionCCXTColumns.TIMESTAMP.value, 0),
                 trading_enums.ExchangeConstantsPositionColumns.SIDE.value: side,
-                trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value:
-                    trading_enums.MarginType(
-                        fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
-                    ),
+                trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value: margin_type,
                 trading_enums.ExchangeConstantsPositionColumns.SIZE.value:
                     size if original_side == trading_enums.PositionSide.LONG.value else -size,
                 trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value:

@@ -120,6 +120,11 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
         if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "PENDING":
             fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CREATION.value
+        # sometimes amount is not set
+        if not fixed[ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value] \
+                and fixed[ccxt_enums.ExchangeOrderCCXTColumns.FILLED.value]:
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value] = \
+                fixed[ccxt_enums.ExchangeOrderCCXTColumns.FILLED.value]
         return fixed
 
     def fix_trades(self, raw, **kwargs):
