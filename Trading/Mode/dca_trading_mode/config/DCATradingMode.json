@@ -17,5 +17,6 @@
     "use_take_profit_exit_orders": false,
     "cancel_open_orders_at_each_entry": true,
     "enable_health_check": false,
-    "health_check_orphan_funds_threshold": 15
+    "health_check_orphan_funds_threshold": 15,
+    "max_asset_holding_percent": 100
 }

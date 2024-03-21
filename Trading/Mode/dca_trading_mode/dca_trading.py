@@ -191,10 +191,12 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
                             (1 + multiplier)
                         )
-                        await self._create_entry_order(
+                        if not await self._create_entry_order(
                             secondary_order_type, secondary_quantity, secondary_target_price,
                             symbol_market, symbol, created_orders, price
-                        )
+                        ):
+                            # stop iterating if an order can't be created
+                            break
             if created_orders:
                 for order in existing_orders:
                     # now that new orders are created, cancel previous ones of any
@@ -217,6 +219,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _create_entry_order(
         self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
     ):
+        if self._is_max_asset_ratio_reached(symbol):
+            # do not create entry on symbol when max ratio is reached
+            return False
         for order_quantity, order_price in \
                 trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -311,6 +316,17 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     order.add_to_order_group(oco_group)
         return await self.trading_mode.create_order(entry_order, params=params or None)
 
+    def _is_max_asset_ratio_reached(self, symbol):
+        asset = symbol_util.parse_symbol(symbol).base
+        ratio = self.get_holdings_ratio(asset, include_assets_in_open_orders=True)
+        if ratio >= self.trading_mode.max_asset_holding_ratio:
+            self.logger.info(
+                f"Max holding ratio reached for {asset}: ratio: {ratio}, max ratio: "
+                f"{self.trading_mode.max_asset_holding_ratio}. Skipping {symbol} entry order."
+            )
+            return True
+        return False
+
     @staticmethod
     def _split_entry_quantity(quantity, target_exits_count, lowest_price, highest_price, symbol_market):
         if target_exits_count == 1:
@@ -342,6 +358,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     TRIGGER_MODE = "trigger_mode"
     CANCEL_OPEN_ORDERS_AT_EACH_ENTRY = "cancel_open_orders_at_each_entry"
     HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD = "health_check_orphan_funds_threshold"
+    MAX_ASSET_HOLDING_PERCENT = "max_asset_holding_percent"
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -401,6 +418,9 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         return False
 
     async def trigger_dca(self, cryptocurrency, symbol, state):
+        if self.trading_mode.max_asset_holding_ratio < trading_constants.ONE:
+            # if holding ratio should be checked, wait for price init to be able to compute this ratio
+            await self._wait_for_symbol_prices_and_profitability_init(self.CONFIG_INIT_TIMEOUT)
         self.state = state
         self.logger.debug(
             f"{symbol} DCA triggered on {self.exchange_manager.exchange_name}, state: {self.state.value}"
@@ -528,6 +548,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
 
         self.cancel_open_orders_at_each_entry = True
         self.health_check_orphan_funds_threshold = self.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD
+        self.max_asset_holding_ratio = trading_constants.ONE
 
         # enable initialization orders
         self.are_initialization_orders_pending = True
@@ -734,6 +755,15 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                         self.ENABLE_HEALTH_CHECK: True
                     }
                 }
+            )
+        )) / trading_constants.ONE_HUNDRED
+        self.max_asset_holding_ratio = decimal.Decimal(str(
+            self.UI.user_input(
+                DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT, commons_enums.UserInputTypes.FLOAT,
+                float(self.max_asset_holding_ratio * trading_constants.ONE_HUNDRED), inputs,
+                title="Max asset holding: Maximum % of the portfolio to allocate to an asset. "
+                      "Buy orders to buy this asset won't be created if this ratio is reached.",
+                min_val=0, max_val=100
             )
         )) / trading_constants.ONE_HUNDRED
 

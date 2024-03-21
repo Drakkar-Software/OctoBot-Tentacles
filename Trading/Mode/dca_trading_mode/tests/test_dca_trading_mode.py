@@ -581,6 +581,65 @@ async def test_create_entry_order(tools):
         assert created_orders == ["created_order"]
 
 
+async def test_create_entry_order_with_max_ratio(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    symbol = mode.symbol
+    symbol_market = trader.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+    price = decimal.Decimal("1222")
+    order_type = trading_enums.TraderOrderType.BUY_LIMIT
+    quantity = decimal.Decimal("42")
+    current_price = decimal.Decimal("22222")
+    created_orders = []
+    with mock.patch.object(
+            consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value="created_order")
+    ) as _create_entry_with_chained_exit_orders_mock:
+        with mock.patch.object(
+                consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=True)
+        ) as _is_max_asset_ratio_reached_mock:
+            assert await consumer._create_entry_order(
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            ) is False
+            _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
+            _create_entry_with_chained_exit_orders_mock.assert_not_called()
+        with mock.patch.object(
+                consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=False)
+        ) as _is_max_asset_ratio_reached_mock:
+            assert await consumer._create_entry_order(
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            ) is True
+            _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
+            _create_entry_with_chained_exit_orders_mock.assert_called_once()
+
+
+async def test_is_max_asset_ratio_reached(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    assert mode.max_asset_holding_ratio == trading_constants.ONE
+    symbol = "BTC/USDT"
+    base = "BTC"
+    with mock.patch.object(
+            consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("1"))
+    ) as get_holdings_ratio_mock:
+        assert consumer._is_max_asset_ratio_reached(symbol) is True
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+    with mock.patch.object(
+            consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.4"))
+    ) as get_holdings_ratio_mock:
+        assert consumer._is_max_asset_ratio_reached(symbol) is False
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+        mode.max_asset_holding_ratio = decimal.Decimal("0.4")
+        assert consumer._is_max_asset_ratio_reached(symbol) is True
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+        mode.max_asset_holding_ratio = decimal.Decimal("0.41")
+        assert consumer._is_max_asset_ratio_reached(symbol) is False
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+
 async def test_create_new_orders(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
