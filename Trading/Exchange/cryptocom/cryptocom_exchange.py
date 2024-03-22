@@ -20,6 +20,8 @@ class CryptoCom(exchanges.RestExchange):
     DESCRIPTION = ""
 
     FIX_MARKET_STATUS = True
+    EXPECT_POSSIBLE_ORDER_NOT_FOUND_DURING_ORDER_CREATION = True  # set True when get_order() can return None
+    # (order not found) when orders are instantly filled on exchange and are not fully processed on the exchange side.
 
     @classmethod
     def get_name(cls):

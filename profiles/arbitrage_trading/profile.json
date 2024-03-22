@@ -12,7 +12,7 @@
             "binance": {
                 "enabled": true
             },
-            "coinbasepro": {
+            "coinbase": {
                 "enabled": true
             },
             "kucoin": {

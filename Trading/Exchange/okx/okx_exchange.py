@@ -22,7 +22,6 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
-import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 

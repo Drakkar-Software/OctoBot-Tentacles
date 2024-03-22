@@ -501,7 +501,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     MODE_CONSUMER_CLASSES = [DCATradingModeConsumer]
     SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = True
     SUPPORTS_HEALTH_CHECK = True
-    DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD = decimal.Decimal("0.15")  # 15%
+    DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD = decimal.Decimal("0.1")  # 10%
     HEALTH_CHECK_FILL_ORDERS_TIMEOUT = 20
 
     def __init__(self, config, exchange_manager):
@@ -769,12 +769,10 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
         common_quote = trading_exchanges.get_common_traded_quote(self.exchange_manager)
         if (
-            self.exchange_manager.is_backtesting
-            or common_quote is None
+            common_quote is None
             or not (self.use_take_profit_exit_orders or self.use_stop_loss)
         ):
             # skipped when:
-            # - backtesting
             # - common_quote is unset
             # - not using take profit or stop losses, health check should not be used
             return []

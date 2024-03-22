@@ -42,6 +42,13 @@ class Htx(exchanges.RestExchange):
             }
         }
 
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
+        history_param = "useHistoricalEndpointForSpot"
+        if limit and history_param not in kwargs:
+            # required to handle limits
+            kwargs[history_param] = False
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
