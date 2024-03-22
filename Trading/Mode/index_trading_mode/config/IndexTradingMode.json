@@ -1,0 +1,6 @@
+{
+    "required_strategies": [],
+    "refresh_interval": 7,
+    "rebalance_cap_percent": 5,
+    "ratio_per_asset": {}
+}
