@@ -196,6 +196,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             symbol_market, symbol, created_orders, price
                         ):
                             # stop iterating if an order can't be created
+                            self.logger.info(
+                                f"Stopping {self.exchange_manager.exchange_name} {symbol} entry orders creation "
+                                f"on secondary order {i + 1}/{self.trading_mode.secondary_entry_orders_count}."
+                            )
                             break
             if created_orders:
                 for order in existing_orders:
@@ -239,6 +243,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
                 created_orders.append(created_order)
                 return True
+        self.logger.info(
+            f"Order not created on {self.exchange_manager.exchange_name}: exchange order requirements are not met. "
+            f"symbol: {symbol} order_type: {order_type} quantity: {quantity}, price: {price}"
+        )
         return False
 
     async def _create_entry_with_chained_exit_orders(self, entry_order, entry_price, symbol_market):
