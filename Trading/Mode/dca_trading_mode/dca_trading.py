@@ -326,7 +326,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def _is_max_asset_ratio_reached(self, symbol):
         asset = symbol_util.parse_symbol(symbol).base
-        ratio = self.get_holdings_ratio(asset, include_assets_in_open_orders=True)
+        ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+            portfolio_value_holder.get_holdings_ratio(asset, include_assets_in_open_orders=True)
         if ratio >= self.trading_mode.max_asset_holding_ratio:
             self.logger.info(
                 f"Max holding ratio reached for {asset}: ratio: {ratio}, max ratio: "

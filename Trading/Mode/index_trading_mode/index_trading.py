@@ -201,7 +201,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     def _should_rebalance(self) -> bool:
         consumer = self.trading_mode.consumers[0]
         for coin in self.trading_mode.indexed_coins:
-            coin_ratio = consumer.get_holdings_ratio(coin)
+            coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
             target_ratio = self.trading_mode.get_target_ratio(coin)
             if (coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO) or (
                 not (

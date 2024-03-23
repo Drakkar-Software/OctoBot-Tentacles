@@ -617,13 +617,14 @@ async def test_is_max_asset_ratio_reached(tools):
     assert mode.max_asset_holding_ratio == trading_constants.ONE
     symbol = "BTC/USDT"
     base = "BTC"
+    portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
     with mock.patch.object(
-            consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("1"))
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("1"))
     ) as get_holdings_ratio_mock:
         assert consumer._is_max_asset_ratio_reached(symbol) is True
         get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
     with mock.patch.object(
-            consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.4"))
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.4"))
     ) as get_holdings_ratio_mock:
         assert consumer._is_max_asset_ratio_reached(symbol) is False
         get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
