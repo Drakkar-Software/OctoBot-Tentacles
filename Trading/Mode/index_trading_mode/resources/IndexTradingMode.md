@@ -1,43 +1,46 @@
-TODO
-Dollar cost averaging (DCA) is a trading mode that can help you lower the amount you pay for investments and 
-minimize risk. Instead of purchasing investments at a single price point, with dollar cost averaging you buy 
-in smaller amounts at regular intervals.
+The Index trading mode splits and maintains your portfolio distributed between the traded currencies. It enables 
+to maintain a crypto index based on your choice of coins.
 
-<div class="text-center">
-    <div>
+### Content of the Index
+The Index is defined by the selected traded pairs against your reference market in the 
+profile configuration section.  
+Example:
+- Your reference market is USDT
+- Your traded pairs are BTC/USDT, ETH/USDT, SOL/USDT, ADA/USDT
+Then your index will be made of 25% BTC, 25% ETH, 25% SOL and 25% ADA. Each coin's holding % will be computed 
+against USDT and checked on a regular basis.
 
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/519pwSV1uwE?si=MT9e1Gqp9WWw45Z" 
-    title="Build your own Smart DCA strategy" frameborder="0" allow="accelerometer; autoplay; 
-    clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+When starting the Index trading mode with a new configuration, or if your current portfolio doesn't reflect
+the target of the index, your portfolio will automatically be adapted to reproduce the index at the best
+accuracy possible.
+
+### Index rebalance
+An Index rebalance is the event when OctoBot is sending orders to the exchange to adapt the content of
+your portfolio in order to reproduce the configuration of your Index.  
+Once your Index trading mode has started, OctoBot will maintain the index content by 
+automatically checking the content of your portfolio of a regular basis and will trigger a rebalance
+if necessary.
+
+Your portfolio content is checked every configured `Trigger period` days. If during an index check, 
+your OctoBot detects that your portfolio content doesn't comply with your index configuration, it will
+trigger a rebalance.
+
+### Rebalance cap
+When checking for rebalance, the Index trading mode also uses your `Rebalance cap` configuration before
+considering your portfolio out of synch with your index configuration.
+The Rebalance cap is an allowed percent of allocation that will avoid triggering a rebalance as long as any
+coin holding is still within the ideal holding % plus or minus the rebalance cap.  
+Example:
+An index on 3 coins with a 33.33% target on each coin and a Rebalance cap of 5% will trigger a rebalance if 
+the holding if any of those 3 coins takes more than 38.33% or less than 28.33% of the portfolio
+
+Warning: When your index Rebalance cap is higher or equal to the target holdings of each coin, no rebalance 
+will be triggered if your holdings of a coin become very low, rebalances will only be triggered when holdings are 
+getting to high.  
+Example:
+An index on 10 coins uses a 10% target on each coin. Using a Rebalance cap of 11% will only trigger a 
+rebalance if any of those 3 coins takes more than 21% of the portfolio (the other side: 10-11 = -1% is incoherent). 
+
+Please note that if the % held of a coin is 0%, then a rebalance will always trigger, ignoring the Rebalance cap.
 
 
-    </div>
-</div>
-
-OctoBot's DCA is more than just a simple regular DCA technique, it allows you to accurately automate your 
-entries and exit conditions in a simple, yet very powerful way.
-
-To know more, checkout the 
-<a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/dca-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=DCATradingModeDocs">
-full DCA trading mode guide</a>.
-
-### In a nutshell
-- Entries can be triggered either:
-    - On a pure time base, regardless of price.
-    - Upon enabled evaluators maximum signals (only 1 or -1 evaluations). In this case, the latest evaluation will 
-        prevail when using limit entry orders: previous evaluations open orders will be cancelled.
-- Entries can be market or limit orders.
-- Once an entry is filled, you can choose to exit/sell the assets yourself (manually) or automatically 
-create a take profit at your price target. 
-- You can enable stop losses protect your holdings once an entry is filled.
-- It is also possible to split entries and exits into multiple orders at regular price intervals to profit even more 
-from the dollar cost averaging effect.
-
-Over the long term, dollar cost averaging can help lower your investment costs and boost your returns by optimizing 
-entry and exit prices according to your goals.
-
-_Note: When using default configuration, DCA Trading mode will buy 50$ (or unit of the quote currency: USDT for BTC/USDT) 
-each week._
-
-
-_This trading mode supports PNL history when take profit exit orders are enabled._
