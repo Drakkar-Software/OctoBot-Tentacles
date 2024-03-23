@@ -266,12 +266,12 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def _get_filtered_traded_coins(self):
         if self.exchange_manager:
-            return list(set(
+            return sorted(list(set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
                 if not self.ratio_per_asset or symbol.base in self.ratio_per_asset
                 and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-            ))
+            )))
         return []
 
     def get_target_ratio(self, currency) -> decimal.Decimal:
