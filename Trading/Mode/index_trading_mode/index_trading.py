@@ -35,7 +35,6 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self.logger.error(f"Unknown index state: {state}")
         return []
 
-
     async def _rebalance_portfolio(self):
         self.logger.info(
             f"Triggering rebalance on [{self.exchange_manager.exchange_name}]."
@@ -123,7 +122,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     REBALANCE_CAP_PERCENT = "rebalance_cap_percent"
-    RATIO_PER_ASSET = "ratio_per_asset"
+    INDEX_CONTENT = "index_content"
+    INDEXED_COIN_NAME = "name"
+    INDEXED_COIN_RATIO = "ratio"
     MIN_INDEXED_COINS = 2
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
@@ -202,10 +203,12 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         for coin in self.trading_mode.indexed_coins:
             coin_ratio = consumer.get_holdings_ratio(coin)
             target_ratio = self.trading_mode.get_target_ratio(coin)
-            if not (
-                target_ratio - self.trading_mode.rebalance_cap_ratio
-                < coin_ratio
-                < target_ratio + self.trading_mode.rebalance_cap_ratio
+            if (coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO) or (
+                not (
+                    target_ratio - self.trading_mode.rebalance_cap_ratio
+                    < coin_ratio
+                    < target_ratio + self.trading_mode.rebalance_cap_ratio
+                )
             ):
                 self.logger.info(
                     f"{coin} is beyond the target ratio of {target_ratio * trading_constants.ONE_HUNDRED}%, "
@@ -213,7 +216,6 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 )
                 return True
         return False
-
 
     def get_channels_registration(self):
         return [self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.FULL_CANDLES.value]]
@@ -244,34 +246,45 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             min_val=0,
             title="Trigger period: Days to wait between each rebalance.",
         ))
-        self.rebalance_cap_ratio = int(self.UI.user_input(
+        self.rebalance_cap_ratio = decimal.Decimal(str(self.UI.user_input(
             IndexTradingModeProducer.REBALANCE_CAP_PERCENT, commons_enums.UserInputTypes.FLOAT,
             float(self.rebalance_cap_ratio * trading_constants.ONE_HUNDRED), inputs,
             min_val=0, max_val=100,
             title="Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
                   "triggering a rebalance.",
-        )) / trading_constants.ONE_HUNDRED
-        self.ratio_per_asset = self.trading_config[IndexTradingModeProducer.RATIO_PER_ASSET]
-        self.total_ratio_per_asset = decimal.Decimal(sum(self.ratio_per_asset.values()))
-        self.indexed_coins = self._get_filtered_traded_coins_()
-
-    def _get_filtered_traded_coins_(self):
-        return list(set(
-            symbol.base
-            for symbol in self.exchange_manager.exchange_config.traded_symbols
-            if not self.indexed_coins or symbol.base in self.indexed_coins
-            and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+        ))) / trading_constants.ONE_HUNDRED
+        self.ratio_per_asset = {
+            asset[IndexTradingModeProducer.INDEXED_COIN_NAME]: asset
+            for asset in self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]
+        }
+        self.total_ratio_per_asset = decimal.Decimal(sum(
+            asset[IndexTradingModeProducer.INDEXED_COIN_RATIO]
+            for asset in self.ratio_per_asset.values()
         ))
+        self.indexed_coins = self._get_filtered_traded_coins()
+
+    def _get_filtered_traded_coins(self):
+        if self.exchange_manager:
+            return list(set(
+                symbol.base
+                for symbol in self.exchange_manager.exchange_config.traded_symbols
+                if not self.ratio_per_asset or symbol.base in self.ratio_per_asset
+                and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            ))
+        return []
 
     def get_target_ratio(self, currency) -> decimal.Decimal:
-        if currency in self.ratio_per_asset and self.total_ratio_per_asset:
-            try:
-                return (
-                    decimal.Decimal(str(self.ratio_per_asset[currency]))
-                    / self.total_ratio_per_asset
-                )
-            except (decimal.DivisionByZero, decimal.InvalidOperation):
-                pass
+        if self.total_ratio_per_asset:
+            if currency in self.ratio_per_asset:
+                try:
+                    return (
+                        decimal.Decimal(str(
+                            self.ratio_per_asset[currency][IndexTradingModeProducer.INDEXED_COIN_RATIO]
+                        )) / self.total_ratio_per_asset
+                    )
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    pass
+            return trading_constants.ZERO
         return trading_constants.ONE / decimal.Decimal(len(self.indexed_coins))
 
     @classmethod
