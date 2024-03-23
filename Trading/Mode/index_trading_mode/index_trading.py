@@ -175,7 +175,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         )
         await self.submit_trading_evaluation(
             cryptocurrency=None,
-            symbol=None,    # todo check if ok to set None for signals
+            symbol=None,
             time_frame=None,
             final_note=None,
             state=trading_enums.EvaluatorStates.NEUTRAL
@@ -229,8 +229,8 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
-        self.refresh_interval_days = 7
-        self.rebalance_cap_ratio = decimal.Decimal("0.05")  #5%
+        self.refresh_interval_days = 1
+        self.rebalance_cap_ratio = decimal.Decimal("0.05")  # 5%
         self.ratio_per_asset = {}
         self.total_ratio_per_asset = trading_constants.ZERO
         self.indexed_coins = []

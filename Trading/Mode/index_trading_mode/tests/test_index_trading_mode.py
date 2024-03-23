@@ -101,7 +101,7 @@ def _get_config(tools, update):
 
 async def test_init_default_values(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
-    assert mode.refresh_interval_days == 7
+    assert mode.refresh_interval_days == 1
     assert mode.rebalance_cap_ratio == decimal.Decimal("0.05")
     assert mode.ratio_per_asset == {}
     assert mode.total_ratio_per_asset == trading_constants.ZERO
@@ -266,8 +266,8 @@ async def test_trigger_rebalance(tools):
             state=trading_enums.EvaluatorStates.NEUTRAL
         )
 
+
 async def test_should_rebalance(tools):
-    #todo 0 check
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     mode.indexed_coins = ["BTC", "ETH", "SOL"]
