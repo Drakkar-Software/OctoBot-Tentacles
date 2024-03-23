@@ -22,10 +22,10 @@ import decimal
 
 import async_channel.util as channel_util
 
-import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.enums as commons_enum
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as commons_symbols
 
 import octobot_backtesting.api as backtesting_api
 
@@ -114,30 +114,63 @@ async def test_init_config_values(tools):
         "rebalance_cap_percent": 10.2,
         "index_content": [
             {
+                "name": "ETH",
+                "ratio": 53,
+            },
+            {
                 "name": "BTC",
                 "ratio": 1,
             },
             {
-                "name": "ETH",
-                "ratio": 53,
+                "name": "SOL",
+                "ratio": 1,
             },
         ]
     }
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT"]
+    ]
     assert mode.refresh_interval_days == 72
     assert mode.rebalance_cap_ratio == decimal.Decimal("0.102")
     assert mode.ratio_per_asset == {
-        "BTC": {
-            "name": "BTC",
-            "ratio": 1,
-        },
         "ETH": {
             "name": "ETH",
             "ratio": 53,
         },
+        "BTC": {
+            "name": "BTC",
+            "ratio": 1,
+        },
+        "SOL": {
+            "name": "SOL",
+            "ratio": 1,
+        },
     }
-    assert mode.total_ratio_per_asset == decimal.Decimal("54")
+    assert mode.total_ratio_per_asset == decimal.Decimal("55")
     assert mode.indexed_coins == ["BTC"]
+
+    # refresh user inputs
+    mode.init_user_inputs({})
+    assert mode.refresh_interval_days == 72
+    assert mode.rebalance_cap_ratio == decimal.Decimal("0.102")
+    assert mode.ratio_per_asset == {
+        "ETH": {
+            "name": "ETH",
+            "ratio": 53,
+        },
+        "BTC": {
+            "name": "BTC",
+            "ratio": 1,
+        },
+        "SOL": {
+            "name": "SOL",
+            "ratio": 1,
+        },
+    }
+    assert mode.total_ratio_per_asset == decimal.Decimal("55")
+    assert mode.indexed_coins == ["BTC", "ETH"]  # sorted list
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
