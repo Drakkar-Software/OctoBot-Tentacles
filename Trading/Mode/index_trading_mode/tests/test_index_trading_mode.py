@@ -272,41 +272,43 @@ async def test_should_rebalance(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     mode.indexed_coins = ["BTC", "ETH", "SOL"]
     mode.rebalance_cap_ratio = decimal.Decimal("0.1")
+    portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is False
         assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
         get_holdings_ratio_mock.reset_mock()
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is True
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
         assert get_holdings_ratio_mock.call_count == 1
         get_holdings_ratio_mock.reset_mock()
 
     # rebalance cap larger than ratio
     mode.rebalance_cap_ratio = decimal.Decimal("0.5")
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is False
         assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
         get_holdings_ratio_mock.reset_mock()
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is False
         assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
         get_holdings_ratio_mock.reset_mock()
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is True
         assert get_holdings_ratio_mock.call_count == 1
         get_holdings_ratio_mock.reset_mock()
     with mock.patch.object(
-        consumer, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
+        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
     ) as get_holdings_ratio_mock:
         assert producer._should_rebalance() is True
         assert get_holdings_ratio_mock.call_count == 1
