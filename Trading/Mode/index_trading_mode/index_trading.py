@@ -15,6 +15,7 @@
 #  License along with this library.
 import asyncio
 import decimal
+import enum
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
@@ -24,6 +25,11 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.personal_data as trading_personal_data
+
+
+class IndexActivity(enum.Enum):
+    REBALANCING_DONE = "rebalancing_done"
+    REBALANCING_SKIPPED = "rebalancing_skipped"
 
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
@@ -164,10 +170,12 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         )
         if self._should_rebalance():
             await self._trigger_rebalance()
+            self.last_activity = IndexActivity.REBALANCING_DONE
         else:
             self.logger.info(
                 f"[{self.exchange_manager.exchange_name}] is following the index: no rebalance is required."
             )
+            self.last_activity = IndexActivity.REBALANCING_SKIPPED
 
     async def _trigger_rebalance(self):
         self.logger.info(
