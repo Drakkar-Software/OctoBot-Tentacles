@@ -307,7 +307,17 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     async def single_exchange_process_optimize_initial_portfolio(
         self, sellable_assets, target_asset: str, tickers: dict
     ) -> list:
-        self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
+        symbol_open_orders = [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+            if order.symbol in self.exchange_manager.exchange_config.traded_symbol_pairs
+        ]
+        self.logger.info(
+            f"Optimizing portfolio: cancelling {len(symbol_open_orders)}open orders, selling {sellable_assets} "
+            f"to buy {target_asset}"
+        )
+        for order in symbol_open_orders:
+            await self.cancel_order(order)
         return await trading_modes.convert_assets_to_target_asset(
             self, sellable_assets, target_asset, tickers
         )

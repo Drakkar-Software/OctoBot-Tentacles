@@ -179,10 +179,52 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
 
     with mock.patch.object(
             octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["order_1"])
-    ) as convert_assets_to_target_asset_mock:
+    ) as convert_assets_to_target_asset_mock, mock.patch.object(
+            mode, "cancel_order", mock.AsyncMock()
+    ) as cancel_order_mock:
+        # no open order
         orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
         convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
+        cancel_order_mock.assert_not_called()
         assert orders == ["order_1"]
+        convert_assets_to_target_asset_mock.reset_mock()
+
+        # open orders of the given symbol are cancelled
+        open_order_1 = trading_personal_data.SellLimitOrder(trader)
+        open_order_2 = trading_personal_data.BuyLimitOrder(trader)
+        open_order_3 = trading_personal_data.BuyLimitOrder(trader)
+        open_order_1.update(order_type=trading_enums.TraderOrderType.SELL_LIMIT,
+                            order_id="open_order_1_id",
+                            symbol="BTC/USDT",
+                            current_price=decimal.Decimal("70"),
+                            quantity=decimal.Decimal("10"),
+                            price=decimal.Decimal("70"))
+        open_order_2.update(order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                            order_id="open_order_2_id",
+                            symbol="ETH/USDT",
+                            current_price=decimal.Decimal("70"),
+                            quantity=decimal.Decimal("10"),
+                            price=decimal.Decimal("70"),
+                            reduce_only=True)
+        open_order_3.update(order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                            order_id="open_order_2_id",
+                            symbol="ADA/USDT",
+                            current_price=decimal.Decimal("70"),
+                            quantity=decimal.Decimal("10"),
+                            price=decimal.Decimal("70"),
+                            reduce_only=True)
+        await mode.exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(open_order_1)
+        await mode.exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(open_order_2)
+        await mode.exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(open_order_3)
+        mode.exchange_manager.exchange_config.traded_symbol_pairs = ["BTC/USDT", "ETH/USDT"]
+
+        orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
+        convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
+        assert cancel_order_mock.call_count == 2
+        assert cancel_order_mock.mock_calls[0].args[0] is open_order_1
+        assert cancel_order_mock.mock_calls[1].args[0] is open_order_2
+        assert orders == ["order_1"]
+        convert_assets_to_target_asset_mock.reset_mock()
 
 
 async def test_get_target_ratio_with_config(tools):
