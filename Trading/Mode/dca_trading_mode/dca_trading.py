@@ -37,11 +37,6 @@ import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes.script_keywords as script_keywords
 
 
-class DCAActivity(enum.Enum):
-    CREATED_ORDERS = "created_orders"
-    NOTHING_TO_DO = "nothing_to_do"
-
-
 class TriggerMode(enum.Enum):
     TIME_BASED = "Time based"
     MAXIMUM_EVALUATORS_SIGNALS_BASED = "Maximum evaluators signals based"
@@ -440,9 +435,9 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{symbol} DCA triggered on {self.exchange_manager.exchange_name}, state: {self.state.value}"
         )
         if self.state is trading_enums.EvaluatorStates.NEUTRAL:
-            self.last_activity = DCAActivity.NOTHING_TO_DO
+            self.last_activity = trading_modes.TradingModeActivity(trading_enums.TradingModeActivityType.NOTHING_TO_DO)
         else:
-            self.last_activity = DCAActivity.CREATED_ORDERS
+            self.last_activity = trading_modes.TradingModeActivity(trading_enums.TradingModeActivityType.CREATED_ORDERS)
             await self._process_entries(cryptocurrency, symbol, state)
             await self._process_exits(cryptocurrency, symbol, state)
 
@@ -853,7 +848,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 ]
             )
             for producer in self.producers:
-                producer.last_activity = DCAActivity.CREATED_ORDERS
+                producer.last_activity = trading_modes.TradingModeActivity(
+                    trading_enums.TradingModeActivityType.CREATED_ORDERS
+                )
         return created_orders
 
     def _get_lost_funds_to_sell(self, common_quote: str, chained_orders: list) -> list[(str, decimal.Decimal)]:
