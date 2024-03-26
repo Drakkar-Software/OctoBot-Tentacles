@@ -660,6 +660,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         asyncio.create_task(self._ensure_staggered_orders_and_reschedule())
 
     async def _ensure_staggered_orders_and_reschedule(self):
+        if self.should_stop:
+            return
         can_create_orders = (
             not trading_api.get_is_backtesting(self.exchange_manager)
             or trading_api.is_mark_price_initialized(self.exchange_manager, symbol=self.symbol)
