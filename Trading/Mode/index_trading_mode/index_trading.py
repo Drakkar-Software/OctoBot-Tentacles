@@ -32,6 +32,11 @@ class IndexActivity(enum.Enum):
     REBALANCING_SKIPPED = "rebalancing_skipped"
 
 
+class RebalanceSkipDetails(enum.Enum):
+    ALREADY_BALANCED = "already_balanced"
+    NOT_ENOUGH_AVAILABLE_FOUNDS = "not_enough_available_founds"
+
+
 class RebalanceDetails(enum.Enum):
     SELL_SOME = "SELL_SOME"
     BUY_MORE = "BUY_MORE"
@@ -52,10 +57,18 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     async def _rebalance_portfolio(self, details: dict):
         self.logger.info(f"Executing rebalance on [{self.exchange_manager.exchange_name}]")
-        # 1. sell indexed coins for reference market
-        orders = await self._sell_indexed_coins_for_reference_market(details)
-        # 2. split reference market into indexed coins
-        orders += await self._split_reference_market_into_indexed_coins(details)
+        orders = []
+        try:
+            # 1. sell indexed coins for reference market
+            orders += await self._sell_indexed_coins_for_reference_market(details)
+            # 2. split reference market into indexed coins
+            orders += await self._split_reference_market_into_indexed_coins(details)
+        except trading_errors.MissingMinimalExchangeTradeVolume as err:
+            self.logger.warning(f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err}")
+            self._update_producer_last_activity(
+                IndexActivity.REBALANCING_SKIPPED,
+                RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+            )
         return orders
 
     async def _sell_indexed_coins_for_reference_market(self, details: dict) -> list:
@@ -95,28 +108,55 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
                 ).available
             coins_to_buy = self.trading_mode.indexed_coins
-        for coin in coins_to_buy:
-            orders.extend(await self._buy_coin(coin, reference_market_to_split))
+
+        amount_by_symbol = await self._get_symbols_and_amounts(coins_to_buy, reference_market_to_split)
+        for symbol, ideal_amount in amount_by_symbol.items():
+            orders.extend(await self._buy_coin(symbol, ideal_amount))
         if not orders:
             raise trading_errors.MissingMinimalExchangeTradeVolume()
         return orders
 
-    async def _buy_coin(self, coin, reference_market_to_split) -> list:
-        symbol = symbol_util.merge_currencies(
-            coin,
-            self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-        )
+    async def _get_symbols_and_amounts(self, coins_to_buy, reference_market_to_split):
+        amount_by_symbol = {}
+        for coin in coins_to_buy:
+            symbol = symbol_util.merge_currencies(
+                coin,
+                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            )
+            price = await trading_personal_data.get_up_to_date_price(
+                self.exchange_manager, symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
+            )
+            symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+            ratio = self.trading_mode.get_target_ratio(coin)
+            ideal_amount = ratio * reference_market_to_split / price
+            # worse case (ex with 5USDT min order size): exactly 5 USDT can be in portfolio, we therefore want to
+            # trade at lease 5 USDT to be able to buy more.
+            # - we want ideal_amount - min_cost > min_cost
+            # - in other words ideal_amount > 2*min_cost => ideal_amount/2 > min cost
+            adapted_quantity = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+                ideal_amount / decimal.Decimal(2),
+                price,
+                symbol_market
+            )
+            if not adapted_quantity:
+                # if we can't create an order in this case, we won't be able to balance the portfolio.
+                # don't try to avoid triggering new rebalances on each wakeup cycling market sell & buy orders
+                raise trading_errors.MissingMinimalExchangeTradeVolume(
+                    f"Can't buy {symbol}: available funds are too low to buy {ratio}% of {reference_market_to_split} "
+                    f"holdings."
+                )
+            amount_by_symbol[symbol] = ideal_amount
+        return amount_by_symbol
+
+    async def _buy_coin(self, symbol, ideal_amount) -> list:
         current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
             await trading_personal_data.get_pre_order_data(
                 self.exchange_manager, symbol=symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
             )
         # ideally use the expected reference_market_available_holdings ratio, fallback to available
         # holdings if necessary
-        reference_market_to_allocate = min(
-            self.trading_mode.get_target_ratio(coin) * reference_market_to_split,
-            current_market_holding
-        )
-        ideal_quantity = (reference_market_to_allocate / price) - current_symbol_holding
+        target_quantity = min(ideal_amount, current_market_holding / price)
+        ideal_quantity = target_quantity - current_symbol_holding
         if ideal_quantity <= trading_constants.ZERO:
             return []
         quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
