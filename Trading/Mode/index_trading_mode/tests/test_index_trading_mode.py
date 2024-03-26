@@ -358,12 +358,103 @@ async def test_get_rebalance_details(tools):
     mode.indexed_coins = ["BTC", "ETH", "SOL"]
     mode.rebalance_cap_ratio = decimal.Decimal("0.1")
     portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
-    ) as get_holdings_ratio_mock:
+    with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock:
         with mock.patch.object(
-            mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
-        ) as get_removed_coins_from_previous_config_mock:
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+        ) as get_holdings_ratio_mock:
+            with mock.patch.object(
+                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
+            ) as get_removed_coins_from_previous_config_mock:
+                should_rebalance, details = producer._get_rebalance_details()
+                assert should_rebalance is False
+                assert details == {
+                    index_trading.RebalanceDetails.SELL_SOME.value: {},
+                    index_trading.RebalanceDetails.BUY_MORE.value: {},
+                    index_trading.RebalanceDetails.REMOVE.value: {},
+                    index_trading.RebalanceDetails.ADD.value: {},
+                    index_trading.RebalanceDetails.SWAP.value: {},
+                }
+                assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
+                get_removed_coins_from_previous_config_mock.assert_called_once()
+                _resolve_swaps_mock.assert_called_once_with(details)
+                _resolve_swaps_mock.reset_mock()
+                get_holdings_ratio_mock.reset_mock()
+            with mock.patch.object(
+                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
+            ) as get_removed_coins_from_previous_config_mock:
+                should_rebalance, details = producer._get_rebalance_details()
+                assert should_rebalance is True
+                assert details == {
+                    index_trading.RebalanceDetails.SELL_SOME.value: {},
+                    index_trading.RebalanceDetails.BUY_MORE.value: {},
+                    index_trading.RebalanceDetails.REMOVE.value: {
+                        "SOL": decimal.Decimal("0.3"),
+                        "ADA": decimal.Decimal("0.3")
+                    },
+                    index_trading.RebalanceDetails.ADD.value: {},
+                    index_trading.RebalanceDetails.SWAP.value: {},
+                }
+                assert get_holdings_ratio_mock.call_count == \
+                       len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
+                get_removed_coins_from_previous_config_mock.assert_called_once()
+                _resolve_swaps_mock.assert_called_once_with(details)
+                _resolve_swaps_mock.reset_mock()
+                get_holdings_ratio_mock.reset_mock()
+        with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
+        ) as get_holdings_ratio_mock:
+            with mock.patch.object(
+                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
+            ) as get_removed_coins_from_previous_config_mock:
+                should_rebalance, details = producer._get_rebalance_details()
+                assert should_rebalance is True
+                assert details == {
+                    index_trading.RebalanceDetails.SELL_SOME.value: {},
+                    index_trading.RebalanceDetails.BUY_MORE.value: {
+                        'BTC': decimal.Decimal('0.3333333333333333333333333333'),
+                        'ETH': decimal.Decimal('0.3333333333333333333333333333'),
+                        'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                    },
+                    index_trading.RebalanceDetails.REMOVE.value: {},
+                    index_trading.RebalanceDetails.ADD.value: {},
+                    index_trading.RebalanceDetails.SWAP.value: {},
+                }
+                assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
+                get_removed_coins_from_previous_config_mock.assert_called_once()
+                _resolve_swaps_mock.assert_called_once_with(details)
+                _resolve_swaps_mock.reset_mock()
+                get_holdings_ratio_mock.reset_mock()
+            with mock.patch.object(
+                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
+            ) as get_removed_coins_from_previous_config_mock:
+                should_rebalance, details = producer._get_rebalance_details()
+                assert should_rebalance is True
+                assert details == {
+                    index_trading.RebalanceDetails.SELL_SOME.value: {},
+                    index_trading.RebalanceDetails.BUY_MORE.value: {
+                        'BTC': decimal.Decimal('0.3333333333333333333333333333'),
+                        'ETH': decimal.Decimal('0.3333333333333333333333333333'),
+                        'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                    },
+                    index_trading.RebalanceDetails.REMOVE.value: {
+                        "SOL": decimal.Decimal("0.2"),
+                        "ADA": decimal.Decimal("0.2")
+                    },
+                    index_trading.RebalanceDetails.ADD.value: {},
+                    index_trading.RebalanceDetails.SWAP.value: {},
+                }
+                assert get_holdings_ratio_mock.call_count == \
+                       len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
+                get_removed_coins_from_previous_config_mock.assert_called_once()
+                _resolve_swaps_mock.assert_called_once_with(details)
+                _resolve_swaps_mock.reset_mock()
+                get_holdings_ratio_mock.reset_mock()
+
+        # rebalance cap larger than ratio
+        mode.rebalance_cap_ratio = decimal.Decimal("0.5")
+        with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+        ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is False
             assert details == {
@@ -374,139 +465,65 @@ async def test_get_rebalance_details(tools):
                 index_trading.RebalanceDetails.SWAP.value: {},
             }
             assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-            get_removed_coins_from_previous_config_mock.assert_called_once()
             get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_called_once_with(details)
+            _resolve_swaps_mock.reset_mock()
         with mock.patch.object(
-            mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
-        ) as get_removed_coins_from_previous_config_mock:
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
+        ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
-            assert should_rebalance is True
+            assert should_rebalance is False
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {},
                 index_trading.RebalanceDetails.BUY_MORE.value: {},
-                index_trading.RebalanceDetails.REMOVE.value: {
-                    "SOL": decimal.Decimal("0.3"),
-                    "ADA": decimal.Decimal("0.3")
-                },
-                index_trading.RebalanceDetails.ADD.value: {},
-                index_trading.RebalanceDetails.SWAP.value: {},
-            }
-            assert get_holdings_ratio_mock.call_count == \
-                   len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
-            get_removed_coins_from_previous_config_mock.assert_called_once()
-            get_holdings_ratio_mock.reset_mock()
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
-    ) as get_holdings_ratio_mock:
-        with mock.patch.object(
-            mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
-        ) as get_removed_coins_from_previous_config_mock:
-            should_rebalance, details = producer._get_rebalance_details()
-            assert should_rebalance is True
-            assert details == {
-                index_trading.RebalanceDetails.SELL_SOME.value: {},
-                index_trading.RebalanceDetails.BUY_MORE.value: {
-                    'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                    'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                    'SOL': decimal.Decimal('0.3333333333333333333333333333')
-                },
                 index_trading.RebalanceDetails.REMOVE.value: {},
                 index_trading.RebalanceDetails.ADD.value: {},
                 index_trading.RebalanceDetails.SWAP.value: {},
             }
             assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-            get_removed_coins_from_previous_config_mock.assert_called_once()
             get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_called_once_with(details)
+            _resolve_swaps_mock.reset_mock()
         with mock.patch.object(
-            mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
-        ) as get_removed_coins_from_previous_config_mock:
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
+        ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is True
             assert details == {
-                index_trading.RebalanceDetails.SELL_SOME.value: {},
-                index_trading.RebalanceDetails.BUY_MORE.value: {
+                index_trading.RebalanceDetails.SELL_SOME.value: {
                     'BTC': decimal.Decimal('0.3333333333333333333333333333'),
                     'ETH': decimal.Decimal('0.3333333333333333333333333333'),
                     'SOL': decimal.Decimal('0.3333333333333333333333333333')
                 },
-                index_trading.RebalanceDetails.REMOVE.value: {
-                    "SOL": decimal.Decimal("0.2"),
-                    "ADA": decimal.Decimal("0.2")
-                },
+                index_trading.RebalanceDetails.BUY_MORE.value: {},
+                index_trading.RebalanceDetails.REMOVE.value: {},
                 index_trading.RebalanceDetails.ADD.value: {},
                 index_trading.RebalanceDetails.SWAP.value: {},
             }
-            assert get_holdings_ratio_mock.call_count == \
-                   len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
-            get_removed_coins_from_previous_config_mock.assert_called_once()
+            assert get_holdings_ratio_mock.call_count == len(details[index_trading.RebalanceDetails.SELL_SOME.value])
             get_holdings_ratio_mock.reset_mock()
-
-    # rebalance cap larger than ratio
-    mode.rebalance_cap_ratio = decimal.Decimal("0.5")
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
-    ) as get_holdings_ratio_mock:
-        should_rebalance, details = producer._get_rebalance_details()
-        assert should_rebalance is False
-        assert details == {
-            index_trading.RebalanceDetails.SELL_SOME.value: {},
-            index_trading.RebalanceDetails.BUY_MORE.value: {},
-            index_trading.RebalanceDetails.REMOVE.value: {},
-            index_trading.RebalanceDetails.ADD.value: {},
-            index_trading.RebalanceDetails.SWAP.value: {},
-        }
-        assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-        get_holdings_ratio_mock.reset_mock()
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
-    ) as get_holdings_ratio_mock:
-        should_rebalance, details = producer._get_rebalance_details()
-        assert should_rebalance is False
-        assert details == {
-            index_trading.RebalanceDetails.SELL_SOME.value: {},
-            index_trading.RebalanceDetails.BUY_MORE.value: {},
-            index_trading.RebalanceDetails.REMOVE.value: {},
-            index_trading.RebalanceDetails.ADD.value: {},
-            index_trading.RebalanceDetails.SWAP.value: {},
-        }
-        assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-        get_holdings_ratio_mock.reset_mock()
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
-    ) as get_holdings_ratio_mock:
-        should_rebalance, details = producer._get_rebalance_details()
-        assert should_rebalance is True
-        assert details == {
-            index_trading.RebalanceDetails.SELL_SOME.value: {
-                'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                'SOL': decimal.Decimal('0.3333333333333333333333333333')
-            },
-            index_trading.RebalanceDetails.BUY_MORE.value: {},
-            index_trading.RebalanceDetails.REMOVE.value: {},
-            index_trading.RebalanceDetails.ADD.value: {},
-            index_trading.RebalanceDetails.SWAP.value: {},
-        }
-        assert get_holdings_ratio_mock.call_count == len(details[index_trading.RebalanceDetails.SELL_SOME.value])
-        get_holdings_ratio_mock.reset_mock()
-    with mock.patch.object(
-        portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
-    ) as get_holdings_ratio_mock:
-        should_rebalance, details = producer._get_rebalance_details()
-        assert should_rebalance is True
-        assert details == {
-            index_trading.RebalanceDetails.SELL_SOME.value: {},
-            index_trading.RebalanceDetails.BUY_MORE.value: {},
-            index_trading.RebalanceDetails.REMOVE.value: {},
-            index_trading.RebalanceDetails.ADD.value: {
-                'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                'SOL': decimal.Decimal('0.3333333333333333333333333333')
-            },
-            index_trading.RebalanceDetails.SWAP.value: {},
-        }
-        assert get_holdings_ratio_mock.call_count == len(details[index_trading.RebalanceDetails.ADD.value])
-        get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_called_once_with(details)
+            _resolve_swaps_mock.reset_mock()
+        with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
+        ) as get_holdings_ratio_mock:
+            should_rebalance, details = producer._get_rebalance_details()
+            assert should_rebalance is True
+            assert details == {
+                index_trading.RebalanceDetails.SELL_SOME.value: {},
+                index_trading.RebalanceDetails.BUY_MORE.value: {},
+                index_trading.RebalanceDetails.REMOVE.value: {},
+                index_trading.RebalanceDetails.ADD.value: {
+                    'BTC': decimal.Decimal('0.3333333333333333333333333333'),
+                    'ETH': decimal.Decimal('0.3333333333333333333333333333'),
+                    'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                },
+                index_trading.RebalanceDetails.SWAP.value: {},
+            }
+            assert get_holdings_ratio_mock.call_count == len(details[index_trading.RebalanceDetails.ADD.value])
+            get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_called_once_with(details)
+            _resolve_swaps_mock.reset_mock()
 
 
 async def test_get_removed_coins_from_previous_config(tools):
@@ -599,7 +616,56 @@ async def test_sell_indexed_coins_for_reference_market(tools):
 async def test_get_coins_to_sell(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    mode.indexed_coins = ["BTC", "ETH"]
+    mode.indexed_coins = ["BTC", "ETH", "DOGE", "SHIB"]
+    assert consumer._get_coins_to_sell({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH", "DOGE", "SHIB"]
+    assert consumer._get_coins_to_sell({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {
+            "BTC": "ETH"
+        },
+    }) == ["BTC"]
+    assert consumer._get_coins_to_sell({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {
+            "XRP": trading_constants.ONE_HUNDRED
+        },
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {
+            "BTC": "ETH",
+            "SOL": "ADA",
+        },
+    }) == ["BTC", "SOL"]
+    assert consumer._get_coins_to_sell({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH", "DOGE", "SHIB"]
+    assert consumer._get_coins_to_sell({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {
+            "XRP": trading_constants.ONE_HUNDRED
+        },
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH", "DOGE", "SHIB", "XRP"]
+
+
+async def test_resolve_swaps(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     mode.rebalance_cap_ratio = decimal.Decimal("0.05")  # %5
     rebalance_details = {
         index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -609,27 +675,35 @@ async def test_get_coins_to_sell(tools):
         index_trading.RebalanceDetails.SWAP.value: {},
     }
     # regular full rebalance
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
     # regular full rebalance with removed coins to sell
     rebalance_details[index_trading.RebalanceDetails.REMOVE.value] = {"SOL": decimal.Decimal("0.3")}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
-    # rebalances with a coin swap only
+    # rebalances with a coin swap only from ADD coin
     rebalance_details[index_trading.RebalanceDetails.ADD.value] = {"ADA": decimal.Decimal("0.3")}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["SOL"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {"SOL": "ADA"}
+
+    # rebalances with a coin swap only from BUY_MORE coin
+    rebalance_details[index_trading.RebalanceDetails.ADD.value] = {}
+    rebalance_details[index_trading.RebalanceDetails.BUY_MORE.value] = {"ADA": decimal.Decimal("0.3")}
+    producer._resolve_swaps(rebalance_details)
+    assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {"SOL": "ADA"}
+    rebalance_details[index_trading.RebalanceDetails.BUY_MORE.value] = {}
+
+    # rebalances with an incompatible coin swap (ratio too different)
+    rebalance_details[index_trading.RebalanceDetails.BUY_MORE.value] = {"ADA": decimal.Decimal("0.1")}
+    producer._resolve_swaps(rebalance_details)
+    assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
+    rebalance_details[index_trading.RebalanceDetails.BUY_MORE.value] = {}
 
     # rebalances with an incompatible coin swap (ratio too different)
     rebalance_details[index_trading.RebalanceDetails.ADD.value] = {"ADA": decimal.Decimal("0.5")}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL"]
-    assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
-
-    # rebalances with an incompatible coin swap (ratio too different)
-    rebalance_details[index_trading.RebalanceDetails.ADD.value] = {"ADA": decimal.Decimal("0.1")}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
     # rebalances with 2 removed coins: sell everything
@@ -637,7 +711,7 @@ async def test_get_coins_to_sell(tools):
         "SOL": decimal.Decimal("0.3"),
         "XRP": decimal.Decimal("0.3"),
     }
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL", "XRP"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
     # rebalances with 2 coin swaps: sell everything
@@ -645,17 +719,17 @@ async def test_get_coins_to_sell(tools):
         "ADA": decimal.Decimal("0.3"),
         "ADA2": decimal.Decimal("0.3"),
     }
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL", "XRP"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
     # rebalance with regular buy / sell more
     rebalance_details[index_trading.RebalanceDetails.BUY_MORE.value] = {"LTC": decimal.Decimal(1)}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL", "XRP"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
     # rebalance with regular buy / sell more
     rebalance_details[index_trading.RebalanceDetails.SELL_SOME.value] = {"BTC": decimal.Decimal(1)}
-    assert consumer._get_coins_to_sell(rebalance_details) == ["BTC", "ETH", "SOL", "XRP"]
+    producer._resolve_swaps(rebalance_details)
     assert rebalance_details[index_trading.RebalanceDetails.SWAP.value] == {}
 
 
@@ -683,13 +757,17 @@ async def test_split_reference_market_into_indexed_coins(tools):
         trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
         "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
     ) as get_currency_portfolio_mock, mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+    ) as get_traded_assets_holdings_value_mock, mock.patch.object(
         consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
     ) as _buy_coin_mock:
         assert await consumer._split_reference_market_into_indexed_coins(details) == ["order", "order"]
-        get_currency_portfolio_mock.assert_called_once_with("USDT")
+        get_traded_assets_holdings_value_mock.assert_called_once_with("USDT")
+        get_currency_portfolio_mock.assert_not_called()
         assert _buy_coin_mock.call_count == 2
-        assert _buy_coin_mock.mock_calls[0].args == ("ETH", decimal.Decimal("2"))
-        assert _buy_coin_mock.mock_calls[1].args == ("ETH2", decimal.Decimal("2"))
+        assert _buy_coin_mock.mock_calls[0].args == ("ETH", decimal.Decimal("2000"))
+        assert _buy_coin_mock.mock_calls[1].args == ("ETH2", decimal.Decimal("2000"))
 
     # no bought coin
     details = {index_trading.RebalanceDetails.SWAP.value: {}}
