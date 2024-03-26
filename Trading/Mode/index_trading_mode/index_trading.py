@@ -42,7 +42,6 @@ class RebalanceDetails(enum.Enum):
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     FILL_ORDER_TIMEOUT = 60
-    ALLOWED_1_TO_1_SWAP_COUNTS = 1
 
     async def create_new_orders(self, symbol, _, state, **kwargs):
         details = kwargs["data"]
@@ -52,9 +51,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return []
 
     async def _rebalance_portfolio(self, details: dict):
-        self.logger.info(
-            f"Triggering rebalance on [{self.exchange_manager.exchange_name}]."
-        )
+        self.logger.info(f"Executing rebalance on [{self.exchange_manager.exchange_name}]")
         # 1. sell indexed coins for reference market
         orders = await self._sell_indexed_coins_for_reference_market(details)
         # 2. split reference market into indexed coins
@@ -78,31 +75,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return orders
 
     def _get_coins_to_sell(self, details: dict) -> list:
-        removed = details[RebalanceDetails.REMOVE.value]
-        details[RebalanceDetails.SWAP.value] = {}
-        if details[RebalanceDetails.SELL_SOME.value]:
-            # rebalance within held coins: global rebalance required
-            return self.trading_mode.indexed_coins + list(removed)
-        added = {**details[RebalanceDetails.ADD.value], **details[RebalanceDetails.BUY_MORE.value]}
-        if len(removed) == len(added) == self.ALLOWED_1_TO_1_SWAP_COUNTS:
-            for removed_coin, removed_ratio, added_coin, added_ratio in zip(
-                removed, removed.values(), added, added.values()
-            ):
-                added_holding_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                    portfolio_value_holder.get_holdings_ratio(added_coin, traded_symbols_only=True)
-                required_added_ratio = added_ratio - added_holding_ratio
-                if (
-                    removed_ratio - self.trading_mode.rebalance_cap_ratio
-                    < required_added_ratio
-                    < removed_ratio + self.trading_mode.rebalance_cap_ratio
-                ):
-                    # removed can be swapped for added: only sell removed
-                    details[RebalanceDetails.SWAP.value][removed_coin] = added_coin
-                else:
-                    # reset to_sell to sell everything
-                    details[RebalanceDetails.SWAP.value] = {}
-                    break
-        return list(details[RebalanceDetails.SWAP.value]) or (self.trading_mode.indexed_coins + list(removed))
+        return list(details[RebalanceDetails.SWAP.value]) or (
+            self.trading_mode.indexed_coins + list(details[RebalanceDetails.REMOVE.value])
+        )
 
     async def _split_reference_market_into_indexed_coins(self, details: dict):
         orders = []
@@ -110,8 +85,8 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             # has to infer total reference market holdings
             reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_traded_assets_holdings_value(
-                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-            )
+                    self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                )
             coins_to_buy = list(details[RebalanceDetails.SWAP.value].values())
         else:
             # can use actual reference market holdings: everything has been sold
@@ -181,6 +156,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     INDEXED_COIN_NAME = "name"
     INDEXED_COIN_RATIO = "ratio"
     MIN_INDEXED_COINS = 2
+    ALLOWED_1_TO_1_SWAP_COUNTS = 1
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -279,8 +255,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
                 should_rebalance = True
                 self.logger.info(
-                    f"{coin} is not in index anymore. A rebalance is required"
+                    f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
+                    f"anymore. A rebalance is required."
                 )
+        # compute coins to buy or sell
         for coin in self.trading_mode.indexed_coins:
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
@@ -302,10 +280,53 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 beyond_ratio = False
             if beyond_ratio:
                 self.logger.info(
-                    f"{coin} is beyond the target ratio of {target_ratio * trading_constants.ONE_HUNDRED}%, "
-                    f"ratio = {coin_ratio * trading_constants.ONE_HUNDRED}%. A rebalance is required"
+                    f"{coin} is beyond the target ratio of {round(target_ratio * trading_constants.ONE_HUNDRED, 3)}%, "
+                    f"ratio: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%. A rebalance is required."
                 )
+        self._resolve_swaps(rebalance_details)
+        for origin, target in rebalance_details[RebalanceDetails.SWAP.value].items():
+            origin_ratio = round(
+                rebalance_details[RebalanceDetails.REMOVE.value][origin] * trading_constants.ONE_HUNDRED,
+                3
+            )
+            target_ratio = round(
+                rebalance_details[RebalanceDetails.ADD.value].get(
+                    target,
+                    rebalance_details[RebalanceDetails.BUY_MORE.value].get(target, trading_constants.ZERO)
+                ) * trading_constants.ONE_HUNDRED,
+                3
+            ) or "???"
+            self.logger.info(
+                f"Swapping {origin} (holding ratio: {origin_ratio}%) for {target} (to buy ratio: {target_ratio}%) "
+                f"on [{self.exchange_manager.exchange_name}]: ratios are similar enough to allow swapping."
+            )
         return should_rebalance, rebalance_details
+
+    def _resolve_swaps(self, details: dict):
+        removed = details[RebalanceDetails.REMOVE.value]
+        details[RebalanceDetails.SWAP.value] = {}
+        if details[RebalanceDetails.SELL_SOME.value]:
+            # rebalance within held coins: global rebalance required
+            return
+        added = {**details[RebalanceDetails.ADD.value], **details[RebalanceDetails.BUY_MORE.value]}
+        if len(removed) == len(added) == self.ALLOWED_1_TO_1_SWAP_COUNTS:
+            for removed_coin, removed_ratio, added_coin, added_ratio in zip(
+                removed, removed.values(), added, added.values()
+            ):
+                added_holding_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                    portfolio_value_holder.get_holdings_ratio(added_coin, traded_symbols_only=True)
+                required_added_ratio = added_ratio - added_holding_ratio
+                if (
+                    removed_ratio - self.trading_mode.rebalance_cap_ratio
+                    < required_added_ratio
+                    < removed_ratio + self.trading_mode.rebalance_cap_ratio
+                ):
+                    # removed can be swapped for added: only sell removed
+                    details[RebalanceDetails.SWAP.value][removed_coin] = added_coin
+                else:
+                    # reset to_sell to sell everything
+                    details[RebalanceDetails.SWAP.value] = {}
+                    return
 
     def get_channels_registration(self):
         return [self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.FULL_CANDLES.value]]
