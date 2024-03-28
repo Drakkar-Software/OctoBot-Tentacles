@@ -42,6 +42,7 @@ import octobot_trading.errors as trading_errors
 
 import tentacles.Trading.Mode as Mode
 import tentacles.Trading.Mode.index_trading_mode.index_trading as index_trading
+import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
 
 
 import tests.test_utils.memory_check_util as memory_check_util
@@ -78,7 +79,7 @@ async def test_run_independent_backtestings_with_memory_check():
         Mode.IndexTradingMode.get_name(): {
             "required_strategies": [],
             "refresh_interval": 7,
-            "rebalance_cap_percent": 5,
+            "rebalance_trigger_min_percent": 5,
             "index_content": []
         },
     }
@@ -104,28 +105,28 @@ def _get_config(tools, update):
 async def test_init_default_values(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
     assert mode.refresh_interval_days == 1
-    assert mode.rebalance_cap_ratio == decimal.Decimal("0.05")
-    assert mode.ratio_per_asset == {}
-    assert mode.total_ratio_per_asset == trading_constants.ZERO
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.05")
+    assert mode.ratio_per_asset == {'BTC': {'name': 'BTC', 'value': decimal.Decimal(100)}}
+    assert mode.total_ratio_per_asset == decimal.Decimal(100)
     assert mode.indexed_coins == ["BTC"]
 
 
 async def test_init_config_values(tools):
     update = {
         "refresh_interval": 72,
-        "rebalance_cap_percent": 10.2,
+        "rebalance_trigger_min_percent": 10.2,
         "index_content": [
             {
-                "name": "ETH",
-                "ratio": 53,
+                index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_distribution.DISTRIBUTION_VALUE: 53,
             },
             {
-                "name": "BTC",
-                "ratio": 1,
+                index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_distribution.DISTRIBUTION_VALUE: 1,
             },
             {
-                "name": "SOL",
-                "ratio": 1,
+                index_distribution.DISTRIBUTION_NAME: "SOL",
+                index_distribution.DISTRIBUTION_VALUE: 1,
             },
         ]
     }
@@ -135,19 +136,19 @@ async def test_init_config_values(tools):
         for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT"]
     ]
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_cap_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
     assert mode.ratio_per_asset == {
         "ETH": {
-            "name": "ETH",
-            "ratio": 53,
+            index_distribution.DISTRIBUTION_NAME: "ETH",
+            index_distribution.DISTRIBUTION_VALUE: 53,
         },
         "BTC": {
-            "name": "BTC",
-            "ratio": 1,
+            index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_distribution.DISTRIBUTION_VALUE: 1,
         },
         "SOL": {
-            "name": "SOL",
-            "ratio": 1,
+            index_distribution.DISTRIBUTION_NAME: "SOL",
+            index_distribution.DISTRIBUTION_VALUE: 1,
         },
     }
     assert mode.total_ratio_per_asset == decimal.Decimal("55")
@@ -156,19 +157,19 @@ async def test_init_config_values(tools):
     # refresh user inputs
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_cap_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
     assert mode.ratio_per_asset == {
         "ETH": {
-            "name": "ETH",
-            "ratio": 53,
+            index_distribution.DISTRIBUTION_NAME: "ETH",
+            index_distribution.DISTRIBUTION_VALUE: 53,
         },
         "BTC": {
-            "name": "BTC",
-            "ratio": 1,
+            index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_distribution.DISTRIBUTION_VALUE: 1,
         },
         "SOL": {
-            "name": "SOL",
-            "ratio": 1,
+            index_distribution.DISTRIBUTION_NAME: "SOL",
+            index_distribution.DISTRIBUTION_VALUE: 1,
         },
     }
     assert mode.total_ratio_per_asset == decimal.Decimal("55")
@@ -232,15 +233,15 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
 async def test_get_target_ratio_with_config(tools):
     update = {
         "refresh_interval": 72,
-        "rebalance_cap_percent": 10.2,
+        "rebalance_trigger_min_percent": 10.2,
         "index_content": [
             {
-                "name": "BTC",
-                "ratio": 1,
+                index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_distribution.DISTRIBUTION_VALUE: 1,
             },
             {
-                "name": "ETH",
-                "ratio": 53,
+                index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_distribution.DISTRIBUTION_VALUE: 53,
             },
         ]
     }
@@ -253,16 +254,33 @@ async def test_get_target_ratio_with_config(tools):
 async def test_get_target_ratio_without_config(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    assert mode.get_target_ratio("ETH") == decimal.Decimal('1')
+    assert mode.get_target_ratio("ETH") == decimal.Decimal('0')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("1")
-    assert mode.get_target_ratio("SOL") == decimal.Decimal("1")
+    assert mode.get_target_ratio("SOL") == decimal.Decimal("0")
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "SOL/USDT", "BTC/USDT"]
+    ]
+    mode._update_coins_distribution()
+    assert mode.get_target_ratio("ETH") == decimal.Decimal('0.33333333333333336')
+    assert mode.get_target_ratio("BTC") == decimal.Decimal("0.33333333333333336")
+    assert mode.get_target_ratio("SOL") == decimal.Decimal("0.33333333333333336")
+    assert mode.get_target_ratio("ADA") == decimal.Decimal("0")
 
-    mode.indexed_coins = ["BTC", "ETH"]
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "BTC/USDT"]
+    ]
+    mode._update_coins_distribution()
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.5')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.5")
-    assert mode.get_target_ratio("SOL") == decimal.Decimal("0.5")
+    assert mode.get_target_ratio("SOL") == decimal.Decimal("0")
 
-    mode.indexed_coins = ["BTC", "ETH", "A", "B"]
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "BTC/USDT", "ADA/USDT", "SOL/USDT"]
+    ]
+    mode._update_coins_distribution()
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.25')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.25")
     assert mode.get_target_ratio("SOL") == decimal.Decimal("0.25")
@@ -355,8 +373,12 @@ async def test_trigger_rebalance(tools):
 async def test_get_rebalance_details(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    mode.indexed_coins = ["BTC", "ETH", "SOL"]
-    mode.rebalance_cap_ratio = decimal.Decimal("0.1")
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "BTC/USDT", "SOL/USDT"]
+    ]
+    mode._update_coins_distribution()
+    mode.rebalance_trigger_min_ratio = decimal.Decimal("0.1")
     portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
     with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock:
         with mock.patch.object(
@@ -411,9 +433,9 @@ async def test_get_rebalance_details(tools):
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
                     index_trading.RebalanceDetails.BUY_MORE.value: {
-                        'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                        'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                        'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                        'BTC': decimal.Decimal('0.33333333333333336'),
+                        'ETH': decimal.Decimal('0.33333333333333336'),
+                        'SOL': decimal.Decimal('0.33333333333333336')
                     },
                     index_trading.RebalanceDetails.REMOVE.value: {},
                     index_trading.RebalanceDetails.ADD.value: {},
@@ -432,9 +454,9 @@ async def test_get_rebalance_details(tools):
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
                     index_trading.RebalanceDetails.BUY_MORE.value: {
-                        'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                        'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                        'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                        'BTC': decimal.Decimal('0.33333333333333336'),
+                        'ETH': decimal.Decimal('0.33333333333333336'),
+                        'SOL': decimal.Decimal('0.33333333333333336')
                     },
                     index_trading.RebalanceDetails.REMOVE.value: {
                         "SOL": decimal.Decimal("0.2"),
@@ -451,7 +473,7 @@ async def test_get_rebalance_details(tools):
                 get_holdings_ratio_mock.reset_mock()
 
         # rebalance cap larger than ratio
-        mode.rebalance_cap_ratio = decimal.Decimal("0.5")
+        mode.rebalance_trigger_min_ratio = decimal.Decimal("0.5")
         with mock.patch.object(
             portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
         ) as get_holdings_ratio_mock:
@@ -491,9 +513,9 @@ async def test_get_rebalance_details(tools):
             assert should_rebalance is True
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {
-                    'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                    'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                    'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                    'BTC': decimal.Decimal('0.33333333333333336'),
+                    'ETH': decimal.Decimal('0.33333333333333336'),
+                    'SOL': decimal.Decimal('0.33333333333333336')
                 },
                 index_trading.RebalanceDetails.BUY_MORE.value: {},
                 index_trading.RebalanceDetails.REMOVE.value: {},
@@ -514,9 +536,9 @@ async def test_get_rebalance_details(tools):
                 index_trading.RebalanceDetails.BUY_MORE.value: {},
                 index_trading.RebalanceDetails.REMOVE.value: {},
                 index_trading.RebalanceDetails.ADD.value: {
-                    'BTC': decimal.Decimal('0.3333333333333333333333333333'),
-                    'ETH': decimal.Decimal('0.3333333333333333333333333333'),
-                    'SOL': decimal.Decimal('0.3333333333333333333333333333')
+                    'BTC': decimal.Decimal('0.33333333333333336'),
+                    'ETH': decimal.Decimal('0.33333333333333336'),
+                    'SOL': decimal.Decimal('0.33333333333333336')
                 },
                 index_trading.RebalanceDetails.SWAP.value: {},
             }
@@ -533,30 +555,30 @@ async def test_get_removed_coins_from_previous_config(tools):
     mode.trading_config = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "AA"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "AA"
             },
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "BB"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BB"
             }
         ]
     }
     mode.previous_trading_config = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "AA"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "AA"
             },
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "BB"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BB"
             }
         ]
     }
     mode.trading_config = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "AA"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "AA"
             },
             {
-                index_trading.IndexTradingModeProducer.INDEXED_COIN_NAME: "CC"
+                index_trading.index_distribution.DISTRIBUTION_NAME: "CC"
             }
         ]
     }
@@ -702,7 +724,7 @@ async def test_get_coins_to_sell(tools):
 async def test_resolve_swaps(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    mode.rebalance_cap_ratio = decimal.Decimal("0.05")  # %5
+    mode.rebalance_trigger_min_ratio = decimal.Decimal("0.05")  # %5
     rebalance_details = {
         index_trading.RebalanceDetails.SELL_SOME.value: {},
         index_trading.RebalanceDetails.BUY_MORE.value: {},
@@ -849,17 +871,27 @@ async def test_split_reference_market_into_indexed_coins(tools):
 async def test_get_symbols_and_amounts(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    assert await consumer._get_symbols_and_amounts(["BTC"], decimal.Decimal(3000)) == {"BTC/USDT": decimal.Decimal(3)}
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["BTC/USDT"]
+    ]
+    mode._update_coins_distribution()
+    assert await consumer._get_symbols_and_amounts(["BTC"], decimal.Decimal(3000)) == {
+        "BTC/USDT": decimal.Decimal(3)
+    }
     with mock.patch.object(
         trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(1000))
     ) as get_up_to_date_price_mock:
         assert await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(3000)) == {
-            "BTC/USDT": decimal.Decimal(3),
-            "ETH/USDT": decimal.Decimal(3)
+            "BTC/USDT": decimal.Decimal(3)
         }
         assert get_up_to_date_price_mock.call_count == 2
         get_up_to_date_price_mock.reset_mock()
-        mode.indexed_coins = ["BTC", "ETH"]
+        trader.exchange_manager.exchange_config.traded_symbols = [
+            commons_symbols.parse_symbol(symbol)
+            for symbol in ["BTC/USDT", "ETH/USDT"]
+        ]
+        mode._update_coins_distribution()
         assert await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(3000)) == {
             "BTC/USDT": decimal.Decimal("1.5"),
             "ETH/USDT": decimal.Decimal("1.5")
