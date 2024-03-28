@@ -61,9 +61,11 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self.logger.info(f"Executing rebalance on [{self.exchange_manager.exchange_name}]")
         orders = []
         try:
-            # 1. sell indexed coins for reference market
+            # 1. make sure we can actually rebalance the portfolio
+            await self._ensure_enough_funds_to_buy_after_selling()
+            # 2. sell indexed coins for reference market
             orders += await self._sell_indexed_coins_for_reference_market(details)
-            # 2. split reference market into indexed coins
+            # 3. split reference market into indexed coins
             orders += await self._split_reference_market_into_indexed_coins(details)
         except trading_errors.MissingMinimalExchangeTradeVolume as err:
             self.logger.warning(f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err}")
@@ -93,6 +95,14 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return list(details[RebalanceDetails.SWAP.value]) or (
             self.trading_mode.indexed_coins + list(details[RebalanceDetails.REMOVE.value])
         )
+
+    async def _ensure_enough_funds_to_buy_after_selling(self):
+        reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+            portfolio_value_holder.get_traded_assets_holdings_value(
+                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            )
+        # will raise if funds are missing
+        await self._get_symbols_and_amounts(self.trading_mode.indexed_coins, reference_market_to_split)
 
     async def _split_reference_market_into_indexed_coins(self, details: dict):
         orders = []
@@ -147,8 +157,8 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # if we can't create an order in this case, we won't be able to balance the portfolio.
                 # don't try to avoid triggering new rebalances on each wakeup cycling market sell & buy orders
                 raise trading_errors.MissingMinimalExchangeTradeVolume(
-                    f"Can't buy {symbol}: available funds are too low to buy {ratio}% of {reference_market_to_split} "
-                    f"holdings."
+                    f"Can't buy {symbol}: available funds are too low to buy {ratio*trading_constants.ONE_HUNDRED}% "
+                    f"of {reference_market_to_split} holdings."
                 )
             amount_by_symbol[symbol] = ideal_amount
         return amount_by_symbol

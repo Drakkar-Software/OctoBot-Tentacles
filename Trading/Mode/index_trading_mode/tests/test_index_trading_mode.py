@@ -606,18 +606,23 @@ async def test_rebalance_portfolio(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
+        consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+    ) as _ensure_enough_funds_to_buy_after_selling_mock, mock.patch.object(
         consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
     ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
         consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(return_value=["buy"])
     ) as _split_reference_market_into_indexed_coins_mock:
         assert await consumer._rebalance_portfolio("details") == ["sell", "buy"]
+        _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
         _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
         _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details")
 
     with mock.patch.object(
-            consumer, "_update_producer_last_activity", mock.Mock()
+        consumer, "_update_producer_last_activity", mock.Mock()
     ) as _update_producer_last_activity_mock:
         with mock.patch.object(
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, mock.patch.object(
             consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
                 side_effect=trading_errors.MissingMinimalExchangeTradeVolume
             )
@@ -625,6 +630,7 @@ async def test_rebalance_portfolio(tools):
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(return_value=["buy"])
         ) as _split_reference_market_into_indexed_coins_mock:
             assert await consumer._rebalance_portfolio("details") == []
+            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
             _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
             _split_reference_market_into_indexed_coins_mock.assert_not_called()
             _update_producer_last_activity_mock.assert_called_once_with(
@@ -634,6 +640,33 @@ async def test_rebalance_portfolio(tools):
             _update_producer_last_activity_mock.reset_mock()
 
         with mock.patch.object(
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock(
+                side_effect=trading_errors.MissingMinimalExchangeTradeVolume
+            )
+        ) as _ensure_enough_funds_to_buy_after_selling_mock,\
+            mock.patch.object(
+            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
+                return_value=["sell"]
+            )
+        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+            consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
+                return_value=["buy"]
+            )
+        ) as _split_reference_market_into_indexed_coins_mock:
+            assert await consumer._rebalance_portfolio("details") == []
+            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+            _sell_indexed_coins_for_reference_market_mock.assert_not_called()
+            _split_reference_market_into_indexed_coins_mock.assert_not_called()
+            _update_producer_last_activity_mock.assert_called_once_with(
+                index_trading.IndexActivity.REBALANCING_SKIPPED,
+                index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+            )
+            _update_producer_last_activity_mock.reset_mock()
+
+        with mock.patch.object(
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+        ) as _ensure_enough_funds_to_buy_after_selling_mock,\
+            mock.patch.object(
             consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
                 return_value=["sell"]
             )
@@ -643,6 +676,7 @@ async def test_rebalance_portfolio(tools):
             )
         ) as _split_reference_market_into_indexed_coins_mock:
             assert await consumer._rebalance_portfolio("details") == ["sell"]
+            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
             _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
             _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details")
             _update_producer_last_activity_mock.assert_called_once_with(
@@ -650,6 +684,20 @@ async def test_rebalance_portfolio(tools):
                 index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
             )
             _update_producer_last_activity_mock.reset_mock()
+
+
+async def test_ensure_enough_funds_to_buy_after_selling(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+    ) as get_traded_assets_holdings_value_mock, mock.patch.object(
+        consumer, "_get_symbols_and_amounts", mock.AsyncMock()
+    ) as _get_symbols_and_amounts_mock:
+        await consumer._ensure_enough_funds_to_buy_after_selling()
+        get_traded_assets_holdings_value_mock.assert_called_once_with("USDT")
+        _get_symbols_and_amounts_mock.assert_called_once_with(["BTC"], decimal.Decimal("2000"))
 
 
 async def test_sell_indexed_coins_for_reference_market(tools):

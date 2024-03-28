@@ -34,6 +34,14 @@ Example:
 An index on 3 coins with a 33.33% target on each coin and a Rebalance cap of 5% will trigger a rebalance if 
 the holding if any of those 3 coins takes more than 38.33% or less than 28.33% of the portfolio
 
+### Minimum funds
+To use the Index Trading Mode, the minimum required funds are twice the minimum exchange order amount for every 
+traded coin. This means that when trading 3 coins on Binance, at least 3 times $5 x2, which is $30 is required.  
+Please note that this is the bare minimum, it's better to have at least twice this amount. If the minimum is reached, 
+the Index Trading Mode will stop updating its portfolio according to the index until the value of the portfolio 
+raises back above the required minimum.
+
+
 Warning: When your index Rebalance cap is higher or equal to the target holdings of each coin, no rebalance 
 will be triggered if your holdings of a coin become very low, rebalances will only be triggered when holdings are 
 getting to high.  
