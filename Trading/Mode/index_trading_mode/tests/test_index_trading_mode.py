@@ -262,9 +262,9 @@ async def test_get_target_ratio_without_config(tools):
         for symbol in ["ETH/USDT", "SOL/USDT", "BTC/USDT"]
     ]
     mode._update_coins_distribution()
-    assert mode.get_target_ratio("ETH") == decimal.Decimal('0.33333333333333336')
-    assert mode.get_target_ratio("BTC") == decimal.Decimal("0.33333333333333336")
-    assert mode.get_target_ratio("SOL") == decimal.Decimal("0.33333333333333336")
+    assert mode.get_target_ratio("ETH") == decimal.Decimal('0.3333333333333333617834929233')
+    assert mode.get_target_ratio("BTC") == decimal.Decimal("0.3333333333333333617834929233")
+    assert mode.get_target_ratio("SOL") == decimal.Decimal("0.3333333333333333617834929233")
     assert mode.get_target_ratio("ADA") == decimal.Decimal("0")
 
     trader.exchange_manager.exchange_config.traded_symbols = [
@@ -433,9 +433,9 @@ async def test_get_rebalance_details(tools):
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
                     index_trading.RebalanceDetails.BUY_MORE.value: {
-                        'BTC': decimal.Decimal('0.33333333333333336'),
-                        'ETH': decimal.Decimal('0.33333333333333336'),
-                        'SOL': decimal.Decimal('0.33333333333333336')
+                        'BTC': decimal.Decimal('0.3333333333333333617834929233'),
+                        'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                        'SOL': decimal.Decimal('0.3333333333333333617834929233')
                     },
                     index_trading.RebalanceDetails.REMOVE.value: {},
                     index_trading.RebalanceDetails.ADD.value: {},
@@ -454,9 +454,9 @@ async def test_get_rebalance_details(tools):
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
                     index_trading.RebalanceDetails.BUY_MORE.value: {
-                        'BTC': decimal.Decimal('0.33333333333333336'),
-                        'ETH': decimal.Decimal('0.33333333333333336'),
-                        'SOL': decimal.Decimal('0.33333333333333336')
+                        'BTC': decimal.Decimal('0.3333333333333333617834929233'),
+                        'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                        'SOL': decimal.Decimal('0.3333333333333333617834929233')
                     },
                     index_trading.RebalanceDetails.REMOVE.value: {
                         "SOL": decimal.Decimal("0.2"),
@@ -513,9 +513,9 @@ async def test_get_rebalance_details(tools):
             assert should_rebalance is True
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {
-                    'BTC': decimal.Decimal('0.33333333333333336'),
-                    'ETH': decimal.Decimal('0.33333333333333336'),
-                    'SOL': decimal.Decimal('0.33333333333333336')
+                    'BTC': decimal.Decimal('0.3333333333333333617834929233'),
+                    'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                    'SOL': decimal.Decimal('0.3333333333333333617834929233')
                 },
                 index_trading.RebalanceDetails.BUY_MORE.value: {},
                 index_trading.RebalanceDetails.REMOVE.value: {},
@@ -536,9 +536,9 @@ async def test_get_rebalance_details(tools):
                 index_trading.RebalanceDetails.BUY_MORE.value: {},
                 index_trading.RebalanceDetails.REMOVE.value: {},
                 index_trading.RebalanceDetails.ADD.value: {
-                    'BTC': decimal.Decimal('0.33333333333333336'),
-                    'ETH': decimal.Decimal('0.33333333333333336'),
-                    'SOL': decimal.Decimal('0.33333333333333336')
+                    'BTC': decimal.Decimal('0.3333333333333333617834929233'),
+                    'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                    'SOL': decimal.Decimal('0.3333333333333333617834929233')
                 },
                 index_trading.RebalanceDetails.SWAP.value: {},
             }
