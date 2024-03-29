@@ -6,13 +6,17 @@ import octobot_trading.constants
 
 DISTRIBUTION_NAME = "name"
 DISTRIBUTION_VALUE = "value"
+MAX_DISTRIBUTION_AFTER_COMMA_DIGITS = 1
 
 
 def get_uniform_distribution(coins) -> typing.List:
     if not coins:
         return []
     ratio = float(
-        octobot_trading.constants.ONE / decimal.Decimal(str(len(coins))) * octobot_trading.constants.ONE_HUNDRED
+        round(
+            octobot_trading.constants.ONE / decimal.Decimal(str(len(coins))) * octobot_trading.constants.ONE_HUNDRED,
+            MAX_DISTRIBUTION_AFTER_COMMA_DIGITS
+        )
     )
     if not ratio:
         return []
@@ -32,7 +36,10 @@ def get_linear_distribution(weight_by_coin: dict[str, decimal.Decimal]) -> typin
     return [
         {
             DISTRIBUTION_NAME: coin,
-            DISTRIBUTION_VALUE: float(weight / total_weight * octobot_trading.constants.ONE_HUNDRED)
+            DISTRIBUTION_VALUE: float(round(
+                weight / total_weight * octobot_trading.constants.ONE_HUNDRED,
+                MAX_DISTRIBUTION_AFTER_COMMA_DIGITS
+            ))
         }
         for coin, weight in weight_by_coin.items()
     ]
