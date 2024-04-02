@@ -15,9 +15,11 @@
 #  License along with this library.
 import typing
 import decimal
+import ccxt
 
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_commons.enums as commons_enums
@@ -37,6 +39,22 @@ class Coinbase(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return CoinbaseCCXTAdapter
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        try:
+            # warning might become deprecated
+            # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
+            user_data = await self.connector.client.v2PrivateGetUser()
+            return user_data["data"]["id"]
+        except ccxt.BaseError as err:
+            self.logger.exception(
+                err, True,
+                f"Error when fetching {self.get_name()} account id: {err} ({err.__class__.__name__}). "
+                f"This is not normal, endpoint might be deprecated, see"
+                f"https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users. "
+                f"Using generated account id instead"
+            )
+            return trading_constants.DEFAULT_ACCOUNT_ID
 
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
