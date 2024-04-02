@@ -1,5 +1,6 @@
 {% import 'components/community/cloud_strategies_selector.html' as m_cloud_strategies_selector %}
 {% import 'components/community/octobot_cloud_description.html' as octobot_cloud_description %}
+{% import "components/community/octobot_cloud_features.html" as octobot_cloud_features %}
 
 {% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE) -%}
 <div class="card">
@@ -15,26 +16,7 @@
                 </a>
             </div>
             <div class="col-8 col-lg-7 col-xl-4 card-text py-3">
-                <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_link" target="_blank" rel="noopener">OctoBot cloud</a>
-                is much more than before ! Now with OctoBot cloud, you can:
-                <ul>
-                    <li>
-                        Use trading strategies in the <strong>simplest way possible</strong>.
-                    </li>
-                    <li>
-                        Apply as many trading strategies as you want <strong>for free</strong>
-                    </li>
-                    <li>
-                        Trade with your exchange account or with a virtual portfolio using paper trading
-                    </li>
-                    <li>
-                         Deploy your OctoBot on the cloud from <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/trading-bot?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_link">
-                             octobot.cloud/trading-bot </a>
-                         and enjoy your OctoBot from anywhere while benefiting
-                        from cloud exclusive features such as the built-in TradingView integration, free ChatGPT evaluations and the
-                        <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/{{LOCALE}}/guides/octobot-usage/strategy-designer?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_link" target="_blank" rel="noopener">Strategy Designer</a>.
-                    </li>
-                </ul>
+                {{ octobot_cloud_features.octobot_cloud_features(OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, 'community') }}
             </div>
             <div class="d-none d-xl-flex col-2">
                 <a class="mx-auto" target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_illustration">
@@ -45,10 +27,10 @@
             <div class="col-12 col-lg-4 col-xl-5 card-text py-3">
                 <p>
                     Find more information the recent changes and future plans on
-                    <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/en/blog/introducing-the-new-octobot-cloud?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_blog" target="_blank" rel="noopener"> our blog</a>.
+                    <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/en/blog?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_blog" target="_blank" rel="noopener"> our blog</a>.
                 </p>
                 <p>
-                    Explore the OctoBot cloud strategies using the <a href="{{OCTOBOT_COMMUNITY_URL}}/strategies?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">strategy explorer</a>.
+                    Explore the OctoBot cloud on <a href="{{OCTOBOT_COMMUNITY_URL}}/strategies?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">app.octobot.cloud</a>.
                 </p>
 
                 <a href="{{ url_for('about') }}"
