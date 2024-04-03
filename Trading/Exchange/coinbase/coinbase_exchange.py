@@ -30,6 +30,7 @@ import octobot_commons.symbols as commons_symbols
 class Coinbase(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 300
     REQUIRES_AUTHENTICATION = True
+    IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = True
 
     FIX_MARKET_STATUS = True
 
@@ -74,15 +75,15 @@ class Coinbase(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
-    def _get_ohlcv_params(self, time_frame, limit, **kwargs):
-        # to be added in tentacle
-        limit = min(self.MAX_PAGINATION_LIMIT, limit) if limit else self.MAX_PAGINATION_LIMIT
-        time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
-        to_time = self.connector.client.milliseconds()
-        kwargs.update({
-            "since": to_time - (time_frame_sec * limit),
-            "limit": limit,
-        })
+    def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
+        limit = input_limit
+        if not input_limit or input_limit > self.MAX_PAGINATION_LIMIT:
+            limit = min(self.MAX_PAGINATION_LIMIT, input_limit) if input_limit else self.MAX_PAGINATION_LIMIT
+        if "since" not in kwargs:
+            time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
+            to_time = self.connector.client.milliseconds()
+            kwargs["since"] = to_time - (time_frame_sec * limit)
+            kwargs["limit"] = limit
         return kwargs
 
 
