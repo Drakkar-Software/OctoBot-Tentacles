@@ -33,6 +33,7 @@ import tentacles.Services.Interfaces.web_interface.controllers.profiles
 import tentacles.Services.Interfaces.web_interface.controllers.automation
 import tentacles.Services.Interfaces.web_interface.controllers.reboot
 import tentacles.Services.Interfaces.web_interface.controllers.welcome
+import tentacles.Services.Interfaces.web_interface.controllers.robots
 
 
 def register(blueprint):
@@ -55,6 +56,7 @@ def register(blueprint):
     tentacles.Services.Interfaces.web_interface.controllers.automation.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.reboot.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.welcome.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.robots.register(blueprint)
 
 
 __all__ = [
