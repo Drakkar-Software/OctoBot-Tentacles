@@ -154,9 +154,10 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
                     # convert amount to have the same units as evert other exchange: use FILLED for accuracy
-                    trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                        trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] / \
-                        trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                    trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
+                            trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] /
+                            trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                    )
             except KeyError:
                 pass
         return raw
