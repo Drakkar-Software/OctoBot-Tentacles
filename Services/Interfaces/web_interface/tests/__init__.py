@@ -45,6 +45,7 @@ import tentacles.Services.Interfaces.web_interface as web_interface
 PORT = 5555
 PASSWORD = "123"
 MAX_START_TIME = 5
+NON_AUTH_ROUTES = ["/api/", "robots.txt"]
 
 
 async def _init_bot():
@@ -128,11 +129,10 @@ async def check_page_login_redirect(url, session):
         text = await resp.text()
         assert "We are sorry, but an unexpected error occurred" not in text
         assert "We are sorry, but this doesn't exist" not in text
-        if "/api/" not in url:
+        if not any(route in url for route in NON_AUTH_ROUTES):
             assert "input type=submit value=Login" in text
             assert resp.real_url.name == "login"
         assert resp.status == 200
-
 
 def get_plugins_routes(web_interface_instance):
     all_rules = tuple(rule for rule in web_interface_instance.server_instance.url_map.iter_rules())
