@@ -310,7 +310,9 @@ class GPTEvaluator(evaluators.TAEvaluator):
         value = self.LOW_CONFIDENCE_PERCENT
         if "%" in cleaned_prediction:
             percent_index = cleaned_prediction.index("%")
-            value = float(cleaned_prediction[:percent_index].split(" ")[-1])
+            bracket_index = (cleaned_prediction[:percent_index].rindex("{") + 1) \
+                if "{" in cleaned_prediction[:percent_index] else 0
+            value = float(cleaned_prediction[bracket_index:percent_index].split(" ")[-1])
         elif "high" in cleaned_prediction:
             value = self.HIGH_CONFIDENCE_PERCENT
         elif "medium" in cleaned_prediction or "intermediate" in cleaned_prediction:
