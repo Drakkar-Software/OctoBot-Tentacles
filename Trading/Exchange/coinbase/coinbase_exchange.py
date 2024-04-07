@@ -75,6 +75,12 @@ class Coinbase(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
+    async def get_balance(self, **kwargs: dict):
+        if "v3" not in kwargs:
+            # use v3 to get free and total amounts (default is only returning free amounts)
+            kwargs["v3"] = True
+        return await super().get_balance(**kwargs)
+
     def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
         limit = input_limit
         if not input_limit or input_limit > self.MAX_PAGINATION_LIMIT:
