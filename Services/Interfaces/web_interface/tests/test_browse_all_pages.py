@@ -23,13 +23,19 @@ import tentacles.Services.Interfaces.web_interface.tests as web_interface_tests
 pytestmark = pytest.mark.asyncio
 
 
+def _get_rule_url(rule: str):
+    if rule in DOTTED_URLS:
+        path = rule
+    else:
+        path = rule.replace('.', '/')
+    return f"http://localhost:{web_interface_tests.PORT}{path}"
+
+
 async def test_browse_all_pages_no_required_password():
     async with web_interface_tests.get_web_interface(False) as web_interface_instance:
         async with aiohttp.ClientSession() as session:
             await asyncio.gather(
-                *[web_interface_tests.check_page_no_login_redirect(
-                    f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
-                    session)
+                *[web_interface_tests.check_page_no_login_redirect(_get_rule_url(rule), session)
                   for rule in _get_all_native_rules(web_interface_instance,
                                                     black_list=["/advanced/tentacles",
                                                                 "/advanced/tentacle_packages"]
@@ -40,9 +46,7 @@ async def test_browse_all_pages_required_password_without_login():
     async with web_interface_tests.get_web_interface(True) as web_interface_instance:
         async with aiohttp.ClientSession() as session:
             await asyncio.gather(
-                *[web_interface_tests.check_page_login_redirect(
-                    f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
-                    session)
+                *[web_interface_tests.check_page_login_redirect(_get_rule_url(rule), session)
                   for rule in _get_all_native_rules(web_interface_instance)])
 
 
@@ -52,16 +56,12 @@ async def test_browse_all_pages_required_password_with_login():
             await web_interface_tests.login_user_on_session(session)
             # correctly display pages: session is logged in
             await asyncio.gather(
-                *[web_interface_tests.check_page_no_login_redirect(
-                    f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
-                    session)
+                *[web_interface_tests.check_page_no_login_redirect(_get_rule_url(rule), session)
                   for rule in _get_all_native_rules(web_interface_instance, ["/logout"])])
         async with aiohttp.ClientSession() as unauthenticated_session:
             # redirect to login page: session is not logged in
             await asyncio.gather(
-                *[web_interface_tests.check_page_login_redirect(
-                    f"http://localhost:{web_interface_tests.PORT}{rule.replace('.', '/')}",
-                    unauthenticated_session)
+                *[web_interface_tests.check_page_login_redirect(_get_rule_url(rule), unauthenticated_session)
                   for rule in _get_all_native_rules(web_interface_instance)])
 
 
@@ -91,6 +91,8 @@ def _get_all_native_rules(web_interface_instance, black_list=None):
 # backlist endpoints expecting additional data
 URL_BLACK_LIST = ["/symbol_market_status", "/tentacle_media", "/watched_symbols", "/export_logs",
                   "/api/first_exchange_details"]
+
+DOTTED_URLS = ["/robots.txt"]
 
 
 def _has_no_empty_params(rule):

@@ -15,9 +15,11 @@
 #  License along with this library.
 import typing
 import decimal
+import ccxt
 
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_commons.enums as commons_enums
@@ -28,6 +30,7 @@ import octobot_commons.symbols as commons_symbols
 class Coinbase(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 300
     REQUIRES_AUTHENTICATION = True
+    IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = True
 
     FIX_MARKET_STATUS = True
 
@@ -37,6 +40,22 @@ class Coinbase(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return CoinbaseCCXTAdapter
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        try:
+            # warning might become deprecated
+            # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
+            user_data = await self.connector.client.v2PrivateGetUser()
+            return user_data["data"]["id"]
+        except ccxt.BaseError as err:
+            self.logger.exception(
+                err, True,
+                f"Error when fetching {self.get_name()} account id: {err} ({err.__class__.__name__}). "
+                f"This is not normal, endpoint might be deprecated, see"
+                f"https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users. "
+                f"Using generated account id instead"
+            )
+            return trading_constants.DEFAULT_ACCOUNT_ID
 
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
@@ -56,15 +75,21 @@ class Coinbase(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
-    def _get_ohlcv_params(self, time_frame, limit, **kwargs):
-        # to be added in tentacle
-        limit = min(self.MAX_PAGINATION_LIMIT, limit) if limit else self.MAX_PAGINATION_LIMIT
-        time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
-        to_time = self.connector.client.milliseconds()
-        kwargs.update({
-            "since": to_time - (time_frame_sec * limit),
-            "limit": limit,
-        })
+    async def get_balance(self, **kwargs: dict):
+        if "v3" not in kwargs:
+            # use v3 to get free and total amounts (default is only returning free amounts)
+            kwargs["v3"] = True
+        return await super().get_balance(**kwargs)
+
+    def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
+        limit = input_limit
+        if not input_limit or input_limit > self.MAX_PAGINATION_LIMIT:
+            limit = min(self.MAX_PAGINATION_LIMIT, input_limit) if input_limit else self.MAX_PAGINATION_LIMIT
+        if "since" not in kwargs:
+            time_frame_sec = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MSECONDS_TO_MINUTE
+            to_time = self.connector.client.milliseconds()
+            kwargs["since"] = to_time - (time_frame_sec * limit)
+            kwargs["limit"] = limit
         return kwargs
 
 
@@ -136,9 +161,10 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
                     # convert amount to have the same units as evert other exchange: use FILLED for accuracy
-                    trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                        trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] / \
-                        trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                    trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
+                            trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] /
+                            trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+                    )
             except KeyError:
                 pass
         return raw

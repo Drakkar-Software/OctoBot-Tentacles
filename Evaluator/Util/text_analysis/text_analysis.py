@@ -15,7 +15,6 @@
 #  License along with this library.
 
 import vaderSentiment.vaderSentiment as vaderSentiment
-import newspaper
 
 
 class TextAnalysis:
@@ -33,13 +32,6 @@ class TextAnalysis:
         # to the rules, and then normalized to be between -1 (most extreme negative) and +1 (most extreme positive).
         # https://github.com/cjhutto/vaderSentiment
         return self.analyzer.polarity_scores(text)["compound"]
-
-    # returns the article object and the analysis result
-    def analyse_web_page_article(self, url):
-        article = newspaper.Article(url)
-        article.download()
-        article.parse()
-        return article, self.analyse(article.text)
 
     # return a list of high influential value websites
     @staticmethod

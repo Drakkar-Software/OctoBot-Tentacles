@@ -280,20 +280,32 @@ async def test_trigger_dca(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(producer, "_process_entries", mock.AsyncMock()) as _process_entries_mock, \
             mock.patch.object(producer, "_process_exits", mock.AsyncMock()) as _process_exits_mock:
+        producer.last_activity = None
         await producer.trigger_dca("crypto", "symbol", trading_enums.EvaluatorStates.NEUTRAL)
         assert producer.state is trading_enums.EvaluatorStates.NEUTRAL
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.NOTHING_TO_DO
+        )
         # neutral is not triggering anything
         _process_entries_mock.assert_not_called()
         _process_exits_mock.assert_not_called()
+        producer.last_activity = None
 
         await producer.trigger_dca("crypto", "symbol", trading_enums.EvaluatorStates.LONG)
         assert producer.state is trading_enums.EvaluatorStates.LONG
         _process_entries_mock.assert_called_once_with("crypto", "symbol", trading_enums.EvaluatorStates.LONG)
         _process_exits_mock.assert_called_once_with("crypto", "symbol", trading_enums.EvaluatorStates.LONG)
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         _process_entries_mock.reset_mock()
         _process_exits_mock.reset_mock()
+        producer.last_activity = None
 
         await producer.trigger_dca("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         assert producer.state is trading_enums.EvaluatorStates.VERY_SHORT
         _process_entries_mock.assert_called_once_with("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
         _process_exits_mock.assert_called_once_with("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
@@ -581,6 +593,66 @@ async def test_create_entry_order(tools):
         assert created_orders == ["created_order"]
 
 
+async def test_create_entry_order_with_max_ratio(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    symbol = mode.symbol
+    symbol_market = trader.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+    price = decimal.Decimal("1222")
+    order_type = trading_enums.TraderOrderType.BUY_LIMIT
+    quantity = decimal.Decimal("42")
+    current_price = decimal.Decimal("22222")
+    created_orders = []
+    with mock.patch.object(
+            consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value="created_order")
+    ) as _create_entry_with_chained_exit_orders_mock:
+        with mock.patch.object(
+                consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=True)
+        ) as _is_max_asset_ratio_reached_mock:
+            assert await consumer._create_entry_order(
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            ) is False
+            _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
+            _create_entry_with_chained_exit_orders_mock.assert_not_called()
+        with mock.patch.object(
+                consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=False)
+        ) as _is_max_asset_ratio_reached_mock:
+            assert await consumer._create_entry_order(
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            ) is True
+            _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
+            _create_entry_with_chained_exit_orders_mock.assert_called_once()
+
+
+async def test_is_max_asset_ratio_reached(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    assert mode.max_asset_holding_ratio == trading_constants.ONE
+    symbol = "BTC/USDT"
+    base = "BTC"
+    portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+    with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("1"))
+    ) as get_holdings_ratio_mock:
+        assert consumer._is_max_asset_ratio_reached(symbol) is True
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+    with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.4"))
+    ) as get_holdings_ratio_mock:
+        assert consumer._is_max_asset_ratio_reached(symbol) is False
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+        mode.max_asset_holding_ratio = decimal.Decimal("0.4")
+        assert consumer._is_max_asset_ratio_reached(symbol) is True
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+        mode.max_asset_holding_ratio = decimal.Decimal("0.41")
+        assert consumer._is_max_asset_ratio_reached(symbol) is False
+        get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
+        get_holdings_ratio_mock.reset_mock()
+
+
 async def test_create_new_orders(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
@@ -862,8 +934,10 @@ async def test_single_exchange_process_health_check(tools):
 
         # no traded symbols: no orders
         exchange_manager.exchange_config.traded_symbols = []
+        producer.last_activity = None
         assert await mode.single_exchange_process_health_check([], {}) == []
         assert portfolio["USDT"].total == origin_portfolio_USDT
+        assert producer.last_activity is None
 
         # with traded symbols: 1 order as BTC is not already in a sell order
         exchange_manager.exchange_config.traded_symbols = [commons_symbols.parse_symbol(mode.symbol)]
@@ -872,15 +946,20 @@ async def test_single_exchange_process_health_check(tools):
         mode.use_take_profit_exit_orders = False
         mode.use_stop_loss = False
         assert await mode.single_exchange_process_health_check([], {}) == []
+        assert producer.last_activity is None
 
         # no health check in backtesting
         exchange_manager.is_backtesting = True
         assert await mode.single_exchange_process_health_check([], {}) == []
+        assert producer.last_activity is None
         exchange_manager.is_backtesting = False
 
         # use_take_profit_exit_orders is True: health check can proceed
         mode.use_take_profit_exit_orders = True
         orders = await mode.single_exchange_process_health_check([], {})
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         assert len(orders) == 1
         sell_order = orders[0]
         assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
@@ -891,7 +970,9 @@ async def test_single_exchange_process_health_check(tools):
         assert after_btc_usdt_portfolio > origin_portfolio_USDT
 
         # now that BTC is sold, calling it again won't create any order
+        producer.last_activity = None
         assert await mode.single_exchange_process_health_check([], {}) == []
+        assert producer.last_activity is None
 
         # add ETH in portfolio: will also be sold but is bellow threshold
         converter.update_last_price("ETH/USDT", decimal.Decimal("100"))
@@ -899,12 +980,18 @@ async def test_single_exchange_process_health_check(tools):
         exchange_manager.exchange_config.traded_symbols.append(commons_symbols.parse_symbol("ETH/USDT"))
         eth_holdings = decimal.Decimal(2)
         portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        producer.last_activity = None
         assert await mode.single_exchange_process_health_check([], {}) == []
+        assert producer.last_activity is None
 
         # more ETH: sell
         eth_holdings = decimal.Decimal(200)
         portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        producer.last_activity = None
         orders = await mode.single_exchange_process_health_check([], {})
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         assert len(orders) == 1
         sell_order = orders[0]
         assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
@@ -921,7 +1008,11 @@ async def test_single_exchange_process_health_check(tools):
         existing_sell_order.origin_quantity = decimal.Decimal(45)
         existing_sell_order.symbol = "ETH/USDT"
         await exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(existing_sell_order)
+        producer.last_activity = None
         orders = await mode.single_exchange_process_health_check([], {})
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         assert len(orders) == 1
         sell_order = orders[0]
         assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
@@ -937,7 +1028,11 @@ async def test_single_exchange_process_health_check(tools):
         chained_sell_order = trading_personal_data.SellLimitOrder(trader)
         chained_sell_order.origin_quantity = decimal.Decimal(10)
         chained_sell_order.symbol = "ETH/USDT"
+        producer.last_activity = None
         orders = await mode.single_exchange_process_health_check([chained_sell_order], {})
+        assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+            trading_enums.TradingModeActivityType.CREATED_ORDERS
+        )
         assert len(orders) == 1
         sell_order = orders[0]
         assert isinstance(sell_order, trading_personal_data.SellMarketOrder)
@@ -954,7 +1049,9 @@ async def test_single_exchange_process_health_check(tools):
         chained_sell_order = trading_personal_data.SellLimitOrder(trader)
         chained_sell_order.origin_quantity = decimal.Decimal(55)
         chained_sell_order.symbol = "ETH/USDT"
+        producer.last_activity = None
         assert await mode.single_exchange_process_health_check([chained_sell_order], {}) == []
+        assert producer.last_activity is None
 
 
 async def _check_open_orders_count(trader, count):

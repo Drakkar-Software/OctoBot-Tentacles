@@ -38,7 +38,8 @@ def _kucoin_retrier(f):
             except (octobot_trading.errors.FailedRequest, ccxt.ExchangeError) as err:
                 last_error = err
                 rest_exchange = args[0]  # self
-                if Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
+                if rest_exchange.connector.client.last_http_response and \
+                        Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
