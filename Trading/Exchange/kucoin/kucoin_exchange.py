@@ -107,6 +107,12 @@ class Kucoin(exchanges.RestExchange):
         }
     }
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'kucoin The order does not exist.'
+        ("order does not exist",),
+    ]
+
     @classmethod
     def get_name(cls):
         return 'kucoin'
