@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
+
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
@@ -20,6 +22,12 @@ import octobot_trading.enums as trading_enums
 
 class Bingx(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
+
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'bingx {"code":100404,"msg":" order not exist","debugMsg":""}'
+        ("order not exist",),
+    ]
 
     def get_adapter_class(self):
         return BingxCCXTAdapter
