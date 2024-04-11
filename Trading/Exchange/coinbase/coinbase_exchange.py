@@ -34,6 +34,13 @@ class Coinbase(exchanges.RestExchange):
 
     FIX_MARKET_STATUS = True
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
+        # coinbase {"error":"NOT_FOUND","error_details":"order with this orderID was not found",
+        #   "message":"order with this orderID was not found"}
+        ("not_found", "order")
+    ]
+
     @classmethod
     def get_name(cls):
         return 'coinbase'
