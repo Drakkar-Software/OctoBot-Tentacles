@@ -103,7 +103,7 @@ class Phemex(exchanges.RestExchange):
                 await asyncio.sleep(3)
             else:
                 return order
-        raise ccxt.OrderNotFound("Order id not found in trades. Impossible to build order from trades history")
+        return None
 
 
 class PhemexCCXTAdapter(exchanges.CCXTAdapter):
