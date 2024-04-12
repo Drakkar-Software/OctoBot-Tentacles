@@ -22,6 +22,8 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.personal_data.orders.order_util as order_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
@@ -98,6 +100,27 @@ class Coinbase(exchanges.RestExchange):
             kwargs["since"] = to_time - (time_frame_sec * limit)
             kwargs["limit"] = limit
         return kwargs
+
+    def is_market_open_for_order_type(self, symbol: str, order_type: trading_enums.TraderOrderType) -> bool:
+        """
+        Override if necessary
+        """
+        market_status_info = self.get_market_status(symbol, with_fixer=False).get(ccxt_constants.CCXT_INFO, {})
+        trade_order_type = order_util.get_trade_order_type(order_type)
+        try:
+            if trade_order_type is trading_enums.TradeOrderType.MARKET:
+                return not market_status_info["limit_only"]
+            if trade_order_type is trading_enums.TradeOrderType.LIMIT:
+                return not market_status_info["cancel_only"]
+        except KeyError as err:
+            self.logger.exception(
+                err,
+                True,
+                f"Can't check {self.get_name()} market opens status for order type: missing {err} "
+                f"in market status info. {self.get_name()} API probably changed. Considering market as open. "
+                f"market_status_info: {market_status_info}"
+            )
+        return True
 
 
 class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
