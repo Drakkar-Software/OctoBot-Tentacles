@@ -15,6 +15,7 @@
 #  License along with this library.
 import tentacles.Trading.Exchange.binance as binance_tentacle
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 
 
 class BinanceUS(binance_tentacle.Binance):
@@ -30,3 +31,9 @@ class BinanceUS(binance_tentacle.Binance):
         return [
             trading_enums.ExchangeTypes.SPOT,
         ]
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # not available on binance.us
+        # see https://docs.binance.us/#get-user-account-information-user_data
+        # vs "uid" in regular binance https://binance-docs.github.io/apidocs/spot/en/#spot-account-endpoints
+        return trading_constants.DEFAULT_ACCOUNT_ID
