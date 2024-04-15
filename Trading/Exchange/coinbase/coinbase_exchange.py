@@ -23,16 +23,31 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data.orders.order_util as order_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
 
 
+class CoinbaseConnector(ccxt_connector.CCXTConnector):
+
+    def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
+        return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
+
+    def _keys_adapter(self, key, secret, password):
+        # CCXT pem key reader is not expecting users to under keys pasted as text from the coinbase UI
+        # convert \\n to \n to make this format compatible as well
+        if secret and "\\n" in secret:
+            secret = secret.replace("\\n", "\n")
+        return key, secret, password
+
+
 class Coinbase(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 300
     REQUIRES_AUTHENTICATION = True
     IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = True
+    DEFAULT_CONNECTOR_CLASS = CoinbaseConnector
 
     FIX_MARKET_STATUS = True
 
