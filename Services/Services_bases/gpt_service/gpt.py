@@ -93,7 +93,14 @@ class GPTService(services.AbstractService):
         if use_stored_signals:
             return self._get_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
         if self.use_stored_signals_only():
-            return await self._fetch_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
+            signal = await self._fetch_signal_from_stored_signals(exchange, symbol, time_frame, version, candle_open_time)
+            if not signal:
+                # should not happen
+                self.logger.error(
+                    f"Missing ChatGPT signal from stored signals on {symbol} {time_frame} "
+                    f"for timestamp: {candle_open_time} with version: {version}"
+                )
+            return signal
         return await self._get_signal_from_gpt(messages, model, max_tokens, n, stop, temperature)
 
     def _get_client(self) -> openai.AsyncOpenAI:
