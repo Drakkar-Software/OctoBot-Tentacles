@@ -1,6 +1,10 @@
 The Index trading mode splits and maintains your portfolio distributed between the traded currencies. It enables 
 to maintain a crypto index based on your choice of coins.
 
+To know more, checkout the 
+<a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/index-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=IndexTradingModeDocs">
+full Index trading mode guide</a>.
+
 ### Content of the Index
 The Index is defined by the selected traded pairs against your reference market in the 
 profile configuration section.  
