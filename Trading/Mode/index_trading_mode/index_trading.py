@@ -427,7 +427,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             distribution = index_distribution.get_uniform_distribution([
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
-            ])
+            ]) if self.exchange_manager else []
         self.ratio_per_asset = {
             asset[index_distribution.DISTRIBUTION_NAME]: asset
             for asset in distribution
