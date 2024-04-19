@@ -147,7 +147,7 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
                                                        time_frame,
                                                        include_in_construction=inc_in_construction_data)
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
-        if len(close) > self.slow_length:
+        if len(close) > max(self.slow_length, self.fast_length):
             await self.evaluate(cryptocurrency, symbol, time_frame, candle, close, volume)
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
@@ -155,23 +155,37 @@ class DeathAndGoldenCrossEvaluator(evaluators.TAEvaluator):
 
     async def evaluate(self, cryptocurrency, symbol, time_frame, candle, candle_data, volume_data):
         if self.fast_ma_type == "vwma":
-            ma1 = tulipy.vwma(candle_data, volume_data, self.fast_length)[-1]
+            fast_ma = tulipy.vwma(candle_data, volume_data, self.fast_length)
         elif self.fast_ma_type == "lsma":
-            ma1 = tulipy.linreg(candle_data, self.fast_length)[-1]
+            fast_ma = tulipy.linreg(candle_data, self.fast_length)
         else:
-            ma1 = getattr(tulipy, self.fast_ma_type)(candle_data, self.fast_length)[-1]
+            fast_ma = getattr(tulipy, self.fast_ma_type)(candle_data, self.fast_length)
 
         if self.slow_ma_type == "vwma":
-            ma2 = tulipy.vwma(candle_data, volume_data, self.slow_length)[-1]
+            slow_ma = tulipy.vwma(candle_data, volume_data, self.slow_length)
         elif self.slow_ma_type == "lsma":
-            ma2 = tulipy.linreg(candle_data, self.slow_length)[-1]
+            slow_ma = tulipy.linreg(candle_data, self.slow_length)
         else:
-            ma2 = getattr(tulipy, self.slow_ma_type)(candle_data, self.slow_length)[-1]
+            slow_ma = getattr(tulipy, self.slow_ma_type)(candle_data, self.slow_length)
 
-        if ma1 > ma2:
-            self.eval_note = -1
-        elif ma1 < ma2:
-            self.eval_note = 1
+        if min(len(fast_ma), len(slow_ma)) < 2:
+            # can't compute crosses: not enough data
+            self.logger.debug(f"Not enough data to compute crosses, skipping {symbol} {time_frame} evaluation")
+            return
+
+        just_crossed = (
+            fast_ma[-1] > slow_ma[-1] and fast_ma[-2] < slow_ma[-2]
+        ) or (
+            fast_ma[-1] < slow_ma[-1] and fast_ma[-2] > slow_ma[-2]
+        )
+        if just_crossed:
+            # crosses happen when the fast_ma and fast_ma just crossed, therefore when it happened on the last candle
+            if fast_ma[-1] > slow_ma[-1]:
+                # golden cross
+                self.eval_note = -1
+            elif fast_ma[-1] < slow_ma[-1]:
+                # death cross
+                self.eval_note = 1
 
 
 # evaluates position of the current (2 unit) average trend relatively to the 5 units average and 10 units average trend
