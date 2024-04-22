@@ -652,6 +652,11 @@ async def test_is_max_asset_ratio_reached(tools):
         get_holdings_ratio_mock.assert_called_with(base, include_assets_in_open_orders=True)
         get_holdings_ratio_mock.reset_mock()
 
+        # disabled on futures
+        consumer.exchange_manager.is_future = True
+        assert consumer._is_max_asset_ratio_reached(symbol) is False
+        get_holdings_ratio_mock.assert_not_called()
+
 
 async def test_create_new_orders(tools):
     update = {}

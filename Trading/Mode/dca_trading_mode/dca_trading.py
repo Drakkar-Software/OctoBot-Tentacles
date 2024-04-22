@@ -325,6 +325,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return await self.trading_mode.create_order(entry_order, params=params or None)
 
     def _is_max_asset_ratio_reached(self, symbol):
+        if self.exchange_manager.is_future:
+            # not implemented for futures
+            return False
         asset = symbol_util.parse_symbol(symbol).base
         ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
             portfolio_value_holder.get_holdings_ratio(asset, include_assets_in_open_orders=True)
@@ -774,7 +777,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT, commons_enums.UserInputTypes.FLOAT,
                 float(self.max_asset_holding_ratio * trading_constants.ONE_HUNDRED), inputs,
                 title="Max asset holding: Maximum % of the portfolio to allocate to an asset. "
-                      "Buy orders to buy this asset won't be created if this ratio is reached.",
+                      "Buy orders to buy this asset won't be created if this ratio is reached. "
+                      "Only applied when trading on spot.",
                 min_val=0, max_val=100
             )
         )) / trading_constants.ONE_HUNDRED
