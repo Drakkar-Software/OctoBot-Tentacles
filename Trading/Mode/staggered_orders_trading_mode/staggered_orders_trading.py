@@ -464,7 +464,8 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 created_order = await self.trading_mode.create_order(current_order)
             if not created_order:
                 self.logger.warning(
-                    f"No order created for {order_data}: incompatible with exchange minimum rules. "
+                    f"No order created for {order_data} (quantity: {quantity}): "
+                    f"incompatible with exchange minimum rules. "
                     f"Limits: {symbol_market[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]}"
                 )
         except trading_errors.MissingFunds as e:
