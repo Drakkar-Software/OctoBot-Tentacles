@@ -72,10 +72,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def create_new_orders(self, symbol, _, state, **kwargs):
         current_order = None
         try:
-            current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
-                await trading_personal_data.get_pre_order_data(
-                    self.exchange_manager, symbol=symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
-                )
+            price = await trading_personal_data.get_up_to_date_price(
+                self.exchange_manager, symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
+            )
+            symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
             created_orders = []
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
             if state is trading_enums.EvaluatorStates.NEUTRAL.value:
@@ -83,28 +83,25 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             side = trading_enums.TradeOrderSide.BUY if state in (
                 trading_enums.EvaluatorStates.LONG.value, trading_enums.EvaluatorStates.VERY_LONG.value
             ) else trading_enums.TradeOrderSide.SELL
-            if self.exchange_manager.is_future:
-                # on futures, current_symbol_holding = current_market_holding = market_quantity
-                initial_available_funds, _ = trading_personal_data.get_futures_max_order_size(
-                    self.exchange_manager, symbol, side,
-                    price, False, current_symbol_holding, market_quantity
-                )
-            else:
-                initial_available_funds = current_market_holding \
-                    if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
-            
-            existing_orders = []
-            if self.trading_mode.cancel_open_orders_at_each_entry:
-                # cancel existing DCA orders from previous iterations
-                existing_orders = [
-                    order
-                    for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-                    if not (order.is_cancelled() or order.is_closed()) and side is order.side
-                ]
 
             secondary_quantity = None
-            if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode,
-                                                                           trading_enums.TradeOrderSide.BUY):
+            if user_amount := trading_modes.get_user_selected_order_amount(
+                self.trading_mode, trading_enums.TradeOrderSide.BUY
+            ):
+                initial_entry_price = price if self.trading_mode.use_market_entry_orders else \
+                    trading_personal_data.decimal_adapt_price(
+                        symbol_market,
+                        price * (
+                            1 - self.trading_mode.entry_limit_orders_price_multiplier
+                            if side is trading_enums.TradeOrderSide.BUY
+                            else 1 + self.trading_mode.entry_limit_orders_price_multiplier
+                        )
+                    )
+                if self.trading_mode.cancel_open_orders_at_each_entry:
+                    await self._cancel_existing_orders_if_replaceable(
+                        ctx, symbol, user_amount, price, initial_entry_price, side, symbol_market
+                    )
+
                 quantity = await script_keywords.get_amount_from_input_amount(
                     context=ctx,
                     input_amount=user_amount,
@@ -129,15 +126,22 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         f"Missing {side.value} entry order quantity in {self.trading_mode.get_name()} configuration"
                         f", please set the \"Amount per buy order\" value.")
                 return []
-            initial_entry_price = price if self.trading_mode.use_market_entry_orders else \
-                trading_personal_data.decimal_adapt_price(
-                    symbol_market,
-                    price * (
-                        1 - self.trading_mode.entry_limit_orders_price_multiplier
-                        if side is trading_enums.TradeOrderSide.BUY
-                        else 1 + self.trading_mode.entry_limit_orders_price_multiplier
-                    )
+
+            # consider holdings only after orders have been cancelled
+            current_symbol_holding, current_market_holding, market_quantity = (
+                trading_personal_data.get_portfolio_amounts(
+                    self.exchange_manager, symbol, price
                 )
+            )
+            if self.exchange_manager.is_future:
+                # on futures, current_symbol_holding = current_market_holding = market_quantity
+                initial_available_funds, _ = trading_personal_data.get_futures_max_order_size(
+                    self.exchange_manager, symbol, side,
+                    price, False, current_symbol_holding, market_quantity
+                )
+            else:
+                initial_available_funds = current_market_holding \
+                    if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
             if side is trading_enums.TradeOrderSide.BUY:
                 initial_entry_order_type = trading_enums.TraderOrderType.BUY_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.BUY_LIMIT
@@ -148,6 +152,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price,
                 trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_funds
             )
+
             # initial entry
             orders_should_have_been_created = await self._create_entry_order(
                 initial_entry_order_type, adapted_entry_quantity, initial_entry_price,
@@ -202,9 +207,6 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             )
                             break
             if created_orders:
-                for order in existing_orders:
-                    # now that new orders are created, cancel previous ones of any
-                    await self.trading_mode.cancel_order(order)
                 return created_orders
             if orders_should_have_been_created:
                 raise trading_errors.OrderCreationError()
@@ -219,6 +221,90 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                               f"{current_order if current_order else None}")
             self.logger.exception(e, False)
             return []
+
+    async def _cancel_existing_orders_if_replaceable(
+        self, ctx, symbol, user_amount, price, initial_entry_price, side, symbol_market
+    ):
+        if to_cancel_orders := [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
+            if not (order.is_cancelled() or order.is_closed()) and side is order.side
+        ]:
+            # Cancel existing DCA orders of the same side from previous iterations
+            # Edge cases about cancelling existing orders when recreating entry orders
+            # 1. max holding ratio is reached, meaning that portfolio + open orders already contain the
+            # max % of asset
+            #   => in this case, we still want to be able to replace open orders of any.
+            #   Need to cancel open orders 1st
+            # 2. value of the portfolio or available holdings dropped to the point that user configured
+            # amount
+            # is now too small to comply with min exchange rules.
+            #   => in this case, orders won't be able to be created.
+            #   Open orders should not be cancelled
+            # Conclusion:
+            #   => Always cancel orders first except when exchange min amount would be reached in new
+            #   buy orders
+            can_create_entries = await self._can_create_entry_orders_regarding_min_exchange_order_size(
+                ctx, user_amount, price, initial_entry_price, side, symbol_market, to_cancel_orders
+            )
+            if can_create_entries:
+                for order in to_cancel_orders:
+                    await self.trading_mode.cancel_order(order)
+            else:
+                self.logger.info(
+                    f"Skipping {self.exchange_manager.exchange_name} {symbol} entry order cancel as new "
+                    f"entries are likely not complying with exchange minimal order size."
+                )
+
+    async def _can_create_entry_orders_regarding_min_exchange_order_size(
+        self, ctx, user_amount, price, initial_entry_price, side, symbol_market, to_cancel_orders
+    ):
+        quantity = await script_keywords.get_amount_from_input_amount(
+            context=ctx,
+            input_amount=user_amount,
+            side=side.value,
+            reduce_only=False,
+            is_stop_order=False,
+            use_total_holding=False,
+            orders_to_be_ignored=to_cancel_orders,  # consider existing orders as cancelled
+        )
+        can_create_entries = self._is_above_exchange_min_order_size(quantity, initial_entry_price, symbol_market)
+        if (
+            can_create_entries and
+            self.trading_mode.use_secondary_entry_orders and
+            self.trading_mode.secondary_entry_orders_amount
+        ):
+            # compute secondary orders quantity before locking quantity from initial order
+            if secondary_quantity := await script_keywords.get_amount_from_input_amount(
+                context=ctx,
+                input_amount=self.trading_mode.secondary_entry_orders_amount,
+                side=side.value,
+                reduce_only=False,
+                is_stop_order=False,
+                use_total_holding=False,
+                orders_to_be_ignored=to_cancel_orders,  # consider existing orders as cancelled
+            ):
+                # check that at least the 1st secondary order can be created
+                multiplier = self.trading_mode.entry_limit_orders_price_multiplier + (
+                    1 * self.trading_mode.secondary_entry_orders_price_multiplier
+                )
+                secondary_target_price = price * (
+                    (1 - multiplier) if side is trading_enums.TradeOrderSide.BUY else
+                    (1 + multiplier)
+                )
+                can_create_entries = self._is_above_exchange_min_order_size(
+                    secondary_quantity, secondary_target_price, symbol_market
+                )
+        return can_create_entries
+
+    def _is_above_exchange_min_order_size(self, quantity, price, symbol_market):
+        return bool(
+            trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
+                quantity,
+                price,
+                symbol_market
+            )
+        )
 
     async def _create_entry_order(
         self, order_type, quantity, price, symbol_market, symbol, created_orders, current_price
@@ -325,6 +411,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return await self.trading_mode.create_order(entry_order, params=params or None)
 
     def _is_max_asset_ratio_reached(self, symbol):
+        if self.exchange_manager.is_future:
+            # not implemented for futures
+            return False
         asset = symbol_util.parse_symbol(symbol).base
         ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
             portfolio_value_holder.get_holdings_ratio(asset, include_assets_in_open_orders=True)
@@ -561,6 +650,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.cancel_open_orders_at_each_entry = True
         self.health_check_orphan_funds_threshold = self.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD
         self.max_asset_holding_ratio = trading_constants.ONE
+        self.max_asset_holding_ratio = decimal.Decimal("0.5")
+        # self.max_asset_holding_ratio = decimal.Decimal("0.66")
+        # self.max_asset_holding_ratio = decimal.Decimal("1")
 
         # enable initialization orders
         self.are_initialization_orders_pending = True
@@ -774,7 +866,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT, commons_enums.UserInputTypes.FLOAT,
                 float(self.max_asset_holding_ratio * trading_constants.ONE_HUNDRED), inputs,
                 title="Max asset holding: Maximum % of the portfolio to allocate to an asset. "
-                      "Buy orders to buy this asset won't be created if this ratio is reached.",
+                      "Buy orders to buy this asset won't be created if this ratio is reached. "
+                      "Only applied when trading on spot.",
                 min_val=0, max_val=100
             )
         )) / trading_constants.ONE_HUNDRED

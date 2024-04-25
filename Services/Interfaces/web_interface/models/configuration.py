@@ -1141,7 +1141,8 @@ async def _fetch_currency_logo(session, data_provider, currency_id):
 
 
 async def _fetch_missing_currency_logos(data_provider, currency_ids):
-    async with aiohttp_util.ssl_fallback_aiohttp_client_session("https://coingecko.com") as session:
+    # always use certify_aiohttp_client_session to avoid triggering rate limit with test request
+    async with aiohttp_util.certify_aiohttp_client_session() as session:
         await asyncio.gather(
             *(
                 _fetch_currency_logo(session, data_provider, currency_id)
