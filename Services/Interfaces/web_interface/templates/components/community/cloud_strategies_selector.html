@@ -4,7 +4,7 @@
         <thead>
             <tr class="">
                 <th scope="col">Strategy</th>
-                <th scope="col">Last month</th>
+                <th scope="col">Profitability</th>
                 <th scope="col">Traded coins</th>
                 <th scope="col">Exchange</th>
                 <th scope="col">Risk level</th>
@@ -30,8 +30,8 @@
                         </div>
                     </a>
                 </td>
-                <td class="align-middle">
-                    {{ (strategy.results.get_max("1m") if strategy.results else 0) | round(2) }}%
+                <td class="align-middle" data-order="{{ strategy.results.get_max_value() }}">
+                    {{ (strategy.results.get_max_value() if strategy.results else 0) | round(2) }}% over {{ strategy.results.get_max_unit() }}
                 </td>
                 <td class="align-middle">
                     {{ strategy.attributes['coins'] | join(', ') }}
