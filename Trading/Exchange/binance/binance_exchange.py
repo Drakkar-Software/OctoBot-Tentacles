@@ -242,6 +242,8 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
                 self.logger.error(f"Unknown order type, order: {fixed}")
             # stop loss and take profits are not tagged as such by ccxt, force it
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
+        if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value, None) == "PENDING_NEW":
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CREATION.value
         return fixed
 
     def fix_trades(self, raw, **kwargs):
