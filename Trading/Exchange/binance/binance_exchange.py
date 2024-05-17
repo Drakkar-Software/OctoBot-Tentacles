@@ -230,6 +230,9 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         self._adapt_order_type(fixed)
+        if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value, None) == "PENDING_NEW":
+            # PENDING_NEW order are old orders on binance and should be considered as open
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.OPEN.value
         return fixed
 
     def _adapt_order_type(self, fixed):
