@@ -137,19 +137,28 @@ class Kucoin(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
-        # updated: 29/12/2023
+        # updated: 21/05/2024
         try:
             account_id = None
             subaccount_id = None
             sub_accounts = await self.connector.client.private_get_sub_accounts()
             accounts = sub_accounts.get("data", {}).get("items", {})
             has_subaccounts = bool(accounts)
-            for account in accounts:
-                if account["subUserId"]:
-                    subaccount_id = account["subName"]
+            if has_subaccounts:
+                if len(accounts) == 1:
+                    # only 1 account: use its id or name
+                    account = accounts[0]
+                    # try using subUserId if available
+                    # 'ex subUserId: 65d41ea409407d000160cc17 subName: octobot1'
+                    account_id = account.get("subUserId") or account["subName"]
                 else:
-                    # only subaccounts have a subUserId: if this condition is True, we are on the main account
-                    account_id = account["subName"]
+                    # more than 1 account: consider other accounts
+                    for account in accounts:
+                        if account["subUserId"]:
+                            subaccount_id = account["subName"]
+                        else:
+                            # only subaccounts have a subUserId: if this condition is True, we are on the main account
+                            account_id = account["subName"]
             if subaccount_id:
                 # there is at least a subaccount: ensure the current account is the main account as there is no way
                 # to know the id of the current account (only a list of existing accounts)
