@@ -131,10 +131,23 @@ async def test_init_config_values(tools):
         ]
     }
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    assert mode.refresh_interval_days == 72
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.ratio_per_asset == {
+        "BTC": {
+            index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_distribution.DISTRIBUTION_VALUE: 1,
+        },
+    }
+    assert mode.total_ratio_per_asset == decimal.Decimal("1")
+    assert mode.indexed_coins == ["BTC"]
+
+    # now with ETH as traded assets
     trader.exchange_manager.exchange_config.traded_symbols = [
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT"]
     ]
+    mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
     assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
     assert mode.ratio_per_asset == {
@@ -145,16 +158,17 @@ async def test_init_config_values(tools):
         "BTC": {
             index_distribution.DISTRIBUTION_NAME: "BTC",
             index_distribution.DISTRIBUTION_VALUE: 1,
-        },
-        "SOL": {
-            index_distribution.DISTRIBUTION_NAME: "SOL",
-            index_distribution.DISTRIBUTION_VALUE: 1,
-        },
+        }
+        # SOL is not added
     }
-    assert mode.total_ratio_per_asset == decimal.Decimal("55")
-    assert mode.indexed_coins == ["BTC"]
+    assert mode.total_ratio_per_asset == decimal.Decimal("54")
+    assert mode.indexed_coins == ["BTC", "ETH"]  # sorted list
 
     # refresh user inputs
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT", "SOL/USDT"]
+    ]
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
     assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
@@ -173,7 +187,7 @@ async def test_init_config_values(tools):
         },
     }
     assert mode.total_ratio_per_asset == decimal.Decimal("55")
-    assert mode.indexed_coins == ["BTC", "ETH"]  # sorted list
+    assert mode.indexed_coins == ["BTC", "ETH", "SOL"]  # sorted list
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
@@ -246,6 +260,15 @@ async def test_get_target_ratio_with_config(tools):
         ]
     }
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    assert mode.get_target_ratio("ETH") == decimal.Decimal('0')
+    assert mode.get_target_ratio("BTC") == decimal.Decimal("1")  # use 100% BTC as others are not in traded pairs
+    assert mode.get_target_ratio("SOL") == decimal.Decimal("0")
+
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT", "SOL/USDT"]
+    ]
+    mode.init_user_inputs({})
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.9814814814814814814814814815')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.01851851851851851851851851852")
     assert mode.get_target_ratio("SOL") == decimal.Decimal("0")
@@ -411,7 +434,7 @@ async def test_get_rebalance_details(tools):
                     index_trading.RebalanceDetails.BUY_MORE.value: {},
                     index_trading.RebalanceDetails.REMOVE.value: {
                         "SOL": decimal.Decimal("0.3"),
-                        "ADA": decimal.Decimal("0.3")
+                        # "ADA": decimal.Decimal("0.3")  # ADA is not in traded pairs, it's not removed
                     },
                     index_trading.RebalanceDetails.ADD.value: {},
                     index_trading.RebalanceDetails.SWAP.value: {},
@@ -460,7 +483,7 @@ async def test_get_rebalance_details(tools):
                     },
                     index_trading.RebalanceDetails.REMOVE.value: {
                         "SOL": decimal.Decimal("0.2"),
-                        "ADA": decimal.Decimal("0.2")
+                        # "ADA": decimal.Decimal("0.2")  # not in traded pairs
                     },
                     index_trading.RebalanceDetails.ADD.value: {},
                     index_trading.RebalanceDetails.SWAP.value: {},
