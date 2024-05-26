@@ -209,7 +209,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
     INDEX_CONTENT = "index_content"
-    MIN_INDEXED_COINS = 2
+    MIN_INDEXED_COINS = 1
     ALLOWED_1_TO_1_SWAP_COUNTS = 1
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
@@ -230,7 +230,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
-                    f"At least {self.MIN_INDEXED_COINS} coins are required to maintain an index. Please "
+                    f"At least {self.MIN_INDEXED_COINS} coin is required to maintain an index. Please "
                     f"select more trading pairs using "
                     f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market} as "
                     f"quote currency."
