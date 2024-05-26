@@ -236,6 +236,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"quote currency."
                 )
             else:
+                self._notify_if_missing_too_many_coins()
                 await self.ensure_index()
             self.logger.debug(f"Next index check in {self.trading_mode.refresh_interval_days} days")
             self._last_trigger_time = current_time
@@ -290,6 +291,14 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             ))
         except ImportError as e:
             self.logger.exception(e, True, f"Impossible to send notification: {e}")
+
+    def _notify_if_missing_too_many_coins(self):
+        if ideal_distribution := self.trading_mode.get_ideal_distribution():
+            if len(self.trading_mode.indexed_coins) < len(ideal_distribution) / 2:
+                self.logger.error(
+                    f"Less than half of configured coins can be traded on {self.exchange_manager.exchange_name}. "
+                    f"Traded: {self.trading_mode.indexed_coins}, configured: {ideal_distribution}"
+                )
 
     def _get_rebalance_details(self) -> (bool, dict):
         rebalance_details = {
@@ -457,9 +466,11 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             )))
         return []
 
+    def get_ideal_distribution(self):
+        return self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
+
     def _get_supported_distribution(self) -> list:
-        if self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]:
-            full_distribution = self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]
+        if full_distribution := self.get_ideal_distribution():
             traded_bases = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
@@ -491,7 +502,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             return []
         current_coins = [
             asset[index_distribution.DISTRIBUTION_NAME]
-            for asset in self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]
+            for asset in self.get_ideal_distribution()
         ]
         return [
             asset[index_distribution.DISTRIBUTION_NAME]
