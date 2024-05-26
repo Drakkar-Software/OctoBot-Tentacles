@@ -44,7 +44,6 @@ import tentacles.Trading.Mode as Mode
 import tentacles.Trading.Mode.index_trading_mode.index_trading as index_trading
 import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
 
-
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.test_exchanges as test_exchanges
@@ -197,7 +196,7 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
     with mock.patch.object(
             octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["order_1"])
     ) as convert_assets_to_target_asset_mock, mock.patch.object(
-            mode, "cancel_order", mock.AsyncMock()
+        mode, "cancel_order", mock.AsyncMock()
     ) as cancel_order_mock:
         # no open order
         orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
@@ -313,15 +312,18 @@ async def test_ohlcv_callback(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     current_time = time.time()
-    with mock.patch.object(producer, "ensure_index", mock.AsyncMock()) as ensure_index_mock:
+    with mock.patch.object(producer, "ensure_index", mock.AsyncMock()) as ensure_index_mock, \
+            mock.patch.object(producer, "_notify_if_missing_too_many_coins", mock.Mock()) \
+            as _notify_if_missing_too_many_coins_mock:
         with mock.patch.object(
-            trader.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=current_time)
+                trader.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=current_time)
         ) as get_exchange_current_time_mock:
             # not enough indexed coins
             mode.indexed_coins = []
             assert producer._last_trigger_time == 0
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_not_called()
+            _notify_if_missing_too_many_coins_mock.assert_not_called()
             get_exchange_current_time_mock.assert_called_once()
             get_exchange_current_time_mock.reset_mock()
             assert producer._last_trigger_time == current_time
@@ -331,28 +333,56 @@ async def test_ohlcv_callback(tools):
             # already called on this time
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_not_called()
+            _notify_if_missing_too_many_coins_mock.assert_not_called()
             get_exchange_current_time_mock.assert_called_once()
 
             assert producer._last_trigger_time == current_time
         with mock.patch.object(
-            trader.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=current_time*2)
+                trader.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=current_time * 2)
         ) as get_exchange_current_time_mock:
             mode.indexed_coins = [1, 2, 3]
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_called_once()
+            _notify_if_missing_too_many_coins_mock.assert_called_once()
             get_exchange_current_time_mock.assert_called_once()
             assert producer._last_trigger_time == current_time * 2
+
+
+async def test_notify_if_missing_too_many_coins(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    with mock.patch.object(producer.logger, "error", mock.Mock()) as error_mock:
+        mode.trading_config[producer.INDEX_CONTENT] = [1, 2, 3, 4, 5]
+        mode.indexed_coins = [1, 2, 3, 4, 5]
+        producer._notify_if_missing_too_many_coins()
+        error_mock.assert_not_called()
+
+        mode.indexed_coins = [1, 2, 3]
+        producer._notify_if_missing_too_many_coins()
+        error_mock.assert_not_called()
+
+        # error
+        mode.indexed_coins = [1, 2]
+        producer._notify_if_missing_too_many_coins()
+        error_mock.assert_called_once()
+        error_mock.reset_mock()
+
+        # error
+        mode.indexed_coins = []
+        producer._notify_if_missing_too_many_coins()
+        error_mock.assert_called_once()
+        error_mock.reset_mock()
 
 
 async def test_ensure_index(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        producer, "_wait_for_symbol_prices_and_profitability_init", mock.AsyncMock()
+            producer, "_wait_for_symbol_prices_and_profitability_init", mock.AsyncMock()
     ) as _wait_for_symbol_prices_and_profitability_init_mock:
         with mock.patch.object(producer, "_trigger_rebalance", mock.AsyncMock()) as _trigger_rebalance_mock:
             with mock.patch.object(
-                producer, "_get_rebalance_details", mock.Mock(return_value=(False, {}))
+                    producer, "_get_rebalance_details", mock.Mock(return_value=(False, {}))
             ) as _get_rebalance_details_mock:
                 await producer.ensure_index()
                 assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
@@ -363,7 +393,7 @@ async def test_ensure_index(tools):
                 _get_rebalance_details_mock.assert_called_once()
                 _trigger_rebalance_mock.assert_not_called()
             with mock.patch.object(
-                producer, "_get_rebalance_details", mock.Mock(return_value=(True, {"plop": 1}))
+                    producer, "_get_rebalance_details", mock.Mock(return_value=(True, {"plop": 1}))
             ) as _get_rebalance_details_mock:
                 await producer.ensure_index()
                 assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
@@ -379,7 +409,7 @@ async def test_trigger_rebalance(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        producer, "submit_trading_evaluation", mock.AsyncMock()
+            producer, "submit_trading_evaluation", mock.AsyncMock()
     ) as _wait_for_symbol_prices_and_profitability_init_mock:
         details = {"hi": "ho"}
         await producer._trigger_rebalance(details)
@@ -405,10 +435,10 @@ async def test_get_rebalance_details(tools):
     portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
     with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock:
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
         ) as get_holdings_ratio_mock:
             with mock.patch.object(
-                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
+                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
             ) as get_removed_coins_from_previous_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is False
@@ -425,7 +455,7 @@ async def test_get_rebalance_details(tools):
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
             with mock.patch.object(
-                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
+                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
             ) as get_removed_coins_from_previous_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
@@ -446,10 +476,10 @@ async def test_get_rebalance_details(tools):
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
         ) as get_holdings_ratio_mock:
             with mock.patch.object(
-                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
+                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
             ) as get_removed_coins_from_previous_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
@@ -470,7 +500,7 @@ async def test_get_rebalance_details(tools):
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
             with mock.patch.object(
-                mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
+                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
             ) as get_removed_coins_from_previous_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
@@ -498,7 +528,7 @@ async def test_get_rebalance_details(tools):
         # rebalance cap larger than ratio
         mode.rebalance_trigger_min_ratio = decimal.Decimal("0.5")
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
         ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is False
@@ -514,7 +544,7 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.assert_called_once_with(details)
             _resolve_swaps_mock.reset_mock()
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
         ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is False
@@ -530,7 +560,7 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.assert_called_once_with(details)
             _resolve_swaps_mock.reset_mock()
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
         ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is True
@@ -550,7 +580,7 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.assert_called_once_with(details)
             _resolve_swaps_mock.reset_mock()
         with mock.patch.object(
-            portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
+                portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
         ) as get_holdings_ratio_mock:
             should_rebalance, details = producer._get_rebalance_details()
             assert should_rebalance is True
@@ -612,7 +642,7 @@ async def test_create_new_orders(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        consumer, "_rebalance_portfolio", mock.AsyncMock(return_value="plop")
+            consumer, "_rebalance_portfolio", mock.AsyncMock(return_value="plop")
     ) as _rebalance_portfolio_mock:
         with pytest.raises(KeyError):
             # missing "data"
@@ -629,7 +659,7 @@ async def test_rebalance_portfolio(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
     ) as _ensure_enough_funds_to_buy_after_selling_mock, mock.patch.object(
         consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
     ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
@@ -641,10 +671,10 @@ async def test_rebalance_portfolio(tools):
         _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details")
 
     with mock.patch.object(
-        consumer, "_update_producer_last_activity", mock.Mock()
+            consumer, "_update_producer_last_activity", mock.Mock()
     ) as _update_producer_last_activity_mock:
         with mock.patch.object(
-            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+                consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
         ) as _ensure_enough_funds_to_buy_after_selling_mock, mock.patch.object(
             consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
                 side_effect=trading_errors.MissingMinimalExchangeTradeVolume
@@ -663,15 +693,15 @@ async def test_rebalance_portfolio(tools):
             _update_producer_last_activity_mock.reset_mock()
 
         with mock.patch.object(
-            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock(
-                side_effect=trading_errors.MissingMinimalExchangeTradeVolume
-            )
-        ) as _ensure_enough_funds_to_buy_after_selling_mock,\
-            mock.patch.object(
-            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
-                return_value=["sell"]
-            )
-        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+                consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock(
+                    side_effect=trading_errors.MissingMinimalExchangeTradeVolume
+                )
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
+                mock.patch.object(
+                    consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
+                        return_value=["sell"]
+                    )
+                ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
                 return_value=["buy"]
             )
@@ -687,13 +717,13 @@ async def test_rebalance_portfolio(tools):
             _update_producer_last_activity_mock.reset_mock()
 
         with mock.patch.object(
-            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
-        ) as _ensure_enough_funds_to_buy_after_selling_mock,\
-            mock.patch.object(
-            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
-                return_value=["sell"]
-            )
-        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+                consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
+                mock.patch.object(
+                    consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
+                        return_value=["sell"]
+                    )
+                ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
                 side_effect=trading_errors.MissingMinimalExchangeTradeVolume
             )
@@ -713,8 +743,8 @@ async def test_ensure_enough_funds_to_buy_after_selling(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
-        "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+            "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
     ) as get_traded_assets_holdings_value_mock, mock.patch.object(
         consumer, "_get_symbols_and_amounts", mock.AsyncMock()
     ) as _get_symbols_and_amounts_mock:
@@ -727,7 +757,7 @@ async def test_sell_indexed_coins_for_reference_market(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
-        octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["1", "2"])
+            octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["1", "2"])
     ) as convert_assets_to_target_asset_mock, mock.patch.object(
         trading_personal_data, "wait_for_order_fill", mock.AsyncMock()
     ) as wait_for_order_fill_mock, mock.patch.object(
@@ -869,14 +899,14 @@ async def test_split_reference_market_into_indexed_coins(tools):
     mode.indexed_coins = []
     details = {index_trading.RebalanceDetails.SWAP.value: {}}
     with mock.patch.object(
-        consumer,
-        "_get_symbols_and_amounts", mock.AsyncMock(
-            side_effect=lambda coins, _: {f"{coin}/USDT": decimal.Decimal(i+1) for i, coin in enumerate(coins)}
-        )
+            consumer,
+            "_get_symbols_and_amounts", mock.AsyncMock(
+                side_effect=lambda coins, _: {f"{coin}/USDT": decimal.Decimal(i + 1) for i, coin in enumerate(coins)}
+            )
     ) as _get_symbols_and_amounts_mock:
         with mock.patch.object(
-            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-            "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
         ) as get_currency_portfolio_mock, mock.patch.object(
             consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
         ) as _buy_coin_mock:
@@ -891,8 +921,8 @@ async def test_split_reference_market_into_indexed_coins(tools):
         mode.indexed_coins = []
         details = {index_trading.RebalanceDetails.SWAP.value: {"BTC": "ETH", "ADA": "SOL"}}
         with mock.patch.object(
-            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-            "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
         ) as get_currency_portfolio_mock, mock.patch.object(
             trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
             "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
@@ -912,8 +942,8 @@ async def test_split_reference_market_into_indexed_coins(tools):
         details = {index_trading.RebalanceDetails.SWAP.value: {}}
         mode.indexed_coins = ["ETH", "BTC"]
         with mock.patch.object(
-            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-            "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
         ) as get_currency_portfolio_mock, mock.patch.object(
             consumer, "_buy_coin", mock.AsyncMock(return_value=[])
         ) as _buy_coin_mock:
@@ -927,8 +957,8 @@ async def test_split_reference_market_into_indexed_coins(tools):
         # bought coins
         mode.indexed_coins = ["ETH", "BTC"]
         with mock.patch.object(
-            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-            "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
         ) as get_currency_portfolio_mock, mock.patch.object(
             consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
         ) as _buy_coin_mock:
@@ -951,7 +981,7 @@ async def test_get_symbols_and_amounts(tools):
         "BTC/USDT": decimal.Decimal(3)
     }
     with mock.patch.object(
-        trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(1000))
+            trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(1000))
     ) as get_up_to_date_price_mock:
         assert await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(3000)) == {
             "BTC/USDT": decimal.Decimal(3)
@@ -973,7 +1003,7 @@ async def test_get_symbols_and_amounts(tools):
     with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
         await consumer._get_symbols_and_amounts(["BTC"], decimal.Decimal(0.0003))
     with mock.patch.object(
-        trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(0.000000001))
+            trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(0.000000001))
     ) as get_up_to_date_price_mock:
         with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
             await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(0.01))
@@ -985,8 +1015,8 @@ async def test_buy_coin(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
     with mock.patch.object(
-        mode,
-        "create_order", mock.AsyncMock(side_effect=lambda x: x)
+            mode,
+            "create_order", mock.AsyncMock(side_effect=lambda x: x)
     ) as create_order_mock:
         # coin already held
         portfolio["BTC"].available = decimal.Decimal(20)
@@ -1027,10 +1057,10 @@ async def test_buy_coin(tools):
 
         # adapt for fees
         with mock.patch.object(
-            consumer.exchange_manager.exchange, "get_trade_fee", mock.Mock(return_value={
-                trading_enums.FeePropertyColumns.COST.value: "10",
-                trading_enums.FeePropertyColumns.CURRENCY.value: "USDT",
-            })
+                consumer.exchange_manager.exchange, "get_trade_fee", mock.Mock(return_value={
+                    trading_enums.FeePropertyColumns.COST.value: "10",
+                    trading_enums.FeePropertyColumns.CURRENCY.value: "USDT",
+                })
         ) as get_trade_fee_mock:
             orders = await consumer._buy_coin("BTC/USDT", decimal.Decimal("0.5"))
             get_trade_fee_mock.assert_called_once()
@@ -1051,7 +1081,7 @@ async def test_buy_coin(tools):
             assert isinstance(orders[0], trading_personal_data.BuyMarketOrder)
             assert orders[0].symbol == "BTC/USDT"
             assert orders[0].origin_price == decimal.Decimal(1000)
-            assert orders[0].origin_quantity == decimal.Decimal("1.98")    # 2 - fees denominated in BTC
+            assert orders[0].origin_quantity == decimal.Decimal("1.98")  # 2 - fees denominated in BTC
             create_order_mock.reset_mock()
 
 
