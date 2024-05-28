@@ -132,6 +132,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_symbols_and_amounts(self, coins_to_buy, reference_market_to_split):
         amount_by_symbol = {}
         for coin in coins_to_buy:
+            if coin == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
+                # nothing to do for reference market, keep as is
+                continue
             symbol = symbol_util.merge_currencies(
                 coin,
                 self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
@@ -458,12 +461,17 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def _get_filtered_traded_coins(self):
         if self.exchange_manager:
-            return sorted(list(set(
+            coins = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
                 if symbol.base in self.ratio_per_asset
                 and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-            )))
+            )
+            if self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market in self.ratio_per_asset \
+               and coins:
+                # there is at least 1 coin traded against ref market, can add ref market if necessary
+                coins.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
+            return sorted(list(coins))
         return []
 
     def get_ideal_distribution(self):
@@ -475,6 +483,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
             )
+            traded_bases.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
             distribution = [
                 asset
                 for asset in full_distribution
