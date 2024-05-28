@@ -188,6 +188,33 @@ async def test_init_config_values(tools):
     assert mode.total_ratio_per_asset == decimal.Decimal("55")
     assert mode.indexed_coins == ["BTC", "ETH", "SOL"]  # sorted list
 
+    # add ref market in coin rations
+    mode.trading_config["index_content"] = [
+        {
+            index_distribution.DISTRIBUTION_NAME: "USDT",
+            index_distribution.DISTRIBUTION_VALUE: 75,
+        },
+        {
+            index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_distribution.DISTRIBUTION_VALUE: 25,
+        },
+    ]
+    mode.init_user_inputs({})
+    assert mode.refresh_interval_days == 72
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.ratio_per_asset == {
+        "BTC": {
+            index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_distribution.DISTRIBUTION_VALUE: 25,
+        },
+        "USDT": {
+            index_distribution.DISTRIBUTION_NAME: "USDT",
+            index_distribution.DISTRIBUTION_VALUE: 75,
+        },
+    }
+    assert mode.total_ratio_per_asset == decimal.Decimal("100")
+    assert mode.indexed_coins == ["BTC", "USDT"]  # sorted list
+
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
     update = {}
@@ -1007,6 +1034,32 @@ async def test_get_symbols_and_amounts(tools):
     ) as get_up_to_date_price_mock:
         with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
             await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(0.01))
+        assert get_up_to_date_price_mock.call_count == 1
+
+    # with ref market in coins config
+    mode.trading_config = {
+        "index_content": [
+            {
+                "name": "BTC",
+                "value": 70
+            },
+            {
+                "name": "USDT",
+                "value": 30
+            }
+        ],
+        "refresh_interval": 1,
+        "required_strategies": [],
+        "rebalance_trigger_min_percent": 5
+    }
+    mode._update_coins_distribution()
+    with mock.patch.object(
+            trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(1000))
+    ) as get_up_to_date_price_mock:
+        # USDT is not counted in orders to create (nothing to buy as USDT is the reference market everything is sold to)
+        assert await consumer._get_symbols_and_amounts(["BTC", "USDT"], decimal.Decimal(3000)) == {
+            "BTC/USDT": decimal.Decimal("2.1")
+        }
         assert get_up_to_date_price_mock.call_count == 1
 
 
