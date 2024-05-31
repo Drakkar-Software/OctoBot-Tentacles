@@ -24,6 +24,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
+import octobot_trading.util as trading_util
 import octobot_trading.personal_data as trading_personal_data
 
 import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
@@ -131,6 +132,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_symbols_and_amounts(self, coins_to_buy, reference_market_to_split):
         amount_by_symbol = {}
         for coin in coins_to_buy:
+            if coin == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market:
+                # nothing to do for reference market, keep as is
+                continue
             symbol = symbol_util.merge_currencies(
                 coin,
                 self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
@@ -208,7 +212,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
     INDEX_CONTENT = "index_content"
-    MIN_INDEXED_COINS = 2
+    MIN_INDEXED_COINS = 1
     ALLOWED_1_TO_1_SWAP_COUNTS = 1
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
@@ -229,12 +233,13 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
-                    f"At least {self.MIN_INDEXED_COINS} coins are required to maintain an index. Please "
+                    f"At least {self.MIN_INDEXED_COINS} coin is required to maintain an index. Please "
                     f"select more trading pairs using "
                     f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market} as "
                     f"quote currency."
                 )
             else:
+                self._notify_if_missing_too_many_coins()
                 await self.ensure_index()
             self.logger.debug(f"Next index check in {self.trading_mode.refresh_interval_days} days")
             self._last_trigger_time = current_time
@@ -290,6 +295,14 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         except ImportError as e:
             self.logger.exception(e, True, f"Impossible to send notification: {e}")
 
+    def _notify_if_missing_too_many_coins(self):
+        if ideal_distribution := self.trading_mode.get_ideal_distribution():
+            if len(self.trading_mode.indexed_coins) < len(ideal_distribution) / 2:
+                self.logger.error(
+                    f"Less than half of configured coins can be traded on {self.exchange_manager.exchange_name}. "
+                    f"Traded: {self.trading_mode.indexed_coins}, configured: {ideal_distribution}"
+                )
+
     def _get_rebalance_details(self) -> (bool, dict):
         rebalance_details = {
             RebalanceDetails.SELL_SOME.value: {},
@@ -300,17 +313,32 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         }
         should_rebalance = False
         # look for coins update in indexed_coins
+        available_traded_bases = set(
+            symbol.base
+            for symbol in self.exchange_manager.exchange_config.traded_symbols
+        )
         for coin in self.trading_mode.get_removed_coins_from_previous_config():
-            coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
-            if coin_ratio >= trading_constants.ZERO:
-                # coin to sell in portfolio
-                rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
-                should_rebalance = True
-                self.logger.info(
-                    f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
-                    f"anymore. A rebalance is required."
-                )
+            if coin in available_traded_bases:
+                coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                    portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
+                if coin_ratio >= trading_constants.ZERO:
+                    # coin to sell in portfolio
+                    rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
+                    should_rebalance = True
+                    self.logger.info(
+                        f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
+                        f"anymore. A rebalance is required."
+                    )
+            else:
+                if trading_util.is_symbol_disabled(self.exchange_manager.config, coin):
+                    self.logger.info(
+                        f"Ignoring {coin} holding: {coin} is not in index anymore but is disabled."
+                    )
+                else:
+                    self.logger.error(
+                        f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
+                        f" but is not in index anymore. This is unexpected"
+                    )
         # compute coins to buy or sell
         for coin in self.trading_mode.indexed_coins:
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
@@ -420,14 +448,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self._update_coins_distribution()
 
     def _update_coins_distribution(self):
-        if self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]:
-            distribution = self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]
-        else:
-            # compute uniform distribution over traded assets
-            distribution = index_distribution.get_uniform_distribution([
-                symbol.base
-                for symbol in self.exchange_manager.exchange_config.traded_symbols
-            ]) if self.exchange_manager else []
+        distribution = self._get_supported_distribution()
         self.ratio_per_asset = {
             asset[index_distribution.DISTRIBUTION_NAME]: asset
             for asset in distribution
@@ -440,20 +461,57 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def _get_filtered_traded_coins(self):
         if self.exchange_manager:
-            return sorted(list(set(
+            coins = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
                 if symbol.base in self.ratio_per_asset
                 and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-            )))
+            )
+            if self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market in self.ratio_per_asset \
+               and coins:
+                # there is at least 1 coin traded against ref market, can add ref market if necessary
+                coins.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
+            return sorted(list(coins))
         return []
+
+    def get_ideal_distribution(self):
+        return self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
+
+    def _get_supported_distribution(self) -> list:
+        if full_distribution := self.get_ideal_distribution():
+            traded_bases = set(
+                symbol.base
+                for symbol in self.exchange_manager.exchange_config.traded_symbols
+            )
+            traded_bases.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
+            distribution = [
+                asset
+                for asset in full_distribution
+                if asset[index_distribution.DISTRIBUTION_NAME] in traded_bases
+            ]
+            if removed_assets := [
+                asset[index_distribution.DISTRIBUTION_NAME]
+                for asset in full_distribution
+                if asset not in distribution
+            ]:
+                self.logger.info(
+                    f"Ignored {len(removed_assets)} assets {removed_assets} from configured "
+                    f"distribution as absent from traded pairs."
+                )
+            return distribution
+        else:
+            # compute uniform distribution over traded assets
+            return index_distribution.get_uniform_distribution([
+                symbol.base
+                for symbol in self.exchange_manager.exchange_config.traded_symbols
+            ]) if self.exchange_manager else []
 
     def get_removed_coins_from_previous_config(self) -> list:
         if not (self.previous_trading_config and self.trading_config):
             return []
         current_coins = [
             asset[index_distribution.DISTRIBUTION_NAME]
-            for asset in self.trading_config[IndexTradingModeProducer.INDEX_CONTENT]
+            for asset in self.get_ideal_distribution()
         ]
         return [
             asset[index_distribution.DISTRIBUTION_NAME]

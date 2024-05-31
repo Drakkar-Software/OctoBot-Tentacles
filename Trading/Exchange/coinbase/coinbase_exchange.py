@@ -31,6 +31,12 @@ import octobot_commons.symbols as commons_symbols
 
 
 class CoinbaseConnector(ccxt_connector.CCXTConnector):
+    # text content of errors due to api key permissions issues
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # coinbase ex: coinbase {"error":"PERMISSION_DENIED",
+        # "error_details":"Missing required scopes","message":"Missing required scopes"}
+        ("permission_denied", "missing required scopes"),
+    ]
 
     def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
