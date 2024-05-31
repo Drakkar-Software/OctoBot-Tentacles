@@ -67,6 +67,17 @@ class Binance(exchanges.RestExchange):
         }
     }
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # Binance ex: DDoSProtection('binance {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}')
+        ("key", "permissions for action"),
+    ]
+    # text content of errors due to traded assets for account
+    EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # Binance ex: InvalidOrder binance {"code":-2010,"msg":"This symbol is not permitted for this account."}
+        ("symbol", "not permitted", "for this account"),
+    ]
+
     BUY_STR = "BUY"
     SELL_STR = "SELL"
     INVERSE_TYPE = "inverse"
