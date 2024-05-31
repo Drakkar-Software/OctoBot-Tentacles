@@ -89,6 +89,17 @@ class OkxConnector(ccxt_connector.CCXTConnector):
 class Okx(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # OKX ex: okx {"msg":"API key doesn't exist","code":"50119"}
+        ("api", "key", "doesn't exist"),
+    ]
+    # text content of errors due to account compliancy issues
+    EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
+        # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
+        ("restricted", "compliance"),
+    ]
+
     FIX_MARKET_STATUS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
 
