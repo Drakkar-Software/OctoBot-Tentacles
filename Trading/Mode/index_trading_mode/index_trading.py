@@ -185,6 +185,17 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         )
         created_orders = []
         orders_should_have_been_created = False
+        ideal_order_type = trading_enums.TraderOrderType.BUY_MARKET
+        order_type = (
+            ideal_order_type
+            if self.exchange_manager.exchange.is_market_open_for_order_type(symbol, ideal_order_type)
+            else trading_enums.TraderOrderType.BUY_LIMIT
+        )
+
+        if trading_personal_data.get_trade_order_type(order_type) is not trading_enums.TradeOrderType.MARKET:
+            # can't use market orders: use limit orders with price a bit above the current price to instant fill it.
+            price, quantity = \
+                trading_modes.get_instantly_filled_limit_order_adapted_price_and_quantity(price, quantity, order_type)
         for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             quantity,
             price,
@@ -193,7 +204,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             orders_should_have_been_created = True
             current_order = trading_personal_data.create_order_instance(
                 trader=self.exchange_manager.trader,
-                order_type=trading_enums.TraderOrderType.BUY_MARKET,
+                order_type=order_type,
                 symbol=symbol,
                 current_price=order_price,
                 quantity=order_quantity,
