@@ -37,7 +37,7 @@ class WavesExchange(exchanges.RestExchange):
         if limit is not None:
             # account for potentially dumped candle
             limit += 1
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
 
 class WavesCCXTAdapter(exchanges.CCXTAdapter):

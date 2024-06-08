@@ -43,7 +43,7 @@ class Bitfinex(exchanges.RestExchange):
                 octobot_commons.constants.MINUTE_TO_SECONDS
             kwargs["since"] = (self.get_exchange_current_time() - tf_seconds * limit) \
                 * octobot_commons.constants.MSECONDS_TO_SECONDS
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     async def get_kline_price(self, symbol: str, time_frame: octobot_commons.enums.TimeFrames,
                               **kwargs: dict) -> typing.Optional[list]:
