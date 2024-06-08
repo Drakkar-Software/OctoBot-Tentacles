@@ -28,6 +28,34 @@ import octobot_trading.personal_data.orders.order_util as order_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.logging as logging
+
+
+def _coinbase_retrier(f):
+    async def wrapper(*args, **kwargs):
+        last_error = None
+        for i in range(0, Coinbase.FAKE_RATE_LIMIT_ERROR_INSTANT_RETRY_COUNT):
+            try:
+                return await f(*args, **kwargs)
+            except (octobot_trading.errors.FailedRequest, ccxt.BaseError) as err:
+                last_error = err
+                if Coinbase.INSTANT_RETRY_ERROR_CODE in str(err):
+                    # should retry instantly, error on coinbase side
+                    logging.get_logger(Coinbase.get_name()).debug(
+                        f"{Coinbase.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args[1:]} kwargs={kwargs}) "
+                        f"request, retrying now. Attempt {i+1} / {Coinbase.FAKE_RATE_LIMIT_ERROR_INSTANT_RETRY_COUNT}, "
+                        f"error: {err} ({last_error.__class__.__name__})."
+                    )
+                else:
+                    raise
+        last_error = last_error or RuntimeError("Unknown Coinbase error")  # to be able to "raise from" in next line
+        raise octobot_trading.errors.FailedRequest(
+            f"Failed Coinbase request after {Coinbase.FAKE_RATE_LIMIT_ERROR_INSTANT_RETRY_COUNT} "
+            f"retries on {f.__name__}(args={args[1:]} kwargs={kwargs}) due "
+            f"to {Coinbase.INSTANT_RETRY_ERROR_CODE} error code. "
+            f"Last error: {last_error} ({last_error.__class__.__name__})"
+        ) from last_error
+    return wrapper
 
 
 class CoinbaseConnector(ccxt_connector.CCXTConnector):
@@ -48,6 +76,9 @@ class Coinbase(exchanges.RestExchange):
     REQUIRES_AUTHENTICATION = True
     IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = True
     DEFAULT_CONNECTOR_CLASS = CoinbaseConnector
+
+    FAKE_RATE_LIMIT_ERROR_INSTANT_RETRY_COUNT = 5
+    INSTANT_RETRY_ERROR_CODE = "429"
 
     FIX_MARKET_STATUS = True
 
@@ -90,11 +121,27 @@ class Coinbase(exchanges.RestExchange):
             )
             return trading_constants.DEFAULT_ACCOUNT_ID
 
+    @_coinbase_retrier
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
         return await super().get_symbol_prices(
             symbol, time_frame, **self._get_ohlcv_params(time_frame, limit, **kwargs)
         )
+
+    @_coinbase_retrier
+    async def get_recent_trades(self, symbol, limit=50, **kwargs):
+        # override for retrier
+        return await super().get_recent_trades(symbol, limit=limit, **kwargs)
+
+    @_coinbase_retrier
+    async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
+        # override for retrier
+        return await super().get_price_ticker(symbol, **kwargs)
+
+    @_coinbase_retrier
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
+        # override for retrier
+        return await super().get_all_currencies_price_ticker(**kwargs)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -108,11 +155,35 @@ class Coinbase(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
+    @_coinbase_retrier
     async def get_balance(self, **kwargs: dict):
         if "v3" not in kwargs:
             # use v3 to get free and total amounts (default is only returning free amounts)
             kwargs["v3"] = True
         return await super().get_balance(**kwargs)
+
+    @_coinbase_retrier
+    async def _create_order_with_retry(self, order_type, symbol, quantity: decimal.Decimal,
+                                       price: decimal.Decimal, stop_price: decimal.Decimal,
+                                       side: trading_enums.TradeOrderSide,
+                                       current_price: decimal.Decimal,
+                                       reduce_only: bool, params) -> dict:
+        # override for retrier
+        return await super()._create_order_with_retry(
+            order_type=order_type, symbol=symbol, quantity=quantity, price=price,
+            stop_price=stop_price, side=side, current_price=current_price,
+            reduce_only=reduce_only, params=params
+        )
+
+    @_coinbase_retrier
+    async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        # override for retrier
+        return await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+
+    @_coinbase_retrier
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        # override for retrier
+        return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
 
     def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
         limit = input_limit
