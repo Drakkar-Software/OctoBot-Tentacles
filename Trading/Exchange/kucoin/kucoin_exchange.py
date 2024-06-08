@@ -331,6 +331,12 @@ class Kucoin(exchanges.RestExchange):
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
 
+    @_kucoin_retrier
+    async def cancel_order(
+        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        return await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
+
     # add retried to _create_order_with_retry to avoid catching error in self._order_operation context manager
     @_kucoin_retrier
     async def _create_order_with_retry(self, order_type, symbol, quantity: decimal.Decimal,
