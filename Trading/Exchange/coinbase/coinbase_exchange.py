@@ -156,6 +156,13 @@ class Coinbase(exchanges.RestExchange):
                                           reduce_only=reduce_only, params=params)
 
     @_coinbase_retrier
+    async def cancel_order(
+        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        # override for retrier
+        return await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
+
+    @_coinbase_retrier
     async def get_balance(self, **kwargs: dict):
         if "v3" not in kwargs:
             # use v3 to get free and total amounts (default is only returning free amounts)
