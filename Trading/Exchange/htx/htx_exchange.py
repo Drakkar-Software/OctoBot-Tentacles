@@ -47,7 +47,7 @@ class Htx(exchanges.RestExchange):
         if limit and history_param not in kwargs:
             # required to handle limits
             kwargs[history_param] = False
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
