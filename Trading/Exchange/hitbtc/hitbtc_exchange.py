@@ -27,4 +27,4 @@ class Hitbtc(exchanges.RestExchange):
         return 'hitbtc'
 
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, sort='DESC', **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, sort='DESC', **kwargs)

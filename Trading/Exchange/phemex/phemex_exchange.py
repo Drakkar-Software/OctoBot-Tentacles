@@ -47,7 +47,7 @@ class Phemex(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
         if limit not in self.ALLOWED_OHLCV_LIMITS:
             limit = self._get_adapted_limit(limit)
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
                               **kwargs: dict) -> typing.Optional[list]:

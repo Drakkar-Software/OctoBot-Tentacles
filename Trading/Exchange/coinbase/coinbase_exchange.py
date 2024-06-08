@@ -93,7 +93,7 @@ class Coinbase(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
         return await super().get_symbol_prices(
-            symbol=symbol, time_frame=time_frame, **self._get_ohlcv_params(time_frame, limit, **kwargs)
+            symbol, time_frame, **self._get_ohlcv_params(time_frame, limit, **kwargs)
         )
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,

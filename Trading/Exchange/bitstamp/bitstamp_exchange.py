@@ -31,4 +31,4 @@ class Bitstamp(exchanges.RestExchange):
         # ohlcv without limit is not supported, replaced by a default max limit
         if limit is None:
             limit = self.DEFAULT_MAX_LIMIT
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
