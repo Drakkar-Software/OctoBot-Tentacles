@@ -22,6 +22,7 @@ import ccxt
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
@@ -59,10 +60,19 @@ def _kucoin_retrier(f):
     return wrapper
 
 
+class KucoinConnector(ccxt_connector.CCXTConnector):
+
+    @_kucoin_retrier
+    async def _load_markets(self, client, reload: bool):
+        # override for retrier
+        await client.load_markets(reload=reload)
+
+
 class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+    DEFAULT_CONNECTOR_CLASS = KucoinConnector
 
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"

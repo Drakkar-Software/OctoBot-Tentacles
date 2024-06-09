@@ -70,6 +70,11 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
             secret = secret.replace("\\n", "\n")
         return key, secret, password
 
+    @_coinbase_retrier
+    async def _load_markets(self, client, reload: bool):
+        # override for retrier
+        await client.load_markets(reload=reload)
+
 
 class Coinbase(exchanges.RestExchange):
     MAX_PAGINATION_LIMIT: int = 300
