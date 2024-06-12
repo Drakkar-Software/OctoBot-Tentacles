@@ -567,7 +567,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             if order.symbol in self.exchange_manager.exchange_config.traded_symbol_pairs
         ]
         self.logger.info(
-            f"Optimizing portfolio: cancelling {len(symbol_open_orders)}open orders, selling {sellable_assets} "
+            f"Optimizing portfolio: cancelling {len(symbol_open_orders)} open orders, selling {sellable_assets} "
             f"to buy {target_asset}"
         )
         for order in symbol_open_orders:
