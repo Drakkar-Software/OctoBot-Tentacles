@@ -32,12 +32,14 @@ import octobot_commons.logging as logging
 
 
 def _coinbase_retrier(f):
-    async def wrapper(*args, **kwargs):
+    async def coinbase_retrier_wrapper(*args, **kwargs):
         last_error = None
         for i in range(0, Coinbase.FAKE_RATE_LIMIT_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
-            except (octobot_trading.errors.FailedRequest, ccxt.BaseError) as err:
+            except (
+                octobot_trading.errors.FailedRequest, octobot_trading.errors.RateLimitExceeded, ccxt.BaseError
+            ) as err:
                 last_error = err
                 if Coinbase.INSTANT_RETRY_ERROR_CODE in str(err):
                     # should retry instantly, error on coinbase side
@@ -55,7 +57,7 @@ def _coinbase_retrier(f):
             f"to {Coinbase.INSTANT_RETRY_ERROR_CODE} error code. "
             f"Last error: {last_error} ({last_error.__class__.__name__})"
         ) from last_error
-    return wrapper
+    return coinbase_retrier_wrapper
 
 
 class CoinbaseConnector(ccxt_connector.CCXTConnector):

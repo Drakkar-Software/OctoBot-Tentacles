@@ -31,7 +31,7 @@ import octobot_trading.enums as trading_enums
 
 
 def _kucoin_retrier(f):
-    async def wrapper(*args, **kwargs):
+    async def kucoin_retrier_wrapper(*args, **kwargs):
         last_error = None
         for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
@@ -57,7 +57,7 @@ def _kucoin_retrier(f):
             f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code. "
             f"Last error: {last_error} ({last_error.__class__.__name__})"
         ) from last_error
-    return wrapper
+    return kucoin_retrier_wrapper
 
 
 class KucoinConnector(ccxt_connector.CCXTConnector):
