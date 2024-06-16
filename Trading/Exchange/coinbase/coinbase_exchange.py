@@ -102,7 +102,13 @@ class Coinbase(exchanges.RestExchange):
         # "error_details":"Missing required scopes","message":"Missing required scopes"}
         # ExchangeError('coinbase {"error":"unknown","error_details":"Missing required scopes",
         # "message":"Missing required scopes"}')
-        ("missing required scopes"),
+        ("missing required scopes", ),
+    ]
+    # text content of errors due to traded assets for account
+    EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # ex when trading WBTC/USDC with and account that can't trade it:
+        # ccxt.base.errors.BadRequest: target is not enabled for trading
+        ("target is not enabled for trading", ),
     ]
 
     @classmethod
