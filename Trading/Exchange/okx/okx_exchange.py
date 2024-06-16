@@ -27,7 +27,7 @@ import octobot_trading.personal_data as trading_personal_data
 
 
 def _disabled_okx_algo_order_creation(f):
-    async def wrapper(*args, **kwargs):
+    async def disabled_okx_algo_order_creation_wrapper(*args, **kwargs):
         # Algo order prevent bundled orders from working as they require to use the regular order api
         # Since the regular order api works for limit and market orders as well, us it all the time
         # Algo api is used for stop losses.
@@ -40,16 +40,16 @@ def _disabled_okx_algo_order_creation(f):
             return await f(*args, **kwargs)
         finally:
             client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
-    return wrapper
+    return disabled_okx_algo_order_creation_wrapper
 
 
 def _enabled_okx_algo_order_creation(f):
-    async def wrapper(*args, **kwargs):
+    async def enabled_okx_algo_order_creation_wrapper(*args, **kwargs):
         # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
         connector = args[0]
         connector.client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
         return await f(*args, **kwargs)
-    return wrapper
+    return enabled_okx_algo_order_creation_wrapper
 
 
 class OkxConnector(ccxt_connector.CCXTConnector):

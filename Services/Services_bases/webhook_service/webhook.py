@@ -27,6 +27,7 @@ import octobot_commons.logging as bot_logging
 import octobot_commons.configuration as configuration
 import octobot_commons.authentication as authentication
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
@@ -41,6 +42,8 @@ class WebHookService(services.AbstractService):
         if self.use_web_interface_for_webhook:
             return {}
         return {
+            services_constants.CONFIG_ENABLE_OCTOBOT_WEBHOOK:
+                f"Use OctoBot cloud webhook. Requires the {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME}.",
             services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
             services_constants.CONFIG_NGROK_DOMAIN: "[Optional] The ngrok subdomain.",
@@ -52,6 +55,7 @@ class WebHookService(services.AbstractService):
         if self.use_web_interface_for_webhook:
             return {}
         return {
+            services_constants.CONFIG_ENABLE_OCTOBOT_WEBHOOK: False,
             services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
             services_constants.CONFIG_NGROK_DOMAIN: "",
@@ -62,6 +66,7 @@ class WebHookService(services.AbstractService):
     def __init__(self):
         super().__init__()
         self.use_web_interface_for_webhook = constants.IS_CLOUD_ENV
+        self.use_octobot_cloud_webhook = False
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
         self.ngrok_enabled = True
@@ -91,10 +96,12 @@ class WebHookService(services.AbstractService):
     def check_required_config(self, config):
         if self.use_web_interface_for_webhook:
             return True
+        if self.is_using_octobot_cloud_webhook():
+            return True
         try:
             token = config.get(services_constants.CONFIG_NGROK_TOKEN)
-            enabled = config.get(services_constants.CONFIG_ENABLE_NGROK, True)
-            if enabled:
+            enabled_ngrok = config.get(services_constants.CONFIG_ENABLE_NGROK, True)
+            if enabled_ngrok:
                 return token and not configuration.has_invalid_default_config_value(token)
             return not (
                 configuration.has_invalid_default_config_value(
@@ -108,11 +115,15 @@ class WebHookService(services.AbstractService):
 
     def has_required_configuration(self):
         try:
-            return self.check_required_config(
-                self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(services_constants.CONFIG_WEBHOOK, {})
-            )
+            return self.check_required_config(self.get_webhook_config())
         except KeyError:
             return False
+
+    def is_using_octobot_cloud_webhook(self):
+        return self.get_webhook_config().get(services_constants.CONFIG_ENABLE_OCTOBOT_WEBHOOK)
+
+    def get_webhook_config(self):
+        return self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(services_constants.CONFIG_WEBHOOK, {})
 
     def get_required_config(self):
         return [] if self.use_web_interface_for_webhook else \
@@ -132,7 +143,7 @@ class WebHookService(services.AbstractService):
         return feed_name in self.service_feed_webhooks
 
     @staticmethod
-    def connect(port, protocol="http", domain=None)-> ngrok.NgrokTunnel:
+    def connect(port, protocol="http", domain=None) -> ngrok.NgrokTunnel:
         """
         Create a new ngrok tunnel
         :param port: the tunnel local port
@@ -155,6 +166,8 @@ class WebHookService(services.AbstractService):
         raise KeyError(f"Service feed has already subscribed to a webhook : {service_feed_name}")
 
     def get_subscribe_url(self, service_feed_name):
+        if self.use_octobot_cloud_webhook:
+            return self._get_community_feed_webhook_url()
         return f"{self.webhook_public_url}/{service_feed_name}"
 
     def _prepare_webhook_server(self):
@@ -181,24 +194,52 @@ class WebHookService(services.AbstractService):
 
         @blueprint.route('/webhook/<webhook_name>', methods=['POST'])
         def webhook(webhook_name):
-            return self._webhook_call(webhook_name)
+            return self._flask_webhook_call(webhook_name)
 
-    def _webhook_call(self, webhook_name):
-        if webhook_name in self.service_feed_webhooks:
-            if flask.request.method == 'POST':
-                data = flask.request.get_data(as_text=True)
-                if self.service_feed_auth_callbacks[webhook_name](data):
-                    self.service_feed_webhooks[webhook_name](data)
-                else:
-                    self.logger.debug(f"Ignored feed (wrong token): {data}")
+    def _flask_webhook_call(self, webhook_name):
+        if flask.request.method == 'POST':
+            data = flask.request.get_data(as_text=True)
+            if self._default_webhook_call(webhook_name, data):
                 return '', 200
-            flask.abort(400)
-        else:
-            self.logger.warning(f"Received unknown request from {webhook_name}")
             flask.abort(500)
+        flask.abort(400)
+
+    def _community_webhook_call_factory(self, service_name: str):
+
+        async def _community_webhook_callback(data: dict) -> bool:
+            return await self._async_default_webhook_call(
+                service_name, data[commons_enums.CommunityFeedAttrs.VALUE.value]
+            )
+
+        return _community_webhook_callback
+
+    def _default_webhook_call(self, webhook_name: str, data: str) -> bool:
+        if self.is_valid_webhook_call(webhook_name, data):
+            self.service_feed_webhooks[webhook_name](data)
+            return True
+        return False
+
+    async def _async_default_webhook_call(self, webhook_name: str, data: str) -> bool:
+        if self.is_valid_webhook_call(webhook_name, data):
+            await self.service_feed_webhooks[webhook_name](data)
+            return True
+        return False
+
+    def is_valid_webhook_call(self, webhook_name:str , data: str):
+        if webhook_name in self.service_feed_webhooks:
+            if self.service_feed_auth_callbacks[webhook_name](data):
+                return True
+            else:
+                self.logger.debug(f"Ignored feed (wrong token): {data}")
+                return False
+        self.logger.warning(f"Received unknown request from {webhook_name}")
+        return False
 
     async def prepare(self) -> None:
         if self.use_web_interface_for_webhook:
+            return
+        if self.is_using_octobot_cloud_webhook():
+            self.use_octobot_cloud_webhook = True
             return
         bot_logging.set_logging_level(self.LOGGERS, logging.WARNING)
         self.ngrok_enabled = self.config[services_constants.CONFIG_CATEGORY_SERVICES][
@@ -264,8 +305,8 @@ class WebHookService(services.AbstractService):
 
     async def _register_on_web_interface(self):
         import tentacles.Services.Interfaces.web_interface.api as api
-        if not api.has_webhook(self._webhook_call):
-            api.register_webhook(self._webhook_call)
+        if not api.has_webhook(self._flask_webhook_call):
+            api.register_webhook(self._flask_webhook_call)
         authenticator = authentication.Authenticator.instance()
         if not authenticator.initialized_event.is_set():
             await asyncio.wait_for(authenticator.initialized_event.wait(), authenticator.LOGIN_TIMEOUT)
@@ -278,18 +319,61 @@ class WebHookService(services.AbstractService):
             self.logger.exception(err, True, f"Impossible to start web interface based webhook {err}")
             return False
 
+    def _get_community_feed_webhook_url(self) -> str:
+        try:
+            authenticator = authentication.Authenticator.instance()
+            bot_identifier = authenticator.get_saved_mqtt_device_uuid()
+            return f"{constants.COMMUNITY_TRADINGVIEW_WEBHOOK_BASE_URL}/{bot_identifier}"
+        except community_errors.NoBotDeviceError:
+            return ""
+
+    async def _register_on_community_feed(self):
+        authenticator = authentication.Authenticator.instance()
+        bot_identifier = authenticator.get_saved_mqtt_device_uuid()
+        if not authenticator.initialized_event.is_set():
+            await asyncio.wait_for(authenticator.initialized_event.wait(), authenticator.LOGIN_TIMEOUT)
+        try:
+            for feed_name, channel_type in [
+                (services_constants.TRADINGVIEW_WEBHOOK_SERVICE_NAME, commons_enums.CommunityChannelTypes.TRADINGVIEW)
+            ]:
+                await authenticator.register_feed_callback(
+                    channel_type,
+                    self._community_webhook_call_factory(feed_name),
+                    identifier=bot_identifier
+                )
+            self.webhook_public_url = self._get_community_feed_webhook_url()
+            self.connected = True
+            return True
+        except community_errors.BotError as err:
+            self.logger.exception(err, True, f"Impossible to start OctoBot cloud based webhook {err}")
+            return False
+
     async def start_webhooks(self) -> bool:
         if self.use_web_interface_for_webhook:
             return await self._register_on_web_interface()
+        if self.use_octobot_cloud_webhook:
+            try:
+                return await self._register_on_community_feed()
+            except community_errors.NoBotDeviceError:
+                raise community_errors.ExtensionRequiredError(
+                    f"A connected OctoBot account using the {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} "
+                    f"is required to use OctoBot webhooks for TradingView."
+                )
         return await self._start_isolated_server()
 
     def _is_healthy(self):
-        return self.use_web_interface_for_webhook or self.webhook_host is not None and self.webhook_port is not None
+        return (
+            self.use_web_interface_for_webhook or
+            self.is_using_octobot_cloud_webhook() or
+            (self.webhook_host is not None and self.webhook_port is not None)
+        )
 
     def get_successful_startup_message(self):
         webhook_endpoint = f"ngrok address"
         if self.use_web_interface_for_webhook:
             webhook_endpoint = "web interface webhook api"
+        if self.is_using_octobot_cloud_webhook():
+            webhook_endpoint = "OctoBot cloud network"
         return f"Webhook configured on {webhook_endpoint}", self._is_healthy()
 
     async def stop(self):

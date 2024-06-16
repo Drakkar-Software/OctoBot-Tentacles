@@ -29,7 +29,7 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
-        self.webhook_service_name = "trading_view"
+        self.webhook_service_name = services_constants.TRADINGVIEW_WEBHOOK_SERVICE_NAME
         self.webhook_service_url = ""
 
     def _something_to_watch(self):
@@ -53,9 +53,21 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
             }
         )
 
+    async def async_webhook_callback(self, data):
+        self.logger.debug(f"Received : {data}")
+        await self._async_notify_consumers(
+            {
+                services_constants.FEED_METADATA: data,
+            }
+        )
+
     def _register_to_service(self):
-        if not self.services[0].is_subscribed(self.webhook_service_name):
-            self.services[0].subscribe_feed(self.webhook_service_name, self.webhook_callback, self.ensure_callback_auth)
+        service = self.services[0]
+        if not service.is_subscribed(self.webhook_service_name):
+            callback = self.async_webhook_callback if service.use_octobot_cloud_webhook else self.webhook_callback
+            service.subscribe_feed(
+                self.webhook_service_name, callback, self.ensure_callback_auth
+            )
 
     def _initialize(self):
         self._register_to_service()
