@@ -16,7 +16,7 @@
         {% for strategy in strategies %}
             <tr>
                 <td>
-                    <a class="text-light" href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector" target="_blank">
+                    <a href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector" target="_blank">
                         <div class="row">
                             <div class="col-4 pr-1">
                                 <img class="img-fluid package_row_image"
@@ -45,7 +45,7 @@
                 <td class="align-middle">
                     {% if strategy.category %}
                         {% if strategy.category.get_url() %}
-                            <a href="{{strategy.category.get_url()}}" target="_blank" class="text-light">
+                            <a href="{{strategy.category.get_url()}}" target="_blank">
                                 {{ strategy.get_name(locale) }} <i class="fas fa-external-link-alt"></i>
                             </a>
                         {% else %}
@@ -55,7 +55,7 @@
                 </td>
                 <td class="align-middle">
                     <button update-url="{{ url_for('profiles_management', action='download') }}"
-                            role="button" class="btn btn-sm btn-outline-white px-1 m-1"
+                            role="button" class="btn btn-sm btn-outline-primary px-1 m-1"
                             data-toggle="tooltip" data-placement="top" title="{{'Use this strategy' if post_install_action else 'Add to OctoBot'}}"
                             data-role="install-strategy"
                             data-strategy-id="{{strategy.id}}"
@@ -63,7 +63,7 @@
                             data-description="{{strategy.content['description_translations'][locale]}}"
                                 data-post-install-action="{{post_install_action}}"
                     >
-                        <i class="fa {{'fa-check' if post_install_action else 'fa-download'}} px-2 text-light strategy_action px-4"></i>
+                        <i class="fa {{'fa-check' if post_install_action else 'fa-download'}} px-2 strategy_action px-4"></i>
                     </button>
                 </td>
             </tr>
