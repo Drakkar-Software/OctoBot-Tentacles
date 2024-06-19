@@ -56,14 +56,14 @@ get_filtered_list, read_only=False) %}
     </h4>
     <div>
         <div class="row">
-            <div class="card profile-card my-1 my-lg-2 px-0 mx-auto col-12 col-lg-5">
+            <div class="card profile-card my-auto my-lg-2 px-0 mx-auto col-12 col-lg-5">
                 <div class="card-header">
                     <h5>Traded pairs</h5>
                 </div>
                 <div class="card-body py-0 d-flex flex-wrap">
                     {% for currency, pairs in get_profile_traded_pairs_by_currency(profile).items() %}
                     <div class="row w-100 p-1">
-                        <div class="col-3">
+                        <div class="my-auto col-3">
                             <div class="animated fadeIn img-fluid very-small-size">
                                 <img class="card-img-top currency-image"
                                      src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
@@ -84,7 +84,7 @@ get_filtered_list, read_only=False) %}
                     <h5>
                         Exchanges
                         {% if get_enabled_trader(profile) %}
-                        <span class="float-right badge badge-dark">
+                        <span class="float-right badge badge-info">
                             {{ get_enabled_trader(profile)}}
                         </span>
                         {% endif %}
@@ -92,7 +92,7 @@ get_filtered_list, read_only=False) %}
                 </div>
                 <div class="card-body py-0 d-flex flex-wrap">
                     {% for exchange in get_profile_exchanges(profile) %}
-                    <div class="p-1 p-md-3">
+                    <div class="my-auto p-1 p-md-3">
                         <a href="" target="_blank" rel="noopener noreferrer" class="waves-effect">
                             <img class="img-fluid product-logo" src="" alt="{{exchange}}" url="{{url_for('exchange_logo', name=exchange)}}">
                         </a>
@@ -274,7 +274,7 @@ get_filtered_list, read_only=False) %}
                     <i class="fas fa-copy" aria-hidden="true"></i> <span class="d-none d-md-inline">Duplicate</span>
                 </button>
                 {% if current_profile.profile_id != profile.profile_id and (profile.imported or not profile.read_only) %}
-                <button class="btn btn-outline-danger px-3 waves-effect remove-profile-button"
+                <button class="btn btn-outline-danger ml-2 px-3 waves-effect remove-profile-button"
                         id="removeProfile{{profile.profile_id}}"
                         data-profile-id="{{profile.profile_id}}"
                         data-url="{{url_for('profiles_management', action='remove')}}">
@@ -289,7 +289,7 @@ get_filtered_list, read_only=False) %}
             {% endif %}
         </div>
     </div>
-    <div class="text-right">
+    <div class="text-right mt-4">
         <button class="btn btn-outline-primary waves-effect"
                 data-toggle="modal" data-target="#importProfileModal">
             Import a profile
@@ -302,7 +302,7 @@ get_filtered_list, read_only=False) %}
 {% macro profile_import_modal(next=None) %}
 <div class="modal fade" id="importProfileModal" tabindex="-1" role="dialog" aria-labelledby="#importProfileModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-    <div class="modal-content modal-text bg-dark text-light">
+    <div class="modal-content modal-text">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#importProfileModalLabel">Import a new profile</h5>
         <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
@@ -426,7 +426,7 @@ get_filtered_list, read_only=False) %}
 <div class="modal fade" id="{{profile.profile_id}}Modal" tabindex="-1" role="dialog"
      aria-labelledby="#{{profile.profile_id}}ModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-    <div class="modal-content modal-text bg-dark text-light mt-4">
+    <div class="modal-content modal-text mt-4">
       <div class="modal-header primary-text">
           <h5 class="modal-title" id="{{profile.profile_id}}ModalLabel">
               {{profile.name}}

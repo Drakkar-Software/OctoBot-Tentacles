@@ -18,7 +18,7 @@
 
 <div class="card">
     <div class="card-body">
-        <div class="alert alert-dark row py-0">
+        <div class="row py-0">
             <div class="col-8 my-auto">
                 <h5 class="p-0 my-0">
 
@@ -62,7 +62,7 @@
         <div class="modal" id="bot-select-modal" tabindex="-1" role="dialog"
              aria-labelledby="#display-bot-select-modal" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-            <div class="modal-content modal-text bg-dark text-light">
+            <div class="modal-content modal-text">
               <div class="modal-header primary-text">
                 <h2 class="modal-title">Bot selection</h2>
                     {% if can_logout and not selected_user_bot["id"]%}
@@ -74,7 +74,7 @@
                     </div>
                     {% endif %}
                   {% if selected_user_bot["id"] %}
-                    <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                       <span aria-hidden="true">&times;</span>
                     </button>
                   {% endif %}
