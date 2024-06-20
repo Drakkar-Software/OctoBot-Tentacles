@@ -2,12 +2,14 @@
 
 {% macro config_tentacle_card(name, info, can_be_disabled) %}
     <a href="#" onclick="return false;"
-       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
+       class="col-md-6 col-lg-4 p-1 rounded list-group-item waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element"
        id="{{ name }}" name="{{ name }}"
        config-type="tentacle_config" config-key={{name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{info['startup_config']}}
        {{ "no-activation-click='true'" if not can_be_disabled}}
     >
-        {{ name }}
+        <span class="ps-2">
+            {{ name }}
+        </span>
         <span class="float-right">
             <span class="badge {{'badge-warning' if info['startup_config'] != info['activation'] else ('badge-success' if info['activation'] else 'badge-secondary')}}">
                 {{('Activation pending restart' if info['activation'] else 'Deactivation pending restart') if info['startup_config'] != info['activation'] else ('Activated' if info['activation'] else 'Deactivated')}}

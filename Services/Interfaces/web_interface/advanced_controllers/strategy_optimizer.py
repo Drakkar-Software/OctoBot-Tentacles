@@ -21,6 +21,9 @@ import tentacles.Services.Interfaces.web_interface.login as login
 
 
 def register(blueprint):
+    # strategy optimize is disabled
+    return
+
     @blueprint.route("/strategy-optimizer")
     @blueprint.route('/strategy-optimizer', methods=['GET', 'POST'])
     @login.login_required_when_activated
