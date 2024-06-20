@@ -153,6 +153,11 @@ a:hover {
     background-color: var(--mdb-bg);
 }
 
+.dropdown.bootstrap-select, .datepicker, .select2-selection select2-selection--multiple {
+    border: solid black 1px;
+    border-radius: 4px;
+}
+
 .nav-tabs .nav-link {
     --mdb-nav-tabs-link-active-color: var(--mdb-secondary);
     --mdb-nav-tabs-link-active-border-color: var(--mdb-secondary);
@@ -413,6 +418,7 @@ footer.page-footer {
 .btn.btn-sm.rounded-circle {
     padding-left: 0.64rem;
     padding-right: 0.64rem;
+    border-radius: 50%;
 }
 
 .font-size-90 {
