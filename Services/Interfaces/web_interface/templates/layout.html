@@ -2,7 +2,7 @@
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
 {% import 'components/modals/generic_modal.html' as m_generic_modal %}
 <!doctype html>
-<html lang="en" data-mdb-theme="light">
+<html lang="en" data-mdb-theme="{{get_color_mode()}}">
     {% set active_page = active_page|default('home') -%}
     {% set page_title = page_title|default(active_page | replace("_", " ") | capitalize) -%}
     {% set startup_messages_added_classes = startup_messages_added_classes|default('') -%}
@@ -183,6 +183,14 @@
                                 <span id="errors-count-badge" class="badge badge-warning"></span>
                             </i></a>
                         </li>
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'logs' == active_page %} active{% endif %}">
+                            <a id="theme-switch" class="nav-link" href="#" aria-label="Switch theme" data-update-url="{{url_for('api.display_config')}}">
+                                <i class="{{'fa fa-moon' if get_color_mode() == 'light' else 'fas fa-sun'}}" data-toggle="tooltip" data-placement="top"
+                                   title="Use {{'dark' if get_color_mode() == 'light' else 'light'}} theme">
+                            </i></a>
+                        </li>
+
+
                         {% if is_advanced_interface_enabled %}
                         <li class="nav-item my-auto">
                             <a class="nav-link mx-1 px-0" href="{{ url_for('advanced.home') }}" aria-label="Advanced OctoBot"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>

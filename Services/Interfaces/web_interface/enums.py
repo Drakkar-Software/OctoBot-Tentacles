@@ -28,3 +28,9 @@ class PriceStrings(enum.Enum):
 class TabsLocation(enum.Enum):
     START = "start"
     END = "end"
+
+
+class ColorModes(enum.Enum):
+    LIGHT = "light"
+    DARK = "dark"
+    DEFAULT = "light"

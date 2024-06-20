@@ -45,6 +45,7 @@ import octobot_tentacles_manager.api
 class WebInterface(services_interfaces.AbstractWebInterface):
 
     REQUIRED_SERVICES = [Service_bases.WebService]
+    COLOR_MODE = "color_mode"
     DISPLAY_TIME_FRAME = "display_time_frame"
     DISPLAY_ORDERS = "display_orders"
     WATCHED_SYMBOLS = "watched_symbols"

@@ -60,6 +60,8 @@ def register(blueprint):
         request_data = flask.request.get_json()
         success = False
         message = "nothing to do"
+        if "color_mode" in request_data:
+            success, message = models.set_color_mode(request_data["color_mode"])
         if "time_frame" in request_data:
             success, message = models.set_display_timeframe(request_data["time_frame"])
         if "display_orders" in request_data:
