@@ -18,7 +18,7 @@
 
 $(document).ready(function() {
 
-    const createPortfolioChart = (element_id, title, animate) => {
+    const createPortfolioChart = (element_id, title, update) => {
         const data = {};
         const element = $(`#${element_id}`);
         const max_medium_screen_legend_items = 50;
@@ -50,7 +50,7 @@ $(document).ready(function() {
                 // legend is hiding the chart on if too many elements are present
                 displayLegend = false;
             }
-            create_doughnut_chart(element[0], data, title, 'white', animate, displayLegend);
+            create_doughnut_chart(element[0], data, title, displayLegend, graphHeight, update);
         }else{
             element.addClass(hidden_class);
         }
@@ -69,7 +69,7 @@ $(document).ready(function() {
     const start_periodic_refresh = () => {
         setInterval(function() {
             $("#portfolio-display").load(location.href + " #portfolio-display", function (){
-                update_display(true, false);
+                update_display(true, true);
             });
         }, portfolio_update_interval);
     }
@@ -84,16 +84,16 @@ $(document).ready(function() {
         });
     }
 
-    const displayPortfolioContent = (referenceMarket, animate) => {
+    const displayPortfolioContent = (referenceMarket, update) => {
         displayPortfolioTable();
         const chartTitle = `Assets value (${referenceMarket})`;
-        createPortfolioChart("portfolio_doughnutChart", chartTitle, animate);
+        createPortfolioChart("portfolio_doughnutChart", chartTitle, update);
         handleButtons();
     }
 
-    const update_display = (withImages, animate) => {
+    const update_display = (withImages, update) => {
         const referenceMarket = $("#portfoliosCard").attr("reference_market");
-        displayPortfolioContent(referenceMarket, animate);
+        displayPortfolioContent(referenceMarket, update);
         if(withImages){
             handleDefaultImages();
         }
@@ -118,7 +118,7 @@ $(document).ready(function() {
         handle_portfolio_button();
         handleClearButton()
     }
-    update_display(false, true);
+    update_display(false, false);
     if(firstLoad){
         start_periodic_refresh();
     }

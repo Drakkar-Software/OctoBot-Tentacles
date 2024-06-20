@@ -31,7 +31,7 @@ const loadPnlFullChartHistory = (data, update) => {
             }
         })
         create_histogram_chart(
-            document.getElementById("pnl_historyChart"), chartedData, `cumulated profit/loss`, "profit/loss", unit, 'white', false
+            document.getElementById("pnl_historyChart"), chartedData, `cumulated profit/loss`, "profit/loss", unit, getTextColor(), false
         );
     }else{
         parentDiv.addClass(hidden_class);

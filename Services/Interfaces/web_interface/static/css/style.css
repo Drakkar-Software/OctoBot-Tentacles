@@ -145,8 +145,12 @@ a:hover {
 }
 
 /* Fix declarations */
-.nav-link, .navbar-brand, .card-body, .card-footer, .card-header, .select2-results__option {
+.nav-link, .navbar-brand, .card-body, .card-footer, .card-header, .select2-results__option, .filter-option {
     color: var(--mdb-primary);
+}
+
+.dropdown, .datepicker, .select2-container--default .select2-selection--multiple, .select2-results__option {
+    background-color: var(--mdb-bg);
 }
 
 .nav-tabs .nav-link {
@@ -226,8 +230,13 @@ a:hover {
     background-image: none !important;
 }
 
-.bg-light {
+.bg-light, .btn-light {
     background-color: transparent !important;
+}
+
+.select2-selection__choice {
+    background-color: var(--mdb-secondary) !important;
+    color: var(--mdb-button-color) !important;
 }
 
 /* plotly */
@@ -518,7 +527,6 @@ footer.page-footer {
     text-align: center;
     border-top: 1px solid #e9ecef;
     font-size: .875rem;
-    color: #6c757d;
 }
 
 .small-image {
