@@ -159,16 +159,16 @@
                          current-value="{{selected_exchange_type}}"
                          data-type="text"
                          data-summary-field="radio-select"
-                         class="config-element"
+                         class="row mx-auto config-element"
                     >
                         {% for exchange_type in exchanges_details['supported_exchange_types'] %}
-                        <div class="form-check form-check-inline">
+                        <div class="col form-check">
                           <input class="form-check-input" type="radio"
                                  name="exchangeTypeRadioOptions{{exchange}}"
                                  id="exchangeTypeRadio{{exchange}}{{exchange_type.value}}"
                                  value="{{exchange_type.value}}"
                                  {{'checked' if exchange_type.value == selected_exchange_type else ''}}>
-                          <label class="form-check-label"
+                          <label class="col form-check-label"
                                  for="exchangeTypeRadio{{exchange}}{{exchange_type.value}}">{{exchange_type.value}}</label>
                         </div>
                         {% endfor %}
