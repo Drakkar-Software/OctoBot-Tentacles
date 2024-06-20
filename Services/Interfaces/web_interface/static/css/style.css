@@ -433,12 +433,13 @@ footer.page-footer {
 .community-bot-stats-label {
   font-weight: bold;
   font-size: x-large;
-    color: var(--mdb-primary)
+  color: var(--mdb-primary);
 }
 
 .community-bot-stats {
   font-size: large;
-  background-color: #C62828;
+  color: var(--mdb-button-color);
+  background-color: var(--mdb-secondary-500);
 }
 
 .package_row_image {
@@ -649,4 +650,8 @@ table.dataTable tfoot th {
 
 .introjs-tooltip {
   background-color: rgba(000, 0, 0, 0.9);
+}
+
+.introjs-tooltip-title {
+  color: #fff;  /* avoid using h1 color */
 }

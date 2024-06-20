@@ -314,7 +314,8 @@ function create_layout(graph_title){
         yaxis2: {
             domain: [0.2, 1],
             autorange: true,
-            title: 'Price'
+            title: 'Price',
+            gridcolor: getTextColor(),
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',

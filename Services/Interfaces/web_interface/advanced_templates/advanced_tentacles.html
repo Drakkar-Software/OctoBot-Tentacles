@@ -36,8 +36,9 @@
                         <td class="selectable_tentacle">{{tentacle.name}}</td>
                         <td class="selectable_tentacle">{{tentacle.tentacle_type}}</td>
                         <td class="selectable_tentacle">{{tentacle.version}}</td>
-                        <td class="text-center"><a class="btn fa fa-download waves-effect" onclick="update('{{tentacle.name}}')" data-toggle="tooltip" data-placement="right" title="Update tentacle"></a>
-                            <a class="btn fa fa-trash-alt waves-effect" onclick="uninstall('{{tentacle.name}}')" data-toggle="tooltip" data-placement="right" title="Uninstall tentacle"></a></td>
+                        <td class="text-center">
+                            <a class="btn btn-sm text-primary waves-effect" onclick="update('{{tentacle.name}}')" data-toggle="tooltip" data-placement="right" title="Update tentacle"><i class="fas fa-download"></i></a>
+                            <a class="btn btn-sm text-primary waves-effect" onclick="uninstall('{{tentacle.name}}')" data-toggle="tooltip" data-placement="right" title="Uninstall tentacle"><i class="fas fa-trash-alt"></i></a></td>
                     </tr>
                 {% endfor %}
               </tbody>
