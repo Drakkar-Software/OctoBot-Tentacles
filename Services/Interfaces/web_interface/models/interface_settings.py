@@ -17,6 +17,7 @@
 import octobot_trading.constants as trading_constants
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface as web_interface
+import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
 
 
@@ -44,6 +45,22 @@ def remove_watched_symbol(symbol):
         return _save_edition()[0]
     except ValueError:
         return True
+
+
+def set_color_mode(color_mode: str):
+    try:
+        get_web_interface_config()[
+            web_interface.WebInterface.COLOR_MODE
+        ] = web_enums.ColorModes(color_mode).value
+    except ValueError:
+        return False, f"invalid color mode: {color_mode}"
+    return _save_edition()
+
+
+def get_color_mode() -> web_enums.ColorModes:
+    return web_enums.ColorModes(get_web_interface_config().get(
+        web_interface.WebInterface.COLOR_MODE, web_enums.ColorModes.DEFAULT.value
+    ))
 
 
 def get_display_timeframe():

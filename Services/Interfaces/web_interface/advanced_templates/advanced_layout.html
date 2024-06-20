@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-mdb-theme="light">
+<html lang="en" data-mdb-theme="{{get_color_mode()}}">
     {% set active_page = active_page|default('advanced.home') -%}
     <head>
         <title>{{ active_page.split(".")[-1] | replace("_", " ") | capitalize }} - OctoBot</title>
@@ -103,6 +103,12 @@
                             <a class="nav-link" href="{{ url_for('advanced.tentacles') }}">Tentacles</a>
                         </li>
                         {% endif %}
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'logs' == active_page %} active{% endif %}">
+                            <a id="theme-switch" class="nav-link" href="#" aria-label="Switch theme" data-update-url="{{url_for('api.display_config')}}">
+                                <i class="{{'fa fa-moon' if get_color_mode() == 'light' else 'fas fa-sun'}}" data-toggle="tooltip" data-placement="top"
+                                   title="Use {{'dark' if get_color_mode() == 'light' else 'light'}} theme">
+                            </i></a>
+                        </li>
                         <li class="nav-item mx-1 px-0 my-auto">
                             <a class="btn btn-sm btn-outline-default waves-effect" href="{{ url_for('home') }}"><i class="fa fa-home"></i> Back to OctoBot</a>
                         </li>
