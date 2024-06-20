@@ -33,6 +33,9 @@ import octobot_trading.enums as trading_enums
 def register_context_processor(web_interface_instance):
     @web_interface_instance.server_instance.context_processor
     def context_processor_register():
+        def get_color_mode() -> str:
+            return models.get_color_mode().value
+
         def get_tentacle_config_file_content(tentacle_class):
             return models.get_tentacle_config(tentacle_class)
 
@@ -137,6 +140,7 @@ def register_context_processor(web_interface_instance):
             TRACKING_ID=constants.TRACKING_ID,
             TAB_START=web_enums.TabsLocation.START,
             TAB_END=web_enums.TabsLocation.END,
+            get_color_mode=get_color_mode,
             get_tentacle_config_file_content=get_tentacle_config_file_content,
             get_currency_id=get_currency_id,
             filter_currency_pairs=filter_currency_pairs,
