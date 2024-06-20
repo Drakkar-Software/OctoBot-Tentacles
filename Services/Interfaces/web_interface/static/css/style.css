@@ -239,6 +239,11 @@ a:hover {
     color: var(--mdb-button-color) !important;
 }
 
+.select2-container--default .select2-results__option--selected {
+    background-color: var(--mdb-secondary) !important;
+    color: var(--mdb-button-color) !important;
+}
+
 /* plotly */
 .gtitle, .xtitle, .xtick text {
     fill: var(--mdb-primary) !important;
