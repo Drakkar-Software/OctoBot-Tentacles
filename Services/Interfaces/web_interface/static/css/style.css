@@ -20,6 +20,7 @@
 /* commons */
 :root {
     --mdb-body-font-family: DM Sans, sans-serif;
+    --local-secondary-bg-text-color: #0f1237;   /* same as dark mdb-primary */
 }
 
 :root[data-mdb-theme=light] {
@@ -50,8 +51,8 @@
     --mdb-nav-link-color: var(--mdb-primary);
 
     /* body */
-    --mdb-body-color: var(--mdb-bg);
-    --mdb-body-color-rgb: var(--mdb-bg-rgb);
+    --mdb-body-color: var(--mdb-primary);
+    --mdb-body-color-rgb: var(--mdb-primary-rgb);
     --mdb-body-bg: var(--mdb-bg);
     --mdb-body-bg-rgb: var(--mdb-bg-rgb);
 
@@ -108,8 +109,8 @@
     --mdb-nav-link-color: var(--mdb-primary);
 
     /* body */
-    --mdb-body-color: var(--mdb-bg);
-    --mdb-body-color-rgb: var(--mdb-bg-rgb);
+    --mdb-body-color: var(--mdb-primary);
+    --mdb-body-color-rgb: var(--mdb-primary-rgb);
     --mdb-body-bg: var(--mdb-bg);
     --mdb-body-bg-rgb: var(--mdb-bg-rgb);
 
