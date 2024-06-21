@@ -162,7 +162,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 # don't try to avoid triggering new rebalances on each wakeup cycling market sell & buy orders
                 raise trading_errors.MissingMinimalExchangeTradeVolume(
                     f"Can't buy {symbol}: available funds are too low to buy {ratio*trading_constants.ONE_HUNDRED}% "
-                    f"of {reference_market_to_split} holdings."
+                    f"of {reference_market_to_split} holdings: {round(ideal_amount / decimal.Decimal(2), 9)} {coin} "
+                    f"required order size is not compatible with {symbol} exchange requirements: "
+                    f"{symbol_market[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]}."
                 )
             amount_by_symbol[symbol] = ideal_amount
         return amount_by_symbol
