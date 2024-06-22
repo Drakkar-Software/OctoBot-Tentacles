@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import os.path
+
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_commons.logging as logging
 import tentacles.Services.Interfaces.web_interface.plugins as plugins
@@ -26,13 +28,17 @@ def register_all_plugins(server_instance, already_registered_plugins, **kwargs) 
     }
     for plugin_class in _get_all_plugins():
         try:
+            can_use_plugin = True
             # flask blueprints can't be be unregistered: reuse them when already registered
             if plugin_class in already_registered_plugins_by_classes:
                 plugin = already_registered_plugins_by_classes[plugin_class]
             else:
                 plugin = plugin_class.factory(**kwargs)
-                plugin.register(server_instance)
-            registered_plugins.append(plugin)
+                can_use_plugin = os.path.exists(plugin.plugin_folder)
+                if can_use_plugin:
+                    plugin.register(server_instance)
+            if can_use_plugin:
+                registered_plugins.append(plugin)
         except Exception as e:
             logging.get_logger("WebInterfacePluggingRegistration").exception(
                 e,
