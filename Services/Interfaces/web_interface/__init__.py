@@ -59,9 +59,12 @@ TIME_AXIS_TITLE = "Time"
 
 
 def dir_last_updated(folder):
-    return str(max(os.path.getmtime(os.path.join(root_path, f))
-                   for root_path, dirs, files in os.walk(folder)
-                   for f in files))
+    update_times = [
+        os.path.getmtime(os.path.join(root_path, f))
+        for root_path, dirs, files in os.walk(folder)
+        for f in files
+    ]
+    return str(max(update_times + [0]))  # add 0 not to crash if no files are found
 
 
 LAST_UPDATED_STATIC_FILES = 0
