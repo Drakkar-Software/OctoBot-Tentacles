@@ -343,7 +343,6 @@ html, body {
 .profile-overview-selected {
     border-bottom: 2px solid var(--mdb-secondary-500);
     border-right: 2px solid var(--mdb-secondary-500);
-    background-color: var(--mdb-secondary-500);
 }
 
 .profile-overview-image {
