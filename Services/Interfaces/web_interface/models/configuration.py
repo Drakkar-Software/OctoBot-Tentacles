@@ -404,7 +404,11 @@ def get_all_automation_steps():
 
 
 def has_at_least_one_running_automation():
-    return bool(interfaces_util.get_bot_api().get_automation().automation_details)
+    return bool(get_automations_count())
+
+
+def get_automations_count():
+    return len(interfaces_util.get_bot_api().get_automation().automation_details)
 
 
 def reset_automation_config_to_default():

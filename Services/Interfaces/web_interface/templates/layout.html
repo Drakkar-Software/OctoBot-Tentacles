@@ -120,13 +120,6 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
                         </li>
-                        {% if are_automations_enabled %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'automations' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('automations') }}" aria-label="Logs">
-                                <i class="d-inline d-xl-none fa-solid fa-repeat" data-toggle="tooltip" data-placement="top" title="Automations"></i>
-                                <span class="d-none d-xl-inline">Automations</span></a>
-                        </li>
-                        {% endif %}
                         {% if not has_open_source_package() %}
                             <li class="nav-item mx-1 px-0 my-auto">
                                 <a class="nav-link" href="{{ url_for('extensions') }}"><i class="fa-solid fa-lock"></i> Strategy design</a>

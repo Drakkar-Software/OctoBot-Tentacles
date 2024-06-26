@@ -81,6 +81,12 @@
                     <i class="fas fa-cogs my-auto"></i><span class="d-none d-md-block pl-3">Tentacles</span>
                 </a>
                 {% endif %}
+                {% if are_automations_enabled %}
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelAutomations-tab" data-toggle="pill"
+                   href="#panelAutomations" role="tab" aria-controls="panelAutomations" aria-selected="false">
+                    <i class="fas fa-robot my-auto"></i><span class="d-none d-md-block pl-3">Automations</span>
+                </a>
+                {% endif %}
             </div>
             <button class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#"
                aria-selected="false" update-url="{{ url_for('config') }}">
@@ -465,6 +471,35 @@
                 {% endfor %}
             </div>
             {% endif %}
+            <div class="tab-pane fade config-root" id="panelAutomations" role="tabpanel"
+                 aria-labelledby="panelTentacles-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>
+                            Automations
+                        </h4>
+
+                    </div>
+                    <div class="card-body text-center">
+                        <div>
+                            Automations are actions that will be triggered automatically when something happens. You can have as many automations as you want.
+                        </div>
+                        <div class="text-center my-5">
+                            <div>
+                                <a type="button" class="btn btn-primary btn-lg"
+                                   href="{{ url_for('automations') }}">
+                                    Configure your profile automations
+                                </a>
+                            </div>
+                            <div>
+                                Your current profile has <strong>{{automations_count}}</strong> automation{{'s' if automations_count > 1 else ''}}.
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <br>
+            </div>
         </div>
     </main>
 </div>

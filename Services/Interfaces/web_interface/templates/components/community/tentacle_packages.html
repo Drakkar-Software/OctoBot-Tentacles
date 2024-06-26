@@ -73,12 +73,12 @@
         {{name}} already purchased
     </button>
     {% elif is_authenticated %}
-    <button type="button" class="btn btn-primary"
+    <button type="button" class="btn btn-primary btn-lg"
             data-role="open-package-purchase">
         Get your {{name}}
     </button>
     {% else %}
-    <a type="button" class="btn btn-primary"
+    <a type="button" class="btn btn-primary btn-lg"
        href="{{ url_for('community_login', next='extensions') }}">
         Login to install the {{name}}
     </a>
