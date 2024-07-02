@@ -59,6 +59,9 @@ class TradingViewService(services.AbstractService):
             services_constants.CONFIG_TRADING_VIEW_TOKEN: self.get_security_token(uuid.uuid4().hex)
         }
 
+    def is_improved_by_extensions(self) -> bool:
+        return True
+
     def get_read_only_info(self):
         return {
             "Webhook url:": self._webhook_url

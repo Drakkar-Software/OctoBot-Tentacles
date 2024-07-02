@@ -291,8 +291,15 @@
                                 {% endif %}
                             {% endfor %}
                         </div>
-                        <div class="card-footer"></div>
+                        <div class="card-footer">
+                        </div>
                     </div>
+                {% endif %}
+                {% if not has_open_source_package() %}
+                <div class="text-center">
+                    <i class="fa fa-info-circle"></i> The <a href="{{ url_for('extensions') }}">{{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}</a> contains many other configuration profiles and enables
+                    your open source OctoBot to use and customize OctoBot cloud's <a target="_blank" rel="noopener" href="https://app.octobot.cloud/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=Profile">automatically configured indexes</a>.
+                </div>
                 {% endif %}
             </div>
             <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel"

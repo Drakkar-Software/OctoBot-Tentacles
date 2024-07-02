@@ -542,6 +542,16 @@ footer.page-footer {
     max-height: 24rem;
 }
 
+.feature-margin {
+    margin-top: 10rem;
+}
+
+.img-feature {
+    max-height: 20rem;
+    margin: auto;
+    display: block;
+}
+
 /* Theme */
 /* Elegant */
 .card-body.candle-graph {
