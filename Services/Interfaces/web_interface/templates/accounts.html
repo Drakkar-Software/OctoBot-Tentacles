@@ -123,7 +123,7 @@
                 <div class="card-deck config-container" update-url="{{ url_for('config') }}">
                     {% for service in services_list %}
                         {% if service in config_services %}
-                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service]) }}
+                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service], extension_name=OCTOBOT_EXTENSION_PACKAGE_1_NAME) }}
                         {% endif %}
                     {% endfor %}
                 </div>
@@ -175,7 +175,8 @@
                                                            services_list[service],
                                                            add_class=added_class,
                                                            no_select=True,
-                                                           default_values=True ) }}
+                                                           default_values=True,
+                                                           extension_name=OCTOBOT_EXTENSION_PACKAGE_1_NAME) }}
             </div>
         {% endfor %}
     </div>

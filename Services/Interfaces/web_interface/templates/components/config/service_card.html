@@ -1,5 +1,5 @@
 {% import 'components/config/editable_config.html' as m_editable_config %}
-{% macro config_service_card(config, service_name, service, add_class='', no_select=False, default_values=False) -%}
+{% macro config_service_card(config, service_name, service, add_class='', no_select=False, default_values=False, extension_name='') -%}
     {% set service_config_fields = service.get_default_value() %}
 
     <!-- Card -->
@@ -49,6 +49,11 @@
                                                         placeholder_str="Add user(s) in whitelist")
                     }}
                 {% endfor %}
+            </p>
+            <p>
+                {% if service.is_improved_by_extensions() %}
+                    <i class="fa fa-info-circle"></i> The {{service_name}} interface is improved by the <a href="{{ url_for('extensions') }}">{{extension_name}}</a>.
+                {% endif %}
             </p>
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
             <div class="float-right card-text mt-2">

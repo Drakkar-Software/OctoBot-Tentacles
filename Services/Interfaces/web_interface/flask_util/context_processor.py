@@ -128,6 +128,7 @@ def register_context_processor(web_interface_instance):
             DEVELOPER_DOCS_URL=constants.DEVELOPER_DOCS_URL,
             EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
             OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
+            OCTOBOT_EXTENSION_PACKAGE_1_NAME=constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME,
             OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
             OCTOBOT_COMMUNITY_LANDING_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_LANDING_URL,
             OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
@@ -161,4 +162,5 @@ def register_context_processor(web_interface_instance):
             are_automations_enabled=models.are_automations_enabled(),
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
+            has_open_source_package=models.has_open_source_package
         )

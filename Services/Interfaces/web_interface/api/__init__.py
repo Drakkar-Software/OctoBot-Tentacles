@@ -23,6 +23,7 @@ import tentacles.Services.Interfaces.web_interface.api.trading
 import tentacles.Services.Interfaces.web_interface.api.user_commands
 import tentacles.Services.Interfaces.web_interface.api.bots
 import tentacles.Services.Interfaces.web_interface.api.webhook
+import tentacles.Services.Interfaces.web_interface.api.tentacles_packages
 
 from tentacles.Services.Interfaces.web_interface.api.webhook import (
     has_webhook,
@@ -41,6 +42,7 @@ def register():
     tentacles.Services.Interfaces.web_interface.api.user_commands.register(blueprint)
     tentacles.Services.Interfaces.web_interface.api.bots.register(blueprint)
     tentacles.Services.Interfaces.web_interface.api.webhook.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.api.tentacles_packages.register(blueprint)
 
     return blueprint
 

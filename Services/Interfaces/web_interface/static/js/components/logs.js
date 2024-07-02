@@ -3,15 +3,13 @@ function handleLogsExporter(){
 }
 
 $(document).ready(function() {
-    $(document).ready(function () {
-      $('#logs_datatable').DataTable({
-          // order by time: most recent first
-          "order": [[ 0, "desc" ]]
-      });
-      $('#notifications_datatable').DataTable({
-          // order by time: most recent first
-          "order": [[ 0, "desc" ]]
-      });
+    $('#logs_datatable').DataTable({
+      // order by time: most recent first
+      "order": [[ 0, "desc" ]]
+    });
+    $('#notifications_datatable').DataTable({
+      // order by time: most recent first
+      "order": [[ 0, "desc" ]]
     });
     handleLogsExporter();
 });

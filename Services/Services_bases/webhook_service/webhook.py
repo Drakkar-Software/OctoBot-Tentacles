@@ -63,6 +63,9 @@ class WebHookService(services.AbstractService):
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
         }
 
+    def is_improved_by_extensions(self) -> bool:
+        return True
+
     def __init__(self):
         super().__init__()
         self.use_web_interface_for_webhook = constants.IS_CLOUD_ENV
