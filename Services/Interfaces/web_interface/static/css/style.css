@@ -258,6 +258,10 @@ a:hover {
     color: var(--mdb-secondary);  /* ensure close button is visible in both themes */
 }
 
+.fs-1 {
+    font-size: 4rem !important;
+}
+
 /* plotly */
 .gtitle, .xtitle, .xtick text {
     fill: var(--mdb-primary) !important;

@@ -34,3 +34,14 @@ def register(blueprint):
             },
             200 if success else 500
         )
+
+    @blueprint.route("/has_open_source_package", methods=['POST'])
+    @login.login_required_when_activated
+    def has_open_source_package():
+        models.update_owned_packages()
+        return util.get_rest_reply(
+            {
+                "has_open_source_package": models.has_open_source_package(),
+            },
+            200
+        )
