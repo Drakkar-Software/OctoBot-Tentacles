@@ -72,12 +72,14 @@ LAST_UPDATED_STATIC_FILES = 0
 
 def update_registered_plugins(plugins):
     global LAST_UPDATED_STATIC_FILES
-    last_update_time = float(LAST_UPDATED_STATIC_FILES)
+    last_update_time = max(
+        float(LAST_UPDATED_STATIC_FILES),
+        float(dir_last_updated(os.path.join(os.path.dirname(__file__), "static")))
+    )
     for plugin in plugins:
         if plugin.static_folder:
             last_update_time = max(
                 last_update_time,
-                float(dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))),
                 float(dir_last_updated(plugin.static_folder))
             )
     LAST_UPDATED_STATIC_FILES = last_update_time

@@ -8,6 +8,7 @@
 
 {{ m_flash_messages.flash_messages() }}
 {{ m_tentacle_packages.pending_tentacles_install_modal(has_owned_packages_to_install) }}
+{{ m_tentacle_packages.waiting_for_owned_packages_to_install_modal(not has_owned_packages_to_install and auto_refresh_packages) }}
 {{ m_tentacle_packages.select_payment_method_modal(OCTOBOT_EXTENSION_PACKAGE_1_NAME) }}
 
 <div class="card">
@@ -88,7 +89,7 @@
             </div>
             <div class="col-6 ">
                 <img class="img-fluid img-feature "
-                             src="{{url_for('static', filename='img/community/tentacles_packages_previews/octobot-strategy-designer-results-on-trx-mkr-xmr.png')}}" alt="OctoBot cloud">
+                             src="{{url_for('static', filename='img/community/tentacles_packages_previews/octobot-strategy-designer-results-on-doge-btc-shib.png')}}" alt="OctoBot cloud">
             </div>
         </div>
         <div class="row feature-margin">

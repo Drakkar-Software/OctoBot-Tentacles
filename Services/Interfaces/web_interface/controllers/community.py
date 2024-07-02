@@ -67,7 +67,8 @@ def register(blueprint):
     @blueprint.route("/extensions")
     @login.login_required_when_activated
     def extensions():
-        refresh_packages = flask.request.args["refresh_packages"] if flask.request.args else "false"
+        refresh_packages = flask.request.args.get("refresh_packages") if flask.request.args else "false"
+        loop = flask.request.args.get("loop") if flask.request.args else "false"
         authenticator = authentication.Authenticator.instance()
         logged_in_email = None
         try:
@@ -84,5 +85,6 @@ def register(blueprint):
             current_logged_in_email=logged_in_email,
             is_community_authenticated=logged_in_email is not None,
             price=constants.OCTOBOT_EXTENSION_PACKAGE_1_PRICE,
+            auto_refresh_packages=refresh_packages and loop == "true",
             has_owned_packages_to_install=models.has_owned_packages_to_install(),
         )

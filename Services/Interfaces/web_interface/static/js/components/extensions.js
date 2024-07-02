@@ -26,29 +26,60 @@ $(document).ready(function() {
         })
     }
 
+    const handlePaymentWaiter = async () => {
+        const waiterModal = $("#waiting-for-owned-packages-to-install-modal");
+        if(waiterModal && waiterModal.data("show-by-default") == "True"){
+            const url = waiterModal.data("url");
+            let hasExtension = false;
+            while (!hasExtension){
+                const has_open_source_package_resp = await async_send_and_interpret_bot_update(null, url, null)
+                if(has_open_source_package_resp.has_open_source_package){
+                    hasExtension = true
+                    document.location.href = window.location.href.replace("&loop=true", "");
+                } else {
+                    await new Promise(r => setTimeout(r, 3000));
+                }
+            }
+        }
+    }
+
     const registerTriggerCheckout = () => {
         $("button[data-role=\"open-package-purchase\"]").click(() => {
             $("#select-payment-method-modal").modal();
         })
+        $("button[data-role=\"restart\"]").click(() => {
+            $("#select-payment-method-modal").modal();
+        })
         $("button[data-role=\"open-checkout\"]").click(async (event) => {
             const button = $(event.currentTarget);
+            const checkoutButtons = $("button[data-role=\"open-checkout\"]");
+            const origin_val = button.text();
             const paymentMethod = button.data("payment-method")
             const url = button.data("checkout-api-url")
             const data = {
                 paymentMethod: paymentMethod,
-                redirectUrl: window.location.href
+                redirectUrl: `${window.location.href}?refresh_packages=true&loop=true`
             }
-            console.log("url", url, "data", data)
-            const checkoutUrl = await async_send_and_interpret_bot_update(data, url, null)
-            console.log("checkoutUrl", checkoutUrl)
-            if(checkoutUrl.url === null){
-                create_alert("success", "User already owns this extension", "");
-            } else {
-                window.open(checkoutUrl.url, '_blank').focus();
+            try {
+                checkoutButtons.addClass("disabled");
+                button.html("<i class='fa fa-circle-notch fa-spin'></i> Loading checkout");
+                const checkoutUrl = await async_send_and_interpret_bot_update(data, url, null)
+                if(checkoutUrl.url === null){
+                    create_alert("success", "User already owns this extension", "");
+                } else {
+                    const newTab = window.open(checkoutUrl.url, '_blank');
+                    if(newTab !== null) {
+                        newTab.focus();
+                    }
+                }
+            } finally {
+                checkoutButtons.removeClass("disabled");
+                button.html(origin_val);
             }
         })
     }
 
     showModalIfNecessary();
     registerTriggerCheckout();
+    handlePaymentWaiter();
 });
