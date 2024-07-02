@@ -250,6 +250,14 @@ a:hover {
     color: var(--mdb-button-color) !important;
 }
 
+/* modal */
+.close {
+    color: var(--mdb-primary);  /* ensure close button is visible in both themes */
+}
+.close:hover {
+    color: var(--mdb-secondary);  /* ensure close button is visible in both themes */
+}
+
 /* plotly */
 .gtitle, .xtitle, .xtick text {
     fill: var(--mdb-primary) !important;
