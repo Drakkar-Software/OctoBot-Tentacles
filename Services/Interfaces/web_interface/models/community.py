@@ -47,7 +47,8 @@ def update_owned_packages():
 
 
 def has_open_source_package() -> bool:
-    return bool(get_owned_packages())
+    authenticator = authentication.Authenticator.instance()
+    return authenticator.has_open_source_package()
 
 
 def get_checkout_url(payment_method, redirect_url) -> (bool, str):
