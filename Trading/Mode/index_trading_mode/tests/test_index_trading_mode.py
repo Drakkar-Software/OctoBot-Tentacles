@@ -465,8 +465,8 @@ async def test_get_rebalance_details(tools):
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
         ) as get_holdings_ratio_mock:
             with mock.patch.object(
-                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
-            ) as get_removed_coins_from_previous_config_mock:
+                mode, "get_removed_coins_from_config", mock.Mock(return_value=[])
+            ) as get_removed_coins_from_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is False
                 assert details == {
@@ -477,13 +477,13 @@ async def test_get_rebalance_details(tools):
                     index_trading.RebalanceDetails.SWAP.value: {},
                 }
                 assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-                get_removed_coins_from_previous_config_mock.assert_called_once()
+                get_removed_coins_from_config_mock.assert_called_once()
                 _resolve_swaps_mock.assert_called_once_with(details)
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
             with mock.patch.object(
-                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
-            ) as get_removed_coins_from_previous_config_mock:
+                    mode, "get_removed_coins_from_config", mock.Mock(return_value=["SOL", "ADA"])
+            ) as get_removed_coins_from_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
@@ -498,7 +498,7 @@ async def test_get_rebalance_details(tools):
                 }
                 assert get_holdings_ratio_mock.call_count == \
                        len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
-                get_removed_coins_from_previous_config_mock.assert_called_once()
+                get_removed_coins_from_config_mock.assert_called_once()
                 _resolve_swaps_mock.assert_called_once_with(details)
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
@@ -506,8 +506,8 @@ async def test_get_rebalance_details(tools):
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.2"))
         ) as get_holdings_ratio_mock:
             with mock.patch.object(
-                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=[])
-            ) as get_removed_coins_from_previous_config_mock:
+                    mode, "get_removed_coins_from_config", mock.Mock(return_value=[])
+            ) as get_removed_coins_from_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
@@ -522,13 +522,13 @@ async def test_get_rebalance_details(tools):
                     index_trading.RebalanceDetails.SWAP.value: {},
                 }
                 assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins)
-                get_removed_coins_from_previous_config_mock.assert_called_once()
+                get_removed_coins_from_config_mock.assert_called_once()
                 _resolve_swaps_mock.assert_called_once_with(details)
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
             with mock.patch.object(
-                    mode, "get_removed_coins_from_previous_config", mock.Mock(return_value=["SOL", "ADA"])
-            ) as get_removed_coins_from_previous_config_mock:
+                    mode, "get_removed_coins_from_config", mock.Mock(return_value=["SOL", "ADA"])
+            ) as get_removed_coins_from_config_mock:
                 should_rebalance, details = producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
@@ -547,7 +547,7 @@ async def test_get_rebalance_details(tools):
                 }
                 assert get_holdings_ratio_mock.call_count == \
                        len(mode.indexed_coins) + len(details[index_trading.RebalanceDetails.REMOVE.value])
-                get_removed_coins_from_previous_config_mock.assert_called_once()
+                get_removed_coins_from_config_mock.assert_called_once()
                 _resolve_swaps_mock.assert_called_once_with(details)
                 _resolve_swaps_mock.reset_mock()
                 get_holdings_ratio_mock.reset_mock()
@@ -628,10 +628,11 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.reset_mock()
 
 
-async def test_get_removed_coins_from_previous_config(tools):
+async def test_get_removed_coins_from_config(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
-    assert mode.get_removed_coins_from_previous_config() == []
+    mode.sell_unindexed_traded_coins = False
+    assert mode.get_removed_coins_from_config([]) == []
     mode.trading_config = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
@@ -642,6 +643,7 @@ async def test_get_removed_coins_from_previous_config(tools):
             }
         ]
     }
+    assert mode.get_removed_coins_from_config([]) == []
     mode.previous_trading_config = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
@@ -662,7 +664,23 @@ async def test_get_removed_coins_from_previous_config(tools):
             }
         ]
     }
-    assert mode.get_removed_coins_from_previous_config() == ["BB"]
+    assert mode.get_removed_coins_from_config([]) == ["BB"]
+    # with sell_unindexed_traded_coins=True
+    mode.sell_unindexed_traded_coins = True
+    mode.indexed_coins = ["BTC"]
+    mode.previous_trading_config = None
+    assert mode.get_removed_coins_from_config(["BTC", "ETH"]) == ["ETH"]
+    mode.previous_trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "AA"
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BB"
+            }
+        ]
+    }
+    assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH"])) == sorted(["ETH", "BB"])
 
 
 async def test_create_new_orders(tools):
@@ -776,7 +794,7 @@ async def test_ensure_enough_funds_to_buy_after_selling(tools):
         consumer, "_get_symbols_and_amounts", mock.AsyncMock()
     ) as _get_symbols_and_amounts_mock:
         await consumer._ensure_enough_funds_to_buy_after_selling()
-        get_traded_assets_holdings_value_mock.assert_called_once_with("USDT")
+        get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
         _get_symbols_and_amounts_mock.assert_called_once_with(["BTC"], decimal.Decimal("2000"))
 
 
@@ -959,7 +977,7 @@ async def test_split_reference_market_into_indexed_coins(tools):
             assert await consumer._split_reference_market_into_indexed_coins(details) == ["order", "order"]
             _get_symbols_and_amounts_mock.assert_called_once()
             _get_symbols_and_amounts_mock.reset_mock()
-            get_traded_assets_holdings_value_mock.assert_called_once_with("USDT")
+            get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
             get_currency_portfolio_mock.assert_not_called()
             assert _buy_coin_mock.call_count == 2
             assert _buy_coin_mock.mock_calls[0].args == ("ETH/USDT", decimal.Decimal("1"))
