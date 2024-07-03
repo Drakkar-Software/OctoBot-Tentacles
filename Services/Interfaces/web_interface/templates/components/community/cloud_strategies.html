@@ -2,7 +2,7 @@
 {% import 'components/community/octobot_cloud_description.html' as octobot_cloud_description %}
 {% import "components/community/octobot_cloud_features.html" as octobot_cloud_features %}
 
-{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME) -%}
+{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME, has_open_source_package) -%}
 <div class="card">
     <div class="card-header justify-content-between flex-wrap">
         <h2>
@@ -48,5 +48,13 @@
     <div class="card-body">
         {{ m_cloud_strategies_selector.cloud_strategies_selector(strategies, LOCALE, "") }}
     </div>
+    {% if not has_open_source_package() %}
+    <div class="card-footer text-center">
+        <i class="fa fa-info-circle"></i>
+        OctoBot cloud <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/{{LOCALE}}/features/crypto-basket">
+            crypto baskets
+        </a> can also be used with your OctoBot when using the <a href="{{ url_for('extensions') }}">{{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}</a>.
+    </div>
+    {% endif %}
 </div>
 {%- endmacro %}

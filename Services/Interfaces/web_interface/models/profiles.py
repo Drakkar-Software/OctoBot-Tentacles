@@ -24,6 +24,7 @@ import octobot_trading.util as trading_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot.constants as constants
 import octobot.community as community
+import octobot.community.errors as community_errors
 
 
 ACTIVATION = "activation"
@@ -169,6 +170,10 @@ def import_profile(profile_path, name, profile_url=None):
 
 
 def import_strategy_as_profile(authenticator, strategy: community.StrategyData, name: str, description: str):
+    if strategy.is_extension_only() and not authenticator.has_open_source_package():
+        raise community_errors.ExtensionRequiredError(
+            f"The {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} is required to install this strategy"
+        )
     profile_data = interfaces_util.run_in_bot_main_loop(authenticator.get_strategy_profile_data(strategy.id))
 
     profile = interfaces_util.run_in_bot_main_loop(
@@ -179,8 +184,9 @@ def import_strategy_as_profile(authenticator, strategy: community.StrategyData, 
             name=name,
             description=description,
             risk=strategy.get_risk(),
-            origin_url=strategy.get_url(),
+            origin_url=strategy.get_product_url(),
             logo_url=strategy.logo_url,
+            auto_update=strategy.is_auto_updated()
         )
     )
     interfaces_util.get_edited_config(dict_only=False).load_profiles()
