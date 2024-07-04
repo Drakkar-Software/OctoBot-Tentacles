@@ -447,7 +447,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.refresh_interval_days = 1
         self.rebalance_trigger_min_ratio = decimal.Decimal("0.05")  # 5%
         self.ratio_per_asset = {}
-        self.sell_unindexed_traded_coins = False
+        self.sell_unindexed_traded_coins = True
         self.total_ratio_per_asset = trading_constants.ZERO
         self.indexed_coins = []
 
@@ -539,7 +539,8 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def get_removed_coins_from_config(self, available_traded_bases) -> list:
         removed_coins = []
-        if self.sell_unindexed_traded_coins:
+        if self.get_ideal_distribution() and self.sell_unindexed_traded_coins:
+            # only remove non indexed coins if an ideal distribution is set
             removed_coins = [
                 coin
                 for coin in available_traded_bases
