@@ -35,7 +35,7 @@ $(document).ready(function() {
                 const has_open_source_package_resp = await async_send_and_interpret_bot_update(null, url, null)
                 if(has_open_source_package_resp.has_open_source_package){
                     hasExtension = true
-                    document.location.href = window.location.href.replace("&loop=true", "");
+                    document.location.href = window.location.href.replace("&loop=true", "").replace("?refresh_packages=true", "");
                 } else {
                     await new Promise(r => setTimeout(r, 3000));
                 }
