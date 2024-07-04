@@ -15,8 +15,9 @@
 #  License along with this library.
 
 class WebInterfaceTab:
-    def __init__(self, identifier, route, display_name, location):
+    def __init__(self, identifier, route, display_name, location, requires_open_source_package):
         self.identifier = identifier
         self.route = route
         self.display_name = display_name
         self.location = location
+        self.requires_open_source_package = location
