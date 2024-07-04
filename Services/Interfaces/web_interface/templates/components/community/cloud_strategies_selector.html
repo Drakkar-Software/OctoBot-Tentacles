@@ -16,7 +16,7 @@
         {% for strategy in strategies %}
             <tr>
                 <td>
-                    <a href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector" target="_blank">
+                    <a href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector_strategy_name" target="_blank">
                         <div class="row">
                             <div class="col-4 pr-1">
                                 <img class="img-fluid package_row_image"
@@ -49,7 +49,7 @@
                 <td class="align-middle">
                     {% if strategy.category %}
                         {% if strategy.category.get_url() %}
-                            <a href="{{strategy.category.get_url()}}" target="_blank">
+                            <a href="{{strategy.category.get_url()}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector_strategy_category" target="_blank">
                                 {{ strategy.category.get_name(locale) }} <i class="fas fa-external-link-alt"></i>
                             </a>
                         {% else %}
