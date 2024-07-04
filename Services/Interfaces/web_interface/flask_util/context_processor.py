@@ -108,9 +108,10 @@ def register_context_processor(web_interface_instance):
             ]
 
         def get_plugin_tabs(location):
+            has_open_source_package = models.has_open_source_package()
             for plugin in web_interface_instance.registered_plugins:
                 for tab in plugin.get_tabs():
-                    if tab.location is location:
+                    if tab.location is location and (not tab.requires_open_source_package or has_open_source_package):
                         yield tab
 
         def is_in_stating_community_env():
