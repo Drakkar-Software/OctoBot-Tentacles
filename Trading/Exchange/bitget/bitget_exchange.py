@@ -80,11 +80,7 @@ class BitgetCCXTAdapter(exchanges.CCXTAdapter):
     def fix_trades(self, raw, **kwargs):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
-            # fees example for paid fees in USDT:
-            # {'code': 'USDT', 'cost': -0.015922}
             fee = trade[trading_enums.ExchangeConstantsOrderColumns.FEE.value]
             if trading_enums.FeePropertyColumns.CURRENCY.value not in fee:
                 fee[trading_enums.FeePropertyColumns.CURRENCY.value] = fee.get("code")
-            if fee[trading_enums.FeePropertyColumns.COST.value]:
-                fee[trading_enums.FeePropertyColumns.COST.value] *= -1
         return raw
