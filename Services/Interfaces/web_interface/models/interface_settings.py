@@ -57,6 +57,27 @@ def set_color_mode(color_mode: str):
     return _save_edition()
 
 
+def set_display_announcement(key: str, display: bool):
+    try:
+        get_web_interface_config()[
+            web_interface.WebInterface.ANNOUNCEMENTS
+        ][key] = display
+    except KeyError:
+        get_web_interface_config()[
+            web_interface.WebInterface.ANNOUNCEMENTS
+        ] = {key: display}
+    return _save_edition()
+
+
+def get_display_announcement(key: str) -> bool:
+    try:
+        return get_web_interface_config()[
+            web_interface.WebInterface.ANNOUNCEMENTS
+        ][key]
+    except KeyError:
+        return True
+
+
 def get_color_mode() -> web_enums.ColorModes:
     return web_enums.ColorModes(get_web_interface_config().get(
         web_interface.WebInterface.COLOR_MODE, web_enums.ColorModes.DEFAULT.value

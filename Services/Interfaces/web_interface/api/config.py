@@ -69,6 +69,13 @@ def register(blueprint):
         return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
 
 
+    @blueprint.route('/hide_announcement<key>', methods=["POST"])
+    @login.login_required_when_activated
+    def hide_announcement(key):
+        models.set_display_announcement(key, False)
+        return util.get_rest_reply(flask.jsonify(""), 200)
+
+
     @blueprint.route('/start_copy_trading', methods=["POST"])
     @login.login_required_when_activated
     def start_copy_trading():
