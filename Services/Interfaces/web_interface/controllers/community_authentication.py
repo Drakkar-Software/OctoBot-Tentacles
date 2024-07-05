@@ -60,7 +60,7 @@ def register(blueprint):
                 except Exception as e:
                     logging.get_logger("CommunityAuthentication").exception(e, False)
                     flask.flash(f"Error during authentication: {e}", "error")
-        if flask.request.method == 'POST' and next_url:
+        if flask.request.method == 'POST' and next_url and authenticator.is_logged_in():
             return flask.redirect(next_url)
         return flask.render_template('community_login.html',
                                      form=form,
