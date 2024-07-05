@@ -46,6 +46,7 @@ class WebInterface(services_interfaces.AbstractWebInterface):
 
     REQUIRED_SERVICES = [Service_bases.WebService]
     COLOR_MODE = "color_mode"
+    ANNOUNCEMENTS = "announcements"
     DISPLAY_TIME_FRAME = "display_time_frame"
     DISPLAY_ORDERS = "display_orders"
     WATCHED_SYMBOLS = "watched_symbols"

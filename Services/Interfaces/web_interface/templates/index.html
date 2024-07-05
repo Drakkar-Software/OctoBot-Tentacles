@@ -3,6 +3,26 @@
 {% block body %}
     <br>
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
+
+    {% if display_ph_launch %}
+    <div class="alert alert-primary text-center" role="alert">
+        <h5 class="">
+            🎉 Major news! OctoBot is launching on Product Hunt {{'today' if is_launching else 'on the 10th of July'}}.
+            {% if not is_launching %}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" data-role="hide-announcement" data-url="{{url_for('api.hide_announcement', key='product_hunt_announcement')}}">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            {% endif %}
+        </h5>
+        <p class="text-center pt-3 mb-0">
+            <a href="https://www.producthunt.com/posts/octobot-open-source?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-octobot&#0045;open&#0045;source" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=463219&theme={{get_color_mode()}}" alt="OctoBot&#0032;open&#0032;source - Your&#0032;open&#0032;source&#0032;investment&#0032;strategy&#0032;builder | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
+        </p>
+        <p class="text-center pt-3 mb-0">
+            Follow the launch to get your exclusive discount.
+        </p>
+    </div>
+    {% endif %}
     {% if not IS_CLOUD %}
     <div class="d-none alert alert-success text-center my-2" role="alert">
         <h5 class="d-none d-sm-inline"><span class="d-none d-md-inline"><i class="far fa-bell"></i> Good news ! </span>OctoBot version <span update-url="{{ url_for('api.upgrade_version') }}" id="upgradeVersion"></span> is available.</h5><button route="{{ url_for('commands', cmd='update') }}" type="button" class="btn btn-warning waves-effect">Upgrade now <i class="fas fa-cloud-download-alt"></i></button>

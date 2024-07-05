@@ -17,6 +17,14 @@
  */
 
 $(document).ready(function () {
+    const handleAnnouncementsHide = () => {
+        $("button[data-role=\"hide-announcement\"]").click(async (event) => {
+            const source = $(event.currentTarget);
+            const url = source.data("url");
+            await async_send_and_interpret_bot_update(undefined, url);
+        })
+    }
+
     function _refresh_profitability(socket) {
         socket.emit('profitability');
         waiting_profitability_update = false;
@@ -265,6 +273,7 @@ $(document).ready(function () {
     init_dashboard_websocket();
     init_graphs();
     registerConfigUpdates();
+    handleAnnouncementsHide();
     if(!startTutorialIfNecessary("home", displayFeedbackFormIfNecessary)){
         displayFeedbackFormIfNecessary()
     }
