@@ -2,7 +2,7 @@
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
 {% import 'components/modals/generic_modal.html' as m_generic_modal %}
 <!doctype html>
-<html lang="en">
+<html lang="en" data-mdb-theme="{{get_color_mode()}}">
     {% set active_page = active_page|default('home') -%}
     {% set page_title = page_title|default(active_page | replace("_", " ") | capitalize) -%}
     {% set startup_messages_added_classes = startup_messages_added_classes|default('') -%}
@@ -35,7 +35,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css" integrity="sha384-YzEqZ2pBV0i9OmlTyoz75PqwTR8If8GsXBv7HLQclEVqIC3VxIt98/U94ES6CJTR" crossorigin="anonymous">
 
         <!-- mdb CSS -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" integrity="sha384-VB0/w/SA4yj77RioXx1gUta4sczGrqbM4McYM8Lbixo0bQjK270LMDrUcp12DETJ" rel="stylesheet" crossorigin="anonymous">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.min.css" integrity="kj1RBJ7aqGUnavWQDbYyovF5HQGHlvNf6SZ2CfaCNkoBJBEux2JXFCXqGZTAYENh" rel="stylesheet" crossorigin="anonymous">
 
         <!-- Datatables -->
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css" integrity="sha384-IDaX67uymf7bFJTnGqJdas2mKfz+0XonrvcR/ZLiQBW4NCINz7BMJYwX+6tlg9y0" crossorigin="anonymous">
@@ -59,7 +59,7 @@
         {% block additional_style %}
         {% endblock additional_style %}
     </head>
-    <body class="bg-dark" style="{% block body_style %}{% endblock body_style %}">
+    <body style="{% block body_style %}{% endblock body_style %}">
         <!-- Scripts -->
         <!-- At the beginning of the page : be available for template scripts -->
         <script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha384-UG8ao2jwOWB7/oDdObZc6ItJmwUkR/PfMyt9Qs5AwX7PsnYn1CRKCTWyncPTWvaS" crossorigin="anonymous"></script>
@@ -68,7 +68,7 @@
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js" integrity="sha384-VDls8ImYGI8SwVxpmjX2Bn27U2TcNodzTNROTusVEWO55+lmL+H9NczoQJk6mwZR" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js" integrity="sha384-FbwKLBNNjVSNRt5ofr/4WX4UOVqG2xcQwoOipC0xnFMB/BqfRaDsuyKay/hVaPE6" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js" integrity="sha384-TGRlbFTmiVIUuSy+b/aj9mHaUTABC3gid02pJimnu14vfLMvOzODXgRmw03nf7vs" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha384-GP2+CwBlakZSDJUr+E4JvbxpM75i1i8+RKkieQxzuyDZLG+5105E1OfHIjzcXyWH" crossorigin="anonymous"></script>
         <script src="https://cdn.plot.ly/plotly-2.20.0.min.js" integrity="sha384-lqNbLAc8irUVsiXijo8d5LY0Ecc43bEe85kyAJgdi+CAvmBPO/L1SWp6EUxChKM/" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.9.1/dist/jsoneditor.min.js" integrity="sha384-dD6cprB8r+EJi9stkRzdAs5tfIzdCeXU+ztMGBgC3U2KIQBzSYTv7rqJQp1fJmMs" crossorigin="anonymous"></script>
@@ -102,7 +102,7 @@
         {% set show_nab_bar = show_nab_bar|default(True) -%}
 
         {% if show_nab_bar %}
-            <nav class="navbar navbar-expand-lg navbar-dark sticky-top py-0 py-md-2" id="main-nav-bar">
+            <nav class="navbar navbar-expand-lg sticky-top py-0 py-md-2" id="main-nav-bar">
                 <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                     <ul class="navbar-nav mr-auto" id="main-nav-left-part">
                         <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
@@ -120,12 +120,10 @@
                         <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
                             <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
                         </li>
-                        {% if are_automations_enabled %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'automations' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('automations') }}" aria-label="Logs">
-                                <i class="d-inline d-xl-none fa-solid fa-repeat" data-toggle="tooltip" data-placement="top" title="Automations"></i>
-                                <span class="d-none d-xl-inline">Automations</span></a>
-                        </li>
+                        {% if not has_open_source_package() %}
+                            <li class="nav-item mx-1 px-0 my-auto">
+                                <a class="nav-link" href="{{ url_for('extensions') }}"><i class="fa-solid fa-lock"></i> Strategy design</a>
+                            </li>
                         {% endif %}
                         {% for plugin_tab in get_plugin_tabs(TAB_START) %}
                         <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
@@ -134,15 +132,18 @@
                         {% endfor %}
                     </ul>
                 </div>
-                <div class="mx-auto order-0">
+                <div class="d-flex mx-auto order-0">
                     <a class="navbar-brand mx-auto font-weight-bolder" href="{{ url_for('home') }}">
                         {% if is_in_stating_community_env() %}
                         <span class="badge badge-light">
                             Beta
                         </span>
                         {% endif %}
-                        OctoBot
-                        <i id="navbar-bot-status" class="fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i>
+                        <img
+                            src="{{url_for('static', filename='img/octobot-logo-'+get_color_mode()+'.png')}}" alt="octobot-logo"
+                            class="navbar-logo"
+                        > OctoBot
+                        <i id="navbar-bot-status" class="ml-2 fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i>
                     </a>
                     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2">
                         <span class="navbar-toggler-icon"></span>
@@ -183,6 +184,14 @@
                                 <span id="errors-count-badge" class="badge badge-warning"></span>
                             </i></a>
                         </li>
+                        <li class="nav-item mx-1 px-0 my-auto {% if 'logs' == active_page %} active{% endif %}">
+                            <a id="theme-switch" class="nav-link" href="#" aria-label="Switch theme" data-update-url="{{url_for('api.display_config')}}">
+                                <i class="{{'fa fa-moon' if get_color_mode() == 'light' else 'fas fa-sun'}}" data-toggle="tooltip" data-placement="top"
+                                   title="Use {{'dark' if get_color_mode() == 'light' else 'light'}} theme">
+                            </i></a>
+                        </li>
+
+
                         {% if is_advanced_interface_enabled %}
                         <li class="nav-item my-auto">
                             <a class="nav-link mx-1 px-0" href="{{ url_for('advanced.home') }}" aria-label="Advanced OctoBot"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>

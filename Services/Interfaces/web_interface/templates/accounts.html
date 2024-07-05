@@ -25,23 +25,23 @@
         </div>
         <div class="nav flex-column bordered pt-0 mt-0 mt-md-4" id="v-tab" role="tablist" aria-orientation="vertical">
           <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab="default" id="panelExchanges-tab" data-toggle="pill" href="#panelExchanges" role="tab" aria-controls="panelExchanges" aria-selected="false">
-              <i class="fas fa-exchange-alt"></i><span class="d-none d-md-block pl-3">Exchanges</span>
+              <i class="fas fa-exchange-alt my-auto"></i><span class="d-none d-md-block pl-3">Exchanges</span>
           </a>
           <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelServices-tab" data-toggle="pill" href="#panelServices" role="tab" aria-controls="panelServices" aria-selected="false">
-              <i class="fas fa-share-alt"></i><span class="d-none d-md-block pl-3">Interfaces</span>
+              <i class="fas fa-share-alt my-auto"></i><span class="d-none d-md-block pl-3">Interfaces</span>
           </a>
           <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelNotifications-tab" data-toggle="pill" href="#panelNotifications" role="tab" aria-controls="panelNotifications" aria-selected="false">
-              <i class="fas fa-bell"></i><span class="d-none d-md-block pl-3">Notifications</span>
+              <i class="fas fa-bell my-auto"></i><span class="d-none d-md-block pl-3">Notifications</span>
           </a>
         </div>
-        <a class="nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}">
-            <i class="fas fa-save"></i><span class="d-none d-md-block pl-2">Save</span>
+        <a class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}">
+            <i class="fas fa-save my-auto"></i><span class="d-none d-md-block pl-2">Save</span>
         </a>
-        <a class="nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#" role="tab" aria-selected="false">
-            <i class="fas fa-redo-alt"></i><span class="d-none d-md-block pl-2">Reset all</span>
+        <a class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0" id="reset-config" href="#" role="tab" aria-selected="false">
+            <i class="fas fa-redo-alt my-auto"></i><span class="d-none d-md-block pl-2">Reset all</span>
         </a>
-        <button class="nav-link pl-2 pl-sm-3 btn red waves-effect d-flex mx-0 mx-md-auto mt-3 mt-mb-5 mb-5" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}">
-            <i class="fas fa-power-off"></i><span class="d-none d-md-block pl-2">Apply changes and restart</span>
+        <button class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0 mt-3 mt-mb-5 mb-5" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}">
+            <i class="fas fa-power-off my-auto"></i><span class="d-none d-md-block pl-2">Apply changes and restart</span>
         </button>
     </div>
   </nav>
@@ -59,7 +59,7 @@
             <div class="card-body deck-container">
                 <div class="card" id="new-exchange-selector">
                     <div class="card-body">Add a new exchange :
-                        <select id="AddExchangeSelect" class="selectpicker" data-live-search="true">
+                        <select id="AddExchangeSelect" class="selectpicker" data-live-search="true" data-window-padding="50">
                             <optgroup label="OctoBot fully tested">
                                {% for exchange in ccxt_tested_exchanges %}
                                     {% set has_ws = exchanges_details[exchange] and exchanges_details[exchange]['has_websockets'] %}
@@ -123,7 +123,7 @@
                 <div class="card-deck config-container" update-url="{{ url_for('config') }}">
                     {% for service in services_list %}
                         {% if service in config_services %}
-                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service]) }}
+                            {{ m_config_service_card.config_service_card(config_services, service, services_list[service], extension_name=OCTOBOT_EXTENSION_PACKAGE_1_NAME) }}
                         {% endif %}
                     {% endfor %}
                 </div>
@@ -175,7 +175,8 @@
                                                            services_list[service],
                                                            add_class=added_class,
                                                            no_select=True,
-                                                           default_values=True ) }}
+                                                           default_values=True,
+                                                           extension_name=OCTOBOT_EXTENSION_PACKAGE_1_NAME) }}
             </div>
         {% endfor %}
     </div>

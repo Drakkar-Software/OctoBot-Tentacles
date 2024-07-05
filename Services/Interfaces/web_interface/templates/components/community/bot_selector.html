@@ -5,7 +5,7 @@
     </h4>
     <div id="bot-selector" data-update-url="{{ url_for('api.select_bot') }}">
         {% for bot in all_user_bots %}
-        <div class="row">
+        <div class="row my-2">
             <div class="col-8">
                 {{ bot["name"] }}
             </div>

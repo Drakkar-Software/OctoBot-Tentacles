@@ -59,9 +59,12 @@ TIME_AXIS_TITLE = "Time"
 
 
 def dir_last_updated(folder):
-    return str(max(os.path.getmtime(os.path.join(root_path, f))
-                   for root_path, dirs, files in os.walk(folder)
-                   for f in files))
+    update_times = [
+        os.path.getmtime(os.path.join(root_path, f))
+        for root_path, dirs, files in os.walk(folder)
+        for f in files
+    ]
+    return str(max(update_times + [0]))  # add 0 not to crash if no files are found
 
 
 LAST_UPDATED_STATIC_FILES = 0
@@ -69,12 +72,14 @@ LAST_UPDATED_STATIC_FILES = 0
 
 def update_registered_plugins(plugins):
     global LAST_UPDATED_STATIC_FILES
-    last_update_time = float(LAST_UPDATED_STATIC_FILES)
+    last_update_time = max(
+        float(LAST_UPDATED_STATIC_FILES),
+        float(dir_last_updated(os.path.join(os.path.dirname(__file__), "static")))
+    )
     for plugin in plugins:
         if plugin.static_folder:
             last_update_time = max(
                 last_update_time,
-                float(dir_last_updated(os.path.join(os.path.dirname(__file__), "static"))),
                 float(dir_last_updated(plugin.static_folder))
             )
     LAST_UPDATED_STATIC_FILES = last_update_time

@@ -2,7 +2,7 @@
 {% import 'components/community/octobot_cloud_description.html' as octobot_cloud_description %}
 {% import "components/community/octobot_cloud_features.html" as octobot_cloud_features %}
 
-{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE) -%}
+{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME, has_open_source_package) -%}
 <div class="card">
     <div class="card-header justify-content-between flex-wrap">
         <h2>
@@ -30,12 +30,17 @@
                     <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/en/blog?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_blog" target="_blank" rel="noopener"> our blog</a>.
                 </p>
                 <p>
-                    Explore the OctoBot cloud on <a href="{{OCTOBOT_COMMUNITY_URL}}/strategies?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">app.octobot.cloud</a>.
+                    Explore the OctoBot cloud strategies on <a href="{{OCTOBOT_COMMUNITY_URL}}/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">app.octobot.cloud</a>.
                 </p>
 
-                <a href="{{ url_for('about') }}"
-                   class="btn btn-sm btn-outline-info waves-effect">
-                    <i class="fa fa-arrow-right"></i> Learn more on OctoBot cloud
+                <p>
+                    Do you want increase the capabilities your OctoBot while supporting the project?
+                    Check out the {{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}
+                </p>
+
+                <a href="{{ url_for('extensions') }}"
+                   class="btn btn-sm btn-primary waves-effect">
+                    <i class="fa fa-arrow-right"></i> View the {{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}
                 </a>
             </div>
         </div>
@@ -43,5 +48,13 @@
     <div class="card-body">
         {{ m_cloud_strategies_selector.cloud_strategies_selector(strategies, LOCALE, "") }}
     </div>
+    {% if not has_open_source_package() %}
+    <div class="card-footer text-center">
+        <i class="fa fa-info-circle"></i>
+        OctoBot cloud <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/{{LOCALE}}/features/crypto-basket?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_package_baskets_text">
+            crypto baskets
+        </a> can also be used with your OctoBot when using the <a href="{{ url_for('extensions') }}">{{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}</a>.
+    </div>
+    {% endif %}
 </div>
 {%- endmacro %}

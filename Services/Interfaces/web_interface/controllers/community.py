@@ -16,6 +16,7 @@
 import flask
 
 import octobot_commons.authentication as authentication
+import octobot.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
@@ -48,6 +49,7 @@ def register(blueprint):
             selected_user_bot=models.get_selected_user_bot(),
             can_logout=models.can_logout(),
             can_select_bot=models.can_select_bot(),
+            has_owned_packages_to_install=models.has_owned_packages_to_install(),
         )
 
 
@@ -61,3 +63,28 @@ def register(blueprint):
                                      can_get_metrics=can_get_metrics,
                                      community_metrics=display_metrics
                                      )
+
+    @blueprint.route("/extensions")
+    @login.login_required_when_activated
+    def extensions():
+        refresh_packages = flask.request.args.get("refresh_packages") if flask.request.args else "false"
+        loop = flask.request.args.get("loop") if flask.request.args else "false"
+        authenticator = authentication.Authenticator.instance()
+        logged_in_email = None
+        try:
+            models.wait_for_login_if_processing()
+            logged_in_email = authenticator.get_logged_in_email()
+            if refresh_packages.lower() == "true":
+                models.update_owned_packages()
+        except (authentication.AuthenticationRequired, authentication.UnavailableError):
+            pass
+        except Exception as e:
+            flask.flash(f"Error when contacting the community server: {e}", "error")
+        return flask.render_template(
+            'extensions.html',
+            current_logged_in_email=logged_in_email,
+            is_community_authenticated=logged_in_email is not None,
+            price=constants.OCTOBOT_EXTENSION_PACKAGE_1_PRICE,
+            auto_refresh_packages=refresh_packages and loop == "true",
+            has_owned_packages_to_install=models.has_owned_packages_to_install(),
+        )

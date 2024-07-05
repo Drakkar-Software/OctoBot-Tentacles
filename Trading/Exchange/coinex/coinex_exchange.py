@@ -29,6 +29,12 @@ class Coinex(exchanges.RestExchange):
 
     MAX_PAGINATION_LIMIT: int = 100
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
+        # ExchangeError('coinex Order not found')
+        ("order not found", )
+    ]
+
     @classmethod
     def get_name(cls):
         return 'coinex'
@@ -88,6 +94,29 @@ class CoinexCCXTAdapter(exchanges.CCXTAdapter):
                 # convert amount to have the same units as evert other exchange: use FILLED for accuracy
                 fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
                     fixed[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
+            if fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] is None:
+                fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
+                    trading_enums.OrderStatus.CLOSED.value
         except KeyError:
             pass
+        return fixed
+
+    def fix_trades(self, raw, **kwargs):
+        raw = super().fix_trades(raw, **kwargs)
+        for trade in raw:
+            info = trade[ccxt_constants.CCXT_INFO]
+            # fees are not parsed by ccxt
+            fee = trade[trading_enums.ExchangeConstantsOrderColumns.FEE.value] or {}
+            if not fee.get(trading_enums.FeePropertyColumns.CURRENCY.value):
+                fee[trading_enums.FeePropertyColumns.CURRENCY.value] = info.get("fee_ccy")
+            if not fee.get(trading_enums.FeePropertyColumns.COST.value):
+                fee[trading_enums.FeePropertyColumns.COST.value] = info.get("fee")
+            trade[trading_enums.ExchangeConstantsOrderColumns.FEE.value] = fee
+            self._register_exchange_fees(trade)
+        return raw
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
+            fixed.get(trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value) or self.connector.client.seconds()
         return fixed

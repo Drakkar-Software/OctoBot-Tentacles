@@ -4,6 +4,7 @@
 {% import "components/community/bot_selector.html" as bot_selector %}
 {% import "components/community/cloud_strategies.html" as cloud_strategies_display %}
 {% import "components/community/bots_stats.html" as bots_stats %}
+{% import "components/community/tentacle_packages.html" as m_tentacle_packages %}
 {% import 'macros/flash_messages.html' as m_flash_messages %}
 
 {% block body %}
@@ -14,11 +15,12 @@
 
 {{ m_flash_messages.flash_messages() }}
 
-{{ cloud_strategies_display.cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE) }}
+{{ m_tentacle_packages.pending_tentacles_install_modal(has_owned_packages_to_install and not auto_refresh_packages) }}
+{{ cloud_strategies_display.cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME, has_open_source_package) }}
 
 <div class="card">
     <div class="card-body">
-        <div class="alert alert-dark row py-0">
+        <div class="row py-0">
             <div class="col-8 my-auto">
                 <h5 class="p-0 my-0">
 
@@ -62,7 +64,7 @@
         <div class="modal" id="bot-select-modal" tabindex="-1" role="dialog"
              aria-labelledby="#display-bot-select-modal" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-            <div class="modal-content modal-text bg-dark text-light">
+            <div class="modal-content modal-text">
               <div class="modal-header primary-text">
                 <h2 class="modal-title">Bot selection</h2>
                     {% if can_logout and not selected_user_bot["id"]%}
@@ -74,7 +76,7 @@
                     </div>
                     {% endif %}
                   {% if selected_user_bot["id"] %}
-                    <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                       <span aria-hidden="true">&times;</span>
                     </button>
                   {% endif %}
@@ -93,5 +95,6 @@
 {% endblock %}
 
 {% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/extensions.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/components/community.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

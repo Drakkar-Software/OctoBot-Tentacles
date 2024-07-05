@@ -2,7 +2,7 @@
 
 {% macro config_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False, include_modal=True) %}
     <a href="#" onclick="return false;"
-       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{ 'd-none' if strategy }} {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
+       class="col-md-6 col-lg-4 p-1 rounded list-group-item waves-effect {{ 'd-none' if strategy }} {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element"
        id={{ evaluator_name }} name={{ evaluator_name }}
        config-type="{{config_type}}" config-key={{evaluator_name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{startup_config[evaluator_name]}}
        requirements="{{info['requirements']}}"
@@ -16,12 +16,15 @@
             </i>
         </span>
         {% endif %}
-        {{ evaluator_name }}
+        <span class="ps-2">
+            {{ evaluator_name }}
+        </span>
+
         <span class="float-right">
             <span class="badge {{'badge-warning' if (evaluator_name in startup_config and startup_config[evaluator_name] != info['activation']) else ('badge-success' if info['activation'] else 'badge-secondary')}}">
                 {{('Activation pending restart' if info['activation'] else 'Deactivation pending restart') if (evaluator_name in startup_config and startup_config[evaluator_name] != info['activation']) else ('Activated' if info['activation'] else 'Deactivated')}}
             </span>
-            <button class="btn btn-outline-primary btn-md waves-effect" data-toggle="modal" data-target="#{{evaluator_name}}Modal" no-activation-click="true"><i class="fa fa-info-circle" no-activation-click="true"></i></button>
+            <button class="btn btn-outline-primary btn-md waves-effect" data-toggle="modal" data-target="#{{evaluator_name}}Modal" no-activation-click="true"><i class="fas fa-cog" no-activation-click="true"></i></button>
         </span>
     </a>
     {% if include_modal %}
@@ -31,13 +34,15 @@
 
 {% macro tentacle_evaluator_card(startup_config, evaluator_name, info, config_type, strategy=False) %}
     <a href="#" onclick="return false;"
-       class="col-md-6 col-lg-4 list-group-item list-group-item-action waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
+       class="col-md-6 col-lg-4 p-1 rounded list-group-item waves-effect {{'list-group-item-success' if info['activation'] else 'list-group-item-light'}} config-element hover_anim"
        id={{evaluator_name}} name={{ evaluator_name }}
        config-type={{config_type}} config-key={{evaluator_name}} current-value={{info['activation']}} config-value={{info['activation']}} startup-config-value={{startup_config[evaluator_name]}}
        requirements="{{info['requirements']}}"
        default-elements="{{info['default-config']}}"
        requirements-min-count="{{info['requirements-min-count']}}">
-        {{ evaluator_name }}
+        <span class="ps-2">
+            {{ evaluator_name }}
+        </span>
         <span class="float-right">
             <span class="badge {{'badge-warning' if startup_config[evaluator_name] != info['activation'] else ('badge-success' if info['activation'] else 'badge-secondary')}}">
                 {{('Activation pending restart' if info['activation'] else 'Deactivation pending restart') if startup_config[evaluator_name] != info['activation'] else ('Activated' if info['activation'] else 'Deactivated')}}
@@ -51,12 +56,12 @@
 {% macro evaluator_card_modal(evaluator_name, info, strategy=False, read_only=False) %}
     <div class="modal fade" id="{{evaluator_name}}Modal" tabindex="-1" role="dialog" aria-labelledby="#{{evaluator_name}}ModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
-        <div class="modal-content modal-text bg-dark text-light mt-4">
+        <div class="modal-content modal-text mt-4">
           <div class="modal-header primary-text">
               <h5 class="modal-title" id="#{{evaluator_name}}ModalLabel">
                   {{evaluator_name}}
               </h5>
-            <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>

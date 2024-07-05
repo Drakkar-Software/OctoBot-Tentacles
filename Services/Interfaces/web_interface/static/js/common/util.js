@@ -151,6 +151,10 @@ function isMediumDisplay() {
     return $(window).width() < medium_width_breakpoint;
 }
 
+const getTextColor = () => {
+    return getComputedStyle(document.body).getPropertyValue('--mdb-primary-text-emphasis')
+}
+
 const handle_rounded_numbers_display = () => {
     $(".rounded-number").each(function (){
         const text = $(this).text().trim();

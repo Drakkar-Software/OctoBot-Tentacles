@@ -13,11 +13,18 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import flask
+import functools
 
-class WebInterfaceTab:
-    def __init__(self, identifier, route, display_name, location, requires_open_source_package=False):
-        self.identifier = identifier
-        self.route = route
-        self.display_name = display_name
-        self.location = location
-        self.requires_open_source_package = requires_open_source_package
+import octobot.constants as constants
+import tentacles.Services.Interfaces.web_interface.models as models
+
+
+def open_source_package_required(func):
+    @functools.wraps(func)
+    def decorated_view(*args, **kwargs):
+        if models.has_open_source_package():
+            flask.flash(f"The {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} is required to use this page")
+            return func(*args, **kwargs)
+        return flask.redirect(flask.url_for('extensions'))
+    return decorated_view

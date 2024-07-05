@@ -100,7 +100,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _ensure_enough_funds_to_buy_after_selling(self):
         reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
             portfolio_value_holder.get_traded_assets_holdings_value(
-                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, None
             )
         # will raise if funds are missing
         await self._get_symbols_and_amounts(self.trading_mode.indexed_coins, reference_market_to_split)
@@ -111,7 +111,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             # has to infer total reference market holdings
             reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_traded_assets_holdings_value(
-                    self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                    self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, None
                 )
             coins_to_buy = list(details[RebalanceDetails.SWAP.value].values())
         else:
@@ -224,9 +224,11 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
+    SELL_UNINDEXED_TRADED_COINS = "sell_unindexed_traded_coins"
     INDEX_CONTENT = "index_content"
     MIN_INDEXED_COINS = 1
     ALLOWED_1_TO_1_SWAP_COUNTS = 1
+    MIN_RATIO_TO_SELL = decimal.Decimal("0.0001")  # 1/10000
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -330,11 +332,14 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             symbol.base
             for symbol in self.exchange_manager.exchange_config.traded_symbols
         )
-        for coin in self.trading_mode.get_removed_coins_from_previous_config():
+
+        for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
             if coin in available_traded_bases:
                 coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                    portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
-                if coin_ratio >= trading_constants.ZERO:
+                    portfolio_value_holder.get_holdings_ratio(
+                        coin, traded_symbols_only=True
+                    )
+                if coin_ratio >= self.MIN_RATIO_TO_SELL:
                     # coin to sell in portfolio
                     rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
                     should_rebalance = True
@@ -355,7 +360,9 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         # compute coins to buy or sell
         for coin in self.trading_mode.indexed_coins:
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                portfolio_value_holder.get_holdings_ratio(coin, traded_symbols_only=True)
+                portfolio_value_holder.get_holdings_ratio(
+                    coin, traded_symbols_only=True
+                )
             target_ratio = self.trading_mode.get_target_ratio(coin)
             beyond_ratio = True
             if coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO:
@@ -408,7 +415,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 removed, removed.values(), added, added.values()
             ):
                 added_holding_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                    portfolio_value_holder.get_holdings_ratio(added_coin, traded_symbols_only=True)
+                    portfolio_value_holder.get_holdings_ratio(
+                        added_coin, traded_symbols_only=True,
+                        coins_whitelist=self.trading_mode.get_coins_to_consider_for_ratio()
+                    )
                 required_added_ratio = added_ratio - added_holding_ratio
                 if (
                     removed_ratio - self.trading_mode.rebalance_trigger_min_ratio
@@ -437,6 +447,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.refresh_interval_days = 1
         self.rebalance_trigger_min_ratio = decimal.Decimal("0.05")  # 5%
         self.ratio_per_asset = {}
+        self.sell_unindexed_traded_coins = True
         self.total_ratio_per_asset = trading_constants.ZERO
         self.indexed_coins = []
 
@@ -458,6 +469,10 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             title="Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
                   "triggering a rebalance.",
         ))) / trading_constants.ONE_HUNDRED
+        self.sell_unindexed_traded_coins = self.trading_config.get(
+            IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS,
+            self.sell_unindexed_traded_coins
+        )
         self._update_coins_distribution()
 
     def _update_coins_distribution(self):
@@ -486,6 +501,9 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 coins.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
             return sorted(list(coins))
         return []
+
+    def get_coins_to_consider_for_ratio(self) -> list:
+        return self.indexed_coins + [self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market]
 
     def get_ideal_distribution(self):
         return self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
@@ -519,18 +537,27 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
             ]) if self.exchange_manager else []
 
-    def get_removed_coins_from_previous_config(self) -> list:
+    def get_removed_coins_from_config(self, available_traded_bases) -> list:
+        removed_coins = []
+        if self.get_ideal_distribution() and self.sell_unindexed_traded_coins:
+            # only remove non indexed coins if an ideal distribution is set
+            removed_coins = [
+                coin
+                for coin in available_traded_bases
+                if coin not in self.indexed_coins
+            ]
+
         if not (self.previous_trading_config and self.trading_config):
-            return []
+            return removed_coins
         current_coins = [
             asset[index_distribution.DISTRIBUTION_NAME]
             for asset in self.get_ideal_distribution()
         ]
-        return [
+        return list(set(removed_coins + [
             asset[index_distribution.DISTRIBUTION_NAME]
             for asset in self.previous_trading_config[IndexTradingModeProducer.INDEX_CONTENT]
             if asset[index_distribution.DISTRIBUTION_NAME] not in current_coins
-        ]
+        ]))
 
     def get_target_ratio(self, currency) -> decimal.Decimal:
         if currency in self.ratio_per_asset:

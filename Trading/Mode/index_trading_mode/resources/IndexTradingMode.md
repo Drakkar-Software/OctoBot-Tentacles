@@ -55,4 +55,6 @@ rebalance if any of those 3 coins takes more than 21% of the portfolio (the othe
 
 Please note that if the % held of a coin is 0%, then a rebalance will always trigger, ignoring the Rebalance cap.
 
-
+### OctoBot cloud indexes
+The [Premium OctoBot extension](extensions) enables your open source OctoBot to use and customize OctoBot cloud's
+<a target="_blank" rel="noopener" href="https://app.octobot.cloud/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=IndexTradingModeDocs">automatically configured indexes</a>. 

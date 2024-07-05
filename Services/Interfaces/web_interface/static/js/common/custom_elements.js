@@ -36,11 +36,10 @@ function create_circular_progress_doughnut(element, label1="% Done", label2="% R
     });
 }
 
-function create_doughnut_chart(element, data, title, fontColor='white', animate=true, displayLegend=true){
+function create_doughnut_chart(element, data, title, displayLegend=true, graphHeight=400, update){
     const labels = [];
     const values = [];
     const backgroundColors = [];
-    const hoverBackgroundColors = [];
     let index = 0;
     let totalValue = 0;
     $.each(data, function (_, value) {
@@ -52,45 +51,44 @@ function create_doughnut_chart(element, data, title, fontColor='white', animate=
             labels.push(`${key} ${(value/totalValue*100).toFixed(2)}%`);
             const color = get_color(index);
             backgroundColors.push(color);
-            hoverBackgroundColors.push(get_dark_color(index));
             index += 1;
         }
     });
-    return new Chart(element.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    data: values,
-                    backgroundColor: backgroundColors,
-                    hoverBackgroundColor: hoverBackgroundColors,
-                    borderColor: backgroundColors
-                }
-            ]
+    const plottedData = [{
+        values: values,
+        labels: labels,
+        marker: {
+            colors: backgroundColors
         },
-        options: {
-            animation: {
-                animateRotate: animate,
-                animateScale: false
-            },
-            responsive: true,
-            title: {
-                text: title,
-                fontColor: fontColor,
-                fontSize: 16,
-                fontStyle: '',
-                display: true
-            },
-            legend: {
-                position: 'right',
-                display: displayLegend,
-                labels:{
-                    fontColor: fontColor
-                }
+        textinfo: 'none',
+        type: "pie"
+    }]
+    const layout = {
+        height: graphHeight,
+        legend: {
+            orientation: isMobileDisplay() ? "h": "v",
+            font: {
+                color: getTextColor()
             }
         },
-    });
+        showlegend: displayLegend,
+        margin: {
+            t: 0,
+            b: 0,
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+    }
+    const plotlyConfig = {
+        scrollZoom: false,
+        responsive: true,
+        displayModeBar: false
+    };
+    if (update){
+        // Plotly.restyle(element, plottedData); // todo use restyle for better perf
+        Plotly.newPlot(element, plottedData, layout, plotlyConfig);
+    } else {
+        Plotly.newPlot(element, plottedData, layout, plotlyConfig);
+    }
 }
 
 function create_line_chart(element, data, title, fontColor='white', update=true, height=undefined){
@@ -154,7 +152,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.y1),
       marker: {
-         color: "#212121",
+         color: getTextColor(),
       },
       opacity: 0.9,
       line: {
@@ -197,7 +195,7 @@ function create_histogram_chart(element, data, titleY1, titleY2, nameYAxis, font
             overlaying: 'y2',
             title: nameYAxis,
             rangemode: "tozero",
-            // range: [minDisplayY, maxDisplayY],
+            gridcolor: "grey"
         },
         yaxis2: {
             rangemode: "tozero",

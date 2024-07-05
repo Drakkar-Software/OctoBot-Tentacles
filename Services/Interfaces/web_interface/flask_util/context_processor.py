@@ -33,6 +33,9 @@ import octobot_trading.enums as trading_enums
 def register_context_processor(web_interface_instance):
     @web_interface_instance.server_instance.context_processor
     def context_processor_register():
+        def get_color_mode() -> str:
+            return models.get_color_mode().value
+
         def get_tentacle_config_file_content(tentacle_class):
             return models.get_tentacle_config(tentacle_class)
 
@@ -105,9 +108,10 @@ def register_context_processor(web_interface_instance):
             ]
 
         def get_plugin_tabs(location):
+            has_open_source_package = models.has_open_source_package()
             for plugin in web_interface_instance.registered_plugins:
                 for tab in plugin.get_tabs():
-                    if tab.location is location:
+                    if tab.location is location and (not tab.requires_open_source_package or has_open_source_package):
                         yield tab
 
         def is_in_stating_community_env():
@@ -125,6 +129,7 @@ def register_context_processor(web_interface_instance):
             DEVELOPER_DOCS_URL=constants.DEVELOPER_DOCS_URL,
             EXCHANGES_DOCS_URL=constants.EXCHANGES_DOCS_URL,
             OCTOBOT_FEEDBACK_URL=constants.OCTOBOT_FEEDBACK,
+            OCTOBOT_EXTENSION_PACKAGE_1_NAME=constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME,
             OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
             OCTOBOT_COMMUNITY_LANDING_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_LANDING_URL,
             OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
@@ -137,6 +142,7 @@ def register_context_processor(web_interface_instance):
             TRACKING_ID=constants.TRACKING_ID,
             TAB_START=web_enums.TabsLocation.START,
             TAB_END=web_enums.TabsLocation.END,
+            get_color_mode=get_color_mode,
             get_tentacle_config_file_content=get_tentacle_config_file_content,
             get_currency_id=get_currency_id,
             filter_currency_pairs=filter_currency_pairs,
@@ -157,4 +163,5 @@ def register_context_processor(web_interface_instance):
             are_automations_enabled=models.are_automations_enabled(),
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
+            has_open_source_package=models.has_open_source_package
         )

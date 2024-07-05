@@ -199,7 +199,7 @@
                     &nbsp <i class="fa-solid fa-question"></i>
                 </a>
                 {% if activated_trading_mode %}
-                <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
+                <a class="float-right badge badge-info waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                     <span class="d-none d-md-inline">Current trading mode: </span>{{ activated_trading_mode.get_name() }}
                 </a>
                 {% endif %}
@@ -224,12 +224,12 @@
                         </div>
                         <div class="col-12 col-md-6 col-xl-5 row">
                             {% if tentacle_desc["activation"] %}
-                                <div class="col-12 col-xl-8 d-flex">
-                                    <div class="mt-2 mx-1">
+                                <div class="col-12 col-xl-8 d-flex my-auto">
+                                    <div class="mx-1">
                                         From :
                                         <input type="date" class="datepicker" id="startDate">
                                     </div>
-                                    <div class="mt-2 mx-1">
+                                    <div class="mx-1">
                                         To :
                                         <input type="date" class="datepicker" id="endDate">
                                     </div>
@@ -274,7 +274,7 @@
         </div>
     </div>
     <br>
-    {{ m_backtesting_utils.backtesting_report('config_tentacle', OCTOBOT_DOCS_URL) }}
+    {{ m_backtesting_utils.backtesting_report('config_tentacle', OCTOBOT_DOCS_URL, has_open_source_package) }}
     {% endif %}
 {% else %}
     <div class="card">

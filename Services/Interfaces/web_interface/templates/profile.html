@@ -61,44 +61,50 @@
                 </span>
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab="default" id="panelStrategies-tab" data-toggle="pill"
                    href="#panelStrategies" role="tab" aria-controls="panelStrategies" aria-selected="true">
-                    <i class="fab fa-octopus-deploy"></i><span class="d-none d-md-block pl-3">Strategies</span>
+                    <i class="fab fa-octopus-deploy my-auto"></i><span class="d-none d-md-block pl-3">Strategies</span>
                 </a>
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelCurrency-tab" data-toggle="pill"
                    href="#panelCurrency" role="tab" aria-controls="panelCurrency" aria-selected="false">
-                    <i class="fab fa-bitcoin"></i><span class="d-none d-md-block pl-3">Currencies</span>
+                    <i class="fab fa-bitcoin my-auto"></i><span class="d-none d-md-block pl-3">Currencies</span>
                 </a>
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelExchanges-tab" data-toggle="pill"
                    href="#panelExchanges" role="tab" aria-controls="panelExchanges" aria-selected="false">
-                    <i class="fas fa-exchange-alt"></i><span class="d-none d-md-block pl-3">Exchanges</span>
+                    <i class="fas fa-exchange-alt my-auto"></i><span class="d-none d-md-block pl-3">Exchanges</span>
                 </a>
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelTrading-tab" data-toggle="pill"
                    href="#panelTrading" role="tab" aria-controls="panelTrading" aria-selected="false">
-                    <i class="fas fa-wallet"></i><span class="d-none d-md-block pl-3">Trading</span>
+                    <i class="fas fa-wallet my-auto"></i><span class="d-none d-md-block pl-3">Trading</span>
                 </a>
                 {% if config_tentacles_by_group or other_tentacles_config %}
                 <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelTentacles-tab" data-toggle="pill"
                    href="#panelTentacles" role="tab" aria-controls="panelTentacles" aria-selected="false">
-                    <i class="fas fa-cogs"></i><span class="d-none d-md-block pl-3">Tentacles</span>
+                    <i class="fas fa-cogs my-auto"></i><span class="d-none d-md-block pl-3">Tentacles</span>
+                </a>
+                {% endif %}
+                {% if are_automations_enabled %}
+                <a class="nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelAutomations-tab" data-toggle="pill"
+                   href="#panelAutomations" role="tab" aria-controls="panelAutomations" aria-selected="false">
+                    <i class="fas fa-robot my-auto"></i><span class="d-none d-md-block pl-3">Automations</span>
                 </a>
                 {% endif %}
             </div>
-            <button class="nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#"
+            <button class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#"
                aria-selected="false" update-url="{{ url_for('config') }}">
-                <i class="fas fa-save"></i><span class="d-none d-md-block pl-2">Save</span>
+                <i class="fas fa-save my-auto"></i><span class="d-none d-md-block pl-2">Save</span>
             </button>
-            <button class="nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#"
+            <button class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#"
                aria-selected="false">
-                <i class="fas fa-redo-alt"></i><span class="d-none d-md-block pl-2">Reset all</span>
+                <i class="fas fa-redo-alt my-auto"></i><span class="d-none d-md-block pl-2">Reset all</span>
             </button>
-            <button class="nav-link pl-2 pl-sm-3 btn red waves-effect d-flex mx-0 mx-md-auto mt-3 mt-mb-5 mb-5"
+            <button class="w-100 my-3 p-2 pl-sm-3 btn btn-lg btn-outline-primary waves-effect d-flex mx-0 mx-md-auto mt-3 mt-mb-5 mb-5"
                     id="save-config-and-restart" href="#" type="button" aria-selected="false"
                     update-url="{{ url_for('config') }}">
-                <i class="fas fa-power-off"></i><span class="d-none d-md-block pl-2">Apply changes and restart</span>
+                <i class="fas fa-power-off my-auto"></i><span class="d-none d-md-block pl-2">Apply changes and restart</span>
             </button>
         </div>
     </nav>
     <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
-        <div class="bg-light">
+        <div>
             {{ m_flash_messages.flash_messages() }}
         </div>
         {% if not strategy_config["trading-modes"] %}
@@ -112,7 +118,7 @@
         </div>
         {% endif %}
         <div class="tab-content" id="super-container">
-            <div class="card bg-dark text-light card-header ">
+            <div class="card card-header ">
                 <a class="d-inline-block" data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
                     <h2 class="">
                         <span class="d-none d-md-inline-block">Current profile</span>
@@ -218,7 +224,7 @@
                                 Profile strategy configuration
                                 <span
                                     href=""
-                                    class="badge badge-dark waves-effect align-top"
+                                    class="badge badge-info waves-effect align-top"
                                     data-role="current-profile-selector"
                                     data-toggle="tooltip"
                                     title="Duplicate this profile to select other trading modes or evaluators"
@@ -291,8 +297,15 @@
                                 {% endif %}
                             {% endfor %}
                         </div>
-                        <div class="card-footer"></div>
+                        <div class="card-footer">
+                        </div>
                     </div>
+                {% endif %}
+                {% if not has_open_source_package() %}
+                <div class="text-center">
+                    <i class="fa fa-info-circle"></i> The <a href="{{ url_for('extensions') }}">{{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}</a> contains many other configuration profiles and enables
+                    your open source OctoBot to use and customize OctoBot cloud's <a target="_blank" rel="noopener" href="https://app.octobot.cloud/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=Profile">automatically configured indexes</a>.
+                </div>
                 {% endif %}
             </div>
             <div class="tab-pane fade config-root" id="panelCurrency" role="tabpanel"
@@ -322,12 +335,12 @@
                                     </div>
                                     <div class="d-none d-md-inline-block col-md-6">
                                         <div class="d-flex justify-content-end">
-                                            <button class="btn btn-outline-info btn-lg waves-effect" id="export-currencies-button"
+                                            <button class="btn btn-outline-info btn-lg mx-1 waves-effect" id="export-currencies-button"
                                                     update-url="{{ url_for('api.get_config_currency')}}">
                                                 <i class="fa fa-cloud-download-alt"></i> <span class="d-none d-md-inline-block">Export</span>
                                             </button>
                                             <input class="d-none" id="import-currencies-input" type="file" name="file" accept=".json"/>
-                                            <button class="btn btn-outline-info btn-lg waves-effect" id="import-currencies-button"
+                                            <button class="btn btn-outline-info btn-lg mx-1 waves-effect" id="import-currencies-button"
                                                     update-url="{{ url_for('api.set_config_currency') }}">
                                                 <i class="fa fa-cloud-upload-alt"></i> <span class="d-none d-md-inline-block">Import</span>
                                             </button>
@@ -409,7 +422,7 @@
                     <div class="card-header">
                         <h2>
                             Trading
-                            <span class="float-right badge {{ 'badge-dark' if real_trader_activated else 'badge-primary' }} waves-effect">
+                            <span class="float-right badge {{ 'badge-info' if real_trader_activated else 'badge-primary' }} waves-effect">
                         {{ 'Real trader' if real_trader_activated else 'Simulator' }}
                     </span>
                         </h2>
@@ -417,10 +430,8 @@
                     <div class="card-body deck-container">
                         <!-- Card deck -->
                         <div class="card-deck config-container">
-                    <span class="col-lg-12">
-                        {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings",
+                            {{ m_config_trader_card.config_trader_card(config_trading, "trading", "Trading settings",
                             link=OCTOBOT_DOCS_URL+"/octobot-configuration/profile-configuration#trading") }}
-                    </span>
                             {{ m_config_trader_card.config_trader_card(config_trader, "trader", "Trader",
                             link=OCTOBOT_DOCS_URL+"/octobot-usage/simulator#real-trader") }}
                             {{ m_config_trader_card.config_trader_card(config_trader_simulator, "trader-simulator",
@@ -460,6 +471,35 @@
                 {% endfor %}
             </div>
             {% endif %}
+            <div class="tab-pane fade config-root" id="panelAutomations" role="tabpanel"
+                 aria-labelledby="panelTentacles-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>
+                            Automations
+                        </h4>
+
+                    </div>
+                    <div class="card-body text-center">
+                        <div>
+                            Automations are actions that will be triggered automatically when something happens. You can have as many automations as you want.
+                        </div>
+                        <div class="text-center my-5">
+                            <div>
+                                <a type="button" class="btn btn-primary btn-lg"
+                                   href="{{ url_for('automations') }}">
+                                    Configure your profile automations
+                                </a>
+                            </div>
+                            <div>
+                                Your current profile has <strong>{{automations_count}}</strong> automation{{'s' if automations_count > 1 else ''}}.
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <br>
+            </div>
         </div>
     </main>
 </div>

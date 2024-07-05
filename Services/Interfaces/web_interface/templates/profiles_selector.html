@@ -27,7 +27,7 @@
                 Select the profile your OctoBot should use
             </h3>
         </div>
-        <div class="text-right">
+        <div class="text-right mt-4">
             <button class="btn btn-outline-primary waves-effect"
                     data-toggle="modal" data-target="#importProfileModal">
                 Import a profile
@@ -56,7 +56,7 @@
             </div>
             <div class="tab-content my-2" id="tabcontent">
                 <div class="tab-pane fade {{ '' if use_cloud else 'active show' }}" id="your-profiles" role="tab-your-profiles" aria-labelledby="your-profiles-tab">
-                    <h4 class="text-center">
+                    <h4 class="text-center mt-4">
                         Use ready-made profiles from the open-source OctoBot and your custom profiles.
                     </h4>
                     <div class="row mx-0 mt-1">
@@ -72,7 +72,7 @@
                     <div id="cloud-strategies-selector"
                          data-select-profile-url="{{url_for('profile', select='PROFILE_ID',
                                                     next=url_for('trading_type_selector', reboot=True, onboarding=onboarding))}}">
-                        <h4 class="text-center">
+                        <h4 class="text-center mt-4">
                             Use <a href="{{OCTOBOT_COMMUNITY_URL}}/strategies?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=profile_selector" target="_blank">OctoBot cloud strategies</a>
                             directly from your OctoBot.
                         </h4>

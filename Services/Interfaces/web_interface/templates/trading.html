@@ -243,7 +243,7 @@
 
                                 <!--Title-->
                                 <div class="card-header">
-                                    <a class="text-white" href="{{ url_for('profile')+'#panelCurrency' }}">New trading pair</a>
+                                    <a class="" href="{{ url_for('profile')+'#panelCurrency' }}">New trading pair</a>
                                 </div>
 
                                 <!--Card image-->
@@ -255,8 +255,8 @@
 
                                 <div class="px-4 pt-3 pb-3">
                                     <!--Card content-->
-                                    <div class="list-group list-group-flush">
-                                        <a class="list-group-item list-group-item-action bg-transparent text-white hover_anim"
+                                    <div class="list-group-flush text-center">
+                                        <a class="btn btn-outline-primary hover_anim"
                                            href="{{ url_for('profile')+'#panelCurrency' }}">
                                             Add a new pair
                                         </a>
@@ -287,7 +287,7 @@
                     <button
                         data-url="{{ url_for('api.clear_trades_history') }}"
                         id="clear-trades-history-button"
-                        class="btn btn-outline-warning waves-effect">
+                        class="btn btn-outline-warning waves-effect mt-2">
                         <i class="fas fa-trash"></i> Clear trades history
                     </button>
                 </div>
@@ -330,10 +330,10 @@
 
 <div class="modal" id="CancelAllOrdersModal" tabindex="-1" role="dialog" aria-labelledby="#CancelAllOrdersModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text bg-dark text-light">
+    <div class="modal-content modal-text">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#CancelAllOrdersModalLabel">Confirm action</h5>
-        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -350,10 +350,10 @@
 
 <div class="modal" id="CancelOrderModal" tabindex="-1" role="dialog" aria-labelledby="#CancelOrderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text bg-dark text-light">
+    <div class="modal-content modal-text">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#CancelOrderModalLabel">Confirm action</h5>
-        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -370,10 +370,10 @@
 
 <div class="modal" id="ClosePositionModal" tabindex="-1" role="dialog" aria-labelledby="#ClosePositionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content modal-text bg-dark text-light">
+    <div class="modal-content modal-text">
       <div class="modal-header primary-text">
         <h5 class="modal-title" id="#ClosePositionModalLabel">Confirm action</h5>
-        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>

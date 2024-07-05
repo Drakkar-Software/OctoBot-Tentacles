@@ -16,11 +16,11 @@
         {% for strategy in strategies %}
             <tr>
                 <td>
-                    <a class="text-light" href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector" target="_blank">
+                    <a href="{{ strategy.get_url() }}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector_strategy_name" target="_blank">
                         <div class="row">
                             <div class="col-4 pr-1">
                                 <img class="img-fluid package_row_image"
-                                     src="{{strategy.logo_url}}"
+                                     src="{{strategy.get_logo_url(url_for('static', filename='img/community/tentacles_packages_previews/'))}}"
                                      alt="Strategy illustration">
                             </div>
                             <div class="col-8 text-left my-auto pl-0 font-weight-bold">
@@ -30,9 +30,13 @@
                         </div>
                     </a>
                 </td>
+                {% if strategy.results %}
                 <td class="align-middle" data-order="{{ strategy.results.get_max_value() }}">
-                    {{ (strategy.results.get_max_value() if strategy.results else 0) | round(2) }}% over {{ strategy.results.get_max_unit() }}
+                    {{ (strategy.results.get_max_value()) | round(2) }}% over {{ strategy.results.get_max_unit() }}
                 </td>
+                {% else %}
+                <td data-order="0"></td>
+                {% endif %}
                 <td class="align-middle">
                     {{ strategy.attributes['coins'] | join(', ') }}
                 </td>
@@ -45,25 +49,25 @@
                 <td class="align-middle">
                     {% if strategy.category %}
                         {% if strategy.category.get_url() %}
-                            <a href="{{strategy.category.get_url()}}" target="_blank" class="text-light">
-                                {{ strategy.get_name(locale) }} <i class="fas fa-external-link-alt"></i>
+                            <a href="{{strategy.category.get_url()}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=cloud_strategies_selector_strategy_category" target="_blank">
+                                {{ strategy.category.get_name(locale) }} <i class="fas fa-external-link-alt"></i>
                             </a>
                         {% else %}
-                            {{ strategy.get_name(locale) }}
+                            {{ strategy.category.get_name(locale) }}
                         {% endif %}
                     {% endif %}
                 </td>
                 <td class="align-middle">
                     <button update-url="{{ url_for('profiles_management', action='download') }}"
-                            role="button" class="btn btn-sm btn-outline-white px-1 m-1"
+                            role="button" class="btn btn-sm btn-outline-primary px-1 m-1"
                             data-toggle="tooltip" data-placement="top" title="{{'Use this strategy' if post_install_action else 'Add to OctoBot'}}"
                             data-role="install-strategy"
                             data-strategy-id="{{strategy.id}}"
                             data-strategy-name="{{strategy.get_name(locale) | capitalize}}"
                             data-description="{{strategy.content['description_translations'][locale]}}"
-                                data-post-install-action="{{post_install_action}}"
+                            data-post-install-action="{{post_install_action}}"
                     >
-                        <i class="fa {{'fa-check' if post_install_action else 'fa-download'}} px-2 text-light strategy_action px-4"></i>
+                        <i class="fa {{'fa-check' if post_install_action else 'fa-download'}} px-2 strategy_action px-4"></i>
                     </button>
                 </td>
             </tr>

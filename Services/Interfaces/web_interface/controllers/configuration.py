@@ -96,7 +96,10 @@ def register(blueprint):
              config_tentacles_by_group=models.get_tentacles_activation_desc_by_group(media_url,
                                                                                      missing_tentacles),
 
-             exchanges_details=models.get_exchanges_details(config_exchanges)
+             exchanges_details=models.get_exchanges_details(config_exchanges),
+
+             are_automations_enabled=models.are_automations_enabled(),
+             automations_count=models.get_automations_count(),
         )
 
 

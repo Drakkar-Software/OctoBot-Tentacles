@@ -13,7 +13,7 @@
                 <i class="fa-solid fa-question"></i>
             </a>
             {% if activated_trading_mode %}
-            <a class="float-right badge badge-dark waves-effect" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
+            <a class="float-right badge badge-info waves-effect mx-2" href="{{ url_for('config_tentacle', name=activated_trading_mode.get_name()) }}">
                 Current trading mode: {{ activated_trading_mode.get_name() }}
             </a>
             {% endif %}
@@ -21,7 +21,15 @@
     </div>
     <div class="card-body">
         {% if data_files %}
-            <table class="table table-striped table-sm table-responsive-lg" id="dataFilesTable">
+            <div class="text-center">
+                            <a href="{{ url_for('data_collector') }}"
+                               id="data-collector-link"
+                               class="btn btn-outline-info waves-effect">
+                                <i class="fa fa-cloud-download-alt"></i> Get historical data
+                            </a>
+
+            </div>
+            <table class="table table-striped table-sm table-responsive-xs" id="dataFilesTable">
               <caption>Select data file(s) to use</caption>
               <thead>
                 <tr>
@@ -59,35 +67,30 @@
                 {% endfor %}
               </tbody>
             </table>
-            <div class="d-flex justify-content-end">
-                <a href="{{ url_for('data_collector') }}"
-                   id="data-collector-link"
-                   class="btn btn-outline-info waves-effect">
-                    <i class="fa fa-cloud-download-alt"></i> Get historical data
-                </a>
-            </div>
             {% if activated_trading_mode and activated_trading_mode.is_backtestable() %}
-                <div class="container-fluid row mx-0">
+                <div class="row mx-0 mt-0">
                     <div class="row col-12 col-md-3">
                         <div class="custom-control custom-switch mx-4 d-none my-auto" id="synchronized-data-only-div">
                             <input type="checkbox" class="custom-control-input" id="synchronized-data-only-checkbox" checked="">
                             <label class="custom-control-label" for="synchronized-data-only-checkbox">Run on synchronized history only</label>
                         </div>
                     </div>
-                    <div class="row col-12 col-md-6">
-                        <div class="my-auto mx-4">
+                    <div class="row">
+                        <div class="offset-md-4 col-12 col-md-2 my-auto">
                             Start Date :
                             <input type="date" class="datepicker" id="startDate">
                         </div>
-                        <div class="my-auto mx-4">
+                        <div class="col-12 col-md-2 my-auto">
                             End Date :
                             <input type="date" class="datepicker" id="endDate">
                         </div>
                     </div>
-                    <div class="row col-12 col-md-3">
-                        <div class="my-auto mx-4">
-                            <button type="button" id="startBacktesting" class="btn btn-primary waves-effect"
-                                start-url="/backtesting?action_type=start_backtesting&amp;source=backtesting">Start backtesting</button>
+                    <div class="row justify-content-center mt-4">
+                        <div class="my-auto text-center">
+                            <button type="button" id="startBacktesting" class="btn btn-lg btn-primary waves-effect ml-auto"
+                                start-url="/backtesting?action_type=start_backtesting&amp;source=backtesting">
+                                <i class="fa fa-play"></i> Start backtesting
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -120,7 +123,7 @@
     </div>
 </div>
 <br>
-{{ m_backtesting_utils.backtesting_report('backtesting', OCTOBOT_DOCS_URL) }}
+{{ m_backtesting_utils.backtesting_report('backtesting', OCTOBOT_DOCS_URL, has_open_source_package) }}
 {% endblock %}
 
 {% block additional_scripts %}

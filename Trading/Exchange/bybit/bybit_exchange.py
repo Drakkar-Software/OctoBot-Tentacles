@@ -154,9 +154,6 @@ class Bybit(exchanges.RestExchange):
 
     async def get_open_orders(self, symbol: str = None, since: int = None,
                               limit: int = None, **kwargs: dict) -> list:
-        if symbol and not self.exchange_manager.is_future:
-            # not done by ccxt spot request
-            symbol = self.connector.client.markets[symbol]["id"]
         orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         if not self.exchange_manager.is_future:
             kwargs = kwargs or {}
@@ -166,13 +163,8 @@ class Bybit(exchanges.RestExchange):
         return orders
 
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
-        if order is None and not self.exchange_manager.is_future:
-            kwargs = kwargs or {}
-            # try stop orders
-            kwargs[self.ORDER_FILTER] = self.SPOT_STOP_ORDERS_FILTER
-            order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
-        return order
+        # regular get order is not supported
+        return await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol=symbol, **kwargs)
 
     async def cancel_order(
             self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict

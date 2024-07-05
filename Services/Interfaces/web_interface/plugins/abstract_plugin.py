@@ -36,12 +36,12 @@ class AbstractWebInterfacePlugin(tentacles_management.AbstractTentacle):
         super().__init__()
         self.name = name
         self.url_prefix = url_prefix
+        self.plugin_folder = plugin_folder
         self.template_folder = os.path.join(plugin_folder, template_folder) if plugin_folder else None
         self.static_folder = os.path.join(plugin_folder, static_folder) if plugin_folder else None
         self.kwargs = kwargs
         self.blueprint = None
         self.logger = logging.get_logger(self.name)
-        self._plugin_folder = plugin_folder
 
     @classmethod
     def get_name(cls):

@@ -151,7 +151,11 @@ class APIHandledSymbols:
     async def update(self):
         try:
             result = await self._exchange.connector.client.spot2PublicGetMarketApiDefaultSymbols()
-            self.symbols = set(result["data"]["symbol"])
+            self.symbols = set(
+                # in some cases, "_" is not replaced as symbol is not found in markets
+                self._exchange.connector.client.safe_market(s)["symbol"].replace("_", "/")
+                for s in result["data"]["symbol"]
+            )
             self.last_update = time.time()
             self._exchange.logger.info(f"Updated handled symbols, list: {self.symbols}")
         except Exception as err:

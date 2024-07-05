@@ -31,9 +31,34 @@ def can_get_community_metrics():
     return octobot_community.can_read_metrics(interfaces_util.get_edited_config(dict_only=False))
 
 
-def get_account_tentacles_packages(authenticator):
-    packages = authenticator.get_packages()
-    return [octobot_community.CommunityTentaclesPackage.from_community_dict(data) for data in packages]
+def get_owned_packages() -> list[str]:
+    authenticator = authentication.Authenticator.instance()
+    return authenticator.get_owned_packages()
+
+
+def has_owned_packages_to_install() -> list[str]:
+    authenticator = authentication.Authenticator.instance()
+    return authenticator.has_owned_packages_to_install()
+
+
+def update_owned_packages():
+    authenticator = authentication.Authenticator.instance()
+    interfaces_util.run_in_bot_main_loop(authenticator.fetch_private_data(reset=True))
+
+
+def has_open_source_package() -> bool:
+    authenticator = authentication.Authenticator.instance()
+    return authenticator.has_open_source_package()
+
+
+def get_checkout_url(payment_method, redirect_url) -> (bool, str):
+    selected_payment_method = "crypto" if payment_method == "crypto" else "credit_card"
+    authenticator = authentication.Authenticator.instance()
+    try:
+        url = interfaces_util.run_in_bot_main_loop(authenticator.fetch_checkout_url(selected_payment_method, redirect_url))
+        return True, url
+    except BaseException:
+        return False, "error when fetching checkout url"
 
 
 def get_cloud_strategies(authenticator) -> list[octobot_community.StrategyData]:
