@@ -30,6 +30,8 @@ import octobot_trading.util as trading_util
 
 class Binance(exchanges.RestExchange):
     DESCRIPTION = ""
+    FIX_MARKET_STATUS = True
+
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     # should be fetched using recent trades.
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
