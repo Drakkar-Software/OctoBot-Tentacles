@@ -111,7 +111,7 @@ def register_context_processor(web_interface_instance):
             has_open_source_package = models.has_open_source_package()
             for plugin in web_interface_instance.registered_plugins:
                 for tab in plugin.get_tabs():
-                    if tab.location is location and (not tab.requires_open_source_package or has_open_source_package):
+                    if tab.location is location and tab.is_available(has_open_source_package):
                         yield tab
 
         def is_in_stating_community_env():
@@ -163,5 +163,5 @@ def register_context_processor(web_interface_instance):
             are_automations_enabled=models.are_automations_enabled(),
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
-            has_open_source_package=models.has_open_source_package
+            has_open_source_package=models.has_open_source_package,
         )

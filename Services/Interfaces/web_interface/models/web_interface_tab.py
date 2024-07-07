@@ -14,10 +14,23 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
+
 class WebInterfaceTab:
-    def __init__(self, identifier, route, display_name, location, requires_open_source_package=False):
+    def __init__(
+        self, identifier, route, display_name, location, requires_open_source_package=False
+    ):
         self.identifier = identifier
         self.route = route
         self.display_name = display_name
         self.location = location
         self.requires_open_source_package = requires_open_source_package
+
+    def is_available(self, has_open_source_package):
+        if not self.requires_open_source_package:
+            # is available in general
+            return True
+        if self.requires_open_source_package and has_open_source_package:
+            # is available if has_open_source_package
+            return True
+        # is not available
+        return False
