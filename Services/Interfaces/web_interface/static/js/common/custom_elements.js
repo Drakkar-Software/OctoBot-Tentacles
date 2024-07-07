@@ -96,7 +96,8 @@ function create_line_chart(element, data, title, fontColor='white', update=true,
       x: data.map((e) => new Date(e.time*1000)),
       y: data.map((e) => e.value),
       fill: "tonexty",
-      type: 'scatter'
+      type: 'scatter',
+      line: {shape: 'spline'},
     };
     const minY = Math.min.apply(null, trace.y);
     const maxDisplayY = Math.max.apply(null, trace.y);

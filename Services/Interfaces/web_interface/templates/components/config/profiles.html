@@ -360,7 +360,7 @@ get_filtered_list, read_only=False) %}
 {% macro profile_overview(profile, current_profile, tentacles_details, strategy_config, evaluator_config,
                           get_profile_traded_pairs_by_currency, get_profile_exchanges, get_enabled_trader,
                           get_filtered_list, read_only=False, reboot=False, onboarding=False) -%}
-<div class="col col-md-4 px-1 profile-overview {{'profile-overview-selected' if profile.profile_id == current_profile.profile_id}}">
+<div class="col-12 col-md-6 col-lg-4 px-1 profile-overview {{'profile-overview-selected' if profile.profile_id == current_profile.profile_id}}">
     <div class="p-2 vertically-aligned">
         <div class="row mx-0">
             <div class="col-9">
