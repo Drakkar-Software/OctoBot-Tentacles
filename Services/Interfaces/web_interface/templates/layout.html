@@ -1,6 +1,7 @@
 {% import 'macros/trading_state.html' as m_trading_state %}
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
 {% import 'components/modals/generic_modal.html' as m_generic_modal %}
+{% import 'components/community/user_details.html' as m_user_details %}
 <!doctype html>
 <html lang="en" data-mdb-theme="{{get_color_mode()}}">
     {% set active_page = active_page|default('home') -%}
@@ -57,6 +58,14 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', u=LAST_UPDATED_STATIC_FILES) }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css', u=LAST_UPDATED_STATIC_FILES) }}">
 
+        {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
+        <script>
+            !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+            posthog.init('{{PH_TRACKING_ID}}',{api_host:'https://eu.i.posthog.com',
+                })
+        </script>
+        {% endif %}
+
         {% block additional_style %}
         {% endblock additional_style %}
     </head>
@@ -88,7 +97,8 @@
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/feedback.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-        {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
+        <script src="{{ url_for('static', filename='js/common/tracking.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+       {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
         <script type="text/javascript">
             (function(c,l,a,r,i,t,y){
                 c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -269,5 +279,15 @@
         {% block additional_scripts %}
         {% endblock additional_scripts %}
         <script src="{{ url_for('static', filename='js/common/on_load.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        {{ m_user_details.user_details(
+            IS_ALLOWING_TRACKING,
+            USER_EMAIL,
+            USER_SELECTED_BOT_ID,
+            has_open_source_package,
+            PROFILE_NAME,
+            TRADING_MODE_NAME,
+            EXCHANGE_NAMES,
+            IS_REAL_TRADING
+        ) }}
     </body>
 </html>
