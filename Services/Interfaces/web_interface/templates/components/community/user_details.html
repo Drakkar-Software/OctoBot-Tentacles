@@ -1,0 +1,23 @@
+{% macro user_details(
+    IS_ALLOWING_TRACKING,
+    USER_EMAIL,
+    USER_SELECTED_BOT_ID,
+    has_open_source_package,
+    PROFILE_NAME,
+    TRADING_MODE_NAME,
+    EXCHANGE_NAMES,
+    IS_REAL_TRADING)
+-%}
+<script>
+    const _IS_ALLOWING_TRACKING = {{ 'true' if IS_ALLOWING_TRACKING else 'false' }}
+    const _USER_DETAILS = {
+        email: "{{ USER_EMAIL }}",
+        botId: "{{ USER_SELECTED_BOT_ID }}",
+        hasPremiumExtension: {{ 'true' if has_open_source_package() else 'false'}},
+        profileName: "{{ PROFILE_NAME }}",
+        tradingMode: "{{ TRADING_MODE_NAME }}",
+        exchanges: "{{ EXCHANGE_NAMES }}".split(","),
+        isRealTrading: {{ 'true' if IS_REAL_TRADING else 'false' }},
+    }
+</script>
+{%- endmacro %}
