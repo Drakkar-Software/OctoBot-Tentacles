@@ -38,8 +38,7 @@ function handle_apply_evaluator_default_config_success_callback(updated_data, up
     location.reload();
 }
 
-function updateTentacleConfig(updatedConfig){
-    const update_url = $("button[data-role='saveConfig']").attr(update_url_attr);
+function updateTentacleConfig(updatedConfig, update_url){
     send_and_interpret_bot_update(updatedConfig, update_url, null, handle_tentacle_config_update_success_callback, handle_tentacle_config_update_error_callback);
 }
 
@@ -67,13 +66,15 @@ function handleConfigDisplay(success){
         $("#configErrorDetails").hide();
         if(canEditConfig()) {
             $("#saveConfigFooter").show();
-            $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function () {
+            $("button[data-role='saveConfig']").removeClass(hidden_class).unbind("click").click(function (event) {
                 const errorsDesc = validateJSONEditor(configEditor);
                 if (errorsDesc.length) {
                     create_alert("error", "Error when saving configuration",
                         `Invalid configuration data: ${errorsDesc}.`);
-                } else
-                    updateTentacleConfig(configEditor.getValue());
+                } else{
+                    const url = $(event.currentTarget).attr(update_url_attr)
+                    updateTentacleConfig(configEditor.getValue(), url);
+                }
             });
         }else{
             $("#noConfigMessage").show();
