@@ -72,6 +72,10 @@ class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+    # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
+    CAN_HAVE_DELAYED_OPEN_ORDERS = True
+    # Set True when get_cancelled_order() can return outdated open orders
+    CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
     DEFAULT_CONNECTOR_CLASS = KucoinConnector
 
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
@@ -452,7 +456,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
