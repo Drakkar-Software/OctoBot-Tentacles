@@ -315,7 +315,7 @@ function create_layout(graph_title){
             domain: [0.2, 1],
             autorange: true,
             title: 'Price',
-            gridcolor: getTextColor(),
+            gridcolor: `rgba(${getTextColorRGB()}, 0.2)`,
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',

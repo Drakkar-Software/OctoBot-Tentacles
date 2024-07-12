@@ -155,6 +155,10 @@ const getTextColor = () => {
     return getComputedStyle(document.body).getPropertyValue('--mdb-primary-text-emphasis')
 }
 
+const getTextColorRGB = () => {
+    return getComputedStyle(document.body).getPropertyValue('--mdb-emphasis-color-rgb')
+}
+
 const isDarkTheme = () => {
     return $("html").data("mdb-theme") === "dark"
 }
