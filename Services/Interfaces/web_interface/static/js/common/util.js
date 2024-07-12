@@ -155,6 +155,10 @@ const getTextColor = () => {
     return getComputedStyle(document.body).getPropertyValue('--mdb-primary-text-emphasis')
 }
 
+const isDarkTheme = () => {
+    return $("html").data("mdb-theme") === "dark"
+}
+
 const handle_rounded_numbers_display = () => {
     $(".rounded-number").each(function (){
         const text = $(this).text().trim();
