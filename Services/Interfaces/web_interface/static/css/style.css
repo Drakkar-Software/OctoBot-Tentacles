@@ -219,6 +219,10 @@ a:hover {
     --mdb-table-striped-color: var(--mdb-primary);
 }
 
+.table td, .table th {
+    border-top: none;
+}
+
 /* toast */
 #toast-container>.toast-warning {
     background-image: none !important;

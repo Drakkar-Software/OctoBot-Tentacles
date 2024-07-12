@@ -118,9 +118,9 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
     });
 }
 
-const sell_color = "#ff0000";
-const buy_color = "#009900";
 const stop_color = "#FFA500";
+const sell_color = "#F65A33";
+const buy_color = isDarkTheme() ? '#299a39' : "#009900";
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
@@ -132,9 +132,9 @@ function create_candlesticks(candles){
     return {
       x: data_time,
       close: data_close,
-      decreasing: {line: {color: '#F65A33'}},
+      decreasing: {line: {color: sell_color}},
       high: data_high,
-      increasing: {line: {color: '#7DF98D'}},
+      increasing: {line: {color: buy_color}},
       line: {color: 'rgba(31,119,180,1)'},
       low: data_low,
       open: data_open,
@@ -320,7 +320,7 @@ function create_layout(graph_title){
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
-            color: "white"
+            color: getTextColor(),
         }
     };
 }
