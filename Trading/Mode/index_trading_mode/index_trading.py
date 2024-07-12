@@ -174,15 +174,16 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             await trading_personal_data.get_pre_order_data(
                 self.exchange_manager, symbol=symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
             )
+        order_target_price = price
         # ideally use the expected reference_market_available_holdings ratio, fallback to available
         # holdings if necessary
-        target_quantity = min(ideal_amount, current_market_holding / price)
+        target_quantity = min(ideal_amount, current_market_holding / order_target_price)
         ideal_quantity = target_quantity - current_symbol_holding
         if ideal_quantity <= trading_constants.ZERO:
             return []
         quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
             self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_MARKET, ideal_quantity,
-            price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+            order_target_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
             trading_enums.TradeOrderSide.BUY, current_market_holding
         )
         created_orders = []
@@ -196,11 +197,13 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
         if trading_personal_data.get_trade_order_type(order_type) is not trading_enums.TradeOrderType.MARKET:
             # can't use market orders: use limit orders with price a bit above the current price to instant fill it.
-            price, quantity = \
-                trading_modes.get_instantly_filled_limit_order_adapted_price_and_quantity(price, quantity, order_type)
+            order_target_price, quantity = \
+                trading_modes.get_instantly_filled_limit_order_adapted_price_and_quantity(
+                    order_target_price, quantity, order_type
+                )
         for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
             quantity,
-            price,
+            order_target_price,
             symbol_market
         ):
             orders_should_have_been_created = True
@@ -208,7 +211,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 trader=self.exchange_manager.trader,
                 order_type=order_type,
                 symbol=symbol,
-                current_price=order_price,
+                current_price=price,
                 quantity=order_quantity,
                 price=order_price,
             )
