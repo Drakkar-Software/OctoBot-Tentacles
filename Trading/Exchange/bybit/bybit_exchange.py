@@ -83,6 +83,9 @@ class Bybit(exchanges.RestExchange):
     EXPECT_POSSIBLE_ORDER_NOT_FOUND_DURING_ORDER_CREATION = True  # set True when get_order() can return None
     # (order not found) when orders are instantly filled on exchange and are not fully processed on the exchange side.
 
+    # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
+    CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
+
     BUY_STR = "Buy"
     SELL_STR = "Sell"
 

@@ -34,6 +34,7 @@ class Coinex(exchanges.RestExchange):
         # ExchangeError('coinex Order not found')
         ("order not found", )
     ]
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     @classmethod
     def get_name(cls):

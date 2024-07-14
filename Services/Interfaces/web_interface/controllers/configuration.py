@@ -283,6 +283,7 @@ def register(blueprint):
             tentacle_name = flask.request.args.get("name")
             action = flask.request.args.get("action")
             profile_id = flask.request.args.get("profile_id")
+            restart = flask.request.args.get("restart", "false") == "true"
             tentacles_setup_config = models.get_tentacles_setup_config_from_profile_id(profile_id) if profile_id else None
             success = True
             response = ""
@@ -311,6 +312,8 @@ def register(blueprint):
                     success = False
                     response = f"Error when reloading configuration {e}"
             if success:
+                if restart:
+                    models.schedule_delayed_command(models.restart_bot)
                 return util.get_rest_reply(flask.jsonify(response))
             else:
                 return util.get_rest_reply(response, 500)

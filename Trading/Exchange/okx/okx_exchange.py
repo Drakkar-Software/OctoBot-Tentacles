@@ -462,7 +462,7 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     def fix_order(self, raw, symbol=None, **kwargs):
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._adapt_order_type(fixed)
         return fixed
 

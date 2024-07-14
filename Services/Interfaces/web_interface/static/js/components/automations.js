@@ -28,7 +28,8 @@ $(document).ready(function() {
         }
     };
     const onEditorChange = (newValue) => {
-        updateTentacleConfig(newValue);
+        const update_url = $("button[data-role='saveConfig']").attr(update_url_attr);
+        updateTentacleConfig(newValue, update_url);
     };
     const startAutomations = () => {
         const successCallback = (updated_data, update_url, dom_root_element, msg, status) => {

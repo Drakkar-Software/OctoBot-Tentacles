@@ -30,6 +30,7 @@ class hollaex(exchanges.RestExchange):
     REST_KEY = "rest"
     HAS_WEBSOCKETS_KEY = "has_websockets"
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     DEFAULT_MAX_LIMIT = 500
 
@@ -102,7 +103,7 @@ class HollaexCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         # average is not supported by ccxt
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] and "average" in raw_order_info:
             fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_order_info.get("average", 0)
         return fixed
