@@ -67,10 +67,7 @@ $(document).ready(function() {
                 if(checkoutUrl.url === null){
                     create_alert("success", "User already owns this extension", "");
                 } else {
-                    const newTab = window.open(checkoutUrl.url, '_blank');
-                    if(newTab !== null) {
-                        newTab.focus();
-                    }
+                    document.location.href = checkoutUrl.url;
                 }
             } finally {
                 checkoutButtons.removeClass("disabled");
