@@ -27,7 +27,13 @@ class Bingx(exchanges.RestExchange):
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'bingx {"code":100404,"msg":" order not exist","debugMsg":""}'
         ("order not exist",),
+        # bingx {"code":100404,"msg":"the order you want to cancel is FILLED or CANCELLED already, or is not a valid
+        # order id ,please verify","debugMsg":""}
+        ("the order you want to cancel is filled or cancelled already", ),
     ]
+    
+    # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
+    CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
 
     def get_adapter_class(self):
         return BingxCCXTAdapter
@@ -57,16 +63,3 @@ class BingxCCXTAdapter(exchanges.CCXTAdapter):
         except KeyError:
             pass
         return fixed
-
-    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
-        # on bingx, amounts are precisions in the right unit, do not patch precision
-        market_status = raw
-        if remove_price_limits:
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
-            market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
-
-        return market_status
