@@ -71,7 +71,10 @@ def format_trades(dict_trade_history):
                     float(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
                 trades[trade_description_key].append(
                     f"{trade_type.name.replace('_', ' ')}: "
-                    f"{dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]}")
+                    f"{dict_trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value]} "
+                    f"{dict_trade[trading_enums.ExchangeConstantsOrderColumns.QUANTITY_CURRENCY.value]} "
+                    f"at {dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]} "
+                    f"{dict_trade[trading_enums.ExchangeConstantsOrderColumns.MARKET.value]}")
                 trades[trade_order_side_key].append(trade_side.value)
 
     return trades
