@@ -120,9 +120,9 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
 
 const stop_color = "#FFA500";
 const sell_color = "#F65A33";
-const buy_color = isDarkTheme() ? '#299a39' : "#009900";
-const candle_sell_color = isDarkTheme() ? "#F65A33" : "#F65A33";
-const candle_buy_color = isDarkTheme() ? '#7DF98D' : "#009900";
+const buy_color = isDarkTheme() ? '#6cb596' : "#6cb596";
+const candle_sell_color = sell_color;
+const candle_buy_color = isDarkTheme() ? '#65e7cf' : "#6cb596";
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
@@ -189,15 +189,15 @@ function create_trades(trades, trader){
         const data_trade_description = trades["trade_description"];
         const data_order_side = trades["order_side"];
 
-        const marker_size = 15;
-        const marker_opacity =  0.85;
-        const border_line_color = "#b6b8c3";
+        const marker_size = 16;
+        const marker_opacity =  0.9;
+        const border_line_color = getTextColor();
         const colors = [];
         $.each(data_order_side, function (index, value) {
             colors.push(_getOrderColor(trades["trade_description"][index], value));
         });
 
-        const line_with = 1;
+        const line_with = isDarkTheme() ? 1 : 0.2;
 
         return {
             x: data_time,
