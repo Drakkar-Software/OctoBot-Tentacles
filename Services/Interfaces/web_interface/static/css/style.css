@@ -563,7 +563,7 @@ footer.page-footer {
 /* Theme */
 /* Elegant */
 .card-body.candle-graph {
-    min-height: 30.625rem;
+    height: 30.625rem;
     background-color: inherit;
 }
 
