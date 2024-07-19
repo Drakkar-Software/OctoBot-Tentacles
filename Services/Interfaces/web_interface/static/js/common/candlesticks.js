@@ -118,11 +118,11 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
     });
 }
 
-const stop_color = "#FFA500";
-const sell_color = "#F65A33";
-const buy_color = isDarkTheme() ? '#6cb596' : "#6cb596";
-const candle_sell_color = sell_color;
-const candle_buy_color = isDarkTheme() ? '#65e7cf' : "#6cb596";
+const stop_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-stop-color');
+const sell_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-sell-color');
+const buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-buy-color');
+const candle_sell_color = getComputedStyle(document.body).getPropertyValue('----local-price-chart-candle-sell-color');
+const candle_buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-candle-buy-color');
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
