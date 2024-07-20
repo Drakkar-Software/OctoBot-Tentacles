@@ -48,8 +48,6 @@ $(document).ready(function () {
 
     const updateProfitabilityDisplay = (bot_real_profitability, bot_real_flat_profitability,
                                         bot_simulated_profitability, bot_simulated_flat_profitability) => {
-        bot_simulated_profitability = 21
-        bot_simulated_flat_profitability = 190
         if(isDefined(bot_real_profitability)){
             displayProfitability(bot_real_profitability, bot_real_flat_profitability);
         }
