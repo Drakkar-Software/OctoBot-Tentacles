@@ -87,7 +87,8 @@ def get_exchanges_load():
             "load": trading_api.get_currently_handled_pair_with_time_frame(exchange_manager),
             "max_load": trading_api.get_max_handled_pair_with_time_frame(exchange_manager),
             "overloaded": trading_api.is_overloaded(exchange_manager),
-            "has_websocket": trading_api.get_has_websocket(exchange_manager)
+            "has_websocket": trading_api.get_has_websocket(exchange_manager),
+            "has_reached_websocket_limit": trading_api.get_has_reached_websocket_limit(exchange_manager)
         }
         for exchange_manager in interfaces_util.get_exchange_managers()
     }
