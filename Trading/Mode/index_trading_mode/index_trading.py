@@ -459,10 +459,10 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.refresh_interval_days = int(self.UI.user_input(
-            IndexTradingModeProducer.REFRESH_INTERVAL, commons_enums.UserInputTypes.INT,
+        self.refresh_interval_days = float(self.UI.user_input(
+            IndexTradingModeProducer.REFRESH_INTERVAL, commons_enums.UserInputTypes.FLOAT,
             self.refresh_interval_days, inputs,
-            min_val=0,
+            min_val=0.0006,  # min 1 per minute
             title="Trigger period: Days to wait between each rebalance.",
         ))
         self.rebalance_trigger_min_ratio = decimal.Decimal(str(self.UI.user_input(
