@@ -8,7 +8,13 @@
 {% set vars = {'exchange_overload': False} %}
 
 {% macro exchange_overload_warning(exchange, load) -%}
-    {% if load["overloaded"] %}
+    {% if load["has_reached_websocket_limit"] %}
+        <div class="alert alert-info font-weight-normal offset-md-3 offset-lg-2 offset-1" role="alert">
+            <span class="text-capitalize">{{ exchange }}</span> exchange websocket can't handle the required
+            {{load["load"]}} simultaneous feed. Exchange maximum is {{load["max_load"]}}. Falling back to the
+            slower "REST" connection.
+        </div>
+    {% elif load["overloaded"] %}
         <div class="alert alert-danger font-weight-normal offset-md-3 offset-lg-2 offset-1" role="alert">
             <span class="text-capitalize">{{ exchange }}</span> exchange is overloaded by
             <span class="font-weight-bold">{{ (load["load"] * 100 / load["max_load"] - 100) | round | int }}%</span>.
