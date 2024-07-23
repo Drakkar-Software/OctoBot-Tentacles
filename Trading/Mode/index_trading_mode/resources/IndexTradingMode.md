@@ -43,22 +43,23 @@ Example:
 An index on 3 coins with a 33.33% target on each coin and a Rebalance cap of 5% will trigger a rebalance if 
 the holding if any of those 3 coins takes more than 38.33% or less than 28.33% of the portfolio
 
+Warning on high Rebalance caps: When your index Rebalance cap is higher or equal to the target holding % of a coin, no rebalance 
+will be triggered if your holdings of this coin become very low, rebalances will only be triggered when holdings are 
+getting too high. This is a special case that can happen when using a large Rebalance cap.
+Example:  
+Let's take an index on 10 coins using a 10% target for each coin. Using a Rebalance cap of 11% will only trigger a 
+rebalance if any of those 10 coins take more than 21% of the portfolio (10% + 11%). The other side: 10% - 11% = -1% 
+is negative and therefore can't happen, which means rebalances won't be triggered from lower holdings in this
+configuration. Using a 9% rebalance cap however would trigger a rebalance at 1% holdings (10% - 9%). 
+
+Please note that if the % held of a coin is 0%, then a rebalance will always trigger, ignoring Rebalance cap.
+
 ### Minimum funds
 To use the Index Trading Mode, the minimum required funds are twice the minimum exchange order amount for every 
 traded coin. This means that when trading 3 coins on Binance, at least 3 times $5 x2, which is $30 is required.  
 Please note that this is the bare minimum, it's better to have at least twice this amount. If the minimum is reached, 
 the Index Trading Mode will stop updating its portfolio according to the index until the value of the portfolio 
 raises back above the required minimum.
-
-
-Warning: When your index Rebalance cap is higher or equal to the target holdings of each coin, no rebalance 
-will be triggered if your holdings of a coin become very low, rebalances will only be triggered when holdings are 
-getting to high.  
-Example:
-An index on 10 coins uses a 10% target on each coin. Using a Rebalance cap of 11% will only trigger a 
-rebalance if any of those 3 coins takes more than 21% of the portfolio (the other side: 10-11 = -1% is incoherent). 
-
-Please note that if the % held of a coin is 0%, then a rebalance will always trigger, ignoring the Rebalance cap.
 
 ### OctoBot cloud indexes
 The [Premium OctoBot extension](extensions) enables your open source OctoBot to use and customize OctoBot cloud's
