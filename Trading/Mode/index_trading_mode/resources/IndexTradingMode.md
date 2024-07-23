@@ -12,7 +12,8 @@ Example:
 - Your reference market is USDT
 - Your traded pairs are BTC/USDT, ETH/USDT, SOL/USDT, ADA/USDT
 Then your index will be made of 25% BTC, 25% ETH, 25% SOL and 25% ADA. Each coin's holding % will be computed 
-against USDT and checked on a regular basis.
+against USDT and checked on a regular basis. You can also specify a specific % for each coin using a Custom 
+distribution.
 
 When starting the Index trading mode with a new configuration, or if your current portfolio doesn't reflect
 the target of the index, your portfolio will automatically be adapted to reproduce the index at the best
@@ -25,9 +26,13 @@ Once your Index trading mode has started, OctoBot will maintain the index conten
 automatically checking the content of your portfolio of a regular basis and will trigger a rebalance
 if necessary.
 
-Your portfolio content is checked every configured `Trigger period` days. If during an index check, 
+Your portfolio content is checked every configured `Trigger period` days. Decimal values can be used to check multiple 
+times a day. If during an index check, 
 your OctoBot detects that your portfolio content doesn't comply with your index configuration, it will
 trigger a rebalance.
+
+If `Trigger period` is set to `0`, then each new price of any indexed coin will trigger an index checkup and a rebalance
+if conditions are met.
 
 ### Rebalance cap
 When checking for rebalance, the Index trading mode also uses your `Rebalance cap` configuration before
