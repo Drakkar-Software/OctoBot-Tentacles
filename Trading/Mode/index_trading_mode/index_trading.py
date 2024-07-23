@@ -20,6 +20,7 @@ import enum
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.authentication as authentication
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
@@ -495,23 +496,25 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS,
             self.sell_unindexed_traded_coins
         )
-        self.UI.user_input(IndexTradingModeProducer.INDEX_CONTENT, commons_enums.UserInputTypes.OBJECT_ARRAY,
-                           self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None), inputs,
-                           item_title="Coin",
-                           other_schema_values={"minItems": 0, "uniqueItems": True},
-                           title="Custom distribution: when used, only coins listed in this distribution and "
-                                 "in your profile traded pairs will be traded. "
-                                 "Leave empty to evenly allocate funds in each traded coin.")
-        self.UI.user_input(index_distribution.DISTRIBUTION_NAME, commons_enums.UserInputTypes.TEXT,
-                           "BTC", inputs,
-                           other_schema_values={"minLength": 1},
-                           parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
-                           title="Name of the coin.")
-        self.UI.user_input(index_distribution.DISTRIBUTION_VALUE, commons_enums.UserInputTypes.FLOAT,
-                           50, inputs,
-                           min_val=0,
-                           parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
-                           title="Weight of the coin within this distribution.")
+        if not self.exchange_manager.is_backtesting and \
+                authentication.Authenticator.instance().has_open_source_package():
+            self.UI.user_input(IndexTradingModeProducer.INDEX_CONTENT, commons_enums.UserInputTypes.OBJECT_ARRAY,
+                               self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None), inputs,
+                               item_title="Coin",
+                               other_schema_values={"minItems": 0, "uniqueItems": True},
+                               title="Custom distribution: when used, only coins listed in this distribution and "
+                                     "in your profile traded pairs will be traded. "
+                                     "Leave empty to evenly allocate funds in each traded coin.")
+            self.UI.user_input(index_distribution.DISTRIBUTION_NAME, commons_enums.UserInputTypes.TEXT,
+                               "BTC", inputs,
+                               other_schema_values={"minLength": 1},
+                               parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
+                               title="Name of the coin.")
+            self.UI.user_input(index_distribution.DISTRIBUTION_VALUE, commons_enums.UserInputTypes.FLOAT,
+                               50, inputs,
+                               min_val=0,
+                               parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
+                               title="Weight of the coin within this distribution.")
         self._update_coins_distribution()
 
     def is_updating_at_each_price_change(self):

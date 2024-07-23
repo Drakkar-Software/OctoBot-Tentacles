@@ -13,7 +13,7 @@ Example:
 - Your traded pairs are BTC/USDT, ETH/USDT, SOL/USDT, ADA/USDT
 Then your index will be made of 25% BTC, 25% ETH, 25% SOL and 25% ADA. Each coin's holding % will be computed 
 against USDT and checked on a regular basis. You can also specify a specific % for each coin using a Custom 
-distribution.
+distribution using the [Premium OctoBot extension](extensions).
 
 When starting the Index trading mode with a new configuration, or if your current portfolio doesn't reflect
 the target of the index, your portfolio will automatically be adapted to reproduce the index at the best
