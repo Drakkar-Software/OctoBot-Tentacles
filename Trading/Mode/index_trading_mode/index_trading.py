@@ -633,7 +633,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         return trading_enums.EvaluatorStates.NEUTRAL.name, f"Indexing {len(self.indexed_coins)} coins"
 
     async def single_exchange_process_optimize_initial_portfolio(
-        self, sellable_assets, target_asset: str, tickers: dict
+        self, sellable_assets: list, target_asset: str, tickers: dict
     ) -> list:
         symbol_open_orders = [
             order
