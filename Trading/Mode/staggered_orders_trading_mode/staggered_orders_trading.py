@@ -272,7 +272,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         return False
 
     async def single_exchange_process_optimize_initial_portfolio(
-        self, sellable_assets, target_asset: str, tickers: dict
+        self, sellable_assets: list, target_asset: str, tickers: dict
     ) -> list:
         portfolio = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
         producer = self.producers[0]
