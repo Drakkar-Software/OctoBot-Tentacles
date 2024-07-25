@@ -2,17 +2,20 @@
 $(document).ready(function() {
 
     const getUserEmail = () => {
-        return getUserDetails().email
+        return getUserDetails().email || "";
     }
 
     const getUserDetails = () => {
+        if (_USER_DETAILS.email === ""){
+            // do not erase email if unset
+            delete _USER_DETAILS.email;
+        }
         return _USER_DETAILS
     }
 
     const updateUserDetails = () => {
         posthog.capture(
-            getUserEmail(),
-            event='update_user_details',
+            'up_user_details',
             properties={
                 '$set': getUserDetails(),
             }
@@ -21,11 +24,19 @@ $(document).ready(function() {
 
     const shouldUpdateUserDetails = () => {
         const currentProperties = posthog.get_property('$stored_person_properties');
-        return (
-            getUserEmail() !== ""
-            && isDefined(currentProperties)
-            && JSON.stringify(currentProperties) !== JSON.stringify(getUserDetails())
-        )
+        if(currentProperties === undefined){
+            return true;
+        }
+        if(isDefined(currentProperties)){
+            const currentDetails = getUserDetails();
+            if(currentDetails.email === undefined){
+                // compare without email (otherwise result is always different as no email is currently set)
+                const localProperties = JSON.parse(JSON.stringify(currentProperties));
+                delete localProperties.email
+                return JSON.stringify(localProperties) !== JSON.stringify(getUserDetails());
+            }
+        }
+        return  JSON.stringify(currentProperties) !== JSON.stringify(getUserDetails());
     }
 
     const shouldReset = (newEmail) => {
