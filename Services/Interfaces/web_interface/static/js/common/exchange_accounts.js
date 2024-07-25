@@ -93,7 +93,7 @@ function register_exchanges_checks(check_existing_accounts){
 
     const check_account = (exchangeCard, source, newValue) => {
         const exchange = exchangeCard.find(".card-body").attr("name");
-        if(exchange !== config_default_value){
+        if(exchange !== config_default_value && exchangeCard.find("#exchange_api-key").length > 0){
             const apiKey = source.attr("id") === "exchange_api-key" ? newValue : exchangeCard.find("#exchange_api-key").editable('getValue', true).trim();
             const apiSecret = source.attr("id") === "exchange_api-secret" ? newValue : exchangeCard.find("#exchange_api-secret").editable('getValue', true).trim();
             const apiPassword = source.attr("id") === "exchange_api-password" ? newValue : exchangeCard.find("#exchange_api-password").editable('getValue', true).trim();
