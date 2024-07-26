@@ -44,6 +44,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
+    ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
@@ -255,10 +256,12 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         tp_price = await self._parse_price(
             ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan
         )
+        allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
+
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
             TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(
-                ctx, parsed_data, parsed_side, target_price
+                ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation
             ),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
@@ -281,7 +284,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             )
         return target_price
 
-    async def _parse_volume(self, ctx, parsed_data, side, target_price):
+    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
         if user_volume == "0":
             return trading_constants.ZERO
@@ -293,7 +296,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,
-            allow_holdings_adaptation=False,    # raise when not enough funds to create an order according to user input
+            # raise when not enough funds to create an order according to user input
+            allow_holdings_adaptation=allow_holdings_adaptation,
         )
 
     async def signal_callback(self, parsed_data: dict, ctx):
