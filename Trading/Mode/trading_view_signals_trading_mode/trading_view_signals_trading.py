@@ -249,7 +249,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
             )
             state = trading_enums.EvaluatorStates.NEUTRAL
-        target_price = await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0)
+        target_price = 0 if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL else (
+            await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0))
         stop_price = await self._parse_price(
             ctx, parsed_data, TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan
         )
