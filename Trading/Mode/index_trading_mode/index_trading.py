@@ -496,7 +496,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS,
             self.sell_unindexed_traded_coins
         )
-        if not self.exchange_manager.is_backtesting and \
+        if (not self.exchange_manager or not self.exchange_manager.is_backtesting) and \
                 authentication.Authenticator.instance().has_open_source_package():
             self.UI.user_input(IndexTradingModeProducer.INDEX_CONTENT, commons_enums.UserInputTypes.OBJECT_ARRAY,
                                self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None), inputs,
