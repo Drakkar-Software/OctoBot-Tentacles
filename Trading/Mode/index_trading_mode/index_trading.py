@@ -20,6 +20,7 @@ import enum
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.authentication as authentication
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
@@ -245,6 +246,13 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,
                              time_frame: str, candle: dict, init_call: bool = False):
+        await self._check_index_if_necessary()
+
+    async def kline_callback(self, exchange: str, exchange_id: str, cryptocurrency: str, symbol: str,
+                             time_frame, kline: dict):
+        await self._check_index_if_necessary()
+
+    async def _check_index_if_necessary(self):
         current_time = self.exchange_manager.exchange.get_exchange_current_time()
         if (
             current_time - self._last_trigger_time
@@ -259,7 +267,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             else:
                 self._notify_if_missing_too_many_coins()
                 await self.ensure_index()
-            self.logger.debug(f"Next index check in {self.trading_mode.refresh_interval_days} days")
+            if not self.trading_mode.is_updating_at_each_price_change():
+                self.logger.debug(f"Next index check in {self.trading_mode.refresh_interval_days} days")
             self._last_trigger_time = current_time
 
     async def ensure_index(self):
@@ -436,7 +445,17 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     return
 
     def get_channels_registration(self):
-        return [self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.FULL_CANDLES.value]]
+        # use candles to trigger at each candle interval and when initializing
+        topics = [
+            self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.FULL_CANDLES.value],
+        ]
+        if self.trading_mode.is_updating_at_each_price_change():
+            # use kline to trigger at each price change
+            self.logger.info(f"Using price change bound update instead of time-based update.")
+            topics.append(
+                self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.IN_CONSTRUCTION_CANDLES.value]
+            )
+        return topics
 
 
 class IndexTradingMode(trading_modes.AbstractTradingMode):
@@ -459,11 +478,12 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        self.refresh_interval_days = int(self.UI.user_input(
-            IndexTradingModeProducer.REFRESH_INTERVAL, commons_enums.UserInputTypes.INT,
+        self.refresh_interval_days = float(self.UI.user_input(
+            IndexTradingModeProducer.REFRESH_INTERVAL, commons_enums.UserInputTypes.FLOAT,
             self.refresh_interval_days, inputs,
             min_val=0,
-            title="Trigger period: Days to wait between each rebalance.",
+            title="Trigger period: Days to wait between each rebalance. Can be a fraction of a day. "
+                  "When set to 0, every new price will trigger a rebalance check.",
         ))
         self.rebalance_trigger_min_ratio = decimal.Decimal(str(self.UI.user_input(
             IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
@@ -476,7 +496,29 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS,
             self.sell_unindexed_traded_coins
         )
+        if not self.exchange_manager.is_backtesting and \
+                authentication.Authenticator.instance().has_open_source_package():
+            self.UI.user_input(IndexTradingModeProducer.INDEX_CONTENT, commons_enums.UserInputTypes.OBJECT_ARRAY,
+                               self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None), inputs,
+                               item_title="Coin",
+                               other_schema_values={"minItems": 0, "uniqueItems": True},
+                               title="Custom distribution: when used, only coins listed in this distribution and "
+                                     "in your profile traded pairs will be traded. "
+                                     "Leave empty to evenly allocate funds in each traded coin.")
+            self.UI.user_input(index_distribution.DISTRIBUTION_NAME, commons_enums.UserInputTypes.TEXT,
+                               "BTC", inputs,
+                               other_schema_values={"minLength": 1},
+                               parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
+                               title="Name of the coin.")
+            self.UI.user_input(index_distribution.DISTRIBUTION_VALUE, commons_enums.UserInputTypes.FLOAT,
+                               50, inputs,
+                               min_val=0,
+                               parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
+                               title="Weight of the coin within this distribution.")
         self._update_coins_distribution()
+
+    def is_updating_at_each_price_change(self):
+        return self.refresh_interval_days == 0
 
     def _update_coins_distribution(self):
         distribution = self._get_supported_distribution()
@@ -591,7 +633,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         return trading_enums.EvaluatorStates.NEUTRAL.name, f"Indexing {len(self.indexed_coins)} coins"
 
     async def single_exchange_process_optimize_initial_portfolio(
-        self, sellable_assets, target_asset: str, tickers: dict
+        self, sellable_assets: list, target_asset: str, tickers: dict
     ) -> list:
         symbol_open_orders = [
             order

@@ -896,6 +896,11 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     async def single_exchange_process_optimize_initial_portfolio(
         self, sellable_assets, target_asset: str, tickers: dict
     ) -> list:
+        traded_coins = [
+            symbol.base
+            for symbol in self.exchange_manager.exchange_config.traded_symbols
+        ]
+        sellable_assets = sorted(list(set(sellable_assets + traded_coins)))
         self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
         return await trading_modes.convert_assets_to_target_asset(
             self, sellable_assets, target_asset, tickers

@@ -1000,6 +1000,17 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
         orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
         convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
         assert orders == ["order_1"]
+        convert_assets_to_target_asset_mock.reset_mock()
+
+        mode.exchange_manager.exchange_config.traded_symbols = [
+            commons_symbols.parse_symbol("SOL/USDT"),
+            commons_symbols.parse_symbol("BCC/ATOM"),
+        ]
+        orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
+        convert_assets_to_target_asset_mock.assert_called_once_with(
+            mode, ["BCC", "BTC", "ETH", "SOL"], "USDT", {}
+        )
+        assert orders == ["order_1"]
 
 
 async def test_single_exchange_process_health_check(tools):

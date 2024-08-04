@@ -87,6 +87,9 @@ def register(blueprint):
                 sandbox_exchanges=sandbox_exchanges,
                 display_ph_launch=display_ph_launch,
                 is_launching=is_launching,
+                latest_release_url=f"{octobot_commons.constants.GITHUB_BASE_URL}/"
+                                   f"{octobot_commons.constants.GITHUB_ORGANISATION}/"
+                                   f"{constants.PROJECT_NAME}/releases/latest",
             )
         else:
             return flask.redirect(flask.url_for("terms"))

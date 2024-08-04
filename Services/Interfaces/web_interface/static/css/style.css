@@ -21,6 +21,8 @@
 :root {
     --mdb-body-font-family: DM Sans, sans-serif;
     --local-secondary-bg-text-color: #0f1237;   /* same as dark mdb-primary */
+    --local-price-chart-sell-color: #F65A33;
+    --local-price-chart-stop-color: #FFA500;
 }
 
 :root[data-mdb-theme=light] {
@@ -72,14 +74,22 @@
     --mdb-card-long-border-color: var(--mdb-secondary);
     --mdb-card-short-border-color: var(--mdb-orange);
     --mdb-card-very-short-border-color: var(--mdb-red);
+    --mdb-card-bg: var(--mdb-bg);
+    --mdb-card-color: var(--mdb-primary);
+    --mdb-surface-bg: var(--mdb-bg);
 
     /* navbar */
     --mdb-navbar-bg: var(--mdb-bg);
     --mdb-navbar-brand-color: var(--mdb-primary);
 
-    --mdb-card-bg: var(--mdb-bg);
-    --mdb-card-color: var(--mdb-primary);
-    --mdb-surface-bg: var(--mdb-bg);
+    /* local */
+    /* config cards */
+    --local-config-card--border-width: 0px;
+
+    /* price charts */
+    --local-price-chart-buy-color: #6cb596;
+    --local-price-chart-candle-sell-color: var(--local-price-chart-sell-color);
+    --local-price-chart-candle-buy-color: #6cb596;
 }
 
 :root[data-mdb-theme=dark] {
@@ -130,14 +140,22 @@
     --mdb-card-long-border-color: var(--mdb-secondary);
     --mdb-card-short-border-color: var(--mdb-orange);
     --mdb-card-very-short-border-color: var(--mdb-red);
+    --mdb-card-bg: var(--mdb-secondary);
+    --mdb-card-color: var(--mdb-primary);
+    --mdb-surface-bg: var(--mdb-bg-500);
 
     /* navbar */
     --mdb-navbar-bg: var(--mdb-bg);
     --mdb-navbar-brand-color: var(--mdb-primary);
 
-    --mdb-card-bg: var(--mdb-secondary);
-    --mdb-card-color: var(--mdb-primary);
-    --mdb-surface-bg: var(--mdb-bg-500);
+    /* local */
+    /* config cards */
+    --local-config-card--border-width: 1px;
+
+    /* price charts */
+    --local-price-chart-buy-color: #6cb596;
+    --local-price-chart-candle-sell-color: var(--local-price-chart-sell-color);
+    --local-price-chart-candle-buy-color: #65e7cf;
 }
 
 /* Fix incompatibility with bootstrap 4 */
@@ -459,6 +477,10 @@ footer.page-footer {
     flex-basis: inherit !important;
 }
 
+.config-card {
+    border: var(--local-config-card--border-width) solid rgba(var(--mdb-primary-rgb), 0.3);
+}
+
 .community-bot-stats-label {
   font-weight: bold;
   font-size: x-large;
@@ -563,7 +585,7 @@ footer.page-footer {
 /* Theme */
 /* Elegant */
 .card-body.candle-graph {
-    min-height: 30.625rem;
+    height: 30.625rem;
     background-color: inherit;
 }
 

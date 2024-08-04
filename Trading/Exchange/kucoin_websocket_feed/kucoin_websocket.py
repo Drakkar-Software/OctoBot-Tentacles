@@ -48,6 +48,10 @@ class KucoinCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.TICKER: [Feeds.KLINE]
     }
 
+    # Feeds to create above which not to use websockets
+    # Kucoin raises "exceed max permits per second" when subscribing to more than 100 feeds
+    MAX_HANDLED_FEEDS = 100
+
     RECREATE_CLIENT_ON_DISCONNECT = True   # when True, a new ccxt websocket client will replace the previous
     # one when the exchange is disconnected
 

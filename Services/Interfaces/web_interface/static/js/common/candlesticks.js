@@ -118,9 +118,11 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
     });
 }
 
-const stop_color = "#FFA500";
-const sell_color = "#F65A33";
-const buy_color = isDarkTheme() ? '#299a39' : "#009900";
+const stop_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-stop-color');
+const sell_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-sell-color');
+const buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-buy-color');
+const candle_sell_color = getComputedStyle(document.body).getPropertyValue('----local-price-chart-candle-sell-color');
+const candle_buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-candle-buy-color');
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
@@ -132,9 +134,9 @@ function create_candlesticks(candles){
     return {
       x: data_time,
       close: data_close,
-      decreasing: {line: {color: sell_color}},
+      decreasing: {line: {color: candle_sell_color}},
       high: data_high,
-      increasing: {line: {color: buy_color}},
+      increasing: {line: {color: candle_buy_color}},
       line: {color: 'rgba(31,119,180,1)'},
       low: data_low,
       open: data_open,
@@ -187,22 +189,23 @@ function create_trades(trades, trader){
         const data_trade_description = trades["trade_description"];
         const data_order_side = trades["order_side"];
 
-        const marker_size = trader === "Simulator" ? 14 : 16;
-        const marker_opacity = trader === "Simulator" ? 0.5 : 0.65;
-        const border_line_color = "#b6b8c3";
+        const marker_size = 16;
+        const marker_opacity =  0.9;
+        const border_line_color = getTextColor();
         const colors = [];
         $.each(data_order_side, function (index, value) {
             colors.push(_getOrderColor(trades["trade_description"][index], value));
         });
 
-        const line_with = trader === "Simulator" ? 0 : 1;
+        const line_with = isDarkTheme() ? 1 : 0.2;
 
         return {
             x: data_time,
             y: data_price,
             mode: 'markers',
-            name: trader,
+            name: "",
             text: data_trade_description,
+            hovertemplate: `%{text}<br>%{x}`,
             marker: {
                 color: colors,
                 size: marker_size,
