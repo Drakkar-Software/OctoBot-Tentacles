@@ -119,8 +119,9 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
         """
         exchanges_to_trade_on = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, cls) \
             .get("exchanges_to_trade_on", [])
-        return not exchanges_to_trade_on or exchange_name.lower() in [exchange.lower()
-                                                                      for exchange in exchanges_to_trade_on]
+        return not exchanges_to_trade_on or exchange_name.lower() in [
+            exchange.lower() for exchange in exchanges_to_trade_on
+        ]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:

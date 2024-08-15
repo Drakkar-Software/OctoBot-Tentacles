@@ -124,7 +124,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_BUY_VOLUME_PER_ORDER], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Buy orders volume: volume of each buy order in quote currency. Set 0 to use all "
+            title="[Optional] Buy orders volume: volume of each buy order in base currency. Set 0 to use all "
                   "available funds in portfolio (or total buy funds if set) to create orders with constant "
                   "total order cost (price * volume).",
         )
@@ -133,7 +133,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_SELL_VOLUME_PER_ORDER], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Sell orders volume: volume of each sell order in quote currency. Set 0 to use all "
+            title="[Optional] Sell orders volume: volume of each sell order in base currency. Set 0 to use all "
                   "available funds in portfolio (or total sell funds if set) to create orders with constant "
                   "total order cost (price * volume).",
         )
