@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
+
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
@@ -25,8 +27,11 @@ class Kraken(exchanges.RestExchange):
 
     RECENT_TRADE_FIXED_LIMIT = 1000
 
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
         self.logger.error("Kraken is not providing free and used data for account balance. "
                           "OctoBot wont be able to manage a real portfolio correctly.")
 

@@ -35,8 +35,11 @@ class MEXC(exchanges.RestExchange):
 
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
-    def __init__(self, config, exchange_manager, connector_class=None):
-        super().__init__(config, exchange_manager, connector_class=connector_class)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
         self.api_handled_symbols = APIHandledSymbols(self, commons_constants.DAYS_TO_SECONDS)
 
     @classmethod
