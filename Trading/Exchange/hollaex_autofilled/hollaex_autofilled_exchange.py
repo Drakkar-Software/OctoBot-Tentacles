@@ -13,12 +13,20 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import requests
+import cachetools
+import aiohttp
+import typing
 
 import octobot_commons.logging as commons_logging
+import octobot_commons.constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 from ..hollaex.hollaex_exchange import hollaex
+
+
+_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL: cachetools.TTLCache[str, dict] = cachetools.TTLCache(
+    maxsize=50, ttl=octobot_commons.constants.DAYS_TO_SECONDS
+)
 
 
 class HollaexAutofilled(hollaex):
@@ -39,18 +47,45 @@ class HollaexAutofilled(hollaex):
             tentacle_config, await kit_details.json(), exchange_name
         )
 
-    def _fetch_details(self, config, exchange_manager):
-        try:
-            exchange_kit_url = self._get_kit_url(self.tentacle_config, exchange_manager.exchange_name)
-        except KeyError:
-            raise errors.NotSupported(f"{exchange_manager.exchange_name} is not supported by {self.get_name()}")
+    def _apply_fetched_details(self, config, exchange_manager):
         self._apply_config(
             self._parse_autofilled_exchange_details(
                 self.tentacle_config,
-                requests.get(exchange_kit_url).json(),
+                _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[
+                    self._get_kit_url(self.tentacle_config, exchange_manager.exchange_name)
+                ],
                 exchange_manager.exchange_name
             )
         )
+
+    @classmethod
+    async def fetch_exchange_config(
+        cls, exchange_config_by_exchange: typing.Optional[dict[str, dict]], exchange_manager
+    ):
+        hollaex_based_exchange_identifier = cls.get_name()
+        if not exchange_config_by_exchange or hollaex_based_exchange_identifier not in exchange_config_by_exchange:
+            raise KeyError(
+                f"{hollaex_based_exchange_identifier} has to be in exchange_config_by_exchange. "
+                f"{exchange_config_by_exchange=}"
+            )
+        tentacle_config = exchange_config_by_exchange[hollaex_based_exchange_identifier]
+        await cls._cached_fetch_autofilled_config(tentacle_config, exchange_manager.exchange_name)
+
+    @classmethod
+    async def _cached_fetch_autofilled_config(cls, tentacle_config, exchange_name) -> dict:
+        try:
+            exchange_kit_url = cls._get_kit_url(tentacle_config, exchange_name)
+        except KeyError:
+            raise errors.NotSupported(f"{exchange_name} is not supported by {cls.get_name()}")
+        if exchange_kit_url in _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL:
+            return _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url]
+        commons_logging.get_logger(cls.get_name()).info(
+            f"Fetching {exchange_name} HollaEx kit from {exchange_kit_url}"
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.get(exchange_kit_url) as response:
+                _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = await response.json()
+        return _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url]
 
     def _supports_autofill(self, exchange_name):
         try:
