@@ -15,7 +15,9 @@
       "reinvest_profits": false,
       "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
-      "use_existing_orders_only": false
+      "use_existing_orders_only": false,
+      "allow_funds_redispatch": false,
+      "funds_redispatch_interval": 24
     },
     {
       "pair": "ADA/ETH",
@@ -31,7 +33,8 @@
       "reinvest_profits": false,
       "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
-      "use_existing_orders_only": false
+      "use_existing_orders_only": false,
+      "funds_redispatch_interval": 24
     },
     {
       "pair": "ETH/USDT",
@@ -47,7 +50,8 @@
       "reinvest_profits": false,
       "use_fixed_volume_for_mirror_orders": false,
       "mirror_order_delay": 0,
-      "use_existing_orders_only": false
+      "use_existing_orders_only": false,
+      "funds_redispatch_interval": 24
     }
   ]
 }
