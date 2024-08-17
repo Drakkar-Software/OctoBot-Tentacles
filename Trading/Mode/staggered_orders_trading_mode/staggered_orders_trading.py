@@ -113,6 +113,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_OPERATIONAL_DEPTH = "operational_depth"
     CONFIG_MIRROR_ORDER_DELAY = "mirror_order_delay"
     CONFIG_ALLOW_FUNDS_REDISPATCH = "allow_funds_redispatch"
+    CONFIG_FUNDS_REDISPATCH_INTERVAL = "funds_redispatch_interval"
     COMPENSATE_FOR_MISSED_MIRROR_ORDER = "compensate_for_missed_mirror_order"
     CONFIG_STARTING_PRICE = "starting_price"
     CONFIG_BUY_FUNDS = "buy_funds"
@@ -523,6 +524,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.mirror_orders_tasks = []
         self.mirroring_pause_task = None
         self.allow_order_funds_redispatch = False
+        self.funds_redispatch_interval = 24
         self._expect_missing_orders = False
         self._skip_order_restore_on_recently_closed_orders = True
         self._use_recent_trades_for_order_restore = False

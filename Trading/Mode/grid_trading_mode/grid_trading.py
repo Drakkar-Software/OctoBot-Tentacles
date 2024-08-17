@@ -176,6 +176,17 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "orders when additional funds become available. Funds redispatch check happens once a day "
                   "around your OctoBot start time.",
         )
+        self.UI.user_input(
+            self.CONFIG_FUNDS_REDISPATCH_INTERVAL, commons_enums.UserInputTypes.FLOAT,
+            default_config[self.CONFIG_FUNDS_REDISPATCH_INTERVAL], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Auto-dispatch interval: hours between each funds redispatch check.",
+            editor_options={
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                  self.CONFIG_ALLOW_FUNDS_REDISPATCH: True
+                }
+            }
+        )
 
     def get_default_pair_config(self, symbol, flat_spread, flat_increment) -> dict:
         return {
@@ -194,6 +205,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
           self.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
           self.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
+          self.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
     def get_mode_producer_classes(self) -> list:
@@ -297,7 +309,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         )
         if self.allow_order_funds_redispatch:
             # check every day that funds should not be redispatched and of orders are missing
-            self.health_check_interval_secs = commons_constants.DAYS_TO_SECONDS
+            self.health_check_interval_secs = self.symbol_trading_config.get(
+                self.trading_mode.CONFIG_FUNDS_REDISPATCH_INTERVAL, self.funds_redispatch_interval
+            ) * commons_constants.HOURS_TO_SECONDS
         self.compensate_for_missed_mirror_order = self.symbol_trading_config.get(
             self.trading_mode.COMPENSATE_FOR_MISSED_MIRROR_ORDER, self.compensate_for_missed_mirror_order
         )
