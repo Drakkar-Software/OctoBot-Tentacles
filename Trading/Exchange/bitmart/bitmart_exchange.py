@@ -17,8 +17,19 @@
 import octobot_trading.exchanges as exchanges
 
 
+class BitMartConnector(exchanges.CCXTConnector):
+
+    def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
+        return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
+
+    def _keys_adapter(self, key, secret, password, uid):
+        # use password as uid
+        return key, secret, "", password
+
+
 class BitMart(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
+    DEFAULT_CONNECTOR_CLASS = BitMartConnector
 
     @classmethod
     def get_name(cls):
