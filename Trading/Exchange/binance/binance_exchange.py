@@ -205,6 +205,8 @@ class Binance(exchanges.RestExchange):
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
+        if "useV2" not in kwargs:
+            kwargs["useV2"] = True  #V2 api is required to fetch empty positions (not retured in V3)
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
         for account_type in self._futures_account_types:
