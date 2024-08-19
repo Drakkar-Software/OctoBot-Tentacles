@@ -31,7 +31,7 @@ try:
 except ImportError:
     # todo remove once supabase migration is complete
     configuration_storage = mock.Mock(
-        SyncConfigurationStorage=mock.Mock(
+        ASyncConfigurationStorage=mock.Mock(
             _save_value_in_config=mock.Mock()
         )
     )
