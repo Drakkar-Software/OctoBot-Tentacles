@@ -305,7 +305,7 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
-                    # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+                    # convert amount to have the same units as every other exchange
                     trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
                             trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] /
                             trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
