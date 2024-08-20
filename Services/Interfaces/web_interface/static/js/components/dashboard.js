@@ -46,8 +46,10 @@ $(document).ready(function () {
         })
     }
 
-    const updateProfitabilityDisplay = (bot_real_profitability, bot_real_flat_profitability,
-                                        bot_simulated_profitability, bot_simulated_flat_profitability) => {
+    const updateProfitabilityDisplay = (
+        bot_real_profitability, bot_real_flat_profitability,
+        bot_simulated_profitability, bot_simulated_flat_profitability
+    ) => {
         if(isDefined(bot_real_profitability)){
             displayProfitability(bot_real_profitability, bot_real_flat_profitability);
         }
@@ -56,15 +58,15 @@ $(document).ready(function () {
         }
     }
 
-    const displayProfitability = (value, flatValue) => {
-        const displayedValue = parseFloat(value.toFixed(2));
+    const displayProfitability = (profitabilityValue, flatValue) => {
+        const displayedValue = parseFloat(profitabilityValue.toFixed(2));
         const badge = $("#profitability-badge");
         const flatValueSpan = $("#flat-profitability");
         const flatValueText = $("#flat-profitability-text");
         const displayValue = $("#profitability-value");
         badge.removeClass(hidden_class);
         flatValueSpan.removeClass(hidden_class);
-        if(value < 0){
+        if(profitabilityValue < 0){
             displayValue.text(displayedValue);
             flatValueText.text(flatValue);
             badge.addClass("badge-warning");

@@ -15,6 +15,7 @@
 #  License along with this library.
 import time
 import sortedcontainers
+
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
 import octobot_trading.enums as trading_enums
@@ -24,6 +25,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.logging as logging
 import octobot_commons.timestamp_util as timestamp_util
 import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.pretty_printer as pretty_printer
 import octobot_commons.symbols as commons_symbols
 import tentacles.Services.Interfaces.web_interface.errors as errors
 import tentacles.Services.Interfaces.web_interface.models.dashboard as dashboard
@@ -135,9 +137,18 @@ def get_symbols_values(symbols, has_real_trader, has_simulated_trader):
     return value_per_symbols
 
 
-def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, from_timestamp, to_timestamp):
-    return trading_api.get_portfolio_historical_values(exchange_manager, currency, time_frame,
-                                                       from_timestamp=from_timestamp, to_timestamp=to_timestamp)
+def _get_exchange_historical_portfolio(exchange_manager, currency, time_frame, from_timestamp, to_timestamp) -> list:
+    return [
+        {
+            trading_enums.HistoricalPortfolioValue.TIME.value: value[trading_enums.HistoricalPortfolioValue.TIME.value],
+            trading_enums.HistoricalPortfolioValue.VALUE.value: pretty_printer.get_min_string_from_number(
+                value[trading_enums.HistoricalPortfolioValue.VALUE.value]
+            )
+        }
+        for value in trading_api.get_portfolio_historical_values(
+            exchange_manager, currency, time_frame, from_timestamp=from_timestamp, to_timestamp=to_timestamp
+        )
+    ]
 
 
 def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timestamp, to_timestamp):
