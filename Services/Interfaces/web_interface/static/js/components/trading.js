@@ -155,6 +155,7 @@ const handle_confirm = (modalElement, confirmButton, data, update_url, disable_c
 
 const add_cancel_individual_orders_buttons = () => {
     $("button[action=cancel_order]").each((_, element) => {
+        $(element).off("click");
         $(element).on("click", (event) => {
             cancel_after_confirm($('#CancelOrderModal'), $(event.currentTarget).attr("order_desc"), $(event.currentTarget).attr(update_url_attr));
         });
@@ -302,7 +303,7 @@ const registerTableButtonsEvents = () => {
     $("#positions-table").on("draw.dt", () => {
         handle_close_buttons();
     });
-    $("#orders-table").on("draw.dt", () => {
+    $("#orders-table").on("draw.dt row-reordered", () => {
         add_cancel_individual_orders_buttons();
         const cancelIcon = $("#cancel_all_icon");
         $("#cancel_order_progress_bar").hide();
