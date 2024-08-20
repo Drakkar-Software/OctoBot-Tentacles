@@ -26,7 +26,7 @@ class NotificationsNamespace(websockets.AbstractWebSocketNamespaceNotifier):
     @staticmethod
     def _get_update_data():
         return {
-            "notifications": copy.copy(web_interface.get_notifications()),
+            "notifications": web_interface.get_notifications(),
             "errors_count": web_interface.get_errors_count()
         }
 
