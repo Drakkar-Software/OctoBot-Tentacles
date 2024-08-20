@@ -267,6 +267,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self._expect_missing_orders = True
         self._skip_order_restore_on_recently_closed_orders = False
         self._use_recent_trades_for_order_restore = True
+        self.allow_virtual_orders = False
 
     def read_config(self):
         self.mode = staggered_orders_trading.StrategyModes.FLAT
