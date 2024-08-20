@@ -1180,7 +1180,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                        current_price, missing_orders, state, allowed_funds, ignore_available_funds, recent_trades):
 
         if lower_bound >= upper_bound:
-            self.logger.warning(f"No {side} orders for {self.symbol} possible: current price beyond boundaries.")
+            self.logger.warning(
+                f"No {side.name} orders for {self.symbol} possible: "
+                f"Your configured increment or spread value is likely too large for the current price. "
+                f"Current price: {current_price}, increment: {self.flat_increment}, spread: {self.flat_spread}. "
+                f"Current price beyond boundaries: "
+                f"computed lower bound: {lower_bound}, computed upper bound: {upper_bound}. "
+                f"Lower bound should be inferior to upper bound."
+            )
             return []
 
         selling = side == trading_enums.TradeOrderSide.SELL
