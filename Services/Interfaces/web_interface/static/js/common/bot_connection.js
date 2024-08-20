@@ -46,9 +46,16 @@ function manage_alert(data){
                 errorBadge.text("");
             }
         }
-        $.each(data["notifications"], function(i, item) {
+        const notifications = data["notifications"];
+        const maxDisplayedNotifications = 10;
+        // only display latest notifications when too many to display
+        const displayedNotifications = (
+            notifications.length > maxDisplayedNotifications ?
+            notifications.slice(notifications.length - maxDisplayedNotifications, notifications.length): notifications
+        );
+        $.each(displayedNotifications, (i, item) => {
             create_alert(item["Level"], item["Title"], item["Message"], "", item["Sound"]);
-            $.each(notificationCallbacks, function(_, callback) {
+            $.each(notificationCallbacks, (_, callback) => {
                callback(item["Title"], item);
             });
         })

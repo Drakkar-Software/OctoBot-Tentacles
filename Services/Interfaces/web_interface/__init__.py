@@ -52,8 +52,9 @@ from tentacles.Services.Interfaces.web_interface.web import WebInterface
 for logger in ('engineio.server', 'socketio.server', 'geventwebsocket.handler'):
     logging.getLogger(logger).setLevel(logging.WARNING)
 
-notifications_history = collections.deque(maxlen=1000)
-notifications = []
+MAX_NOTIFICATION_HISTORY_SIZE = 1000
+notifications_history = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
+notifications = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
 
 TIME_AXIS_TITLE = "Time"
 
@@ -134,8 +135,8 @@ async def add_notification(level, title, message, sound=None):
     send_general_notifications()
 
 
-def get_notifications():
-    return notifications
+def get_notifications() -> list:
+    return list(notifications)
 
 
 def get_notifications_history() -> list:
