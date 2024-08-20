@@ -204,8 +204,8 @@ class WebHookService(services.AbstractService):
             data = flask.request.get_data(as_text=True)
             if self._default_webhook_call(webhook_name, data):
                 return '', 200
-            flask.abort(500)
-        flask.abort(400)
+            return 'invalid or missing input parameters', 400
+        flask.abort(405)
 
     def _community_webhook_call_factory(self, service_name: str):
 
