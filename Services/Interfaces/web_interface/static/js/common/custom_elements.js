@@ -102,8 +102,14 @@ function create_line_chart(element, data, title, fontColor='white', update=true,
     const minY = Math.min.apply(null, trace.y);
     const maxDisplayY = Math.max.apply(null, trace.y);
     const minDisplayY = Math.max(0, minY - ((maxDisplayY - minY) / 2));
+    const titleSpecs = {
+        text: title,
+        font: {
+            size: 24
+        },
+    };
     const layout = {
-        title: title,
+        title: titleSpecs,
         height: height,
         dragmode: isMobileDisplay() ? false : 'zoom',
         margin: {
@@ -142,7 +148,10 @@ function create_line_chart(element, data, title, fontColor='white', update=true,
         displaylogo: false // no logo to avoid 'rel="noopener noreferrer"' security issue (see https://webhint.io/docs/user-guide/hints/hint-disown-opener/)
     };
     if(update){
-        Plotly.restyle(element, {x: [trace.x], y: [trace.y]}, 0);
+        const layoutUpdate = {
+            title: titleSpecs
+        }
+        Plotly.update(element, {x: [trace.x], y: [trace.y]}, layoutUpdate, 0);
     } else {
         Plotly.newPlot(element, [trace], layout, plotlyConfig);
     }

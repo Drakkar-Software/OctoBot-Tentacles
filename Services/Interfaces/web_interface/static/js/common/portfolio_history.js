@@ -17,7 +17,7 @@
  */
 
 $(document).ready(function() {
-    const createHistoricalPortfolioChart = (element_id, title, update) => {
+    const createHistoricalPortfolioChart = (element_id, reference_market, update) => {
         const element = $(`#${element_id}`);
         const selectedTimeFrame = "1d"; // todo add timeframe selector
         const url = `${element.data("url")}${selectedTimeFrame}`;
@@ -28,6 +28,8 @@ $(document).ready(function() {
             if(msg.length > 1){
                 graphDiv.removeClass(hidden_class);
                 defaultDiv.addClass(hidden_class);
+                const current_value = msg[msg.length - 1].value;
+                const title = `${current_value > 0 ? current_value : '-'} ${reference_market}`
                 create_line_chart(document.getElementById(element_id), msg, title, 'white', update, height);
             }else{
                 graphDiv.addClass(hidden_class);
@@ -38,8 +40,7 @@ $(document).ready(function() {
     }
 
     const displayPortfolioHistory = (elementId, referenceMarket, update) => {
-        const chartTitle = `Portfolio total ${referenceMarket} value`;
-        createHistoricalPortfolioChart(elementId, chartTitle, update);
+        createHistoricalPortfolioChart(elementId, referenceMarket, update);
     }
 
     const update_display = (update) => {
