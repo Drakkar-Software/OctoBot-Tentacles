@@ -98,8 +98,11 @@ class Bybit(exchanges.RestExchange):
     SPOT_STOP_ORDERS_FILTER = "StopOrder"
     ORDER_FILTER = "orderFilter"
 
-    def __init__(self, config, exchange_manager, connector_class=None):
-        super().__init__(config, exchange_manager, connector_class=connector_class)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
         self.order_quantity_by_amount = {}
         self.order_quantity_by_id = {}
 

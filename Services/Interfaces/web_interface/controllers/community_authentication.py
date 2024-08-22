@@ -96,15 +96,15 @@ def register(blueprint):
                     return flask.redirect(next_url)
             except community_errors.EmailValidationRequiredError:
                 flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
-                authenticator.logout()
+                interfaces_util.run_in_bot_main_loop(authenticator.logout())
                 return flask.redirect(flask.url_for(f"community_login", **flask.request.args))
             except authentication.AuthenticationError as err:
                 flask.flash(f"Error when creating account: {err}", "error")
-                authenticator.logout()
+                interfaces_util.run_in_bot_main_loop(authenticator.logout())
             except Exception as e:
                 logging.get_logger("CommunityAuthentication").exception(e, False)
                 flask.flash(f"Unexpected error when creating account: {e}", "error")
-                authenticator.logout()
+                interfaces_util.run_in_bot_main_loop(authenticator.logout())
         return flask.render_template('community_register.html',
                                      form=form,
                                      current_logged_in_email=logged_in_email,
@@ -118,7 +118,7 @@ def register(blueprint):
         next_url = flask.request.args.get("next", flask.url_for("community_login"))
         if not models.can_logout():
             return flask.redirect(flask.url_for('community'))
-        authentication.Authenticator.instance().logout()
+        interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().logout())
         return flask.redirect(next_url)
 
 

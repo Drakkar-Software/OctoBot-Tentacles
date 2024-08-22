@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import ccxt
+import typing
 
 import octobot_commons.enums as commons_enums
 import octobot_trading.enums as trading_enums
@@ -34,8 +35,11 @@ class hollaex(exchanges.RestExchange):
 
     DEFAULT_MAX_LIMIT = 500
 
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
         self.exchange_manager.rest_only = self.exchange_manager.rest_only \
             or not self.tentacle_config.get(
                 self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only

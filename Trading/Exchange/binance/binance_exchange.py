@@ -85,9 +85,12 @@ class Binance(exchanges.RestExchange):
     INVERSE_TYPE = "inverse"
     LINEAR_TYPE = "linear"
 
-    def __init__(self, config, exchange_manager, connector_class=None):
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
         self._futures_account_types = self._infer_account_types(exchange_manager)
-        super().__init__(config, exchange_manager, connector_class=connector_class)
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
 
     @classmethod
     def get_name(cls):
@@ -202,6 +205,8 @@ class Binance(exchanges.RestExchange):
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
+        if "useV2" not in kwargs:
+            kwargs["useV2"] = True  #V2 api is required to fetch empty positions (not retured in V3)
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
         for account_type in self._futures_account_types:

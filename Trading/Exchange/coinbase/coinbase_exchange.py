@@ -65,12 +65,12 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
     def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
 
-    def _keys_adapter(self, key, secret, password):
+    def _keys_adapter(self, key, secret, password, uid):
         # CCXT pem key reader is not expecting users to under keys pasted as text from the coinbase UI
         # convert \\n to \n to make this format compatible as well
         if secret and "\\n" in secret:
             secret = secret.replace("\\n", "\n")
-        return key, secret, password
+        return key, secret, password, uid
 
     @_coinbase_retrier
     async def _load_markets(self, client, reload: bool):
@@ -305,7 +305,7 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
-                    # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+                    # convert amount to have the same units as every other exchange
                     trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
                             trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] /
                             trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
