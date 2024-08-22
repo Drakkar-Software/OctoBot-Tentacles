@@ -291,8 +291,6 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
             return None
 
     def parse_leverage(self, fixed, **kwargs):
-        # WARNING no CCXT standard leverage parsing logic
-        # HAS TO BE IMPLEMENTED IN EACH EXCHANGE IMPLEMENTATION
         parsed = super().parse_leverage(fixed, **kwargs)
         # on binance fixed is a parsed position
         parsed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \
