@@ -37,6 +37,8 @@ class Binance(exchanges.RestExchange):
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
+    # Set True when the "limit" param when fetching order books is taken into account
+    SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = True
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -291,8 +293,6 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
             return None
 
     def parse_leverage(self, fixed, **kwargs):
-        # WARNING no CCXT standard leverage parsing logic
-        # HAS TO BE IMPLEMENTED IN EACH EXCHANGE IMPLEMENTATION
         parsed = super().parse_leverage(fixed, **kwargs)
         # on binance fixed is a parsed position
         parsed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \
