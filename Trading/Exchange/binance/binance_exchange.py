@@ -37,6 +37,8 @@ class Binance(exchanges.RestExchange):
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
+    # Set True when the "limit" param when fetching order books is taken into account
+    SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = True
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
