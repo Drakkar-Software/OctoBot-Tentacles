@@ -109,6 +109,9 @@ class Coinbase(exchanges.RestExchange):
         # ex when trading WBTC/USDC with and account that can't trade it:
         # ccxt.base.errors.BadRequest: target is not enabled for trading
         ("target is not enabled for trading", ),
+        # ccxt.base.errors.PermissionDenied: coinbase {"error":"PERMISSION_DENIED","error_details":
+        # "User is not allowed to convert crypto","message":"User is not allowed to convert crypto"}
+        ("user is not allowed to convert crypto", ),
     ]
 
     @classmethod
