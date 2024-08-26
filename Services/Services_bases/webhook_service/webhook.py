@@ -383,4 +383,7 @@ class WebHookService(services.AbstractService):
         if not self.use_web_interface_for_webhook and self.connected:
             ngrok.kill()
             if self.webhook_server:
-                self.webhook_server.stop()
+                try:
+                    self.webhook_server.stop()
+                except Exception as err:
+                    self.logger.warning(f"Error when stopping webhook server: {err}")
