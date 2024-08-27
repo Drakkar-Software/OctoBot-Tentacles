@@ -181,11 +181,12 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_FUNDS_REDISPATCH_INTERVAL], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Auto-dispatch interval: hours between each funds redispatch check.",
-            editor_options={
-                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
-                  self.CONFIG_ALLOW_FUNDS_REDISPATCH: True
-                }
-            }
+            # dependency disabled: conditional display is not working properly
+            # editor_options={
+            #     commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+            #       self.CONFIG_ALLOW_FUNDS_REDISPATCH: True
+            #     }
+            # }
         )
 
     def get_default_pair_config(self, symbol, flat_spread, flat_increment) -> dict:
