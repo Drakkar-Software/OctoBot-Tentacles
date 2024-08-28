@@ -53,8 +53,9 @@ for logger in ('engineio.server', 'socketio.server', 'geventwebsocket.handler'):
     logging.getLogger(logger).setLevel(logging.WARNING)
 
 MAX_NOTIFICATION_HISTORY_SIZE = 1000
+MAX_NOTIFICATION_AT_ONCE = 10
 notifications_history = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
-notifications = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
+notifications = collections.deque(maxlen=MAX_NOTIFICATION_AT_ONCE)
 
 TIME_AXIS_TITLE = "Time"
 
