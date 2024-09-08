@@ -186,7 +186,8 @@ def import_strategy_as_profile(authenticator, strategy: community.StrategyData, 
             risk=strategy.get_risk(),
             origin_url=strategy.get_product_url(),
             logo_url=strategy.logo_url,
-            auto_update=strategy.is_auto_updated()
+            auto_update=strategy.is_auto_updated(),
+            force_simulator=True
         )
     )
     interfaces_util.get_edited_config(dict_only=False).load_profiles()

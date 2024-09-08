@@ -34,6 +34,12 @@ class MEXC(exchanges.RestExchange):
     # (order not found) when orders are instantly filled on exchange and are not fully processed on the exchange side.
 
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    # text content of errors due to unhandled authentication issues
+
+    EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'mexc {"code":10072,"msg":"Api key info invalid"}'
+        ("api key info invalid",),
+    ]
 
     def __init__(
         self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],

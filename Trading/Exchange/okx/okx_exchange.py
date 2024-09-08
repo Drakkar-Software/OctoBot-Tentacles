@@ -100,6 +100,11 @@ class Okx(exchanges.RestExchange):
         # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
         ("restricted", "compliance"),
     ]
+    # text content of errors due to unhandled authentication issues
+    EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'okx {"msg":"API key doesn't exist","code":"50119"}'
+        ("api key doesn't exist",),
+    ]
 
     FIX_MARKET_STATUS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
