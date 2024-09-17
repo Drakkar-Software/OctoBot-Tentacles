@@ -85,6 +85,10 @@ class hollaex(exchanges.RestExchange):
     def is_configurable(cls):
         return True
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        user_info = await self.connector.client.private_get_user()
+        return user_info["id"]
+
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit
         if limit is None:
