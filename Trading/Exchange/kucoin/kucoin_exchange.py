@@ -240,16 +240,10 @@ class Kucoin(exchanges.RestExchange):
         # filtered by limit before reversing (or most recent trades are lost)
         recent_trades = await super().get_recent_trades(symbol, limit=None, **kwargs)
         return recent_trades[::-1][:limit] if recent_trades else []
-
     @_kucoin_retrier
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
-        return super().get_order_book(symbol, limit=limit, **kwargs)
-
-    @_kucoin_retrier
-    async def get_order_book(self, symbol, limit=20, **kwargs):
-        # override default limit to be kucoin complient
-        return super().get_order_book(symbol, limit=limit, **kwargs)
+        return await super().get_order_book(symbol, limit=limit, **kwargs)
 
     @_kucoin_retrier
     async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
