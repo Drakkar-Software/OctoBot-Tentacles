@@ -22,6 +22,7 @@ import requests
 # import twitter.twitter_utils
 
 import octobot_services.constants as services_constants
+import octobot_services.enums as services_enums
 import octobot_services.services as services
 import octobot.constants as constants
 
@@ -58,10 +59,12 @@ class TwitterService:
     def get_required_config(self):
         return [self.API_KEY, self.API_SECRET, self.ACCESS_TOKEN, self.ACCESS_TOKEN_SECRET]
 
-    def get_read_only_info(self):
-        return {
-            "Connected to": self._account_url
-        } if self._account_url else {}
+    def get_read_only_info(self) -> list[services.ReadOnlyInfo]:
+        return [
+            services.ReadOnlyInfo(
+                'Connected to:', self._account_url, services_enums.ReadOnlyInfoType.CLICKABLE
+            )
+        ] if self._account_url else []
 
     @classmethod
     def get_help_page(cls) -> str:

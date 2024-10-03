@@ -16,7 +16,9 @@
 import hashlib
 import uuid
 
+import octobot_commons.authentication as authentication
 import octobot_services.constants as services_constants
+import octobot_services.enums as services_enums
 import octobot_services.services as services
 import octobot.constants as constants
 
@@ -26,6 +28,7 @@ class TradingViewService(services.AbstractService):
         super().__init__()
         self.requires_token = None
         self.token = None
+        self.use_email_alert = None
         self._webhook_url = None
 
     @staticmethod
@@ -41,31 +44,55 @@ class TradingViewService(services.AbstractService):
 
     def get_required_config(self):
         return [services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN,
-                services_constants.CONFIG_TRADING_VIEW_TOKEN]
+                services_constants.CONFIG_TRADING_VIEW_TOKEN,
+                services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
 
     def get_fields_description(self):
         return {
-            services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: "When enabled the Trading View webhook will require your "
+            services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: "When enabled the TradingView webhook will require your "
                                                                   "tradingview.com token to process any signal.",
             services_constants.CONFIG_TRADING_VIEW_TOKEN: "Your personal unique tradingview.com token. Can be used to ensure only your "
-                                                          "Trading View signals are triggering your OctoBot in case someone else get "
+                                                          "TradingView signals are triggering your OctoBot in case someone else get "
                                                           "your webhook link. You can change it at any moment but remember to change it "
-                                                          "on your tradingview.com signal account as well."
+                                                          "on your tradingview.com signal account as well.",
+            services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: (
+                f"When enabled, your OctoBot will trade using the free TradingView email alerts. When disabled, "
+                f"a webhook configuration is required to trade using TradingView alerts. Requires the "
+                f"{constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME}."
+            ),
         }
 
     def get_default_value(self):
         return {
             services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: False,
-            services_constants.CONFIG_TRADING_VIEW_TOKEN: self.get_security_token(uuid.uuid4().hex)
+            services_constants.CONFIG_TRADING_VIEW_TOKEN: self.get_security_token(uuid.uuid4().hex),
+            services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: False,
         }
 
     def is_improved_by_extensions(self) -> bool:
         return True
 
-    def get_read_only_info(self):
-        return {
-            "Webhook url:": self._webhook_url
-        } if self._webhook_url else {}
+    def get_read_only_info(self) -> list[services.ReadOnlyInfo]:
+        read_only_info = []
+        if email_address := authentication.Authenticator.instance().get_saved_tradingview_email():
+            read_only_info.append(services.ReadOnlyInfo(
+                'Email address:', email_address, services_enums.ReadOnlyInfoType.COPYABLE,
+                configuration_title="Configure on TradingView", configuration_path="tradingview_email_config"
+            ))
+        else:
+            read_only_info.append(services.ReadOnlyInfo(
+                'Email address:', "Click to configure", services_enums.ReadOnlyInfoType.CLICKABLE,
+                path="tradingview_email_config"
+            ))
+        if self._webhook_url:
+            read_only_info.append(services.ReadOnlyInfo(
+                'Webhook url:',
+                self._webhook_url,
+                services_enums.ReadOnlyInfoType.READONLY
+                if self._webhook_url == services_constants.TRADING_VIEW_USING_EMAIL_INSTEAD_OF_WEBHOOK
+                else services_enums.ReadOnlyInfoType.COPYABLE,
+            ))
+        return read_only_info
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -91,15 +118,21 @@ class TradingViewService(services.AbstractService):
             self.token = \
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TRADING_VIEW][
                     services_constants.CONFIG_TRADING_VIEW_TOKEN]
+            self.use_email_alert = \
+                self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TRADING_VIEW][
+                    services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
         except KeyError:
             if self.requires_token is None:
                 self.requires_token = self.get_default_value()[services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN]
             if self.token is None:
                 self.token = self.get_default_value()[services_constants.CONFIG_TRADING_VIEW_TOKEN]
+            if self.use_email_alert is None:
+                self.use_email_alert = self.get_default_value()[services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
             # save new values into config file
             updated_config = {
                 services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: self.requires_token,
-                services_constants.CONFIG_TRADING_VIEW_TOKEN: self.token
+                services_constants.CONFIG_TRADING_VIEW_TOKEN: self.token,
+                services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: self.use_email_alert,
             }
             self.save_service_config(services_constants.CONFIG_TRADING_VIEW, updated_config)
 

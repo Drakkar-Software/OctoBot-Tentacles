@@ -70,6 +70,7 @@ class WebHookService(services.AbstractService):
         super().__init__()
         self.use_web_interface_for_webhook = constants.IS_CLOUD_ENV
         self.use_octobot_cloud_webhook = False
+        self.use_octobot_cloud_email_webhook = False
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
         self.ngrok_enabled = True
@@ -99,7 +100,7 @@ class WebHookService(services.AbstractService):
     def check_required_config(self, config):
         if self.use_web_interface_for_webhook:
             return True
-        if self.is_using_octobot_cloud_webhook():
+        if self.is_using_octobot_cloud_webhook() or self.is_using_octobot_cloud_email_webhook():
             return True
         try:
             token = config.get(services_constants.CONFIG_NGROK_TOKEN)
@@ -124,6 +125,13 @@ class WebHookService(services.AbstractService):
 
     def is_using_octobot_cloud_webhook(self):
         return self.get_webhook_config().get(services_constants.CONFIG_ENABLE_OCTOBOT_WEBHOOK)
+
+    def is_using_octobot_cloud_email_webhook(self):
+        return self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(
+            services_constants.CONFIG_TRADING_VIEW, {}
+        ).get(
+            services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS, False
+        )
 
     def get_webhook_config(self):
         return self.config[services_constants.CONFIG_CATEGORY_SERVICES].get(services_constants.CONFIG_WEBHOOK, {})
@@ -169,6 +177,8 @@ class WebHookService(services.AbstractService):
         raise KeyError(f"Service feed has already subscribed to a webhook : {service_feed_name}")
 
     def get_subscribe_url(self, service_feed_name):
+        if self.use_octobot_cloud_email_webhook:
+            return services_constants.TRADING_VIEW_USING_EMAIL_INSTEAD_OF_WEBHOOK
         if self.use_octobot_cloud_webhook:
             return self._get_community_feed_webhook_url()
         return f"{self.webhook_public_url}/{service_feed_name}"
@@ -238,8 +248,14 @@ class WebHookService(services.AbstractService):
         self.logger.warning(f"Received unknown request from {webhook_name}")
         return False
 
+    def _is_using_cloud_webhooks(self):
+        return self.use_octobot_cloud_webhook or self.use_octobot_cloud_email_webhook
+
     async def prepare(self) -> None:
         if self.use_web_interface_for_webhook:
+            return
+        if self.is_using_octobot_cloud_email_webhook():
+            self.use_octobot_cloud_email_webhook = True
             return
         if self.is_using_octobot_cloud_webhook():
             self.use_octobot_cloud_webhook = True
@@ -354,13 +370,14 @@ class WebHookService(services.AbstractService):
     async def start_webhooks(self) -> bool:
         if self.use_web_interface_for_webhook:
             return await self._register_on_web_interface()
-        if self.use_octobot_cloud_webhook:
+        if self._is_using_cloud_webhooks():
             try:
                 return await self._register_on_community_feed()
             except community_errors.NoBotDeviceError:
                 raise community_errors.ExtensionRequiredError(
                     f"A connected OctoBot account using the {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} "
-                    f"is required to use OctoBot webhooks for TradingView."
+                    f"is required to use OctoBot {'email' if self.use_octobot_cloud_email_webhook else 'webhook' } "
+                    f"alerts for TradingView."
                 )
         return await self._start_isolated_server()
 
@@ -368,6 +385,7 @@ class WebHookService(services.AbstractService):
         return (
             self.use_web_interface_for_webhook or
             self.is_using_octobot_cloud_webhook() or
+            self.is_using_octobot_cloud_email_webhook() or
             (self.webhook_host is not None and self.webhook_port is not None)
         )
 
@@ -375,7 +393,7 @@ class WebHookService(services.AbstractService):
         webhook_endpoint = f"ngrok address"
         if self.use_web_interface_for_webhook:
             webhook_endpoint = "web interface webhook api"
-        if self.is_using_octobot_cloud_webhook():
+        if self.is_using_octobot_cloud_webhook() or self.is_using_octobot_cloud_email_webhook():
             webhook_endpoint = "OctoBot cloud network"
         return f"Webhook configured on {webhook_endpoint}", self._is_healthy()
 

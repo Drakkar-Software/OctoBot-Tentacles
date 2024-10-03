@@ -460,3 +460,12 @@ function selectFirstTab(nestedNavBar=undefined){
         activate_tab($("[data-tab='default']"), nestedNavBar);
     }
 }
+
+function copyToClipBoard(name, value) {
+    navigator.clipboard.writeText(value);
+    create_alert("success", `${name} copied to clipboard`);
+}
+
+async function sleep(milliseconds) {
+    return new Promise(r => setTimeout(r, milliseconds))
+}

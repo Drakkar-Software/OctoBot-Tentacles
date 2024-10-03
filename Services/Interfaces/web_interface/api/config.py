@@ -15,6 +15,8 @@
 #  License along with this library.
 import flask
 
+import octobot_commons.authentication
+import octobot.community.errors
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -109,3 +111,25 @@ def register(blueprint):
             "strategies": strategy_config[models.STRATEGIES_KEY],
             "evaluators": evaluators,
         })
+
+
+    @blueprint.route('/tradingview_confirm_email_content', methods=["GET"])
+    @login.login_required_when_activated
+    def tradingview_confirm_email_content():
+        try:
+            return util.get_rest_reply(
+                flask.jsonify(models.get_last_email_address_confirm_code_email_content()), 200
+            )
+        except octobot_commons.authentication.AuthenticationRequired:
+            return util.get_rest_reply(flask.jsonify("authentication required"), 401)
+
+
+    @blueprint.route('/trigger_wait_for_email_address_confirm_code_email', methods=["POST"])
+    @login.login_required_when_activated
+    def trigger_wait_for_email_address_confirm_code_email():
+        try:
+            models.wait_for_email_address_confirm_code_email()
+            return util.get_rest_reply(flask.jsonify(""), 200)
+        except octobot.community.errors.ExtensionRequiredError as err:
+            return util.get_rest_reply(flask.jsonify(str(err)), 401)
+

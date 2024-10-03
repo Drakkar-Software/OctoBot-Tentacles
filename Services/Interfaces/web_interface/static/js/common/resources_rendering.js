@@ -178,10 +178,18 @@ function handleDefaultImages(){
     displayImages(true);
 }
 
+function handle_copy_to_clipboard() {
+    $("[data-role=\"copy-to-clipboard\"]").on("click", (event) => {
+        const element = $(event.currentTarget);
+        copyToClipBoard(element.data("name"), element.data("value"));
+    })
+}
+
 
 $(document).ready(function() {
     // register error listeners as soon as possible
     handleDefaultImages();
+    handle_copy_to_clipboard();
     $(".markdown-content").each(function () {
         const element = $(this);
         element.html(markdown_to_html(element.text()));
