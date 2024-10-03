@@ -88,3 +88,13 @@ def register(blueprint):
             auto_refresh_packages=refresh_packages and loop == "true",
             has_owned_packages_to_install=models.has_owned_packages_to_install(),
         )
+
+    @blueprint.route("/tradingview_email_config")
+    @login.login_required_when_activated
+    def tradingview_email_config():
+        models.wait_for_login_if_processing()
+        return flask.render_template(
+            'tradingview_email_config.html',
+            is_community_authenticated=authentication.Authenticator.instance().is_logged_in(),
+            tradingview_email_address=models.get_tradingview_email_address(),
+        )

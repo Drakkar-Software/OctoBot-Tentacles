@@ -16,6 +16,7 @@
 import octobot_services.channel as services_channel
 import octobot_services.constants as services_constants
 import octobot_services.service_feeds as service_feeds
+import octobot_commons.authentication as authentication
 import tentacles.Services.Services_bases as Services_bases
 
 
@@ -77,6 +78,11 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
         self.webhook_service_url = self.services[0].get_subscribe_url(self.webhook_service_name)
         if success:
             self.services[1].register_webhook_url(self.webhook_service_url)
-            self.logger.info(f"Your OctoBot's TradingView webhook url is: {self.webhook_service_url}    "
-                             f"the pin code for this feed is: {self.services[1].token}")
+            address_details = (
+                f"email address is: {authentication.Authenticator.instance().get_saved_tradingview_email()}"
+                if self.services[0].use_octobot_cloud_email_webhook
+                else f"webhook url is: {self.webhook_service_url}"
+            )
+            self.logger.info(f"Your OctoBot's TradingView {address_details}    "
+                             f"the pin code for this alert is: {self.services[1].token}")
         return success
