@@ -37,8 +37,11 @@ async def test_browse_all_pages_no_required_password():
             await asyncio.gather(
                 *[web_interface_tests.check_page_no_login_redirect(_get_rule_url(rule), session)
                   for rule in _get_all_native_rules(web_interface_instance,
-                                                    black_list=["/advanced/tentacles",
-                                                                "/advanced/tentacle_packages"]
+                                                    black_list=[
+                                                        "/advanced/tentacles",
+                                                        "/advanced/tentacle_packages",
+                                                        "/api/tradingview_confirm_email_content",   # community account required
+                                                    ]
                                                     )])
 
 
@@ -57,7 +60,11 @@ async def test_browse_all_pages_required_password_with_login():
             # correctly display pages: session is logged in
             await asyncio.gather(
                 *[web_interface_tests.check_page_no_login_redirect(_get_rule_url(rule), session)
-                  for rule in _get_all_native_rules(web_interface_instance, ["/logout"])])
+                  for rule in _get_all_native_rules(web_interface_instance,
+                                                    [
+                                                        "/logout",
+                                                        "/api/tradingview_confirm_email_content",
+                                                    ])])
         async with aiohttp.ClientSession() as unauthenticated_session:
             # redirect to login page: session is not logged in
             await asyncio.gather(

@@ -113,12 +113,15 @@ async def get_web_interface(require_password):
 
 
 async def check_page_no_login_redirect(url, session):
+    COMMUNITY_LOGIN_CONTAINED_PAGE_SUFFIXES = [
+        "login", "logout", "/profiles_selector",
+        "/community"  # redirects
+    ]
     async with session.get(url) as resp:
         text = await resp.text()
         assert "We are sorry, but an unexpected error occurred" not in text
         assert "We are sorry, but this doesn't exist" not in text
-        if not (url.endswith("login") or url.endswith("logout")
-                or url.endswith("/community") or url.endswith("/profiles_selector")):
+        if not (any(url.endswith(suffix)) for suffix in COMMUNITY_LOGIN_CONTAINED_PAGE_SUFFIXES):
             assert "input type=submit value=Login" not in text
             assert not resp.real_url.name == "login"
         assert resp.status == 200

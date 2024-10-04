@@ -65,7 +65,7 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
     def _register_to_service(self):
         service = self.services[0]
         if not service.is_subscribed(self.webhook_service_name):
-            callback = self.async_webhook_callback if service.use_octobot_cloud_webhook else self.webhook_callback
+            callback = self.async_webhook_callback if service.is_using_cloud_webhooks() else self.webhook_callback
             service.subscribe_feed(
                 self.webhook_service_name, callback, self.ensure_callback_auth
             )
