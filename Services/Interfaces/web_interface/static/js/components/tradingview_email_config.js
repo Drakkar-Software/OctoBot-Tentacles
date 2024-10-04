@@ -41,7 +41,7 @@ const triggerEmailConfirmWaiter = async () => {
     try {
         await async_send_and_interpret_bot_update(null, stepperElement.data("trigger-verif-code-waiter"), null, "POST", true)
         let confirmEmailContent = null;
-        const timeout = 2 * 60 * 1000;
+        const timeout = 5 * 60 * 1000;
         const t0 = new Date().getTime();
         while (confirmEmailContent === null) {
             if (new Date().getTime() - t0 > timeout){
