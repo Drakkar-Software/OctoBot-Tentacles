@@ -462,6 +462,12 @@ function selectFirstTab(nestedNavBar=undefined){
 }
 
 function copyToClipBoard(name, value) {
+    if(!navigator.clipboard){
+        create_alert(
+            "error",
+            "Browser security is preventing copy. Please manually copy this value"
+        );
+    }
     navigator.clipboard.writeText(value);
     create_alert("success", `${name} copied to clipboard`);
 }

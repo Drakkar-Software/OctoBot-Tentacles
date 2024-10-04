@@ -105,7 +105,7 @@ class TradingViewService(services.AbstractService):
         return services_constants.CONFIG_TRADING_VIEW
 
     def get_website_url(self):
-        return "https://www.tradingview.com/"
+        return "https://www.tradingview.com/?aff_id=27595"
 
     def get_logo(self):
         return "https://in.tradingview.com/static/images/favicon.ico"
