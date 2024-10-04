@@ -248,7 +248,7 @@ class WebHookService(services.AbstractService):
         self.logger.warning(f"Received unknown request from {webhook_name}")
         return False
 
-    def _is_using_cloud_webhooks(self):
+    def is_using_cloud_webhooks(self):
         return self.use_octobot_cloud_webhook or self.use_octobot_cloud_email_webhook
 
     async def prepare(self) -> None:
@@ -370,7 +370,7 @@ class WebHookService(services.AbstractService):
     async def start_webhooks(self) -> bool:
         if self.use_web_interface_for_webhook:
             return await self._register_on_web_interface()
-        if self._is_using_cloud_webhooks():
+        if self.is_using_cloud_webhooks():
             try:
                 return await self._register_on_community_feed()
             except community_errors.NoBotDeviceError:
