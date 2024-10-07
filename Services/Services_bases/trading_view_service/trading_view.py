@@ -74,14 +74,15 @@ class TradingViewService(services.AbstractService):
 
     def get_read_only_info(self) -> list[services.ReadOnlyInfo]:
         read_only_info = []
-        if email_address := authentication.Authenticator.instance().get_saved_tradingview_email():
+        auth = authentication.Authenticator.instance()
+        if auth.is_tradingview_email_confirmed() and (email_address := auth.get_saved_tradingview_email()):
             read_only_info.append(services.ReadOnlyInfo(
                 'Email address:', email_address, services_enums.ReadOnlyInfoType.COPYABLE,
                 configuration_title="Configure on TradingView", configuration_path="tradingview_email_config"
             ))
         else:
             read_only_info.append(services.ReadOnlyInfo(
-                'Email address:', "Click to configure", services_enums.ReadOnlyInfoType.CLICKABLE,
+                'Email address:', "Generate email", services_enums.ReadOnlyInfoType.CTA,
                 path="tradingview_email_config"
             ))
         if self._webhook_url:
