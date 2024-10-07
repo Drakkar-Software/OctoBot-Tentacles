@@ -76,6 +76,14 @@
                             <i class="fa fa-copy mr-1"></i>
                             {{ read_only_info.value }}
                         </span>
+                    {% elif read_only_info.type.value == "cta" %}
+                        <a
+                            type="button" class="btn btn-sm btn-primary"
+                            href="{{url_for(read_only_info.path) if read_only_info.path else read_only_info.value}}"
+                        >
+                            <i class="fa fa-plus mr-1"></i>
+                            {{ read_only_info.value }}
+                        </a>
                     {% else %}
                         {{ read_only_info.value }}
                     {% endif %}
