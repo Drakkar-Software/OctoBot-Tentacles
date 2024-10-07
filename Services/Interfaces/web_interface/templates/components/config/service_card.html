@@ -57,16 +57,46 @@
             </p>
             <button type="button" class="btn btn-danger remove-btn px-3 waves-effect"><i class="fa fa-ban" aria-hidden="true"></i> Remove</button>
             <div class="float-right card-text mt-2">
-                {% for key, element in service.get_read_only_info().items() %}
-                <p class="">
+                {% for read_only_info in service.get_read_only_info() %}
+                <div class="">
                     <i class="fa fa-check mr-1"></i>
                     <span class="mr-2">
-                        {{ key }}
+                        {{ read_only_info.name }}
                     </span>
-                    <a class="text-danger external-link" target="_blank" rel="noopener noreferrer" href="{{element}}">
-                        {{element}}
-                    </a>
-                </p>
+                    {% if read_only_info.type.value == "clickable" %}
+                        <a class="text-danger external-link" target="_blank" rel="noopener noreferrer" href="{{url_for(read_only_info.path) if read_only_info.path else read_only_info.value}}">
+                            {{ read_only_info.value }}
+                        </a>
+                    {% elif read_only_info.type.value == "copyable" %}
+                        <span
+                            class="font-weight-bolder pointer-cursor"
+                            data-role="copy-to-clipboard" data-name="{{read_only_info.name}}" data-value="{{read_only_info.value}}"
+                            data-toggle="tooltip" data-placement="bottom" title="Click to copy"
+                        >
+                            <i class="fa fa-copy mr-1"></i>
+                            {{ read_only_info.value }}
+                        </span>
+                    {% elif read_only_info.type.value == "cta" %}
+                        <a
+                            type="button" class="btn btn-sm btn-primary"
+                            href="{{url_for(read_only_info.path) if read_only_info.path else read_only_info.value}}"
+                        >
+                            <i class="fa fa-plus mr-1"></i>
+                            {{ read_only_info.value }}
+                        </a>
+                    {% else %}
+                        {{ read_only_info.value }}
+                    {% endif %}
+                    {% if read_only_info.configuration_path %}
+                        <a
+                            href="{{url_for(read_only_info.configuration_path)}}"
+                            data-toggle="tooltip" data-placement="bottom"
+                            title="{{read_only_info.configuration_title or 'Configure'}}"
+                        >
+                            <i class="fa fa-cog ml-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
                 {% endfor %}
             </div>
 

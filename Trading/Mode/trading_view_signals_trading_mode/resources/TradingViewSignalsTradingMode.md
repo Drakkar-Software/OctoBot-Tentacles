@@ -1,6 +1,10 @@
 TradingViewSignalsTradingMode is a trading mode configured to automate orders creation on the 
-exchange of your choice by following signals from 
-[TradingView](https://www.tradingview.com/) indicators or strategies.
+exchange of your choice by following alerts from 
+[TradingView](https://www.tradingview.com/?aff_id=27595) price events, indicators or strategies.
+
+Free TradingView <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview/automating-tradingview-free-email-alerts-with-octobot?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">email</a> 
+alerts as well as <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview/using-a-webhook?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">webhook</a>
+alerts can be used to automate trades based on TradingView alerts.
 
 To know more, checkout the 
 <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/tradingview-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">

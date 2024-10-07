@@ -460,3 +460,18 @@ function selectFirstTab(nestedNavBar=undefined){
         activate_tab($("[data-tab='default']"), nestedNavBar);
     }
 }
+
+function copyToClipBoard(name, value) {
+    if(!navigator.clipboard){
+        create_alert(
+            "error",
+            "Browser security is preventing copy. Please manually copy this value"
+        );
+    }
+    navigator.clipboard.writeText(value);
+    create_alert("success", `${name} copied to clipboard`);
+}
+
+async function sleep(milliseconds) {
+    return new Promise(r => setTimeout(r, milliseconds))
+}

@@ -21,6 +21,7 @@ import telegram.error
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
+import octobot_services.enums as services_enums
 import octobot_services.services as services
 import octobot.constants as constants
 
@@ -61,10 +62,12 @@ class TelegramService(services.AbstractService):
     def get_required_config(self):
         return [self.CHAT_ID, services_constants.CONFIG_TOKEN]
 
-    def get_read_only_info(self):
-        return {
-            "Connected to": self._bot_url
-        } if self._bot_url else {}
+    def get_read_only_info(self) -> list[services.ReadOnlyInfo]:
+        return [
+            services.ReadOnlyInfo(
+                'Connected to:', self._bot_url, services_enums.ReadOnlyInfoType.CLICKABLE
+            )
+        ] if self._bot_url else []
 
     @classmethod
     def get_help_page(cls) -> str:

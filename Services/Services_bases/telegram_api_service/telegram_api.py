@@ -23,6 +23,7 @@ import telethon
 
 import octobot.constants as constants
 import octobot_services.constants as services_constants
+import octobot_services.enums as services_enums
 import octobot_services.services as services
 import octobot_tentacles_manager.api as tentacles_manager_api
 
@@ -63,9 +64,14 @@ class TelegramApiService(services.AbstractService):
     def get_required_config(self):
         return [services_constants.CONFIG_API, services_constants.CONFIG_API_HASH]
 
-    def get_read_only_info(self):
-        return {f"Connected as {self.user_account.username}": f"https://telegram.me/{self.user_account.username}"} \
-            if self.connected and self.user_account else {}
+    def get_read_only_info(self) -> list[services.ReadOnlyInfo]:
+        return [
+            services.ReadOnlyInfo(
+                f"Connected as {self.user_account.username}",
+                f"https://telegram.me/{self.user_account.username}",
+                services_enums.ReadOnlyInfoType.COPYABLE
+            )
+        ] if self.connected and self.user_account else []
 
     @classmethod
     def get_help_page(cls) -> str:

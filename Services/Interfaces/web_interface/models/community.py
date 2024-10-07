@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import typing
 
 import octobot_services.interfaces.util as interfaces_util
 import octobot.community as octobot_community
@@ -59,6 +60,20 @@ def get_checkout_url(payment_method, redirect_url) -> (bool, str):
         return True, url
     except BaseException:
         return False, "error when fetching checkout url"
+
+
+def get_tradingview_email_address() -> str:
+    return authentication.Authenticator.instance().get_saved_tradingview_email()
+
+
+def get_last_email_address_confirm_code_email_content() -> typing.Optional[str]:
+    return authentication.Authenticator.instance().get_last_email_address_confirm_code_email_content()
+
+
+def wait_for_email_address_confirm_code_email():
+    return interfaces_util.run_in_bot_main_loop(
+        authentication.Authenticator.instance().trigger_wait_for_email_address_confirm_code_email()
+    )
 
 
 def get_cloud_strategies(authenticator) -> list[octobot_community.StrategyData]:
