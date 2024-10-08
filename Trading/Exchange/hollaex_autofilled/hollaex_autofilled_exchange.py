@@ -240,10 +240,10 @@ class HollaexAutofilled(hollaex):
         """
         return exchanges.ExchangeDetails(
             exchange_name,
-            kit_details["api_name"],
-            kit_details["links"]["referral_link"],
-            kit_details["links"]["api"],
-            kit_details["logo_image"],
+            kit_details.get("api_name", exchange_name),
+            kit_details["links"].get("referral_link", ""),
+            kit_details["info"]["url"], # required (API url)
+            kit_details.get("logo_image", ""),
             HollaexAutofilled._has_websocket(
                 tentacle_config,
                 exchange_name
