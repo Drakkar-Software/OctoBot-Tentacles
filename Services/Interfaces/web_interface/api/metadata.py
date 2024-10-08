@@ -43,7 +43,7 @@ def register(blueprint):
             updater = octobot_api.get_updater()
             return await updater.get_latest_version() if updater and await updater.should_be_updated() else None
 
-        return json.dumps(interfaces.run_in_bot_main_loop(fetch_upgrade_version()))
+        return json.dumps(interfaces.run_in_bot_main_loop(fetch_upgrade_version(), timeout=5))
 
 
     @blueprint.route("/user_feedback")
