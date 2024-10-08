@@ -101,6 +101,10 @@
                     can't be used in backtesting.
                     <a href="{{ url_for('profile')}}">Select another profile or trading mode</a> to run a backtesting.
                 </div>
+            {% elif not activated_trading_mode %}
+                <div class="alert alert-warning mt-1 text-center" role="alert">
+                    No active trading mode.
+                </div>
             {% endif %}
             <span id='backtesting_progress_bar' style='display: none;'>
                 <div class="card-title">
