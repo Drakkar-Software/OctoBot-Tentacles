@@ -109,6 +109,58 @@ async def _stop(exchange_manager):
     await asyncio_tools.wait_asyncio_next_cycle()
 
 
+async def test_parse_signal_data():
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        """
+        KEY=value
+        EXCHANGE=1
+        PLOp=true
+        """,
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": True,
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\nEXCHANGE=1\nPLOp=false\n",
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": False,
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\\nEXCHANGE=1\\nPLOp=ABC",
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": "ABC",
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\\nEXCHANGE\\nPLOp=ABC",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
+
 async def test_trading_view_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
