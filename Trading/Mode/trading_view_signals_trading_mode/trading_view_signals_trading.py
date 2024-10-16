@@ -127,19 +127,20 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         consumers = await super().create_consumers()
         return consumers + await self._get_feed_consumers()
 
-    def _adapt_symbol(self, parsed_data):
-        if self.SYMBOL_KEY not in parsed_data:
+    @classmethod
+    def _adapt_symbol(cls, parsed_data):
+        if cls.SYMBOL_KEY not in parsed_data:
             return
-        symbol = parsed_data[self.SYMBOL_KEY]
-        for suffix in self.TRADINGVIEW_FUTURES_SUFFIXES:
+        symbol = parsed_data[cls.SYMBOL_KEY]
+        for suffix in cls.TRADINGVIEW_FUTURES_SUFFIXES:
             if symbol.endswith(suffix):
-                parsed_data[self.SYMBOL_KEY] = symbol.split(suffix)[0]
+                parsed_data[cls.SYMBOL_KEY] = symbol.split(suffix)[0]
                 return
 
-    async def _trading_view_signal_callback(self, data):
+    @classmethod
+    def parse_signal_data(cls, signal_data: str, errors: list) -> dict:
         parsed_data = {}
-        signal_data = data.get("metadata", "")
-        for line in signal_data.split("\n"):
+        for line in signal_data.replace("\\n", "\n").split("\n"):
             if not line.strip():
                 # ignore empty lines
                 continue
@@ -152,9 +153,18 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                     value = lower_val == "true"
                 parsed_data[values[0].strip()] = value
             except IndexError:
-                self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
+                errors.append(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
-        self._adapt_symbol(parsed_data)
+        cls._adapt_symbol(parsed_data)
+        return parsed_data
+
+
+    async def _trading_view_signal_callback(self, data):
+        signal_data = data.get("metadata", "")
+        errors = []
+        parsed_data = self.parse_signal_data(signal_data, errors)
+        for error in errors:
+            self.logger.error(error)
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
