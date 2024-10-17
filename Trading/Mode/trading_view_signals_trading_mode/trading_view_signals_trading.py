@@ -32,6 +32,7 @@ import octobot_trading.modes.script_keywords as script_keywords
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
     TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
+    PARAM_SEPARATORS = [";", "\\n", "\n"]
 
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
@@ -140,7 +141,12 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     @classmethod
     def parse_signal_data(cls, signal_data: str, errors: list) -> dict:
         parsed_data = {}
-        for line in signal_data.replace("\\n", "\n").split("\n"):
+        # replace all split char by a single one
+        splittable_data = signal_data
+        final_split_char = cls.PARAM_SEPARATORS[0]
+        for split_char in cls.PARAM_SEPARATORS[1:]:
+            splittable_data = splittable_data.replace(split_char, final_split_char)
+        for line in splittable_data.split(final_split_char):
             if not line.strip():
                 # ignore empty lines
                 continue

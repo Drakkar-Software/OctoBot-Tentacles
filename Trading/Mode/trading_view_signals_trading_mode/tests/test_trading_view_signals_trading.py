@@ -160,6 +160,33 @@ async def test_parse_signal_data():
     assert "nPLOp" not in str(errors[0])
     assert "KEY" not in str(errors[0])
 
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value;EXCHANGE;PLOp=ABC",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+        "GG": "HIHI",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
 
 async def test_trading_view_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
