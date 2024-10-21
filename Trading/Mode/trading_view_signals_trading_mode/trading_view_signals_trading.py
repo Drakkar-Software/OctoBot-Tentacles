@@ -273,6 +273,9 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         tp_price = await self._parse_price(
             ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan
         )
+        additional_tp_prices = await self._parse_additional_prices(
+            ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan
+        )
         allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
 
         order_data = {
@@ -283,6 +286,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
+            TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: additional_tp_prices,
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.TAG_KEY:
@@ -292,6 +296,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
+
+    async def _parse_additional_prices(self, ctx, parsed_data, price_prefix, default):
+        prices = []
+        for key, value in parsed_data.items():
+            if key.startswith(price_prefix) and len(key.split(price_prefix)) == 2:
+                prices.append(await self._parse_price(ctx, parsed_data, key, default))
+        return prices
 
     async def _parse_price(self, ctx, parsed_data, key, default):
         target_price = decimal.Decimal(str(default))
