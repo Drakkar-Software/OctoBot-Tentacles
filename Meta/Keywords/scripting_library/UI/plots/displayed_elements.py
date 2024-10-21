@@ -518,6 +518,17 @@ class DisplayedElements(display.DisplayTranslator):
         )
         self.elements.append(element)
 
+    def dictionary(self, label, dictionary):
+        element = display.Element(
+            None,
+            None,
+            None,
+            title=label,
+            value=dict(dictionary),
+            type=commons_enums.DisplayedElementTypes.DICTIONARY.value
+        )
+        self.elements.append(element)
+
     def html_value(self, html):
         element = display.Element(
             None,
