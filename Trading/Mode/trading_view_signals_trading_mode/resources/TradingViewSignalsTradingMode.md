@@ -51,7 +51,8 @@ orders price syntax</a>.
 - `STOP_PRICE` is the price of the stop order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the stop loss will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the stop loss will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
 orders price syntax</a>.
 - `TAKE_PROFIT_PRICE` is the price of the take profit order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the take profit will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the take profit will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
-orders price syntax</a>.
+orders price syntax</a>.  
+Multiple take profit prices can be used from `TAKE_PROFIT_PRICE_1`, `TAKE_PROFIT_PRICE_2`, ...
 - `REDUCE_ONLY` when true, only reduce the current position (avoid accidental short position opening when reducing a long position). **Only used in futures trading**. Default is false
 - `TAG` is an identifier to give to the orders to create.
 
