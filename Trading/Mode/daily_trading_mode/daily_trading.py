@@ -609,7 +609,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     symbol_market,
                     price
                 )
-                for price in data.get(self.ADDITIONAL_TAKE_PROFIT_PRICES_KEY, [])
+                for price in (data.get(self.ADDITIONAL_TAKE_PROFIT_PRICES_KEY) or [])
             ]
             user_stop_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,

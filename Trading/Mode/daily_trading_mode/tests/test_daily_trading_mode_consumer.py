@@ -963,6 +963,24 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     # take profit only
     data = {
         consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("100000"),
+        consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+    }
+    orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
+    buy_order = orders_with_tp[0]
+    assert len(buy_order.chained_orders) == 1
+    take_profit_order = buy_order.chained_orders[0]
+    assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+    assert take_profit_order.origin_quantity == decimal.Decimal("0.01") \
+           - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
+    assert take_profit_order.origin_price == decimal.Decimal("100000")
+    assert take_profit_order.is_waiting_for_chained_trigger
+    assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+    assert not take_profit_order.is_open()
+    assert not take_profit_order.is_created()
+    # take profit only using ADDITIONAL_TAKE_PROFIT_PRICES_KEY
+    data = {
+        consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [decimal.Decimal("100000")],
         consumer.VOLUME_KEY: decimal.Decimal("0.01"),
     }
     orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
