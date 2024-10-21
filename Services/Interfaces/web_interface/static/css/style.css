@@ -720,3 +720,10 @@ table.dataTable tfoot th {
 .introjs-tooltip-title {
   color: #fff;  /* avoid using h1 color */
 }
+
+/* markdown fixes */
+pre code {
+    font-size: inherit;
+    color: var(--mdb-code-color);   /* 'inherit' overridden for themes compatibility */
+    word-break: normal;
+}
