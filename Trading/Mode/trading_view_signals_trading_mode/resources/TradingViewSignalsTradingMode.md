@@ -12,7 +12,11 @@ full TradingView trading mode guide</a>.
 
 ### Generate your own strategy using AI
 Describe your trading strategy to the OctoBot AI strategy generator and get your strategy as Pine Script in seconds.
-<p class="">
+Automate it with your self-hosted OctoBot or a <a
+  href="https://app.octobot.cloud/fr/explore?category=tv&utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=tv-trading-mode-tradingview-octobot"
+  target="_blank" rel="noopener">
+   TradingView OctoBot</a>.
+<p>
 <a class="btn btn-primary waves-effect" 
   href="https://app.octobot.cloud/creator?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=tv-trading-mode-generate-my-strategy-with-ai"
   target="_blank" rel="noopener">
