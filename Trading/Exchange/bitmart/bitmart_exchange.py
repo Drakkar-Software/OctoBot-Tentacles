@@ -27,9 +27,9 @@ class BitMartConnector(exchanges.CCXTConnector):
     def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
 
-    def _keys_adapter(self, key, secret, password, uid):
+    def _keys_adapter(self, key, secret, password, uid, auth_token):
         # use password as uid
-        return key, secret, "", password
+        return key, secret, "", password, None, None
 
 
 class BitMart(exchanges.RestExchange):
