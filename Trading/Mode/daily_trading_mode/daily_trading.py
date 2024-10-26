@@ -16,6 +16,8 @@
 import asyncio
 import decimal
 import math
+import dataclasses
+import typing
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
@@ -33,6 +35,12 @@ import octobot_trading.modes as trading_modes
 import octobot_trading.modes.script_keywords as script_keywords
 import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
+
+
+@dataclasses.dataclass
+class OrderDetails:
+    price: decimal.Decimal
+    quantity: typing.Optional[decimal.Decimal]
 
 
 class DailyTradingMode(trading_modes.AbstractTradingMode):
@@ -184,6 +192,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     VOLUME_KEY = "VOLUME"
     STOP_PRICE_KEY = "STOP_PRICE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
+    ADDITIONAL_TAKE_PROFIT_PRICES_KEY = "ADDITIONAL_TAKE_PROFIT_PRICES"
     STOP_ONLY = "STOP_ONLY"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     TAG_KEY = "TAG"
@@ -468,10 +477,22 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                   f"Set it to 100 to buy anyway.")
         return trading_constants.ZERO
 
+    def _get_split_take_profit_details(
+        self, order_details: list[OrderDetails], total_quantity: decimal.Decimal, symbol_market
+    ):
+        prices = [order_detail.price for order_detail in order_details]
+        quantities, prices = trading_personal_data.get_valid_split_orders(
+            total_quantity, prices, symbol_market
+        )
+        return [
+            OrderDetails(price, quantity)
+            for quantity, price in zip(quantities, prices)
+        ]
+
     async def _create_order(
         self, current_order,
-        use_take_profit_orders, take_profit_price,
-        use_stop_loss_orders, stop_price,
+        use_take_profit_orders, take_profits_details: list[OrderDetails],
+        use_stop_loss_orders, stop_loss_details: list[OrderDetails],
         symbol_market, tag
     ):
         params = {}
@@ -479,37 +500,52 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         is_long = current_order.side is trading_enums.TradeOrderSide.BUY
         exit_side = trading_enums.TradeOrderSide.SELL if is_long else trading_enums.TradeOrderSide.BUY
         if use_stop_loss_orders:
+            if len(stop_loss_details) > 1:
+                self.logger.error(f"Multiple stop loss orders is not supported.")
             stop_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 current_order.origin_price * (
                     trading_constants.ONE + (self.TARGET_PROFIT_STOP_LOSS * (-1 if is_long else 1))
                 )
-            ) if stop_price.is_nan() else stop_price
+            ) if (not stop_loss_details or stop_loss_details[0].price.is_nan()) else stop_loss_details[0].price
             param_update, chained_order = await self.register_chained_order(
                 current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side, tag=tag
             )
             params.update(param_update)
             chained_orders.append(chained_order)
         if use_take_profit_orders:
-            take_profit_price = trading_personal_data.decimal_adapt_price(
-                symbol_market,
-                current_order.origin_price * (
-                    trading_constants.ONE + (self.TARGET_PROFIT_TAKE_PROFIT * (1 if is_long else -1))
+            if take_profits_details:
+                local_take_profits_details = self._get_split_take_profit_details(
+                    take_profits_details, current_order.origin_quantity, symbol_market
                 )
-            ) if take_profit_price.is_nan() else take_profit_price
-            order_type = self.exchange_manager.trader.get_take_profit_order_type(
-                current_order,
-                trading_enums.TraderOrderType.SELL_LIMIT if exit_side is trading_enums.TradeOrderSide.SELL
-                else trading_enums.TraderOrderType.BUY_LIMIT
-            )
-            param_update, chained_order = await self.register_chained_order(
-                current_order, take_profit_price, order_type, exit_side, tag=tag
-            )
-            params.update(param_update)
-            chained_orders.append(chained_order)
+            else:
+                local_take_profits_details = [
+                    OrderDetails(decimal.Decimal("nan"), current_order.origin_quantity)
+                ]
+            for take_profits_detail in local_take_profits_details:
+                take_profit_price = trading_personal_data.decimal_adapt_price(
+                    symbol_market,
+                    current_order.origin_price * (
+                        trading_constants.ONE + (self.TARGET_PROFIT_TAKE_PROFIT * (1 if is_long else -1))
+                    )
+                ) if take_profits_detail.price.is_nan() else take_profits_detail.price
+                order_type = self.exchange_manager.trader.get_take_profit_order_type(
+                    current_order,
+                    trading_enums.TraderOrderType.SELL_LIMIT if exit_side is trading_enums.TradeOrderSide.SELL
+                    else trading_enums.TraderOrderType.BUY_LIMIT
+                )
+                param_update, chained_order = await self.register_chained_order(
+                    current_order, take_profit_price, order_type, exit_side,
+                    quantity=take_profits_detail.quantity, tag=tag
+                )
+                params.update(param_update)
+                chained_orders.append(chained_order)
         if len(chained_orders) > 1:
-            oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+            stop_count = len([o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)])
+            tp_count = len(chained_orders) - stop_count
+            group_type = trading_personal_data.OneCancelsTheOtherOrderGroup if stop_count == tp_count \
+                else trading_personal_data.BalancedTakeProfitAndStopOrderGroup
+            oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
         return await self.trading_mode.create_order(current_order, params=params or None)
@@ -568,6 +604,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 symbol_market,
                 data.get(self.TAKE_PROFIT_PRICE_KEY, decimal.Decimal(math.nan))
             )
+            additional_user_take_profit_prices = [
+                trading_personal_data.decimal_adapt_price(
+                    symbol_market,
+                    price
+                )
+                for price in (data.get(self.ADDITIONAL_TAKE_PROFIT_PRICES_KEY) or [])
+            ]
             user_stop_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
@@ -599,11 +642,24 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             use_stop_orders = is_reducing_position and (self.USE_STOP_ORDERS or not user_stop_price.is_nan())
             # use stop loss when increasing the position and the user explicitly asks for one
             use_chained_take_profit_orders = increasing_position and (
-                not user_take_profit_price.is_nan() or self.USE_TARGET_PROFIT_MODE
+                (not user_take_profit_price.is_nan() or additional_user_take_profit_prices)
+                or self.USE_TARGET_PROFIT_MODE
             )
             use_chained_stop_loss_orders = increasing_position and (
                 not user_stop_price.is_nan() or (self.USE_TARGET_PROFIT_MODE and self.USE_STOP_ORDERS)
             )
+            stop_loss_order_details = take_profit_order_details = []
+            if use_chained_take_profit_orders:
+                take_profit_order_details = [] if user_take_profit_price.is_nan() else [
+                    OrderDetails(user_take_profit_price, None)
+                ]
+                take_profit_order_details += [
+                    OrderDetails(price, None)
+                    for price in additional_user_take_profit_prices
+                ]
+            if use_chained_stop_loss_orders:
+                stop_loss_order_details = [OrderDetails(user_stop_price, None)]
+
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume \
                            or await self._get_market_quantity_from_risk(
@@ -631,8 +687,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                     if current_order := await self._create_order(
                         current_order,
-                        use_chained_take_profit_orders, user_take_profit_price,
-                        use_chained_stop_loss_orders, user_stop_price,
+                        use_chained_take_profit_orders, take_profit_order_details,
+                        use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag
                     ):
                         created_orders.append(current_order)
@@ -667,8 +723,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     updated_limit = None
                     if create_stop_only or (updated_limit := await self._create_order(
                         current_order,
-                        use_chained_take_profit_orders, user_take_profit_price,
-                        use_chained_stop_loss_orders, user_stop_price,
+                        use_chained_take_profit_orders, take_profit_order_details,
+                        use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag
                     )):
                         if updated_limit:
@@ -735,8 +791,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     updated_limit = None
                     if create_stop_only or (updated_limit := await self._create_order(
                         current_order,
-                        use_chained_take_profit_orders, user_take_profit_price,
-                        use_chained_stop_loss_orders, user_stop_price,
+                        use_chained_take_profit_orders, take_profit_order_details,
+                        use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag
                     )):
                         if updated_limit:
@@ -797,8 +853,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                     if current_order := await self._create_order(
                         current_order,
-                        use_chained_take_profit_orders, user_take_profit_price,
-                        use_chained_stop_loss_orders, user_stop_price,
+                        use_chained_take_profit_orders, take_profit_order_details,
+                        use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag
                     ):
                         created_orders.append(current_order)

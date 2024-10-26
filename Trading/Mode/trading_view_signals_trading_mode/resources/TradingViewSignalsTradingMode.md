@@ -6,9 +6,31 @@ Free TradingView <a target="_blank" rel="noopener" href="https://www.octobot.clo
 alerts as well as <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview/using-a-webhook?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">webhook</a>
 alerts can be used to automate trades based on TradingView alerts.
 
+<div class="text-center">
+    <div>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/HeOi4PY1ayk" 
+    title="TradingView tutorial: automate any strategy with OctoBot custom automation" frameborder="0" allow="accelerometer; autoplay; 
+    clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+</div>
+
 To know more, checkout the 
 <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/tradingview-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
 full TradingView trading mode guide</a>.
+
+### Generate your own strategy using AI
+Describe your trading strategy to the OctoBot AI strategy generator and get your strategy as Pine Script in seconds.
+Automate it with your self-hosted OctoBot or a <a
+  href="https://app.octobot.cloud/fr/explore?category=tv&utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=tv-trading-mode-tradingview-octobot"
+  target="_blank" rel="noopener">
+   TradingView OctoBot</a>.
+<p>
+<a class="btn btn-primary waves-effect" 
+  href="https://app.octobot.cloud/creator?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=tv-trading-mode-generate-my-strategy-with-ai"
+  target="_blank" rel="noopener">
+   Generate my strategy with AI
+</a>
+</p>
 
 ### Alert format cheatsheet
 Basic signals have the following format:
@@ -41,7 +63,8 @@ orders price syntax</a>.
 - `STOP_PRICE` is the price of the stop order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the stop loss will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the stop loss will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
 orders price syntax</a>.
 - `TAKE_PROFIT_PRICE` is the price of the take profit order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the take profit will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the take profit will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
-orders price syntax</a>.
+orders price syntax</a>.  
+Multiple take profit prices can be used from `TAKE_PROFIT_PRICE_1`, `TAKE_PROFIT_PRICE_2`, ...
 - `REDUCE_ONLY` when true, only reduce the current position (avoid accidental short position opening when reducing a long position). **Only used in futures trading**. Default is false
 - `TAG` is an identifier to give to the orders to create.
 
@@ -57,7 +80,9 @@ SIGNAL=CANCEL
 
 Additional cancel parameters:
 - `PARAM_SIDE` is the side of the orders to cancel, it can be `buy` or `sell` to only cancel buy or sell orders.
-  - `TAG` is the tag of the order(s) to cancel. It can be used to only cancel orders that have been created with a specific tag.
+- `TAG` is the tag of the order(s) to cancel. It can be used to only cancel orders that have been created with a specific tag.
+
+Note: `;` can also be used to separate signal parameters, exemple: `EXCHANGE=binance;SYMBOL=ETHBTC;SIGNAL=CANCEL` is equivalent to the previous example.
 
 Find the full TradingView alerts format on
 <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview/alert-format?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
