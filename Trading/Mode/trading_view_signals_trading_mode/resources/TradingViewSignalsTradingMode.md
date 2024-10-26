@@ -6,6 +6,14 @@ Free TradingView <a target="_blank" rel="noopener" href="https://www.octobot.clo
 alerts as well as <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview/using-a-webhook?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">webhook</a>
 alerts can be used to automate trades based on TradingView alerts.
 
+<div class="text-center">
+    <div>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/HeOi4PY1ayk" 
+    title="TradingView tutorial: automate any strategy with OctoBot custom automation" frameborder="0" allow="accelerometer; autoplay; 
+    clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+</div>
+
 To know more, checkout the 
 <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/tradingview-trading-mode?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
 full TradingView trading mode guide</a>.
