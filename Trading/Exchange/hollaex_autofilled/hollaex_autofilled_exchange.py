@@ -16,6 +16,7 @@
 import cachetools
 import aiohttp
 import typing
+import asyncio
 
 import octobot_commons.logging as commons_logging
 import octobot_commons.constants
@@ -37,6 +38,8 @@ class HollaexAutofilled(hollaex):
     AUTO_FILLED_KEY = "auto_filled"
     WEBSOCKETS_KEY = "websockets"
     KIT_PATH = "v2/kit"
+    MAX_RATE_LIMIT_ATTEMPTS = 60    # fetch over 3 minutes, every 3s (we can't start the bot if the kit request fails)
+    RATE_LIMIT_SLEEP_TIME = 3
 
     @classmethod
     def supported_autofill_exchanges(cls, tentacle_config):
@@ -96,9 +99,32 @@ class HollaexAutofilled(hollaex):
             f"Fetching {exchange_name} HollaEx kit from {exchange_kit_url}"
         )
         async with aiohttp.ClientSession() as session:
-            async with session.get(exchange_kit_url) as response:
-                _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = await response.json()
+            _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = await cls._retry_fetch_when_rate_limit(
+                session, exchange_kit_url
+            )
         return _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url]
+
+    @classmethod
+    async def _retry_fetch_when_rate_limit(cls, session, url):
+        for attempt in range(cls.MAX_RATE_LIMIT_ATTEMPTS):
+            async with session.get(url) as response:
+                if response.status < 300:
+                    return await response.json()
+                elif response.status in (403, 429) or "has banned your IP address" in (await response.text()):
+                    # rate limit: sleep and retry
+                    commons_logging.get_logger(cls.get_name()).warning(
+                        f"Error when fetching {url}: {response.status}. Retrying in {cls.RATE_LIMIT_SLEEP_TIME} seconds"
+                    )
+                    await asyncio.sleep(cls.RATE_LIMIT_SLEEP_TIME)
+                else:
+                    # unexpected error
+                    response.raise_for_status()
+
+        commons_logging.get_logger(cls.get_name()).error(
+            f"Error when fetching {url}: {response.status}. Max attempts ({cls.MAX_RATE_LIMIT_ATTEMPTS}) reached. "
+            f"Error text: {await response.text()}"
+        )
+        response.raise_for_status()
 
     def _supports_autofill(self, exchange_name):
         try:
