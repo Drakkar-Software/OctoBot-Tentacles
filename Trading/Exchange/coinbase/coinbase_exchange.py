@@ -296,6 +296,8 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
         if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "PENDING":
             fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CREATION.value
+        if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "CANCEL_QUEUED":
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CANCEL.value
         # sometimes amount is not set
         if not fixed[ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value] \
                 and fixed[ccxt_enums.ExchangeOrderCCXTColumns.FILLED.value]:
