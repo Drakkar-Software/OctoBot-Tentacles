@@ -116,6 +116,15 @@ class Coinbase(exchanges.RestExchange):
         # "User is not allowed to convert crypto","message":"User is not allowed to convert crypto"}
         ("user is not allowed to convert crypto", ),
     ]
+    # text content of errors due to exchange internal synch (like when portfolio is not yet up to date after a trade)
+    EXCHANGE_INTERNAL_SYNC_ERRORS: typing.List[typing.Iterable[str]] = [
+        # BadRequest coinbase {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+        ("account is not available", )
+    ]
+    # text content of errors due to missing fnuds when creating an order (when not identified as such by ccxt)
+    EXCHANGE_MISSING_FUNDS_ERRORS: typing.List[typing.Iterable[str]] = [
+        ("insufficient balance in source account", )
+    ]
 
     @classmethod
     def get_name(cls):
