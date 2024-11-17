@@ -64,10 +64,19 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         orders = []
         try:
             # 1. make sure we can actually rebalance the portfolio
+            self.logger.info("Step 1/3: ensuring enough funds are available for rebalance")
             await self._ensure_enough_funds_to_buy_after_selling()
             # 2. sell indexed coins for reference market
+            self.logger.info(
+                f"Step 2/3: selling coins to free "
+                f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
+            )
             orders += await self._sell_indexed_coins_for_reference_market(details)
             # 3. split reference market into indexed coins
+            self.logger.info(
+                f"Step 3/3: buying coins using "
+                f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
+            )
             orders += await self._split_reference_market_into_indexed_coins(details)
         except trading_errors.MissingMinimalExchangeTradeVolume as err:
             self.logger.warning(f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err}")
@@ -75,6 +84,8 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 IndexActivity.REBALANCING_SKIPPED,
                 RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
             )
+        finally:
+            self.logger.info("Portoflio rebalance complete")
         return orders
 
     async def _sell_indexed_coins_for_reference_market(self, details: dict) -> list:
