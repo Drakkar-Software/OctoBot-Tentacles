@@ -288,10 +288,17 @@ class Kucoin(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # on futures, balance has to be fetched per currency
             # use gather to fetch everything at once (and not allow other requests to get in between)
-            await asyncio.gather(*(
-                self._update_balance(balance, currency, **kwargs)
-                for currency in self.exchange_manager.exchange_config.get_all_traded_currencies()
-            ))
+            currencies = self.exchange_manager.exchange_config.get_all_traded_currencies()
+            if not currencies:
+                self.logger.warning(
+                    f"Can't fetch balance on {self.exchange_manager.exchange_name} futures when no traded currencies "
+                    f"are set"
+                )
+            else:
+                await asyncio.gather(*(
+                    self._update_balance(balance, currency, **kwargs)
+                    for currency in currencies
+                ))
             return balance
         return await super().get_balance(**kwargs)
 
