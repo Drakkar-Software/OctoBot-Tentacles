@@ -340,8 +340,21 @@ class Kucoin(exchanges.RestExchange):
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if self.exchange_manager.is_future:
+            params = params or {}
             # on futures exchange expects, quantity in contracts: convert quantity into contracts
             quantity = quantity / self.get_contract_size(symbol)
+            try:
+                # "marginMode": "ISOLATED" // Added field for margin mode: ISOLATED, CROSS, default: ISOLATED
+                # from https://www.kucoin.com/docs/rest/futures-trading/orders/place-order
+                if (
+                    KucoinCCXTAdapter.KUCOIN_MARGIN_MODE not in params and
+                    self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position_margin_type(
+                        symbol
+                    ) is trading_enums.MarginType.CROSS
+                ):
+                    params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "CROSS"
+            except ValueError as err:
+                self.logger.error(f"Impossible to add {KucoinCCXTAdapter.KUCOIN_MARGIN_MODE} to order: {err}")
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
@@ -455,6 +468,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
 
     # ORDER
     KUCOIN_LEVERAGE = "leverage"
+    KUCOIN_MARGIN_MODE = "marginMode"
 
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
@@ -522,13 +536,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def parse_position(self, fixed, **kwargs):
         raw_position_info = fixed[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         parsed = super().parse_position(fixed, **kwargs)
-        parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            trading_enums.MarginType(
-                fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
-            )
-        parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
-            trading_enums.PositionMode.HEDGE if raw_position_info[self.KUCOIN_AUTO_DEPOSIT] \
-            else trading_enums.PositionMode.ONE_WAY
+        parsed[trading_enums.ExchangeConstantsPositionColumns.AUTO_DEPOSIT_MARGIN.value] = (
+            raw_position_info.get(self.KUCOIN_AUTO_DEPOSIT, False)  # unset for cross positions
+        )
         parsed_leverage = self.safe_decimal(
             parsed, trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value, constants.ZERO
         )
