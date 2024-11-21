@@ -138,35 +138,32 @@ class Coinbase(exchanges.RestExchange):
             # warning might become deprecated
             # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
             portfolio_id = None
-            try:
-                # use portfolio id when possible to enable "coinbase subaccounts" which are called "portfolios"
-                # note: portfolio id == user id (from v2PrivateGetUser) when using master account
-                accounts = await self.connector.client.fetch_accounts()
-                portfolio_ids = set(account[ccxt_constants.CCXT_INFO]['retail_portfolio_id'] for account in accounts)
-                if len(portfolio_ids) != 1:
-                    is_up_to_date_key = self._is_up_to_date_api_key()
-                    if is_up_to_date_key:
-                        self.logger.error(
-                            f"Unexpected: failed to identify Coinbase portfolio id on up to date API keys: "
-                            f"{portfolio_ids=}"
-                        )
-                    self.logger.info(
-                        f"{len(portfolio_ids)} portfolio found on Coinbase account. "
-                        f"This can happen with non up-to-date API keys ({is_up_to_date_key=}). "
-                        f"Falling back to v2PrivateGetUser() to get the current account id."
+            accounts = await self.connector.client.fetch_accounts()
+            # use portfolio id when possible to enable "coinbase subaccounts" which are called "portfolios"
+            # note: oldest portfolio portfolio id == user id (from previous v2PrivateGetUser) when using master account
+            portfolio_ids = set(account[ccxt_constants.CCXT_INFO]['retail_portfolio_id'] for account in accounts)
+            if len(portfolio_ids) != 1:
+                is_up_to_date_key = self._is_up_to_date_api_key()
+                if is_up_to_date_key:
+                    self.logger.error(
+                        f"Unexpected: failed to identify Coinbase portfolio id on up to date API keys: "
+                        f"{portfolio_ids=}"
                     )
-                else:
-                    portfolio_id = next(iter(portfolio_ids))
-            except (IndexError, KeyError):
-                pass
-            if portfolio_id is None:
-                # fallback to user id
-                user_data = await self.connector.client.v2PrivateGetUser()
-                portfolio_id = user_data["data"]["id"]
-                self.logger.warning(
-                    f"No Coinbase portfolio id can be selected from fetch_accounts(), used v2PrivateGetUser() "
-                    f"to identify user id and use it as portfolio id: {portfolio_id}"
+                sorted_portfolios = sorted(
+                    [
+                        account[ccxt_constants.CCXT_INFO]
+                        for account in accounts
+                    ],
+                    key=lambda account: account["created_at"],
                 )
+                portfolio_id = sorted_portfolios[0]['retail_portfolio_id']
+                self.logger.info(
+                    f"{len(portfolio_ids)} portfolio found on Coinbase account. "
+                    f"This can happen with non up-to-date API keys ({is_up_to_date_key=}). "
+                    f"Using the oldest portfolio id to bind to main account: {portfolio_id=}."
+                )
+            else:
+                portfolio_id = next(iter(portfolio_ids))
             return portfolio_id
         except ccxt.BaseError as err:
             self.logger.exception(
