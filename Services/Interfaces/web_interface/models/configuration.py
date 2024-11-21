@@ -51,6 +51,7 @@ import octobot_commons.symbols as commons_symbols
 import octobot_commons.display as display
 import octobot_commons.errors as commons_errors
 import octobot_commons.aiohttp_util as aiohttp_util
+import octobot_commons.html_util as html_util
 import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
@@ -1058,9 +1059,10 @@ def get_all_symbols_list():
             # fetched_all: save it
             data_provider.set_all_currencies(all_currencies)
         except Exception as e:
-            details = f"code: {request_response.status_code}, body: {request_response.text}" \
+            str_error = html_util.get_html_summary_if_relevant(e)
+            details = f"code: {request_response.status_code}, error: {str_error}" \
                 if request_response else {request_response}
-            _get_logger().exception(e, True, f"{base_error}{e}")
+            _get_logger().exception(e, True, f"{base_error}{str_error}")
             _get_logger().debug(f"coingecko.com response {details}")
             return {}
     return all_currencies
