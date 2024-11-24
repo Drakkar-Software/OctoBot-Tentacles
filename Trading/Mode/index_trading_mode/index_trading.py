@@ -368,7 +368,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.logger.exception(e, True, f"Impossible to send notification: {e}")
 
     def _notify_if_missing_too_many_coins(self):
-        if ideal_distribution := self.trading_mode.get_ideal_distribution():
+        if ideal_distribution := self.trading_mode.get_ideal_distribution(self.trading_mode.trading_config):
             if len(self.trading_mode.indexed_coins) < len(ideal_distribution) / 2:
                 self.logger.error(
                     f"Less than half of configured coins can be traded on {self.exchange_manager.exchange_name}. "
@@ -563,6 +563,13 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                                title="Weight of the coin within this distribution.")
         self._update_coins_distribution()
 
+    @classmethod
+    def get_tentacle_config_traded_symbols(cls, config: dict, reference_market: str) -> list:
+        return [
+            symbol_util.merge_currencies(asset[index_distribution.DISTRIBUTION_NAME], reference_market)
+            for asset in (cls.get_ideal_distribution(config) or [])
+        ]
+
     def is_updating_at_each_price_change(self):
         return self.refresh_interval_days == 0
 
@@ -596,11 +603,12 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     def get_coins_to_consider_for_ratio(self) -> list:
         return self.indexed_coins + [self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market]
 
-    def get_ideal_distribution(self):
-        return self.trading_config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
+    @classmethod
+    def get_ideal_distribution(cls, config: dict):
+        return config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
 
     def _get_supported_distribution(self) -> list:
-        if full_distribution := self.get_ideal_distribution():
+        if full_distribution := self.get_ideal_distribution(self.trading_config):
             traded_bases = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
@@ -630,7 +638,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def get_removed_coins_from_config(self, available_traded_bases) -> list:
         removed_coins = []
-        if self.get_ideal_distribution() and self.sell_unindexed_traded_coins:
+        if self.get_ideal_distribution(self.trading_config) and self.sell_unindexed_traded_coins:
             # only remove non indexed coins if an ideal distribution is set
             removed_coins = [
                 coin
@@ -642,7 +650,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             return removed_coins
         current_coins = [
             asset[index_distribution.DISTRIBUTION_NAME]
-            for asset in (self.get_ideal_distribution() or [])
+            for asset in (self.get_ideal_distribution(self.trading_config) or [])
         ]
         return list(set(removed_coins + [
             asset[index_distribution.DISTRIBUTION_NAME]
