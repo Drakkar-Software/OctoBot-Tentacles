@@ -351,7 +351,7 @@ async def test_ohlcv_callback(tools):
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_not_called()
             _notify_if_missing_too_many_coins_mock.assert_not_called()
-            get_exchange_current_time_mock.assert_called_once()
+            assert get_exchange_current_time_mock.call_count == 2
             get_exchange_current_time_mock.reset_mock()
             assert producer._last_trigger_time == current_time
 
@@ -361,7 +361,7 @@ async def test_ohlcv_callback(tools):
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_not_called()
             _notify_if_missing_too_many_coins_mock.assert_not_called()
-            get_exchange_current_time_mock.assert_called_once()
+            assert get_exchange_current_time_mock.call_count == 1
 
             assert producer._last_trigger_time == current_time
         with mock.patch.object(
@@ -371,7 +371,7 @@ async def test_ohlcv_callback(tools):
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_called_once()
             _notify_if_missing_too_many_coins_mock.assert_called_once()
-            get_exchange_current_time_mock.assert_called_once()
+            assert get_exchange_current_time_mock.call_count == 2
             assert producer._last_trigger_time == current_time * 2
 
 
@@ -801,20 +801,70 @@ async def test_ensure_enough_funds_to_buy_after_selling(tools):
 async def test_sell_indexed_coins_for_reference_market(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    orders = [
+        mock.Mock(
+            symbol="BTC/USDT",
+            side=trading_enums.TradeOrderSide.SELL
+        ),
+        mock.Mock(
+            symbol="ETH/USDT",
+            side=trading_enums.TradeOrderSide.SELL
+        )
+    ]
     with mock.patch.object(
-            octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=["1", "2"])
+            octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=orders)
     ) as convert_assets_to_target_asset_mock, mock.patch.object(
         trading_personal_data, "wait_for_order_fill", mock.AsyncMock()
     ) as wait_for_order_fill_mock, mock.patch.object(
         consumer, "_get_coins_to_sell", mock.Mock(return_value=[1, 2, 3])
     ) as _get_coins_to_sell_mock:
-        assert await consumer._sell_indexed_coins_for_reference_market("details") == ["1", "2"]
+        details = {
+            index_trading.RebalanceDetails.REMOVE.value: {}
+        }
+        assert await consumer._sell_indexed_coins_for_reference_market(details) == orders
         convert_assets_to_target_asset_mock.assert_called_once_with(
             mode, [1, 2, 3],
             consumer.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {}
         )
         assert wait_for_order_fill_mock.call_count == 2
-        _get_coins_to_sell_mock.assert_called_once_with("details")
+        _get_coins_to_sell_mock.assert_called_once_with(details)
+        convert_assets_to_target_asset_mock.reset_mock()
+        wait_for_order_fill_mock.reset_mock()
+        _get_coins_to_sell_mock.reset_mock()
+
+        # with valid remove coins
+        details = {
+            index_trading.RebalanceDetails.REMOVE.value: {"BTC": 0.01},
+            index_trading.RebalanceDetails.BUY_MORE.value: {},
+            index_trading.RebalanceDetails.ADD.value: {},
+            index_trading.RebalanceDetails.SWAP.value: {},
+        }
+        assert await consumer._sell_indexed_coins_for_reference_market(details) == orders + orders
+        assert convert_assets_to_target_asset_mock.call_count == 2
+        assert wait_for_order_fill_mock.call_count == 4
+        _get_coins_to_sell_mock.assert_called_once_with(details)
+        convert_assets_to_target_asset_mock.reset_mock()
+        wait_for_order_fill_mock.reset_mock()
+        _get_coins_to_sell_mock.reset_mock()
+
+        with mock.patch.object(
+                octobot_trading.modes, "convert_assets_to_target_asset", mock.AsyncMock(return_value=[])
+        ) as convert_assets_to_target_asset_mock_2:
+            # with remove coins that can't be sold
+            details = {
+                index_trading.RebalanceDetails.REMOVE.value: {"BTC": 0.01},
+                index_trading.RebalanceDetails.BUY_MORE.value: {},
+                index_trading.RebalanceDetails.ADD.value: {},
+                index_trading.RebalanceDetails.SWAP.value: {},
+            }
+            with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
+                assert await consumer._sell_indexed_coins_for_reference_market(details) == orders + orders
+            convert_assets_to_target_asset_mock_2.assert_called_once_with(
+                mode, ["BTC"],
+                consumer.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {}
+            )
+            wait_for_order_fill_mock.assert_not_called()
+            _get_coins_to_sell_mock.assert_not_called()
 
 
 async def test_get_coins_to_sell(tools):
@@ -864,7 +914,7 @@ async def test_get_coins_to_sell(tools):
         },
         index_trading.RebalanceDetails.ADD.value: {},
         index_trading.RebalanceDetails.SWAP.value: {},
-    }) == ["BTC", "ETH", "DOGE", "SHIB", "XRP"]
+    }) == ["BTC", "ETH", "DOGE", "SHIB"]
 
 
 async def test_resolve_swaps(tools):
