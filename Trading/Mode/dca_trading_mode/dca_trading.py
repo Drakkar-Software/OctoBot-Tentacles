@@ -592,7 +592,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     async def delayed_start(self):
         await self._wait_for_bot_init(
-            self.CONFIG_INIT_TIMEOUT, extra_topics=[commons_enums.InitializationEventExchangeTopics.PRICE.value]
+            self.CONFIG_INIT_TIMEOUT, extra_symbol_topics=[commons_enums.InitializationEventExchangeTopics.PRICE.value]
         )
         await self.dca_task()
 
