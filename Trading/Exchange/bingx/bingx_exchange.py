@@ -68,3 +68,19 @@ class BingxCCXTAdapter(exchanges.CCXTAdapter):
         except KeyError:
             pass
         return fixed
+
+    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
+        fixed = super().fix_market_status(raw, remove_price_limits=remove_price_limits, **kwargs)
+        if not fixed:
+            return fixed
+        # bingx min and max quantity should be ignored
+        # https://bingx-api.github.io/docs/#/en-us/spot/market-api.html#Spot%20trading%20symbols
+        limits = fixed[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]
+        limits[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_AMOUNT.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_AMOUNT_MIN.value
+        ] = 0
+        limits[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_AMOUNT.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_AMOUNT_MAX.value
+        ] = None
+
+        return fixed
