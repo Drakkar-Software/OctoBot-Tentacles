@@ -19,6 +19,7 @@ import octobot_trading.enums as trading_enums
 
 class Bitmex(exchanges.RestExchange):
     DESCRIPTION = ""
+    FIX_MARKET_STATUS = False    # todo fix precision price but not amount ? todo check
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
@@ -36,9 +37,6 @@ class Bitmex(exchanges.RestExchange):
         :return: The list of supported exchange types
         """
         return [
+            trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
-
-    async def get_recent_trades(self, symbol, limit=50, **kwargs):
-        kwargs.update({"reverse": True})
-        return await super().get_recent_trades(self, symbol=symbol, limit=limit, **kwargs)
