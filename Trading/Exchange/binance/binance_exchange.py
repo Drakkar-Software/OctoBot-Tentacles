@@ -102,13 +102,17 @@ class Binance(exchanges.RestExchange):
         return BinanceCCXTAdapter
 
     async def get_account_id(self, **kwargs: dict) -> str:
-        raw_balance = await self.connector.client.fetch_balance()
         try:
-            return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
-        except KeyError:
             if self.exchange_manager.is_future:
-                raise NotImplementedError("get_account_id is not implemented on binance futures account")
-            # should not happen in spot
+                raw_binance_balance = await self.connector.client.fapiPrivateV3GetBalance()
+                # accountAlias = unique account code
+                # from https://binance-docs.github.io/apidocs/futures/en/#futures-account-balance-v3-user_data
+                return raw_binance_balance[0]["accountAlias"]
+            else:
+                raw_balance = await self.connector.client.fetch_balance()
+                return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+        except (KeyError, IndexError):
+            # should not happen
             raise
 
     def _infer_account_types(self, exchange_manager):
