@@ -279,7 +279,7 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
 
     def parse_position(self, fixed, force_empty=False, **kwargs):
         try:
-            parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
+            return super().parse_position(fixed, force_empty=force_empty, **kwargs)
         except decimal.InvalidOperation:
             # on binance, positions might be invalid (ex: LUNAUSD_PERP as None contact size)
             return None
