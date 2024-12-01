@@ -128,6 +128,8 @@ class Kucoin(exchanges.RestExchange):
         ("order does not exist",),
     ]
 
+    DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
+
     @classmethod
     def get_name(cls):
         return 'kucoin'
@@ -290,15 +292,15 @@ class Kucoin(exchanges.RestExchange):
             # use gather to fetch everything at once (and not allow other requests to get in between)
             currencies = self.exchange_manager.exchange_config.get_all_traded_currencies()
             if not currencies:
+                currencies = self.DEFAULT_BALANCE_CURRENCIES_TO_FETCH
                 self.logger.warning(
                     f"Can't fetch balance on {self.exchange_manager.exchange_name} futures when no traded currencies "
-                    f"are set"
+                    f"are set, fetching {currencies[0]} balance instead"
                 )
-            else:
-                await asyncio.gather(*(
-                    self._update_balance(balance, currency, **kwargs)
-                    for currency in currencies
-                ))
+            await asyncio.gather(*(
+                self._update_balance(balance, currency, **kwargs)
+                for currency in currencies
+            ))
             return balance
         return await super().get_balance(**kwargs)
 
