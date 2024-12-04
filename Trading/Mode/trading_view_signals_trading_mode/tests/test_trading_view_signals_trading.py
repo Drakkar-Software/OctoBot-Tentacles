@@ -195,19 +195,20 @@ async def test_trading_view_signal_callback(tools):
     context = script_keywords.get_base_context(producer.trading_mode)
     with mock.patch.object(script_keywords, "get_base_context", mock.Mock(return_value=context)) \
          as get_base_context_mock:
-        # ensure exception is caught
-        with mock.patch.object(
-                producer, "signal_callback", mock.AsyncMock(side_effect=errors.MissingFunds)
-        ) as signal_callback_mock:
-            signal = f"""
-                EXCHANGE={exchange_manager.exchange_name}
-                SYMBOL={symbol}
-                SIGNAL=BUY
-            """
-            await mode._trading_view_signal_callback({"metadata": signal})
-            signal_callback_mock.assert_awaited_once()
-            get_base_context_mock.assert_called_once()
-            get_base_context_mock.reset_mock()
+        for exception in (errors.MissingFunds, errors.InvalidArgumentError):
+            # ensure exception is caught
+            with mock.patch.object(
+                    producer, "signal_callback", mock.AsyncMock(side_effect=exception)
+            ) as signal_callback_mock:
+                signal = f"""
+                    EXCHANGE={exchange_manager.exchange_name}
+                    SYMBOL={symbol}
+                    SIGNAL=BUY
+                """
+                await mode._trading_view_signal_callback({"metadata": signal})
+                signal_callback_mock.assert_awaited_once()
+                get_base_context_mock.assert_called_once()
+                get_base_context_mock.reset_mock()
 
         with mock.patch.object(producer, "signal_callback", mock.AsyncMock()) as signal_callback_mock:
             # invalid data
@@ -415,6 +416,23 @@ async def test_signal_callback(tools):
                 mode.EXCHANGE_KEY: exchange_manager.exchange_name,
                 mode.SYMBOL_KEY: "unused",
                 mode.SIGNAL_KEY: "SelL",
+                mode.PRICE_KEY: "123000q",  # price = 123
+                mode.VOLUME_KEY: "11111b",  # base amount: not enough funds
+                mode.REDUCE_ONLY_KEY: True,
+                mode.ORDER_TYPE_SIGNAL: "LiMiT",
+                mode.STOP_PRICE_KEY: "-10%",  # price - 10%
+                mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
+                mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+                "PARAM_TAG_1": "ttt",
+                "PARAM_Plop": False,
+            }, context)
+        _set_state_mock.assert_not_called()
+
+        with pytest.raises(errors.InvalidArgumentError):
+            await producer.signal_callback({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: "unused",
+                mode.SIGNAL_KEY: "DSDSDDSS",
                 mode.PRICE_KEY: "123000q",  # price = 123
                 mode.VOLUME_KEY: "11111b",  # base amount: not enough funds
                 mode.REDUCE_ONLY_KEY: True,

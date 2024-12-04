@@ -241,7 +241,7 @@ class Binance(exchanges.RestExchange):
         :return: the update result
         """
         try:
-            return await super(). set_symbol_margin_type(symbol, isolated, **kwargs)
+            return await super().set_symbol_margin_type(symbol, isolated, **kwargs)
         except ccxt.ExchangeError as err:
             raise errors.NotSupported() from err
 
