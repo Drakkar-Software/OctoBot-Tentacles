@@ -24,6 +24,7 @@ import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.personal_data.orders.order_util as order_util
 import octobot_trading.api as api
 import octobot_trading.errors as errors
+import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import tentacles.Meta.Keywords.scripting_library as scripting_library
 
@@ -102,6 +103,13 @@ async def test_orders_with_invalid_values(mock_context, skip_if_octobot_trading_
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=["backtesting_config"])
 async def test_orders_amount_then_position_sequence(mock_context):
     initial_usdt_holdings, btc_price = await _usdt_trading_context(mock_context)
+    mock_context.exchange_manager.is_future = True
+    api.load_pair_contract(
+        mock_context.exchange_manager,
+        api.create_default_future_contract(
+            mock_context.symbol, decimal.Decimal(1), trading_enums.FutureContractType.LINEAR_PERPETUAL
+        ).to_dict()
+    )
 
     if os.getenv('CYTHON_IGNORE'):
         return
@@ -193,7 +201,7 @@ async def test_concurrent_orders(mock_context):
 
         # create 3 sell orders (at price = 500 + 10 = 510)
         # that would end up selling more than what we have if not executed sequentially
-        # 1st order is 80% of position, second is 80% of the remaining 20% and so on
+        # 1st order is 80% of available btc, second is 80% of the remaining 20% and so on
 
         orders = []
         async def create_order(amount):
@@ -207,13 +215,13 @@ async def test_concurrent_orders(mock_context):
             )
         await asyncio.gather(
             *(
-                create_order("80%p")
+                create_order("80%a")
                 for _ in range(3)
             )
         )
 
         initial_btc_holdings = btc_val
-        btc_val = initial_btc_holdings * decimal.Decimal("0.2") ** 3  # 0.16
+        btc_val = initial_btc_holdings * (decimal.Decimal("0.2") ** 3)
         usdt_val = usdt_val + (initial_btc_holdings - btc_val) * (btc_price + 10)   # 50118.40
         await _fill_and_check(mock_context, btc_val, usdt_val, orders, orders_count=3)
 
