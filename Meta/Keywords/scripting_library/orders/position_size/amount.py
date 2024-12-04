@@ -31,28 +31,15 @@ async def get_amount(
     unknown_portfolio_on_creation=False,
     target_price=None
 ):
-    try:
-        amount_value = await script_keywords.get_amount_from_input_amount(
-            context=context,
-            input_amount=input_amount,
-            side=side,
-            reduce_only=reduce_only,
-            is_stop_order=is_stop_order,
-            use_total_holding=use_total_holding,
-            target_price=target_price
-        )
-    except NotImplementedError:
-        amount_type, amount_value = script_keywords.parse_quantity(input_amount)
-        if amount_type is script_keywords.QuantityType.POSITION_PERCENT:  # todo handle existing open short position
-            amount_value = \
-                exchange_private_data.open_position_size(context, side,
-                                                         amount_type=commons_constants.PORTFOLIO_AVAILABLE) \
-                * amount_value / 100
-        else:
-            raise trading_errors.InvalidArgumentError("make sure to use a supported syntax for amount")
-        return await script_keywords.adapt_amount_to_holdings(context, amount_value, side,
-                                                              use_total_holding, reduce_only, is_stop_order,
-                                                              target_price=target_price)
+    amount_value = await script_keywords.get_amount_from_input_amount(
+        context=context,
+        input_amount=input_amount,
+        side=side,
+        reduce_only=reduce_only,
+        is_stop_order=is_stop_order,
+        use_total_holding=use_total_holding,
+        target_price=target_price
+    )
     if unknown_portfolio_on_creation:
         # no way to check if the amount is valid when creating order
         _, amount_value = script_keywords.parse_quantity(input_amount)
