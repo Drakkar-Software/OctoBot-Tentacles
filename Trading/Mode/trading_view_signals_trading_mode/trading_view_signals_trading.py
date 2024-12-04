@@ -176,6 +176,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
                      parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+        except trading_errors.InvalidArgumentError as e:
+            self.logger.error(f"Error when handling trading view signal: {e}")
         except trading_errors.MissingFunds as e:
             self.logger.error(f"Error when handling trading view signal: not enough funds: {e}")
         except KeyError as e:
@@ -261,10 +263,9 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         elif side == TradingViewSignalsTradingMode.CANCEL_SIGNAL:
             state = trading_enums.EvaluatorStates.NEUTRAL
         else:
-            self.logger.error(
+            raise trading_errors.InvalidArgumentError(
                 f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
             )
-            state = trading_enums.EvaluatorStates.NEUTRAL
         target_price = 0 if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL else (
             await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0))
         stop_price = await self._parse_price(
