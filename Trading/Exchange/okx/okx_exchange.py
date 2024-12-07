@@ -181,6 +181,13 @@ class Okx(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "OK-ACCESS-SIGN"
+        return bool(
+            headers
+            and signature_identifier in headers
+        )
+
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 

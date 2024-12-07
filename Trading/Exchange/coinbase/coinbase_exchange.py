@@ -169,7 +169,7 @@ class Coinbase(exchanges.RestExchange):
             self.logger.exception(
                 err, True,
                 f"Error when fetching {self.get_name()} account id: {err} ({err.__class__.__name__}). "
-                f"This is not normal, endpoint might be deprecated, see"
+                f"This is not normal, endpoint might be deprecated, see "
                 f"https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users. "
                 f"Using generated account id instead"
             )
@@ -263,6 +263,17 @@ class Coinbase(exchanges.RestExchange):
             kwargs["since"] = to_time - (time_frame_sec * limit)
             kwargs["limit"] = limit
         return kwargs
+
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "CB-ACCESS-SIGN"
+        oauth_identifier = "Authorization"
+        return bool(
+            headers
+            and (
+                signature_identifier in headers
+                or oauth_identifier in headers
+            )
+        )
 
     def is_market_open_for_order_type(self, symbol: str, order_type: trading_enums.TraderOrderType) -> bool:
         """

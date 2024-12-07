@@ -261,6 +261,13 @@ class Kucoin(exchanges.RestExchange):
         """
         return Kucoin.INSTANT_RETRY_ERROR_CODE not in str(exception)
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "KC-API-SIGN"
+        return bool(
+            headers
+            and signature_identifier in headers
+        )
+
     def get_order_additional_params(self, order) -> dict:
         params = {}
         if self.exchange_manager.is_future:

@@ -161,6 +161,18 @@ class Binance(exchanges.RestExchange):
         }
         return config
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "signature="
+        return bool(
+            (
+                url
+                and signature_identifier in url # for GET & DELETE requests
+            ) or (
+                body
+                and signature_identifier in body # for other requests
+            )
+        )
+
     async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
             balance = []

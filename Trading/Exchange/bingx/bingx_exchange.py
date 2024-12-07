@@ -57,6 +57,12 @@ class Bingx(exchanges.RestExchange):
             return await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
         return await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "signature="
+        return bool(
+            url
+            and signature_identifier in url
+        )
 
 class BingxCCXTAdapter(exchanges.CCXTAdapter):
 
