@@ -286,13 +286,18 @@ class Coinbase(exchanges.RestExchange):
         # override for retrier
         return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
 
-    @_coinbase_retrier
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        params = params or {}
         # warning coinbase only supports stop limit orders, stop markets are not available
+        stop_price = price
+        price = float(decimal.Decimal(str(price)) * self.STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO)
+        # use limit stop loss with a "normally instantly" filled price
+        return await self._create_limit_stop_loss_order(symbol, quantity, price, stop_price, side, params=params)
+
+    @_coinbase_retrier
+    async def _create_limit_stop_loss_order(self, symbol, quantity, price, stop_price, side, params=None) -> dict:
+        params = params or {}
         if "stopLossPrice" not in params:
-            params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-            price = float(decimal.Decimal(str(price)) * self.STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO)
+            params["stopLossPrice"] = stop_price  # make ccxt understand that it's a stop loss
         order = self.connector.adapter.adapt_order(
             await self.connector.client.create_order(
                 symbol, trading_enums.TradeOrderType.LIMIT.value, side, quantity, price, params=params
