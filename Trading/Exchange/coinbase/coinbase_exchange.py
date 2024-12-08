@@ -126,6 +126,39 @@ class Coinbase(exchanges.RestExchange):
         ("insufficient balance in source account", )
     ]
 
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            # not supported or need custom mechanics with batch orders
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot (as spot limit)
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
+    # stop limit price is 2% bellow trigger price to ensure instant fill
+    STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO = decimal.Decimal("0.98")
+
     @classmethod
     def get_name(cls):
         return 'coinbase'
@@ -253,6 +286,21 @@ class Coinbase(exchanges.RestExchange):
         # override for retrier
         return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
 
+    @_coinbase_retrier
+    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        params = params or {}
+        # warning coinbase only supports stop limit orders, stop markets are not available
+        if "stopLossPrice" not in params:
+            params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+            price = float(decimal.Decimal(str(price)) * self.STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO)
+        order = self.connector.adapter.adapt_order(
+            await self.connector.client.create_order(
+                symbol, trading_enums.TradeOrderType.LIMIT.value, side, quantity, price, params=params
+            ),
+            symbol=symbol, quantity=quantity
+        )
+        return order
+
     def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
         limit = input_limit
         if not input_limit or input_limit > self.MAX_PAGINATION_LIMIT:
@@ -311,6 +359,21 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
         except (KeyError, TypeError):
             pass
 
+    def _update_stop_order_or_trade_type_and_price(self, order_or_trade: dict):
+        if stop_price := order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value):
+            # from https://bingx-api.github.io/docs/#/en-us/spot/trade-api.html#Current%20Open%20Orders
+            limit_price = order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.PRICE.value)
+            # use stop price as order price to parse it properly
+            order_or_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price
+            # type is TAKE_STOP_LIMIT (not unified)
+            if order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.TYPE.value) not in (
+                trading_enums.TradeOrderType.STOP_LOSS.value, trading_enums.TradeOrderType.TAKE_PROFIT.value
+            ):
+                # Force stop loss. Add order direction parsing logic to handle take profits if necessary
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = (
+                    trading_enums.TradeOrderType.STOP_LOSS.value    # simulate market stop loss
+                )
+
     def fix_order(self, raw, **kwargs):
         """
         Handle 'order_type': 'UNKNOWN_ORDER_TYPE in coinbase order response (translated into None in ccxt order type)
@@ -336,6 +399,7 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
         'takeProfitPrice': None, 'stopLossPrice': None, 'exchange_id': 'd7471b4e-960e-4c92-bdbf-755cb92e176b'}
         """
         fixed = super().fix_order(raw, **kwargs)
+        self._update_stop_order_or_trade_type_and_price(fixed)
         if fixed[ccxt_enums.ExchangeOrderCCXTColumns.TYPE.value] is None:
             if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value] is not None:
                 # stop price set: stop order
@@ -361,6 +425,7 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
     def fix_trades(self, raw, **kwargs):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
+            self._update_stop_order_or_trade_type_and_price(trade)
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
             try:
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
