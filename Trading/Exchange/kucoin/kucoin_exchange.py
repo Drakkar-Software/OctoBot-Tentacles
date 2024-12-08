@@ -110,7 +110,7 @@ class Kucoin(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -333,8 +333,7 @@ class Kucoin(exchanges.RestExchange):
             limit = 200
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         stop_orders = []
-        if self.exchange_manager.is_future:
-            # stop ordes are futures only for now
+        if "stop" not in kwargs:
             # add untriggered stop orders (different api endpoint)
             kwargs["stop"] = True
             stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
@@ -494,6 +493,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def fix_trades(self, raw, **kwargs):
         fixed = super().fix_trades(raw, **kwargs)
         for trade in fixed:
+            self._adapt_order_type(trade)
             self._ensure_fees(trade)
         return fixed
 
@@ -506,16 +506,16 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             down: Triggers when the price reaches or goes below the stopPrice.
             up: Triggers when the price reaches or goes above the stopPrice.
             """
-            side = fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+            side = fixed.get(trading_enums.ExchangeConstantsOrderColumns.SIDE.value)
             if side == trading_enums.TradeOrderSide.BUY.value:
-                if trigger_direction == "up":
+                if trigger_direction in ("up", "loss"):
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
-                elif trigger_direction == "down":
+                elif trigger_direction in ("down", "entry"):
                     updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
             else:
-                if trigger_direction == "up":
+                if trigger_direction in ("up", "entry"):
                     updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
-                elif trigger_direction == "down":
+                elif trigger_direction in ("down", "loss"):
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
             # stop loss are not tagged as such by ccxt, force it
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type

@@ -59,7 +59,7 @@ class Binance(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -209,17 +209,15 @@ class Binance(exchanges.RestExchange):
         """
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        if self.exchange_manager.is_future:
-            params = params or {}
-            params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-            order = self.connector.adapter.adapt_order(
-                await self.connector.client.create_order(
-                    symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-                ),
-                symbol=symbol, quantity=quantity
-            )
-            return order
-        return await super()._create_market_stop_loss_order(symbol, quantity, price, side, current_price, params=params)
+        params = params or {}
+        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+        order = self.connector.adapter.adapt_order(
+            await self.connector.client.create_order(
+                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+            ),
+            symbol=symbol, quantity=quantity
+        )
+        return order
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
