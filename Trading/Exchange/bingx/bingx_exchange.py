@@ -40,6 +40,37 @@ class Bingx(exchanges.RestExchange):
     # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
     CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
 
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            # not supported or need custom mechanics with batch orders
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
+
     def get_adapter_class(self):
         return BingxCCXTAdapter
 
@@ -57,16 +88,62 @@ class Bingx(exchanges.RestExchange):
             return await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
         return await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "signature="
+        return bool(
+            url
+            and signature_identifier in url
+        )
+
+    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        params = params or {}
+        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+        order = self.connector.adapter.adapt_order(
+            await self.connector.client.create_order(
+                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+            ),
+            symbol=symbol, quantity=quantity
+        )
+        return order
 
 class BingxCCXTAdapter(exchanges.CCXTAdapter):
 
+    def _update_stop_order_or_trade_type_and_price(self, order_or_trade: dict):
+        info = order_or_trade.get(ccxt_constants.CCXT_INFO, {})
+        if stop_price := order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.STOP_LOSS_PRICE.value):
+            # from https://bingx-api.github.io/docs/#/en-us/spot/trade-api.html#Current%20Open%20Orders
+            order_creation_price = float(
+                info.get("price") or order_or_trade.get(
+                    trading_enums.ExchangeConstantsOrderColumns.PRICE.value
+                )
+            )
+            stop_price = float(stop_price)
+            # use stop price as order price to parse it properly
+            order_or_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price
+            # type is TAKE_STOP_LIMIT (not unified)
+            if order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.TYPE.value) not in (
+                trading_enums.TradeOrderType.STOP_LOSS.value, trading_enums.TradeOrderType.TAKE_PROFIT.value
+            ):
+                if stop_price <= order_creation_price:
+                     order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                else:
+                    order_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
+
     def fix_order(self, raw, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
+        self._update_stop_order_or_trade_type_and_price(fixed)
         try:
             info = fixed[ccxt_constants.CCXT_INFO]
             fixed[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = info["orderId"]
         except KeyError:
             pass
+        return fixed
+
+    def fix_trades(self, raw, **kwargs):
+        fixed = super().fix_trades(raw, **kwargs)
+        for trade in fixed:
+            self._update_stop_order_or_trade_type_and_price(trade)
         return fixed
 
     def fix_market_status(self, raw, remove_price_limits=False, **kwargs):

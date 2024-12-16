@@ -59,7 +59,7 @@ class Binance(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -102,13 +102,17 @@ class Binance(exchanges.RestExchange):
         return BinanceCCXTAdapter
 
     async def get_account_id(self, **kwargs: dict) -> str:
-        raw_balance = await self.connector.client.fetch_balance()
         try:
-            return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
-        except KeyError:
             if self.exchange_manager.is_future:
-                raise NotImplementedError("get_account_id is not implemented on binance futures account")
-            # should not happen in spot
+                raw_binance_balance = await self.connector.client.fapiPrivateV3GetBalance()
+                # accountAlias = unique account code
+                # from https://binance-docs.github.io/apidocs/futures/en/#futures-account-balance-v3-user_data
+                return raw_binance_balance[0]["accountAlias"]
+            else:
+                raw_balance = await self.connector.client.fetch_balance()
+                return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+        except (KeyError, IndexError):
+            # should not happen
             raise
 
     def _infer_account_types(self, exchange_manager):
@@ -157,6 +161,18 @@ class Binance(exchanges.RestExchange):
         }
         return config
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "signature="
+        return bool(
+            (
+                url
+                and signature_identifier in url # for GET & DELETE requests
+            ) or (
+                body
+                and signature_identifier in body # for other requests
+            )
+        )
+
     async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
             balance = []
@@ -193,17 +209,15 @@ class Binance(exchanges.RestExchange):
         """
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        if self.exchange_manager.is_future:
-            params = params or {}
-            params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-            order = self.connector.adapter.adapt_order(
-                await self.connector.client.create_order(
-                    symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-                ),
-                symbol=symbol, quantity=quantity
-            )
-            return order
-        return await super()._create_market_stop_loss_order(symbol, quantity, price, side, current_price, params=params)
+        params = params or {}
+        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
+        order = self.connector.adapter.adapt_order(
+            await self.connector.client.create_order(
+                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+            ),
+            symbol=symbol, quantity=quantity
+        )
+        return order
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
@@ -237,7 +251,7 @@ class Binance(exchanges.RestExchange):
         :return: the update result
         """
         try:
-            return await super(). set_symbol_margin_type(symbol, isolated, **kwargs)
+            return await super().set_symbol_margin_type(symbol, isolated, **kwargs)
         except ccxt.ExchangeError as err:
             raise errors.NotSupported() from err
 
@@ -275,19 +289,7 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
 
     def parse_position(self, fixed, force_empty=False, **kwargs):
         try:
-            parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
-            parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-                trading_enums.MarginType(
-                    fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
-                )
-            # use one way by default.
-            if parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] is None:
-                parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = (
-                    trading_enums.PositionMode.HEDGE if fixed.get(ccxt_enums.ExchangePositionCCXTColumns.HEDGED.value,
-                                                                  True)
-                    else trading_enums.PositionMode.ONE_WAY
-                )
-            return parsed
+            return super().parse_position(fixed, force_empty=force_empty, **kwargs)
         except decimal.InvalidOperation:
             # on binance, positions might be invalid (ex: LUNAUSD_PERP as None contact size)
             return None
