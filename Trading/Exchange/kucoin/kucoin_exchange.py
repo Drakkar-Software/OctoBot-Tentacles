@@ -483,7 +483,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
         fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+                fixed.get(trading_enums.ExchangeConstantsOrderColumns.COST.value) is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
