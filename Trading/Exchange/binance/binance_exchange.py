@@ -243,6 +243,14 @@ class Binance(exchanges.RestExchange):
         # leverage is in position
         return self.connector.adapter.adapt_leverage(await self.get_position(symbol))
 
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
+        if "subType" in kwargs or not self.exchange_manager.is_future:
+            return await super().get_all_currencies_price_ticker(**kwargs)
+        # futures with unspecified subType: fetch both linear and inverse tickers
+        linear_tickers = await super().get_all_currencies_price_ticker(subType=self.LINEAR_TYPE, **kwargs)
+        inverse_tickers = await super().get_all_currencies_price_ticker(subType=self.INVERSE_TYPE, **kwargs)
+        return {**linear_tickers, **inverse_tickers}
+
     async def set_symbol_margin_type(self, symbol: str, isolated: bool, **kwargs: dict):
         """
         Set the symbol margin type
