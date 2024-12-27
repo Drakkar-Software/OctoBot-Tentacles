@@ -436,6 +436,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert stop_loss.origin_price == entry_price * (1 - mode.stop_loss_price_multiplier)
         assert stop_loss.triggered_by is entry_order
         assert stop_loss.order_group is None
+        assert stop_loss.reduce_only is False
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
@@ -456,6 +457,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert take_profit.origin_price == entry_price * (1 + mode.exit_limit_orders_price_multiplier)
         assert take_profit.triggered_by is entry_order
         assert take_profit.order_group is None
+        assert take_profit.reduce_only is False
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
@@ -531,7 +533,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
 
-        # chained stop loss
+        # chained stop loss on futures
+        consumer.exchange_manager.is_future = True
         # 3 take profit (initial + 2 additional)
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = True
@@ -555,6 +558,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # ensure only stop losses and take profits in chained orders
         assert len(stop_losses) == 1
         assert len(take_profits) == 1
+        assert all(order.reduce_only is True for order in entry_order.chained_orders)   # futures: use reduce only
         assert stop_losses[0].origin_quantity == take_profits[0].origin_quantity == entry_order.origin_quantity
 
 

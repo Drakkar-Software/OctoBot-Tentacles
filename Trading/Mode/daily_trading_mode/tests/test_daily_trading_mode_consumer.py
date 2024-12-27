@@ -957,6 +957,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.tag == "super"
+    assert stop_order.reduce_only is False
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -978,6 +979,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
+    assert take_profit_order.reduce_only is False
     # take profit only using ADDITIONAL_TAKE_PROFIT_PRICES_KEY
     data = {
         consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [decimal.Decimal("100000")],
@@ -995,6 +997,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
+    assert take_profit_order.reduce_only is False
 
     # stop loss and take profit
     data = {
@@ -1023,6 +1026,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
+    assert take_profit_order.reduce_only is False
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
     assert take_profit_order.order_group is stop_order.order_group
 
@@ -1044,6 +1048,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert sell_limit.chained_orders == []
     assert stop_loss.associated_entry_ids is None
     assert stop_loss.chained_orders == []
+    assert stop_loss.reduce_only is True    # True as force stop loss
     assert stop_loss.origin_price == decimal.Decimal("123")
     assert stop_loss.origin_quantity == decimal.Decimal("0.01") \
            - trading_personal_data.get_fees_for_currency(sell_limit.fee, stop_loss.quantity_currency)
@@ -1207,6 +1212,7 @@ async def test_target_profit_mode(tools):
     assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
     assert take_profit_order.side is trading_enums.TradeOrderSide.SELL
     assert take_profit_order.origin_quantity == buy_order.origin_quantity
+    assert take_profit_order.reduce_only is False
     assert take_profit_order.origin_price == trading_personal_data.decimal_adapt_price(
         symbol_market,
         buy_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_TAKE_PROFIT)
@@ -1225,6 +1231,7 @@ async def test_target_profit_mode(tools):
     assert isinstance(stop_order, trading_personal_data.StopLossOrder)
     assert stop_order.side is trading_enums.TradeOrderSide.SELL
     assert stop_order.origin_quantity == buy_order.origin_quantity
+    assert stop_order.reduce_only is False
     assert stop_order.origin_price == trading_personal_data.decimal_adapt_price(
         symbol_market,
         buy_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_STOP_LOSS)
@@ -1307,12 +1314,14 @@ async def test_target_profit_mode_futures_trading(future_tools):
     assert isinstance(stop_loss_order, trading_personal_data.StopLossOrder)
     assert take_profit_order.side is trading_enums.TradeOrderSide.BUY
     assert take_profit_order.origin_quantity == sell_order.origin_quantity
+    assert take_profit_order.reduce_only is True
     assert take_profit_order.origin_price == trading_personal_data.decimal_adapt_price(
         symbol_market,
         sell_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_TAKE_PROFIT)
     )
     assert stop_loss_order.side is trading_enums.TradeOrderSide.BUY
     assert stop_loss_order.origin_quantity == sell_order.origin_quantity
+    assert stop_loss_order.reduce_only is True
     assert stop_loss_order.origin_price == trading_personal_data.decimal_adapt_price(
         symbol_market,
         sell_order.origin_price * (trading_constants.ONE + consumer.TARGET_PROFIT_STOP_LOSS)
