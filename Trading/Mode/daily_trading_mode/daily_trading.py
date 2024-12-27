@@ -499,6 +499,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         chained_orders = []
         is_long = current_order.side is trading_enums.TradeOrderSide.BUY
         exit_side = trading_enums.TradeOrderSide.SELL if is_long else trading_enums.TradeOrderSide.BUY
+        # tag chained orders as reduce_only when trading futures
+        reduce_only_chained_orders = self.exchange_manager.is_future
         if use_stop_loss_orders:
             if len(stop_loss_details) > 1:
                 self.logger.error(f"Multiple stop loss orders is not supported.")
@@ -509,7 +511,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
             ) if (not stop_loss_details or stop_loss_details[0].price.is_nan()) else stop_loss_details[0].price
             param_update, chained_order = await self.register_chained_order(
-                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side, tag=tag
+                current_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side,
+                tag=tag, reduce_only=reduce_only_chained_orders
             )
             params.update(param_update)
             chained_orders.append(chained_order)
@@ -536,7 +539,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 param_update, chained_order = await self.register_chained_order(
                     current_order, take_profit_price, order_type, exit_side,
-                    quantity=take_profits_detail.quantity, tag=tag
+                    quantity=take_profits_detail.quantity, tag=tag, reduce_only=reduce_only_chained_orders
                 )
                 params.update(param_update)
                 chained_orders.append(chained_order)
