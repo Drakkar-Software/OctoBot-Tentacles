@@ -285,7 +285,8 @@ class HollaexAutofilled(hollaex):
     def is_supporting_sandbox(cls) -> bool:
         return False
 
-    def get_rest_name(self):
+    @classmethod
+    def get_rest_name(cls, exchange_manager):
         return hollaex.get_name()
 
     def get_associated_websocket_exchange_name(self):

@@ -135,10 +135,11 @@ class Kucoin(exchanges.RestExchange):
     def get_name(cls):
         return 'kucoin'
 
-    def get_rest_name(self):
-        if self.exchange_manager.is_future:
-            return self.FUTURES_CCXT_CLASS_NAME
-        return self.get_name()
+    @classmethod
+    def get_rest_name(cls, exchange_manager):
+        if exchange_manager.is_future:
+            return cls.FUTURES_CCXT_CLASS_NAME
+        return cls.get_name()
 
     def get_adapter_class(self):
         return KucoinCCXTAdapter
