@@ -28,6 +28,7 @@ import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
+import octobot.community
 
 
 def _kucoin_retrier(f):
@@ -176,6 +177,10 @@ class Kucoin(exchanges.RestExchange):
                         else:
                             # only subaccounts have a subUserId: if this condition is True, we are on the main account
                             account_id = account["subName"]
+                if account_id and self.exchange_manager.is_future:
+                    account_id = octobot.community.to_community_exchange_internal_name(
+                        account_id, commons_constants.CONFIG_EXCHANGE_FUTURE
+                    )
             if subaccount_id:
                 # there is at least a subaccount: ensure the current account is the main account as there is no way
                 # to know the id of the current account (only a list of existing accounts)
