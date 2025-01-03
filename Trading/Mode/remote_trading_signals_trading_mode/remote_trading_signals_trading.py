@@ -309,7 +309,11 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             base_order, chained_order, chained_order.update_with_triggering_order_fees, False
         )
         if base_order.state is not None and base_order.is_filled() and chained_order.should_be_created():
-            await personal_data.create_as_chained_order(chained_order)
+            try:
+                await personal_data.create_as_chained_order(chained_order)
+            except errors.OctoBotExchangeError as err:
+                # todo later on: handle locale error if necessary
+                self.logger.error(f"Failed to create chained order: {chained_order}: {err}")
             return 1
         return 0
 

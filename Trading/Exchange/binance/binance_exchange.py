@@ -81,6 +81,15 @@ class Binance(exchanges.RestExchange):
         # Binance ex: InvalidOrder binance {"code":-2010,"msg":"This symbol is not permitted for this account."}
         ("symbol", "not permitted", "for this account"),
     ]
+    # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
+    EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # doesn't seem to happen on binance
+    ]
+    # text content of errors due to an order that would immediately trigger if created. Relevant for stop losses
+    EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = [
+        # binance {"code":-2021,"msg":"Order would immediately trigger."}
+        ("order would immediately trigger", )
+    ]
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
@@ -242,6 +251,14 @@ class Binance(exchanges.RestExchange):
         """
         # leverage is in position
         return self.connector.adapter.adapt_leverage(await self.get_position(symbol))
+
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
+        if "subType" in kwargs or not self.exchange_manager.is_future:
+            return await super().get_all_currencies_price_ticker(**kwargs)
+        # futures with unspecified subType: fetch both linear and inverse tickers
+        linear_tickers = await super().get_all_currencies_price_ticker(subType=self.LINEAR_TYPE, **kwargs)
+        inverse_tickers = await super().get_all_currencies_price_ticker(subType=self.INVERSE_TYPE, **kwargs)
+        return {**linear_tickers, **inverse_tickers}
 
     async def set_symbol_margin_type(self, symbol: str, isolated: bool, **kwargs: dict):
         """

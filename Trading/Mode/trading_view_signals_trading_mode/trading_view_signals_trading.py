@@ -278,18 +278,18 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan
         )
         allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
-
+        reduce_only = parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False)
+        amount = await self._parse_volume(
+            ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation, reduce_only
+        )
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
-            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(
-                ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation
-            ),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: amount,
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
             TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: additional_tp_prices,
-            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
-                parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
+            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY: reduce_only,
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
@@ -313,7 +313,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             )
         return target_price
 
-    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation):
+    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation, reduce_only):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
         if user_volume == "0":
             return trading_constants.ZERO
@@ -321,7 +321,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             context=ctx,
             input_amount=user_volume,
             side=side,
-            reduce_only=False,
+            reduce_only=reduce_only,
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,

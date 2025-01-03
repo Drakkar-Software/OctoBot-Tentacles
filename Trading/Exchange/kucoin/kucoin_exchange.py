@@ -28,6 +28,7 @@ import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
+import octobot.community
 
 
 def _kucoin_retrier(f):
@@ -127,6 +128,15 @@ class Kucoin(exchanges.RestExchange):
         # 'kucoin The order does not exist.'
         ("order does not exist",),
     ]
+    # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
+    EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'kucoinfutures No open positions to close.'
+        ("No open positions to close", )
+    ]
+    # text content of errors due to an order that would immediately trigger if created. Relevant for stop losses
+    EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = [
+        # doesn't seem to happen on kucoin
+    ]
 
     DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
 
@@ -134,10 +144,11 @@ class Kucoin(exchanges.RestExchange):
     def get_name(cls):
         return 'kucoin'
 
-    def get_rest_name(self):
-        if self.exchange_manager.is_future:
-            return self.FUTURES_CCXT_CLASS_NAME
-        return self.get_name()
+    @classmethod
+    def get_rest_name(cls, exchange_manager):
+        if exchange_manager.is_future:
+            return cls.FUTURES_CCXT_CLASS_NAME
+        return cls.get_name()
 
     def get_adapter_class(self):
         return KucoinCCXTAdapter
@@ -176,6 +187,10 @@ class Kucoin(exchanges.RestExchange):
                         else:
                             # only subaccounts have a subUserId: if this condition is True, we are on the main account
                             account_id = account["subName"]
+                if account_id and self.exchange_manager.is_future:
+                    account_id = octobot.community.to_community_exchange_internal_name(
+                        account_id, commons_constants.CONFIG_EXCHANGE_FUTURE
+                    )
             if subaccount_id:
                 # there is at least a subaccount: ensure the current account is the main account as there is no way
                 # to know the id of the current account (only a list of existing accounts)
@@ -483,7 +498,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
         fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+                fixed.get(trading_enums.ExchangeConstantsOrderColumns.COST.value) is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))

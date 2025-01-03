@@ -367,6 +367,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             symbol_market
         )
         can_bundle_exit_orders = len(exit_quantities) == 1
+        reduce_only_chained_orders = self.exchange_manager.is_future
         for i, exit_quantity in exit_quantities:
             order_couple = []
             # stop loss
@@ -374,7 +375,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 stop_price = trading_personal_data.decimal_adapt_price(symbol_market, stop_price)
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side,
-                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
+                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders,
+                    reduce_only=reduce_only_chained_orders
                 )
                 params.update(param_update)
                 order_couple.append(chained_order)
@@ -399,7 +401,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, take_profit_price, take_profit_order_type, None,
-                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders
+                    quantity=exit_quantity, allow_bundling=can_bundle_exit_orders,
+                    reduce_only=reduce_only_chained_orders
                 )
                 params.update(param_update)
                 order_couple.append(chained_order)
