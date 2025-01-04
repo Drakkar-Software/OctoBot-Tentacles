@@ -44,6 +44,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     STOP_PRICE_KEY = "STOP_PRICE"
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
+    LEVERAGE = "LEVERAGE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     PARAM_PREFIX_KEY = "PARAM_"
@@ -294,6 +295,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
                 parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
+            TradingViewSignalsModeConsumer.LEVERAGE:
+                parsed_data.get(TradingViewSignalsTradingMode.LEVERAGE, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -335,8 +338,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
+        await self._process_pre_state_update_actions(ctx, order_data)
         # Use daily trading mode state system
         await self._set_state(self.trading_mode.cryptocurrency, ctx.symbol, state, order_data)
+
+    async def _process_pre_state_update_actions(self, context, order_data: dict):
+        if leverage := order_data.get(TradingViewSignalsModeConsumer.LEVERAGE):
+            await script_keywords.set_leverage(context, leverage)
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
         async with self.trading_mode_trigger():
