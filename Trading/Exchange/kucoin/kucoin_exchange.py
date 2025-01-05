@@ -80,6 +80,9 @@ class Kucoin(exchanges.RestExchange):
     CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
     DEFAULT_CONNECTOR_CLASS = KucoinConnector
 
+    # Set False when the leverage value is set via something else that a set_leverage api (from orders for example)
+    UPDATE_LEVERAGE_FROM_API = False  # leverage is set via orders on kucoin
+
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
@@ -325,20 +328,6 @@ class Kucoin(exchanges.RestExchange):
             ))
             return balance
         return await super().get_balance(**kwargs)
-
-    """
-    Margin and leverage
-    """
-
-    async def set_symbol_leverage(self, symbol: str, leverage: float, **kwargs):
-        """
-        Set the symbol leverage
-        :param symbol: the symbol
-        :param leverage: the leverage
-        :return: the update result
-        """
-        # leverage is set via orders on kucoin
-        return None
 
     @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:

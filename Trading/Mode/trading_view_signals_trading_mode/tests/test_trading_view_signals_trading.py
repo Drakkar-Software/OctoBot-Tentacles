@@ -290,7 +290,7 @@ async def test_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
     with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock, \
-        mock.patch.object(exchange_manager.trader, "set_leverage", mock.AsyncMock()) as set_leverage_mock:
+        mock.patch.object(mode, "set_leverage", mock.AsyncMock()) as set_leverage_mock:
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",
@@ -359,7 +359,8 @@ async def test_signal_callback(tools):
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
         }, context)
-        set_leverage_mock.assert_not_called()
+        set_leverage_mock.assert_called_once()
+        set_leverage_mock.reset_mock()
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT

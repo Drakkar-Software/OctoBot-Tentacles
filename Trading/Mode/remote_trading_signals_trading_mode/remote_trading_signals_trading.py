@@ -20,6 +20,7 @@ import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
 import octobot_commons.authentication as authentication
 import octobot_commons.tentacles_management as tentacles_management
+import octobot_commons.signals as commons_signals
 import async_channel.channels as channels
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
@@ -158,16 +159,39 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             self.trading_mode.trading_config.get(self.ROUND_TO_MINIMAL_SIZE_IF_NECESSARY_CONFIG_KEY)
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state,
-                                data):
-        # creates a new order (or multiple split orders), always check self.can_create_order() first.
+                                data: commons_signals.Signal):
         try:
-            await self._handle_signal_orders(symbol, data)
+            await self.handle_signal(symbol, data)
         except errors.MissingMinimalExchangeTradeVolume:
             self.logger.info(self.get_minimal_funds_error(symbol, final_note))
         except Exception as e:
             self.logger.exception(e, True, f"Error when handling remote signal orders: {e}")
 
-    async def _handle_signal_orders(self, symbol, signal):
+    async def handle_signal(self, symbol, data: commons_signals.Signal):
+        if data.topic == trading_enums.TradingSignalTopics.ORDERS.value:
+            # creates a new order (or multiple split orders), always check self.can_create_order() first.
+            await self._handle_signal_orders(symbol, data)
+        elif data.topic == trading_enums.TradingSignalTopics.POSITIONS.value:
+            await self._handle_positions_signal(symbol, data)
+        else:
+            self.logger.error(f"Unhandled signal topic: {data.topic} (signal: {data})")
+
+    async def _handle_positions_signal(self, symbol: str, signal: commons_signals.Signal):
+        action = signal.content.get(trading_enums.TradingSignalCommonsAttrs.ACTION.value)
+        if action == trading_enums.TradingSignalPositionsActions.EDIT.value:
+            await self._edit_position(symbol, signal)
+        else:
+            self.logger.error(f"Unhandled signal action: {action} (signal: {signal})")
+
+    async def _edit_position(self, symbol: str, signal: commons_signals.Signal):
+        leverage = signal.content.get(trading_enums.TradingSignalPositionsAttrs.LEVERAGE.value)
+        side = signal.content.get(trading_enums.TradingSignalPositionsAttrs.SIDE.value)
+        if side:
+            side = trading_enums.PositionSide(side)
+        if leverage is not None:
+            await self._set_leverage(symbol, decimal.Decimal(str(leverage)), side)
+
+    async def _handle_signal_orders(self, symbol: str, signal: commons_signals.Signal):
         to_create_orders_descriptions, to_edit_orders_descriptions, \
             to_cancel_orders_descriptions, to_group_orders_descriptions = \
             self._parse_signal_orders(signal)
@@ -487,7 +511,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         order_type = order_description[trading_enums.TradingSignalOrdersAttrs.TYPE.value]
         return personal_data.TraderOrderTypeClasses[order_type] == order.__class__
 
-    def _parse_signal_orders(self, signal):
+    def _parse_signal_orders(self, signal: commons_signals.Signal):
         to_create_orders = []
         to_edit_orders = []
         to_cancel_orders = []
@@ -572,6 +596,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             edited_stop_price=edited_stop_price
         )
 
+    async def _set_leverage(self, symbol: str, leverage: decimal.Decimal, side):
+        context = script_keywords.get_base_context(self.trading_mode, symbol=symbol)
+        await script_keywords.set_leverage(context, leverage, side=side)
+
 
 class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer):
 
@@ -583,9 +611,13 @@ class RemoteTradingSignalsModeProducer(trading_modes.AbstractTradingModeProducer
         exchange_type = signal.content[trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value]
         if exchange_type == exchanges.get_exchange_type(self.exchange_manager).value:
             state = trading_enums.EvaluatorStates.UNKNOWN
+            symbol = (
+                signal.content.get(trading_enums.TradingSignalOrdersAttrs.SYMBOL.value)
+                or signal.content.get(trading_enums.TradingSignalPositionsAttrs.SYMBOL.value)
+            )
             await self._set_state(
                 self.trading_mode.cryptocurrency,
-                signal.content[trading_enums.TradingSignalOrdersAttrs.SYMBOL.value],
+                symbol,
                 state, signal
             )
         else:
