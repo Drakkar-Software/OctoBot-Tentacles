@@ -106,7 +106,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
             channels.del_chan(channels_names.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)
 
 
-SIGNAL_TOPIC = "moonmoon"
+SIGNAL_TOPIC = trading_enums.TradingSignalTopics.ORDERS.value
 
 
 @pytest.fixture
@@ -143,6 +143,22 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
+        }
+    )
+
+
+@pytest.fixture
+def mocked_update_leverage_signal():
+    return signals.Signal(
+        trading_enums.TradingSignalTopics.POSITIONS.value,
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.EDIT.value,
+            trading_enums.TradingSignalPositionsAttrs.SYMBOL.value: "BTC/USDT:USDT",
+            trading_enums.TradingSignalPositionsAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalPositionsAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.FUTURE.value,
+            trading_enums.TradingSignalPositionsAttrs.STRATEGY.value: "plop strategy",
+            trading_enums.TradingSignalPositionsAttrs.SIDE.value: None,
+            trading_enums.TradingSignalPositionsAttrs.LEVERAGE.value: 10,
         }
     )
 

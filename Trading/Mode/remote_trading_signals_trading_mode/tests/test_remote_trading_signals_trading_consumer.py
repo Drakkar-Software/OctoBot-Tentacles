@@ -16,6 +16,7 @@
 import decimal
 import pytest
 import mock
+from more_itertools.more import side_effect
 
 import octobot_trading.api as trading_api
 import octobot_commons.signals as commons_signals
@@ -24,33 +25,46 @@ import octobot_trading.errors as errors
 import octobot_trading.constants as trading_constants
 import octobot_trading.personal_data as trading_personal_data
 import octobot_services.api as services_api
+import octobot_trading.modes.script_keywords as script_keywords
 
 from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_sell_limit_signal, \
-    mocked_bundle_stop_loss_in_sell_limit_in_market_signal, mocked_buy_market_signal, mocked_buy_limit_signal
+    mocked_bundle_stop_loss_in_sell_limit_in_market_signal, mocked_buy_market_signal, mocked_buy_limit_signal, \
+    mocked_update_leverage_signal
 
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
 
 
-async def test_internal_callback(local_trader, mocked_sell_limit_signal):
+async def test_internal_callback(local_trader, mocked_sell_limit_signal, mocked_update_leverage_signal):
     _, consumer, _ = local_trader
-    consumer.logger = mock.Mock(info=mock.Mock(), exception=mock.Mock())
+    consumer.logger = mock.Mock(info=mock.Mock(), error=mock.Mock(), exception=mock.Mock())
     with mock.patch.object(consumer, "_handle_signal_orders", new=mock.AsyncMock()) \
          as _handle_signal_orders_mock:
         await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
-                                         "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol", "data")
+                                         "state", mocked_sell_limit_signal)
+        _handle_signal_orders_mock.assert_called_once_with("symbol", mocked_sell_limit_signal)
         consumer.logger.info.assert_not_called()
+        consumer.logger.error.assert_not_called()
+        consumer.logger.exception.assert_not_called()
+
+    with mock.patch.object(consumer, "_handle_positions_signal", new=mock.AsyncMock()) \
+         as _handle_positions_signal_mock:
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
+                                         "state", mocked_update_leverage_signal)
+        _handle_positions_signal_mock.assert_called_once_with("symbol", mocked_update_leverage_signal)
+        consumer.logger.info.assert_not_called()
+        consumer.logger.error.assert_not_called()
         consumer.logger.exception.assert_not_called()
 
     with mock.patch.object(consumer, "_handle_signal_orders",
                            new=mock.AsyncMock(side_effect=errors.MissingMinimalExchangeTradeVolume)) \
          as _handle_signal_orders_mock:
         await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
-                                         "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
+                                         "state", mocked_sell_limit_signal)
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", mocked_sell_limit_signal)
         consumer.logger.info.assert_called_once()
+        consumer.logger.error.assert_not_called()
         consumer.logger.exception.assert_not_called()
         consumer.logger.info.reset_mock()
 
@@ -58,9 +72,24 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal):
                            new=mock.AsyncMock(side_effect=RuntimeError)) \
          as _handle_signal_orders_mock:
         await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
-                                         "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
+                                         "state", mocked_sell_limit_signal)
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", mocked_sell_limit_signal)
         consumer.logger.info.assert_not_called()
+        consumer.logger.error.assert_not_called()
+        consumer.logger.exception.assert_called_once()
+
+    with mock.patch.object(consumer, "_handle_signal_orders",
+                           new=mock.AsyncMock(side_effect=RuntimeError)) as _handle_signal_orders_mock, \
+        mock.patch.object(consumer, "_handle_positions_signal",
+            new=mock.AsyncMock(side_effect=RuntimeError)) \
+         as _handle_positions_signal_mock:
+        mocked_sell_limit_signal.topic = "plop"
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
+                                         "state", mocked_sell_limit_signal)
+        _handle_signal_orders_mock.assert_not_called()
+        _handle_positions_signal_mock.assert_not_called()
+        consumer.logger.info.assert_not_called()
+        consumer.logger.error.assert_called_once()
         consumer.logger.exception.assert_called_once()
 
 
@@ -532,3 +561,49 @@ def _group_edit_cancel_create_order_signals(to_group_id, group_id, group_type,
         }
     )
     return nested_edit_signal, cancel_signal, create_signal
+
+
+async def test_handle_positions_signal(local_trader, mocked_update_leverage_signal):
+    _, consumer, trader = local_trader
+    symbol = mocked_update_leverage_signal.content[
+        trading_enums.TradingSignalPositionsAttrs.SYMBOL.value
+    ]
+    with mock.patch.object(consumer, "_edit_position", mock.AsyncMock()) as _edit_position_mock:
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        _edit_position_mock.assert_called_once_with(symbol, mocked_update_leverage_signal)
+        _edit_position_mock.reset_mock()
+
+        # unknown action
+        mocked_update_leverage_signal.content[trading_enums.TradingSignalCommonsAttrs.ACTION.value] = "plop"
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        _edit_position_mock.assert_not_called()
+
+
+async def test_edit_position(local_trader, mocked_update_leverage_signal):
+    _, consumer, trader = local_trader
+    trader.exchange_manager.is_future = False
+    symbol = mocked_update_leverage_signal.content[
+        trading_enums.TradingSignalPositionsAttrs.SYMBOL.value
+    ]
+    with mock.patch.object(trader, "set_leverage", mock.AsyncMock()) as set_leverage_mock:
+        leverage = mocked_update_leverage_signal.content[
+            trading_enums.TradingSignalPositionsAttrs.LEVERAGE.value
+        ]
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        set_leverage_mock.assert_not_called()
+
+        trader.exchange_manager.is_future = True
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        set_leverage_mock.assert_called_once_with(symbol, None, decimal.Decimal(str(leverage)))
+        set_leverage_mock.reset_mock()
+
+        mocked_update_leverage_signal.content[
+            trading_enums.TradingSignalPositionsAttrs.SIDE.value
+        ] = trading_enums.PositionSide.LONG.value
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        set_leverage_mock.assert_called_once_with(symbol, trading_enums.PositionSide.LONG, decimal.Decimal(str(leverage)))
+
+    # do not propagate errors
+    with mock.patch.object(trader, "set_leverage", mock.AsyncMock(side_effect=NotImplementedError)) as set_leverage_mock:
+        await consumer._handle_positions_signal(symbol, mocked_update_leverage_signal)
+        set_leverage_mock.assert_called_once()

@@ -234,6 +234,12 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         # Ignore matrix calls
         pass
 
+    def _parse_pre_update_order_details(self, parsed_data):
+        return {
+            TradingViewSignalsModeConsumer.LEVERAGE:
+                parsed_data.get(TradingViewSignalsTradingMode.LEVERAGE, None),
+        }
+
     async def _parse_order_details(self, ctx, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
         order_type = parsed_data.get(TradingViewSignalsTradingMode.ORDER_TYPE_SIGNAL, "").casefold()
@@ -336,15 +342,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
+        pre_update_data = self._parse_pre_update_order_details(parsed_data)
+        await self._process_pre_state_update_actions(ctx, pre_update_data)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
-        await self._process_pre_state_update_actions(ctx, order_data)
         # Use daily trading mode state system
         await self._set_state(self.trading_mode.cryptocurrency, ctx.symbol, state, order_data)
 
-    async def _process_pre_state_update_actions(self, context, order_data: dict):
-        if leverage := order_data.get(TradingViewSignalsModeConsumer.LEVERAGE):
-            await script_keywords.set_leverage(context, leverage)
+    async def _process_pre_state_update_actions(self, context, data: dict):
+        try:
+            if leverage := data.get(TradingViewSignalsModeConsumer.LEVERAGE):
+                await self.trading_mode.set_leverage(context.symbol, None, decimal.Decimal(str(leverage)))
+        except Exception as err:
+            import traceback
+            traceback.print_exc()
+            self.logger.exception(
+                err, True, f"Error when processing pre_state_update_actions: {err} (data: {data})"
+            )
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
         async with self.trading_mode_trigger():
