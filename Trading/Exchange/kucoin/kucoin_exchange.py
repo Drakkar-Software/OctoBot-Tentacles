@@ -134,7 +134,7 @@ class Kucoin(exchanges.RestExchange):
     # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
     EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'kucoinfutures No open positions to close.'
-        ("No open positions to close", )
+        ("no open positions to close", )
     ]
     # text content of errors due to an order that would immediately trigger if created. Relevant for stop losses
     EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = [
