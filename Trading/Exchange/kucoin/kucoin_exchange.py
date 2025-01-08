@@ -511,18 +511,34 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             up: Triggers when the price reaches or goes above the stopPrice.
             """
             side = fixed.get(trading_enums.ExchangeConstantsOrderColumns.SIDE.value)
-            if side == trading_enums.TradeOrderSide.BUY.value:
-                if trigger_direction in ("up", "loss"):
-                    updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
-                elif trigger_direction in ("down", "entry"):
-                    updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+            trigger_above = False
+            if trigger_direction in ("up", "loss"):
+                trigger_above = True
+            elif trigger_direction in ("down", "loss"):
+                trigger_above = False
             else:
-                if trigger_direction in ("up", "entry"):
-                    updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
-                elif trigger_direction in ("down", "loss"):
+                self.logger.error(f"Unknown trigger direction {trigger_direction} ({fixed})")
+            stop_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None)
+            if side == trading_enums.TradeOrderSide.BUY.value:
+                if trigger_above:
+                    updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                else:
+                    # take profits are not yet handled as such: consider them as limit orders
+                    updated_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
+                    if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
+                        fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price # waiting for TP handling
+            else:
+                # selling
+                if trigger_above:
+                    # take profits are not yet handled as such: consider them as limit orders
+                    updated_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
+                    if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
+                        fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price # waiting for TP handling
+                else:
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
             # stop loss are not tagged as such by ccxt, force it
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = trigger_above
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
