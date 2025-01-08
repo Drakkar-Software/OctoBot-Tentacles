@@ -16,7 +16,6 @@
 import decimal
 import pytest
 import mock
-from more_itertools.more import side_effect
 
 import octobot_trading.api as trading_api
 import octobot_commons.signals as commons_signals
@@ -29,7 +28,7 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 from tentacles.Trading.Mode.remote_trading_signals_trading_mode.tests import local_trader, mocked_sell_limit_signal, \
     mocked_bundle_stop_loss_in_sell_limit_in_market_signal, mocked_buy_market_signal, mocked_buy_limit_signal, \
-    mocked_update_leverage_signal
+    mocked_update_leverage_signal, mocked_bundle_trigger_above_stop_loss_in_sell_limit_in_market_signal
 
 
 # All test coroutines will be treated as marked.
@@ -110,9 +109,11 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert isinstance(orders[0].order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
     assert orders[0].update_with_triggering_order_fees is False
     assert orders[0].origin_price == decimal.Decimal("9990")
+    assert orders[0].trigger_above is False
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
     assert orders[1].update_with_triggering_order_fees is True
+    assert orders[1].trigger_above is True
     assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
     # update_with_triggering_order_fees is False
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
@@ -151,8 +152,39 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert "1" in consumer.trading_mode.last_signal_description
 
 
+async def test_handle_signal_orders_trigger_above_stop_loss(local_trader, mocked_bundle_trigger_above_stop_loss_in_sell_limit_in_market_signal):
+    _, consumer, trader = local_trader
+    symbol = mocked_bundle_trigger_above_stop_loss_in_sell_limit_in_market_signal.content[
+        trading_enums.TradingSignalOrdersAttrs.SYMBOL.value
+    ]
+    exchange_manager = trader.exchange_manager
+    assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
+    assert consumer.trading_mode.last_signal_description == ""
+    await consumer._handle_signal_orders(symbol, mocked_bundle_trigger_above_stop_loss_in_sell_limit_in_market_signal)
+    # ensure orders are created
+    orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+    assert len(orders) == 2
+    # market order is filled, chained & bundled orders got created
+    assert isinstance(orders[0], trading_personal_data.StopLossOrder)
+    assert isinstance(orders[0].order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
+    assert orders[0].update_with_triggering_order_fees is False
+    assert orders[0].origin_price == decimal.Decimal("999999990")
+    assert orders[0].trigger_above is True
+    assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
+    assert orders[1].order_group is orders[0].order_group
+    assert orders[1].update_with_triggering_order_fees is True
+    assert orders[1].trigger_above is True
+    assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
+    # update_with_triggering_order_fees is False
+    trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
+    assert len(trades) == 1
+    assert trades[0].trade_type, trading_enums.TraderOrderType.BUY_MARKET
+    assert trades[0].status is trading_enums.OrderStatus.FILLED
+    assert "2" in consumer.trading_mode.last_signal_description
+
+
 async def test_handle_signal_orders_no_triggering_order(
-        local_trader, mocked_bundle_stop_loss_in_sell_limit_in_market_signal
+    local_trader, mocked_bundle_stop_loss_in_sell_limit_in_market_signal
 ):
     _, consumer, trader = local_trader
     symbol = mocked_bundle_stop_loss_in_sell_limit_in_market_signal.content[
