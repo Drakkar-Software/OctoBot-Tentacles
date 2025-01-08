@@ -374,13 +374,15 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             or order_description[trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value]
         adapted_price = personal_data.decimal_adapt_price(symbol_market, decimal.Decimal(f"{price}"))
         order_type = trading_enums.TraderOrderType(
-                order_description[trading_enums.TradingSignalOrdersAttrs.TYPE.value]
-            )
+            order_description[trading_enums.TradingSignalOrdersAttrs.TYPE.value]
+        )
         if order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET):
             # side param is not supported for these orders
             side = None
-        associated_entries = order_description.get(trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value,
-                                                   None)
+        associated_entries = order_description.get(
+            trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value, None
+        )
+        trigger_above = order_description.get(trading_enums.TradingSignalOrdersAttrs.TRIGGER_ABOVE.value, None)
         order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
             order_type=order_type,
@@ -389,6 +391,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             quantity=adapted_quantity,
             price=adapted_price,
             side=side,
+            trigger_above=trigger_above,
             tag=order_description[trading_enums.TradingSignalOrdersAttrs.TAG.value],
             order_id=order_description[trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value],
             group=group,
