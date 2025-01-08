@@ -90,6 +90,10 @@ class Binance(exchanges.RestExchange):
         # binance {"code":-2021,"msg":"Order would immediately trigger."}
         ("order would immediately trigger", )
     ]
+    # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
+    EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
+        ('Unknown order sent', )
+    ]
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"

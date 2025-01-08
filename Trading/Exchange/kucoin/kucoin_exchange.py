@@ -140,6 +140,11 @@ class Kucoin(exchanges.RestExchange):
     EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = [
         # doesn't seem to happen on kucoin
     ]
+    # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
+    EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
+        ('order cannot be canceled', ),
+        ('order_not_exist_or_not_allow_to_cancel', )
+    ]
 
     DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
 

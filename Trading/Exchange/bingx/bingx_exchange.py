@@ -30,11 +30,18 @@ class Bingx(exchanges.RestExchange):
         # bingx {"code":100404,"msg":"the order you want to cancel is FILLED or CANCELLED already, or is not a valid
         # order id ,please verify","debugMsg":""}
         ("the order you want to cancel is filled or cancelled already", ),
+        #  bingx {"code":100404,"msg":"the order is FILLED or CANCELLED already before, or is not a valid
+        #  order id ,please verify","debugMsg":""}
+        ("the order is filled or cancelled already before", ),
     ]
     # text content of errors due to unhandled authentication issues
     EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'bingx {'code': '100413', 'msg': 'Incorrect apiKey', 'timestamp': '1725195218082'}'
         ("incorrect apikey",),
+    ]
+    # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
+    EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
+        ('the order is filled or cancelled', )
     ]
     
     # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
