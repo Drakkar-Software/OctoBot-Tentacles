@@ -125,6 +125,10 @@ class Coinbase(exchanges.RestExchange):
     EXCHANGE_MISSING_FUNDS_ERRORS: typing.List[typing.Iterable[str]] = [
         ("insufficient balance in source account", )
     ]
+    # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
+    EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
+        ('cancelorders() has failed, check your arguments and parameters', )
+    ]
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
