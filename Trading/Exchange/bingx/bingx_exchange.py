@@ -117,17 +117,36 @@ class BingxCCXTAdapter(exchanges.CCXTAdapter):
                     trading_enums.ExchangeConstantsOrderColumns.PRICE.value
                 )
             )
+            is_selling = (
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+                == trading_enums.TradeOrderSide.SELL.value
+            )
             stop_price = float(stop_price)
             # use stop price as order price to parse it properly
             order_or_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price
             # type is TAKE_STOP_LIMIT (not unified)
-            if order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.TYPE.value) not in (
-                trading_enums.TradeOrderType.STOP_LOSS.value, trading_enums.TradeOrderType.TAKE_PROFIT.value
-            ):
+            if order_or_trade.get(trading_enums.ExchangeConstantsOrderColumns.TYPE.value) == "take_stop_limit":
+                # unsupported: no way to figure out if this order is a stop loss or a take profit
+                # (trigger above or bellow)
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = (
+                    trading_enums.TradeOrderType.UNSUPPORTED.value)
+                self.logger.info(f"Unsupported order fetched: {order_or_trade}")
+            else:
                 if stop_price <= order_creation_price:
-                     order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                    trigger_above = False
+                    if is_selling:
+                        order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                        order_or_trade[trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value] = stop_price
+                    else:
+                        order_type = trading_enums.TradeOrderType.LIMIT.value
                 else:
-                    order_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
+                    trigger_above = True
+                    if is_selling:
+                        order_type = trading_enums.TradeOrderType.LIMIT.value
+                    else:
+                        order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                        order_or_trade[trading_enums.ExchangeConstantsOrderColumns.STOP_PRICE.value] = stop_price
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = trigger_above
                 order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
 
     def fix_order(self, raw, **kwargs):
