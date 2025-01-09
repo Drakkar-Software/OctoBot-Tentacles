@@ -311,7 +311,7 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
                 if is_stop:
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
                     trigger_above = not selling # sell stop loss triggers when price is lower than target
-                if is_tp:
+                elif is_tp:
                     # updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
                     # take profits are not yet handled as such: consider them as limit orders
                     updated_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
@@ -319,7 +319,9 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
                         fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price # waiting for TP handling
                     trigger_above = selling # sell take profit triggers when price is higher than target
                 else:
-                    self.logger.error(f"Unknown order type, order: {fixed}")
+                    self.logger.error(
+                        f"Unknown [{self.connector.exchange_manager.exchange_name}] order type, order: {fixed}"
+                    )
                 # stop loss and take profits are not tagged as such by ccxt, force it
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = trigger_above

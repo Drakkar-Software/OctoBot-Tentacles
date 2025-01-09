@@ -522,7 +522,10 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             elif trigger_direction in ("down", "loss"):
                 trigger_above = False
             else:
-                self.logger.error(f"Unknown trigger direction {trigger_direction} ({fixed})")
+                self.logger.error(
+                    f"Unknown [{self.connector.exchange_manager.exchange_name}] order trigger direction "
+                    f"{trigger_direction} ({fixed})"
+                )
             stop_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None)
             if side == trading_enums.TradeOrderSide.BUY.value:
                 if trigger_above:
