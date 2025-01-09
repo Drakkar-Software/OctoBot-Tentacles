@@ -24,6 +24,7 @@ import tentacles.Services.Services_feeds.trading_view_service_feed as trading_vi
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
+import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes.script_keywords as script_keywords
@@ -35,6 +36,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     PARAM_SEPARATORS = [";", "\\n", "\n"]
 
     EXCHANGE_KEY = "EXCHANGE"
+    TRADING_TYPE_KEY = "TRADING_TYPE"   # expect a trading_enums.ExchangeTypes value
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
     PRICE_KEY = "PRICE"
@@ -166,6 +168,13 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return parsed_data
 
 
+    @classmethod
+    def is_compatible_trading_type(cls, parsed_signal: dict, trading_type: trading_enums.ExchangeTypes) -> bool:
+        if parsed_trading_type := parsed_signal.get(cls.TRADING_TYPE_KEY):
+            return parsed_trading_type == trading_type.value
+        return True
+
+
     async def _trading_view_signal_callback(self, data):
         signal_data = data.get("metadata", "")
         errors = []
@@ -173,9 +182,14 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         for error in errors:
             self.logger.error(error)
         try:
-            if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                    (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
-                     parsed_data[self.SYMBOL_KEY] == self.str_symbol):
+            if (
+                self.is_compatible_trading_type(parsed_data, trading_exchanges.get_exchange_type(self.exchange_manager))
+                and parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and
+                (
+                    parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
+                    parsed_data[self.SYMBOL_KEY] == self.str_symbol
+                )
+            ):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
         except trading_errors.InvalidArgumentError as e:
             self.logger.error(f"Error when handling trading view signal: {e}")
