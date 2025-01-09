@@ -515,7 +515,9 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
                     else:
                         updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
             else:
-                self.logger.error(f"Unknown order type, order: {fixed}")
+                self.logger.error(
+                    f"Unknown [{self.connector.exchange_manager.exchange_name}] order type, order: {fixed}"
+                )
             # stop loss and take profits are not tagged as such by ccxt, force it
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
         return fixed
