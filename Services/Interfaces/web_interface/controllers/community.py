@@ -31,6 +31,7 @@ def register(blueprint):
         try:
             models.wait_for_login_if_processing()
             logged_in_email = authenticator.get_logged_in_email()
+            all_user_bots = models.get_all_user_bots()
         except (authentication.AuthenticationRequired, authentication.UnavailableError):
             pass
         except Exception as e:
@@ -45,7 +46,7 @@ def register(blueprint):
             is_donor=bool(authenticator.user_account.supports.is_donor()),
             strategies=strategies,
             current_bots_stats=models.get_current_octobots_stats(),
-            all_user_bots=models.get_all_user_bots(),
+            all_user_bots=all_user_bots,
             selected_user_bot=models.get_selected_user_bot(),
             can_logout=models.can_logout(),
             can_select_bot=models.can_select_bot(),
