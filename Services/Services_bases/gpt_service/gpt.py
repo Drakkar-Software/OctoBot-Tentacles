@@ -26,6 +26,7 @@ import octobot_services.util
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
+import octobot_commons.logging as commons_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.tree as tree
@@ -36,6 +37,16 @@ import octobot.community as community
 
 
 octobot_services.util.patch_openai_proxies()
+
+
+NO_SYSTEM_PROMPT_MODELS = [
+    "o1-mini",
+]
+MINIMAL_PARAMS_MODELS = [
+    "o1-mini",
+]
+SYSTEM = "system"
+USER = "user"
 
 
 class GPTService(services.AbstractService):
@@ -75,7 +86,12 @@ class GPTService(services.AbstractService):
         self.last_consumed_token_date = None
 
     @staticmethod
-    def create_message(role, content):
+    def create_message(role, content, model: str = None):
+        if role == SYSTEM and model in NO_SYSTEM_PROMPT_MODELS:
+            commons_logging.get_logger(GPTService.__name__).debug(
+                f"Overriding prompt to use {USER} instead of {SYSTEM} for {model}"
+            )
+            return {"role": USER, "content": content}
         return {"role": role, "content": content}
 
     async def get_chat_completion(
@@ -124,12 +140,18 @@ class GPTService(services.AbstractService):
         self._ensure_rate_limit()
         try:
             model = model or self.model
+            supports_params = model not in MINIMAL_PARAMS_MODELS
+            if not supports_params:
+                self.logger.info(
+                    f"The {model} model does not support every required parameter, results might not be as accurate "
+                    f"as with other models."
+                )
             completions = await self._get_client().chat.completions.create(
                 model=model,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens if supports_params else openai.NOT_GIVEN,
                 n=n,
                 stop=stop,
-                temperature=temperature,
+                temperature=temperature if supports_params else openai.NOT_GIVEN,
                 messages=messages
             )
             self._update_token_usage(completions.usage.total_tokens)
@@ -140,7 +162,10 @@ class GPTService(services.AbstractService):
         )as err:
             if "does not support 'system' with this model" in str(err):
                 desc = err.body.get("message", str(err))
-                err_message = f"The \"{model}\" model can't be used for this request: {desc}"
+                err_message = (
+                    f"The \"{model}\" model can't be used with {SYSTEM} prompts. "
+                    f"It should be added to NO_SYSTEM_PROMPT_MODELS: {desc}"
+            )
             else:
                 err_message = f"Error when running request with model {model} (invalid request): {err}"
             raise errors.InvalidRequestError(err_message) from err
