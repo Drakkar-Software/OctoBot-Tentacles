@@ -25,6 +25,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors
 import octobot_commons.symbols as symbols_util
 import octobot_commons.constants as commons_constants
+import octobot_trading.constants as constants
 
 
 class MEXC(exchanges.RestExchange):
@@ -36,6 +37,10 @@ class MEXC(exchanges.RestExchange):
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     # text content of errors due to unhandled authentication issues
 
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'mexc {"code":700007,"msg":"No permission to access the endpoint."}'
+        ("no permission to access",),
+    ]
     EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'mexc {"code":10072,"msg":"Api key info invalid"}'
         ("api key info invalid",),
@@ -64,6 +69,10 @@ class MEXC(exchanges.RestExchange):
                 "recvWindow": 60000,  # default is 5000, avoid time related issues
             }
         }
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # current impossible to get account UID (10/01/25)
+        return constants.DEFAULT_SUBACCOUNT_ID
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
