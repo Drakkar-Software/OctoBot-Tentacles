@@ -138,9 +138,12 @@ class GPTService(services.AbstractService):
             openai.BadRequestError, # error in request
             openai.UnprocessableEntityError # error in model (ex: model not found)
         )as err:
-            raise errors.InvalidRequestError(
-                f"Error when running request with model {model} (invalid request): {err}"
-            ) from err
+            if "does not support 'system' with this model" in str(err):
+                desc = err.body.get("message", str(err))
+                err_message = f"The \"{model}\" model can't be used for this request: {desc}"
+            else:
+                err_message = f"Error when running request with model {model} (invalid request): {err}"
+            raise errors.InvalidRequestError(err_message) from err
         except openai.AuthenticationError as err:
             self.logger.error(f"Invalid OpenAI api key: {err}")
             self.creation_error_message = err
