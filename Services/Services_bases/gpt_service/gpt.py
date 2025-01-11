@@ -58,7 +58,10 @@ class GPTService(services.AbstractService):
         if self._env_secret_key is None:
             return {
                 services_constants.CONIG_OPENAI_SECRET_KEY: "Your openai API secret key",
-                services_constants.CONIG_LLM_CUSTOM_BASE_URL: "Custom LLM base url to use. Leave empty to use openai.com",
+                services_constants.CONIG_LLM_CUSTOM_BASE_URL: (
+                    "Custom LLM base url to use. Leave empty to use openai.com. For Ollama models, "
+                    "add /v1 to the url (such as: http://localhost:11434/v1)"
+                ),
             }
         return {}
 
@@ -365,20 +368,28 @@ class GPTService(services.AbstractService):
             if self.use_stored_signals_only():
                 self.logger.info(f"Skipping GPT - OpenAI models fetch as self.use_stored_signals_only() is True")
                 return
+            if self._get_base_url():
+                self.logger.info(f"Using custom LLM url: {self._get_base_url()}")
             fetched_models = await self._get_client().models.list()
             self.models = [d.id for d in fetched_models.data]
             if self.model not in self.models:
-                self.logger.warning(
-                    f"Warning: the default '{self.model}' model is not in available LLM models from the "
-                    f"selected LLM provider. "
-                    f"Available models are: {self.models}. Please select an available model when configuring your "
-                    f"evaluators."
-                )
+                if self._get_base_url():
+                    self.logger.info(
+                        f"Custom LLM available models are: {self.models}. "
+                        f"Please select one of those in your evaluator configuration."
+                    )
+                else:
+                    self.logger.warning(
+                        f"Warning: the default '{self.model}' model is not in available LLM models from the "
+                        f"selected LLM provider. "
+                        f"Available models are: {self.models}. Please select an available model when configuring your "
+                        f"evaluators."
+                    )
         except openai.AuthenticationError as err:
             self.logger.error(f"Invalid OpenAI api key: {err}")
             self.creation_error_message = err
         except Exception as err:
-            self.logger.error(f"Unexpected error when checking api key: {err}")
+            self.logger.exception(err, True, f"Unexpected error when initializing GPT service: {err}")
 
     def _is_healthy(self):
         return self.use_stored_signals_only() or (self._get_api_key() and self.models)
