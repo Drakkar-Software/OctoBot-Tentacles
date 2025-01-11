@@ -46,13 +46,6 @@ class MEXC(exchanges.RestExchange):
         ("api key info invalid",),
     ]
 
-    def __init__(
-        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
-        connector_class=None
-    ):
-        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
-        self.api_handled_symbols = APIHandledSymbols(self, commons_constants.DAYS_TO_SECONDS)
-
     @classmethod
     def get_name(cls):
         return 'mexc'
@@ -73,6 +66,15 @@ class MEXC(exchanges.RestExchange):
     async def get_account_id(self, **kwargs: dict) -> str:
         # current impossible to get account UID (10/01/25)
         return constants.DEFAULT_SUBACCOUNT_ID
+
+    async def get_all_tradable_symbols(self, active_only=True) -> set[str]:
+        """
+        Override if the exchange is not allowing trading for all available symbols (ex: MEXC)
+        :return: the list of all symbols supported by the exchange that can currently be traded through API
+        """
+        if CACHED_MEXC_API_HANDLED_SYMBOLS.should_be_updated():
+            await CACHED_MEXC_API_HANDLED_SYMBOLS.update(self)
+        return CACHED_MEXC_API_HANDLED_SYMBOLS.symbols
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -95,6 +97,7 @@ class MEXC(exchanges.RestExchange):
                                      stop_price: decimal.Decimal = None, reduce_only: bool = False,
                                      params=None) -> dict:
         async with self._mexc_handled_symbols_filter(symbol):
+            raise ccxt.BadSymbol
             return await super()._create_specific_order(order_type, symbol, quantity,
                                                         price=price, stop_price=stop_price,
                                                         side=side, current_price=current_price,
@@ -105,13 +108,13 @@ class MEXC(exchanges.RestExchange):
         try:
             yield
         except (ccxt.BadSymbol, ccxt.BadRequest) as err:
-            if self.api_handled_symbols.should_be_updated():
-                await self.api_handled_symbols.update()
-            if symbol not in self.api_handled_symbols.symbols:
+            if CACHED_MEXC_API_HANDLED_SYMBOLS.should_be_updated():
+                await CACHED_MEXC_API_HANDLED_SYMBOLS.update(self)
+            if symbol not in CACHED_MEXC_API_HANDLED_SYMBOLS.symbols:
                 raise octobot_trading.errors.FailedRequest(
                     f"{self.get_name()} error: {symbol} trading pair is not available to the API at the moment, "
                     f"{symbol} is under maintenance ({err}). "
-                    f"API available trading pairs are {self.api_handled_symbols.symbols}"
+                    f"API available trading pairs are {CACHED_MEXC_API_HANDLED_SYMBOLS.symbols}"
                 )
             raise err
 
@@ -157,28 +160,33 @@ class APIHandledSymbols:
     currently api tradable symbols from the defaultSymbols endpoint.
     """
 
-    def __init__(self, exchange, update_interval):
+    def __init__(self, update_interval):
         self.symbols = set()
         self.last_update = 0
-        self._exchange = exchange
         self._update_interval = update_interval
 
     def should_be_updated(self):
         return time.time() - self._update_interval >= self._update_interval
 
-    async def update(self):
+    async def update(self, exchange):
         try:
-            result = await self._exchange.connector.client.spot2PublicGetMarketApiDefaultSymbols()
+            all_symbols = exchange.get_all_available_symbols(True)
+            result = await exchange.connector.client.spot2_public_get_market_api_default_symbols()
             self.symbols = set(
                 # in some cases, "_" is not replaced as symbol is not found in markets
-                self._exchange.connector.client.safe_market(s)["symbol"].replace("_", "/")
+                exchange.connector.client.safe_market(s)["symbol"].replace("_", "/")
                 for s in result["data"]["symbol"]
             )
+            all_symbols_usdt = [s for s in all_symbols if s.endswith("/USDT")]
+            all_available_symbols_usdt = [s for s in self.symbols if s.endswith("/USDT")]
+            missing = [s for s in all_symbols if s not in all_available_symbols_usdt]
             self.last_update = time.time()
-            self._exchange.logger.info(f"Updated handled symbols, list: {self.symbols}")
+            exchange.logger.info(f"Updated handled symbols, list: {self.symbols}")
         except Exception as err:
-            self._exchange.logger.exception(err, True, f"Error when fetching api-tradable symbols: {err}")
+            exchange.logger.exception(err, True, f"Error when fetching api-tradable symbols: {err}")
 
+# make it available a singleton
+CACHED_MEXC_API_HANDLED_SYMBOLS = APIHandledSymbols(commons_constants.DAYS_TO_SECONDS)
 
 class MEXCCCXTAdapter(exchanges.CCXTAdapter):
 
