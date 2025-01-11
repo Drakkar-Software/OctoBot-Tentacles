@@ -47,6 +47,7 @@ class RebalanceDetails(enum.Enum):
     REMOVE = "REMOVE"
     ADD = "ADD"
     SWAP = "SWAP"
+    UNTRADABLE = "UNTRADABLE"
 
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
@@ -138,9 +139,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         return orders
 
     def _get_coins_to_sell(self, details: dict) -> list:
-        return list(details[RebalanceDetails.SWAP.value]) or (
-            self.trading_mode.indexed_coins
-        )
+        return list(details[RebalanceDetails.SWAP.value]) or self.trading_mode.get_tradable_indexed_coins(details)
 
     async def _ensure_enough_funds_to_buy_after_selling(self):
         reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
@@ -165,7 +164,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
                     self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
                 ).available
-            coins_to_buy = self.trading_mode.indexed_coins
+            coins_to_buy = self.trading_mode.get_tradable_indexed_coins(details)
 
         amount_by_symbol = await self._get_symbols_and_amounts(coins_to_buy, reference_market_to_split)
         for symbol, ideal_amount in amount_by_symbol.items():
@@ -323,7 +322,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{len(self.trading_mode.indexed_coins)} coins: {self.trading_mode.indexed_coins} with reference market: "
             f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
         )
-        is_rebalance_required, rebalance_details = self._get_rebalance_details()
+        is_rebalance_required, rebalance_details = await self._get_rebalance_details()
         if is_rebalance_required:
             await self._trigger_rebalance(rebalance_details)
             self.last_activity = trading_modes.TradingModeActivity(
@@ -375,13 +374,14 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"Traded: {self.trading_mode.indexed_coins}, configured: {ideal_distribution}"
                 )
 
-    def _get_rebalance_details(self) -> (bool, dict):
+    async def _get_rebalance_details(self) -> (bool, dict):
         rebalance_details = {
             RebalanceDetails.SELL_SOME.value: {},
             RebalanceDetails.BUY_MORE.value: {},
             RebalanceDetails.REMOVE.value: {},
             RebalanceDetails.ADD.value: {},
             RebalanceDetails.SWAP.value: {},
+            RebalanceDetails.UNTRADABLE.value: set(),
         }
         should_rebalance = False
         # look for coins update in indexed_coins
@@ -389,6 +389,12 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             symbol.base
             for symbol in self.exchange_manager.exchange_config.traded_symbols
         )
+        # untradable_bases can't currently be traded and should not break the index algorithm
+        untradable_bases = set(
+            symbol.base
+            for symbol in await self.exchange_manager.exchange_config.get_untradable_symbols()
+        )
+        rebalance_details[RebalanceDetails.UNTRADABLE.value] = untradable_bases
 
         for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
             if coin in available_traded_bases:
@@ -398,6 +404,12 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     )
                 if coin_ratio >= self.MIN_RATIO_TO_SELL:
                     # coin to sell in portfolio
+                    if coin in untradable_bases:
+                        # coin can't be sold for now
+                        self.logger.warning(
+                            f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
+                            f"anymore. A rebalance is required but coin can't be traded for now, it will be ignored."
+                        )
                     rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
                     should_rebalance = True
                     self.logger.info(
@@ -424,16 +436,32 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             beyond_ratio = True
             if coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO:
                 # missing coin in portfolio
-                rebalance_details[RebalanceDetails.ADD.value][coin] = target_ratio
-                should_rebalance = True
+                if coin in untradable_bases:
+                    self.logger.warning(
+                        f"{coin} should be added to the portfolio but is unavailable for trading, it will be ignored."
+                    )
+                else:
+                    rebalance_details[RebalanceDetails.ADD.value][coin] = target_ratio
+                    should_rebalance = True
             elif coin_ratio < target_ratio - self.trading_mode.rebalance_trigger_min_ratio:
                 # not enough in portfolio
-                rebalance_details[RebalanceDetails.BUY_MORE.value][coin] = target_ratio
-                should_rebalance = True
+                if coin in untradable_bases:
+                    self.logger.warning(
+                        f"More {coin} should be added to the portfolio but the traded pair unavailable for trading, "
+                        f"it will be ignored."
+                    )
+                else:
+                    rebalance_details[RebalanceDetails.BUY_MORE.value][coin] = target_ratio
+                    should_rebalance = True
             elif coin_ratio > target_ratio + self.trading_mode.rebalance_trigger_min_ratio:
                 # too much in portfolio
-                rebalance_details[RebalanceDetails.SELL_SOME.value][coin] = target_ratio
-                should_rebalance = True
+                if coin in untradable_bases:
+                    self.logger.warning(
+                        f"Some {coin} should be sold but the traded pair unavailable for trading, it will be ignored."
+                    )
+                else:
+                    rebalance_details[RebalanceDetails.SELL_SOME.value][coin] = target_ratio
+                    should_rebalance = True
             else:
                 beyond_ratio = False
             if beyond_ratio:
@@ -516,6 +544,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.ratio_per_asset = {}
         self.sell_unindexed_traded_coins = True
         self.total_ratio_per_asset = trading_constants.ZERO
+        # coins to maintain in index
         self.indexed_coins = []
 
     def init_user_inputs(self, inputs: dict) -> None:
@@ -572,6 +601,13 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
 
     def is_updating_at_each_price_change(self):
         return self.refresh_interval_days == 0
+
+    def get_tradable_indexed_coins(self, rebalance_details: dict):
+        return  [
+            coin
+            for coin in self.indexed_coins
+            if coin not in rebalance_details[RebalanceDetails.UNTRADABLE.value]
+        ]
 
     def _update_coins_distribution(self):
         distribution = self._get_supported_distribution()
@@ -653,6 +689,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             for asset in (self.get_ideal_distribution(self.trading_config) or [])
         ]
         return list(set(removed_coins + [
+            # also include coins that were in previous config but not in the current one
             asset[index_distribution.DISTRIBUTION_NAME]
             for asset in self.previous_trading_config[IndexTradingModeProducer.INDEX_CONTENT]
             if asset[index_distribution.DISTRIBUTION_NAME] not in current_coins

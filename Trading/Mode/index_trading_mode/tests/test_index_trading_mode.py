@@ -467,7 +467,7 @@ async def test_get_rebalance_details(tools):
             with mock.patch.object(
                 mode, "get_removed_coins_from_config", mock.Mock(return_value=[])
             ) as get_removed_coins_from_config_mock:
-                should_rebalance, details = producer._get_rebalance_details()
+                should_rebalance, details = await producer._get_rebalance_details()
                 assert should_rebalance is False
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -484,7 +484,7 @@ async def test_get_rebalance_details(tools):
             with mock.patch.object(
                     mode, "get_removed_coins_from_config", mock.Mock(return_value=["SOL", "ADA"])
             ) as get_removed_coins_from_config_mock:
-                should_rebalance, details = producer._get_rebalance_details()
+                should_rebalance, details = await producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -508,7 +508,7 @@ async def test_get_rebalance_details(tools):
             with mock.patch.object(
                     mode, "get_removed_coins_from_config", mock.Mock(return_value=[])
             ) as get_removed_coins_from_config_mock:
-                should_rebalance, details = producer._get_rebalance_details()
+                should_rebalance, details = await producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -529,7 +529,7 @@ async def test_get_rebalance_details(tools):
             with mock.patch.object(
                     mode, "get_removed_coins_from_config", mock.Mock(return_value=["SOL", "ADA"])
             ) as get_removed_coins_from_config_mock:
-                should_rebalance, details = producer._get_rebalance_details()
+                should_rebalance, details = await producer._get_rebalance_details()
                 assert should_rebalance is True
                 assert details == {
                     index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -557,7 +557,7 @@ async def test_get_rebalance_details(tools):
         with mock.patch.object(
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.3"))
         ) as get_holdings_ratio_mock:
-            should_rebalance, details = producer._get_rebalance_details()
+            should_rebalance, details = await producer._get_rebalance_details()
             assert should_rebalance is False
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -573,7 +573,7 @@ async def test_get_rebalance_details(tools):
         with mock.patch.object(
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.00000001"))
         ) as get_holdings_ratio_mock:
-            should_rebalance, details = producer._get_rebalance_details()
+            should_rebalance, details = await producer._get_rebalance_details()
             assert should_rebalance is False
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {},
@@ -589,7 +589,7 @@ async def test_get_rebalance_details(tools):
         with mock.patch.object(
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0.9"))
         ) as get_holdings_ratio_mock:
-            should_rebalance, details = producer._get_rebalance_details()
+            should_rebalance, details = await producer._get_rebalance_details()
             assert should_rebalance is True
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {
@@ -609,7 +609,7 @@ async def test_get_rebalance_details(tools):
         with mock.patch.object(
                 portfolio_value_holder, "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
         ) as get_holdings_ratio_mock:
-            should_rebalance, details = producer._get_rebalance_details()
+            should_rebalance, details = await producer._get_rebalance_details()
             assert should_rebalance is True
             assert details == {
                 index_trading.RebalanceDetails.SELL_SOME.value: {},
