@@ -315,7 +315,7 @@ class GPTService(services.AbstractService):
         self.logger.debug(f"Consumed {consumed_tokens} tokens. {self.consumed_daily_tokens} consumed tokens today.")
 
     def check_required_config(self, config):
-        if self._env_secret_key is not None or self.use_stored_signals_only():
+        if self._env_secret_key is not None or self.use_stored_signals_only() or self._get_base_url():
             return True
         try:
             config_key = config[services_constants.CONIG_OPENAI_SECRET_KEY]
