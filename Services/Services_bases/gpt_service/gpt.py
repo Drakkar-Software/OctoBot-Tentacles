@@ -15,6 +15,8 @@
 #  License along with this library.
 import asyncio
 import os
+import uuid
+
 import openai
 import logging
 import datetime
@@ -350,10 +352,18 @@ class GPTService(services.AbstractService):
         return "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
     
     def _get_api_key(self):
-        return self._env_secret_key or \
-            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT][
-                services_constants.CONIG_OPENAI_SECRET_KEY
-            ]
+        key = (
+            self._env_secret_key or
+            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
+                services_constants.CONIG_OPENAI_SECRET_KEY, None
+            )
+        )
+        if key and not fields_utils.has_invalid_default_config_value(key):
+            return key
+        if self._get_base_url():
+            # no key and custom base url: use random key
+            return uuid.uuid4().hex
+        return key
 
     def _get_base_url(self):
         value = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
