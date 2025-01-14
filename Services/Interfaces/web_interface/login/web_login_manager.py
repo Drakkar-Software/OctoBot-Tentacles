@@ -105,10 +105,10 @@ def active_login_required(func):
     def decorated_view(*args, **kwargs):
         if is_login_required():
             return _login_required_func(func, *args, **kwargs)
-        flask.flash("For security reasons, please enable password authentication in "
-                    "accounts configuration to use this page.",
+        flask.flash(f"For security reasons, please enable password authentication in "
+                    f"accounts configuration to use the {flask.request.path} page.",
                     category=flask_login.LOGIN_MESSAGE_CATEGORY)
-        return flask.redirect(flask.current_app.login_manager.login_view)
+        return flask.redirect('home')
     return decorated_view
 
 
