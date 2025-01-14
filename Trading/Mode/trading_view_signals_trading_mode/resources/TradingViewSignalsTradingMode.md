@@ -67,6 +67,7 @@ orders price syntax</a>.
 Multiple take profit prices can be used from `TAKE_PROFIT_PRICE_1`, `TAKE_PROFIT_PRICE_2`, ...
 - `REDUCE_ONLY` when true, only reduce the current position (avoid accidental short position opening when reducing a long position). **Only used in futures trading**. Default is false
 - `TAG` is an identifier to give to the orders to create.
+- `LEVERAGE` the leverage value to use when trading futures.
 
 When not specified, orders volume and price are automatically computed based on the current 
 asset price and holdings.

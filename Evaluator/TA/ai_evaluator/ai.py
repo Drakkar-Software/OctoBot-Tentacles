@@ -227,12 +227,13 @@ class GPTEvaluator(evaluators.TAEvaluator):
                 {} if self.is_backtesting else self.services_config
             )
             service.apply_daily_token_limit_if_possible(self.gpt_tokens_limit)
+            model = self.gpt_model if self.enable_model_selector else None
             resp = await service.get_chat_completion(
                 [
-                    service.create_message("system", preprompt),
-                    service.create_message("user", inputs),
+                    service.create_message("system", preprompt, model=model),
+                    service.create_message("user", inputs, model=model),
                 ],
-                model=self.gpt_model if self.enable_model_selector else None,
+                model=model,
                 exchange=self.exchange_name,
                 symbol=symbol,
                 time_frame=time_frame,

@@ -15,6 +15,8 @@
 #  License along with this library.
 import asyncio
 import os
+import uuid
+
 import openai
 import logging
 import datetime
@@ -26,6 +28,7 @@ import octobot_services.util
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
+import octobot_commons.logging as commons_logging
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.authentication as authentication
 import octobot_commons.tree as tree
@@ -38,6 +41,16 @@ import octobot.community as community
 octobot_services.util.patch_openai_proxies()
 
 
+NO_SYSTEM_PROMPT_MODELS = [
+    "o1-mini",
+]
+MINIMAL_PARAMS_MODELS = [
+    "o1-mini",
+]
+SYSTEM = "system"
+USER = "user"
+
+
 class GPTService(services.AbstractService):
     BACKTESTING_ENABLED = True
     DEFAULT_MODEL = "gpt-3.5-turbo"
@@ -47,7 +60,10 @@ class GPTService(services.AbstractService):
         if self._env_secret_key is None:
             return {
                 services_constants.CONIG_OPENAI_SECRET_KEY: "Your openai API secret key",
-                services_constants.CONIG_LLM_CUSTOM_BASE_URL: "Custom LLM base url to use. Leave empty to use openai.com",
+                services_constants.CONIG_LLM_CUSTOM_BASE_URL: (
+                    "Custom LLM base url to use. Leave empty to use openai.com. For Ollama models, "
+                    "add /v1 to the url (such as: http://localhost:11434/v1)"
+                ),
             }
         return {}
 
@@ -75,7 +91,12 @@ class GPTService(services.AbstractService):
         self.last_consumed_token_date = None
 
     @staticmethod
-    def create_message(role, content):
+    def create_message(role, content, model: str = None):
+        if role == SYSTEM and model in NO_SYSTEM_PROMPT_MODELS:
+            commons_logging.get_logger(GPTService.__name__).debug(
+                f"Overriding prompt to use {USER} instead of {SYSTEM} for {model}"
+            )
+            return {"role": USER, "content": content}
         return {"role": role, "content": content}
 
     async def get_chat_completion(
@@ -124,12 +145,18 @@ class GPTService(services.AbstractService):
         self._ensure_rate_limit()
         try:
             model = model or self.model
+            supports_params = model not in MINIMAL_PARAMS_MODELS
+            if not supports_params:
+                self.logger.info(
+                    f"The {model} model does not support every required parameter, results might not be as accurate "
+                    f"as with other models."
+                )
             completions = await self._get_client().chat.completions.create(
                 model=model,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens if supports_params else openai.NOT_GIVEN,
                 n=n,
                 stop=stop,
-                temperature=temperature,
+                temperature=temperature if supports_params else openai.NOT_GIVEN,
                 messages=messages
             )
             self._update_token_usage(completions.usage.total_tokens)
@@ -138,9 +165,15 @@ class GPTService(services.AbstractService):
             openai.BadRequestError, # error in request
             openai.UnprocessableEntityError # error in model (ex: model not found)
         )as err:
-            raise errors.InvalidRequestError(
-                f"Error when running request with model {model} (invalid request): {err}"
-            ) from err
+            if "does not support 'system' with this model" in str(err):
+                desc = err.body.get("message", str(err))
+                err_message = (
+                    f"The \"{model}\" model can't be used with {SYSTEM} prompts. "
+                    f"It should be added to NO_SYSTEM_PROMPT_MODELS: {desc}"
+            )
+            else:
+                err_message = f"Error when running request with model {model} (invalid request): {err}"
+            raise errors.InvalidRequestError(err_message) from err
         except openai.AuthenticationError as err:
             self.logger.error(f"Invalid OpenAI api key: {err}")
             self.creation_error_message = err
@@ -284,7 +317,7 @@ class GPTService(services.AbstractService):
         self.logger.debug(f"Consumed {consumed_tokens} tokens. {self.consumed_daily_tokens} consumed tokens today.")
 
     def check_required_config(self, config):
-        if self._env_secret_key is not None or self.use_stored_signals_only():
+        if self._env_secret_key is not None or self.use_stored_signals_only() or self._get_base_url():
             return True
         try:
             config_key = config[services_constants.CONIG_OPENAI_SECRET_KEY]
@@ -319,10 +352,18 @@ class GPTService(services.AbstractService):
         return "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
     
     def _get_api_key(self):
-        return self._env_secret_key or \
-            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT][
-                services_constants.CONIG_OPENAI_SECRET_KEY
-            ]
+        key = (
+            self._env_secret_key or
+            self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
+                services_constants.CONIG_OPENAI_SECRET_KEY, None
+            )
+        )
+        if key and not fields_utils.has_invalid_default_config_value(key):
+            return key
+        if self._get_base_url():
+            # no key and custom base url: use random key
+            return uuid.uuid4().hex
+        return key
 
     def _get_base_url(self):
         value = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
@@ -337,20 +378,28 @@ class GPTService(services.AbstractService):
             if self.use_stored_signals_only():
                 self.logger.info(f"Skipping GPT - OpenAI models fetch as self.use_stored_signals_only() is True")
                 return
+            if self._get_base_url():
+                self.logger.info(f"Using custom LLM url: {self._get_base_url()}")
             fetched_models = await self._get_client().models.list()
             self.models = [d.id for d in fetched_models.data]
             if self.model not in self.models:
-                self.logger.warning(
-                    f"Warning: the default '{self.model}' model is not in available LLM models from the "
-                    f"selected LLM provider. "
-                    f"Available models are: {self.models}. Please select an available model when configuring your "
-                    f"evaluators."
-                )
+                if self._get_base_url():
+                    self.logger.info(
+                        f"Custom LLM available models are: {self.models}. "
+                        f"Please select one of those in your evaluator configuration."
+                    )
+                else:
+                    self.logger.warning(
+                        f"Warning: the default '{self.model}' model is not in available LLM models from the "
+                        f"selected LLM provider. "
+                        f"Available models are: {self.models}. Please select an available model when configuring your "
+                        f"evaluators."
+                    )
         except openai.AuthenticationError as err:
             self.logger.error(f"Invalid OpenAI api key: {err}")
             self.creation_error_message = err
         except Exception as err:
-            self.logger.error(f"Unexpected error when checking api key: {err}")
+            self.logger.exception(err, True, f"Unexpected error when initializing GPT service: {err}")
 
     def _is_healthy(self):
         return self.use_stored_signals_only() or (self._get_api_key() and self.models)

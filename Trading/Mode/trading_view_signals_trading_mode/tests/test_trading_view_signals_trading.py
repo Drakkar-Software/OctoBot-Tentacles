@@ -289,13 +289,15 @@ async def test_trading_view_signal_callback(tools):
 async def test_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
-    with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock:
+    with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock, \
+        mock.patch.object(mode, "set_leverage", mock.AsyncMock()) as set_leverage_mock:
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",
             mode.SIGNAL_KEY: "BUY",
         }, context)
         _set_state_mock.assert_awaited_once()
+        set_leverage_mock.assert_not_called()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.VERY_LONG
         assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
@@ -308,6 +310,7 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
             consumer.EXCHANGE_ORDER_IDS: None,
+            consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
         _set_state_mock.reset_mock()
@@ -322,6 +325,7 @@ async def test_signal_callback(tools):
             mode.TAG_KEY: "stop_1_tag",
             consumer.EXCHANGE_ORDER_IDS: None,
         }, context)
+        set_leverage_mock.assert_not_called()
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
@@ -335,6 +339,7 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: "stop_1_tag",
             consumer.EXCHANGE_ORDER_IDS: None,
+            consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
         _set_state_mock.reset_mock()
@@ -350,9 +355,12 @@ async def test_signal_callback(tools):
             mode.STOP_PRICE_KEY: "12",
             mode.TAKE_PROFIT_PRICE_KEY: "22222",
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.LEVERAGE: 22,
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
         }, context)
+        set_leverage_mock.assert_called_once()
+        set_leverage_mock.reset_mock()
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
@@ -366,6 +374,7 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.LEVERAGE: 22,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
                 "Plop": False,
@@ -373,43 +382,56 @@ async def test_signal_callback(tools):
         })
         _set_state_mock.reset_mock()
 
+        # future exchange: call set_leverage
+        exchange_manager.is_future = True
+        trading_api.load_pair_contract(
+            exchange_manager,
+            trading_api.create_default_future_contract(
+                "BTC/USDT", decimal.Decimal(4), trading_enums.FutureContractType.LINEAR_PERPETUAL
+            ).to_dict()
+        )
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",
             mode.SIGNAL_KEY: "SelL",
             mode.PRICE_KEY: "123@",  # price = 123
-            mode.VOLUME_KEY: "1b",  # base amount
-            mode.REDUCE_ONLY_KEY: True,
+            mode.VOLUME_KEY: "100q",  # base amount
+            mode.REDUCE_ONLY_KEY: False,
             mode.ORDER_TYPE_SIGNAL: "LiMiT",
             mode.STOP_PRICE_KEY: "-10%",  # price - 10%
             f"{mode.TAKE_PROFIT_PRICE_KEY}_0": "120.333333333333333d",   # price  + 120.333333333333333
             f"{mode.TAKE_PROFIT_PRICE_KEY}_1": "122.333333333333333d",   # price  + 122.333333333333333
             f"{mode.TAKE_PROFIT_PRICE_KEY}_2": "4444d",   # price  + 4444
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.LEVERAGE: 22,
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
         }, context)
+        set_leverage_mock.assert_called_once()
+        assert set_leverage_mock.mock_calls[0].args[2] == decimal.Decimal("22")
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
         assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
         assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
             consumer.PRICE_KEY: decimal.Decimal("123"),
-            consumer.VOLUME_KEY: decimal.Decimal("1"),
+            consumer.VOLUME_KEY: decimal.Decimal("0.8130081300813008130081300813"),
             consumer.STOP_PRICE_KEY: decimal.Decimal("6308.27549999"),
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("nan"), # only additional TP orders are provided
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [
                 decimal.Decimal("7129.52833333"), decimal.Decimal("7131.52833333"), decimal.Decimal('11453.19499999')
             ],
-            consumer.REDUCE_ONLY_KEY: True,
+            consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.LEVERAGE: 22,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
                 "Plop": False,
             },
         })
         _set_state_mock.reset_mock()
+        set_leverage_mock.reset_mock()
 
         with pytest.raises(errors.MissingFunds):
             await producer.signal_callback({
@@ -423,9 +445,11 @@ async def test_signal_callback(tools):
                 mode.STOP_PRICE_KEY: "-10%",  # price - 10%
                 mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
                 mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+                mode.LEVERAGE: None,
                 "PARAM_TAG_1": "ttt",
                 "PARAM_Plop": False,
             }, context)
+        set_leverage_mock.assert_not_called()
         _set_state_mock.assert_not_called()
 
         with pytest.raises(errors.InvalidArgumentError):
@@ -440,9 +464,11 @@ async def test_signal_callback(tools):
                 mode.STOP_PRICE_KEY: "-10%",  # price - 10%
                 mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
                 mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+                mode.LEVERAGE: None,
                 "PARAM_TAG_1": "ttt",
                 "PARAM_Plop": False,
             }, context)
+        set_leverage_mock.assert_not_called()
         _set_state_mock.assert_not_called()
 
 

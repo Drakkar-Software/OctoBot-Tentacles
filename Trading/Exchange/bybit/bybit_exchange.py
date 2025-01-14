@@ -402,7 +402,7 @@ class BybitCCXTAdapter(exchanges.CCXTAdapter):
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = \
                     trading_enums.TradeOrderType.STOP_LOSS.value
             else:
-                self.logger.error(f"Unknown trigger order: {fixed}")
+                self.logger.error(f"Unknown [{self.connector.exchange_manager.exchange_name}] trigger order: {fixed}")
         return fixed
 
     def fix_ticker(self, raw, **kwargs):

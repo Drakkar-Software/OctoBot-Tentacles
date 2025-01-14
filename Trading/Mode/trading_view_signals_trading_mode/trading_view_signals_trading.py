@@ -24,6 +24,7 @@ import tentacles.Services.Services_feeds.trading_view_service_feed as trading_vi
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
+import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes.script_keywords as script_keywords
@@ -35,6 +36,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     PARAM_SEPARATORS = [";", "\\n", "\n"]
 
     EXCHANGE_KEY = "EXCHANGE"
+    TRADING_TYPE_KEY = "TRADING_TYPE"   # expect a trading_enums.ExchangeTypes value
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
     PRICE_KEY = "PRICE"
@@ -44,6 +46,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     STOP_PRICE_KEY = "STOP_PRICE"
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
+    LEVERAGE = "LEVERAGE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     PARAM_PREFIX_KEY = "PARAM_"
@@ -165,6 +168,13 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return parsed_data
 
 
+    @classmethod
+    def is_compatible_trading_type(cls, parsed_signal: dict, trading_type: trading_enums.ExchangeTypes) -> bool:
+        if parsed_trading_type := parsed_signal.get(cls.TRADING_TYPE_KEY):
+            return parsed_trading_type == trading_type.value
+        return True
+
+
     async def _trading_view_signal_callback(self, data):
         signal_data = data.get("metadata", "")
         errors = []
@@ -172,9 +182,14 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         for error in errors:
             self.logger.error(error)
         try:
-            if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
-                    (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
-                     parsed_data[self.SYMBOL_KEY] == self.str_symbol):
+            if (
+                self.is_compatible_trading_type(parsed_data, trading_exchanges.get_exchange_type(self.exchange_manager))
+                and parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and
+                (
+                    parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
+                    parsed_data[self.SYMBOL_KEY] == self.str_symbol
+                )
+            ):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
         except trading_errors.InvalidArgumentError as e:
             self.logger.error(f"Error when handling trading view signal: {e}")
@@ -232,6 +247,12 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # Ignore matrix calls
         pass
+
+    def _parse_pre_update_order_details(self, parsed_data):
+        return {
+            TradingViewSignalsModeConsumer.LEVERAGE:
+                parsed_data.get(TradingViewSignalsTradingMode.LEVERAGE, None),
+        }
 
     async def _parse_order_details(self, ctx, parsed_data):
         side = parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY].casefold()
@@ -294,6 +315,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
                 parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
+            TradingViewSignalsModeConsumer.LEVERAGE:
+                parsed_data.get(TradingViewSignalsTradingMode.LEVERAGE, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
@@ -333,10 +356,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             await self.cancel_symbol_open_orders(self.trading_mode.symbol)
+        pre_update_data = self._parse_pre_update_order_details(parsed_data)
+        await self._process_pre_state_update_actions(ctx, pre_update_data)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
         # Use daily trading mode state system
         await self._set_state(self.trading_mode.cryptocurrency, ctx.symbol, state, order_data)
+
+    async def _process_pre_state_update_actions(self, context, data: dict):
+        try:
+            if leverage := data.get(TradingViewSignalsModeConsumer.LEVERAGE):
+                await self.trading_mode.set_leverage(context.symbol, None, decimal.Decimal(str(leverage)))
+        except Exception as err:
+            import traceback
+            traceback.print_exc()
+            self.logger.exception(
+                err, True, f"Error when processing pre_state_update_actions: {err} (data: {data})"
+            )
 
     async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
         async with self.trading_mode_trigger():

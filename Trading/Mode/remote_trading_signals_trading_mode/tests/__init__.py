@@ -106,7 +106,7 @@ async def local_trader(exchange_name="binance", backtesting=None, symbol="BTC/US
             channels.del_chan(channels_names.OctoBotCommunityChannelsName.REMOTE_TRADING_SIGNALS_CHANNEL.value)
 
 
-SIGNAL_TOPIC = "moonmoon"
+SIGNAL_TOPIC = trading_enums.TradingSignalTopics.ORDERS.value
 
 
 @pytest.fixture
@@ -132,6 +132,7 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 1000.69,
             trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
             trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: True,
+            trading_enums.TradingSignalOrdersAttrs.TRIGGER_ABOVE.value: True,
             trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
@@ -143,6 +144,22 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
+        }
+    )
+
+
+@pytest.fixture
+def mocked_update_leverage_signal():
+    return signals.Signal(
+        trading_enums.TradingSignalTopics.POSITIONS.value,
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.EDIT.value,
+            trading_enums.TradingSignalPositionsAttrs.SYMBOL.value: "BTC/USDT:USDT",
+            trading_enums.TradingSignalPositionsAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalPositionsAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.FUTURE.value,
+            trading_enums.TradingSignalPositionsAttrs.STRATEGY.value: "plop strategy",
+            trading_enums.TradingSignalPositionsAttrs.SIDE.value: None,
+            trading_enums.TradingSignalPositionsAttrs.LEVERAGE.value: 10,
         }
     )
 
@@ -243,6 +260,48 @@ def mocked_bundle_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_sig
             trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 1000.69,
             trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
             trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: True,
+            trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
+            trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
+            trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
+                trading_personal_data.BalancedTakeProfitAndStopOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.TAG.value: "managed_order long exit (id: 143968020)",
+            trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "5ad2a999-5ac2-47f0-9b69-c75a36f3858a",
+            trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
+            trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
+            trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
+            trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: False,
+        }
+    )
+    mocked_buy_market_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
+        mocked_sell_limit_signal.content
+    )
+    return mocked_buy_market_signal
+
+
+@pytest.fixture
+def mocked_bundle_trigger_above_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_signal, mocked_buy_market_signal):
+    mocked_sell_limit_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
+        {
+            trading_enums.TradingSignalCommonsAttrs.ACTION.value: trading_enums.TradingSignalOrdersActions.CREATE.value,
+            trading_enums.TradingSignalOrdersAttrs.SYMBOL.value: "BTC/USDT:USDT",
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE.value: "bybit",
+            trading_enums.TradingSignalOrdersAttrs.EXCHANGE_TYPE.value: trading_enums.ExchangeTypes.SPOT.value,
+            trading_enums.TradingSignalOrdersAttrs.SIDE.value: trading_enums.TradeOrderSide.SELL.value,
+            trading_enums.TradingSignalOrdersAttrs.TYPE.value: trading_enums.TraderOrderType.STOP_LOSS.value,
+            trading_enums.TradingSignalOrdersAttrs.QUANTITY.value: 0.004,
+            trading_enums.TradingSignalOrdersAttrs.TARGET_AMOUNT.value: "5.356892%",
+            trading_enums.TradingSignalOrdersAttrs.TARGET_POSITION.value: 0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_AMOUNT.value: None,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_TARGET_POSITION.value: None,
+            trading_enums.TradingSignalOrdersAttrs.LIMIT_PRICE.value: 999999990.0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_LIMIT_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_STOP_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.CURRENT_PRICE.value: 1000.69,
+            trading_enums.TradingSignalOrdersAttrs.UPDATED_CURRENT_PRICE.value: 0.0,
+            trading_enums.TradingSignalOrdersAttrs.REDUCE_ONLY.value: True,
+            trading_enums.TradingSignalOrdersAttrs.TRIGGER_ABOVE.value: True,
             trading_enums.TradingSignalOrdersAttrs.POST_ONLY.value: False,
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:

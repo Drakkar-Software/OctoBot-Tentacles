@@ -125,6 +125,10 @@ class Coinbase(exchanges.RestExchange):
     EXCHANGE_MISSING_FUNDS_ERRORS: typing.List[typing.Iterable[str]] = [
         ("insufficient balance in source account", )
     ]
+    # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
+    EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
+        ('cancelorders() has failed, check your arguments and parameters', )
+    ]
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -375,9 +379,35 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                 trading_enums.TradeOrderType.STOP_LOSS.value, trading_enums.TradeOrderType.TAKE_PROFIT.value
             ):
                 # Force stop loss. Add order direction parsing logic to handle take profits if necessary
-                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = (
-                    trading_enums.TradeOrderType.STOP_LOSS.value    # simulate market stop loss
-                )
+                order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                trigger_above = False
+                try:
+                    order_config = order_or_trade.get(ccxt_constants.CCXT_INFO, {}).get("order_configuration", {})
+                    stop_config = order_config.get("stop_limit_stop_limit_gtc") or order_config.get("stop_limit_stop_limit_gtd")
+                    stop_direction = stop_config.get("stop_direction", "")
+                    if "down" in stop_direction.lower():
+                        trigger_above = False
+                    elif "up" in stop_direction.lower():
+                        trigger_above = True
+                    else:
+                        self.logger.error(f"Unknown order direction: {stop_direction} ({order_or_trade})")
+                    side = order_or_trade[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+                    if side == trading_enums.TradeOrderSide.SELL.value:
+                        if trigger_above:
+                            # take profits are not yet handled as such: consider them as limit orders
+                            order_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
+                        else:
+                            order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                    elif side == trading_enums.TradeOrderSide.BUY.value:
+                        if trigger_above:
+                            order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                        else:
+                            # take profits are not yet handled as such: consider them as limit orders
+                            order_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
+                except (KeyError, TypeError) as err:
+                    self.logger.error(f"missing expected coinbase order config: {err}, {order_or_trade}")
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
+                order_or_trade[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = trigger_above
 
     def fix_order(self, raw, **kwargs):
         """
