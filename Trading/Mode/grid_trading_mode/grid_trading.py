@@ -177,6 +177,23 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "around your OctoBot start time.",
         )
         self.UI.user_input(
+            self.CONFIG_ENABLE_TRAILING_UP, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ENABLE_TRAILING_UP], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Trailing up: when checked, the whole grid will be cancelled and recreated when price goes above the "
+                  "highest selling price. This might require the grid to perform a buy market order to be "
+                  "able to recreate the grid new sell orders at the updated price.",
+        )
+        # not implemented
+        # self.UI.user_input(
+        #     self.CONFIG_ENABLE_TRAILING_DOWN, commons_enums.UserInputTypes.BOOLEAN,
+        #     default_config[self.CONFIG_ENABLE_TRAILING_DOWN], inputs,
+        #     parent_input_name=self.CONFIG_PAIR_SETTINGS,
+        #     title="Trailing down: when checked, the whole grid will be cancelled and recreated when price goes bellow"
+        #           " the lowest buying price. This might require the grid to perform a sell market order to be "
+        #           "able to recreate the grid new buy orders at the updated price.",
+        # )
+        self.UI.user_input(
             self.CONFIG_FUNDS_REDISPATCH_INTERVAL, commons_enums.UserInputTypes.FLOAT,
             default_config[self.CONFIG_FUNDS_REDISPATCH_INTERVAL], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -206,6 +223,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
           self.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
           self.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
+          self.CONFIG_ENABLE_TRAILING_UP: False,
+          self.CONFIG_ENABLE_TRAILING_DOWN: False,
           self.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
@@ -317,6 +336,13 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.compensate_for_missed_mirror_order = self.symbol_trading_config.get(
             self.trading_mode.COMPENSATE_FOR_MISSED_MIRROR_ORDER, self.compensate_for_missed_mirror_order
         )
+        self.enable_trailing_up = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_ENABLE_TRAILING_UP, self.enable_trailing_up
+        )
+        # not implemented for now
+        # self.enable_trailing_down = self.symbol_trading_config.get(
+        #     self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
+        # )
 
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
@@ -395,11 +421,22 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
+        trigger_trailing_up = False
+        trigger_trailing_down = False
         if sorted_orders:
             buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
             highest_buy = current_price
             sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
             lowest_sell = current_price
+            one_sided_orders_trailing_threshold = self.operational_depth / 2
+            if len(buy_orders) >= one_sided_orders_trailing_threshold and not sell_orders:
+                # only buy orders remaining: everything has been sold, trigger tailing up when enabled
+                if self.enable_trailing_up:
+                    trigger_trailing_up = True
+            elif len(sell_orders) >= one_sided_orders_trailing_threshold and not buy_orders:
+                # only sell orders remaining: everything has been bought, trigger tailing up when enabled
+                if self.enable_trailing_down:
+                    trigger_trailing_down = True
             origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
                 sorted_orders, recently_closed_trades
             )
@@ -432,16 +469,22 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                     # use only open order prices when possible
                     _lowest_buy = buy_orders[0].origin_price
                     lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
-
-        missing_orders, state, _ = self._analyse_current_orders_situation(
-            sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
-        )
-        if missing_orders:
-            self.logger.info(
-                f"{len(missing_orders)} missing {self.symbol} orders on {self.exchange_name}: {missing_orders}"
+        if trigger_trailing_up or trigger_trailing_down:
+            await self._trigger_trailing(sorted_orders, current_price)
+            # trailing will cancel all orders: set state to NEW with no existing order
+            missing_orders, state, sorted_orders = None, self.NEW, []
+        else:
+            # no trailing, process normal analysis
+            missing_orders, state, _ = self._analyse_current_orders_situation(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
             )
-        await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
+            if missing_orders:
+                self.logger.info(
+                    f"{len(missing_orders)} missing {self.symbol} orders on {self.exchange_name}: {missing_orders}"
+                )
+            await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
+            # apply state and (re)create missing orders
             buy_orders = self._create_orders(lowest_buy, highest_buy,
                                              trading_enums.TradeOrderSide.BUY, sorted_orders,
                                              current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
