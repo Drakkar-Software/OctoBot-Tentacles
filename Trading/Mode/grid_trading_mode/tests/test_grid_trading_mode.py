@@ -1360,6 +1360,113 @@ async def test_start_after_offline_only_sell_orders_remaining():
         assert sorted(new_orders, key=lambda x: x.origin_price)[-1] is sorted(open_orders, key=lambda x: x.origin_price)[-1]
 
 
+async def test_trailing_up():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        # first start: setup orders
+        producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
+        producer.buy_funds = decimal.Decimal("1")  # 19 buy orders
+        orders_count = 19 + 25
+
+        price = 100
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 100)
+        # A. price moves up
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+        producer.enable_trailing_up = True
+
+        # top filled sell order price = 225
+        assert max(o.origin_price for o in offline_filled) == decimal.Decimal("225")
+        new_price = decimal.Decimal(250)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+        # will trail up
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 250)
+
+        # B. orders get filled but not enough to trigger a trailing reset
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # all but 1 sell orders is filled
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL][:-1]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
+        producer.enable_trailing_up = True
+        producer.enable_trailing_down = True
+        # doesn't trail up: a sell order still remains
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 250)
+        # all buy orders are still here
+        # not cancelled sell order is still here
+        offline_filled_ids = [o.order_id for o in offline_filled]
+        for order in open_orders:
+            if order.order_id in offline_filled_ids:
+                assert order.is_closed()
+            else:
+                assert order.is_open()
+
+        # C. price moves down, trailing down is disabled
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(offline_filled)
+        producer.enable_trailing_down = False
+
+        # top filled sell order price = 125
+        assert min(o.origin_price for o in offline_filled) == decimal.Decimal("125")
+        new_price = decimal.Decimal(125)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+        # will not trail down
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 250)
+        # only contains sell orders
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert all (order.side == trading_enums.TradeOrderSide.SELL for order in open_orders)
+
+        # D. price is still down, trailing down is enabled
+        producer.enable_trailing_down = True
+
+        # will trail down
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth - 1))   # -1 because the very first order can't be at a price <0
+        # orders are recreated around 125
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 125)
+        # now contains buy and sell orders
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        assert len([order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]) == producer.sell_orders_count
+        assert len([order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]) == producer.buy_orders_count - 1
+
+
 @contextlib.contextmanager
 def _assert_adapt_order_quantity_because_fees(get_fees_for_currency=False):
     _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
