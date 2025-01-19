@@ -168,14 +168,6 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "fill. OctoBot won't create orders at startup: it will use the ones already on exchange instead. "
                   "This mode allows grid orders to operate on user created orders. Can't work on trading simulator.",
         )
-        self.UI.user_input( 
-            self.CONFIG_ALLOW_FUNDS_REDISPATCH, commons_enums.UserInputTypes.BOOLEAN,
-            default_config[self.CONFIG_ALLOW_FUNDS_REDISPATCH], inputs,
-            parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Auto-dispatch new funds: when checked, new available funds will be dispatched into existing "
-                  "orders when additional funds become available. Funds redispatch check happens once a day "
-                  "around your OctoBot start time.",
-        )
         self.UI.user_input(
             self.CONFIG_ENABLE_TRAILING_UP, commons_enums.UserInputTypes.BOOLEAN,
             default_config[self.CONFIG_ENABLE_TRAILING_UP], inputs,
@@ -184,15 +176,24 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "highest selling price. This might require the grid to perform a buy market order to be "
                   "able to recreate the grid new sell orders at the updated price.",
         )
-        # not implemented
-        # self.UI.user_input(
-        #     self.CONFIG_ENABLE_TRAILING_DOWN, commons_enums.UserInputTypes.BOOLEAN,
-        #     default_config[self.CONFIG_ENABLE_TRAILING_DOWN], inputs,
-        #     parent_input_name=self.CONFIG_PAIR_SETTINGS,
-        #     title="Trailing down: when checked, the whole grid will be cancelled and recreated when price goes bellow"
-        #           " the lowest buying price. This might require the grid to perform a sell market order to be "
-        #           "able to recreate the grid new buy orders at the updated price.",
-        # )
+        self.UI.user_input(
+            self.CONFIG_ENABLE_TRAILING_DOWN, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ENABLE_TRAILING_DOWN], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Trailing down: when checked, the whole grid will be cancelled and recreated when price goes bellow"
+                  " the lowest buying price. This might require the grid to perform a sell market order to be "
+                  "able to recreate the grid new buy orders at the updated price. "
+                  "Warning: when trailing down, the sell order required to recreate the buying side of the grid "
+                  "might generate a loss.",
+        )
+        self.UI.user_input(
+            self.CONFIG_ALLOW_FUNDS_REDISPATCH, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ALLOW_FUNDS_REDISPATCH], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Auto-dispatch new funds: when checked, new available funds will be dispatched into existing "
+                  "orders when additional funds become available. Funds redispatch check happens once a day "
+                  "around your OctoBot start time.",
+        )
         self.UI.user_input(
             self.CONFIG_FUNDS_REDISPATCH_INTERVAL, commons_enums.UserInputTypes.FLOAT,
             default_config[self.CONFIG_FUNDS_REDISPATCH_INTERVAL], inputs,
@@ -339,10 +340,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self.enable_trailing_up = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_ENABLE_TRAILING_UP, self.enable_trailing_up
         )
-        # not implemented for now
-        # self.enable_trailing_down = self.symbol_trading_config.get(
-        #     self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
-        # )
+        self.enable_trailing_down = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
+        )
 
     async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
         self._init_allowed_price_ranges(current_price)
@@ -425,50 +425,50 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         trigger_trailing_down = False
         if sorted_orders:
             buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
-            highest_buy = current_price
             sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
-            lowest_sell = current_price
-            one_sided_orders_trailing_threshold = self.operational_depth / 2
-            if len(buy_orders) >= one_sided_orders_trailing_threshold and not sell_orders:
+            # 3 to allow trailing even if a few order from the other side have also been filled
+            one_sided_orders_trailing_threshold = self.operational_depth / 3
+            if self.enable_trailing_up and len(buy_orders) >= one_sided_orders_trailing_threshold and not sell_orders:
                 # only buy orders remaining: everything has been sold, trigger tailing up when enabled
-                if self.enable_trailing_up:
-                    trigger_trailing_up = True
-            elif len(sell_orders) >= one_sided_orders_trailing_threshold and not buy_orders:
+                trigger_trailing_up = True
+            elif self.enable_trailing_down and len(sell_orders) >= one_sided_orders_trailing_threshold and not buy_orders:
                 # only sell orders remaining: everything has been bought, trigger tailing up when enabled
-                if self.enable_trailing_down:
-                    trigger_trailing_down = True
-            origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
-                sorted_orders, recently_closed_trades
-            )
+                trigger_trailing_down = True
+            else:
+                highest_buy = current_price
+                lowest_sell = current_price
+                origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
+                    sorted_orders, recently_closed_trades
+                )
 
-            min_max_total_order_price_delta = (
-                self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
-                + self.flat_increment
-            )
-            if buy_orders:
-                lowest_buy = buy_orders[0].origin_price
-                if not sell_orders:
-                    highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
-                    # buy orders only
-                    lowest_sell = highest_buy + self.flat_spread - self.flat_increment
-                    highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
-                else:
-                    # use only open order prices when possible
-                    _highest_sell = sell_orders[-1].origin_price
-                    highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
-            if sell_orders:
-                highest_sell = sell_orders[-1].origin_price
-                if not buy_orders:
-                    lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
-                    # sell orders only
-                    lowest_buy = max(
-                        0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
-                    )
-                    highest_buy = lowest_sell - self.flat_spread + self.flat_increment
-                else:
-                    # use only open order prices when possible
-                    _lowest_buy = buy_orders[0].origin_price
-                    lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
+                min_max_total_order_price_delta = (
+                    self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
+                    + self.flat_increment
+                )
+                if buy_orders:
+                    lowest_buy = buy_orders[0].origin_price
+                    if not sell_orders:
+                        highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
+                        # buy orders only
+                        lowest_sell = highest_buy + self.flat_spread - self.flat_increment
+                        highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
+                    else:
+                        # use only open order prices when possible
+                        _highest_sell = sell_orders[-1].origin_price
+                        highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
+                if sell_orders:
+                    highest_sell = sell_orders[-1].origin_price
+                    if not buy_orders:
+                        lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
+                        # sell orders only
+                        lowest_buy = max(
+                            0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
+                        )
+                        highest_buy = lowest_sell - self.flat_spread + self.flat_increment
+                    else:
+                        # use only open order prices when possible
+                        _lowest_buy = buy_orders[0].origin_price
+                        lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
         if trigger_trailing_up or trigger_trailing_down:
             await self._trigger_trailing(sorted_orders, current_price)
             # trailing will cancel all orders: set state to NEW with no existing order
