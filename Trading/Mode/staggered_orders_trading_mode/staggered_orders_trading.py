@@ -1227,31 +1227,31 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             target_base = usable_amount_in_base / decimal.Decimal(2)
             target_quote = usable_amount_in_quote / decimal.Decimal(2)
 
-            base_amount = trading_constants.ZERO
+            amount = trading_constants.ZERO
             if available_base_amount < target_base:
+                # buy order
                 to_buy = parsed_symbol.base
                 to_sell = parsed_symbol.quote
-                base_amount = target_base - available_base_amount
+                amount = (target_base - available_base_amount) * current_price
             if available_quote_amount < target_quote:
-                if base_amount != trading_constants.ZERO:
+                if amount != trading_constants.ZERO:
                     # can't buy with currencies, this should never happen: log error
                     self.logger.error(f"{log_header}can't buy and sell {parsed_symbol} at the same time.")
                 else:
+                    # sell order
                     to_buy = parsed_symbol.quote
                     to_sell = parsed_symbol.base
-                    base_amount = (target_quote - available_quote_amount) / current_price
-            else:
-                self.logger.info(f"{log_header}nothing to buy or sell. Current funds are enough")
+                    amount = (target_quote - available_quote_amount) / current_price
 
-            if base_amount > trading_constants.ZERO:
-                self.logger.info(f"{log_header}selling {base_amount} {to_sell} to buy {to_buy}")
+            if amount > trading_constants.ZERO:
+                self.logger.info(f"{log_header}selling {amount} {to_sell} to buy {to_buy}")
                 # need portfolio available to be up-to-date with cancelled orders
                 orders = await trading_modes.convert_asset_to_target_asset(
-                    self, to_sell, to_buy, {
+                    self.trading_mode, to_sell, to_buy, {
                         self.symbol: {
                             trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: current_price,
                         }
-                    }, asset_amount=base_amount
+                    }, asset_amount=amount
                 )
                 if orders:
                     await asyncio.gather(*[
@@ -1259,6 +1259,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                             order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
                         ) for order in orders
                     ])
+            else:
+                self.logger.info(f"{log_header}nothing to buy or sell. Current funds are enough")
         except Exception as err:
             self.logger.exception(
                 err, True, f"Error in {log_header}convert into target step: {err}"

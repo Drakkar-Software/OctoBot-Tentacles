@@ -20,6 +20,12 @@ You can customize the grid for each trading pair. To configure a pair, enter:
 - The interval between each order (increment)
 - The amount of initial buy and sell orders to create 
 
+#### Trailing options
+A grid can only operate within its price range. However, when trailing options are enabled, 
+the whole grid can be automatically cancelled and recreated 
+when the traded asset's price moves beyond the grid range. In this case, a market order can be executed in order to 
+have the necessary funds to create the grid buy and sell orders.
+
 #### Profits
 Profits will be made from price movements within the covered price area.  
 It never "sells at a loss", but always at a profit, therefore OctoBot never cancels any orders when using the Grid Trading Mode.

@@ -104,6 +104,8 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         await trader.initialize()
 
         # set BTC/USDT price at 1000 USDT
+        if symbol not in exchange_manager.client_symbols:
+            exchange_manager.client_symbols.append(symbol)
         trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
 
         mode, producer = await _init_trading_mode(config, exchange_manager, symbol)
@@ -1487,6 +1489,74 @@ async def test_single_exchange_process_optimize_initial_portfolio():
         final_portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
         assert final_portfolio["BTC"].available == decimal.Decimal('5.539455')  # 5.545 - fees
         assert final_portfolio["USD"].available == decimal.Decimal("5545")
+
+
+async def test_trigger_trailing():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+        # price info: create orders
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        # simulate price being stable
+        cancelled_orders, created_orders = await producer._trigger_trailing(open_orders, current_price=4000)
+        assert len(cancelled_orders) == len(open_orders)
+        # cancelled orders
+        updated_open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        assert updated_open_orders == []
+
+        # created order to balance BTC and USD (sell BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal("4.87500000")
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal("19.5")
+        assert isinstance(created_orders[0], trading_personal_data.SellMarketOrder)
+
+        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        # portfolio is now balanced
+        assert portfolio["BTC"].available == decimal.Decimal("5.125")   # 5.125 x 4000 = 20500
+        assert portfolio["USD"].available == decimal.Decimal("20480.5") == decimal.Decimal("20500") - fees
+
+        # price change (going down), no order to cancel: just adapt pf
+        trading_api.force_set_mark_price(exchange_manager, symbol, 3000)
+        cancelled_orders, created_orders = await producer._trigger_trailing(open_orders, current_price=3000)
+        # no order to cancel (orders are already cancelled)
+        assert len(cancelled_orders) == 0
+        # created order to balance BTC and USD (buy BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal('0.85091666')
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal('0.00085091666')
+        assert isinstance(created_orders[0], trading_personal_data.BuyMarketOrder)
+
+        assert portfolio["BTC"].available == decimal.Decimal('5.97506574334')   # Decimal('5.97506574334') x 3000 = Decimal('17925.19723002000')
+        assert portfolio["USD"].available == decimal.Decimal('17927.75002000000')
+
+        # price change (going up), no order to cancel: just adapt pf
+        trading_api.force_set_mark_price(exchange_manager, symbol, 8000)
+        cancelled_orders, created_orders = await producer._trigger_trailing([], current_price=8000)
+        # no order to cancel
+        assert len(cancelled_orders) == 0
+        # created order to balance BTC and USD (buy BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal('1.86704849')
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal('14.93638792000')
+        assert isinstance(created_orders[0], trading_personal_data.SellMarketOrder)
+
+        assert portfolio["BTC"].available == decimal.Decimal('4.10801725334')   # Decimal('4.10801725334') x 8000 = Decimal('32864.13802672000')
+        assert portfolio["USD"].available == decimal.Decimal('32849.20155208000')
 
 
 async def _wait_for_orders_creation(orders_count=1):
