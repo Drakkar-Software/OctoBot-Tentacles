@@ -32,6 +32,9 @@ import octobot_trading.constants as constants
 class MEXC(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+    # set True when disabled symbols should still be considered (ex: mexc with its temporary api trading disabled symbols)
+    # => avoid skipping untradable symbols
+    INCLUDE_DISABLED_SYMBOLS_IN_AVAILABLE_SYMBOLS = True
     EXPECT_POSSIBLE_ORDER_NOT_FOUND_DURING_ORDER_CREATION = True  # set True when get_order() can return None
     # (order not found) when orders are instantly filled on exchange and are not fully processed on the exchange side.
 
@@ -108,13 +111,10 @@ class MEXC(exchanges.RestExchange):
         try:
             yield
         except (ccxt.BadSymbol, ccxt.BadRequest) as err:
-            if CACHED_MEXC_API_HANDLED_SYMBOLS.should_be_updated():
-                await CACHED_MEXC_API_HANDLED_SYMBOLS.update(self)
-            if symbol not in CACHED_MEXC_API_HANDLED_SYMBOLS.symbols:
+            if "symbol not support api" in str(err):
                 raise octobot_trading.errors.UntradableSymbolError(
                     f"{self.get_name()} error: {symbol} trading pair is not available to the API at the moment, "
-                    f"{symbol} is under maintenance ({err}). "
-                    f"API available trading pairs are {CACHED_MEXC_API_HANDLED_SYMBOLS.symbols}"
+                    f"{symbol} is under maintenance ({err})."
                 )
             raise err
 
