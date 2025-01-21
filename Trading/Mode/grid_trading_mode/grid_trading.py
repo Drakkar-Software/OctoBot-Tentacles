@@ -421,20 +421,13 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
-        trigger_trailing_up = False
-        trigger_trailing_down = False
+        trigger_trailing = False
         if sorted_orders:
-            buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
-            sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
-            # 3 to allow trailing even if a few order from the other side have also been filled
-            one_sided_orders_trailing_threshold = self.operational_depth / 3
-            if self.enable_trailing_up and len(buy_orders) >= one_sided_orders_trailing_threshold and not sell_orders:
-                # only buy orders remaining: everything has been sold, trigger tailing up when enabled
-                trigger_trailing_up = True
-            elif self.enable_trailing_down and len(sell_orders) >= one_sided_orders_trailing_threshold and not buy_orders:
-                # only sell orders remaining: everything has been bought, trigger tailing up when enabled
-                trigger_trailing_down = True
+            if self._should_trigger_trailing(sorted_orders):
+                trigger_trailing = True
             else:
+                buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
+                sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
                 highest_buy = current_price
                 lowest_sell = current_price
                 origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
@@ -469,8 +462,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                         # use only open order prices when possible
                         _lowest_buy = buy_orders[0].origin_price
                         lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
-        if trigger_trailing_up or trigger_trailing_down:
-            await self._trigger_trailing(sorted_orders, current_price)
+        if trigger_trailing:
+            await self._prepare_trailing(sorted_orders, current_price)
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
         else:

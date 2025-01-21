@@ -1491,7 +1491,7 @@ async def test_single_exchange_process_optimize_initial_portfolio():
         assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
-async def test_trigger_trailing():
+async def test_prepare_trailing():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
@@ -1507,7 +1507,7 @@ async def test_trigger_trailing():
         # now has buy and sell orders
         open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
         # simulate price being stable
-        cancelled_orders, created_orders = await producer._trigger_trailing(open_orders, current_price=4000)
+        cancelled_orders, created_orders = await producer._prepare_trailing(open_orders, current_price=4000)
         assert len(cancelled_orders) == len(open_orders)
         # cancelled orders
         updated_open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
@@ -1528,7 +1528,7 @@ async def test_trigger_trailing():
 
         # price change (going down), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 3000)
-        cancelled_orders, created_orders = await producer._trigger_trailing(open_orders, current_price=3000)
+        cancelled_orders, created_orders = await producer._prepare_trailing(open_orders, current_price=3000)
         # no order to cancel (orders are already cancelled)
         assert len(cancelled_orders) == 0
         # created order to balance BTC and USD (buy BTC)
@@ -1544,7 +1544,7 @@ async def test_trigger_trailing():
 
         # price change (going up), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 8000)
-        cancelled_orders, created_orders = await producer._trigger_trailing([], current_price=8000)
+        cancelled_orders, created_orders = await producer._prepare_trailing([], current_price=8000)
         # no order to cancel
         assert len(cancelled_orders) == 0
         # created order to balance BTC and USD (buy BTC)
@@ -1557,6 +1557,102 @@ async def test_trigger_trailing():
 
         assert portfolio["BTC"].available == decimal.Decimal('4.10801725334')   # Decimal('4.10801725334') x 8000 = Decimal('32864.13802672000')
         assert portfolio["USD"].available == decimal.Decimal('32849.20155208000')
+
+
+async def test_should_trigger_trailing():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        # A. no open order: no trailing
+        assert producer._should_trigger_trailing([]) is False
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing([]) is False
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+
+        # B. trailing disabled
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        assert producer._should_trigger_trailing([]) is False
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        assert len(buy_orders) > 10
+        assert len(sell_orders) > 10
+        assert producer._should_trigger_trailing(buy_orders) is False
+        assert producer._should_trigger_trailing(sell_orders) is False
+
+        # C. trailing enabled
+        producer.enable_trailing_up = True
+        assert producer._should_trigger_trailing(buy_orders) is True
+        assert producer._should_trigger_trailing(sell_orders) is False
+        producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing(buy_orders) is True
+        assert producer._should_trigger_trailing(sell_orders) is True
+
+        # D. no trailing if at least 1 order on each side
+        assert producer._should_trigger_trailing(buy_orders + sell_orders) is False
+        assert producer._should_trigger_trailing([buy_orders[0]] + sell_orders) is False
+
+        # E. use open orders
+        assert producer._should_trigger_trailing([]) is False
+
+
+async def test_order_notification_callback():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+
+        # cancel buy orders and change reference price to 2000: should trigger trailing
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        for order in buy_orders:
+            await exchange_manager.trader.cancel_order(order)
+        trading_api.force_set_mark_price(exchange_manager, symbol, 2000)
+        filled_order = sell_orders[0]
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            _lock_portfolio_and_create_order_when_possible.assert_called_once()
+        assert len(exchange_manager.exchange_personal_data.orders_manager.get_open_orders()) == len(sell_orders) - 1
+
+        # will trail
+        filled_order = sell_orders[1]
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            # trailing trigger
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+            updated_open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+            buy_orders = [order for order in updated_open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+            sell_orders = [order for order in updated_open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+            assert len(buy_orders) == 13    # can't create more due to min price
+            assert len(sell_orders) == 37   # 50 - 13
+            # trailed instead
+            _lock_portfolio_and_create_order_when_possible.assert_not_called()
+
+        filled_order = buy_orders[0]
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            # do not trail again, create mirror order instead
+            _lock_portfolio_and_create_order_when_possible.assert_called_once()
 
 
 async def _wait_for_orders_creation(orders_count=1):
