@@ -344,12 +344,16 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
         )
 
-    async def _handle_staggered_orders(self, current_price, ignore_mirror_orders_only, ignore_available_funds):
+    async def _handle_staggered_orders(
+        self, current_price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing
+    ):
         self._init_allowed_price_ranges(current_price)
         if ignore_mirror_orders_only or not self.use_existing_orders_only:
             async with self.producer_exchange_wide_lock(self.exchange_manager):
                 # use exchange level lock to prevent funds double spend
-                buy_orders, sell_orders = await self._generate_staggered_orders(current_price, ignore_available_funds)
+                buy_orders, sell_orders = await self._generate_staggered_orders(
+                    current_price, ignore_available_funds, trigger_trailing
+                )
                 grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
                 await self._create_not_virtual_orders(grid_orders, current_price)
 
@@ -386,7 +390,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         )
         return True
 
-    async def _generate_staggered_orders(self, current_price, ignore_available_funds):
+    async def _generate_staggered_orders(self, current_price, ignore_available_funds, trigger_trailing):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         if not self.single_pair_setup:
             interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
@@ -421,9 +425,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
-        trigger_trailing = False
         if sorted_orders:
-            if self._should_trigger_trailing(sorted_orders):
+            if self._should_trigger_trailing(sorted_orders, current_price):
                 trigger_trailing = True
             else:
                 buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
