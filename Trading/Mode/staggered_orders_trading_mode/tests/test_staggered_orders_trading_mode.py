@@ -1655,6 +1655,81 @@ async def test_order_notification_callback():
             _lock_portfolio_and_create_order_when_possible.assert_called_once()
 
 
+async def test_create_mirror_order():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        # create orders
+        price = 100
+        producer.mode = staggered_orders_trading.StrategyModes.NEUTRAL
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        buy_sell_increment = producer.flat_spread - producer.flat_increment
+
+        # mirroring buy order
+        buy_1 = buy_orders[0]
+        assert buy_1.origin_price == decimal.Decimal("97")
+        assert buy_1.origin_quantity == decimal.Decimal("0.46")
+        assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
+        assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
+        assert buy_1_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        assert buy_1_mirror_order.symbol == symbol
+        assert buy_1_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_1_mirror_order.quantity < buy_1.origin_quantity
+        assert buy_1_mirror_order.quantity == decimal.Decimal('0.4595400')
+
+        # mirroring sell order
+        sell_1 = sell_orders[0]
+        assert sell_1.origin_price == decimal.Decimal("103")
+        assert sell_1.origin_quantity == decimal.Decimal('0.00464646')
+        assert sell_1.side == trading_enums.TradeOrderSide.SELL
+        sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
+        assert sell_1_mirror_order.associated_entry_id == sell_1.order_id
+        assert sell_1_mirror_order.side == trading_enums.TradeOrderSide.BUY
+        assert sell_1_mirror_order.symbol == symbol
+        assert sell_1_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
+        assert sell_1_mirror_order.quantity > sell_1.origin_quantity
+        assert sell_1_mirror_order.quantity == decimal.Decimal('0.004733730639801980198019801981')
+
+        # fill price is != from origin price => use origin price to avoid moving grid orders
+        assert buy_1.origin_price == decimal.Decimal("97")
+        buy_1.filled_price = decimal.Decimal("96")  # simulate fill at 96
+        buy_2_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_2_mirror_order, staggered_orders_trading.OrderData)
+        # mirror order price is still 99, even if fill price is not 97
+        assert buy_2_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_2_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        # new sell order quantity is equal to previous mirror order quantity: only the amount of USDT spend is smaller
+        assert buy_2_mirror_order.quantity == buy_1_mirror_order.quantity
+        assert buy_2_mirror_order.quantity == decimal.Decimal('0.4595400')
+
+        # sell_1 will be found in trades
+        assert sell_1.origin_price == decimal.Decimal("103")
+        sell_1.filled_price = decimal.Decimal("110")  # simulate fill at 110
+        await _fill_order(sell_1, exchange_manager, trigger_update_callback=False, producer=producer)
+        maybe_trade, maybe_order = exchange_manager.exchange_personal_data.get_trade_or_open_order(
+            sell_1.order_id
+        )
+        assert maybe_trade
+        assert maybe_trade.origin_price == decimal.Decimal("103")
+        assert maybe_order is None
+        sell_2_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        # mirror order price is still 101, even if fill price is not 110
+        assert sell_2_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
+        assert sell_2_mirror_order.side == trading_enums.TradeOrderSide.BUY
+        # new buy order quantity is larger than previous one as sell order was filled at a higher price
+        assert sell_2_mirror_order.quantity > sell_1_mirror_order.quantity
+        assert sell_2_mirror_order.quantity == decimal.Decimal('0.005055854530099009900990099009')
+
+
 async def _wait_for_orders_creation(orders_count=1):
     for _ in range(orders_count):
         await asyncio_tools.wait_asyncio_next_cycle()

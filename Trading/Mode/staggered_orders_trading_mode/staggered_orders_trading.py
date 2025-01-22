@@ -737,8 +737,24 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     await self._handle_staggered_orders(current_price, ignore_mirror_orders_only, ignore_available_funds)
                     self.logger.debug(f"{self.symbol} orders updated on {self.exchange_name}")
 
-    async def order_filled_callback(self, filled_order):
+    async def order_filled_callback(self, filled_order: dict):
         # create order on the order side
+        new_order = self._create_mirror_order(filled_order)
+        self.logger.debug(f"Creating mirror order: {new_order} after filled order: {filled_order}")
+        filled_price = decimal.Decimal(str(
+            filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+        ))
+        if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
+            await self._ensure_trailing_and_create_order_when_possible(new_order, filled_price)
+        else:
+            # create order after waiting time
+            self.mirror_orders_tasks.append(asyncio.get_event_loop().call_later(
+                self.mirror_order_delay,
+                asyncio.create_task,
+                self._ensure_trailing_and_create_order_when_possible(new_order, filled_price)
+            ))
+
+    def _create_mirror_order(self, filled_order: dict):
         now_selling = filled_order[
           trading_enums.ExchangeConstantsOrderColumns.SIDE.value
         ] == trading_enums.TradeOrderSide.BUY.value
@@ -760,23 +776,33 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.flat_spread = trading_personal_data.decimal_adapt_price(
                 self.symbol_market, self.spread * self.flat_increment / self.increment
             )
-        price_increment = self.flat_spread - self.flat_increment
-        filled_price = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
+        mirror_price_difference = self.flat_spread - self.flat_increment
+        # try to get the order origin price to compute mirror order price
+        filled_price = decimal.Decimal(str(
+            filled_order[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
+        ))
+        maybe_trade, maybe_order = self.exchange_manager.exchange_personal_data.get_trade_or_open_order(
+            filled_order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
+        )
+        if maybe_trade:
+            # normal case
+            order_origin_price = maybe_trade.origin_price
+        elif maybe_order:
+            # should not happen but still handle it just in case
+            order_origin_price = maybe_order.origin_price
+        else:
+            # can't find order: default to filled price, even though it might be different from origin price
+            self.logger.warning(
+                f"Computing mirror order price using filled order price: no associated trade or order has been "
+                f"found, this can lead to inconsistent order intervals (order: {filled_order})"
+            )
+            order_origin_price = filled_price
+        price = order_origin_price + mirror_price_difference if now_selling else order_origin_price - mirror_price_difference
+
         filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
-        price = filled_price + price_increment if now_selling else filled_price - price_increment
         fee = filled_order[trading_enums.ExchangeConstantsOrderColumns.FEE.value]
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume, fee)
-        new_order = OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)
-        self.logger.debug(f"Creating mirror order: {new_order} after filled order: {filled_order}")
-        if self.mirror_order_delay == 0 or trading_api.get_is_backtesting(self.exchange_manager):
-            await self._ensure_trailing_and_create_order_when_possible(new_order, filled_price)
-        else:
-            # create order after waiting time
-            self.mirror_orders_tasks.append(asyncio.get_event_loop().call_later(
-                self.mirror_order_delay,
-                asyncio.create_task,
-                self._ensure_trailing_and_create_order_when_possible(new_order, filled_price)
-            ))
+        return OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)
 
     def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume, paid_fees: dict):
         # use target volumes if set
@@ -808,17 +834,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             fees_in_base = new_order_quantity * self.max_fees
         return new_order_quantity - fees_in_base
 
-    async def _ensure_trailing_and_create_order_when_possible(self, new_order, filled_price):
+    async def _ensure_trailing_and_create_order_when_possible(self, new_order, current_price):
         if self._should_trigger_trailing(None):
             await self._ensure_staggered_orders()
         else:
             async with self.get_lock():
-                await self._lock_portfolio_and_create_order_when_possible(new_order, filled_price)
+                await self._lock_portfolio_and_create_order_when_possible(new_order, current_price)
 
-    async def _lock_portfolio_and_create_order_when_possible(self, new_order, filled_price):
+    async def _lock_portfolio_and_create_order_when_possible(self, new_order, current_price):
         await asyncio.wait_for(self.allowed_mirror_orders.wait(), timeout=None)
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-            await self._create_order(new_order, filled_price)
+            await self._create_order(new_order, current_price)
 
     def _should_trigger_trailing(self, orders: typing.Optional[list]):
         if not (self.enable_trailing_up or self.enable_trailing_down):
@@ -1228,7 +1254,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return trades_with_missing_mirror_order_fills
 
     async def _prepare_trailing(self, open_orders: list, current_price: decimal.Decimal):
-        log_header = f"[{self.exchange_manager.exchange_name}] {self.symbol} trailing process: "
+        log_header = f"[{self.exchange_manager.exchange_name}] {self.symbol} @ {current_price} trailing process: "
         if current_price <= trading_constants.ZERO:
             self.logger.error(
                 f"Aborting {log_header}current price is {current_price}")
