@@ -1140,7 +1140,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         )
         if fees_adapted_target_amount != target_amount:
             self.logger.info(
-                f"Adapted balancing quantity to compy with exchange fees. Using {fees_adapted_target_amount} "
+                f"Adapted balancing quantity to comply with exchange fees. Using {fees_adapted_target_amount} "
                 f"instead of {target_amount}"
             )
             target_amount = fees_adapted_target_amount
@@ -1150,7 +1150,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.symbol_market
         )
         if not to_create_details:
-            self.logger.error(
+            self.logger.warning(
                 f"No enough computed funds to recreate packed missed [{self.exchange_manager.exchange_name}] "
                 f"mirror order balancing order on {self.symbol}: target_amount: {target_amount} is not enough "
                 f"for exchange minimal trading amounts rules"
@@ -1164,7 +1164,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     else market_quantity
                 other_currency = base if order_type is trading_enums.TraderOrderType.BUY_MARKET \
                     else quote
-                self.logger.error(
+                self.logger.warning(
                     f"No enough available funds to create missed [{self.exchange_manager.exchange_name}] mirror "
                     f"order {order_type.value} balancing order on {self.symbol}. "
                     f"Required {float(order_amount)} {limiting_currency}, available {float(limiting_amount)} "
@@ -1685,8 +1685,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 only_sell = True
             if sorted_orders[-1].side == trading_enums.TradeOrderSide.BUY:
                 # only buy orders
-                self.logger.warning(f"Only buy orders are online for {self.symbol}, now waiting for the price to "
-                                    f"go down to create new sell orders.")
+                self.logger.warning(
+                    f"Only buy orders are online ({len(sorted_orders)} orders) for {self.symbol}, "
+                    f"now waiting for the price to go down to create new sell orders."
+                )
                 only_buy = True
             for order in sorted_orders:
                 if order.symbol != self.symbol:
