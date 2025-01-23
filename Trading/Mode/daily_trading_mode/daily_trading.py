@@ -587,6 +587,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             spot_increasing_position = state in (trading_enums.EvaluatorStates.VERY_LONG.value,
                                                  trading_enums.EvaluatorStates.LONG.value)
             if self.exchange_manager.is_future:
+                self.trading_mode.ensure_supported(symbol)
                 # on futures, current_symbol_holding = current_market_holding = market_quantity
                 max_buy_size, buy_increasing_position = trading_personal_data.get_futures_max_order_size(
                     self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
@@ -868,9 +869,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
-        except (trading_errors.MissingFunds,
-                trading_errors.MissingMinimalExchangeTradeVolume,
-                trading_errors.OrderCreationError):
+        except (
+            trading_errors.MissingFunds,
+            trading_errors.MissingMinimalExchangeTradeVolume,
+            trading_errors.OrderCreationError,
+            trading_errors.InvalidPositionSide,
+            trading_errors.UnsupportedContractConfigurationError
+        ):
             raise
         except asyncio.TimeoutError as e:
             self.logger.error(f"Impossible to create order for {symbol} on {self.exchange_manager.exchange_name}: {e} "

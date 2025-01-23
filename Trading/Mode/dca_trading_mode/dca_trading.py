@@ -134,6 +134,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
             )
             if self.exchange_manager.is_future:
+                self.trading_mode.ensure_supported(symbol)
                 # on futures, current_symbol_holding = current_market_holding = market_quantity
                 initial_available_funds, _ = trading_personal_data.get_futures_max_order_size(
                     self.exchange_manager, symbol, side,

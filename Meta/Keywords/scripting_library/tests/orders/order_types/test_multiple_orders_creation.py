@@ -107,7 +107,8 @@ async def test_orders_amount_then_position_sequence(mock_context):
     api.load_pair_contract(
         mock_context.exchange_manager,
         api.create_default_future_contract(
-            mock_context.symbol, decimal.Decimal(1), trading_enums.FutureContractType.LINEAR_PERPETUAL
+            mock_context.symbol, decimal.Decimal(1), trading_enums.FutureContractType.LINEAR_PERPETUAL,
+            trading_constants.DEFAULT_SYMBOL_POSITION_MODE
         ).to_dict()
     )
 
