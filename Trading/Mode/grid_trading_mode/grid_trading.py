@@ -350,12 +350,18 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         self._init_allowed_price_ranges(current_price)
         if ignore_mirror_orders_only or not self.use_existing_orders_only:
             async with self.producer_exchange_wide_lock(self.exchange_manager):
+                if trigger_trailing and self.is_currently_trailing:
+                    self.logger.debug(
+                        f"{self.symbol} on {self.exchange_name}: trailing signal ignored: "
+                        f"a trailing process is already running"
+                    )
+                    return
                 # use exchange level lock to prevent funds double spend
-                buy_orders, sell_orders = await self._generate_staggered_orders(
+                buy_orders, sell_orders, triggering_trailing = await self._generate_staggered_orders(
                     current_price, ignore_available_funds, trigger_trailing
                 )
                 grid_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-                await self._create_not_virtual_orders(grid_orders, current_price)
+                await self._create_not_virtual_orders(grid_orders, current_price, triggering_trailing)
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
@@ -398,7 +404,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 self.logger.error(f"Impossible to create grid orders for {self.symbol} with interfering orders "
                                   f"using pair(s): {interfering_orders_pairs}. Configure funds to use for each pairs "
                                   f"to be able to use interfering pairs.")
-                return [], []
+                return [], [], False
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = self._get_grid_trades_or_orders(existing_orders)
@@ -425,8 +431,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
-        if sorted_orders:
-            if self._should_trigger_trailing(sorted_orders, current_price):
+        if sorted_orders and not trigger_trailing:
+            if self._should_trigger_trailing(sorted_orders, current_price, False):
                 trigger_trailing = True
             else:
                 buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
@@ -467,6 +473,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                         lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
         if trigger_trailing:
             await self._prepare_trailing(sorted_orders, current_price)
+            self.is_currently_trailing = True
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
         else:
@@ -500,8 +507,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             buy_orders, sell_orders, state = await self._reset_orders(
                 sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
             )
+            trigger_trailing = False
 
-        return buy_orders, sell_orders
+        return buy_orders, sell_orders, trigger_trailing
 
     def _get_origin_orders_count(self, recent_trades, open_orders):
         origin_created_buy_orders_count = self.buy_orders_count
