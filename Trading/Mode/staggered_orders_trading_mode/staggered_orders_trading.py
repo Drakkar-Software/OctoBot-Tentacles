@@ -390,6 +390,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
     ORDER_DATA_KEY = "order_data"
     CURRENT_PRICE_KEY = "current_price"
     SYMBOL_MARKET_KEY = "symbol_market"
+    COMPLETING_TRAILING_KEY = "completing_trailing"
 
     def __init__(self, trading_mode):
         super().__init__(trading_mode)
@@ -408,13 +409,19 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # use dict default getter: can't afford missing data
         data = kwargs["data"]
-        if not self.skip_orders_creation:
-            order_data = data[self.ORDER_DATA_KEY]
-            current_price = data[self.CURRENT_PRICE_KEY]
-            symbol_market = data[self.SYMBOL_MARKET_KEY]
-            return await self.create_order(order_data, current_price, symbol_market)
-        else:
-            self.logger.info(f"Skipped {data.get(self.ORDER_DATA_KEY, '')}")
+        try:
+            if not self.skip_orders_creation:
+                order_data = data[self.ORDER_DATA_KEY]
+                current_price = data[self.CURRENT_PRICE_KEY]
+                symbol_market = data[self.SYMBOL_MARKET_KEY]
+                return await self.create_order(order_data, current_price, symbol_market)
+            else:
+                self.logger.info(f"Skipped {data.get(self.ORDER_DATA_KEY, '')}")
+        finally:
+            if data[self.COMPLETING_TRAILING_KEY]:
+                for producer in self.trading_mode.producers:
+                    # trailing process complete
+                    producer.is_currently_trailing = False
 
     async def create_order(self, order_data, current_price, symbol_market):
         created_order = None
@@ -555,6 +562,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.allow_virtual_orders = True
         self.health_check_interval_secs = self.__class__.HEALTH_CHECK_INTERVAL_SECS
         self.healthy = False
+        self.is_currently_trailing = False
 
         try:
             self._load_symbol_trading_config()
@@ -841,7 +849,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return new_order_quantity - fees_in_base
 
     async def _ensure_trailing_and_create_order_when_possible(self, new_order, current_price):
-        if self._should_trigger_trailing(None, None):
+        if self._should_trigger_trailing(None, None, True):
             # do not give current price as in this context, having only one-sided orders requires trailing
             await self._ensure_staggered_orders(trigger_trailing=True)
         else:
@@ -851,10 +859,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def _lock_portfolio_and_create_order_when_possible(self, new_order, current_price):
         await asyncio.wait_for(self.allowed_mirror_orders.wait(), timeout=None)
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-            await self._create_order(new_order, current_price)
+            await self._create_order(new_order, current_price, False)
 
     def _should_trigger_trailing(
-        self, orders: typing.Optional[list], current_price: typing.Optional[decimal.Decimal]
+        self,
+        orders: typing.Optional[list],
+        current_price: typing.Optional[decimal.Decimal],
+        trail_on_missing_orders: bool
     ) -> bool:
         if not (self.enable_trailing_up or self.enable_trailing_down):
             return False
@@ -871,10 +882,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         )
         # 3 to allow trailing even if a few order from the other side have also been filled
         one_sided_orders_trailing_threshold = self.operational_depth / 3
-        if self.enable_trailing_up and len(buy_orders) >= one_sided_orders_trailing_threshold and not sell_orders:
+        if (
+            self.enable_trailing_up
+            and (len(buy_orders) >= one_sided_orders_trailing_threshold or trail_on_missing_orders)
+            and not sell_orders
+        ):
             # only buy orders remaining: everything has been sold, trigger tailing up when enabled if price is
             # beyond range
-            if current_price:
+            if current_price and buy_orders:
                 missing_orders_count = self.operational_depth - len(buy_orders)
                 price_delta = missing_orders_count * self.flat_increment
                 first_order = buy_orders[0]
@@ -887,9 +902,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     # not all buy orders could have been created: trigger trailing as there is no way to check
                     # the theoretical max price of the grid
                     return len(buy_orders) >= self.operational_depth / 2 and current_price > first_order.origin_price
-            else:
+            elif trail_on_missing_orders:
+                # trail too much
                 return True
-        if self.enable_trailing_down and len(sell_orders) >= one_sided_orders_trailing_threshold and not buy_orders:
+        if (
+            self.enable_trailing_down
+            and (len(sell_orders) >= one_sided_orders_trailing_threshold or trail_on_missing_orders)
+            and not buy_orders
+        ):
             # only sell orders remaining: everything has been bought, trigger tailing up when enabled if price is
             # beyond range
             if current_price:
@@ -900,7 +920,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 if current_price <= approximated_lowest_sell_price:
                     # current price is beyond grid minimum sell price: trigger trailing
                     return True
-            else:
+            elif trail_on_missing_orders:
                 return True
         return False
 
@@ -914,12 +934,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self._set_increment_and_spread(current_price)
         else:
             async with self.producer_exchange_wide_lock(self.exchange_manager):
+                if trigger_trailing and self.is_currently_trailing:
+                    self.logger.debug(
+                        f"{self.symbol} on {self.exchange_name}: trailing signal ignored: "
+                        f"a trailing process is already running"
+                    )
+                    return
                 # use exchange level lock to prevent funds double spend
-                buy_orders, sell_orders = await self._generate_staggered_orders(
+                buy_orders, sell_orders, triggering_trailing = await self._generate_staggered_orders(
                     current_price, ignore_available_funds, trigger_trailing
                 )
                 staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-                await self._create_not_virtual_orders(staggered_orders, current_price)
+                await self._create_not_virtual_orders(staggered_orders, current_price, triggering_trailing)
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
@@ -951,7 +977,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} with "
                               f"interfering orders using pair(s): {interfering_orders_pairs}. "
                               f"{self.ORDERS_DESC.capitalize()} orders require no other orders in both base and quote.")
-            return [], []
+            return [], [], False
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
@@ -962,11 +988,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                since=recent_trades_time)
         recently_closed_trades = sorted(recently_closed_trades, key=lambda trade: trade.executed_price)
         candidate_flat_increment = None
-        trigger_trailing = trigger_trailing or (
-            sorted_orders and self._should_trigger_trailing(sorted_orders, current_price)
+        trigger_trailing = trigger_trailing or bool(
+            sorted_orders and self._should_trigger_trailing(sorted_orders, current_price, False)
         )
         if trigger_trailing:
             await self._prepare_trailing(sorted_orders, current_price)
+            self.is_currently_trailing = True
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
         else:
@@ -995,7 +1022,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
-        return buy_orders, sell_orders
+        return buy_orders, sell_orders, trigger_trailing
 
     async def _reset_orders(
         self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
@@ -2135,11 +2162,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         max_quantity = average_order_quantity * (1 + mode_multiplier / 2)
         return min_quantity, max_quantity
 
-    async def _create_order(self, order, current_price):
+    async def _create_order(self, order, current_price, completing_trailing):
         data = {
             StaggeredOrdersTradingModeConsumer.ORDER_DATA_KEY: order,
             StaggeredOrdersTradingModeConsumer.CURRENT_PRICE_KEY: current_price,
             StaggeredOrdersTradingModeConsumer.SYMBOL_MARKET_KEY: self.symbol_market,
+            StaggeredOrdersTradingModeConsumer.COMPLETING_TRAILING_KEY: completing_trailing,
         }
         state = trading_enums.EvaluatorStates.LONG if order.side is trading_enums.TradeOrderSide.BUY else trading_enums.EvaluatorStates.SHORT
         await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
@@ -2148,9 +2176,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                              state=state,
                                              data=data)
 
-    async def _create_not_virtual_orders(self, orders_to_create, current_price):
-        for order in orders_to_create:
-            await self._create_order(order, current_price)
+    async def _create_not_virtual_orders(
+        self, orders_to_create: list, current_price: decimal.Decimal, triggering_trailing: bool
+    ):
+        for index, order in enumerate(orders_to_create):
+            is_completing_trailing = triggering_trailing and (index == len(orders_to_create) - 1)
+            await self._create_order(order, current_price, is_completing_trailing)
             base, quote = symbol_util.parse_symbol(order.symbol).base_and_quote()
             # keep track of the required funds
             volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \
