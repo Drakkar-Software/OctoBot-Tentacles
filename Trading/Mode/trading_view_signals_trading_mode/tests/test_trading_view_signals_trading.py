@@ -387,7 +387,8 @@ async def test_signal_callback(tools):
         trading_api.load_pair_contract(
             exchange_manager,
             trading_api.create_default_future_contract(
-                "BTC/USDT", decimal.Decimal(4), trading_enums.FutureContractType.LINEAR_PERPETUAL
+                "BTC/USDT", decimal.Decimal(4), trading_enums.FutureContractType.LINEAR_PERPETUAL,
+                trading_constants.DEFAULT_SYMBOL_POSITION_MODE
             ).to_dict()
         )
         await producer.signal_callback({

@@ -104,6 +104,8 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         await trader.initialize()
 
         # set BTC/USDT price at 1000 USDT
+        if symbol not in exchange_manager.client_symbols:
+            exchange_manager.client_symbols.append(symbol)
         trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
 
         mode, producer = await _init_trading_mode(config, exchange_manager, symbol)
@@ -1371,6 +1373,70 @@ async def test_create_order():
             assert created_orders == []
 
 
+async def test_create_state():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, consumer, exchange_manager = tools
+        price = decimal.Decimal(1000)
+        ignore_mirror_orders_only = False
+        ignore_available_funds = False
+        trigger_trailing = False
+        _, _, _, _, producer.symbol_market = await trading_personal_data.get_pre_order_data(exchange_manager, symbol)
+        # not triggering trailing
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], False))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_awaited_once_with(price, ignore_available_funds, trigger_trailing)
+            _create_not_virtual_orders_mock.assert_awaited_once_with([], price, False)
+
+        # triggering trailing
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], True))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_awaited_once_with(price, ignore_available_funds, trigger_trailing)
+            _create_not_virtual_orders_mock.assert_awaited_once_with([], price, True)
+        trigger_trailing = True
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], True))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_awaited_once_with(price, ignore_available_funds, trigger_trailing)
+            _create_not_virtual_orders_mock.assert_awaited_once_with([], price, True)
+
+        # already trailing: skip call
+        producer.is_currently_trailing = True
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], True))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_not_called()
+            _create_not_virtual_orders_mock.assert_not_called()
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], False))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_not_called()
+            _create_not_virtual_orders_mock.assert_not_called()
+
+        # not tailing anymore: can now call
+        producer.is_currently_trailing = False
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], True))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_awaited_once_with(price, ignore_available_funds, trigger_trailing)
+            _create_not_virtual_orders_mock.assert_awaited_once_with([], price, True)
+        trigger_trailing = True
+        with mock.patch.object(producer, "_generate_staggered_orders", mock.AsyncMock(return_value=([], [], False))) \
+            as _generate_staggered_orders_mock, mock.patch.object(producer, "_create_not_virtual_orders", mock.AsyncMock()) \
+            as _create_not_virtual_orders_mock:
+            await producer.create_state(price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing)
+            _generate_staggered_orders_mock.assert_awaited_once_with(price, ignore_available_funds, trigger_trailing)
+            _create_not_virtual_orders_mock.assert_awaited_once_with([], price, False)
+
+
 async def test_create_new_orders():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
@@ -1383,15 +1449,26 @@ async def test_create_new_orders():
 
         # valid input
         price = decimal.Decimal(205)
-        quantity = decimal.Decimal(4)
+        quantity = decimal.Decimal(1)
         side = trading_enums.TradeOrderSide.BUY
         to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+        producer.is_currently_trailing = True
         data = {
             consumer.ORDER_DATA_KEY: to_create_order,
             consumer.CURRENT_PRICE_KEY: price,
-            consumer.SYMBOL_MARKET_KEY: symbol_market
+            consumer.SYMBOL_MARKET_KEY: symbol_market,
+            consumer.COMPLETING_TRAILING_KEY: False,
         }
         assert await consumer.create_new_orders(symbol, None, None, data=data)
+        assert producer.is_currently_trailing is True
+        data = {
+            consumer.ORDER_DATA_KEY: to_create_order,
+            consumer.CURRENT_PRICE_KEY: price,
+            consumer.SYMBOL_MARKET_KEY: symbol_market,
+            consumer.COMPLETING_TRAILING_KEY: True, # will update producer.is_currently_trailing
+        }
+        assert await consumer.create_new_orders(symbol, None, None, data=data)
+        assert producer.is_currently_trailing is False  # updated to false
 
         # invalid input 1
         data = {
@@ -1489,6 +1566,313 @@ async def test_single_exchange_process_optimize_initial_portfolio():
         assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
+async def test_prepare_trailing():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+        # price info: create orders
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        # simulate price being stable
+        cancelled_orders, created_orders = await producer._prepare_trailing(open_orders, current_price=4000)
+        assert len(cancelled_orders) == len(open_orders)
+        # cancelled orders
+        updated_open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        assert updated_open_orders == []
+
+        # created order to balance BTC and USD (sell BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal("4.87500000")
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal("19.5")
+        assert isinstance(created_orders[0], trading_personal_data.SellMarketOrder)
+
+        portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        # portfolio is now balanced
+        assert portfolio["BTC"].available == decimal.Decimal("5.125")   # 5.125 x 4000 = 20500
+        assert portfolio["USD"].available == decimal.Decimal("20480.5") == decimal.Decimal("20500") - fees
+
+        # price change (going down), no order to cancel: just adapt pf
+        trading_api.force_set_mark_price(exchange_manager, symbol, 3000)
+        cancelled_orders, created_orders = await producer._prepare_trailing(open_orders, current_price=3000)
+        # no order to cancel (orders are already cancelled)
+        assert len(cancelled_orders) == 0
+        # created order to balance BTC and USD (buy BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal('0.85091666')
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal('0.00085091666')
+        assert isinstance(created_orders[0], trading_personal_data.BuyMarketOrder)
+
+        assert portfolio["BTC"].available == decimal.Decimal('5.97506574334')   # Decimal('5.97506574334') x 3000 = Decimal('17925.19723002000')
+        assert portfolio["USD"].available == decimal.Decimal('17927.75002000000')
+
+        # price change (going up), no order to cancel: just adapt pf
+        trading_api.force_set_mark_price(exchange_manager, symbol, 8000)
+        cancelled_orders, created_orders = await producer._prepare_trailing([], current_price=8000)
+        # no order to cancel
+        assert len(cancelled_orders) == 0
+        # created order to balance BTC and USD (buy BTC)
+        assert len(created_orders) == 1
+        assert created_orders[0].symbol == symbol
+        assert created_orders[0].origin_quantity == decimal.Decimal('1.86704849')
+        fees = created_orders[0].fee[trading_enums.FeePropertyColumns.COST.value]
+        assert fees == decimal.Decimal('14.93638792000')
+        assert isinstance(created_orders[0], trading_personal_data.SellMarketOrder)
+
+        assert portfolio["BTC"].available == decimal.Decimal('4.10801725334')   # Decimal('4.10801725334') x 8000 = Decimal('32864.13802672000')
+        assert portfolio["USD"].available == decimal.Decimal('32849.20155208000')
+
+
+async def test_should_trigger_trailing_not_all_buy_order_created():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        current_price = decimal.Decimal(4000)
+        producer, _, exchange_manager = tools
+        # A. no open order: no trailing
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing([], current_price, False) is False
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+
+        # B. trailing disabled
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        assert len(buy_orders) > 10
+        assert len(sell_orders) > 10
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+
+        # C. trailing enabled
+        producer.enable_trailing_up = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        # True because all buy orders couldn't be created: impossible to check accurately
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is True
+
+        producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, decimal.Decimal(100), False) is True
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is True
+
+        # D. no trailing if at least 1 order on each side
+        assert producer._should_trigger_trailing(buy_orders + sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing([buy_orders[0]] + sell_orders, current_price, False) is False
+
+        # E. use open orders
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        assert producer._should_trigger_trailing([], current_price, True) is False
+
+
+async def test_should_trigger_trailing_all_buy_order_created():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        current_price = decimal.Decimal(4000)
+        producer, _, exchange_manager = tools
+        producer.increment = decimal.Decimal("0.02")    # instead of 0.04
+        # A. no open order: no trailing
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing([], current_price, False) is False
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+
+        # B. trailing disabled
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        assert len(buy_orders) > 10
+        assert len(sell_orders) > 10
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+
+        # C. trailing enabled
+        producer.enable_trailing_up = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, None, False) is False
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(buy_orders, decimal.Decimal(6000), False) is True
+        assert producer._should_trigger_trailing(buy_orders, None, True) is True
+        assert producer._should_trigger_trailing(buy_orders, None, False) is False
+
+        producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, decimal.Decimal(2000), False) is True
+        assert producer._should_trigger_trailing(sell_orders, None, True) is True
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(buy_orders, None, False) is False
+        assert producer._should_trigger_trailing(buy_orders, None, True) is True
+
+        # D. no trailing if at least 1 order on each side
+        assert producer._should_trigger_trailing(buy_orders + sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing([buy_orders[0]] + sell_orders, current_price, False) is False
+
+        # E. use open orders
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        assert producer._should_trigger_trailing([], current_price, True) is False  # has open orders on the other side
+
+
+async def test_order_notification_callback():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        producer.increment = decimal.Decimal("0.02") # replaces 0.04
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+
+        # cancel sell orders and change reference price to 6000: should trigger trailing
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        for order in sell_orders:
+            await exchange_manager.trader.cancel_order(order)
+        trading_api.force_set_mark_price(exchange_manager, symbol, 6000)
+        filled_order = buy_orders[0]
+        filled_order.filled_price = 6000
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            # trailing disabled
+            _lock_portfolio_and_create_order_when_possible.assert_called_once()
+        assert len(exchange_manager.exchange_personal_data.orders_manager.get_open_orders()) == len(sell_orders) - 1
+
+        # will trail
+        filled_order = buy_orders[1]
+        filled_order.filled_price = 6000
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            # trailing trigger
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+            updated_open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+            buy_orders = [order for order in updated_open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+            sell_orders = [order for order in updated_open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+            assert len(buy_orders) == 25
+            assert len(sell_orders) == 25
+            # trailed instead
+            _lock_portfolio_and_create_order_when_possible.assert_not_called()
+
+        filled_order = buy_orders[0]
+        with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
+            await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
+            # do not trail again, create mirror order instead
+            _lock_portfolio_and_create_order_when_possible.assert_called_once()
+
+
+async def test_create_mirror_order():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        # create orders
+        price = 100
+        producer.mode = staggered_orders_trading.StrategyModes.NEUTRAL
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        buy_sell_increment = producer.flat_spread - producer.flat_increment
+
+        # mirroring buy order
+        buy_1 = buy_orders[0]
+        assert buy_1.origin_price == decimal.Decimal("97")
+        assert buy_1.origin_quantity == decimal.Decimal("0.46")
+        assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
+        assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
+        assert buy_1_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        assert buy_1_mirror_order.symbol == symbol
+        assert buy_1_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_1_mirror_order.quantity < buy_1.origin_quantity
+        assert buy_1_mirror_order.quantity == decimal.Decimal('0.4595400')
+
+        # mirroring sell order
+        sell_1 = sell_orders[0]
+        assert sell_1.origin_price == decimal.Decimal("103")
+        assert sell_1.origin_quantity == decimal.Decimal('0.00464646')
+        assert sell_1.side == trading_enums.TradeOrderSide.SELL
+        sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
+        assert sell_1_mirror_order.associated_entry_id == sell_1.order_id
+        assert sell_1_mirror_order.side == trading_enums.TradeOrderSide.BUY
+        assert sell_1_mirror_order.symbol == symbol
+        assert sell_1_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
+        assert sell_1_mirror_order.quantity > sell_1.origin_quantity
+        assert sell_1_mirror_order.quantity == decimal.Decimal('0.004733730639801980198019801981')
+
+        # fill price is != from origin price => use origin price to avoid moving grid orders
+        assert buy_1.origin_price == decimal.Decimal("97")
+        buy_1.filled_price = decimal.Decimal("96")  # simulate fill at 96
+        buy_2_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_2_mirror_order, staggered_orders_trading.OrderData)
+        # mirror order price is still 99, even if fill price is not 97
+        assert buy_2_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_2_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        # new sell order quantity is equal to previous mirror order quantity: only the amount of USDT spend is smaller
+        assert buy_2_mirror_order.quantity == buy_1_mirror_order.quantity
+        assert buy_2_mirror_order.quantity == decimal.Decimal('0.4595400')
+
+        # sell_1 will be found in trades
+        assert sell_1.origin_price == decimal.Decimal("103")
+        sell_1.filled_price = decimal.Decimal("110")  # simulate fill at 110
+        await _fill_order(sell_1, exchange_manager, trigger_update_callback=False, producer=producer)
+        maybe_trade, maybe_order = exchange_manager.exchange_personal_data.get_trade_or_open_order(
+            sell_1.order_id
+        )
+        assert maybe_trade
+        assert maybe_trade.origin_price == decimal.Decimal("103")
+        assert maybe_order is None
+        sell_2_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        # mirror order price is still 101, even if fill price is not 110
+        assert sell_2_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
+        assert sell_2_mirror_order.side == trading_enums.TradeOrderSide.BUY
+        # new buy order quantity is larger than previous one as sell order was filled at a higher price
+        assert sell_2_mirror_order.quantity > sell_1_mirror_order.quantity
+        assert sell_2_mirror_order.quantity == decimal.Decimal('0.005055854530099009900990099009')
+
+
 async def _wait_for_orders_creation(orders_count=1):
     for _ in range(orders_count):
         await asyncio_tools.wait_asyncio_next_cycle()
@@ -1559,9 +1943,10 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
                                  expected_sell_count, price, symbol_market):
     async with exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
         producer._refresh_symbol_data(symbol_market)
-        buy_orders, sell_orders = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False)
+        buy_orders, sell_orders, triggering_trailing = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False, False)
         assert len(buy_orders) == expected_buy_count
         assert len(sell_orders) == expected_sell_count
+        assert triggering_trailing is False
 
         assert all(o.price < price for o in buy_orders)
         assert all(o.price > price for o in sell_orders)
@@ -1582,7 +1967,7 @@ async def _check_generate_orders(exchange_manager, producer, expected_buy_count,
         if staggered_orders:
             assert not any(order for order in staggered_orders if order.is_virtual)
 
-        await producer._create_not_virtual_orders(staggered_orders, price)
+        await producer._create_not_virtual_orders(staggered_orders, price, triggering_trailing)
 
         assert all(producer.highest_sell >= o.price >= producer.lowest_buy
                    for o in sell_orders)
@@ -1697,9 +2082,10 @@ def _check_orders(orders, strategy_mode, producer, exchange_manager):
 
 
 async def _light_check_orders(producer, exchange_manager, expected_buy_count, expected_sell_count, price):
-    buy_orders, sell_orders = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False)
+    buy_orders, sell_orders, triggering_trailing = await producer._generate_staggered_orders(decimal.Decimal(str(price)), False, False)
     assert len(buy_orders) == expected_buy_count
     assert len(sell_orders) == expected_sell_count
+    assert triggering_trailing is False
 
     assert all(o.price < price for o in buy_orders)
     assert all(o.price > price for o in sell_orders)
@@ -1714,7 +2100,7 @@ async def _light_check_orders(producer, exchange_manager, expected_buy_count, ex
     if staggered_orders:
         assert not any(order for order in staggered_orders if order.is_virtual)
 
-    await producer._create_not_virtual_orders(staggered_orders, price)
+    await producer._create_not_virtual_orders(staggered_orders, price, triggering_trailing)
 
     await asyncio.create_task(_wait_for_orders_creation(len(staggered_orders)))
     open_orders = trading_api.get_open_orders(exchange_manager)
