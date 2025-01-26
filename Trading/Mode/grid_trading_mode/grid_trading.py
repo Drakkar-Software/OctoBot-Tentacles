@@ -440,7 +440,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 highest_buy = current_price
                 lowest_sell = current_price
                 origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
-                    sorted_orders, recently_closed_trades
+                    recently_closed_trades, sorted_orders
                 )
 
                 min_max_total_order_price_delta = (
@@ -485,6 +485,12 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 self.logger.info(
                     f"{len(missing_orders)} missing {self.symbol} orders on {self.exchange_name}: {missing_orders}"
                 )
+            else:
+                self.logger.info(
+                    f"All {len(sorted_orders)} out of {self.buy_orders_count + self.sell_orders_count} {self.symbol} "
+                    f"target orders are in place on {self.exchange_name}"
+                )
+
             await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
             # apply state and (re)create missing orders
@@ -515,10 +521,13 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         origin_created_buy_orders_count = self.buy_orders_count
         origin_created_sell_orders_count = self.sell_orders_count
         if recent_trades:
+            # in case all initial orders didn't get created, try to infer the original value from open orders and trades
             buy_orders_count = len([order for order in open_orders if order.side is trading_enums.TradeOrderSide.BUY])
             buy_trades_count = len([trade for trade in recent_trades if trade.side is trading_enums.TradeOrderSide.BUY])
             origin_created_buy_orders_count = buy_orders_count + buy_trades_count
-            origin_created_sell_orders_count = len(open_orders) + len(recent_trades) - origin_created_buy_orders_count
+            origin_created_sell_orders_count = (
+                len(open_orders) + len(recent_trades) - origin_created_buy_orders_count
+            )
         return origin_created_buy_orders_count, origin_created_sell_orders_count
 
     def _get_grid_trades_or_orders(self, trades_or_orders):
