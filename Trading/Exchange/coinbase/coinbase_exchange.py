@@ -172,37 +172,39 @@ class Coinbase(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
-            # warning might become deprecated
-            # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
-            portfolio_id = None
-            accounts = await self.connector.client.fetch_accounts()
-            # use portfolio id when possible to enable "coinbase subaccounts" which are called "portfolios"
-            # note: oldest portfolio portfolio id == user id (from previous v2PrivateGetUser) when using master account
-            portfolio_ids = set(account[ccxt_constants.CCXT_INFO]['retail_portfolio_id'] for account in accounts)
-            if len(portfolio_ids) != 1:
-                is_up_to_date_key = self._is_up_to_date_api_key()
-                if is_up_to_date_key:
-                    self.logger.error(
-                        f"Unexpected: failed to identify Coinbase portfolio id on up to date API keys: "
-                        f"{portfolio_ids=}"
+            with self.connector.error_describer():
+                # warning might become deprecated
+                # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
+                portfolio_id = None
+                accounts = await self.connector.client.fetch_accounts()
+                # use portfolio id when possible to enable "coinbase subaccounts" which are called "portfolios"
+                # note: oldest portfolio portfolio id == user id (from previous v2PrivateGetUser) when
+                # using master account
+                portfolio_ids = set(account[ccxt_constants.CCXT_INFO]['retail_portfolio_id'] for account in accounts)
+                if len(portfolio_ids) != 1:
+                    is_up_to_date_key = self._is_up_to_date_api_key()
+                    if is_up_to_date_key:
+                        self.logger.error(
+                            f"Unexpected: failed to identify Coinbase portfolio id on up to date API keys: "
+                            f"{portfolio_ids=}"
+                        )
+                    sorted_portfolios = sorted(
+                        [
+                            account[ccxt_constants.CCXT_INFO]
+                            for account in accounts
+                        ],
+                        key=lambda account: account["created_at"],
                     )
-                sorted_portfolios = sorted(
-                    [
-                        account[ccxt_constants.CCXT_INFO]
-                        for account in accounts
-                    ],
-                    key=lambda account: account["created_at"],
-                )
-                portfolio_id = sorted_portfolios[0]['retail_portfolio_id']
-                self.logger.info(
-                    f"{len(portfolio_ids)} portfolio found on Coinbase account. "
-                    f"This can happen with non up-to-date API keys ({is_up_to_date_key=}). "
-                    f"Using the oldest portfolio id to bind to main account: {portfolio_id=}."
-                )
-            else:
-                portfolio_id = next(iter(portfolio_ids))
-            return portfolio_id
-        except ccxt.BaseError as err:
+                    portfolio_id = sorted_portfolios[0]['retail_portfolio_id']
+                    self.logger.info(
+                        f"{len(portfolio_ids)} portfolio found on Coinbase account. "
+                        f"This can happen with non up-to-date API keys ({is_up_to_date_key=}). "
+                        f"Using the oldest portfolio id to bind to main account: {portfolio_id=}."
+                    )
+                else:
+                    portfolio_id = next(iter(portfolio_ids))
+                return portfolio_id
+        except (ccxt.BaseError, octobot_trading.errors.OctoBotExchangeError) as err:
             self.logger.exception(
                 err, True,
                 f"Error when fetching {self.get_name()} account id: {err} ({err.__class__.__name__}). "

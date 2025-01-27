@@ -1502,7 +1502,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         # missing order between similar orders
                         quantity = self._get_surrounded_missing_order_quantity(
                             previous_o, following_o, max_quant_per_order, decimal_missing_order_price, recent_trades,
-                            current_price, sorted_orders
+                            current_price, sorted_orders, side
                         )
                         orders.append(OrderData(missing_order_side, quantity,
                                                 decimal_missing_order_price, self.symbol, False))
@@ -1578,9 +1578,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _get_surrounded_missing_order_quantity(
         self, previous_order, following_order, max_quant_per_order, order_price, recent_trades,
-            current_price, sorted_orders
+            current_price, sorted_orders, side
     ):
-        selling = previous_order.side == trading_enums.TradeOrderSide.SELL
+        selling = side == trading_enums.TradeOrderSide.SELL
         if sorted_orders:
             if quantity := self._get_quantity_from_existing_orders(
                 order_price, sorted_orders, selling
@@ -1594,10 +1594,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 min(
                     data_util.mean([previous_order.origin_quantity, following_order.origin_quantity])
                     if following_order else previous_order.origin_quantity,
-                    max_quant_per_order / order_price
+                    (max_quant_per_order if selling else max_quant_per_order / order_price)
                 )
-            )
-        )
+            ))
 
     def _get_spread_missing_order_quantity(
         self, average_order_quantity, side, i, orders_count, price, selling, limiting_amount_from_this_order,

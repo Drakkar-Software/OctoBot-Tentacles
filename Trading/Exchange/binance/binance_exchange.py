@@ -116,14 +116,15 @@ class Binance(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
-            if self.exchange_manager.is_future:
-                raw_binance_balance = await self.connector.client.fapiPrivateV3GetBalance()
-                # accountAlias = unique account code
-                # from https://binance-docs.github.io/apidocs/futures/en/#futures-account-balance-v3-user_data
-                return raw_binance_balance[0]["accountAlias"]
-            else:
-                raw_balance = await self.connector.client.fetch_balance()
-                return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+            with self.connector.error_describer():
+                if self.exchange_manager.is_future:
+                    raw_binance_balance = await self.connector.client.fapiPrivateV3GetBalance()
+                    # accountAlias = unique account code
+                    # from https://binance-docs.github.io/apidocs/futures/en/#futures-account-balance-v3-user_data
+                    return raw_binance_balance[0]["accountAlias"]
+                else:
+                    raw_balance = await self.connector.client.fetch_balance()
+                    return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
         except (KeyError, IndexError):
             # should not happen
             raise

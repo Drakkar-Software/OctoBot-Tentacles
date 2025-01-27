@@ -25,6 +25,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
@@ -175,56 +176,54 @@ class Kucoin(exchanges.RestExchange):
         # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
         # updated: 21/05/2024
         try:
-            account_id = None
-            subaccount_id = None
-            sub_accounts = await self.connector.client.private_get_sub_accounts()
-            accounts = sub_accounts.get("data", {}).get("items", {})
-            has_subaccounts = bool(accounts)
-            if has_subaccounts:
-                if len(accounts) == 1:
-                    # only 1 account: use its id or name
-                    account = accounts[0]
-                    # try using subUserId if available
-                    # 'ex subUserId: 65d41ea409407d000160cc17 subName: octobot1'
-                    account_id = account.get("subUserId") or account["subName"]
-                else:
-                    # more than 1 account: consider other accounts
-                    for account in accounts:
-                        if account["subUserId"]:
-                            subaccount_id = account["subName"]
-                        else:
-                            # only subaccounts have a subUserId: if this condition is True, we are on the main account
-                            account_id = account["subName"]
-                if account_id and self.exchange_manager.is_future:
-                    account_id = octobot.community.to_community_exchange_internal_name(
-                        account_id, commons_constants.CONFIG_EXCHANGE_FUTURE
+            with self.connector.error_describer():
+                account_id = None
+                subaccount_id = None
+                sub_accounts = await self.connector.client.private_get_sub_accounts()
+                accounts = sub_accounts.get("data", {}).get("items", {})
+                has_subaccounts = bool(accounts)
+                if has_subaccounts:
+                    if len(accounts) == 1:
+                        # only 1 account: use its id or name
+                        account = accounts[0]
+                        # try using subUserId if available
+                        # 'ex subUserId: 65d41ea409407d000160cc17 subName: octobot1'
+                        account_id = account.get("subUserId") or account["subName"]
+                    else:
+                        # more than 1 account: consider other accounts
+                        for account in accounts:
+                            if account["subUserId"]:
+                                subaccount_id = account["subName"]
+                            else:
+                                # only subaccounts have a subUserId: if this condition is True, we are on the main account
+                                account_id = account["subName"]
+                    if account_id and self.exchange_manager.is_future:
+                        account_id = octobot.community.to_community_exchange_internal_name(
+                            account_id, commons_constants.CONFIG_EXCHANGE_FUTURE
+                        )
+                if subaccount_id:
+                    # there is at least a subaccount: ensure the current account is the main account as there is no way
+                    # to know the id of the current account (only a list of existing accounts)
+                    subaccount_api_key_details = await self.connector.client.private_get_sub_api_key(
+                        {"subName": subaccount_id}
                     )
-            if subaccount_id:
-                # there is at least a subaccount: ensure the current account is the main account as there is no way
-                # to know the id of the current account (only a list of existing accounts)
-                subaccount_api_key_details = await self.connector.client.private_get_sub_api_key(
-                    {"subName": subaccount_id}
-                )
-                if "data" not in subaccount_api_key_details or "msg" in subaccount_api_key_details:
-                    # subaccounts can't fetch other accounts data, if this is False, we are on a subaccount
+                    if "data" not in subaccount_api_key_details or "msg" in subaccount_api_key_details:
+                        # subaccounts can't fetch other accounts data, if this is False, we are on a subaccount
+                        self.logger.error(
+                            f"kucoin api changed: it is now possible to call private_get_sub_accounts on subaccounts. "
+                            f"kucoin get_account_id has to be updated. "
+                            f"sub_accounts={sub_accounts} subaccount_api_key_details={subaccount_api_key_details}"
+                        )
+                        return constants.DEFAULT_ACCOUNT_ID
+                if has_subaccounts and account_id is None:
                     self.logger.error(
-                        f"kucoin api changed: it is now possible to call private_get_sub_accounts on subaccounts. "
-                        f"kucoin get_account_id has to be updated. "
-                        f"sub_accounts={sub_accounts} subaccount_api_key_details={subaccount_api_key_details}"
+                        f"kucoin api changed: can't fetch master account account_id. "
+                        f"kucoin get_account_id has to be updated."
+                        f"sub_accounts={sub_accounts}"
                     )
-                    return constants.DEFAULT_ACCOUNT_ID
-            if has_subaccounts and account_id is None:
-                self.logger.error(
-                    f"kucoin api changed: can't fetch master account account_id. "
-                    f"kucoin get_account_id has to be updated."
-                    f"sub_accounts={sub_accounts}"
-                )
-                account_id = constants.DEFAULT_ACCOUNT_ID
-            # we are on the master account
-            return account_id or constants.DEFAULT_ACCOUNT_ID
-        except ccxt.AuthenticationError:
-            # when api key is wrong
-            raise
+                    account_id = constants.DEFAULT_ACCOUNT_ID
+                # we are on the master account
+                return account_id or constants.DEFAULT_ACCOUNT_ID
         except ccxt.ExchangeError as err:
             # ExchangeError('kucoin This user is not a master user')
             if "not a master user" not in str(err):
