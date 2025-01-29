@@ -526,7 +526,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 local_take_profits_details = [
                     OrderDetails(decimal.Decimal("nan"), current_order.origin_quantity)
                 ]
-            for take_profits_detail in local_take_profits_details:
+            for index, take_profits_detail in enumerate(local_take_profits_details):
+                is_last = index == len(local_take_profits_details) - 1
                 take_profit_price = trading_personal_data.decimal_adapt_price(
                     symbol_market,
                     current_order.origin_price * (
@@ -540,7 +541,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 param_update, chained_order = await self.register_chained_order(
                     current_order, take_profit_price, order_type, exit_side,
-                    quantity=take_profits_detail.quantity, tag=tag, reduce_only=reduce_only_chained_orders
+                    quantity=take_profits_detail.quantity, tag=tag, reduce_only=reduce_only_chained_orders,
+                    # only the last order is to take trigger fees into account
+                    update_with_triggering_order_fees=is_last and not self.exchange_manager.is_future
                 )
                 params.update(param_update)
                 chained_orders.append(chained_order)

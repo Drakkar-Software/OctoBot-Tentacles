@@ -1075,6 +1075,7 @@ async def test_chained_multiple_take_profit_orders(tools):
     tp_prices = [decimal.Decimal("100000"), decimal.Decimal("110000"), decimal.Decimal("120000")]
     assert len(buy_order.chained_orders) == len(tp_prices)
     for i, take_profit_order in enumerate(buy_order.chained_orders):
+        is_last = i == len(buy_order.chained_orders) - 1
         assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
         assert take_profit_order.origin_quantity == (
             decimal.Decimal("0.01")
@@ -1085,6 +1086,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert take_profit_order.associated_entry_ids == [buy_order.order_id]
         assert not take_profit_order.is_open()
         assert not take_profit_order.is_created()
+        assert take_profit_order.update_with_triggering_order_fees == is_last
 
     # only 2 additional (2 in total)
     data = {
@@ -1096,6 +1098,7 @@ async def test_chained_multiple_take_profit_orders(tools):
     tp_prices = [decimal.Decimal("110000"), decimal.Decimal("120000")]
     assert len(buy_order.chained_orders) == len(tp_prices)
     for i, take_profit_order in enumerate(buy_order.chained_orders):
+        is_last = i == len(buy_order.chained_orders) - 1
         assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
         assert take_profit_order.origin_quantity == (
             decimal.Decimal("0.01")
@@ -1106,6 +1109,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert take_profit_order.associated_entry_ids == [buy_order.order_id]
         assert not take_profit_order.is_open()
         assert not take_profit_order.is_created()
+        assert take_profit_order.update_with_triggering_order_fees == is_last
 
     # stop loss and 1 take profit and 5 additional (6 TP in total)
     tp_prices = [
@@ -1129,8 +1133,10 @@ async def test_chained_multiple_take_profit_orders(tools):
     assert stop_order.origin_price == decimal.Decimal("123")
     assert stop_order.is_waiting_for_chained_trigger
     assert stop_order.associated_entry_ids == [buy_order.order_id]
+    assert stop_order.update_with_triggering_order_fees is True
     assert len(buy_order.chained_orders[1:]) == len(tp_prices)
     for i, take_profit_order in enumerate(buy_order.chained_orders[1:]):
+        is_last = i == len(buy_order.chained_orders[1:]) - 1
         assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
         assert take_profit_order.origin_quantity == (
             decimal.Decimal("0.01")
@@ -1143,6 +1149,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert not take_profit_order.is_created()
         assert isinstance(stop_order.order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
         assert take_profit_order.order_group is stop_order.order_group
+        assert take_profit_order.update_with_triggering_order_fees == is_last
 
 
 async def test_create_stop_loss_orders(tools):
@@ -1168,6 +1175,7 @@ async def test_create_stop_loss_orders(tools):
     assert stop_order.origin_price == decimal.Decimal("10")
     assert stop_order.side is trading_enums.TradeOrderSide.SELL
     assert stop_order.is_waiting_for_chained_trigger is False
+    assert stop_order.update_with_triggering_order_fees is False    # not chained order
     assert stop_order.tag is None
     assert stop_order.is_open()
 

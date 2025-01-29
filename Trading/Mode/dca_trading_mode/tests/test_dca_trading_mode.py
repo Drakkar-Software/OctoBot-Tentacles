@@ -437,6 +437,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert stop_loss.triggered_by is entry_order
         assert stop_loss.order_group is None
         assert stop_loss.reduce_only is False
+        assert stop_loss.update_with_triggering_order_fees is True
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
@@ -458,6 +459,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert take_profit.triggered_by is entry_order
         assert take_profit.order_group is None
         assert take_profit.reduce_only is False
+        assert take_profit.update_with_triggering_order_fees is True
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
@@ -480,6 +482,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert isinstance(take_profit.state, trading_personal_data.PendingCreationChainedOrderState)
         assert take_profit.order_group is stop_loss.order_group
         assert isinstance(take_profit.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
+        assert take_profit.update_with_triggering_order_fees is True
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
@@ -510,7 +513,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         total_tp_quantity = trading_constants.ZERO
         previous_stop_price = entry_price
         previous_tp_price = trading_constants.ZERO
-        for (stop_loss, take_profit) in zip(stop_losses, take_profits):
+        for i, (stop_loss, take_profit) in enumerate(zip(stop_losses, take_profits)):
+            is_last = i == len(stop_losses) - 1
             assert isinstance(stop_loss.state, trading_personal_data.PendingCreationChainedOrderState)
             assert isinstance(take_profit.state, trading_personal_data.PendingCreationChainedOrderState)
             total_tp_quantity += take_profit.origin_quantity
@@ -526,6 +530,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
             # ensure orders are grouped together
             assert take_profit.order_group is stop_loss.order_group
             assert isinstance(take_profit.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
+            assert stop_loss.update_with_triggering_order_fees is is_last
+            assert take_profit.update_with_triggering_order_fees is is_last
         # ensure selling the total entry quantity
         assert total_stop_quantity == entry_order.origin_quantity
         assert total_tp_quantity == entry_order.origin_quantity
@@ -560,6 +566,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert len(take_profits) == 1
         assert all(order.reduce_only is True for order in entry_order.chained_orders)   # futures: use reduce only
         assert stop_losses[0].origin_quantity == take_profits[0].origin_quantity == entry_order.origin_quantity
+        # update_with_triggering_order_fees is false because we are trading futures
+        assert stop_losses[0].update_with_triggering_order_fees == take_profits[0].update_with_triggering_order_fees == False
 
 
 async def test_create_entry_order(tools):

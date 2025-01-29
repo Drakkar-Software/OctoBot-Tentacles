@@ -370,6 +370,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         can_bundle_exit_orders = len(exit_quantities) == 1
         reduce_only_chained_orders = self.exchange_manager.is_future
         for i, exit_quantity in exit_quantities:
+            is_last = i == len(exit_quantities)
             order_couple = []
             # stop loss
             if self.trading_mode.use_stop_loss:
@@ -377,7 +378,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side,
                     quantity=exit_quantity, allow_bundling=can_bundle_exit_orders,
-                    reduce_only=reduce_only_chained_orders
+                    reduce_only=reduce_only_chained_orders,
+                    # only the last order is to take trigger fees into account
+                    update_with_triggering_order_fees=is_last and not self.exchange_manager.is_future
                 )
                 params.update(param_update)
                 order_couple.append(chained_order)
@@ -403,7 +406,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, take_profit_price, take_profit_order_type, None,
                     quantity=exit_quantity, allow_bundling=can_bundle_exit_orders,
-                    reduce_only=reduce_only_chained_orders
+                    reduce_only=reduce_only_chained_orders,
+                    # only the last order is to take trigger fees into account
+                    update_with_triggering_order_fees=is_last and not self.exchange_manager.is_future
                 )
                 params.update(param_update)
                 order_couple.append(chained_order)
