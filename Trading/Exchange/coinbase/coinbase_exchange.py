@@ -106,6 +106,7 @@ class Coinbase(exchanges.RestExchange):
         # ExchangeError('coinbase {"error":"unknown","error_details":"Missing required scopes",
         # "message":"Missing required scopes"}')
         ("missing required scopes", ),
+        ("permission is required", ),
     ]
     # text content of errors due to traded assets for account
     EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
