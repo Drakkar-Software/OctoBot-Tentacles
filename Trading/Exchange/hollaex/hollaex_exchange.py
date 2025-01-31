@@ -34,6 +34,10 @@ class hollaex(exchanges.RestExchange):
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     DEFAULT_MAX_LIMIT = 500
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # '"message":"Access denied: Unauthorized Access. This key does not have the right permissions to access this endpoint"'
+        ("permissions to access",),
+    ]
 
     def __init__(
         self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
