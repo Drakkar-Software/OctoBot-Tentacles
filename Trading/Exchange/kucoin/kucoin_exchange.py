@@ -126,7 +126,11 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
         }
     }
-
+    # text content of errors due to api key permissions issues
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'kucoinfutures Access denied, require more permission'
+        ("require more permission",),
+    ]
     # text content of errors due to orders not found errors
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'kucoin The order does not exist.'
@@ -146,6 +150,10 @@ class Kucoin(exchanges.RestExchange):
         ('order cannot be canceled', ),
         ('order_not_exist_or_not_allow_to_cancel', )
     ]
+    # text content of errors due to unhandled IP white list issues
+    EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
+        # "kucoinfutures Invalid request ip, the current clientIp is:e3b:e3b:e3b:e3b:e3b:e3b:e3b:e3b"
+        ("invalid request ip",),]
 
     DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
 
