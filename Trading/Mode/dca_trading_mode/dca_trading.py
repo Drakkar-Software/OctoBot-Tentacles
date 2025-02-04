@@ -16,6 +16,7 @@
 import asyncio
 import decimal
 import enum
+import typing
 
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
@@ -599,10 +600,14 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.error(f"Unknown registration topic: {topic}")
         return registration_channels
 
+    def get_extra_init_symbol_topics(self) -> typing.Optional[list]:
+        if self.exchange_manager.is_backtesting:
+            # disabled in backtesting as price might not be initialized at this point
+            return None
+        # required as trigger can happen independently of price events when time based
+        return [commons_enums.InitializationEventExchangeTopics.PRICE.value]
+
     async def delayed_start(self):
-        await self._wait_for_bot_init(
-            self.CONFIG_INIT_TIMEOUT, extra_symbol_topics=[commons_enums.InitializationEventExchangeTopics.PRICE.value]
-        )
         await self.dca_task()
 
     async def _send_alert_notification(self, symbol, state, step):

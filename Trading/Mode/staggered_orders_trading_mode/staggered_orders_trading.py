@@ -640,6 +640,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.logger.debug(f"Initializing orders creation")
             await self._ensure_staggered_orders_and_reschedule()
 
+    def get_extra_init_symbol_topics(self) -> typing.Optional[list]:
+        if self.exchange_manager.is_backtesting:
+            # disabled in backtesting as price might not be initialized at this point
+            return None
+        # required as trigger happens independently of price events for initial orders
+        return [commons_enums.InitializationEventExchangeTopics.PRICE.value]
+
     async def stop(self):
         if self.trading_mode is not None:
             self.trading_mode.flush_trading_mode_consumers()
