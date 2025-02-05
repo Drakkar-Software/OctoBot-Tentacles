@@ -481,8 +481,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
         except trading_errors.MissingFunds as e:
             raise e
         except Exception as e:
-            self.logger.error(f"Failed to create order : {e}. Order: {order_data}")
-            self.logger.exception(e, False)
+            self.logger.exception(e, True, f"Failed to create order : {e}. Order: {order_data}")
             return None
         return [] if created_order is None else [created_order]
 
