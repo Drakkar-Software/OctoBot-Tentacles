@@ -145,7 +145,6 @@ class RedditServiceFeed(service_feeds.AbstractServiceFeed):
                     self.connect_attempts += 0.1
                 time.sleep(self._SLEEPING_TIME_BEFORE_RECONNECT_ATTEMPT_SEC)
             except Exception as e:
-                self.logger.error(f"Error when receiving Reddit feed: '{e}'")
                 self.logger.exception(e, True, f"Error when receiving Reddit feed: '{e}'")
                 self.keep_running = False
                 self.should_stop = True
