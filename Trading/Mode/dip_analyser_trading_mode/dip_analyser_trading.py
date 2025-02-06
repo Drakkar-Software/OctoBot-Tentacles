@@ -276,9 +276,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 trading_errors.OrderCreationError):
             raise
         except Exception as e:
-            self.logger.error(f"Failed to create order : {e}. Order: "
-                              f"{current_order if current_order else None}")
-            self.logger.exception(e, False)
+            self.logger.exception(
+                e, True, f"Failed to create order : {e}. Order: {current_order if current_order else None}"
+            )
             return []
 
     async def create_sell_orders(
@@ -332,9 +332,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 trading_errors.OrderCreationError):
             raise
         except Exception as e:
-            self.logger.error(f"Failed to create order : {e} ({e.__class__.__name__}). Order: "
-                              f"{current_order if current_order else None}")
-            self.logger.exception(e, False)
+            self.logger.exception(
+                e, True, f"Failed to create order : {e} ({e.__class__.__name__}). Order: "
+                f"{current_order if current_order else None}"
+            )
             return []
 
     async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_id):

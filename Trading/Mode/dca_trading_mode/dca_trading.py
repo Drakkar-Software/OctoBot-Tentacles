@@ -217,10 +217,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 trading_errors.MissingMinimalExchangeTradeVolume,
                 trading_errors.OrderCreationError):
             raise
-        except Exception as e:
-            self.logger.error(f"Failed to create order : {e}. Order: "
-                              f"{current_order if current_order else None}")
-            self.logger.exception(e, False)
+        except Exception as err:
+            self.logger.exception(
+                err, True, f"Failed to create order : {err}. Order: {current_order if current_order else None}"
+            )
             return []
 
     async def _cancel_existing_orders_if_replaceable(
