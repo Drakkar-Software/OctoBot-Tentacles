@@ -57,7 +57,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                            title="Configuration for each traded pairs.")
         self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT,
                            default_config[self.CONFIG_PAIR], inputs,
-                           other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                           other_schema_values={"minLength": 3, "pattern": commons_constants.TRADING_SYMBOL_REGEX},
                            parent_input_name=self.CONFIG_PAIR_SETTINGS,
                            title="Name of the traded pair.")
         self.UI.user_input(
