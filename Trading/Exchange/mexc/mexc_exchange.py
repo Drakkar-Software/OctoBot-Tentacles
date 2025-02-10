@@ -73,7 +73,7 @@ class MEXC(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # current impossible to get account UID (10/01/25)
-        return constants.DEFAULT_SUBACCOUNT_ID
+        return constants.DEFAULT_ACCOUNT_ID
 
     async def get_all_tradable_symbols(self, active_only=True) -> set[str]:
         """
