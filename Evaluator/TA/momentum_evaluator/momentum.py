@@ -371,6 +371,7 @@ class EMAMomentumEvaluator(evaluators.TAEvaluator):
         self.period_length = 21
         self.price_threshold_percent = 2
         self.price_threshold_multiplier = self.price_threshold_percent / 100
+        self.reverse_signal = False
 
     def init_user_inputs(self, inputs: dict) -> None:
         self.period_length = self.UI.user_input(
@@ -384,6 +385,11 @@ class EMAMomentumEvaluator(evaluators.TAEvaluator):
                   "which to trigger a long or short signal. "
                   "Example with EMA value=200, Price threshold=5: a short signal will fire when price is above or "
                   "equal to 210 and a long signal will when price is bellow or equal to 190",
+        )
+        self.reverse_signal = self.UI.user_input(
+            "reverse_signal", enums.UserInputTypes.BOOLEAN, self.reverse_signal, inputs,
+            title="Reverse signal: when enabled, emits a short signal when the current price is bellow the EMA "
+                  "value and long signal when the current price is above the EMA value.",
         )
         self.price_threshold_multiplier = self.price_threshold_percent / 100
 
@@ -400,10 +406,14 @@ class EMAMomentumEvaluator(evaluators.TAEvaluator):
         if len(candle_data) >= self.period_length:
             # compute ema
             ema_values = tulipy.ema(candle_data, self.period_length)
-            if candle_data[-1] >= (ema_values[-1] * (1 + self.price_threshold_multiplier)):
+            is_price_above_ema_threshold = candle_data[-1] >= (ema_values[-1] * (1 + self.price_threshold_multiplier))
+            is_price_bellow_ema_threshold = candle_data[-1] <= (ema_values[-1] * (1 - self.price_threshold_multiplier))
+            if is_price_above_ema_threshold:
                 self.eval_note = 1
-            elif candle_data[-1] <= (ema_values[-1] * (1 - self.price_threshold_multiplier)):
+            elif is_price_bellow_ema_threshold:
                 self.eval_note = -1
+            if self.reverse_signal:
+                self.eval_note = -1 * self.eval_note
         await self.evaluation_completed(cryptocurrency, symbol, time_frame,
                                         eval_time=evaluators_util.get_eval_time(full_candle=candle,
                                                                                 time_frame=time_frame))
