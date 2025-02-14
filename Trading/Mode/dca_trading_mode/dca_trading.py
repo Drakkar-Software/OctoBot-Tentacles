@@ -676,15 +676,18 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
+        default_config = self.get_default_config()
         self.trigger_mode = TriggerMode(
             self.UI.user_input(
-                DCATradingModeProducer.TRIGGER_MODE, commons_enums.UserInputTypes.OPTIONS, self.trigger_mode.value,
+                DCATradingModeProducer.TRIGGER_MODE, commons_enums.UserInputTypes.OPTIONS,
+                default_config[DCATradingModeProducer.TRIGGER_MODE],
                 inputs, options=[mode.value for mode in TriggerMode],
                 title="Trigger mode: When should DCA entry orders should be triggered."
             )
         )
         self.minutes_before_next_buy = int(self.UI.user_input(
-            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT, 10080, inputs,
+            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY, commons_enums.UserInputTypes.INT,
+            default_config[DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY], inputs,
             min_val=1,
             title="Trigger period: Minutes to wait between each transaction. Examples: 60 for 1 hour, 1440 for 1 day, "
                   "10080 for 1 week or 43200 for 1 month.",
@@ -696,7 +699,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         ))
         self.enable_initialization_entry = self.UI.user_input(
             DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            self.enable_initialization_entry, inputs,
+            default_config[DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS], inputs,
             title="Enable initialization entry orders: Automatically trigger entry orders "
                   "when starting OctoBot, regardless of initial evaluator values.",
             editor_options={
@@ -708,13 +711,14 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         trading_modes.user_select_order_amount(self, inputs, include_sell=False)
         self.use_market_entry_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            self.use_market_entry_orders, inputs,
+            default_config[DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS], inputs,
             title="Use market orders instead of limit orders."
         )
         self.entry_limit_orders_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.ENTRY_LIMIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.entry_limit_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeConsumer.ENTRY_LIMIT_ORDERS_PRICE_PERCENT]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 min_val=0,
                 title="Limit entry percent difference: Price difference in percent to compute the entry price from "
                       "when using limit orders. "
@@ -729,12 +733,12 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )) / trading_constants.ONE_HUNDRED
         self.use_secondary_entry_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_SECONDARY_ENTRY_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            self.use_secondary_entry_orders, inputs,
+            default_config[DCATradingModeConsumer.USE_SECONDARY_ENTRY_ORDERS], inputs,
             title="Enable secondary entry orders: Split entry into multiple orders using different prices."
         )
         self.secondary_entry_orders_count = self.UI.user_input(
             DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
-            self.secondary_entry_orders_count, inputs,
+            default_config[DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_COUNT], inputs,
             title="Secondary entry orders count: Number of secondary limit orders to create alongside the initial "
                   "entry order.",
             editor_options={
@@ -746,7 +750,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.secondary_entry_orders_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.secondary_entry_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_PRICE_PERCENT]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 title="Secondary entry orders price interval percent: Price difference in percent to compute the "
                       "price of secondary entry orders compared to the price of the initial entry order. "
                       "Example: 10 on a 1800 USDT entry buy (with an asset price of 2000) would "
@@ -759,7 +764,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             )
         )) / trading_constants.ONE_HUNDRED
         self.secondary_entry_orders_amount = self.UI.user_input(
-            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT, commons_enums.UserInputTypes.TEXT, "", inputs,
+            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT, commons_enums.UserInputTypes.TEXT,
+            default_config[DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT], inputs,
             title=f"Secondary entry orders amount: {trading_modes.get_order_amount_value_desc()}",
             other_schema_values={"minLength": 0},
             editor_options={
@@ -770,14 +776,15 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )
         self.use_take_profit_exit_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            self.use_take_profit_exit_orders, inputs,
+            default_config[DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS], inputs,
             title="Enable take profit exit orders: Automatically create take profit exit orders "
                   "when entries are filled."
         )
         self.exit_limit_orders_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.exit_limit_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 min_val=0,
                 title="Limit exit percent difference: Price difference in percent to compute the exit price from "
                       "after an entry is filled. "
@@ -791,7 +798,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )) / trading_constants.ONE_HUNDRED
         self.use_secondary_exit_orders = self.UI.user_input(
             DCATradingModeConsumer.USE_SECONDARY_EXIT_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            self.use_secondary_exit_orders, inputs,
+            default_config[DCATradingModeConsumer.USE_SECONDARY_EXIT_ORDERS], inputs,
             title="Enable secondary exit orders: Split each filled entry order into into multiple exit orders using "
                   "different prices.",
             editor_options={
@@ -802,7 +809,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         )
         self.secondary_exit_orders_count = self.UI.user_input(
             DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
-            self.secondary_exit_orders_count, inputs,
+            default_config[DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT], inputs,
             title="Secondary exit orders count: Number of secondary limit orders to create additionally to "
                   "the initial exit order. When enabled, the entry filled amount is split into each exit orders.",
             editor_options={
@@ -814,7 +821,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.secondary_exit_orders_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.secondary_exit_orders_price_multiplier * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_PRICE_PERCENT]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 title="Secondary exit orders price interval percent: Price difference in percent to compute the "
                       "price of secondary exit orders compared to the price of the associated entry order. "
                       "Example: 10 on a 2000 USDT exit sell price would create secondary exit sell orders "
@@ -827,13 +835,15 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             )
         )) / trading_constants.ONE_HUNDRED
         self.use_stop_loss = self.UI.user_input(
-            DCATradingModeConsumer.USE_STOP_LOSSES, commons_enums.UserInputTypes.BOOLEAN, self.use_stop_loss, inputs,
+            DCATradingModeConsumer.USE_STOP_LOSSES, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[DCATradingModeConsumer.USE_STOP_LOSSES], inputs,
             title="Enable stop losses: Create stop losses when entries are filled.",
         )
         self.stop_loss_price_multiplier = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeConsumer.STOP_LOSS_PRICE_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.stop_loss_price_multiplier * trading_constants.ONE_HUNDRED), inputs, min_val=0, max_val=100,
+                float(default_config[DCATradingModeConsumer.STOP_LOSS_PRICE_PERCENT] * trading_constants.ONE_HUNDRED),
+                inputs, min_val=0, max_val=100,
                 title="Stop loss price percent: maximum percent losses to compute the stop loss price from. "
                       "Example: a buy entry filled at 2000 with a Stop loss percent at"
                       " 15 will create a stop order at 1700.",
@@ -847,13 +857,13 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
 
         self.cancel_open_orders_at_each_entry = self.UI.user_input(
             DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY, commons_enums.UserInputTypes.BOOLEAN,
-            self.cancel_open_orders_at_each_entry, inputs,
+            default_config[DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY], inputs,
             title="Cancel open orders on each entry: Cancel existing orders from previous iteration on each entry.",
         )
 
         self.is_health_check_enabled = self.UI.user_input(
             self.ENABLE_HEALTH_CHECK, commons_enums.UserInputTypes.BOOLEAN,
-            self.is_health_check_enabled, inputs,
+            default_config[self.ENABLE_HEALTH_CHECK], inputs,
             title="Health check: when enabled, OctoBot will automatically sell traded assets that are not associated "
                   "to a sell order and that represent at least the 'Health check threshold' part of the "
                   "portfolio. Health check can be useful to avoid inactive funds, for example if a buy order got "
@@ -864,7 +874,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.health_check_orphan_funds_threshold = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD, commons_enums.UserInputTypes.FLOAT,
-                float(self.health_check_orphan_funds_threshold * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 title="Health check threshold: Minimum % of the portfolio taken by a traded asset that is not in "
                       "sell orders. Assets above this threshold will be sold for the common quote market during "
                       "Health check.",
@@ -878,13 +889,59 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         self.max_asset_holding_ratio = decimal.Decimal(str(
             self.UI.user_input(
                 DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT, commons_enums.UserInputTypes.FLOAT,
-                float(self.max_asset_holding_ratio * trading_constants.ONE_HUNDRED), inputs,
+                float(default_config[DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT]
+                      * trading_constants.ONE_HUNDRED), inputs,
                 title="Max asset holding: Maximum % of the portfolio to allocate to an asset. "
                       "Buy orders to buy this asset won't be created if this ratio is reached. "
                       "Only applied when trading on spot.",
                 min_val=0, max_val=100
             )
         )) / trading_constants.ONE_HUNDRED
+
+    @classmethod
+    def get_default_config(
+        cls,
+        buy_amount: typing.Optional[str] = None, sell_amount: typing.Optional[str] = None,
+        use_secondary_entry_orders: typing.Optional[bool] = None,
+        secondary_entry_orders_count: typing.Optional[int] = None,
+        exit_limit_orders_price_percent: typing.Optional[float] = None,
+        entry_limit_orders_price_percent: typing.Optional[float] = None,
+        secondary_entry_orders_price_percent: typing.Optional[float] = None,
+        enable_stop_loss: typing.Optional[bool] = None,
+        stop_loss_price: typing.Optional[float] = None
+    ) -> dict:
+        return {
+            trading_constants.CONFIG_BUY_ORDER_AMOUNT: buy_amount,
+            trading_constants.CONFIG_SELL_ORDER_AMOUNT: sell_amount,
+            DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value,
+            DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY: 10080,
+            DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS: False,
+            DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS: False,
+            DCATradingModeConsumer.ENTRY_LIMIT_ORDERS_PRICE_PERCENT:
+                entry_limit_orders_price_percent or DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
+            DCATradingModeConsumer.USE_SECONDARY_ENTRY_ORDERS: use_secondary_entry_orders or False,
+            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_COUNT:
+                secondary_entry_orders_count or DCATradingModeConsumer.DEFAULT_SECONDARY_ENTRY_ORDERS_COUNT,
+            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_PRICE_PERCENT:
+                secondary_entry_orders_price_percent or DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
+            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT: "",
+            DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS: False,
+            DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT:
+                exit_limit_orders_price_percent or DCATradingModeConsumer.DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER,
+            DCATradingModeConsumer.USE_SECONDARY_EXIT_ORDERS: False,
+            DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT:
+                DCATradingModeConsumer.DEFAULT_SECONDARY_EXIT_ORDERS_COUNT,
+            DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_PRICE_PERCENT:
+                DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
+            DCATradingModeConsumer.USE_STOP_LOSSES: enable_stop_loss or False,
+            DCATradingModeConsumer.STOP_LOSS_PRICE_PERCENT:
+                stop_loss_price or DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER,
+            DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY: True,
+            cls.ENABLE_HEALTH_CHECK: False,
+            DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD:
+                cls.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD,
+            DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT: decimal.Decimal(1),
+        }
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
