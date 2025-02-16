@@ -901,21 +901,26 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     @classmethod
     def get_default_config(
         cls,
-        buy_amount: typing.Optional[str] = None, sell_amount: typing.Optional[str] = None,
+        buy_amount: typing.Optional[str] = None,
+        sell_amount: typing.Optional[str] = None,
         use_secondary_entry_orders: typing.Optional[bool] = None,
         secondary_entry_orders_count: typing.Optional[int] = None,
         exit_limit_orders_price_percent: typing.Optional[float] = None,
         entry_limit_orders_price_percent: typing.Optional[float] = None,
         secondary_entry_orders_price_percent: typing.Optional[float] = None,
+        secondary_entry_orders_amount: typing.Optional[str] = None,
         enable_stop_loss: typing.Optional[bool] = None,
-        stop_loss_price: typing.Optional[float] = None
+        stop_loss_price: typing.Optional[float] = None,
+        use_init_entry_orders: typing.Optional[bool] = None,
+        use_take_profit_exit_orders: typing.Optional[bool] = None,
+        trigger_mode:typing. Optional[TriggerMode] = None,
     ) -> dict:
         return {
             trading_constants.CONFIG_BUY_ORDER_AMOUNT: buy_amount,
             trading_constants.CONFIG_SELL_ORDER_AMOUNT: sell_amount,
-            DCATradingModeProducer.TRIGGER_MODE: TriggerMode.TIME_BASED.value,
+            DCATradingModeProducer.TRIGGER_MODE: trigger_mode.value if trigger_mode else TriggerMode.TIME_BASED.value,
             DCATradingModeProducer.MINUTES_BEFORE_NEXT_BUY: 10080,
-            DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS: False,
+            DCATradingModeConsumer.USE_INIT_ENTRY_ORDERS: use_init_entry_orders or False,
             DCATradingModeConsumer.USE_MARKET_ENTRY_ORDERS: False,
             DCATradingModeConsumer.ENTRY_LIMIT_ORDERS_PRICE_PERCENT:
                 entry_limit_orders_price_percent or DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
@@ -924,8 +929,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 secondary_entry_orders_count or DCATradingModeConsumer.DEFAULT_SECONDARY_ENTRY_ORDERS_COUNT,
             DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_PRICE_PERCENT:
                 secondary_entry_orders_price_percent or DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
-            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT: "",
-            DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS: False,
+            DCATradingModeConsumer.SECONDARY_ENTRY_ORDERS_AMOUNT: secondary_entry_orders_amount or "",
+            DCATradingModeConsumer.USE_TAKE_PROFIT_EXIT_ORDERS: use_take_profit_exit_orders or False,
             DCATradingModeConsumer.EXIT_LIMIT_ORDERS_PRICE_PERCENT:
                 exit_limit_orders_price_percent or DCATradingModeConsumer.DEFAULT_EXIT_LIMIT_PRICE_MULTIPLIER,
             DCATradingModeConsumer.USE_SECONDARY_EXIT_ORDERS: False,
