@@ -914,6 +914,9 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         use_init_entry_orders: typing.Optional[bool] = None,
         use_take_profit_exit_orders: typing.Optional[bool] = None,
         trigger_mode:typing. Optional[TriggerMode] = None,
+        secondary_exit_orders_price_percent: typing.Optional[float] = None,
+        health_check_orphan_funds_threshold: typing.Optional[float] = None,
+        max_asset_holding_percent : typing.Optional[float] = None,
     ) -> dict:
         return {
             trading_constants.CONFIG_BUY_ORDER_AMOUNT: buy_amount,
@@ -937,15 +940,15 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_COUNT:
                 DCATradingModeConsumer.DEFAULT_SECONDARY_EXIT_ORDERS_COUNT,
             DCATradingModeConsumer.SECONDARY_EXIT_ORDERS_PRICE_PERCENT:
-                DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
+                secondary_exit_orders_price_percent or DCATradingModeConsumer.DEFAULT_ENTRY_LIMIT_PRICE_MULTIPLIER,
             DCATradingModeConsumer.USE_STOP_LOSSES: enable_stop_loss or False,
             DCATradingModeConsumer.STOP_LOSS_PRICE_PERCENT:
                 stop_loss_price or DCATradingModeConsumer.DEFAULT_STOP_LOSS_ORDERS_PRICE_MULTIPLIER,
             DCATradingModeProducer.CANCEL_OPEN_ORDERS_AT_EACH_ENTRY: True,
             cls.ENABLE_HEALTH_CHECK: False,
             DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD:
-                cls.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD,
-            DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT: decimal.Decimal(1),
+                health_check_orphan_funds_threshold or cls.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD,
+            DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT: max_asset_holding_percent or decimal.Decimal(1),
         }
 
     @classmethod
