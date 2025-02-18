@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
+
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
@@ -48,18 +50,21 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
         those are defined somewhere else.
         """
         super().init_user_inputs(inputs)
+        default_config = self.get_default_config()
         self.UI.user_input(commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, commons_enums.UserInputTypes.INT,
-                        500, inputs, min_val=1,
+                        default_config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT],
+                       inputs, min_val=1,
                         title="Initialization candles count: the number of historical candles to fetch from "
                               "exchanges when OctoBot is starting.")
         self.social_evaluators_default_timeout = \
             self.UI.user_input(self.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY, commons_enums.UserInputTypes.INT,
-                            1 * commons_constants.HOURS_TO_SECONDS, inputs, min_val=0,
-                            title="Number of seconds to consider a social evaluation valid from the moment it "
+                               default_config[self.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY],
+                               inputs, min_val=0,
+                               title="Number of seconds to consider a social evaluation valid from the moment it "
                                   "appears on OctoBot. Example: a tweet evaluation.")
         self.re_evaluate_TA_when_social_or_realtime_notification = \
             self.UI.user_input(self.RE_EVAL_TA_ON_RT_OR_SOCIAL, commons_enums.UserInputTypes.BOOLEAN,
-                            True, inputs,
+                            default_config[self.RE_EVAL_TA_ON_RT_OR_SOCIAL], inputs,
                             title="Recompute technical evaluators on real-time evaluator signal: "
                                   "When activated, technical evaluators will be asked to recompute their evaluation "
                                   "based on the current in-construction candle "
@@ -70,12 +75,25 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
                                   "alongside technical analysis results of the last closed candle.")
         self.background_social_evaluators = \
             self.UI.user_input(self.BACKGROUND_SOCIAL_EVALUATORS, commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
-                            [], inputs, other_schema_values={"minItems": 0, "uniqueItems": True},
+                               default_config[self.BACKGROUND_SOCIAL_EVALUATORS],
+                               inputs, other_schema_values={"minItems": 0, "uniqueItems": True},
                             options=["RedditForumEvaluator", "TwitterNewsEvaluator",
                                      "TelegramSignalEvaluator", "GoogleTrendsEvaluator"],
                             title="Social evaluator to consider as background evaluators: they won't trigger technical "
                                   "evaluators re-evaluation when updated. Avoiding unnecessary updates increases "
                                   "performances.")
+
+    @classmethod
+    def get_default_config(cls, time_frames: typing.Optional[list[str]] = None) -> dict:
+        return {
+            evaluators_constants.STRATEGIES_REQUIRED_TIME_FRAME: (
+                time_frames or [commons_enums.TimeFrames.ONE_HOUR.value]
+            ),
+            commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT: 500,
+            cls.SOCIAL_EVALUATORS_NOTIFICATION_TIMEOUT_KEY: 1 * commons_constants.HOURS_TO_SECONDS,
+            cls.RE_EVAL_TA_ON_RT_OR_SOCIAL: True,
+            cls.BACKGROUND_SOCIAL_EVALUATORS: [],
+        }
 
     async def matrix_callback(self,
                               matrix_id,

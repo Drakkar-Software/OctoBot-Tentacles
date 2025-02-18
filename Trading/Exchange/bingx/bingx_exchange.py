@@ -43,6 +43,13 @@ class Bingx(exchanges.RestExchange):
     EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
         ('the order is filled or cancelled', )
     ]
+    # text content of errors due to unhandled IP white list issues
+    EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
+        # "PermissionDenied("bingx {"code":100419,"msg":"your current request IP is xx.xx.xx.xxx does not match IP
+        # whitelist , please go to https://bingx.com/en/account/api/ to verify the ip you have set",
+        # "timestamp":1739291708037}")"
+        ("not match ip whitelist",),
+    ]
     
     # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
     CAN_HAVE_DELAYED_CANCELLED_ORDERS = True

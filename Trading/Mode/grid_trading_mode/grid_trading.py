@@ -15,6 +15,7 @@
 #  License along with this library.
 import dataclasses
 import decimal
+import typing
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
@@ -49,7 +50,10 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        default_config = self.get_default_pair_config("BTC/USDT", 0.05, 0.005)
+        default_config = self.get_default_pair_config(
+            "BTC/USDT", 0.05, 0.005,
+            None, None, None, None
+        )
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                            self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
                            item_title="Pair configuration",
@@ -57,7 +61,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                            title="Configuration for each traded pairs.")
         self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT,
                            default_config[self.CONFIG_PAIR], inputs,
-                           other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                           other_schema_values={"minLength": 3, "pattern": commons_constants.TRADING_SYMBOL_REGEX},
                            parent_input_name=self.CONFIG_PAIR_SETTINGS,
                            title="Name of the traded pair.")
         self.UI.user_input(
@@ -207,26 +211,31 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             # }
         )
 
-    def get_default_pair_config(self, symbol, flat_spread, flat_increment) -> dict:
+    @classmethod
+    def get_default_pair_config(
+        cls, symbol, flat_spread: float, flat_increment: float,
+        buy_count: typing.Optional[int], sell_count: typing.Optional[int],
+        enable_trailing_up: typing.Optional[bool], enable_trailing_down: typing.Optional[bool]
+    ) -> dict:
         return {
-          self.CONFIG_PAIR: symbol,
-          self.CONFIG_FLAT_SPREAD: flat_spread,
-          self.CONFIG_FLAT_INCREMENT: flat_increment,
-          self.CONFIG_BUY_ORDERS_COUNT: 20,
-          self.CONFIG_SELL_ORDERS_COUNT: 20,
-          self.CONFIG_SELL_FUNDS: 0,
-          self.CONFIG_BUY_FUNDS: 0,
-          self.CONFIG_STARTING_PRICE: 0,
-          self.CONFIG_BUY_VOLUME_PER_ORDER: 0,
-          self.CONFIG_SELL_VOLUME_PER_ORDER: 0,
-          self.CONFIG_IGNORE_EXCHANGE_FEES: False,
-          self.CONFIG_MIRROR_ORDER_DELAY: 0,
-          self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
-          self.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
-          self.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
-          self.CONFIG_ENABLE_TRAILING_UP: False,
-          self.CONFIG_ENABLE_TRAILING_DOWN: False,
-          self.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
+          cls.CONFIG_PAIR: symbol,
+          cls.CONFIG_FLAT_SPREAD: flat_spread,
+          cls.CONFIG_FLAT_INCREMENT: flat_increment,
+          cls.CONFIG_BUY_ORDERS_COUNT: buy_count or 20,
+          cls.CONFIG_SELL_ORDERS_COUNT: sell_count or 20,
+          cls.CONFIG_SELL_FUNDS: 0,
+          cls.CONFIG_BUY_FUNDS: 0,
+          cls.CONFIG_STARTING_PRICE: 0,
+          cls.CONFIG_BUY_VOLUME_PER_ORDER: 0,
+          cls.CONFIG_SELL_VOLUME_PER_ORDER: 0,
+          cls.CONFIG_IGNORE_EXCHANGE_FEES: False,
+          cls.CONFIG_MIRROR_ORDER_DELAY: 0,
+          cls.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
+          cls.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
+          cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
+          cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
+          cls.CONFIG_ENABLE_TRAILING_DOWN: enable_trailing_down or False,
+          cls.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
     def get_mode_producer_classes(self) -> list:
@@ -393,6 +402,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.symbol,
             None,   # will compute flat_spread from self.spread
             None,   # will compute flat_increment from self.increment
+            None,
+            None,
+            None,
+            None
         )
         return True
 

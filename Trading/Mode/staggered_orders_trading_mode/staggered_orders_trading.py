@@ -143,7 +143,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                            other_schema_values={"minItems": 1, "uniqueItems": True},
                            title="Configuration for each traded pairs.")
         self.UI.user_input(self.CONFIG_PAIR, commons_enums.UserInputTypes.TEXT, "BTC/USDT", inputs,
-                           other_schema_values={"minLength": 3, "pattern": "([a-zA-Z]|\\d){2,}\\/([a-zA-Z]|\\d){2,}"},
+                           other_schema_values={"minLength": 3, "pattern": commons_constants.TRADING_SYMBOL_REGEX},
                            parent_input_name=self.CONFIG_PAIR_SETTINGS,
                            title="Name of the traded pair."),
         self.UI.user_input(
@@ -638,6 +638,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if StaggeredOrdersTradingModeProducer.SCHEDULE_ORDERS_CREATION_ON_START and self.healthy:
             self.logger.debug(f"Initializing orders creation")
             await self._ensure_staggered_orders_and_reschedule()
+
+    def get_extra_init_symbol_topics(self) -> typing.Optional[list]:
+        if self.exchange_manager.is_backtesting:
+            # disabled in backtesting as price might not be initialized at this point
+            return None
+        # required as trigger happens independently of price events for initial orders
+        return [commons_enums.InitializationEventExchangeTopics.PRICE.value]
 
     async def stop(self):
         if self.trading_mode is not None:
