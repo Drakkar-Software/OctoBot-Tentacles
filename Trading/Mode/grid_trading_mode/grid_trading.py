@@ -51,7 +51,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         those are defined somewhere else.
         """
         default_config = self.get_default_pair_config(
-            "BTC/USDT", 0.05, 0.005, None, None, None
+            "BTC/USDT", 0.05, 0.005,
+            None, None, None, None
         )
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                            self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
