@@ -119,11 +119,15 @@ class GPTEvaluator(evaluators.TAEvaluator):
             self.min_confidence_threshold, inputs, min_val=0, max_val=100,
             title="Minimum confidence threshold: % confidence value starting from which to return 1 or -1."
         )
-        if len(self.GPT_MODELS) > 1 and self.enable_model_selector:
+        if self.enable_model_selector:
+            current_value = self.specific_config.get("GPT_model")
+            models = list(self.GPT_MODELS) or (
+                [current_value] if current_value else [gpt_service.GPTService.DEFAULT_MODEL]
+            )
             self.gpt_model = self.UI.user_input(
                 "GPT model", enums.UserInputTypes.OPTIONS, gpt_service.GPTService.DEFAULT_MODEL,
-                inputs, options=list(self.GPT_MODELS),
-                title="GPT Model: the GPT model to use."
+                inputs, options=sorted(models),
+                title="GPT Model: the GPT model to use. Enable the evaluator to load other models."
             )
         if os_util.parse_boolean_environment_var(self.ALLOW_GPT_REEVALUATION_ENV, "True"):
             self.allow_reevaluations = self.UI.user_input(
