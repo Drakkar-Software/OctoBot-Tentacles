@@ -381,7 +381,12 @@ class GPTService(services.AbstractService):
             if self._get_base_url():
                 self.logger.info(f"Using custom LLM url: {self._get_base_url()}")
             fetched_models = await self._get_client().models.list()
-            self.models = [d.id for d in fetched_models.data]
+            if fetched_models.data:
+                self.logger.info(f"Fetched {len(fetched_models.data)} models")
+                self.models = [d.id for d in fetched_models.data]
+            else:
+                self.logger.info("No fetched models")
+                self.models = []
             if self.model not in self.models:
                 if self._get_base_url():
                     self.logger.info(
