@@ -20,6 +20,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors
+import octobot_trading.constants as constants
 
 
 class Coinex(exchanges.RestExchange):
@@ -51,6 +52,21 @@ class Coinex(exchanges.RestExchange):
                 "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
             }
         }
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # current impossible to get account UID (22/02/25)
+        return constants.DEFAULT_ACCOUNT_ID
+
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        v1_signature_identifiers = "Authorization"
+        v2_signature_identifiers = "X-COINEX-SIGN"
+        return bool(
+            headers
+            and (
+                v1_signature_identifiers in headers
+                or v2_signature_identifiers in headers
+            )
+        )
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         return await super().get_open_orders(symbol=symbol,

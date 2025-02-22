@@ -75,6 +75,17 @@ class MEXC(exchanges.RestExchange):
         # current impossible to get account UID (10/01/25)
         return constants.DEFAULT_ACCOUNT_ID
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        url_signature_identifiers = "signature="
+        header_signature_identifiers = "Signature"
+        return bool(
+            headers
+            and header_signature_identifiers in headers
+        ) or bool(
+            url
+            and url_signature_identifiers in url
+        )
+
     async def get_all_tradable_symbols(self, active_only=True) -> set[str]:
         """
         Override if the exchange is not allowing trading for all available symbols (ex: MEXC)
