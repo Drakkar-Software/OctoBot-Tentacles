@@ -891,11 +891,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         )
         # 3 to allow trailing even if a few order from the other side have also been filled
         one_sided_orders_trailing_threshold = self.operational_depth / 3
-        if (
-            self.enable_trailing_up
-            and (len(buy_orders) >= one_sided_orders_trailing_threshold or trail_on_missing_orders)
-            and not sell_orders
-        ):
+        if self.enable_trailing_up and not sell_orders:
+            if len(buy_orders) < one_sided_orders_trailing_threshold and not trail_on_missing_orders:
+                self.logger.warning(
+                    f"{self.symbol} trailing up process aborted: too many missing buy orders. "
+                    f"Only {len(buy_orders)} are online while configured total orders is {self.operational_depth}"
+                )
+                return False
             # only buy orders remaining: everything has been sold, trigger tailing up when enabled if price is
             # beyond range
             if current_price and buy_orders:
@@ -914,11 +916,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             elif trail_on_missing_orders:
                 # trail too much
                 return True
-        if (
-            self.enable_trailing_down
-            and (len(sell_orders) >= one_sided_orders_trailing_threshold or trail_on_missing_orders)
-            and not buy_orders
-        ):
+        if self.enable_trailing_down and not buy_orders:
+            if len(sell_orders) < one_sided_orders_trailing_threshold and not trail_on_missing_orders:
+                self.logger.warning(
+                    f"{self.symbol} trailing down process aborted: too many missing sell orders. "
+                    f"Only {len(sell_orders)} are online while configured total orders is {self.operational_depth}"
+                )
+                return False
             # only sell orders remaining: everything has been bought, trigger tailing up when enabled if price is
             # beyond range
             if current_price:
