@@ -108,6 +108,15 @@ class CoinexCCXTAdapter(exchanges.CCXTAdapter):
             if fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] is None:
                 fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
                     trading_enums.OrderStatus.CLOSED.value
+            # from https://docs.coinex.com/api/v2/enum#order_status
+            elif fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == "part_filled":
+                # order partially executed (still pending)
+                fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
+                    trading_enums.OrderStatus.OPEN.value
+            elif fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == "part_canceled":
+                # order partially executed and then canceled
+                fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
+                    trading_enums.OrderStatus.CANCELED.value
         except KeyError:
             pass
         return fixed
