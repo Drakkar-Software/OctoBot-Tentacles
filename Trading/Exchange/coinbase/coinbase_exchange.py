@@ -31,6 +31,18 @@ import octobot_commons.symbols as commons_symbols
 import octobot_commons.logging as logging
 
 
+ALIASED_SYMBOLS = set()
+
+
+def _refresh_alias_symbols(client):
+    if client.markets:
+        ALIASED_SYMBOLS.update({
+            symbol
+            for symbol, market_status in client.markets.items()
+            if market_status["info"].get("alias_to")
+        })
+
+
 def _coinbase_retrier(f):
     async def coinbase_retrier_wrapper(*args, **kwargs):
         last_error = None
@@ -77,8 +89,11 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
 
     @_coinbase_retrier
     async def _load_markets(self, client, reload: bool):
-        # override for retrier
+        # override for retrier and populate ALIASED_SYMBOLS
         await client.load_markets(reload=reload)
+        # only call _refresh_alias_symbols from here as markets just got reloaded,
+        # no market can be missing unlike when using cached markets
+        _refresh_alias_symbols(client)
 
 
 class Coinbase(exchanges.RestExchange):
@@ -170,6 +185,12 @@ class Coinbase(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return CoinbaseCCXTAdapter
+
+    def get_alias_symbols(self) -> set[str]:
+        """
+        :return: a set of symbol of this exchange that are aliases to other symbols
+        """
+        return ALIASED_SYMBOLS
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
