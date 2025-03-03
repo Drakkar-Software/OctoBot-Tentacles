@@ -16,6 +16,7 @@
 import tentacles.Trading.Exchange.binance as binance_tentacle
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 
 
 class BinanceUS(binance_tentacle.Binance):
@@ -31,6 +32,23 @@ class BinanceUS(binance_tentacle.Binance):
         return [
             trading_enums.ExchangeTypes.SPOT,
         ]
+
+    def get_additional_connector_config(self):
+        config = super().get_additional_connector_config()
+        # override to fix ccxt values
+        config[ccxt_constants.CCXT_FEES] = {
+            'trading': {
+                'tierBased': True,
+                'percentage': True,
+                # ccxt replaced values
+                # 'taker': float('0.001'),  # 0.1% trading fee, zero fees for all trading pairs before November 1.
+                # 'maker': float('0.001'),  # 0.1% trading fee, zero fees for all trading pairs before November 1.
+                # 03/03/2025 values https://www.binance.us/fees
+                'taker': float('0.006'),  # 0.600%
+                'maker': float('0.004'),  # 0.400%
+            },
+        }
+        return config
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # not available on binance.us
