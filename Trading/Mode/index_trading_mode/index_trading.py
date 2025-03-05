@@ -318,7 +318,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self._last_trigger_time = current_time
 
     async def ensure_index(self):
-        await self._wait_for_symbol_prices_and_profitability_init(self.CONFIG_INIT_TIMEOUT)
+        await self._wait_for_symbol_prices_and_profitability_init(self._get_config_init_timeout())
         self.logger.info(
             f"Ensuring Index on [{self.exchange_manager.exchange_name}] "
             f"{len(self.trading_mode.indexed_coins)} coins: {self.trading_mode.indexed_coins} with reference market: "

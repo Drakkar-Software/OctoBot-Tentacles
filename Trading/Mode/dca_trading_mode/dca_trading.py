@@ -528,7 +528,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
     async def trigger_dca(self, cryptocurrency, symbol, state):
         if self.trading_mode.max_asset_holding_ratio < trading_constants.ONE:
             # if holding ratio should be checked, wait for price init to be able to compute this ratio
-            await self._wait_for_symbol_prices_and_profitability_init(self.CONFIG_INIT_TIMEOUT)
+            await self._wait_for_symbol_prices_and_profitability_init(self._get_config_init_timeout())
         self.state = state
         self.logger.debug(
             f"{symbol} DCA triggered on {self.exchange_manager.exchange_name}, state: {self.state.value}"
