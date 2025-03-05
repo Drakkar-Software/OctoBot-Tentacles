@@ -90,9 +90,13 @@ async def test_run_independent_backtestings_with_memory_check():
             return {}
 
     with tentacles_manager_api.local_tentacle_config_proxy(config_proxy):
-        await memory_check_util.run_independent_backtestings_with_memory_check(
-            config, tentacles_setup_config, use_multiple_asset_data_file=True
-        )
+        with mock.patch.object(octobot_trading.modes.AbstractTradingMode, "get_historical_config", mock.Mock()) \
+            as get_historical_config:
+            await memory_check_util.run_independent_backtestings_with_memory_check(
+                config, tentacles_setup_config, use_multiple_asset_data_file=True
+            )
+            # should not be called when no historical config is available (or it will log errors)
+            get_historical_config.assert_not_called()
 
 
 def _get_config(tools, update):
@@ -351,7 +355,7 @@ async def test_ohlcv_callback(tools):
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_not_called()
             _notify_if_missing_too_many_coins_mock.assert_not_called()
-            assert get_exchange_current_time_mock.call_count == 2
+            assert get_exchange_current_time_mock.call_count == 1   # only called once as no historical config exists
             get_exchange_current_time_mock.reset_mock()
             assert producer._last_trigger_time == current_time
 
@@ -371,7 +375,7 @@ async def test_ohlcv_callback(tools):
             await producer.ohlcv_callback("binance", "123", "BTC", "BTC/USDT", None, None)
             ensure_index_mock.assert_called_once()
             _notify_if_missing_too_many_coins_mock.assert_called_once()
-            assert get_exchange_current_time_mock.call_count == 2
+            assert get_exchange_current_time_mock.call_count == 1
             assert producer._last_trigger_time == current_time * 2
 
 
