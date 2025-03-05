@@ -25,6 +25,9 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
 
+VALIDATE_EMAIL_INFO = "Please validate your email from the confirm link we sent you and re-enter your credentials."
+
+
 def register(blueprint):
     @blueprint.route('/community_login', methods=['GET', 'POST'])
     @login.login_required_when_activated
@@ -54,7 +57,7 @@ def register(blueprint):
                             flask.flash(f"Downloaded {len(added_profiles)} profile{'s' if len(added_profiles) > 1 else ''} "
                                         f"from your OctoBot account.", "success")
                 except community_errors.EmailValidationRequiredError:
-                    flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
+                    flask.flash(VALIDATE_EMAIL_INFO, "info")
                 except authentication.FailedAuthentication:
                     flask.flash(f"Invalid email or password", "error")
                 except Exception as e:
@@ -95,7 +98,7 @@ def register(blueprint):
                 if next_url:
                     return flask.redirect(next_url)
             except community_errors.EmailValidationRequiredError:
-                flask.flash(f"Please validate your email from the confirm link we sent you.", "error")
+                flask.flash(VALIDATE_EMAIL_INFO, "info")
                 interfaces_util.run_in_bot_main_loop(authenticator.logout())
                 return flask.redirect(flask.url_for(f"community_login", **flask.request.args))
             except authentication.AuthenticationError as err:
