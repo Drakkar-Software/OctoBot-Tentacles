@@ -2,7 +2,7 @@
 {% import 'components/community/octobot_cloud_description.html' as octobot_cloud_description %}
 {% import "components/community/octobot_cloud_features.html" as octobot_cloud_features %}
 
-{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME, has_open_source_package) -%}
+{% macro cloud_strategies(strategies, OCTOBOT_COMMUNITY_URL, LOCALE, OCTOBOT_EXTENSION_PACKAGE_1_NAME, has_open_source_package) -%}
 <div class="card">
     <div class="card-header justify-content-between flex-wrap">
         <h2>
@@ -10,16 +10,16 @@
         </h2>
         <div class="card-body row mx-0 py-0">
             <div class="col-12 col-md-2 col-lg-1 py-3">
-                <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_logo">
+                <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_logo">
                     <img class="img-fluid cloud-logo"
                          src="{{url_for('static', filename='img/community/octobot-cloud.png')}}" alt="OctoBot cloud">
                 </a>
             </div>
             <div class="col-8 col-lg-7 col-xl-4 card-text py-3">
-                {{ octobot_cloud_features.octobot_cloud_features(OCTOBOT_COMMUNITY_LANDING_URL, LOCALE, 'community') }}
+                {{ octobot_cloud_features.octobot_cloud_features(OCTOBOT_COMMUNITY_URL, LOCALE, 'community') }}
             </div>
             <div class="d-none d-xl-flex col-2">
-                <a class="mx-auto" target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_illustration">
+                <a class="mx-auto" target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_URL}}?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_illustration">
                     <img class="img-fluid cloud-logo-2x"
                          src="{{url_for('static', filename='img/community/cloud_dark.png')}}" alt="OctoBot cloud">
                 </a>
@@ -27,10 +27,10 @@
             <div class="col-12 col-lg-4 col-xl-5 card-text py-3">
                 <p>
                     Find more information the recent changes and future plans on
-                    <a href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/en/blog?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_blog" target="_blank" rel="noopener"> our blog</a>.
+                    <a href="{{OCTOBOT_COMMUNITY_URL}}/en/blog?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_blog" target="_blank" rel="noopener"> our blog</a>.
                 </p>
                 <p>
-                    Explore the OctoBot cloud strategies on <a href="{{OCTOBOT_COMMUNITY_URL}}/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">app.octobot.cloud</a>.
+                    Explore the OctoBot cloud strategies on <a href="{{OCTOBOT_COMMUNITY_URL}}/explore?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_strategies" target="_blank" rel="noopener">www.octobot.cloud</a>.
                 </p>
 
                 <p>
@@ -51,7 +51,7 @@
     {% if not has_open_source_package() %}
     <div class="card-footer text-center">
         <i class="fa fa-info-circle"></i>
-        OctoBot cloud <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_LANDING_URL}}/{{LOCALE}}/features/crypto-basket?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_package_baskets_text">
+        OctoBot cloud <a target="_blank" rel="noopener" href="{{OCTOBOT_COMMUNITY_URL}}/{{LOCALE}}/features/crypto-basket?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=community_package_baskets_text">
             crypto baskets
         </a> can also be used with your OctoBot when using the <a href="{{ url_for('extensions') }}">{{OCTOBOT_EXTENSION_PACKAGE_1_NAME}}</a>.
     </div>
