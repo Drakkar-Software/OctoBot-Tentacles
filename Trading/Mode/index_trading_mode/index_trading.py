@@ -301,7 +301,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if (
             current_time - self._last_trigger_time
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
-            self.trading_mode.update_config_and_user_inputs_if_necessary()
+            if self.trading_mode.supports_historical_config():
+                self.trading_mode.update_config_and_user_inputs_if_necessary()
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
                     f"At least {self.MIN_INDEXED_COINS} coin is required to maintain an index. Please "
