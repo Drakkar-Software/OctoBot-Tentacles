@@ -39,6 +39,12 @@ class Bingx(exchanges.RestExchange):
         # 'bingx {'code': '100413', 'msg': 'Incorrect apiKey', 'timestamp': '1725195218082'}'
         ("incorrect apikey",),
     ]
+    # text content of errors due to api key permissions issues
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'bingx {"code":100004,"msg":"Permission denied as the API key was created without the permission，
+        # this api need Spot Trading permission， please config it in https://bingx.com/en/account/api"'
+        ("permission denied", "trading permission"),
+    ]
     # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
     EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
         ('the order is filled or cancelled', )

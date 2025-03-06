@@ -301,7 +301,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if (
             current_time - self._last_trigger_time
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
-            self.trading_mode.update_config_and_user_inputs_if_necessary()
+            if self.trading_mode.supports_historical_config():
+                self.trading_mode.update_config_and_user_inputs_if_necessary()
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
                     f"At least {self.MIN_INDEXED_COINS} coin is required to maintain an index. Please "
@@ -317,7 +318,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self._last_trigger_time = current_time
 
     async def ensure_index(self):
-        await self._wait_for_symbol_prices_and_profitability_init(self.CONFIG_INIT_TIMEOUT)
+        await self._wait_for_symbol_prices_and_profitability_init(self._get_config_init_timeout())
         self.logger.info(
             f"Ensuring Index on [{self.exchange_manager.exchange_name}] "
             f"{len(self.trading_mode.indexed_coins)} coins: {self.trading_mode.indexed_coins} with reference market: "
