@@ -148,6 +148,10 @@
                 <h2>
                     <i class="fa fa-spinner fa-spin"></i>
                 </h2>
+                <p class="mt-5">
+                    If this loader remains, please make sure that at least one exchange is enabled in
+                    <a href="{{url_for('profile', _anchor='panelExchanges')}}">your profile</a>.
+                </p>
             </div>
             {% if backtesting_mode %}
                 <div class="card-body" id="first_symbol_graph" update-url="{{ url_for('first_symbol') }}" backtesting_mode={{backtesting_mode}}>

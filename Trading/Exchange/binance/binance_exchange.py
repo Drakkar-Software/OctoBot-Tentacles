@@ -275,7 +275,7 @@ class Binance(exchanges.RestExchange):
         try:
             return await super().set_symbol_margin_type(symbol, isolated, **kwargs)
         except ccxt.ExchangeError as err:
-            raise errors.NotSupported() from err
+            raise errors.NotSupported(err) from err
 
 
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):
