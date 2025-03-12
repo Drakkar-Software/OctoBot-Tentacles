@@ -39,6 +39,9 @@ class Binance(exchanges.RestExchange):
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
     # Set True when the "limit" param when fetching order books is taken into account
     SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = True
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -167,7 +170,7 @@ class Binance(exchanges.RestExchange):
     def get_additional_connector_config(self):
         config = {
             ccxt_constants.CCXT_OPTIONS: {
-                "quoteOrderQty": False,  # disable quote conversion
+                "quoteOrderQty": True,  # enable quote conversion for market orders
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
                 "fetchPositions": "account",    # required to fetch empty positions as well
                 "filterClosed": False,  # return empty positions as well
@@ -215,6 +218,14 @@ class Binance(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    async def _create_market_sell_order(
+        self, symbol, quantity, price=None, reduce_only: bool = False, params=None
+        ) -> dict:
+        # force price to None to avoid selling using quote amount (force market sell quantity in base amount)
+        return await super()._create_market_sell_order(
+            symbol, quantity, price=None, reduce_only=reduce_only, params=params
+        )
 
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,
                                                        tp_sl_mode: trading_enums.TakeProfitStopLossMode):
