@@ -40,6 +40,9 @@ class MEXC(exchanges.RestExchange):
 
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     # text content of errors due to unhandled authentication issues
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
 
     EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'mexc {"code":700007,"msg":"No permission to access the endpoint."}'
@@ -94,22 +97,6 @@ class MEXC(exchanges.RestExchange):
         if CACHED_MEXC_API_HANDLED_SYMBOLS.should_be_updated():
             await CACHED_MEXC_API_HANDLED_SYMBOLS.update(self)
         return CACHED_MEXC_API_HANDLED_SYMBOLS.symbols
-
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        if order_type is trading_enums.TraderOrderType.BUY_MARKET:
-            # on MEXC, market orders are in quote currency (YYY in XYZ/YYY)
-            used_price = price or current_price
-            if not used_price:
-                raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
-                                                          f"market orders as quantity is in quote currency")
-            quantity = quantity * used_price
-        return await super().create_order(order_type, symbol, quantity,
-                                          price=price, stop_price=stop_price,
-                                          side=side, current_price=current_price,
-                                          reduce_only=reduce_only, params=params)
 
     async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
                                      side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,

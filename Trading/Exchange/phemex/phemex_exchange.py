@@ -16,7 +16,6 @@
 import asyncio
 import decimal
 import typing
-import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants

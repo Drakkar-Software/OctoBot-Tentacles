@@ -25,7 +25,6 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
@@ -88,6 +87,9 @@ class Kucoin(exchanges.RestExchange):
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = decimal.Decimal("0.95")
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
 
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
@@ -273,6 +275,7 @@ class Kucoin(exchanges.RestExchange):
         # filtered by limit before reversing (or most recent trades are lost)
         recent_trades = await super().get_recent_trades(symbol, limit=None, **kwargs)
         return recent_trades[::-1][:limit] if recent_trades else []
+
     @_kucoin_retrier
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
