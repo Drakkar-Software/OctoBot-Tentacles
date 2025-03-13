@@ -16,6 +16,7 @@
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 
 
 class BitMartConnector(exchanges.CCXTConnector):
@@ -35,6 +36,8 @@ class BitMart(exchanges.RestExchange):
     # set True when create_market_buy_order_with_cost should be used to create buy market orders
     # (useful to predict the exact spent amount)
     ENABLE_SPOT_BUY_MARKET_WITH_COST = True
+    # broken: need v4 endpoint required, 13/03/25 ccxt still doesn't have it
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     @classmethod
     def get_name(cls):
@@ -51,6 +54,10 @@ class BitMart(exchanges.RestExchange):
                 "createMarketBuyOrderRequiresPrice": False  # disable quote conversion
             }
         }
+
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # not available on bitmart
+        return trading_constants.DEFAULT_ACCOUNT_ID
 
 
 class BitMartCCXTAdapter(exchanges.CCXTAdapter):
