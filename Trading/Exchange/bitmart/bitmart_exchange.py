@@ -13,13 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import decimal
-import typing
-
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
-import octobot_trading.errors
+import octobot_trading.constants as trading_constants
 
 
 class BitMartConnector(exchanges.CCXTConnector):
@@ -36,6 +33,11 @@ class BitMart(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     DEFAULT_CONNECTOR_CLASS = BitMartConnector
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
+    # broken: need v4 endpoint required, 13/03/25 ccxt still doesn't have it
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     @classmethod
     def get_name(cls):
@@ -53,21 +55,9 @@ class BitMart(exchanges.RestExchange):
             }
         }
 
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        if order_type is trading_enums.TraderOrderType.BUY_MARKET:
-            # on BitMart, market orders are in quote currency (YYY in XYZ/YYY)
-            used_price = price or current_price
-            if not used_price:
-                raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
-                                                          f"market orders as quantity is in quote currency")
-            quantity = quantity * used_price
-        return await super().create_order(order_type, symbol, quantity,
-                                          price=price, stop_price=stop_price,
-                                          side=side, current_price=current_price,
-                                          reduce_only=reduce_only, params=params)
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # not available on bitmart
+        return trading_constants.DEFAULT_ACCOUNT_ID
 
 
 class BitMartCCXTAdapter(exchanges.CCXTAdapter):

@@ -187,6 +187,7 @@ class Bybit(exchanges.RestExchange):
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if not self.exchange_manager.is_future:
+            # should be replacable by ENABLE_SPOT_BUY_MARKET_WITH_COST = True => check when upgrading to unified
             if order_type is trading_enums.TraderOrderType.BUY_MARKET:
                 # on Bybit, market orders are in quote currency (YYY in XYZ/YYY)
                 used_price = price or current_price

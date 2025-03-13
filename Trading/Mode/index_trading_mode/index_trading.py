@@ -152,21 +152,20 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     async def _split_reference_market_into_indexed_coins(self, details: dict):
         orders = []
+        ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
         if details[RebalanceDetails.SWAP.value]:
             # has to infer total reference market holdings
             reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                portfolio_value_holder.get_traded_assets_holdings_value(
-                    self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, None
-                )
+                portfolio_value_holder.get_traded_assets_holdings_value(ref_market, None)
             coins_to_buy = list(details[RebalanceDetails.SWAP.value].values())
         else:
             # can use actual reference market holdings: everything has been sold
             reference_market_to_split = \
                 self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
-                    self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                    ref_market
                 ).available
             coins_to_buy = self.trading_mode.indexed_coins
-
+        self.logger.info(f"Splitting {reference_market_to_split} {ref_market} to buy {coins_to_buy}")
         amount_by_symbol = await self._get_symbols_and_amounts(coins_to_buy, reference_market_to_split)
         for symbol, ideal_amount in amount_by_symbol.items():
             orders.extend(await self._buy_coin(symbol, ideal_amount))

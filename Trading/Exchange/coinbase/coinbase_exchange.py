@@ -106,6 +106,9 @@ class Coinbase(exchanges.RestExchange):
     INSTANT_RETRY_ERROR_CODE = "429"
 
     FIX_MARKET_STATUS = True
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
 
     # text content of errors due to orders not found errors
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
@@ -264,18 +267,6 @@ class Coinbase(exchanges.RestExchange):
     async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
         # override for retrier
         return await super().get_all_currencies_price_ticker(**kwargs)
-
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        # ccxt is converting quantity using price, make sure it's available
-        if order_type is trading_enums.TraderOrderType.BUY_MARKET and not current_price:
-            raise octobot_trading.errors.NotSupported(f"current_price is required for {order_type} orders")
-        return await super().create_order(order_type, symbol, quantity,
-                                          price=price, stop_price=stop_price,
-                                          side=side, current_price=current_price,
-                                          reduce_only=reduce_only, params=params)
 
     @_coinbase_retrier
     async def cancel_order(

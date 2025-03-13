@@ -13,13 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import decimal
 import typing
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
-import octobot_trading.errors
 import octobot_trading.constants as constants
 
 
@@ -36,6 +34,9 @@ class Coinex(exchanges.RestExchange):
         ("order not found", )
     ]
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
+    # set True when create_market_buy_order_with_cost should be used to create buy market orders
+    # (useful to predict the exact spent amount)
+    ENABLE_SPOT_BUY_MARKET_WITH_COST = True
 
     @classmethod
     def get_name(cls):
@@ -79,21 +80,6 @@ class Coinex(exchanges.RestExchange):
                                                since=since,
                                                limit=self._fix_limit(limit),
                                                **kwargs)
-
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        if order_type is trading_enums.TraderOrderType.BUY_MARKET:
-            # on coinex, market orders are in quote currency (YYY in XYZ/YYY)
-            if price is None:
-                raise octobot_trading.errors.NotSupported(f"{self.get_name()} requires a price parameter to create "
-                                                          f"market orders as quantity is in quote currency")
-            quantity = quantity * price
-        return await super().create_order(order_type, symbol, quantity,
-                                          price=price, stop_price=stop_price,
-                                          side=side, current_price=current_price,
-                                          reduce_only=reduce_only, params=params)
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
