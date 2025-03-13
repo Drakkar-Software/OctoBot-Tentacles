@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "title": "SignalCatcherTradingMode",
+  "properties": {
+    "sell_with_maximum_size_orders": {
+        "title": "All in sell trades: Trade with all available funds at each sell order.",
+        "type": "boolean",
+        "format": "checkbox"
+    },
+    "buy_with_maximum_size_orders": {
+        "title": "All in buy trades: Trade with all available funds at each buy order.",
+        "type": "boolean",
+        "format": "checkbox"
+    }
+  }
+}
