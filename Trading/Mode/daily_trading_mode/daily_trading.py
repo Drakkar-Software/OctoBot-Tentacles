@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import copy
 import decimal
 import math
 import dataclasses
@@ -28,13 +29,13 @@ import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
-import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
+import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
 import octobot_trading.modes.script_keywords as script_keywords
 import octobot_trading.enums as trading_enums
-import octobot_trading.api as trading_api
+import octobot_trading.personal_data as trading_personal_data
 
 
 @dataclasses.dataclass
@@ -194,6 +195,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ADDITIONAL_TAKE_PROFIT_PRICES_KEY = "ADDITIONAL_TAKE_PROFIT_PRICES"
     STOP_ONLY = "STOP_ONLY"
+    TRAILING_PROFILE = "TRAILING_PROFILE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
@@ -494,7 +496,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self, current_order,
         use_take_profit_orders, take_profits_details: list[OrderDetails],
         use_stop_loss_orders, stop_loss_details: list[OrderDetails],
-        symbol_market, tag
+        symbol_market, tag,
+        trailing_profile_type: typing.Optional[trading_personal_data.TrailingProfileTypes]
     ):
         params = {}
         chained_orders = []
@@ -548,10 +551,20 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 params.update(param_update)
                 chained_orders.append(chained_order)
         if len(chained_orders) > 1:
-            stop_count = len([o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)])
-            tp_count = len(chained_orders) - stop_count
-            group_type = trading_personal_data.OneCancelsTheOtherOrderGroup if stop_count == tp_count \
-                else trading_personal_data.BalancedTakeProfitAndStopOrderGroup
+            stop_orders = [o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)]
+            tp_orders = [o for o in chained_orders if not trading_personal_data.is_stop_order(o.order_type)]
+            if len(stop_orders) == len(tp_orders):
+                group_type = trading_personal_data.OneCancelsTheOtherOrderGroup
+            elif trailing_profile_type == trading_personal_data.TrailingProfileTypes.FILLED_TAKE_PROFIT:
+                group_type = trading_personal_data.TrailingOnFilledTPBalancedOrderGroup
+                entry_price = current_order.origin_price
+                for stop_order in stop_orders:
+                    # register trailing profile in stop orders
+                    stop_order.trailing_profile = trading_personal_data.create_filled_take_profit_trailing_profile(
+                        entry_price, tp_orders
+                    )
+            else:
+                group_type = trading_personal_data.BalancedTakeProfitAndStopOrderGroup
             oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
@@ -627,6 +640,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if create_stop_only and (not user_stop_price or user_stop_price.is_nan()):
                 self.logger.error("Stop price is required to create a stop order")
                 return []
+            trailing_profile_type = trading_personal_data.TrailingProfileTypes(
+                data[self.TRAILING_PROFILE]
+            ) if data.get(self.TRAILING_PROFILE) else None
             is_reducing_position = not increasing_position
             if self.USE_TARGET_PROFIT_MODE:
                 if is_reducing_position:
@@ -697,7 +713,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     ):
                         created_orders.append(current_order)
 
@@ -733,7 +750,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -801,7 +819,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -863,7 +882,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     ):
                         created_orders.append(current_order)
             if created_orders:

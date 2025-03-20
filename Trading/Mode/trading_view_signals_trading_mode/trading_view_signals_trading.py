@@ -49,6 +49,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     LEVERAGE = "LEVERAGE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
+    TRAILING_PROFILE = "TRAILING_PROFILE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
@@ -303,6 +304,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         amount = await self._parse_volume(
             ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation, reduce_only
         )
+        trailing_profile = parsed_data.get(TradingViewSignalsTradingMode.TRAILING_PROFILE)
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
             TradingViewSignalsModeConsumer.VOLUME_KEY: amount,
@@ -313,6 +315,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY: reduce_only,
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
+            TradingViewSignalsModeConsumer.TRAILING_PROFILE: trailing_profile.casefold() if trailing_profile else None,
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
                 parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
             TradingViewSignalsModeConsumer.LEVERAGE:
