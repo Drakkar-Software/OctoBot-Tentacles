@@ -309,6 +309,7 @@ async def test_signal_callback(tools):
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
+            consumer.TRAILING_PROFILE: None,
             consumer.EXCHANGE_ORDER_IDS: None,
             consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
@@ -339,6 +340,7 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: "stop_1_tag",
             consumer.EXCHANGE_ORDER_IDS: None,
+            consumer.TRAILING_PROFILE: None,
             consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
         })
@@ -374,7 +376,49 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.TRAILING_PROFILE: None,
             consumer.LEVERAGE: 22,
+            consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
+                "TAG_1": "ttt",
+                "Plop": False,
+            },
+        })
+        _set_state_mock.reset_mock()
+
+        # with trailing profile
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "SelL",
+            mode.PRICE_KEY: "123",
+            mode.VOLUME_KEY: "12%",
+            mode.REDUCE_ONLY_KEY: True,
+            mode.ORDER_TYPE_SIGNAL: "LiMiT",
+            mode.STOP_PRICE_KEY: "12",
+            mode.TAKE_PROFIT_PRICE_KEY: "22222",
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            mode.TRAILING_PROFILE: "fiLLED_take_profit",
+            consumer.LEVERAGE: 22,
+            "PARAM_TAG_1": "ttt",
+            "PARAM_Plop": False,
+        }, context)
+        set_leverage_mock.assert_called_once()
+        set_leverage_mock.reset_mock()
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.await_args[0][1] == symbol
+        assert _set_state_mock.await_args[0][2] == trading_enums.EvaluatorStates.SHORT
+        assert compare_dict_with_nan(_set_state_mock.await_args[0][3], {
+            consumer.PRICE_KEY: decimal.Decimal("123"),
+            consumer.VOLUME_KEY: decimal.Decimal("1.2"),
+            consumer.STOP_PRICE_KEY: decimal.Decimal("12"),
+            consumer.STOP_ONLY: False,
+            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
+            consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+            consumer.REDUCE_ONLY_KEY: True,
+            consumer.TAG_KEY: None,
+            mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.LEVERAGE: 22,
+            consumer.TRAILING_PROFILE: "filled_take_profit",
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
                 "Plop": False,
@@ -425,6 +469,7 @@ async def test_signal_callback(tools):
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            consumer.TRAILING_PROFILE: None,
             consumer.LEVERAGE: 22,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {
                 "TAG_1": "ttt",
