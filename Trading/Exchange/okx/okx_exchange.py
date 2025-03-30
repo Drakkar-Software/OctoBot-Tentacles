@@ -99,6 +99,8 @@ class Okx(exchanges.RestExchange):
     EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
         # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
         ("restricted", "compliance"),
+        # OKX ex: You can't trade this pair or borrow this crypto due to local compliance restrictions.
+        ("restrictions", "compliance"),
     ]
     # text content of errors due to unhandled authentication issues
     EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
