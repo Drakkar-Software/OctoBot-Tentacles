@@ -784,7 +784,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         new_side = trading_enums.TradeOrderSide.SELL if now_selling else trading_enums.TradeOrderSide.BUY
         associated_entry_id = filled_order[
             trading_enums.ExchangeConstantsOrderColumns.ID.value
-        ]
+        ] if now_selling else None  # don't double count PNL: only record entries on sell orders
         if self.flat_increment is None:
             details = "self.flat_increment is unset"
             if self.symbol_market is None:
