@@ -1061,7 +1061,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_buy_order = open_orders[-1]
-        assert newly_created_buy_order.associated_entry_ids == [to_fill_order.order_id]
+        assert newly_created_buy_order.associated_entry_ids is None # buy order => previous sell order is not an entry
         assert newly_created_buy_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price - (price_spread - price_increment)
         assert newly_created_buy_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price, 8)
@@ -1106,7 +1106,7 @@ async def test_order_fill_callback():
         assert len(open_orders) == producer.operational_depth
         assert to_fill_order not in open_orders
         newly_created_buy_order = open_orders[-1]
-        assert newly_created_buy_order.associated_entry_ids == [to_fill_order.order_id]
+        assert newly_created_buy_order.associated_entry_ids is None # buy order => previous sell order is not an entry
         assert newly_created_buy_order.symbol == to_fill_order.symbol
         price = to_fill_order.origin_price - (price_spread - price_increment)
         assert newly_created_buy_order.origin_price == trading_personal_data.decimal_trunc_with_n_decimal_digits(price, 8)
@@ -1835,7 +1835,7 @@ async def test_create_mirror_order():
         assert sell_1.side == trading_enums.TradeOrderSide.SELL
         sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
         assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
-        assert sell_1_mirror_order.associated_entry_id == sell_1.order_id
+        assert sell_1_mirror_order.associated_entry_id is None
         assert sell_1_mirror_order.side == trading_enums.TradeOrderSide.BUY
         assert sell_1_mirror_order.symbol == symbol
         assert sell_1_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
@@ -1849,6 +1849,7 @@ async def test_create_mirror_order():
         assert isinstance(buy_2_mirror_order, staggered_orders_trading.OrderData)
         # mirror order price is still 99, even if fill price is not 97
         assert buy_2_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_2_mirror_order.associated_entry_id == buy_1.order_id
         assert buy_2_mirror_order.side == trading_enums.TradeOrderSide.SELL
         # new sell order quantity is equal to previous mirror order quantity: only the amount of USDT spend is smaller
         assert buy_2_mirror_order.quantity == buy_1_mirror_order.quantity
@@ -1865,6 +1866,7 @@ async def test_create_mirror_order():
         assert maybe_trade.origin_price == decimal.Decimal("103")
         assert maybe_order is None
         sell_2_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        assert sell_2_mirror_order.associated_entry_id is None
         # mirror order price is still 101, even if fill price is not 110
         assert sell_2_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
         assert sell_2_mirror_order.side == trading_enums.TradeOrderSide.BUY
