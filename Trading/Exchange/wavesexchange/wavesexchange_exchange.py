@@ -22,6 +22,7 @@ import octobot_commons.enums as commons_enums
 
 class WavesExchange(exchanges.RestExchange):
     DESCRIPTION = ""
+    FIX_MARKET_STATUS = True
     DUMP_INCOMPLETE_LAST_CANDLE = True  # set True in tentacle when the exchange can return incomplete last candles
 
     @classmethod
