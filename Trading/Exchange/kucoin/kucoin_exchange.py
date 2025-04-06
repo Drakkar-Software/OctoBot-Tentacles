@@ -266,7 +266,7 @@ class Kucoin(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
-            kwargs["to"] = int(time.time() * 1000)
+            kwargs["to"] = int(time.time() * commons_constants.MSECONDS_TO_SECONDS)
         return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     @_kucoin_retrier
