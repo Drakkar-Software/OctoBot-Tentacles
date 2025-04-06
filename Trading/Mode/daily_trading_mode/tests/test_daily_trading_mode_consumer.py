@@ -33,6 +33,7 @@ import octobot_trading.exchange_data as exchange_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges as exchanges
+import octobot_trading.modes.script_keywords as script_keywords
 import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode as Mode
 import tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit as trading_mode_test_toolkit
@@ -1263,6 +1264,94 @@ async def test_create_stop_loss_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.tag == "plop1"
     assert stop_order.is_open()
+
+
+async def test_get_limit_quantity_from_risk(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+    ctx = script_keywords.get_base_context(consumer.trading_mode, symbol)
+    last_btc_price = 100
+    trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
+        symbol] = last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(last_btc_price * 10 + 1000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.current_crypto_currencies_values["BTC"] = \
+        decimal.Decimal(str(last_btc_price))
+    # with user amount
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal(1)
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = 10
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_SELL_ORDER_AMOUNT] = 10
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("9.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10")
+
+    # without user amount
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_BUY_ORDER_AMOUNT)
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_SELL_ORDER_AMOUNT)
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("8.7")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+
+async def test_get_market_quantity_from_risk(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+    ctx = script_keywords.get_base_context(consumer.trading_mode, symbol)
+    last_btc_price = 80
+    trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
+        symbol] = last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(last_btc_price * 10 + 1000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.current_crypto_currencies_values["BTC"] = \
+        decimal.Decimal(str(last_btc_price))
+    # with user amount
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal(1)
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = 10
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_SELL_ORDER_AMOUNT] = 10
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10")
+
+    # without user amount
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_BUY_ORDER_AMOUNT)
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_SELL_ORDER_AMOUNT)
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("11.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10.8")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10.8")
 
 
 async def test_target_profit_mode(tools):
