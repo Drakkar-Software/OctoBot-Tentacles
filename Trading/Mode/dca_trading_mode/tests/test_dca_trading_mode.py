@@ -35,6 +35,7 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchange_data as trading_exchange_data
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
@@ -60,6 +61,18 @@ async def tools():
     try:
         tentacles_manager_api.reload_tentacle_info()
         mode, trader = await _get_tools()
+        yield mode, trader
+    finally:
+        if trader:
+            await _stop(trader.exchange_manager)
+
+
+@pytest_asyncio.fixture
+async def futures_tools():
+    trader = None
+    try:
+        tentacles_manager_api.reload_tentacle_info()
+        mode, trader = await _get_futures_tools()
         yield mode, trader
     finally:
         if trader:
@@ -1002,6 +1015,60 @@ async def test_create_new_buy_orders_fees_in_quote(tools):
         assert total_cost <= decimal.Decimal("225.98463886")  # took fees into account
 
 
+async def test_create_new_buy_orders_futures_trading(futures_tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(futures_tools, _get_config(futures_tools, update))
+    mode.use_secondary_entry_orders = True
+    mode.secondary_entry_orders_count = 3
+    mode.secondary_entry_orders_amount = "8%t"
+    mode.use_market_entry_orders = False
+    mode.cancel_open_orders_at_each_entry = False
+    mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "8%t"
+
+    mode.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol("BTC/USDT:USDT")
+    ]
+    portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+    portfolio["USDT"].available = decimal.Decimal("200")
+    portfolio["USDT"].total = decimal.Decimal("200")
+    portfolio.pop("USD", None)
+    portfolio.pop("BTC", None)
+
+    trading_api.force_set_mark_price(trader.exchange_manager, "BTC/USDT:USDT", 11.0096)
+    converter = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter
+    converter.update_last_price("BTC/USDT:USDT", decimal.Decimal("11.0096"))
+
+
+    def _get_fees_currency(base, quote, order_type):
+        # force quote fees
+        return quote
+
+    def _read_fees_from_config(fees):
+        # use 0.2% fees
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value] = 0.002
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value] = 0.002
+        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value] = 0.002
+
+    async def _create_order(order, **kwargs):
+        await order.initialize(is_from_exchange_data=True, enable_associated_orders_creation=False)
+        return order
+
+    with mock.patch.object(
+        mode, "create_order", mock.AsyncMock(side_effect=_create_order)
+    ) as create_order_mock, mock.patch.object(
+        trader.exchange_manager.exchange.connector, "_get_fees_currency",
+        mock.Mock(side_effect=_get_fees_currency)
+    ) as _get_fees_currency_mock, mock.patch.object(
+        trader.exchange_manager.exchange.connector, "_read_fees_from_config",
+        mock.Mock(side_effect=_read_fees_from_config)
+    ) as _get_fees_currency_mock:
+        orders = await consumer.create_new_orders("BTC/USDT:USDT", None, trading_enums.EvaluatorStates.LONG.value)
+        assert orders
+        assert len(orders) == 4
+        total_cost = sum(order.total_cost for order in orders)
+        assert round(total_cost) == decimal.Decimal("56")
+
+
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
@@ -1187,6 +1254,55 @@ async def _get_tools(symbol="BTC/USDT"):
         await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
                                                          exchange_manager=exchange_manager)
 
+    trader = exchanges.TraderSimulator(config, exchange_manager)
+    await trader.initialize()
+
+    mode = Mode.DCATradingMode(config, exchange_manager)
+    mode.symbol = None if mode.get_is_symbol_wildcard() else symbol
+    # trading mode is not initialized: to be initialized with the required config in tests
+
+    # add mode to exchange manager so that it can be stopped and freed from memory
+    exchange_manager.trading_modes.append(mode)
+
+    # set BTC/USDT price at 1000 USDT
+    trading_api.force_set_mark_price(exchange_manager, symbol, 1000)
+
+    return mode, trader
+
+
+async def _get_futures_tools(symbol="BTC/USDT:USDT"):
+    config = test_config.load_test_config()
+    config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]["USDT"] = 2000
+    exchange_manager = test_exchanges.get_test_exchange_manager(config, "binance")
+    exchange_manager.tentacles_setup_config = test_utils_config.get_tentacles_setup_config()
+
+    # use backtesting not to spam exchanges apis
+    exchange_manager.is_spot_only = False
+    exchange_manager.is_future = True
+    exchange_manager.is_simulated = True
+    exchange_manager.is_backtesting = True
+    exchange_manager.use_cached_markets = False
+    backtesting = await backtesting_api.initialize_backtesting(
+        config,
+        exchange_ids=[exchange_manager.id],
+        matrix_id=None,
+        data_files=[os.path.join(test_config.TEST_CONFIG_FOLDER,
+                                 "AbstractExchangeHistoryCollector_1586017993.616272.data")])
+    exchange_manager.exchange = exchanges.ExchangeSimulator(
+        exchange_manager.config, exchange_manager, backtesting
+    )
+    await exchange_manager.exchange.initialize()
+    for exchange_channel_class_type in [exchanges_channel.ExchangeChannel, exchanges_channel.TimeFrameExchangeChannel]:
+        await channel_util.create_all_subclasses_channel(exchange_channel_class_type, exchanges_channel.set_chan,
+                                                         exchange_manager=exchange_manager)
+    contract = trading_exchange_data.FutureContract(
+        pair=symbol,
+        margin_type=trading_enums.MarginType.ISOLATED,
+        contract_type=trading_enums.FutureContractType.LINEAR_PERPETUAL,
+        current_leverage=trading_constants.ONE,
+        maximum_leverage=trading_constants.ONE_HUNDRED
+    )
+    exchange_manager.exchange.set_pair_future_contract(symbol, contract)
     trader = exchanges.TraderSimulator(config, exchange_manager)
     await trader.initialize()
 

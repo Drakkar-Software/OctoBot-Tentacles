@@ -137,12 +137,13 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if self.exchange_manager.is_future:
                 self.trading_mode.ensure_supported(symbol)
                 # on futures, current_symbol_holding = current_market_holding = market_quantity
-                initial_available_funds, _ = trading_personal_data.get_futures_max_order_size(
+                initial_available_base_funds, _ = trading_personal_data.get_futures_max_order_size(
                     self.exchange_manager, symbol, side,
                     price, False, current_symbol_holding, market_quantity
                 )
+                initial_available_quote_funds = initial_available_base_funds * price
             else:
-                initial_available_funds = current_market_holding \
+                initial_available_quote_funds = current_market_holding \
                     if side is trading_enums.TradeOrderSide.BUY else current_symbol_holding
             if side is trading_enums.TradeOrderSide.BUY:
                 initial_entry_order_type = trading_enums.TraderOrderType.BUY_MARKET \
@@ -152,7 +153,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.SELL_LIMIT
             adapted_entry_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                 self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price,
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_funds
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_quote_funds
             )
 
             # initial entry
@@ -172,7 +173,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
                 else:
                     for i in range(self.trading_mode.secondary_entry_orders_count):
-                        remaining_funds = initial_available_funds - sum(
+                        remaining_funds = initial_available_quote_funds - sum(
                             trading_personal_data.get_locked_funds(order)
                             for order in created_orders
                         )

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import copy
 import decimal
 import math
 import dataclasses
@@ -28,13 +29,13 @@ import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
-import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import octobot_trading.errors as trading_errors
+import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
 import octobot_trading.modes.script_keywords as script_keywords
 import octobot_trading.enums as trading_enums
-import octobot_trading.api as trading_api
+import octobot_trading.personal_data as trading_personal_data
 
 
 @dataclasses.dataclass
@@ -194,6 +195,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ADDITIONAL_TAKE_PROFIT_PRICES_KEY = "ADDITIONAL_TAKE_PROFIT_PRICES"
     STOP_ONLY = "STOP_ONLY"
+    TRAILING_PROFILE = "TRAILING_PROFILE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
@@ -311,95 +313,50 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         factor = max_percent - risk_difference if is_long else min_percent + risk_difference
         return trading_modes.check_factor(min_percent, max_percent, factor)
 
-    """
-    Starting point : self.QUANTITY_MIN_PERCENT
-    abs(eval_note) --> confirmation level --> high : sell/buy more quantity
-    trader.risk --> high risk : sell / buy more quantity
-    abs(eval_note) + weighted_risk --> result between 0 and 1 + self.QUANTITY_RISK_WEIGHT --> self.MAX_SUM_RESULT
-    self.QUANTITY_ATTENUATION --> try to contains the result between self.QUANTITY_MIN_PERCENT
-    and self.QUANTITY_MAX_PERCENT
-    """
 
-    async def _get_buy_limit_quantity_from_risk(self, ctx, eval_note, quantity, quote, increasing_position):
+    async def _get_limit_quantity_from_risk(self, ctx, eval_note, max_quantity, base, selling, increasing_position):
+        order_side = trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
         # check all in orders
-        if increasing_position and self.BUY_WITH_MAXIMUM_SIZE_ORDERS:
-            return quantity
+        if increasing_position and (
+            (selling and self.SELL_WITH_MAXIMUM_SIZE_ORDERS) or (not selling and self.BUY_WITH_MAXIMUM_SIZE_ORDERS)
+        ):
+            return max_quantity
         # check configured quantity
+        max_amount_from_ratio = self._get_max_amount_from_max_ratio(
+            self.MAX_CURRENCY_RATIO, max_quantity, base, self.QUANTITY_MAX_PERCENT
+        ) if increasing_position else max_quantity
         if user_amount := trading_modes.get_user_selected_order_amount(
             self.trading_mode,
             self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE
-            if self.USE_TARGET_PROFIT_MODE else trading_enums.TradeOrderSide.BUY
+            if self.USE_TARGET_PROFIT_MODE else order_side
         ):
-            return await script_keywords.get_amount_from_input_amount(
+            user_input_amount = await script_keywords.get_amount_from_input_amount(
                 context=ctx,
                 input_amount=user_amount,
-                side=trading_enums.TradeOrderSide.BUY.value,
+                side=order_side.value,
                 reduce_only=False,
                 is_stop_order=False,
                 use_total_holding=False,
             )
+            return min(user_input_amount, max_amount_from_ratio)
         # get quantity from risk
-        max_amount = self._get_max_amount_from_max_ratio(
-            self.MAX_CURRENCY_RATIO, quantity, quote, self.QUANTITY_MAX_PERCENT
-        ) if increasing_position else quantity
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
-        # consider buy quantity like a sell if quote is the reference market
-        if quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market \
-                and increasing_position:
-            weighted_risk *= self.SELL_MULTIPLIER
-        if not increasing_position and self._get_ratio(quote) < self.FULL_SELL_MIN_RATIO:
-            return quantity
-        factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = trading_modes.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT,
-                                                    factor)
-        holding_ratio = self._get_quantity_ratio(quote) if increasing_position else trading_constants.ONE
-        return min(checked_factor * quantity * holding_ratio, max_amount)
-
-    """
-    Starting point : self.QUANTITY_MIN_PERCENT
-    abs(eval_note) --> confirmation level --> high : sell/buy more quantity
-    trader.risk --> high risk : sell / buy more quantity
-    use SELL_MULTIPLIER to increase sell volume relatively to risk
-    if currency holding < FULL_SELL_MIN_RATIO, sell everything to free up funds
-    abs(eval_note) + weighted_risk --> result between 0 and 1 + self.QUANTITY_RISK_WEIGHT --> self.MAX_SUM_RESULT
-    self.QUANTITY_ATTENUATION --> try to contains the result between self.QUANTITY_MIN_PERCENT
-    and self.QUANTITY_MAX_PERCENT
-    """
-
-    async def _get_sell_limit_quantity_from_risk(self, ctx, eval_note, quantity, quote, increasing_position):
-        # check all in orders
-        if not increasing_position and self.SELL_WITH_MAXIMUM_SIZE_ORDERS:
-            return quantity
-        if user_amount := trading_modes.get_user_selected_order_amount(
-            self.trading_mode,
-            self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE
-            if self.USE_TARGET_PROFIT_MODE else trading_enums.TradeOrderSide.SELL
+        if (
+            # consider sell quantity like a buy if base is the reference market
+            selling and base != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                and not increasing_position
+        ) or (
+            # consider buy quantity like a sell if quote is the reference market
+            not selling and base == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                and increasing_position
         ):
-            return await script_keywords.get_amount_from_input_amount(
-                context=ctx,
-                input_amount=user_amount,
-                side=trading_enums.TradeOrderSide.SELL.value,
-                reduce_only=False,
-                is_stop_order=False,
-                use_total_holding=False,
-            )
-        # check configured quantity
-        # get quantity from risk
-        max_amount = self._get_max_amount_from_max_ratio(
-            self.MAX_CURRENCY_RATIO, quantity, quote, self.QUANTITY_MAX_PERCENT
-        ) if increasing_position else quantity
-        weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
-        # consider sell quantity like a buy if base is the reference market
-        if quote != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market \
-                and not increasing_position:
             weighted_risk *= self.SELL_MULTIPLIER
-        if not increasing_position and self._get_ratio(quote) < self.FULL_SELL_MIN_RATIO:
-            return quantity
+        if not increasing_position and self._get_ratio(base) < self.FULL_SELL_MIN_RATIO:
+            return max_quantity
         factor = self.QUANTITY_MIN_PERCENT + ((abs(eval_note) + weighted_risk) * self.QUANTITY_ATTENUATION)
-        checked_factor = trading_modes.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT,
-                                                    factor)
-        holding_ratio = self._get_quantity_ratio(quote) if increasing_position else trading_constants.ONE
-        return min(checked_factor * quantity * holding_ratio, max_amount)
+        checked_factor = trading_modes.check_factor(self.QUANTITY_MIN_PERCENT, self.QUANTITY_MAX_PERCENT, factor)
+        holding_ratio = self._get_quantity_ratio(base) if increasing_position else trading_constants.ONE
+        return min(checked_factor * max_quantity * holding_ratio, max_amount_from_ratio)
 
     """
     Starting point : self.QUANTITY_MARKET_MIN_PERCENT
@@ -411,13 +368,18 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     and self.QUANTITY_MARKET_MAX_PERCENT
     """
 
-    async def _get_market_quantity_from_risk(self, ctx, eval_note, quantity, quote, selling, increasing_position):
+    async def _get_market_quantity_from_risk(self, ctx, eval_note, quantity, base, selling, increasing_position):
         # check configured quantity
         side = self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE if self.USE_TARGET_PROFIT_MODE else (
             trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
         )
+        max_amount_from_ratio = (
+            self._get_max_amount_from_max_ratio(
+                self.MAX_CURRENCY_RATIO, quantity, base, self.QUANTITY_MARKET_MAX_PERCENT
+            ) if increasing_position else quantity * self.QUANTITY_MARKET_MAX_PERCENT
+        )
         if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode, side):
-            return await script_keywords.get_amount_from_input_amount(
+            user_input_amount = await script_keywords.get_amount_from_input_amount(
                 context=ctx,
                 input_amount=user_amount,
                 side=side.value,
@@ -425,21 +387,18 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 is_stop_order=False,
                 use_total_holding=False,
             )
+            return min(user_input_amount, max_amount_from_ratio)
         # get quantity from risk
-        max_amount = quantity * self.QUANTITY_MARKET_MAX_PERCENT if increasing_position \
-            else self._get_max_amount_from_max_ratio(self.MAX_CURRENCY_RATIO, quantity,
-                                                     quote, self.QUANTITY_MARKET_MAX_PERCENT)
         weighted_risk = self.trader.risk * self.QUANTITY_RISK_WEIGHT
         ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-        if (not increasing_position and quote != ref_market) or (increasing_position and quote == ref_market):
+        if (not increasing_position and base != ref_market) or (increasing_position and base == ref_market):
             weighted_risk *= self.SELL_MULTIPLIER
-        factor = self.QUANTITY_MARKET_MIN_PERCENT + (
-                (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION)
-
-        checked_factor = trading_modes.check_factor(self.QUANTITY_MARKET_MIN_PERCENT,
-                                                    self.QUANTITY_MARKET_MAX_PERCENT, factor)
-        holding_ratio = 1 if not increasing_position else self._get_quantity_ratio(quote)
-        return min(checked_factor * holding_ratio * quantity, max_amount)
+        factor = self.QUANTITY_MARKET_MIN_PERCENT + (abs(eval_note) + weighted_risk) * self.QUANTITY_MARKET_ATTENUATION
+        checked_factor = trading_modes.check_factor(
+            self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor
+        )
+        holding_ratio = 1 if not increasing_position else self._get_quantity_ratio(base)
+        return min(checked_factor * holding_ratio * quantity, max_amount_from_ratio)
 
     def _get_ratio(self, currency):
         try:
@@ -459,21 +418,21 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         else:
             return 1
 
-    def _get_max_amount_from_max_ratio(self, max_ratio, quantity, quote, default_ratio):
+    def _get_max_amount_from_max_ratio(self, max_ratio, quantity, currency, default_ratio):
         # TODO ratios in futures trading
         # reduce max amount when self.MAX_CURRENCY_RATIO is defined
         if self.MAX_CURRENCY_RATIO is None or max_ratio == trading_constants.ONE or self.exchange_manager.is_future:
             return quantity * default_ratio
-        max_amount_ratio = max_ratio - self._get_ratio(quote)
+        max_amount_ratio = max_ratio - self._get_ratio(currency)
         if max_amount_ratio > 0:
             max_amount_in_ref_market = trading_api.get_current_portfolio_value(self.exchange_manager) * \
                                        max_amount_ratio
             try:
                 max_theoretical_amount = max_amount_in_ref_market / trading_api.get_current_crypto_currency_value(
-                    self.exchange_manager, quote)
+                    self.exchange_manager, currency)
                 return min(max_theoretical_amount, quantity)
             except KeyError:
-                self.logger.error(f"Missing price information in reference market for {quote}. Skipping buy order "
+                self.logger.error(f"Missing price information in reference market for {currency}. Skipping buy order "
                                   f"as is it required to ensure the maximum currency percent parameter. "
                                   f"Set it to 100 to buy anyway.")
         return trading_constants.ZERO
@@ -494,7 +453,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self, current_order,
         use_take_profit_orders, take_profits_details: list[OrderDetails],
         use_stop_loss_orders, stop_loss_details: list[OrderDetails],
-        symbol_market, tag
+        symbol_market, tag,
+        trailing_profile_type: typing.Optional[trading_personal_data.TrailingProfileTypes]
     ):
         params = {}
         chained_orders = []
@@ -548,10 +508,20 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 params.update(param_update)
                 chained_orders.append(chained_order)
         if len(chained_orders) > 1:
-            stop_count = len([o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)])
-            tp_count = len(chained_orders) - stop_count
-            group_type = trading_personal_data.OneCancelsTheOtherOrderGroup if stop_count == tp_count \
-                else trading_personal_data.BalancedTakeProfitAndStopOrderGroup
+            stop_orders = [o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)]
+            tp_orders = [o for o in chained_orders if not trading_personal_data.is_stop_order(o.order_type)]
+            if len(stop_orders) == len(tp_orders):
+                group_type = trading_personal_data.OneCancelsTheOtherOrderGroup
+            elif trailing_profile_type == trading_personal_data.TrailingProfileTypes.FILLED_TAKE_PROFIT:
+                group_type = trading_personal_data.TrailingOnFilledTPBalancedOrderGroup
+                entry_price = current_order.origin_price
+                for stop_order in stop_orders:
+                    # register trailing profile in stop orders
+                    stop_order.trailing_profile = trading_personal_data.create_filled_take_profit_trailing_profile(
+                        entry_price, tp_orders
+                    )
+            else:
+                group_type = trading_personal_data.BalancedTakeProfitAndStopOrderGroup
             oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
@@ -627,6 +597,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if create_stop_only and (not user_stop_price or user_stop_price.is_nan()):
                 self.logger.error("Stop price is required to create a stop order")
                 return []
+            trailing_profile_type = trading_personal_data.TrailingProfileTypes(
+                data[self.TRAILING_PROFILE]
+            ) if data.get(self.TRAILING_PROFILE) else None
             is_reducing_position = not increasing_position
             if self.USE_TARGET_PROFIT_MODE:
                 if is_reducing_position:
@@ -697,15 +670,15 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     ):
                         created_orders.append(current_order)
 
             elif state == trading_enums.EvaluatorStates.SHORT.value and not self.DISABLE_SELL_ORDERS:
-                quantity = user_volume or \
-                           await self._get_sell_limit_quantity_from_risk(
-                               ctx, final_note, max_sell_size, base, increasing_position
-                           )
+                quantity = user_volume or await self._get_limit_quantity_from_risk(
+                    ctx, final_note, max_sell_size, base, True, increasing_position
+                )
                 quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price,
                                                                                             symbol_market,
                                                                                             max_sell_size)
@@ -733,7 +706,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -768,10 +742,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 return []
 
             elif state == trading_enums.EvaluatorStates.LONG.value and not self.DISABLE_BUY_ORDERS:
-                quantity = await self._get_buy_limit_quantity_from_risk(
-                    ctx, final_note, max_buy_size, base, increasing_position
-                ) \
-                    if user_volume == 0 else user_volume
+                quantity = await self._get_limit_quantity_from_risk(
+                    ctx, final_note, max_buy_size, base, False, increasing_position
+                ) if user_volume == 0 else user_volume
                 limit_price = user_stop_price if create_stop_only else trading_personal_data.decimal_adapt_price(
                     symbol_market, user_price or (price * self._get_limit_price_from_risk(final_note))
                 )
@@ -801,7 +774,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -863,7 +837,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         current_order,
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
-                        symbol_market, tag
+                        symbol_market, tag,
+                        trailing_profile_type
                     ):
                         created_orders.append(current_order)
             if created_orders:

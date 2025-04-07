@@ -383,6 +383,16 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value, None
         )
         trigger_above = order_description.get(trading_enums.TradingSignalOrdersAttrs.TRIGGER_ABOVE.value, None)
+        trailing_profile = None
+        if trailing_profile_details := order_description.get(
+            trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE.value
+        ):
+            trailing_profile = personal_data.create_trailing_profile(
+                personal_data.TrailingProfileTypes(
+                    order_description[trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE_TYPE.value],
+                ),
+                trailing_profile_details
+            )
         order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
             order_type=order_type,
@@ -397,7 +407,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             group=group,
             fees_currency_side=fees_currency_side,
             reduce_only=reduce_only,
-            associated_entry_id=associated_entries[0] if associated_entries else None
+            associated_entry_id=associated_entries[0] if associated_entries else None,
+            trailing_profile=trailing_profile,
         )
         if associated_entries and len(associated_entries) > 1:
             for associated_entry in associated_entries[1:]:
@@ -409,7 +420,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
 
     def _get_or_create_order_group(self, order_description, group_id):
         group_type = order_description[trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value]
-        group_class = tentacles_management.get_class_from_parent_subclasses(group_type, personal_data.OrderGroup)
+        group_class = tentacles_management.get_deep_class_from_parent_subclasses(group_type, personal_data.OrderGroup)
         return self.exchange_manager.exchange_personal_data.orders_manager.get_or_create_group(group_class, group_id)
 
     async def _create_orders(self, orders_descriptions, symbol):

@@ -267,9 +267,7 @@ async def test_single_exchange_process_optimize_initial_portfolio(tools):
 
         orders = await mode.single_exchange_process_optimize_initial_portfolio(["BTC", "ETH"], "USDT", {})
         convert_assets_to_target_asset_mock.assert_called_once_with(mode, ["BTC", "ETH"], "USDT", {})
-        assert cancel_order_mock.call_count == 2
-        assert cancel_order_mock.mock_calls[0].args[0] is open_order_1
-        assert cancel_order_mock.mock_calls[1].args[0] is open_order_2
+        cancel_order_mock.assert_not_called()
         assert orders == ["order_1"]
         convert_assets_to_target_asset_mock.reset_mock()
 
@@ -344,7 +342,7 @@ async def test_ohlcv_callback(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     current_time = time.time()
     with mock.patch.object(producer, "ensure_index", mock.AsyncMock()) as ensure_index_mock, \
-            mock.patch.object(producer, "_notify_if_missing_too_many_coins", mock.Mock()) \
+        mock.patch.object(producer, "_notify_if_missing_too_many_coins", mock.Mock()) \
             as _notify_if_missing_too_many_coins_mock:
         with mock.patch.object(
                 trader.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=current_time)
@@ -410,7 +408,9 @@ async def test_ensure_index(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     with mock.patch.object(
             producer, "_wait_for_symbol_prices_and_profitability_init", mock.AsyncMock()
-    ) as _wait_for_symbol_prices_and_profitability_init_mock:
+    ) as _wait_for_symbol_prices_and_profitability_init_mock, \
+        mock.patch.object(producer, "cancel_traded_pairs_open_orders_if_any", mock.AsyncMock()) \
+            as _cancel_traded_pairs_open_orders_if_any:
         with mock.patch.object(producer, "_trigger_rebalance", mock.AsyncMock()) as _trigger_rebalance_mock:
             with mock.patch.object(
                     producer, "_get_rebalance_details", mock.Mock(return_value=(False, {}))
@@ -419,6 +419,8 @@ async def test_ensure_index(tools):
                 assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
                     index_trading.IndexActivity.REBALANCING_SKIPPED
                 )
+                _cancel_traded_pairs_open_orders_if_any.assert_called_once()
+                _cancel_traded_pairs_open_orders_if_any.reset_mock()
                 _wait_for_symbol_prices_and_profitability_init_mock.assert_called_once()
                 _wait_for_symbol_prices_and_profitability_init_mock.reset_mock()
                 _get_rebalance_details_mock.assert_called_once()
@@ -426,6 +428,7 @@ async def test_ensure_index(tools):
             with mock.patch.object(
                     producer, "_get_rebalance_details", mock.Mock(return_value=(True, {"plop": 1}))
             ) as _get_rebalance_details_mock:
+                producer.trading_mode.cancel_open_orders = False
                 await producer.ensure_index()
                 assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
                     index_trading.IndexActivity.REBALANCING_DONE, {"plop": 1}
@@ -433,7 +436,29 @@ async def test_ensure_index(tools):
                 _wait_for_symbol_prices_and_profitability_init_mock.assert_called_once()
                 _wait_for_symbol_prices_and_profitability_init_mock.reset_mock()
                 _get_rebalance_details_mock.assert_called_once()
+                _cancel_traded_pairs_open_orders_if_any.assert_not_called()
                 _trigger_rebalance_mock.assert_called_once_with({"plop": 1})
+
+
+async def test_cancel_traded_pairs_open_orders_if_any(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    orders = [
+        mock.Mock(symbol="BTC/USDT"),
+        mock.Mock(symbol="BTC/USDT"),
+        mock.Mock(symbol="ETH/USDT"),
+        mock.Mock(symbol="DOGE/USDT"),
+    ]
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.orders_manager, "get_open_orders", mock.Mock(return_value=orders)
+    ) as get_open_orders_mock, \
+        mock.patch.object(mode, "cancel_order", mock.AsyncMock()) \
+            as cancel_order_mock:
+        await producer.cancel_traded_pairs_open_orders_if_any()
+        get_open_orders_mock.assert_called_once()
+        assert cancel_order_mock.call_count == 2
+        assert cancel_order_mock.mock_calls[0].args[0] is orders[0]
+        assert cancel_order_mock.mock_calls[1].args[0] is orders[1]
 
 
 async def test_trigger_rebalance(tools):

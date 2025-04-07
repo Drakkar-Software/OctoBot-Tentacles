@@ -3,8 +3,7 @@
         "SimpleStrategyEvaluator"
     ],
     "required_strategies": [
-        "SimpleStrategyEvaluator",
-        "TechnicalAnalysisStrategyEvaluator"
+        "SimpleStrategyEvaluator"
     ],
     "buy_order_amount": "50q",
     "exit_limit_orders_price_percent": 5,

@@ -33,6 +33,7 @@ import octobot_trading.exchange_data as exchange_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges as exchanges
+import octobot_trading.modes.script_keywords as script_keywords
 import octobot_trading.personal_data as trading_personal_data
 import tentacles.Trading.Mode as Mode
 import tests.unit_tests.trading_modes_tests.trading_mode_test_toolkit as trading_mode_test_toolkit
@@ -958,6 +959,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.tag == "super"
     assert stop_order.reduce_only is False
+    assert stop_order.trailing_profile is None
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -977,6 +979,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert take_profit_order.origin_price == decimal.Decimal("100000")
     assert take_profit_order.is_waiting_for_chained_trigger
     assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+    assert take_profit_order.trailing_profile is None
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     assert take_profit_order.reduce_only is False
@@ -998,6 +1001,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     assert take_profit_order.reduce_only is False
+    assert take_profit_order.trailing_profile is None
 
     # stop loss and take profit
     data = {
@@ -1015,6 +1019,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_order.origin_price == decimal.Decimal("123")
     assert stop_order.is_waiting_for_chained_trigger
     assert stop_order.associated_entry_ids == [buy_order.order_id]
+    assert stop_order.trailing_profile is None
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     take_profit_order = buy_order.chained_orders[1]
@@ -1029,6 +1034,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert take_profit_order.reduce_only is False
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
     assert take_profit_order.order_group is stop_order.order_group
+    assert take_profit_order.trailing_profile is None
 
     # stop loss and take profit but decreasing position size: create stop loss and no take profit
     # (this initial order is a take profit already)
@@ -1050,6 +1056,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_loss.chained_orders == []
     assert stop_loss.reduce_only is True    # True as force stop loss
     assert stop_loss.origin_price == decimal.Decimal("123")
+    assert stop_loss.trailing_profile is None
     assert stop_loss.origin_quantity == decimal.Decimal("0.01") \
            - trading_personal_data.get_fees_for_currency(sell_limit.fee, stop_loss.quantity_currency)
 
@@ -1087,11 +1094,12 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert not take_profit_order.is_open()
         assert not take_profit_order.is_created()
         assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
 
     # only 2 additional (2 in total)
     data = {
         consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [decimal.Decimal("110000"), decimal.Decimal("120000")],
-        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"), consumer.TRAILING_PROFILE: None
     }
     orders_with_tps = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
     buy_order = orders_with_tps[0]
@@ -1110,6 +1118,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert not take_profit_order.is_open()
         assert not take_profit_order.is_created()
         assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
 
     # stop loss and 1 take profit and 5 additional (6 TP in total)
     tp_prices = [
@@ -1134,6 +1143,7 @@ async def test_chained_multiple_take_profit_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.update_with_triggering_order_fees is True
+    assert stop_order.trailing_profile is None
     assert len(buy_order.chained_orders[1:]) == len(tp_prices)
     for i, take_profit_order in enumerate(buy_order.chained_orders[1:]):
         is_last = i == len(buy_order.chained_orders[1:]) - 1
@@ -1150,6 +1160,64 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert isinstance(stop_order.order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
         assert take_profit_order.order_group is stop_order.order_group
         assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
+
+
+async def test_chained_multiple_take_profit_with_filled_tp_trailing_stop_orders(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+
+    # with BTC/USDT
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
+        last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(10 + 1000 / last_btc_price))
+
+    state = trading_enums.EvaluatorStates.LONG.value
+    # stop loss and 1 take profit and 5 additional (6 TP in total)
+    tp_prices = [
+        decimal.Decimal("100012"),
+        decimal.Decimal("110000"), decimal.Decimal("120000"), decimal.Decimal("130000"),
+        decimal.Decimal("140000"), decimal.Decimal("150000")
+    ]
+    data = {
+        consumer.STOP_PRICE_KEY: decimal.Decimal("123"),
+        consumer.TAKE_PROFIT_PRICE_KEY: tp_prices[0],
+        consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: tp_prices[1:],
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.TRAILING_PROFILE: trading_personal_data.TrailingProfileTypes.FILLED_TAKE_PROFIT.value,
+    }
+    orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state, data=data)
+    buy_order = orders_with_tp[0]
+    assert len(buy_order.chained_orders) == 1 + len(tp_prices)
+    stop_order = buy_order.chained_orders[0]
+    assert isinstance(stop_order, trading_personal_data.StopLossOrder)
+    assert stop_order.origin_quantity == decimal.Decimal("0.01") \
+           - trading_personal_data.get_fees_for_currency(buy_order.fee, stop_order.quantity_currency)
+    assert stop_order.origin_price == decimal.Decimal("123")
+    assert stop_order.is_waiting_for_chained_trigger
+    assert stop_order.associated_entry_ids == [buy_order.order_id]
+    assert stop_order.update_with_triggering_order_fees is True
+    assert stop_order.trailing_profile == trading_personal_data.FilledTakeProfitTrailingProfile([
+        trading_personal_data.TrailingPriceStep(float(trailing_price), float(trigger_price), True)
+        for trailing_price, trigger_price in zip([buy_order.origin_price] + tp_prices[:-1], tp_prices)
+    ])
+    assert len(buy_order.chained_orders[1:]) == len(tp_prices)
+    for i, take_profit_order in enumerate(buy_order.chained_orders[1:]):
+        is_last = i == len(buy_order.chained_orders[1:]) - 1
+        assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+        assert take_profit_order.origin_quantity == (
+            decimal.Decimal("0.01")
+           - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
+        ) / decimal.Decimal(str(len(tp_prices)))
+        assert take_profit_order.origin_price == tp_prices[i]
+        assert take_profit_order.is_waiting_for_chained_trigger
+        assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+        assert not take_profit_order.is_open()
+        assert not take_profit_order.is_created()
+        assert isinstance(stop_order.order_group, trading_personal_data.TrailingOnFilledTPBalancedOrderGroup)
+        assert take_profit_order.order_group is stop_order.order_group
+        assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
 
 
 async def test_create_stop_loss_orders(tools):
@@ -1196,6 +1264,94 @@ async def test_create_stop_loss_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.tag == "plop1"
     assert stop_order.is_open()
+
+
+async def test_get_limit_quantity_from_risk(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+    ctx = script_keywords.get_base_context(consumer.trading_mode, symbol)
+    last_btc_price = 100
+    trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
+        symbol] = last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(last_btc_price * 10 + 1000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.current_crypto_currencies_values["BTC"] = \
+        decimal.Decimal(str(last_btc_price))
+    # with user amount
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal(1)
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = 10
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_SELL_ORDER_AMOUNT] = 10
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("9.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10")
+
+    # without user amount
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_BUY_ORDER_AMOUNT)
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_SELL_ORDER_AMOUNT)
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("8.7")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+
+async def test_get_market_quantity_from_risk(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+    ctx = script_keywords.get_base_context(consumer.trading_mode, symbol)
+    last_btc_price = 80
+    trading_api.force_set_mark_price(exchange_manager, symbol, last_btc_price)
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[
+        symbol] = last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(last_btc_price * 10 + 1000))
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.current_crypto_currencies_values["BTC"] = \
+        decimal.Decimal(str(last_btc_price))
+    # with user amount
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal(1)
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = 10
+    consumer.trading_mode.trading_config[trading_constants.CONFIG_SELL_ORDER_AMOUNT] = 10
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("10")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10")
+
+    # without user amount
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_BUY_ORDER_AMOUNT)
+    consumer.trading_mode.trading_config.pop(trading_constants.CONFIG_SELL_ORDER_AMOUNT)
+
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.5")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("11.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.MAX_CURRENCY_RATIO = decimal.Decimal("0.1")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10.8")
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10.8")
 
 
 async def test_target_profit_mode(tools):

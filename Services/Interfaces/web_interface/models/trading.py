@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
 import time
 import sortedcontainers
 
@@ -161,8 +162,9 @@ def _merge_all_exchanges_historical_portfolio(currency, time_frame, from_timesta
                 merged_result[value[trading_enums.HistoricalPortfolioValue.TIME.value]] = \
                     value[trading_enums.HistoricalPortfolioValue.VALUE.value]
             else:
-                merged_result[value[trading_enums.HistoricalPortfolioValue.TIME.value]] += \
+                merged_result[value[trading_enums.HistoricalPortfolioValue.TIME.value]] += str(decimal.Decimal(
                     value[trading_enums.HistoricalPortfolioValue.VALUE.value]
+                ))
     return [
         {
             trading_enums.HistoricalPortfolioValue.TIME.value: key,

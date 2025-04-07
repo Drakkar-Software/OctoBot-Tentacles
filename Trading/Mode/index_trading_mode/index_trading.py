@@ -270,6 +270,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
 class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
+    CANCEL_OPEN_ORDERS = "cancel_open_orders"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
     SELL_UNINDEXED_TRADED_COINS = "sell_unindexed_traded_coins"
     INDEX_CONTENT = "index_content"
@@ -323,6 +324,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{len(self.trading_mode.indexed_coins)} coins: {self.trading_mode.indexed_coins} with reference market: "
             f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
         )
+        if self.trading_mode.cancel_open_orders:
+            await self.cancel_traded_pairs_open_orders_if_any()
         is_rebalance_required, rebalance_details = self._get_rebalance_details()
         if is_rebalance_required:
             await self._trigger_rebalance(rebalance_details)
@@ -502,6 +505,18 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             )
         return topics
 
+    async def cancel_traded_pairs_open_orders_if_any(self):
+        if symbol_open_orders := [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+            if order.symbol in self.exchange_manager.exchange_config.traded_symbol_pairs
+        ]:
+            self.logger.info(
+                f"Cancelling {len(symbol_open_orders)} open orders"
+            )
+            for order in symbol_open_orders:
+                await self.trading_mode.cancel_order(order)
+
 
 class IndexTradingMode(trading_modes.AbstractTradingMode):
     MODE_PRODUCER_CLASSES = [IndexTradingModeProducer]
@@ -515,6 +530,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.rebalance_trigger_min_ratio = decimal.Decimal("0.05")  # 5%
         self.ratio_per_asset = {}
         self.sell_unindexed_traded_coins = True
+        self.cancel_open_orders = True
         self.total_ratio_per_asset = trading_constants.ZERO
         self.indexed_coins = []
 
@@ -538,6 +554,12 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             title="Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
                   "triggering a rebalance.",
         ))) / trading_constants.ONE_HUNDRED
+        self.cancel_open_orders = float(self.UI.user_input(
+            IndexTradingModeProducer.CANCEL_OPEN_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
+            self.cancel_open_orders, inputs,
+            title="Cancel open orders: When enabled, open orders of the index trading pairs will be canceled to free "
+                  "funds and invest in the index content.",
+        ))
         self.sell_unindexed_traded_coins = trading_config.get(
             IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS,
             self.sell_unindexed_traded_coins
@@ -689,17 +711,6 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     async def single_exchange_process_optimize_initial_portfolio(
         self, sellable_assets: list, target_asset: str, tickers: dict
     ) -> list:
-        symbol_open_orders = [
-            order
-            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
-            if order.symbol in self.exchange_manager.exchange_config.traded_symbol_pairs
-        ]
-        self.logger.info(
-            f"Optimizing portfolio: cancelling {len(symbol_open_orders)} open orders, selling {sellable_assets} "
-            f"to buy {target_asset}"
-        )
-        for order in symbol_open_orders:
-            await self.cancel_order(order)
         return await trading_modes.convert_assets_to_target_asset(
             self, sellable_assets, target_asset, tickers
         )
