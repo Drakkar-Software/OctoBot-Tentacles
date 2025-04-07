@@ -47,7 +47,8 @@ class Bingx(exchanges.RestExchange):
     ]
     # text content of errors due to an order that can't be cancelled on exchange (because filled or already cancelled)
     EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
-        ('the order is filled or cancelled', )
+        ('the order is filled or cancelled', ''),
+        ('order not exist', '')
     ]
     # text content of errors due to unhandled IP white list issues
     EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
