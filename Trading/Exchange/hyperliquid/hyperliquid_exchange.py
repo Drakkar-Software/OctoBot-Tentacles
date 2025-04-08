@@ -13,15 +13,36 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
 
+class HyperliquidConnector(exchanges.CCXTConnector):
+
+    def _client_factory(
+        self,
+        force_unauth,
+        keys_adapter: typing.Callable[[exchanges.ExchangeCredentialsData], exchanges.ExchangeCredentialsData]=None
+    ) -> tuple:
+        return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
+
+    def _keys_adapter(self, creds: exchanges.ExchangeCredentialsData) -> exchanges.ExchangeCredentialsData:
+        # use api key and secret as wallet address and private key
+        creds.wallet_address = creds.api_key
+        creds.private_key = creds.secret
+        creds.api_key = creds.secret = None
+        return creds
+
+
 class Hyperliquid(exchanges.RestExchange):
     DESCRIPTION = ""
+    DEFAULT_CONNECTOR_CLASS = HyperliquidConnector
 
     FIX_MARKET_STATUS = True
+    REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    # should be fetched using recent trades.
 
     @classmethod
     def get_name(cls):
