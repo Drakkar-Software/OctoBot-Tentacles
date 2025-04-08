@@ -47,7 +47,7 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
         return True
 
     def webhook_callback(self, data):
-        self.logger.debug(f"Received : {data}")
+        self.logger.info(f"Received : {data}")
         self._notify_consumers(
             {
                 services_constants.FEED_METADATA: data,
@@ -55,7 +55,7 @@ class TradingViewServiceFeed(service_feeds.AbstractServiceFeed):
         )
 
     async def async_webhook_callback(self, data):
-        self.logger.debug(f"Received : {data}")
+        self.logger.info(f"Received : {data}")
         await self._async_notify_consumers(
             {
                 services_constants.FEED_METADATA: data,
