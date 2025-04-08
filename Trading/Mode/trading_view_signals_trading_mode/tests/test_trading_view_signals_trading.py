@@ -177,17 +177,19 @@ async def test_parse_signal_data():
 
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
-        "KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI",
+        "KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI;LEVERAGE=3",
         errors
     ) == {
         "KEY": "value",
         "PLOp": "ABC",
         "GG": "HIHI",
+        "LEVERAGE": "3",
     }
     assert len(errors) == 1
     assert "EXCHANGE" in str(errors[0])
     assert "nPLOp" not in str(errors[0])
     assert "KEY" not in str(errors[0])
+    assert "LEVERAGE" not in str(errors[0])
 
 
 async def test_trading_view_signal_callback(tools):
@@ -362,6 +364,7 @@ async def test_signal_callback(tools):
             "PARAM_Plop": False,
         }, context)
         set_leverage_mock.assert_called_once()
+        assert set_leverage_mock.mock_calls[0].args[2] == decimal.Decimal(22)
         set_leverage_mock.reset_mock()
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
@@ -403,6 +406,7 @@ async def test_signal_callback(tools):
             "PARAM_Plop": False,
         }, context)
         set_leverage_mock.assert_called_once()
+        assert set_leverage_mock.mock_calls[0].args[2] == decimal.Decimal(22)
         set_leverage_mock.reset_mock()
         _set_state_mock.assert_awaited_once()
         assert _set_state_mock.await_args[0][1] == symbol
