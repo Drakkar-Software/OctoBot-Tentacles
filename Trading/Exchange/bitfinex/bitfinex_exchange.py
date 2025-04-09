@@ -23,7 +23,7 @@ import octobot_trading.enums as trading_enums
 
 class Bitfinex(exchanges.RestExchange):
 
-    # bitfinex2 only supports 1, 25 and 100 size
+    # bitfinex only supports 1, 25 and 100 size
     # https://docs.bitfinex.com/reference#rest-public-book
     SUPPORTED_ORDER_BOOK_LIMITS = [1, 25, 100]
     DEFAULT_ORDER_BOOK_LIMIT = 25
@@ -31,7 +31,7 @@ class Bitfinex(exchanges.RestExchange):
 
     @classmethod
     def get_name(cls):
-        return 'bitfinex2'
+        return 'bitfinex'
 
     def get_adapter_class(self):
         return BitfinexCCXTAdapter

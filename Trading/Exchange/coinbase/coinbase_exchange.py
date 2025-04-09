@@ -74,18 +74,24 @@ def _coinbase_retrier(f):
 
 class CoinbaseConnector(ccxt_connector.CCXTConnector):
 
-    def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
+    def _client_factory(
+        self,
+        force_unauth,
+        keys_adapter: typing.Callable[[exchanges.ExchangeCredentialsData], exchanges.ExchangeCredentialsData]=None
+    ) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
 
-    def _keys_adapter(self, key, secret, password, uid, auth_token):
-        if auth_token:
+    def _keys_adapter(self, creds: exchanges.ExchangeCredentialsData) -> exchanges.ExchangeCredentialsData:
+        if creds.auth_token:
             # when auth token is provided, force invalid keys
-            return "ANY_KEY", "ANY_SECRET", password, uid, auth_token, "Bearer "
+            creds.api_key = "ANY_KEY"
+            creds.secret = "ANY_KEY"
+            creds.auth_token_header_prefix = "Bearer "
         # CCXT pem key reader is not expecting users to under keys pasted as text from the coinbase UI
         # convert \\n to \n to make this format compatible as well
-        if secret and "\\n" in secret:
-            secret = secret.replace("\\n", "\n")
-        return key, secret, password, uid, None, None
+        if creds.secret and "\\n" in creds.secret:
+            creds.secret = creds.secret.replace("\\n", "\n")
+        return creds
 
     @_coinbase_retrier
     async def _load_markets(self, client, reload: bool):

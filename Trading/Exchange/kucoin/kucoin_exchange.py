@@ -28,6 +28,7 @@ import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors as trading_errors
 import octobot.community
 
 
@@ -94,10 +95,10 @@ class Kucoin(exchanges.RestExchange):
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
 
+    SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
+
     # get_my_recent_trades only covers the last 24h on kucoin
     ALLOW_TRADES_FROM_CLOSED_ORDERS = True  # set True when get_my_recent_trades should use get_closed_orders
-
-    SUPPORTS_SET_MARGIN_TYPE = False  # set False when there is no API to switch between cross and isolated margin types
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -266,7 +267,7 @@ class Kucoin(exchanges.RestExchange):
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
-            kwargs["to"] = int(time.time() * 1000)
+            kwargs["to"] = int(time.time() * commons_constants.MSECONDS_TO_SECONDS)
         return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     @_kucoin_retrier
@@ -411,6 +412,24 @@ class Kucoin(exchanges.RestExchange):
     async def get_my_recent_trades(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
         return await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
 
+    @_kucoin_retrier
+    async def set_symbol_margin_type(self, symbol: str, isolated: bool, **kwargs: dict):
+        """
+        Set the symbol margin type
+        :param symbol: the symbol
+        :param isolated: when False, margin type is cross, else it's isolated
+        :return: the update result
+        """
+        try:
+            return await super().set_symbol_margin_type(symbol, isolated, **kwargs)
+        except ccxt.errors.ExchangeError as err:
+            if "Please close or cancel them" in str(err):
+                if self.SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS:
+                    raise
+                else:
+                    raise trading_errors.NotSupported(f"set_symbol_margin_type is not supported on open positions")
+            raise
+
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
         Get the current user symbol position list
@@ -527,14 +546,31 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             up: Triggers when the price reaches or goes above the stopPrice.
             """
             side = fixed.get(trading_enums.ExchangeConstantsOrderColumns.SIDE.value)
+            # SPOT: trigger_direction can be "loss" or  "entry"
+            # spot
+            is_stop_loss = False
+            is_stop_entry = False
             trigger_above = False
-            if trigger_direction in ("up", "loss"):
+            # spot
+            if trigger_direction == "loss":
+                is_stop_loss = True
+            elif trigger_direction == "entry":
+                is_stop_entry = True
+            # futures
+            elif trigger_direction == "up":
                 trigger_above = True
-            elif trigger_direction in ("down", "loss"):
+            elif trigger_direction == "down":
                 trigger_above = False
             else:
                 self.logger.error(
                     f"Unknown [{self.connector.exchange_manager.exchange_name}] order trigger direction "
+                    f"{trigger_direction} ({fixed})"
+                )
+            if is_stop_loss:
+                trigger_above = side == trading_enums.TradeOrderSide.BUY.value
+            if is_stop_entry:
+                self.logger.error(
+                    f"Unhandled [{self.connector.exchange_manager.exchange_name}] stop order type "
                     f"{trigger_direction} ({fixed})"
                 )
             stop_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None)
