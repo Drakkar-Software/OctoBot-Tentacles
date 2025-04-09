@@ -59,3 +59,17 @@ class HyperLiquidCCXTAdapter(exchanges.CCXTAdapter):
         fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
             fixed.get(trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value) or self.connector.client.seconds()
         return fixed
+
+    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
+        fixed = super().fix_market_status(raw, remove_price_limits=remove_price_limits, **kwargs)
+        if not fixed:
+            return fixed
+        # hyperliquid min cost should be increased by 10% (a few cents above min cost is refused)
+        limits = fixed[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]
+        limits[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value
+        ] = limits[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST.value][
+            trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value
+        ] * 1.1
+
+        return fixed
