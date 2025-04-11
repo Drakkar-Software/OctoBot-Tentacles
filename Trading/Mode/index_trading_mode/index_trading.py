@@ -666,6 +666,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 coin
                 for coin in available_traded_bases
                 if coin not in self.indexed_coins
+                   and coin != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
             ]
 
         if not (self.previous_trading_config and self.trading_config):
@@ -678,6 +679,10 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             asset[index_distribution.DISTRIBUTION_NAME]
             for asset in self.previous_trading_config[IndexTradingModeProducer.INDEX_CONTENT]
             if asset[index_distribution.DISTRIBUTION_NAME] not in current_coins
+                and (
+                    asset[index_distribution.DISTRIBUTION_NAME]
+                    != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                )
         ]))
 
     def get_target_ratio(self, currency) -> decimal.Decimal:
