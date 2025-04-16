@@ -414,9 +414,12 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         if not self.single_pair_setup:
             interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
             if interfering_orders_pairs:
-                self.logger.error(f"Impossible to create grid orders for {self.symbol} with interfering orders "
-                                  f"using pair(s): {interfering_orders_pairs}. Configure funds to use for each pairs "
-                                  f"to be able to use interfering pairs.")
+                self.logger.error(
+                    f"Impossible to create {self.symbol} grid orders with open orders on "
+                    f"{', '.join(interfering_orders_pairs)}. To use shared base or quote currencies, "
+                    f"set 'Total buy funds' and 'Total sell funds' in your {self.trading_mode.get_name()} "
+                    f"{self.symbol} configuration."
+                )
                 return [], [], False
         existing_orders = order_manager.get_open_orders(self.symbol)
 
