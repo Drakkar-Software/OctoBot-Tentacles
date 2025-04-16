@@ -997,9 +997,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
         if interfering_orders_pairs:
-            self.logger.error(f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} with "
-                              f"interfering orders using pair(s): {interfering_orders_pairs}. "
-                              f"{self.ORDERS_DESC.capitalize()} orders require no other orders in both base and quote.")
+            self.logger.error(
+                f"Impossible to create {self.ORDERS_DESC} orders for {self.symbol} with interfering orders using "
+                f"pair(s): {', '.join(interfering_orders_pairs)}. {self.ORDERS_DESC.capitalize()} orders require no "
+                f"other orders in both base and quote. Please use the Grid Trading Mode with configured Total funds"
+                f" trade with interfering orders."
+            )
             return [], [], False
         existing_orders = order_manager.get_open_orders(self.symbol)
 
