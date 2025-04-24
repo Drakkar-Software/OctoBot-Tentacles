@@ -346,7 +346,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         )
         await self.submit_trading_evaluation(
             cryptocurrency=None,
-            symbol=None,
+            symbol=None,    # never set symbol in order to skip consumer.can_create_order check
             time_frame=None,
             final_note=None,
             state=trading_enums.EvaluatorStates.NEUTRAL,
