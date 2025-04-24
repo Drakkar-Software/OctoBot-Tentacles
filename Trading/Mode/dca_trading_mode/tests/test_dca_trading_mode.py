@@ -649,6 +649,42 @@ async def test_create_entry_order_with_max_ratio(tools):
             _create_entry_with_chained_exit_orders_mock.assert_called_once()
 
 
+async def test_create_create_order_if_possible_with_funds_already_locked(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    symbol = mode.symbol
+    with mock.patch.object(
+        consumer, "create_new_orders", mock.AsyncMock(return_value=["orders"])
+    ) as create_new_orders_mock:
+        # case 1: all OK => enough available funds
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
+            decimal.Decimal("1000")
+        # DOES NOT cancel orders before creating entries: can new entries as funds are available
+        mode.cancel_open_orders_at_each_entry = False
+        assert await consumer.create_order_if_possible(symbol, None, trading_enums.EvaluatorStates.VERY_LONG.value) == ["orders"]
+        create_new_orders_mock.assert_called_once()
+        create_new_orders_mock.reset_mock()
+
+        # DOES cancel orders before creating entries: can create new entries as funds are available
+        mode.cancel_open_orders_at_each_entry = True
+        assert await consumer.create_order_if_possible(symbol, None, trading_enums.EvaluatorStates.VERY_LONG.value) == ["orders"]
+        create_new_orders_mock.assert_called_once()
+        create_new_orders_mock.reset_mock()
+
+        # case 2: NOT all OK => not enough available funds
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
+            decimal.Decimal("0")
+        # DOES NOT cancel orders before creating entries: can't create new entries when no funds are available
+        mode.cancel_open_orders_at_each_entry = False
+        assert await consumer.create_order_if_possible(symbol, None, trading_enums.EvaluatorStates.VERY_LONG.value) == []
+        create_new_orders_mock.assert_not_called()
+
+        # DOES cancel orders before creating entries: can create new entries when no funds are available
+        mode.cancel_open_orders_at_each_entry = True
+        assert await consumer.create_order_if_possible(symbol, None, trading_enums.EvaluatorStates.VERY_LONG.value) == ["orders"]
+        create_new_orders_mock.assert_called_once()
+
+
 async def test_is_max_asset_ratio_reached(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
     assert mode.max_asset_holding_ratio == trading_constants.ONE
