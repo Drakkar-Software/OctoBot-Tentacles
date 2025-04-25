@@ -525,6 +525,11 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type)
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
+            if self.exchange_manager.trader.enable_inactive_orders:
+                active_order_swap_strategy = oco_group.get_active_order_swap_strategy(0)
+                await active_order_swap_strategy.set_inactive_orders(
+                    chained_orders, trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE
+                )
         return await self.trading_mode.create_order(current_order, params=params or None)
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
