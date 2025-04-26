@@ -422,8 +422,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 params.update(param_update)
                 order_couple.append(chained_order)
             if len(order_couple) > 1:
-                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                    trading_personal_data.OneCancelsTheOtherOrderGroup,
+                    active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
+                )
                 for order in order_couple:
                     order.add_to_order_group(oco_group)
         return await self.trading_mode.create_order(entry_order, params=params or None)

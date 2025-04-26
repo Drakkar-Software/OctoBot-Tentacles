@@ -424,7 +424,21 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
     def _get_or_create_order_group(self, order_description, group_id):
         group_type = order_description[trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value]
         group_class = tentacles_management.get_deep_class_from_parent_subclasses(group_type, personal_data.OrderGroup)
-        return self.exchange_manager.exchange_personal_data.orders_manager.get_or_create_group(group_class, group_id)
+        active_order_swap_strategy = None
+        if active_strategy_type := order_description.get(
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TYPE.value
+        ):
+            active_order_swap_strategy = tentacles_management.get_deep_class_from_parent_subclasses(
+                active_strategy_type, personal_data.ActiveOrderSwapStrategy
+            )(
+                swap_timeout=
+                    order_description[trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TIMEOUT.value],
+                trigger_price_configuration=
+                    order_description[trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TRIGGER_CONFIG.value]
+            )
+        return self.exchange_manager.exchange_personal_data.orders_manager.get_or_create_group(
+            group_class, group_id, active_order_swap_strategy=active_order_swap_strategy
+        )
 
     async def _create_orders(self, orders_descriptions, symbol):
         to_create_orders = {}   # dict of (orders, orders_param)

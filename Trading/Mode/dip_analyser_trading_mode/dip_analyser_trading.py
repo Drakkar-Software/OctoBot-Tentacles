@@ -342,8 +342,10 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
             return None
         stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
-        oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-            .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+        oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+            trading_personal_data.OneCancelsTheOtherOrderGroup,
+            active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
+        )
         sell_order.add_to_order_group(oco_group)
         current_order = trading_personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
