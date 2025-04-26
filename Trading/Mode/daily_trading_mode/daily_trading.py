@@ -14,7 +14,6 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
-import copy
 import decimal
 import math
 import dataclasses
@@ -192,6 +191,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     PRICE_KEY = "PRICE"
     VOLUME_KEY = "VOLUME"
     STOP_PRICE_KEY = "STOP_PRICE"
+    ACTIVE_ORDER_SWAP_STRATEGY = "ACTIVE_ORDER_SWAP_STRATEGY"
+    ACTIVE_ORDER_SWAP_TIMEOUT = "ACTIVE_ORDER_SWAP_TIMEOUT"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ADDITIONAL_TAKE_PROFIT_PRICES_KEY = "ADDITIONAL_TAKE_PROFIT_PRICES"
     STOP_ONLY = "STOP_ONLY"
@@ -454,7 +455,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         use_take_profit_orders, take_profits_details: list[OrderDetails],
         use_stop_loss_orders, stop_loss_details: list[OrderDetails],
         symbol_market, tag,
-        trailing_profile_type: typing.Optional[trading_personal_data.TrailingProfileTypes]
+        trailing_profile_type: typing.Optional[trading_personal_data.TrailingProfileTypes],
+        active_order_swap_strategy: trading_personal_data.ActiveOrderSwapStrategy,
     ):
         params = {}
         chained_orders = []
@@ -522,12 +524,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     )
             else:
                 group_type = trading_personal_data.BalancedTakeProfitAndStopOrderGroup
-            oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type)
+            oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                group_type, active_order_swap_strategy=active_order_swap_strategy
+            )
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
             if self.exchange_manager.trader.enable_inactive_orders:
-                active_order_swap_strategy = oco_group.get_active_order_swap_strategy(0)
-                await active_order_swap_strategy.set_inactive_orders(
+                await oco_group.get_active_order_swap_strategy.apply_inactive_orders(
                     chained_orders, trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE
                 )
         return await self.trading_mode.create_order(current_order, params=params or None)
@@ -646,6 +649,12 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if use_chained_stop_loss_orders:
                 stop_loss_order_details = [OrderDetails(user_stop_price, None)]
 
+            active_order_swap_strategy = data.get(self.ACTIVE_ORDER_SWAP_STRATEGY) or (
+                trading_personal_data.StopFirstActiveOrderSwapStrategy(data.get(
+                    self.ACTIVE_ORDER_SWAP_TIMEOUT, trading_constants.ACTIVE_ORDER_STRATEGY_SWAP_TIMEOUT
+                ))
+            )
+
             if state == trading_enums.EvaluatorStates.VERY_SHORT.value and not self.DISABLE_SELL_ORDERS:
                 quantity = user_volume \
                            or await self._get_market_quantity_from_risk(
@@ -676,7 +685,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
-                        trailing_profile_type
+                        trailing_profile_type,
+                        active_order_swap_strategy
                     ):
                         created_orders.append(current_order)
 
@@ -712,7 +722,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
-                        trailing_profile_type
+                        trailing_profile_type,
+                        active_order_swap_strategy
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -720,8 +731,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         if create_stop_only or (use_stop_orders and updated_limit and updated_limit.is_open()):
                             oco_group = None
                             if updated_limit:
-                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                                    trading_personal_data.OneCancelsTheOtherOrderGroup,
+                                    active_order_swap_strategy=active_order_swap_strategy
+                                )
                                 updated_limit.add_to_order_group(oco_group)
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(True)
@@ -780,7 +793,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
-                        trailing_profile_type
+                        trailing_profile_type,
+                        active_order_swap_strategy
                     )):
                         if updated_limit:
                             created_orders.append(updated_limit)
@@ -788,8 +802,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         if create_stop_only or (use_stop_orders and updated_limit and updated_limit.is_open()):
                             oco_group = None
                             if updated_limit:
-                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                                oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                                    trading_personal_data.OneCancelsTheOtherOrderGroup,
+                                    active_order_swap_strategy=active_order_swap_strategy
+                                )
                                 updated_limit.add_to_order_group(oco_group)
                             stop_price = trading_personal_data.decimal_adapt_price(
                                 symbol_market, price * self._get_stop_price_from_risk(False)
@@ -843,7 +859,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_take_profit_orders, take_profit_order_details,
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
-                        trailing_profile_type
+                        trailing_profile_type,
+                        active_order_swap_strategy
                     ):
                         created_orders.append(current_order)
             if created_orders:
