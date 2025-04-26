@@ -214,7 +214,8 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 arbitrage_container.target_price,
                 symbol_market):
             oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
-                trading_personal_data.OneCancelsTheOtherOrderGroup
+                trading_personal_data.OneCancelsTheOtherOrderGroup,
+                active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
             )
             current_order = trading_personal_data.create_order_instance(
                 trader=self.exchange_manager.trader,
