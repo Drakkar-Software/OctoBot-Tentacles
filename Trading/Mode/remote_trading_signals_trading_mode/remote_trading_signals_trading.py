@@ -212,11 +212,22 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             await self._send_alert_notification(symbol, created_count, edited_count, cancelled_count)
 
     async def _group_orders(self, orders_descriptions, symbol):
+        groups = []
+        orders_by_group_id = {}
         for order_description, order in self.get_open_order_from_description(orders_descriptions, symbol):
             order_group = self._get_or_create_order_group(
                 order_description,
                 order_description[trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value])
+            if order_group not in groups:
+                groups.append(order_group)
+                orders_by_group_id[order_group.name] = []
             order.add_to_order_group(order_group)
+            orders_by_group_id[order_group.name].append(order)
+
+        for group in groups:
+            # in futures, inactive orders are not necessary
+            if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                await group.get_active_order_swap_strategy.apply_inactive_orders(orders_by_group_id[group.name])
 
     async def _cancel_orders(self, orders_descriptions, symbol):
         cancelled_count = 0
@@ -396,6 +407,14 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
                 ),
                 trailing_profile_details
             )
+        is_active = order_description.get(trading_enums.TradingSignalOrdersAttrs.IS_ACTIVE.value, True)
+        active_trigger_price = (
+            None if order_description.get(trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_PRICE.value) is None
+            else decimal.Decimal(str(
+                order_description[trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_PRICE.value]
+            ))
+        )
+        active_trigger_above = order_description.get(trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_ABOVE.value)
         order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
             order_type=order_type,
@@ -412,6 +431,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             reduce_only=reduce_only,
             associated_entry_id=associated_entries[0] if associated_entries else None,
             trailing_profile=trailing_profile,
+            is_active=is_active,
+            active_trigger_price=active_trigger_price,
+            active_trigger_above=active_trigger_above
         )
         if associated_entries and len(associated_entries) > 1:
             for associated_entry in associated_entries[1:]:

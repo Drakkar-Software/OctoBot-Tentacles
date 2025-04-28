@@ -496,12 +496,16 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert take_profit.order_group is stop_loss.order_group
         assert isinstance(take_profit.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
         assert take_profit.update_with_triggering_order_fees is True
+        assert take_profit.is_active
+        assert stop_loss.is_active
         # reset values
         create_order_mock.reset_mock()
         entry_order.chained_orders = []
 
+        # with inactive orders
         # chained stop loss
         # 3 take profit (initial + 2 additional)
+        trader.enable_inactive_orders = True
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = True
         mode.use_secondary_exit_orders = True
@@ -545,6 +549,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
             assert isinstance(take_profit.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
             assert stop_loss.update_with_triggering_order_fees is is_last
             assert take_profit.update_with_triggering_order_fees is is_last
+            assert take_profit.is_active is False   # TP are inactive
+            assert stop_loss.is_active is True  # SL are active
         # ensure selling the total entry quantity
         assert total_stop_quantity == entry_order.origin_quantity
         assert total_tp_quantity == entry_order.origin_quantity
@@ -577,6 +583,7 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # ensure only stop losses and take profits in chained orders
         assert len(stop_losses) == 1
         assert len(take_profits) == 1
+        assert all(o.is_active is True for o in entry_order.chained_orders) # on futures, all orders are active
         assert all(order.reduce_only is True for order in entry_order.chained_orders)   # futures: use reduce only
         assert stop_losses[0].origin_quantity == take_profits[0].origin_quantity == entry_order.origin_quantity
         # update_with_triggering_order_fees is false because we are trading futures

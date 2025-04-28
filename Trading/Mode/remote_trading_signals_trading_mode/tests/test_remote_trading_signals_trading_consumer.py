@@ -108,13 +108,22 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     # market order is filled, chained & bundled orders got created
     assert isinstance(orders[0], trading_personal_data.StopLossOrder)
     assert isinstance(orders[0].order_group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup)
+    assert isinstance(orders[0].order_group.active_order_swap_strategy, trading_personal_data.StopFirstActiveOrderSwapStrategy)
+    assert orders[0].order_group.active_order_swap_strategy.swap_timeout == 3
+    assert orders[0].order_group.active_order_swap_strategy.trigger_price_configuration == trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE.value
     assert orders[0].trailing_profile is None
     assert orders[0].update_with_triggering_order_fees is False
     assert orders[0].origin_price == decimal.Decimal("9990")
     assert orders[0].trigger_above is False
+    assert orders[0].is_active is True
+    assert orders[0].active_trigger_price is None
+    assert orders[0].active_trigger_above is None
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
     assert orders[1].trailing_profile is None
+    assert orders[1].is_active is False
+    assert orders[1].active_trigger_price == decimal.Decimal(21)
+    assert orders[1].active_trigger_above is False
     assert orders[1].update_with_triggering_order_fees is True
     assert orders[1].trigger_above is True
     assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
