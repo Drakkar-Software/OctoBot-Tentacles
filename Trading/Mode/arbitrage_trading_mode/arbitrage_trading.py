@@ -35,6 +35,8 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 
+tentacles_manager_api.reload_tentacle_info()
+
 
 class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
 
@@ -248,6 +250,11 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if now_selling else trading_enums.TradeOrderSide.BUY,
                     associated_entry_id=entry_id,
                 )
+                # in futures, inactive orders are not necessary
+                if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                    await oco_group.active_order_swap_strategy.apply_inactive_orders(
+                        [created_orders[0], current_order]
+                    )
                 await self.trading_mode.create_order(current_order)
                 arbitrage_container.secondary_stop_order_id = current_order.order_id
             return created_orders

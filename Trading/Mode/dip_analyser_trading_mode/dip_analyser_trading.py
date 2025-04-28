@@ -359,6 +359,9 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             group=oco_group,
             associated_entry_id=buy_order_id,
         )
+        # in futures, inactive orders are not necessary
+        if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+            await oco_group.active_order_swap_strategy.apply_inactive_orders([sell_order, current_order])
         stop_order = await self.trading_mode.create_order(current_order)
         self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")
         return stop_order
