@@ -509,9 +509,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 params.update(param_update)
                 chained_orders.append(chained_order)
-        if len(chained_orders) > 1:
-            stop_orders = [o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)]
-            tp_orders = [o for o in chained_orders if not trading_personal_data.is_stop_order(o.order_type)]
+        stop_orders = [o for o in chained_orders if trading_personal_data.is_stop_order(o.order_type)]
+        tp_orders = [o for o in chained_orders if not trading_personal_data.is_stop_order(o.order_type)]
+        if stop_orders and tp_orders:
             if len(stop_orders) == len(tp_orders):
                 group_type = trading_personal_data.OneCancelsTheOtherOrderGroup
             elif trailing_profile_type == trading_personal_data.TrailingProfileTypes.FILLED_TAKE_PROFIT:
@@ -529,10 +529,10 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             )
             for order in chained_orders:
                 order.add_to_order_group(oco_group)
-            if self.exchange_manager.trader.enable_inactive_orders:
-                await oco_group.get_active_order_swap_strategy.apply_inactive_orders(
-                    chained_orders, trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE
-                )
+            # in futures, inactive orders are not necessary
+            if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                print("apply_inactive_orders")
+                await oco_group.active_order_swap_strategy.apply_inactive_orders(chained_orders)
         return await self.trading_mode.create_order(current_order, params=params or None)
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
@@ -752,6 +752,14 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                 exchange_creation_params=exchange_creation_params,
                                 tag=tag,
                             )
+                            # in futures, inactive orders are not necessary
+                            if (
+                                oco_group and self.exchange_manager.trader.enable_inactive_orders
+                                and not self.exchange_manager.is_future
+                            ):
+                                await oco_group.active_order_swap_strategy.apply_inactive_orders(
+                                    [updated_limit, current_order]
+                                )
                             created_stop = await self.trading_mode.create_order(current_order)
                             if create_stop_only:
                                 created_orders.append(created_stop)
@@ -823,6 +831,14 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                 exchange_creation_params=exchange_creation_params,
                                 tag=tag,
                             )
+                            # in futures, inactive orders are not necessary
+                            if (
+                                oco_group and self.exchange_manager.trader.enable_inactive_orders
+                                and not self.exchange_manager.is_future
+                            ):
+                                await oco_group.active_order_swap_strategy.apply_inactive_orders(
+                                    [updated_limit, current_order]
+                                )
                             await self.trading_mode.create_order(current_order)
                             created_stop = await self.trading_mode.create_order(current_order)
                             if create_stop_only:

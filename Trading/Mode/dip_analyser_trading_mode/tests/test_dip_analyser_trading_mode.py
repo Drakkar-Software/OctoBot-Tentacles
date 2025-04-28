@@ -442,6 +442,7 @@ async def test_create_sell_orders_without_stop_loss(tools):
 async def test_create_sell_orders_with_stop_loss(tools):
     producer, consumer, trader = tools
 
+    trader.enable_inactive_orders = True
     sell_quantity = decimal.Decimal("5")
     sell_target = 2
     buy_price = decimal.Decimal("100")
@@ -475,6 +476,8 @@ async def test_create_sell_orders_with_stop_loss(tools):
         assert limit.origin_quantity == stop.origin_quantity
         assert limit.origin_price > stop.origin_price
         assert stop.origin_price == stop_price
+        assert stop.is_active is True
+        assert limit.is_active is False
         group_orders = trader.exchange_manager.exchange_personal_data.orders_manager.get_order_from_group(
             limit.order_group.name
         )

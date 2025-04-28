@@ -428,6 +428,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 for order in order_couple:
                     order.add_to_order_group(oco_group)
+                # in futures, inactive orders are not necessary
+                if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                    await oco_group.active_order_swap_strategy.apply_inactive_orders(order_couple)
         return await self.trading_mode.create_order(entry_order, params=params or None)
 
     def _is_max_asset_ratio_reached(self, symbol):
