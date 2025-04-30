@@ -305,7 +305,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                                           sell_base, symbol_market)
             for order_quantity, order_price in to_create_orders:
                 orders_should_have_been_created = True
-                current_order = trading_personal_data.create_order_instance(
+                current_limit_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
                     order_type=trading_enums.TraderOrderType.SELL_LIMIT,
                     symbol=symbol,
@@ -315,12 +315,12 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     reduce_only=reduce_only,
                     associated_entry_id=buy_order_id,
                 )
-                if created_order := await self.trading_mode.create_order(current_order):
-                    created_orders.append(created_order)
-                    if stop_order := await self._create_stop_loss_if_enabled(
-                            created_order, sell_base, symbol_market, buy_order_id
-                    ):
-                        created_orders.append(stop_order)
+                created_sell_order, created_stop_order = await self._create_exit_with_stop_loss_if_enabled(
+                    current_limit_order, sell_base, symbol_market, buy_order_id
+                )
+                created_orders.append(created_sell_order)
+                if created_stop_order:
+                    created_orders.append(created_stop_order)
             if created_orders:
                 return created_orders
             if orders_should_have_been_created:
@@ -338,33 +338,36 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             )
             return []
 
-    async def _create_stop_loss_if_enabled(self, sell_order, sell_base, symbol_market, buy_order_id):
-        if not self.STOP_LOSS_PRICE_MULTIPLIER or not sell_order.is_open():
-            return None
-        stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
-        oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
-            trading_personal_data.OneCancelsTheOtherOrderGroup,
-            active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
-        )
-        sell_order.add_to_order_group(oco_group)
-        current_order = trading_personal_data.create_order_instance(
-            trader=self.exchange_manager.trader,
-            order_type=trading_enums.TraderOrderType.STOP_LOSS,
-            symbol=sell_order.symbol,
-            current_price=trading_personal_data.adapt_price(symbol_market, stop_price),
-            quantity=sell_order.origin_quantity,
-            price=stop_price,
-            side=trading_enums.TradeOrderSide.SELL,
-            reduce_only=True,
-            group=oco_group,
-            associated_entry_id=buy_order_id,
-        )
-        # in futures, inactive orders are not necessary
-        if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
-            await oco_group.active_order_swap_strategy.apply_inactive_orders([sell_order, current_order])
-        stop_order = await self.trading_mode.create_order(current_order)
-        self.logger.debug(f"Grouping orders: {sell_order} and {stop_order}")
-        return stop_order
+    async def _create_exit_with_stop_loss_if_enabled(self, sell_order_to_create, sell_base, symbol_market, buy_order_id):
+        current_stop_order = None
+        if self.STOP_LOSS_PRICE_MULTIPLIER and sell_order_to_create:
+            stop_price = sell_base * self.STOP_LOSS_PRICE_MULTIPLIER
+            oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                trading_personal_data.OneCancelsTheOtherOrderGroup,
+                active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
+            )
+            sell_order_to_create.add_to_order_group(oco_group)
+            current_stop_order = trading_personal_data.create_order_instance(
+                trader=self.exchange_manager.trader,
+                order_type=trading_enums.TraderOrderType.STOP_LOSS,
+                symbol=sell_order_to_create.symbol,
+                current_price=trading_personal_data.adapt_price(symbol_market, stop_price),
+                quantity=sell_order_to_create.origin_quantity,
+                price=stop_price,
+                side=trading_enums.TradeOrderSide.SELL,
+                reduce_only=True,
+                group=oco_group,
+                associated_entry_id=buy_order_id,
+            )
+            # in futures, inactive orders are not necessary
+            if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                await oco_group.active_order_swap_strategy.apply_inactive_orders([sell_order_to_create, current_stop_order])
+        created_sell_order = await self.trading_mode.create_order(sell_order_to_create)
+        created_stop_order = None
+        if created_sell_order and created_sell_order.is_open() and current_stop_order:
+            created_stop_order = await self.trading_mode.create_order(current_stop_order)
+            self.logger.debug(f"Grouping orders: {sell_order_to_create} and {created_stop_order}")
+        return created_sell_order, created_stop_order
 
     def _register_buy_order(self, order_id, price_weight):
         self.sell_targets_by_order_id[order_id] = price_weight

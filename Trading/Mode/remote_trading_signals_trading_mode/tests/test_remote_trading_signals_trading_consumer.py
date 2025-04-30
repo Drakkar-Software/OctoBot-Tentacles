@@ -116,14 +116,13 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert orders[0].origin_price == decimal.Decimal("9990")
     assert orders[0].trigger_above is False
     assert orders[0].is_active is True
-    assert orders[0].active_trigger_price is None
-    assert orders[0].active_trigger_above is None
+    assert orders[0].active_trigger is None
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
     assert orders[1].trailing_profile is None
     assert orders[1].is_active is False
-    assert orders[1].active_trigger_price == decimal.Decimal(21)
-    assert orders[1].active_trigger_above is False
+    assert orders[1].active_trigger.trigger_price == decimal.Decimal(21)
+    assert orders[1].active_trigger.trigger_above is False
     assert orders[1].update_with_triggering_order_fees is True
     assert orders[1].trigger_above is True
     assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
