@@ -763,7 +763,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             active_order_swap_strategy
                         )
                         created_orders.append(created_limit)
-                    if current_stop_order is not None and (create_stop_only or created_limit.is_open()):
+                    if current_stop_order is not None and (create_stop_only or (
+                        created_limit is not None and created_limit.is_open()
+                    )):
                         created_stop = await self.trading_mode.create_order(current_stop_order)
                         if create_stop_only:
                             created_orders.append(created_stop)
@@ -845,7 +847,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             active_order_swap_strategy
                         )
                         created_orders.append(created_limit)
-                    if current_stop_order is not None and (create_stop_only or created_limit.is_open()):
+                    if current_stop_order is not None and (create_stop_only or (
+                        created_limit is not None and created_limit.is_open()
+                    )):
                         created_stop = await self.trading_mode.create_order(current_stop_order)
                         if create_stop_only:
                             created_orders.append(created_stop)
