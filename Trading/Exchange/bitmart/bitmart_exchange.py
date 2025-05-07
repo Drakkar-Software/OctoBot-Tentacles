@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
@@ -21,12 +22,18 @@ import octobot_trading.constants as trading_constants
 
 class BitMartConnector(exchanges.CCXTConnector):
 
-    def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
+    def _client_factory(
+        self,
+        force_unauth,
+        keys_adapter: typing.Callable[[exchanges.ExchangeCredentialsData], exchanges.ExchangeCredentialsData]=None
+    ) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
 
-    def _keys_adapter(self, key, secret, password, uid, auth_token):
+    def _keys_adapter(self, creds: exchanges.ExchangeCredentialsData) -> exchanges.ExchangeCredentialsData:
         # use password as uid
-        return key, secret, "", password, None, None
+        creds.uid = creds.password
+        creds.password = None
+        return creds
 
 
 class BitMart(exchanges.RestExchange):

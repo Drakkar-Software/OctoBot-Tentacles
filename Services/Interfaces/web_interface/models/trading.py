@@ -362,7 +362,7 @@ def _dump_order(order, is_simulated):
             EXCHANGE: order.exchange_manager.exchange.name if order.exchange_manager else '',
             DATE: _convert_timestamp(order.creation_time),
             TIME: order.creation_time,
-            COST: _convert_amount(order.exchange_manager, order.total_cost, market),
+            COST: _convert_amount(order.exchange_manager, order.total_cost, market) or order.total_cost,
             MARKET: market,
             SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
             ID: order.order_id,

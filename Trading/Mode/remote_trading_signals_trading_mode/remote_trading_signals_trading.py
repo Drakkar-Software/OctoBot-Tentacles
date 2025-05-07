@@ -160,6 +160,9 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state,
                                 data: commons_signals.Signal):
+        """
+        Override not to call self.create_order_if_possible to skip portfolio checks and handle signals directly
+        """
         try:
             await self.handle_signal(symbol, data)
         except errors.MissingMinimalExchangeTradeVolume:

@@ -332,9 +332,16 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
                 created_orders.append(created_order)
                 return True
+        unit = trading_personal_data.get_order_quantity_currency(self.exchange_manager, symbol)
+        if unit == symbol_util.parse_symbol(symbol).quote:
+            cost = quantity * price
+        else:
+            cost = quantity
         self.logger.info(
-            f"Order not created on {self.exchange_manager.exchange_name}: exchange order requirements are not met. "
-            f"symbol: {symbol} order_type: {order_type} quantity: {quantity}, price: {price}"
+            f"Please get more {unit}: order not created on "
+            f"{self.exchange_manager.exchange_name}: exchange order requirements are not met. "
+            f" (attempted order quantity={cost} {unit} symbol: {symbol} order_type: {order_type} quantity: {quantity}, "
+            f"price: {price}."
         )
         return False
 
@@ -454,12 +461,14 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         else:
             return []
 
-    async def can_create_order(self, symbol, state):
-        can_create_order_result = await super().can_create_order(symbol, state)
-        if not can_create_order_result:
-            market = symbol_util.parse_symbol(symbol).quote
-            self.logger.debug(f"Can't create order : not enough balance. Please get more {market}.")
-        return can_create_order_result
+    def skip_portfolio_available_check_before_creating_orders(self) -> bool:
+        """
+        When returning true, will skip portfolio available funds check
+        before calling self.create_new_orders().
+        Override if necessary
+        """
+        # will cancel open orders: skip available checks
+        return self.trading_mode.cancel_open_orders_at_each_entry
 
 
 class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):

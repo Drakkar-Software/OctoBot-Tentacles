@@ -26,6 +26,7 @@ class AscendEx(exchanges.RestExchange):
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     FIX_MARKET_STATUS = True
 
