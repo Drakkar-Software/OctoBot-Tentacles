@@ -364,7 +364,12 @@ def _dump_order(order, is_simulated):
             TIME: order.creation_time,
             COST: _convert_amount(order.exchange_manager, order.total_cost, market) or order.total_cost,
             MARKET: market,
-            SIMULATED_OR_REAL: "Simulated" if is_simulated else "(virtual)" if order.is_self_managed() else "Real",
+            SIMULATED_OR_REAL: (
+                "Simulated" if is_simulated
+                else "Virtual" if order.is_self_managed()
+                else "Inactive" if not order.is_active
+                else "Real"
+            ),
             ID: order.order_id,
         }
     except Exception as err:
