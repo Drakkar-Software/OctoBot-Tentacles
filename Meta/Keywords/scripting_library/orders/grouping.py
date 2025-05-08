@@ -13,30 +13,22 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import typing
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 
 
-def create_one_cancels_the_other_group(
-    context, group_identifier=None, orders=None,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.OneCancelsTheOtherOrderGroup:
+def create_one_cancels_the_other_group(context, group_identifier=None, orders=None) \
+        -> trading_personal_data.OneCancelsTheOtherOrderGroup:
     """
     Should be used to create temporary groups binding localized orders, where this group can be
     created once and directly associated to each order
     """
-    return _create_order_group(
-        context, trading_personal_data.OneCancelsTheOtherOrderGroup, group_identifier, orders,
-        active_order_swap_strategy=active_order_swap_strategy
-    )
+    return _create_order_group(context, trading_personal_data.OneCancelsTheOtherOrderGroup, group_identifier, orders)
 
 
 def get_or_create_one_cancels_the_other_group(
-    context, orders=None, include_chained_orders=True,
-    group_identifier=None,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.OneCancelsTheOtherOrderGroup:
+        context, orders=None, include_chained_orders=True,
+        group_identifier=None) -> trading_personal_data.OneCancelsTheOtherOrderGroup:
     """
     Should be used to manage long lasting groups that are meant to be re-used
     First: looks for groups in orders
@@ -45,28 +37,22 @@ def get_or_create_one_cancels_the_other_group(
     """
     if group := get_group_from_orders(orders, include_chained_orders=include_chained_orders):
         return group
-    return _get_or_create_order_group(
-        context, trading_personal_data.OneCancelsTheOtherOrderGroup,
-        group_identifier, active_order_swap_strategy=active_order_swap_strategy
-    )
+    return _get_or_create_order_group(context, trading_personal_data.OneCancelsTheOtherOrderGroup, group_identifier)
 
 
-def create_balanced_take_profit_and_stop_group(
-    context, group_identifier=None, orders=None,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.BalancedTakeProfitAndStopOrderGroup:
+def create_balanced_take_profit_and_stop_group(context, group_identifier=None, orders=None) \
+        -> trading_personal_data.BalancedTakeProfitAndStopOrderGroup:
     """
     Should be used to create temporary groups binding localized orders, where this group can be
     created once and directly associated to each order
     """
     return _create_order_group(context, trading_personal_data.BalancedTakeProfitAndStopOrderGroup,
-                               group_identifier, orders, active_order_swap_strategy=active_order_swap_strategy)
+                               group_identifier, orders)
 
 
 def get_or_create_balanced_take_profit_and_stop_group(
-    context, orders=None, include_chained_orders=True, group_identifier=None,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.BalancedTakeProfitAndStopOrderGroup:
+        context, orders=None, include_chained_orders=True,
+        group_identifier=None) -> trading_personal_data.BalancedTakeProfitAndStopOrderGroup:
     """
     Should be used to manage long lasting groups that are meant to be re-used
     First: looks for groups in orders
@@ -76,7 +62,7 @@ def get_or_create_balanced_take_profit_and_stop_group(
     if group := get_group_from_orders(orders, include_chained_orders=include_chained_orders):
         return group
     return _get_or_create_order_group(context, trading_personal_data.BalancedTakeProfitAndStopOrderGroup,
-                                      group_identifier, active_order_swap_strategy=active_order_swap_strategy)
+                                      group_identifier)
 
 
 def add_orders_to_group(ctx, order_group, orders):
@@ -108,23 +94,14 @@ async def enable_group(order_group, enabled):
     await order_group.enable(enabled)
 
 
-def _create_order_group(
-    context, group_type, group_identifier, orders,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.OrderGroup:
-    group = context.exchange_manager.exchange_personal_data.orders_manager.create_group(
-        group_type, group_identifier, active_order_swap_strategy=active_order_swap_strategy
-    )
+def _create_order_group(context, group_type, group_identifier, orders) -> trading_personal_data.OrderGroup:
+    group = context.exchange_manager.exchange_personal_data.orders_manager.create_group(group_type, group_identifier)
     if orders is not None:
         add_orders_to_group(context, group, orders)
     return group
 
 
-def _get_or_create_order_group(
-    context, group_type, group_identifier,
-    active_order_swap_strategy: typing.Optional[trading_personal_data.ActiveOrderSwapStrategy] = None
-) -> trading_personal_data.OrderGroup:
-    return context.exchange_manager.exchange_personal_data.orders_manager.get_or_create_group(
-        group_type, group_identifier, active_order_swap_strategy=active_order_swap_strategy
-    )
+def _get_or_create_order_group(context, group_type, group_identifier) -> trading_personal_data.OrderGroup:
+    return context.exchange_manager.exchange_personal_data.orders_manager.get_or_create_group(group_type,
+                                                                                              group_identifier)
 

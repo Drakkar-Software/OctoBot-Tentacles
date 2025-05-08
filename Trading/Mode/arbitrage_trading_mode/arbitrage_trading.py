@@ -35,8 +35,6 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import tentacles.Trading.Mode.arbitrage_trading_mode.arbitrage_container as arbitrage_container_import
 
-tentacles_manager_api.reload_tentacle_info()
-
 
 class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
 
