@@ -531,7 +531,6 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 order.add_to_order_group(oco_group)
             # in futures, inactive orders are not necessary
             if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
-                print("apply_inactive_orders")
                 await oco_group.active_order_swap_strategy.apply_inactive_orders(chained_orders)
         return await self.trading_mode.create_order(current_order, params=params or None)
 
