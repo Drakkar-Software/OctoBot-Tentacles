@@ -264,6 +264,7 @@ async def test_sell_limit_with_stop_loss_orders_single_sell_and_stop_with_oco_gr
     async with _20_percent_position_trading_context(mock_context) as context_data:
         btc_val, usdt_val, btc_price = context_data
 
+        mock_context.allow_artificial_orders = True  # make stop loss not lock funds
         oco_group = scripting_library.create_one_cancels_the_other_group(mock_context)
         sell_limit_orders = await scripting_library.limit(
             mock_context,
@@ -293,6 +294,7 @@ async def test_sell_limit_with_stop_loss_orders_two_sells_and_stop_with_oco(mock
     async with _20_percent_position_trading_context(mock_context) as context_data:
         btc_val, usdt_val, btc_price = context_data
 
+        mock_context.allow_artificial_orders = True  # make stop loss not lock funds
         oco_group = scripting_library.create_one_cancels_the_other_group(mock_context)
         stop_loss_orders = await scripting_library.stop_loss(
             mock_context,
@@ -337,6 +339,7 @@ async def test_sell_limit_with_multiple_stop_loss_and_sell_orders_in_balanced_ta
     async with _20_percent_position_trading_context(mock_context) as context_data:
         btc_val, usdt_val, btc_price = context_data
 
+        mock_context.allow_artificial_orders = True  # make stop loss not lock funds
         btsl_group_1 = scripting_library.create_balanced_take_profit_and_stop_group(mock_context)
         g1_stop_1 = await scripting_library.stop_loss(
             mock_context, amount="2", offset=-50, side="sell", group=btsl_group_1, tag="exitPosition1"
@@ -405,6 +408,7 @@ async def test_multiple_sell_limit_with_stop_loss_rounding_issues_in_balanced_ta
     async with _20_percent_position_trading_context(mock_context) as context_data:
         btc_val, usdt_val, btc_price = context_data
 
+        mock_context.allow_artificial_orders = True  # make stop loss not lock funds
         btsl_group_1 = scripting_library.create_balanced_take_profit_and_stop_group(mock_context)
         # disable to create orders
         await btsl_group_1.enable(False)

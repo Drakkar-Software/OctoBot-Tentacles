@@ -138,6 +138,12 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
                 trading_personal_data.BalancedTakeProfitAndStopOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TYPE.value: trading_personal_data.StopFirstActiveOrderSwapStrategy.__name__,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TIMEOUT.value: 3,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TRIGGER_CONFIG.value: trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE.value,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_PRICE.value: 21,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_ABOVE.value: False,
+            trading_enums.TradingSignalOrdersAttrs.IS_ACTIVE.value: False,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: "managed_order long exit (id: 143968020)",
             trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "5705d395-f970-45d9-9ba8-f63da17f17b2",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: None,
@@ -308,6 +314,9 @@ def mocked_bundle_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_sig
             trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value: "46a0b2de-5b8f-4a39-89a0-137504f83dfc",
             trading_enums.TradingSignalOrdersAttrs.GROUP_TYPE.value:
                 trading_personal_data.BalancedTakeProfitAndStopOrderGroup.__name__,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TYPE.value: trading_personal_data.StopFirstActiveOrderSwapStrategy.__name__,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TIMEOUT.value: 3,
+            trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TRIGGER_CONFIG.value: trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE.value,
             trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE_TYPE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: "managed_order long exit (id: 143968020)",
