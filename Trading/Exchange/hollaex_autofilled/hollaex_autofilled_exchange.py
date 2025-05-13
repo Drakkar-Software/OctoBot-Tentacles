@@ -17,6 +17,7 @@ import cachetools
 import aiohttp
 import typing
 import asyncio
+import requests.utils
 
 import octobot_commons.logging as commons_logging
 import octobot_commons.constants
@@ -37,7 +38,8 @@ class HollaexAutofilled(hollaex):
     URL_KEY = "url"
     AUTO_FILLED_KEY = "auto_filled"
     WEBSOCKETS_KEY = "websockets"
-    KIT_PATH = "v2/kit"
+    KIT_PATH = "/kit"
+    V2_KIT_PATH = f"v2{KIT_PATH}"
     MAX_RATE_LIMIT_ATTEMPTS = 60    # fetch over 3 minutes, every 3s (we can't start the bot if the kit request fails)
     RATE_LIMIT_SLEEP_TIME = 3
 
@@ -88,6 +90,18 @@ class HollaexAutofilled(hollaex):
         await cls._cached_fetch_autofilled_config(tentacle_config, exchange_manager.exchange_name)
 
     @classmethod
+    def _get_user_agent(cls):
+        return requests.utils.default_user_agent()
+
+    @classmethod
+    def _get_headers(cls):
+        return {
+            # same as CCXT
+            'User-Agent': cls._get_user_agent(),
+            "Accept-Encoding": "gzip, deflate"
+        }
+
+    @classmethod
     async def _cached_fetch_autofilled_config(cls, tentacle_config, exchange_name) -> dict:
         try:
             exchange_kit_url = cls._get_kit_url(tentacle_config, exchange_name)
@@ -98,7 +112,7 @@ class HollaexAutofilled(hollaex):
         commons_logging.get_logger(cls.get_name()).info(
             f"Fetching {exchange_name} HollaEx kit from {exchange_kit_url}"
         )
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=cls._get_headers()) as session:
             _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = await cls._retry_fetch_when_rate_limit(
                 session, exchange_kit_url
             )
@@ -139,7 +153,7 @@ class HollaexAutofilled(hollaex):
         if not exchange_kit_url.endswith(cls.KIT_PATH) and not exchange_kit_url.endswith("/"):
             exchange_kit_url = f"{exchange_kit_url}/"
         if not exchange_kit_url.endswith(cls.KIT_PATH):
-            exchange_kit_url = f"{exchange_kit_url}{cls.KIT_PATH}"
+            exchange_kit_url = f"{exchange_kit_url}{cls.V2_KIT_PATH}"
         return exchange_kit_url
 
     @classmethod
