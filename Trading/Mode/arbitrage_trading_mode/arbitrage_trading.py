@@ -210,13 +210,15 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
             quantity = trading_personal_data.decimal_add_dusts_to_quantity_if_necessary(quantity, price, symbol_market,
                                                                                         current_symbol_holding)
         for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
-                quantity,
-                arbitrage_container.target_price,
-                symbol_market):
+            quantity,
+            arbitrage_container.target_price,
+            symbol_market
+        ):
             oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
-                trading_personal_data.OneCancelsTheOtherOrderGroup
+                trading_personal_data.OneCancelsTheOtherOrderGroup,
+                active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
             )
-            current_order = trading_personal_data.create_order_instance(
+            current_limit_order = trading_personal_data.create_order_instance(
                 trader=self.exchange_manager.trader,
                 order_type=trading_enums.TraderOrderType.SELL_LIMIT if now_selling
                 else trading_enums.TraderOrderType.BUY_LIMIT,
@@ -227,29 +229,33 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 group=oco_group,
                 associated_entry_id=entry_id
             )
-            created_order = await self.trading_mode.create_order(current_order)
-            created_orders.append(created_order)
-            arbitrage_container.secondary_limit_order_id = created_order.order_id
-
-            if created_order.is_open():
-                stop_price = self._get_stop_loss_price(symbol_market,
-                                                       arbitrage_container.own_exchange_price,
-                                                       now_selling)
-                current_order = trading_personal_data.create_order_instance(
-                    trader=self.exchange_manager.trader,
-                    order_type=trading_enums.TraderOrderType.STOP_LOSS,
-                    symbol=self.trading_mode.symbol,
-                    current_price=arbitrage_container.own_exchange_price,
-                    quantity=order_quantity,
-                    price=stop_price,
-                    group=oco_group,
-                    side=trading_enums.TradeOrderSide.SELL
-                    if now_selling else trading_enums.TradeOrderSide.BUY,
-                    associated_entry_id=entry_id,
+            stop_price = self._get_stop_loss_price(symbol_market,
+                                                   arbitrage_container.own_exchange_price,
+                                                   now_selling)
+            current_stop_order = trading_personal_data.create_order_instance(
+                trader=self.exchange_manager.trader,
+                order_type=trading_enums.TraderOrderType.STOP_LOSS,
+                symbol=self.trading_mode.symbol,
+                current_price=arbitrage_container.own_exchange_price,
+                quantity=order_quantity,
+                price=stop_price,
+                group=oco_group,
+                side=trading_enums.TradeOrderSide.SELL
+                if now_selling else trading_enums.TradeOrderSide.BUY,
+                associated_entry_id=entry_id,
+            )
+            # in futures, inactive orders are not necessary
+            if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                await oco_group.active_order_swap_strategy.apply_inactive_orders(
+                    [current_limit_order, current_stop_order]
                 )
-                await self.trading_mode.create_order(current_order)
-                arbitrage_container.secondary_stop_order_id = current_order.order_id
+            if created_limit_order := await self.trading_mode.create_order(current_limit_order):
+                created_stop_order = await self.trading_mode.create_order(current_stop_order)
+                created_orders.append(created_limit_order)
+                arbitrage_container.secondary_limit_order_id = created_limit_order.order_id
+                arbitrage_container.secondary_stop_order_id = created_stop_order.order_id
             return created_orders
+        return []
 
     def _get_quantity_from_holdings(self, current_symbol_holding, market_quantity, state):
         # TODO handle quantity in a non dynamic manner (avoid subsequent orders volume reduction)
