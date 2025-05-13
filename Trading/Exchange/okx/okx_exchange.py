@@ -27,64 +27,64 @@ import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connecto
 import octobot_trading.personal_data as trading_personal_data
 
 
-def _disabled_okx_algo_order_creation(f):
-    async def disabled_okx_algo_order_creation_wrapper(*args, **kwargs):
-        # Algo order prevent bundled orders from working as they require to use the regular order api
-        # Since the regular order api works for limit and market orders as well, us it all the time
-        # Algo api is used for stop losses.
-        # This ccxt issue will remain as long as privatePostTradeOrderAlgo will be used for each order with a
-        # stopLossPrice or takeProfitPrice even when both are set (which make it an invalid okx algo order)
-        connector = args[0]
-        client = connector.client
-        client.privatePostTradeOrderAlgo = client.privatePostTradeOrder
-        try:
-            return await f(*args, **kwargs)
-        finally:
-            client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
-    return disabled_okx_algo_order_creation_wrapper
-
-
-def _enabled_okx_algo_order_creation(f):
-    async def enabled_okx_algo_order_creation_wrapper(*args, **kwargs):
-        # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
-        connector = args[0]
-        connector.client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
-        return await f(*args, **kwargs)
-    return enabled_okx_algo_order_creation_wrapper
-
-
-class OkxConnector(ccxt_connector.CCXTConnector):
-    PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
-
-    def _create_client(self):
-        super()._create_client()
-        # save client.privatePostTradeOrderAlgo ref to prevent concurrent _disabled_algo_order_creation issues
-        self.set_saved_data(self.PRIVATE_POST_TRADE_ORDER_ALGO, self.client.privatePostTradeOrderAlgo)
-
-    @_disabled_okx_algo_order_creation
-    async def create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
-        return await super().create_market_buy_order(symbol, quantity, price=price, params=params)
-
-    @_disabled_okx_algo_order_creation
-    async def create_limit_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
-        return await super().create_limit_buy_order(symbol, quantity, price=price, params=params)
-
-    @_disabled_okx_algo_order_creation
-    async def create_market_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
-        return await super().create_market_sell_order(symbol, quantity, price=price, params=params)
-
-    @_disabled_okx_algo_order_creation
-    async def create_limit_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
-        return await super().create_limit_sell_order(symbol, quantity, price=price, params=params)
-
-    @_enabled_okx_algo_order_creation
-    async def create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        return self.adapter.adapt_order(
-            await self.client.create_order(
-                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            ),
-            symbol=symbol, quantity=quantity
-        )
+# def _disabled_okx_algo_order_creation(f):
+#     async def disabled_okx_algo_order_creation_wrapper(*args, **kwargs):
+#         # Algo order prevent bundled orders from working as they require to use the regular order api
+#         # Since the regular order api works for limit and market orders as well, us it all the time
+#         # Algo api is used for stop losses.
+#         # This ccxt issue will remain as long as privatePostTradeOrderAlgo will be used for each order with a
+#         # stopLossPrice or takeProfitPrice even when both are set (which make it an invalid okx algo order)
+#         connector = args[0]
+#         client = connector.client
+#         client.privatePostTradeOrderAlgo = client.privatePostTradeOrder
+#         try:
+#             return await f(*args, **kwargs)
+#         finally:
+#             client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
+#     return disabled_okx_algo_order_creation_wrapper
+#
+#
+# def _enabled_okx_algo_order_creation(f):
+#     async def enabled_okx_algo_order_creation_wrapper(*args, **kwargs):
+#         # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
+#         connector = args[0]
+#         connector.client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
+#         return await f(*args, **kwargs)
+#     return enabled_okx_algo_order_creation_wrapper
+#
+#
+# class OkxConnector(ccxt_connector.CCXTConnector):
+#     PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
+#
+#     def _create_client(self):
+#         super()._create_client()
+#         # save client.privatePostTradeOrderAlgo ref to prevent concurrent _disabled_algo_order_creation issues
+#         self.set_saved_data(self.PRIVATE_POST_TRADE_ORDER_ALGO, self.client.privatePostTradeOrderAlgo)
+#
+#     @_disabled_okx_algo_order_creation
+#     async def create_market_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
+#         return await super().create_market_buy_order(symbol, quantity, price=price, params=params)
+#
+#     @_disabled_okx_algo_order_creation
+#     async def create_limit_buy_order(self, symbol, quantity, price=None, params=None) -> dict:
+#         return await super().create_limit_buy_order(symbol, quantity, price=price, params=params)
+#
+#     @_disabled_okx_algo_order_creation
+#     async def create_market_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
+#         return await super().create_market_sell_order(symbol, quantity, price=price, params=params)
+#
+#     @_disabled_okx_algo_order_creation
+#     async def create_limit_sell_order(self, symbol, quantity, price=None, params=None) -> dict:
+#         return await super().create_limit_sell_order(symbol, quantity, price=price, params=params)
+#
+#     @_enabled_okx_algo_order_creation
+#     async def create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+#         return self.adapter.adapt_order(
+#             await self.client.create_order(
+#                 symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
+#             ),
+#             symbol=symbol, quantity=quantity
+#         )
 
 
 class Okx(exchanges.RestExchange):
@@ -111,7 +111,7 @@ class Okx(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
 
-    DEFAULT_CONNECTOR_CLASS = OkxConnector
+    # DEFAULT_CONNECTOR_CLASS = OkxConnector    # disabled until futures support is back
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
 
     # set when the exchange returns nothing when fetching historical candles with a too early start time
