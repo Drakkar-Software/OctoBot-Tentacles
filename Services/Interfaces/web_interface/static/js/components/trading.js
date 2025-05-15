@@ -257,11 +257,13 @@ const updateTradesCount = (pnlHistory) => {
     $("#match-trades-count").text(pnlHistory.reduce((sum, element) => sum + element.tc, 0));
 }
 const reload_pnl = async (update) => {
-    const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
-    loadPnlFullChartHistory(pnlHistory, update);
-    loadPnlTableHistory(pnlHistory, update);
-    updateTradesCount(pnlHistory);
-    $("#pnl-waiter").hide();
+    if ($("#pnl_historyChart").length){
+        const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
+        loadPnlFullChartHistory(pnlHistory, update);
+        loadPnlTableHistory(pnlHistory, update);
+        updateTradesCount(pnlHistory);
+        $("#pnl-waiter").hide();
+    }
 }
 
 const resizePnlChart = () => {
@@ -304,6 +306,9 @@ const registerTableButtonsEvents = () => {
         handle_close_buttons();
     });
     $("#orders-table").on("draw.dt row-reordered", () => {
+        if($("#orders-table").data("cancel-url") === undefined){
+            return
+        }
         add_cancel_individual_orders_buttons();
         const cancelIcon = $("#cancel_all_icon");
         $("#cancel_order_progress_bar").hide();

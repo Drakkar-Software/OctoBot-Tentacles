@@ -13,11 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot.enums
 
 import tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication
 import tentacles.Services.Interfaces.web_interface.controllers.community_authentication
 import tentacles.Services.Interfaces.web_interface.controllers.backtesting
 import tentacles.Services.Interfaces.web_interface.controllers.commands
+import tentacles.Services.Interfaces.web_interface.controllers.about
 import tentacles.Services.Interfaces.web_interface.controllers.community
 import tentacles.Services.Interfaces.web_interface.controllers.configuration
 import tentacles.Services.Interfaces.web_interface.controllers.dashboard
@@ -29,34 +31,43 @@ import tentacles.Services.Interfaces.web_interface.controllers.logs
 import tentacles.Services.Interfaces.web_interface.controllers.medias
 import tentacles.Services.Interfaces.web_interface.controllers.terms
 import tentacles.Services.Interfaces.web_interface.controllers.trading
+import tentacles.Services.Interfaces.web_interface.controllers.portfolio
 import tentacles.Services.Interfaces.web_interface.controllers.profiles
 import tentacles.Services.Interfaces.web_interface.controllers.automation
 import tentacles.Services.Interfaces.web_interface.controllers.reboot
 import tentacles.Services.Interfaces.web_interface.controllers.welcome
 import tentacles.Services.Interfaces.web_interface.controllers.robots
+import tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making
 
 
-def register(blueprint):
+def register(blueprint, distribution: octobot.enums.OctoBotDistribution):
+    if distribution is octobot.enums.OctoBotDistribution.DEFAULT:
+        tentacles.Services.Interfaces.web_interface.controllers.community_authentication.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.backtesting.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.about.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.community.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.configuration.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.dashboard.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.octobot_help.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.home.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.interface_settings.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.logs.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.trading.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.portfolio.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.profiles.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.automation.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.welcome.register(blueprint)
+    elif distribution is octobot.enums.OctoBotDistribution.MARKET_MAKING:
+        tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.register(blueprint)
+
+    # common routes
     tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.community_authentication.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.backtesting.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.commands.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.community.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.configuration.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.dashboard.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.errors.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.octobot_help.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.home.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.interface_settings.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.logs.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.medias.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.terms.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.trading.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.profiles.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.automation.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.reboot.register(blueprint)
-    tentacles.Services.Interfaces.web_interface.controllers.welcome.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.robots.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.reboot.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.terms.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.errors.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.commands.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.medias.register(blueprint)
 
 
 __all__ = [
