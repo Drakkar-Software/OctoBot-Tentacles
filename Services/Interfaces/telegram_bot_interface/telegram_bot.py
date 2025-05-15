@@ -39,7 +39,7 @@ class TelegramBotInterface(interfaces_bots.AbstractBotInterface):
 
     def __init__(self, config):
         super().__init__(config)
-        self.telegram_service = None
+        self.telegram_service: Services_bases.TelegramService = None
 
     async def _post_initialize(self, _):
         self.telegram_service = Services_bases.TelegramService.instance()
