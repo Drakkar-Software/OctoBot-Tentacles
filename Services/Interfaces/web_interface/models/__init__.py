@@ -169,6 +169,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     update_config_currencies,
     get_config_required_candles_count,
     get_sandbox_exchanges,
+    get_distribution,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -481,5 +482,6 @@ __all__ = [
     "update_config_currencies",
     "get_config_required_candles_count",
     "get_sandbox_exchanges",
+    "get_distribution",
     "WebInterfaceTab",
 ]

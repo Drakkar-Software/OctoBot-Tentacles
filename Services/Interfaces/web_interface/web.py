@@ -27,6 +27,8 @@ import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
+import octobot.configuration_manager as configuration_manager
+import octobot.enums
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
@@ -198,13 +200,13 @@ class WebInterface(services_interfaces.AbstractWebInterface):
         self.requires_password = requires_password
         login.set_is_login_required(requires_password)
 
-    def _register_routes(self, server_instance):
-        tentacles.Services.Interfaces.web_interface.controllers.register(server_instance)
+    def _register_routes(self, server_instance, distribution: octobot.enums.OctoBotDistribution):
+        tentacles.Services.Interfaces.web_interface.controllers.register(server_instance, distribution)
         server_instance.register_blueprint(
-            tentacles.Services.Interfaces.web_interface.api.register()
+            tentacles.Services.Interfaces.web_interface.api.register(distribution)
         )
         server_instance.register_blueprint(
-            tentacles.Services.Interfaces.web_interface.advanced_controllers.register()
+            tentacles.Services.Interfaces.web_interface.advanced_controllers.register(distribution)
         )
 
     def _prepare_websocket(self, server_instance):
@@ -232,11 +234,14 @@ class WebInterface(services_interfaces.AbstractWebInterface):
 
         try:
             self.server_instance = flask.Flask(__name__)
+            distribution = configuration_manager.get_distribution(interfaces_util.get_edited_config())
 
-            self._register_routes(self.server_instance)
-            self.registered_plugins = web_interface_plugins.register_all_plugins(
-                self.server_instance, self.registered_plugins
-            )
+            self._register_routes(self.server_instance, distribution)
+            if distribution is octobot.enums.OctoBotDistribution.DEFAULT:
+                # for now, plugins are only available on default distribution
+                self.registered_plugins = web_interface_plugins.register_all_plugins(
+                    self.server_instance, self.registered_plugins
+                )
             web_interface_root.update_registered_plugins(self.registered_plugins)
             self.init_flask_plugins_and_config(self.server_instance)
             self.websocket_instance = self._prepare_websocket(self.server_instance)

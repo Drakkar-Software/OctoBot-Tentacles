@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import logging
+import typing
 import telegram
 import telegram.ext
 import telegram.request
@@ -205,7 +206,7 @@ class TelegramService(services.AbstractService):
             self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TELEGRAM]) \
                and self.get_is_enabled(self.config)
 
-    async def send_message(self, content, markdown=False, reply_to_message_id=None) -> telegram.Message:
+    async def send_message(self, content, markdown=False, reply_to_message_id=None) -> typing.Optional[telegram.Message]:
         if not self.chat_id:
             self.logger.warning(
                 "Impossible to send telegram message: please provide a chat id in telegram configuration."

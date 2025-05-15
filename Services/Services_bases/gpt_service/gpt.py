@@ -15,8 +15,8 @@
 #  License along with this library.
 import asyncio
 import os
+import typing
 import uuid
-
 import openai
 import logging
 import datetime
@@ -24,7 +24,6 @@ import datetime
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot_services.errors as errors
-import octobot_services.util
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
@@ -36,9 +35,6 @@ import octobot_commons.configuration.fields_utils as fields_utils
 
 import octobot.constants as constants
 import octobot.community as community
-
-
-octobot_services.util.patch_openai_proxies()
 
 
 NO_SYSTEM_PROMPT_MODELS = [
@@ -202,7 +198,7 @@ class GPTService(services.AbstractService):
         time_frame: str,
         version: str,
         candle_open_time: float,
-    ) -> str:
+    ) -> typing.Optional[str]:
         authenticator = authentication.Authenticator.instance()
         try:
             return await authenticator.get_gpt_signal(
@@ -342,7 +338,7 @@ class GPTService(services.AbstractService):
     def get_help_page(cls) -> str:
         return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/chatgpt"
 
-    def get_type(self) -> None:
+    def get_type(self) -> str:
         return services_constants.CONFIG_GPT
 
     def get_website_url(self):

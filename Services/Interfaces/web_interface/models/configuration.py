@@ -22,7 +22,6 @@ import copy
 import requests.adapters
 import urllib3.util.retry
 
-import aiohttp
 import gc
 
 import octobot_evaluators.constants as evaluators_constants
@@ -57,6 +56,7 @@ import octobot_backtesting.api as backtesting_api
 import octobot.community as community
 import octobot.constants as octobot_constants
 import octobot.enums as octobot_enums
+import octobot.configuration_manager as configuration_manager
 import octobot.databases_util as octobot_databases_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -1450,6 +1450,10 @@ def get_sandbox_exchanges() -> list:
         for exchange_manager in interfaces_util.get_exchange_managers()
         if trading_api.get_exchange_manager_is_sandboxed(exchange_manager)
     ]
+
+
+def get_distribution() -> octobot_enums.OctoBotDistribution:
+    return configuration_manager.get_distribution(interfaces_util.get_edited_config())
 
 
 def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:

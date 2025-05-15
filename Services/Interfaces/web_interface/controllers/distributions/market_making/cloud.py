@@ -16,24 +16,12 @@
 import flask
 
 import tentacles.Services.Interfaces.web_interface.login as login
-import tentacles.Services.Interfaces.web_interface.models as models
 
 
 def register(blueprint):
-    @blueprint.route('/commands/<cmd>', methods=['GET', 'POST'])
+    @blueprint.route("/cloud")
     @login.login_required_when_activated
-    def commands(cmd=None):
-        if cmd == "restart":
-            models.schedule_delayed_command(models.restart_bot, delay=0.1)
-            return flask.jsonify("Success")
-
-        elif cmd == "stop":
-            models.schedule_delayed_command(models.stop_bot, delay=0.1)
-            return flask.jsonify("Success")
-
-        elif cmd == "update":
-            models.schedule_delayed_command(models.update_bot, delay=0.1)
-            return flask.jsonify("Update started")
-
-        else:
-            raise RuntimeError("Unknown command")
+    def cloud():
+        return flask.render_template(
+            'distributions/market_making/cloud.html',
+        )
