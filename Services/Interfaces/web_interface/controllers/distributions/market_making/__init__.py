@@ -16,6 +16,7 @@
 import tentacles.Services.Interfaces.web_interface.controllers.portfolio
 import tentacles.Services.Interfaces.web_interface.controllers.logs
 import tentacles.Services.Interfaces.web_interface.controllers.dashboard
+import tentacles.Services.Interfaces.web_interface.controllers.tentacles_config
 import tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.dashboard
 import tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.configuration
 import tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.cloud
@@ -25,6 +26,7 @@ def register(blueprint):
     tentacles.Services.Interfaces.web_interface.controllers.portfolio.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.logs.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.dashboard.register(blueprint)
+    tentacles.Services.Interfaces.web_interface.controllers.tentacles_config.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.dashboard.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.configuration.register(blueprint)
     tentacles.Services.Interfaces.web_interface.controllers.distributions.market_making.cloud.register(blueprint)

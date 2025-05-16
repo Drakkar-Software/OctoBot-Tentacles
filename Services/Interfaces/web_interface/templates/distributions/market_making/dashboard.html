@@ -194,6 +194,12 @@
         </div>
     </div>
 
+    <div class="text-right my-5">
+        <button type="button" class="btn btn-outline-primary btn-lg" route="{{ url_for('commands', cmd='stop') }}">
+            <i class="fa fa-power-off" aria-hidden="true"></i> Stop OctoBot
+        </button>
+    </div>
+
     <span class="d-none"
           data-display-intro="{{display_intro}}"
           data-selected-profile="{{selected_profile}}"
