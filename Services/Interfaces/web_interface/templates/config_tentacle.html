@@ -4,6 +4,7 @@
 
 {% import 'macros/tentacles.html' as m_tentacles %}
 {% import 'macros/backtesting_utils.html' as m_backtesting_utils %}
+{% import 'components/config/tentacle_config_editor.html' as m_tentacle_config_editor %}
 {% import 'components/config/evaluator_card.html' as m_config_evaluator_card %}
 
 {% block body %}
@@ -41,30 +42,7 @@
                 </a>
             </h2>
         </div>
-        <div class="card-body" id="configEditorBody"
-             data-edit-details-url="{{ url_for('config_tentacle_edit_details', tentacle=name) }}">
-            <div id="configEditor"></div>
-            <div id="editor-waiter" class="text-center my-4">
-                <div>
-                    <h2>Loading configuration</h2>
-                </div>
-                <div>
-                    <h2><i class="fa fa-spinner fa-spin"></i></h2>
-                </div>
-            </div>
-            <div id="noConfigMessage" style='display: none;'>
-                This {{ tentacle_type }} can't be configured.
-            </div>
-            <div id="configErrorDetails" style='display: none;'>
-                <div>
-                    Error when fetching tentacle config. Resetting its configuration should fix the issue.
-                </div>
-                <div>
-                    <button class="btn btn-warning waves-effect" data-role='factoryResetConfig'
-                            update-url="{{ url_for('config_tentacle', name=name, action='factory_reset') }}"><i class="fas fa-recycle"></i> Reset configuration to default values</button>
-                </div>
-            </div>
-        </div>
+        {{ m_tentacle_config_editor.tentacles_config_editor(name, "card-body") }}
         <div class="card-footer" id='saveConfigFooter' style='display: none;'>
             <button class="btn btn-primary waves-effect" data-role='saveConfig' update-url="{{ url_for('config_tentacle', name=name, action='update', restart='false') }}"><i class="fas fa-save"></i> Save configuration and restart later</button>
             <button class="btn btn-outline-primary waves-effect mx-5" data-role='saveConfig' update-url="{{ url_for('config_tentacle', name=name, action='update', restart='true') }}">Save and restart</button>

@@ -105,12 +105,12 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
 
     MIN_SPREAD_DESC = "Min spread %: Percentage of the current price to use as bid-ask spread."
     MAX_SPREAD_DESC = "Max spread %: Percentage of the current price to use to define the target order book depth."
-    BIDS_COUNT_DECS = "Bids count: How many buy orders to create in the order book"
-    ASKS_COUNT_DECS = "Asks count: How many sell orders to create in the order book"
+    BIDS_COUNT_DECS = "Bids count: How many buy orders to create in the order book."
+    ASKS_COUNT_DECS = "Asks count: How many sell orders to create in the order book."
     REFERENCE_EXCHANGE_DESC = (
         f"Reference exchange. Used as the price source to create the order book's orders from. "
-        f"This exchange need to have a trading market for the selected traded pair. "
-        f"Use {LOCAL_EXCHANGE_PRICE} to use the current exchange price."
+        f"This exchange need to have a trading market for the selected traded pair. Example: \"binance\". "
+        f"Use \"{LOCAL_EXCHANGE_PRICE}\" to use the current exchange price."
     )
 
     def init_user_inputs(self, inputs: dict) -> None:
@@ -140,7 +140,9 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
         )
         self.UI.user_input(
             self.REFERENCE_EXCHANGE, commons_enums.UserInputTypes.TEXT,
-            "binance", inputs, title=self.REFERENCE_EXCHANGE_DESC
+            "binance", inputs,
+            other_schema_values={"inputAttributes": {"placeholder": "binance"}},
+            title=self.REFERENCE_EXCHANGE_DESC
         )
 
     def get_current_state(self) -> (str, float):
