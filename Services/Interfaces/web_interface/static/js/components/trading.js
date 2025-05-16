@@ -276,10 +276,12 @@ const ordersNotificationCallback = (title, _) => {
     }
 }
 
-const debouncedReloadDisplay = debounce(
-    () => reloadDisplay(true),
-    500
-);
+function debouncedReloadDisplay(){
+    debounce(
+        () => reloadDisplay(true),
+        500
+    );
+}
 
 const reloadDisplay = async (update) => {
     if(!update){
@@ -324,6 +326,15 @@ const registerTableButtonsEvents = () => {
     });
 }
 
+const refreshTables = async () => {
+    if (!initializedTables){
+        await reloadDisplay(true);
+        initializedTables = true
+    }
+}
+
+let initializedTables = false
+
 selectFirstTab();
 registerFilterSelectors();
 registerTableButtonsEvents();
@@ -337,5 +348,8 @@ register_notification_callback(ordersNotificationCallback);
 await reloadDisplay(false);
 registerOnTabShownEvents();
 handle_rounded_numbers_display();
+if(registerGraphUpdateCallback !== undefined){
+    registerGraphUpdateCallback(refreshTables);
+}
 
 });
