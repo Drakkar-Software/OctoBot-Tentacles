@@ -28,6 +28,7 @@ from tentacles.Services.Interfaces.web_interface.models import strategy_optimize
 from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
 from tentacles.Services.Interfaces.web_interface.models import web_interface_tab
+from tentacles.Services.Interfaces.web_interface.models import json_schemas
 
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
@@ -87,6 +88,16 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     sync_community_account,
     wait_for_login_if_processing,
 )
+from tentacles.Services.Interfaces.web_interface.models.json_schemas import (
+    NAME,
+    JSON_PORTFOLIO_SCHEMA,
+    JSON_TRADING_SIMULATOR_SCHEMA,
+    get_json_simulated_portfolio,
+    get_json_trading_simulator_config,
+    get_json_exchanges_schema,
+    get_json_exchange_config,
+    json_exchange_config_to_config,
+)
 from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_evaluators_tentacles_startup_activation,
     get_trading_tentacles_startup_activation,
@@ -141,7 +152,6 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_all_symbols_list_by_symbol_type,
     get_exchange_logo,
     get_currency_logo_urls,
-    get_json_simulated_portfolio,
     get_traded_time_frames,
     get_full_exchange_list,
     get_full_configurable_exchange_list,
@@ -156,7 +166,6 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     REQUIREMENTS_KEY,
     SYMBOL_KEY,
     ID_KEY,
-    JSON_PORTFOLIO_SCHEMA,
     TRADING_MODES_KEY,
     STRATEGIES_KEY,
     FULL_EXCHANGE_LIST,

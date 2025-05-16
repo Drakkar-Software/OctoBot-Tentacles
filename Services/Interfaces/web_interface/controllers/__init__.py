@@ -22,6 +22,7 @@ import tentacles.Services.Interfaces.web_interface.controllers.commands
 import tentacles.Services.Interfaces.web_interface.controllers.about
 import tentacles.Services.Interfaces.web_interface.controllers.community
 import tentacles.Services.Interfaces.web_interface.controllers.configuration
+import tentacles.Services.Interfaces.web_interface.controllers.tentacles_config
 import tentacles.Services.Interfaces.web_interface.controllers.dashboard
 import tentacles.Services.Interfaces.web_interface.controllers.errors
 import tentacles.Services.Interfaces.web_interface.controllers.octobot_help
@@ -47,6 +48,7 @@ def register(blueprint, distribution: octobot.enums.OctoBotDistribution):
         tentacles.Services.Interfaces.web_interface.controllers.about.register(blueprint)
         tentacles.Services.Interfaces.web_interface.controllers.community.register(blueprint)
         tentacles.Services.Interfaces.web_interface.controllers.configuration.register(blueprint)
+        tentacles.Services.Interfaces.web_interface.controllers.tentacles_config.register(blueprint)
         tentacles.Services.Interfaces.web_interface.controllers.dashboard.register(blueprint)
         tentacles.Services.Interfaces.web_interface.controllers.octobot_help.register(blueprint)
         tentacles.Services.Interfaces.web_interface.controllers.home.register(blueprint)

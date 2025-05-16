@@ -30,10 +30,16 @@ def register(blueprint):
         return flask.jsonify(models.format_config_symbols(interfaces_util.get_edited_config()))
 
 
-    @blueprint.route('/get_all_currencies<exchange>', methods=["GET"])
+    @blueprint.route('/get_all_currencies/<exchange>', methods=["GET"])
     @login.login_required_when_activated
     def get_all_currencies(exchange):
         return flask.jsonify(models.get_all_currencies([exchange]))
+
+
+    @blueprint.route('/get_all_symbols/<exchange>')
+    @login.login_required_when_activated
+    def get_all_symbols(exchange):
+        return flask.jsonify(models.get_symbol_list([exchange]))
 
 
     @blueprint.route('/set_config_currency', methods=["POST"])

@@ -92,8 +92,6 @@ BASE_CLASSES_KEY = "base_classes"
 EVALUATION_FORMAT_KEY = "evaluation_format"
 CONFIG_KEY = "config"
 DISPLAYED_ELEMENTS_KEY = "displayed_elements"
-ASSET = "asset"
-VALUE = "value"
 
 # tentacles from which configuration is not handled in strategies / evaluators configuration and that can be groupped
 GROUPPABLE_NON_TRADING_STRATEGY_RELATED_TENTACLES = [
@@ -139,30 +137,6 @@ exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
 exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 _LOGGER = None
-
-JSON_PORTFOLIO_SCHEMA = {
-    "type": "array",
-    "uniqueItems": True,
-    "title": "Simulated portfolio",
-    "format": "table",
-    "items": {
-        "type": "object",
-        "title": "Asset",
-        "properties": {
-            ASSET: {
-                "title": "Asset",
-                "type": "string",
-                "enum": [],
-            },
-            VALUE: {
-                "title": "Holding",
-                "type": "number",
-                "minimum": 0,
-            },
-        }
-    }
-}
-
 
 def _get_logger():
     global _LOGGER
@@ -1173,17 +1147,6 @@ def get_currency_logo_urls(currency_ids):
             "logo": data_provider.get_currency_logo_url(currency_id)
         }
         for currency_id in currency_ids
-    ]
-
-
-def get_json_simulated_portfolio(user_config):
-    config_portfolio = user_config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]
-    return [
-        {
-            ASSET: asset,
-            VALUE: value,
-        }
-        for asset, value in config_portfolio.items()
     ]
 
 
