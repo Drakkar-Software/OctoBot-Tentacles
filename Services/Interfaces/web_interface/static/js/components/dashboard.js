@@ -103,9 +103,16 @@ $(document).ready(function () {
         }
     }
 
+    const onGraphUpdate = (data) => {
+        if (onGraphUpdateCallback !== undefined){
+            onGraphUpdateCallback();
+        }
+        update_graph(data);
+    }
+
     function handle_graph_update() {
         socket.on('candle_graph_update_data', function (data) {
-            update_graph(data);
+            onGraphUpdate(data);
         });
         socket.on('new_data', function (data) {
             debounce(
@@ -280,3 +287,9 @@ $(document).ready(function () {
         displayFeedbackFormIfNecessary()
     }
 });
+
+
+let onGraphUpdateCallback = undefined
+function registerGraphUpdateCallback(callback) {
+    onGraphUpdateCallback = callback
+}
