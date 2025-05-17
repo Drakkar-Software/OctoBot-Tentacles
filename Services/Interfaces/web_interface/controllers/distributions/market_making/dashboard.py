@@ -32,7 +32,7 @@ def register(blueprint):
     @blueprint.route("/home")
     @login.login_required_when_activated
     def home():
-        if flask.request.args.get("reset_tutorials", "False") == "True":
+        if flask.request.args.get("reset_tutorials", "False").lower() == "true":
             flask_util.BrowsingDataProvider.instance().set_first_displays(True)
         if models.accepted_terms():
             display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
@@ -48,8 +48,8 @@ def register(blueprint):
             past_launch_time = (
                 web_constants.PRODUCT_HUNT_ANNOUNCEMENT_DAY
                 + (
-                        octobot_commons.enums.TimeFramesMinutes[octobot_commons.enums.TimeFrames.ONE_DAY]
-                        * octobot_commons.constants.MINUTE_TO_SECONDS
+                    octobot_commons.enums.TimeFramesMinutes[octobot_commons.enums.TimeFrames.ONE_DAY]
+                    * octobot_commons.constants.MINUTE_TO_SECONDS
                 )
             )
             is_launching = (

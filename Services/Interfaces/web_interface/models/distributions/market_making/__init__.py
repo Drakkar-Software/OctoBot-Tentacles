@@ -18,8 +18,10 @@ from tentacles.Services.Interfaces.web_interface.models.distributions.market_mak
 
 from tentacles.Services.Interfaces.web_interface.models.distributions.market_making.configuration import (
     save_market_making_configuration,
+    get_market_making_services,
 )
 
 __all__ = [
     "save_market_making_configuration",
+    "get_market_making_services",
 ]
