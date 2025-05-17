@@ -42,8 +42,11 @@ $(document).ready(function() {
     const saveConfig = async (saveUrl) => {
         try {
             validateConfig();
-            const resp = await async_send_and_interpret_bot_update(getConfigUpdate(), saveUrl, null);
+            const updatedConfig = getConfigUpdate();
+            const resp = await async_send_and_interpret_bot_update(updatedConfig, saveUrl, null);
             create_alert("success", "Configuration saved", resp);
+            refreshExchangeSelector()
+            lastSavedConfig = updatedConfig
         } catch (error) {
             create_alert("error", "Impossible to save config", error)
         }
@@ -74,7 +77,6 @@ $(document).ready(function() {
     }
 
     const refreshExchangeSelector = () => {
-        console.log("refreshExchangeSelector")
         const exchanges = getSelectableExchange();
         const exchangeSelector = $("#main-exchange-selector");
         const profileExchange = exchangeSelector.data("selected-exchange");
@@ -125,6 +127,10 @@ $(document).ready(function() {
             disable_edit_json: true,
             disable_properties: true,
         })
+        simulatedPortfolioEditor.on('ready', () => {
+            readyEditors.portfolio = true
+            initLastSavedConfig();
+        })
     }
 
     const refreshTradingSimulatorEditor = () => {
@@ -148,10 +154,13 @@ $(document).ready(function() {
             disable_edit_json: true,
             disable_properties: true,
         })
+        tradingSimulatorEditor.on('ready', () => {
+            readyEditors.simulator = true
+            initLastSavedConfig();
+        })
     }
 
     const refreshExchangesEditor = () => {
-        console.log("refreshExchangesEditor")
         const editorDiv = $("#exchanges-editor");
         let value = editorDiv.data("config");
         if(typeof value === "undefined"){
@@ -227,6 +236,10 @@ $(document).ready(function() {
         return $("#traded-symbol-selector").val()
     }
 
+    const getTradingModeName = () => {
+        return $("#trading-mode-config-editor").data("trading-mode-name")
+    }
+
     const registerEvents = () => {
          $("#main-exchange-selector").on(
              "change", () => onSelectedExchange(getSelectedExchange())
@@ -245,8 +258,9 @@ $(document).ready(function() {
         [configEditor, tradingSimulatorEditor, simulatedPortfolioEditor, exchangesEditor].forEach((editor) => {
            const errors = editor.validate();
            if (errors.length){
-               console.log(errors)
-               throw JSON.stringify(errors.map(err => `${err.path}: ${err.message}`))
+               throw JSON.stringify(errors.map(
+                   err => `${err.path.replace('root.', '')}: ${err.message}`
+               ).join(", "))
            }
         });
     }
@@ -255,10 +269,22 @@ $(document).ready(function() {
         return {
             exchange: getSelectedExchange(),
             tradingPair: getSelectedPair(),
-            tentacleConfig: configEditor.getValue(),
+            tradingModeName: getTradingModeName(),
+            tradingModeConfig: configEditor.getValue(),
             tradingSimulatorConfig: tradingSimulatorEditor.getValue(),
             simulatedPortfolioConfig: simulatedPortfolioEditor.getValue(),
             exchangesConfig: exchangesEditor.getValue(),
+        }
+    }
+
+    const initLastSavedConfig = () => {
+        if (
+            readyEditors.exchanges
+            && readyEditors.simulator
+            && readyEditors.portfolio
+            && lastSavedConfig === undefined
+        ) {
+            lastSavedConfig = getConfigUpdate()
         }
     }
 
@@ -266,20 +292,42 @@ $(document).ready(function() {
         exchangesEditor.on('ready', () => {
             initSelectedExchange();
             registerEvents();
+            readyEditors.exchanges = true
+            initLastSavedConfig();
         })
         $("[data-role=save]").on("click", (event) => {
             saveConfig($(event.currentTarget).data("update-url"))
         })
     }
 
+    const hasPendingUpdates = () => {
+        if (tradingSimulatorEditor === undefined
+            || simulatedPortfolioEditor === undefined
+            || exchangesEditor === undefined
+            || lastSavedConfig === undefined
+        ) {
+            return false;
+        }
+        return getValueChangedFromRef(
+            getConfigUpdate(), lastSavedConfig, true
+        )
+    }
+
     let exchangeSymbols = [];
     let tradingSimulatorEditor = undefined;
     let simulatedPortfolioEditor = undefined;
     let exchangesEditor = undefined;
+    let lastSavedConfig = undefined
+    const readyEditors = {
+        exchanges: false,
+        simulator: false,
+        portfolio: false,
+    }
 
 
     refreshExchangesEditor();
     refreshTradingSimulatorEditor();
     initUIWhenPossible();
     addCustomValidator();
+    register_exit_confirm_function(hasPendingUpdates)
 });
