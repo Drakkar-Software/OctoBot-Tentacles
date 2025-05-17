@@ -73,11 +73,74 @@ def register(blueprint):
             display_intro=display_intro,
         )
 
+    @blueprint.route('/interfaces')
+    @login.login_required_when_activated
+    def interfaces():
+        display_config = interfaces_util.get_edited_config()
+
+        # service lists
+        service_list = models.get_market_making_services()
+        services_config = {
+            service: config
+            for service, config in display_config[services_constants.CONFIG_CATEGORY_SERVICES].items()
+            if service in service_list
+        }
+        notifiers_list = models.get_notifiers_list()
+
+        return flask.render_template(
+            'distributions/market_making/interfaces.html',
+            config_notifications=display_config[
+             services_constants.CONFIG_CATEGORY_NOTIFICATION],
+            config_services=services_config,
+
+            services_list=service_list,
+            notifiers_list=notifiers_list,
+        )
+
+
+
+    @blueprint.route('/interface_config', methods=['POST'])
+    @login.login_required_when_activated
+    def interface_config():
+        next_url = flask.request.args.get("next", None)
+        request_data = flask.request.get_json()
+        success = True
+        response = ""
+        err_message = ""
+
+        if request_data:
+            # remove elements from global config if any to remove
+            removed_elements_key = "removed_elements"
+            if removed_elements_key in request_data and request_data[removed_elements_key]:
+                update_success, err_message = models.update_global_config(request_data[removed_elements_key], delete=True)
+                success = success and update_success
+            else:
+                request_data[removed_elements_key] = ""
+
+            # update global config if required
+            if constants.GLOBAL_CONFIG_KEY in request_data and request_data[constants.GLOBAL_CONFIG_KEY]:
+                success, err_message = models.update_global_config(request_data[constants.GLOBAL_CONFIG_KEY])
+            else:
+                request_data[constants.GLOBAL_CONFIG_KEY] = ""
+
+            response = {
+                "global_updated_config": request_data[constants.GLOBAL_CONFIG_KEY],
+                removed_elements_key: request_data[removed_elements_key]
+            }
+
+        if success:
+            if request_data.get("restart_after_save", False):
+                models.schedule_delayed_command(models.restart_bot)
+            if next_url is not None:
+                return flask.redirect(next_url)
+            return util.get_rest_reply(flask.jsonify(response))
+        else:
+            return util.get_rest_reply(flask.jsonify(err_message), 500)
+
     @blueprint.route('/configuration', methods=['POST'])
     @login.login_required_when_activated
     def save_market_making_config():
         request_data = flask.request.get_json()
-        print(request_data)
         success = False
         response = "Restart to apply."
         err_message = None

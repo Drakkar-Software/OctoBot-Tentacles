@@ -4,9 +4,16 @@
 {% import 'components/config/tentacle_config_editor.html' as m_tentacle_config_editor %}
 
 
-{% macro save_block() %}
+{% macro save_block(display_interfaces_link) %}
 <div class="d-flex justify-content-between">
-    <div class="d-none d-md-flex px-5"></div>
+    <div class="{{'' if display_interfaces_link else 'd-none d-md-flex px-5'}}">
+        <a href="{{url_for('interfaces')}}" class="{{'' if display_interfaces_link else 'd-none'}}">
+            <button type="button" class="btn btn-outline-primary btn-lg"
+                    data-toggle="tooltip" title="Configure your OctoBot's web interface access and enable the Telegram bot.">
+                Web & Telegram configuration
+            </button>
+        </a>
+    </div>
     <div class="">
         <button type="button" class="btn btn-primary btn-lg"
                 data-role="save" data-update-url="{{url_for('save_market_making_config')}}">
@@ -29,7 +36,7 @@
             {{tentacle_docs}}
         </div>
         <div class="col col-lg-6">
-            <div>
+            <div id="exchange-and-pair">
                 <h2>Exchange and Trading pair</h2>
                 <div class="grid row form-inline my-4">
                     <div class="col col-lg-6">
@@ -53,8 +60,8 @@
             </div>
         </div>
     </div>
-    {{ save_block() }}
-    <div>
+    {{ save_block(False) }}
+    <div id="trading-simulation">
         <h2>Trading simulator configuration</h2>
         <div class="grid row">
             <div class="col col-lg-6">
@@ -71,7 +78,7 @@
             </div>
         </div>
     </div>
-    <div>
+    <div id="exchange-configuration">
         <h2>Exchanges configuration</h2>
         <div class="mt-4">
             <p>
@@ -90,7 +97,11 @@
             <i>Click save after adding a new exchange to be able to select it.</i>
         </p>
     </div>
-    {{ save_block() }}
+    {{ save_block(True) }}
+
+    <span class="d-none"
+          data-display-intro="{{display_intro}}"
+    ></span>
 </div>
 {% endblock %}
 

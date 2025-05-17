@@ -330,4 +330,5 @@ $(document).ready(function() {
     initUIWhenPossible();
     addCustomValidator();
     register_exit_confirm_function(hasPendingUpdates)
+    startTutorialIfNecessary("mm:configuration");
 });
