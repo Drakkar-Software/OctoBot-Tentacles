@@ -35,24 +35,16 @@ def register(blueprint):
         if flask.request.args.get("reset_tutorials", "False") == "True":
             flask_util.BrowsingDataProvider.instance().set_first_displays(True)
         if models.accepted_terms():
-            trading_delay_info = flask.request.args.get("trading_delay_info", 'false').lower() == "true"
-            in_backtesting = models.get_in_backtesting_mode()
             display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
-                flask_util.BrowsingDataProvider.HOME
+                flask_util.BrowsingDataProvider.get_distribution_key(
+                    models.get_distribution(),
+                    flask_util.BrowsingDataProvider.HOME,
+                )
             )
-            form_to_display = constants.WELCOME_FEEDBACK_FORM_ID
-            pnl_symbols = models.get_pnl_history_symbols()
             all_time_frames = models.get_all_watched_time_frames()
             display_time_frame = models.get_display_timeframe()
             display_orders = models.get_display_orders()
             sandbox_exchanges = models.get_sandbox_exchanges()
-            try:
-                user_id = models.get_user_account_id()
-                display_feedback_form = form_to_display and not models.has_filled_form(form_to_display)
-            except authentication.AuthenticationRequired:
-                # no authenticated user: don't display form
-                user_id = None
-                display_feedback_form = False
             past_launch_time = (
                 web_constants.PRODUCT_HUNT_ANNOUNCEMENT_DAY
                 + (
@@ -71,25 +63,19 @@ def register(blueprint):
             ) and not time.time() > past_launch_time
             return flask.render_template(
                 'distributions/market_making/dashboard.html',
-                has_pnl_history=bool(pnl_symbols),
-                watched_symbols=models.get_watched_symbols(),
-                backtesting_mode=in_backtesting,
                 display_intro=display_intro,
-                display_trading_delay_info=trading_delay_info,
-                selected_profile=models.get_current_profile().name,
                 reference_unit=interfaces_util.get_reference_market(),
                 display_time_frame=display_time_frame,
                 display_orders=display_orders,
                 all_time_frames=all_time_frames,
-                user_id=user_id,
-                form_to_display=form_to_display,
-                display_feedback_form=display_feedback_form,
                 sandbox_exchanges=sandbox_exchanges,
                 display_ph_launch=display_ph_launch,
                 is_launching=is_launching,
-                latest_release_url=f"{octobot_commons.constants.GITHUB_BASE_URL}/"
-                                   f"{octobot_commons.constants.GITHUB_ORGANISATION}/"
-                                   f"{constants.PROJECT_NAME}/releases/latest",
             )
         else:
             return flask.redirect(flask.url_for("terms"))
+
+    @blueprint.route("/welcome")
+    def welcome():
+        # used in terms page
+        return flask.redirect(flask.url_for("home"))

@@ -29,6 +29,7 @@ from tentacles.Services.Interfaces.web_interface.models import tentacles
 from tentacles.Services.Interfaces.web_interface.models import trading
 from tentacles.Services.Interfaces.web_interface.models import web_interface_tab
 from tentacles.Services.Interfaces.web_interface.models import json_schemas
+from tentacles.Services.Interfaces.web_interface.models import distributions
 
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
@@ -279,6 +280,9 @@ from tentacles.Services.Interfaces.web_interface.models.trading import (
 from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import (
     WebInterfaceTab,
 )
+from tentacles.Services.Interfaces.web_interface.models.distributions import (
+    save_market_making_configuration,
+)
 
 
 __all__ = [
@@ -493,4 +497,5 @@ __all__ = [
     "get_sandbox_exchanges",
     "get_distribution",
     "WebInterfaceTab",
+    "save_market_making_configuration",
 ]

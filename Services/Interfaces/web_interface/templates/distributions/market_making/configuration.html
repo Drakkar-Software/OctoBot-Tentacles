@@ -48,7 +48,7 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div id="trading-mode-config-editor" data-trading-mode-name="{{trading_mode_name}}">
                 {{ m_tentacle_config_editor.tentacles_config_editor(trading_mode_name) }}
             </div>
         </div>
@@ -86,6 +86,9 @@
              data-config='{{config_exchanges | tojson}}'
              data-schema='{{exchanges_schema | tojson}}'
         ></div>
+        <p class="mx-4">
+            <i>Click save after adding a new exchange to be able to select it.</i>
+        </p>
     </div>
     {{ save_block() }}
 </div>

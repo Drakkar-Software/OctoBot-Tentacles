@@ -25,6 +25,13 @@ import octobot_commons.json_util as json_util
 import octobot_commons.configuration as commons_configuration
 import octobot_commons.authentication as commons_authentication
 from octobot_services.interfaces import run_in_bot_main_loop
+import octobot.enums
+
+
+_PREFIX_BY_DISTRIBUTION = {
+    octobot.enums.OctoBotDistribution.DEFAULT.value: "",
+    octobot.enums.OctoBotDistribution.MARKET_MAKING.value: "mm:",
+}
 
 
 class BrowsingDataProvider(singleton.Singleton):
@@ -34,6 +41,7 @@ class BrowsingDataProvider(singleton.Singleton):
     ALL_CURRENCIES = "all_currencies"
     HOME = "home"
     PROFILE = "profile"
+    CONFIGURATION = "configuration"
     AUTOMATIONS = "automations"
     PROFILE_SELECTOR = "profile_selector"
     CACHE_EXPIRATION = constants.DAYS_TO_SECONDS * 14   # use 14 days cache maximum
@@ -44,6 +52,10 @@ class BrowsingDataProvider(singleton.Singleton):
         self.browsing_data = {}
         self.logger = logging.get_logger(self.__class__.__name__)
         self._load_saved_data()
+
+    @staticmethod
+    def get_distribution_key(distribution: octobot.enums.OctoBotDistribution, key: str) -> str:
+        return f"{_PREFIX_BY_DISTRIBUTION[distribution.value]}{key}"
 
     def get_or_create_session_secret_key(self):
         try:

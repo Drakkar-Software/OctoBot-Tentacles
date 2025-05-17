@@ -14,10 +14,12 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_commons.constants as commons_constants
+import octobot_commons.configuration as configuration
 
 
 ASSET = "asset"
 VALUE = "value"
+HIDDEN_VALUE = "******"
 
 NAME = "name"
 API_KEY = "api-key"
@@ -58,6 +60,13 @@ def get_json_simulated_portfolio(user_config):
         }
         for asset, value in config_portfolio.items()
     ]
+
+
+def json_simulated_portfolio_to_config(json_portfolio_config: list[dict]) -> dict:
+    return {
+        entry[ASSET]: entry[VALUE]
+        for entry in json_portfolio_config
+    }
 
 
 JSON_TRADING_SIMULATOR_SCHEMA = {
@@ -107,7 +116,7 @@ def get_json_trading_simulator_config(user_config: dict) -> dict:
     }
 
 
-def get_json_exchanges_schema(exchanges: list[str]):
+def get_json_exchanges_schema(exchanges: list[str]) -> dict:
     return {
         "type": "array",
         "uniqueItems": True,
@@ -153,21 +162,31 @@ def get_json_exchange_config(user_config: dict):
     return [
         {
             NAME: name,
-            API_KEY: "******" if values.get(commons_constants.CONFIG_EXCHANGE_KEY) else '',
-            API_SECRET: "******" if values.get(commons_constants.CONFIG_EXCHANGE_SECRET) else '',
-            API_PASSWORD: "******" if values.get(commons_constants.CONFIG_EXCHANGE_PASSWORD) else '',
+            API_KEY: "" if configuration.has_invalid_default_config_value(values.get(commons_constants.CONFIG_EXCHANGE_KEY)) else HIDDEN_VALUE,
+            API_SECRET: "" if configuration.has_invalid_default_config_value(values.get(commons_constants.CONFIG_EXCHANGE_SECRET)) else HIDDEN_VALUE,
+            API_PASSWORD: "" if configuration.has_invalid_default_config_value(values.get(commons_constants.CONFIG_EXCHANGE_PASSWORD)) else HIDDEN_VALUE,
         }
         for name, values in user_config[commons_constants.CONFIG_EXCHANGES].items()
     ]
 
-def json_exchange_config_to_config(json_exchange_config: dict, enabled, exchange_type):
+def json_exchange_config_to_config(json_exchanges_config: list[dict], enabled: bool):
     return {
-        config[NAME]: {
-            commons_constants.CONFIG_EXCHANGE_KEY: config[API_KEY],
-            commons_constants.CONFIG_EXCHANGE_SECRET: config[API_SECRET],
-            commons_constants.CONFIG_EXCHANGE_PASSWORD: config[API_PASSWORD],
-            commons_constants.CONFIG_ENABLED_OPTION: enabled,
-            commons_constants.CONFIG_EXCHANGE_TYPE: exchange_type,
-        }
-        for config in json_exchange_config
+        config[NAME]: _get_exchange_config_from_json(config, enabled)
+        for config in json_exchanges_config
     }
+
+def _get_exchange_config_from_json(json_exchange_config: dict, enabled: bool) -> dict:
+    config = {
+        commons_constants.CONFIG_ENABLED_OPTION: enabled,
+    }
+    for json_key, config_key in (
+        (API_KEY, commons_constants.CONFIG_EXCHANGE_KEY),
+        (API_SECRET, commons_constants.CONFIG_EXCHANGE_SECRET),
+        (API_PASSWORD, commons_constants.CONFIG_EXCHANGE_PASSWORD),
+        (API_KEY, commons_constants.CONFIG_EXCHANGE_KEY),
+    ):
+        json_value = json_exchange_config[json_key]
+        if json_value != HIDDEN_VALUE:
+            # only add keys if their value is not HIDDEN_VALUE, use commons_constants.EMPTY_VALUE instead of ""
+            config[config_key] = json_value or commons_constants.NO_KEY_VALUE
+    return config

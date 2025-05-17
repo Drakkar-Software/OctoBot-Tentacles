@@ -38,7 +38,10 @@ def register(blueprint):
     @login.login_required_when_activated
     def configuration():
         display_intro = flask_util.BrowsingDataProvider.instance().get_and_unset_is_first_display(
-            flask_util.BrowsingDataProvider.PROFILE
+            flask_util.BrowsingDataProvider.get_distribution_key(
+                models.get_distribution(),
+                flask_util.BrowsingDataProvider.CONFIGURATION,
+            )
         )
         display_config = interfaces_util.get_edited_config()
         enabled_exchanges = trading_api.get_enabled_exchanges_names(display_config)
@@ -66,6 +69,8 @@ def register(blueprint):
             portfolio_schema=models.JSON_PORTFOLIO_SCHEMA,
             trading_simulator_schema=models.JSON_TRADING_SIMULATOR_SCHEMA,
             config_trading_simulator=models.get_json_trading_simulator_config(display_config),
+
+            display_intro=display_intro,
         )
 
     @blueprint.route('/configuration', methods=['POST'])
@@ -73,10 +78,22 @@ def register(blueprint):
     def save_market_making_config():
         request_data = flask.request.get_json()
         print(request_data)
-        success = True
+        success = False
         response = "Restart to apply."
         err_message = None
-
+        try:
+            models.save_market_making_configuration(
+                request_data["exchange"],
+                request_data["tradingPair"],
+                request_data["exchangesConfig"],
+                request_data["tradingSimulatorConfig"],
+                request_data["simulatedPortfolioConfig"],
+                request_data["tradingModeName"],
+                request_data["tradingModeConfig"],
+            )
+            success = True
+        except Exception as e:
+            err_message = f"Failed to save market making configuration: {e.__class__.__name__}: {e}"
         if success:
             return util.get_rest_reply(flask.jsonify(response))
         else:
