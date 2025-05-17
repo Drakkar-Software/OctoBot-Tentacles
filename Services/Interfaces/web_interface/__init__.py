@@ -56,6 +56,7 @@ MAX_NOTIFICATION_HISTORY_SIZE = 1000
 MAX_NOTIFICATION_AT_ONCE = 10
 notifications_history = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
 notifications = collections.deque(maxlen=MAX_NOTIFICATION_AT_ONCE)
+major_issue_alerts: list[str] = []
 
 TIME_AXIS_TITLE = "Time"
 
@@ -142,6 +143,15 @@ def get_notifications() -> list:
 
 def get_notifications_history() -> list:
     return list(notifications_history)
+
+
+# todo find where to call it
+def register_major_issue_alert(message):
+    major_issue_alerts.append(message)
+
+
+def get_major_issue_alerts() -> list:
+    return list(major_issue_alerts)
 
 
 def get_logs():

@@ -282,6 +282,7 @@ from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import
 )
 from tentacles.Services.Interfaces.web_interface.models.distributions import (
     save_market_making_configuration,
+    get_market_making_services,
 )
 
 
@@ -498,4 +499,5 @@ __all__ = [
     "get_distribution",
     "WebInterfaceTab",
     "save_market_making_configuration",
+    "get_market_making_services",
 ]

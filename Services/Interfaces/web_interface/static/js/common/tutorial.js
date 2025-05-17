@@ -208,6 +208,77 @@ _TUTORIALS = {
         }
     },
 
+    "mm:home": () => {
+        return {
+            steps: [
+                {
+                    title: 'Welcome to OctoBot Market Making',
+                    intro: 'This free software lets you easily automate market making strategies.'
+                },
+                {
+                    title: 'This is your dashboard',
+                    element: document.querySelector('#dashboard-graph'),
+                    intro: `From this graph, you can follow your market price, market making orders and trades.`
+                },
+                {
+                    title: 'Simulated trading',
+                    element: document.querySelector('#trading-type-indicator'),
+                    intro: `This part shows if your bot is currently using virtual funds (simulated trading) or trades with a real exchange account.`
+                },
+                {
+                    title: 'Your open orders',
+                    element: document.querySelector('#openOrderTable'),
+                    intro: `In this table are displayed details about your strategy current open orders.`
+                },
+                {
+                    title: 'Your account balance',
+                    element: document.querySelector('#profitability-display'),
+                    intro: `Here will be displayed the chart of your historical balance, once your bot will have run for some time.`
+                },
+                {
+                    title: 'Your trades',
+                    element: document.querySelector('#trades-table'),
+                    intro: `Your market making trade history will be detailed on this table.`
+                },
+                {
+                    title: "That's it !",
+                    intro: 'Thank your for using OctoBot Market Making.'
+                },
+            ]
+        }
+    },
+
+    "mm:configuration": () => {
+        return {
+            steps: [
+                {
+                    title: 'Configuration',
+                    intro: 'This page lets you configure your strategy.'
+                },
+                {
+                    title: 'Exchange and pair',
+                    element: document.querySelector('#exchange-and-pair'),
+                    intro: `Select the exchange and trading pair to provide liquidity on.`
+                },
+                {
+                    title: 'Exchanges configuration',
+                    element: document.querySelector('#exchange-configuration'),
+                    intro: `You can enter your target exchange and API Keys here.`
+                },
+                {
+                    title: 'Simulated trading',
+                    element: document.querySelector('#trading-simulation'),
+                    intro: `Use the risk-free trading simulator to fine tune your configuration before using real funds.`
+                },
+                {
+                    title: 'Strategy details',
+                    element: document.querySelector('#trading-mode-config-editor'),
+                    intro: `Edit your strategy details to create the strategy of your choice.`
+                },
+            ]
+        }
+    },
+
     account_exchanges: () => {
         return {
             steps: [

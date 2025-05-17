@@ -189,4 +189,5 @@ def register_context_processor(web_interface_instance):
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
             has_open_source_package=models.has_open_source_package,
+            major_issue_alerts=web_interface.get_major_issue_alerts(),
         )

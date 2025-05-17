@@ -20,11 +20,14 @@ import octobot_commons.dict_util as dict_util
 import octobot_commons.logging as commons_logging
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.models.json_schemas as json_schemas
+import tentacles.Services.Interfaces.web_interface.models.configuration as models_configuration
 import octobot_tentacles_manager.api
 
 
 _LOGGER_NAME = "MMConfigurationModel"
-
+_MM_SERVICES = [
+    "telegram", "web"
+]
 
 def save_market_making_configuration(
     enabled_exchange: str,
@@ -40,6 +43,14 @@ def save_market_making_configuration(
         enabled_exchange, trading_pair, exchange_configurations,
         trading_simulator_configuration, simulated_portfolio_configuration
     )
+
+
+def get_market_making_services() -> dict:
+    return {
+        name: service
+        for name, service in models_configuration.get_services_list().items()
+        if name in _MM_SERVICES
+    }
 
 
 def _save_user_config(

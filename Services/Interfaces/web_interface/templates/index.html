@@ -1,5 +1,8 @@
 {% extends "layout.html" %}
 {% set active_page = "home" %}
+
+{% import 'macros/major_issue_alert.html' as m_major_issue_alert %}
+
 {% block body %}
     <br>
     <div update-url="{{ url_for('api.announcements') }}" class="alert alert-danger text-center d-none" role="alert" id="annoncementsAlert"></div>
@@ -64,6 +67,7 @@
             </div>
         </div>
         {% endif %}
+        {{ m_major_issue_alert.major_issue_alert(major_issue_alerts) }}
         <div class="card" id="profitability-display">
             <div class="card-header">
                 <h4>
@@ -223,5 +227,6 @@
     <script src="{{ url_for('static', filename='js/common/candlesticks.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/common/portfolio_history.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/components/dashboard.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+    <script src="{{ url_for('static', filename='js/components/dashboard_tutorial_starter.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
     <script src="{{ url_for('static', filename='js/components/tentacles_configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}
