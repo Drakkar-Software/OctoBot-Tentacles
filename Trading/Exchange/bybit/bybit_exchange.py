@@ -237,8 +237,8 @@ class Bybit(exchanges.RestExchange):
                                          price=price, stop_price=stop_price, side=side,
                                          current_price=current_price, params=params)
 
-    async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
-        return await super()._verify_order(created_order, order_type, symbol, price, side,
+    async def _verify_order(self, created_order, order_type, symbol, price, quantity, side, get_order_params=None):
+        return await super()._verify_order(created_order, order_type, symbol, price, quantity, side,
                                            get_order_params=get_order_params)
 
     async def set_symbol_partial_take_profit_stop_loss(self, symbol: str, inverse: bool,

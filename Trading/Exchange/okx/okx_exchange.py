@@ -321,12 +321,12 @@ class Okx(exchanges.RestExchange):
             pass
         return params
 
-    async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
+    async def _verify_order(self, created_order, order_type, symbol, price, quantity, side, get_order_params=None):
 
         if trading_personal_data.is_stop_order(order_type) or trading_personal_data.is_take_profit_order(order_type):
             get_order_params = get_order_params or {}
             get_order_params["stop"] = True
-        return await super()._verify_order(created_order, order_type, symbol, price, side,
+        return await super()._verify_order(created_order, order_type, symbol, price, quantity, side,
                                            get_order_params=get_order_params)
 
     def _is_oco_order(self, params):
