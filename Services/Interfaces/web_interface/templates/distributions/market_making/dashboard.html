@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "home" %}
 
-{% import 'macros/major_issue_alert.html' as m_major_issue_alert %}
+{% import 'macros/critical_notifications_alert.html' as m_critical_notifications_alert %}
 
 {% macro waiter(waiter_id, title) %}
 <div id="{{waiter_id}}" class="text-center my-4 py-4 h-100">
@@ -37,7 +37,7 @@
         </p>
     </div>
     {% endif %}
-    {{ m_major_issue_alert.major_issue_alert(major_issue_alerts) }}
+    {{ m_critical_notifications_alert.critical_notifications_alert(critical_notifications) }}
     <span id="exchange-specific-data">
         <div class="card" id="dashboard-graph">
             <div class="card-header d-flex justify-content-between" id="all-watched-markets">

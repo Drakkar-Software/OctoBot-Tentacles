@@ -54,7 +54,8 @@ function manage_alert(data){
             notifications.slice(notifications.length - maxDisplayedNotifications, notifications.length): notifications
         );
         $.each(displayedNotifications, (i, item) => {
-            create_alert(item["Level"], item["Title"], item["Message"], "", item["Sound"]);
+            const toastAlertLevel = item["Level"] === "critical" ? "error": item["Level"]
+            create_alert(toastAlertLevel, item["Title"], item["Message"], "", item["Sound"]);
             $.each(notificationCallbacks, (_, callback) => {
                callback(item["Title"], item);
             });
