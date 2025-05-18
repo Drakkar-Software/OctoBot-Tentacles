@@ -17,15 +17,17 @@ import aiohttp
 import asyncio
 
 import tentacles.Services.Interfaces.web_interface.tests as web_interface_tests
+import octobot.enums
 
 
 class AbstractPluginTester:
+    DISTRIBUTION: octobot.enums.OctoBotDistribution = octobot.enums.OctoBotDistribution.DEFAULT
     VERBOSE = False  # Set true to print tested urls
     PLUGIN = None
     URL_BLACK_LIST = []
 
     async def test_browse_all_pages_no_required_password(self):
-        async with web_interface_tests.get_web_interface(False) as web_interface_instance:
+        async with web_interface_tests.get_web_interface(False, self.DISTRIBUTION) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await asyncio.gather(
                     *[web_interface_tests.check_page_no_login_redirect(
@@ -34,7 +36,7 @@ class AbstractPluginTester:
                         for rule in self._get_rules(web_interface_instance)])
 
     async def test_browse_all_pages_required_password_without_login(self):
-        async with web_interface_tests.get_web_interface(True) as web_interface_instance:
+        async with web_interface_tests.get_web_interface(True, self.DISTRIBUTION) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await asyncio.gather(
                     *[web_interface_tests.check_page_login_redirect(
@@ -43,7 +45,7 @@ class AbstractPluginTester:
                         for rule in self._get_rules(web_interface_instance)])
 
     async def test_browse_all_pages_required_password_with_login(self):
-        async with web_interface_tests.get_web_interface(True) as web_interface_instance:
+        async with web_interface_tests.get_web_interface(True, self.DISTRIBUTION) as web_interface_instance:
             async with aiohttp.ClientSession() as session:
                 await web_interface_tests.login_user_on_session(session)
                 # correctly display pages: session is logged in
@@ -67,5 +69,5 @@ class AbstractPluginTester:
             self.URL_BLACK_LIST
         )
         if self.VERBOSE:
-            print(f"{self.__class__.__name__} Tested rules: {rules}")
+            print(f"{self.__class__.__name__} Tested {len(rules)} rules: {rules}")
         return rules

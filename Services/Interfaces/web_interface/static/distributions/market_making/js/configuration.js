@@ -308,6 +308,7 @@ $(document).ready(function() {
         ) {
             return false;
         }
+        console.log("lastSavedConfig", lastSavedConfig)
         return getValueChangedFromRef(
             getConfigUpdate(), lastSavedConfig, true
         )

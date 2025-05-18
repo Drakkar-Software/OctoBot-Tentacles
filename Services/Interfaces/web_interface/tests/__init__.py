@@ -36,6 +36,8 @@ except ImportError:
         )
     )
 import octobot.automation as automation
+import octobot.enums
+import octobot_commons.constants
 
 import tentacles.Services.Interfaces.web_interface.controllers.octobot_authentication as octobot_authentication
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -48,7 +50,7 @@ MAX_START_TIME = 5
 NON_AUTH_ROUTES = ["/api/", "robots.txt"]
 
 
-async def _init_bot():
+async def _init_bot(distribution: octobot.enums.OctoBotDistribution):
     # import here to prevent web interface import issues
     import octobot.octobot as octobot
     import octobot.constants as octobot_constants
@@ -61,7 +63,9 @@ async def _init_bot():
     community.IdentifiersProvider.use_production()
     singleton.Singleton._instances.pop(authentication.Authenticator, None)
     singleton.Singleton._instances.pop(community.CommunityAuthentication, None)
-    octobot = octobot.OctoBot(test_config.load_test_config(dict_only=False))
+    test_config = test_config.load_test_config(dict_only=False)
+    test_config.config[octobot_commons.constants.CONFIG_DISTRIBUTION] = distribution.value
+    octobot = octobot.OctoBot(test_config)
     octobot.initialized = True
     tentacles_config = config.load_test_tentacles_config()
     loaders.reload_tentacle_by_tentacle_class()
@@ -85,7 +89,7 @@ def _start_web_interface(interface):
 
 # use context manager instead of fixture to prevent pytest threads issues
 @contextlib.asynccontextmanager
-async def get_web_interface(require_password):
+async def get_web_interface(require_password: bool, distribution: octobot.enums.OctoBotDistribution):
     web_interface_instance = None
     try:
         with mock.patch.object(configuration_storage.SyncConfigurationStorage, "_save_value_in_config", mock.Mock()):
@@ -94,7 +98,7 @@ async def get_web_interface(require_password):
             web_interface_instance.should_open_web_interface = False
             web_interface_instance.set_requires_password(require_password)
             web_interface_instance.password_hash = configuration.get_password_hash(PASSWORD)
-            bot = await _init_bot()
+            bot = await _init_bot(distribution)
             interfaces.AbstractInterface.bot_api = bot.octobot_api
             first_exchange = next(iter(bot.config[commons_constants.CONFIG_EXCHANGES]))
             with mock.patch.object(web_interface_instance, "_register_on_channels", new=mock.AsyncMock()), \
@@ -119,23 +123,23 @@ async def check_page_no_login_redirect(url, session):
     ]
     async with session.get(url) as resp:
         text = await resp.text()
-        assert "We are sorry, but an unexpected error occurred" not in text
-        assert "We are sorry, but this doesn't exist" not in text
+        assert "We are sorry, but an unexpected error occurred" not in text, f"{url=}"
+        assert "We are sorry, but this doesn't exist" not in text, f"{url=}"
         if not (any(url.endswith(suffix)) for suffix in COMMUNITY_LOGIN_CONTAINED_PAGE_SUFFIXES):
-            assert "input type=submit value=Login" not in text
-            assert not resp.real_url.name == "login"
-        assert resp.status == 200
+            assert "input type=submit value=Login" not in text, f"{url=}"
+            assert not resp.real_url.name == "login", f"{resp.real_url.name=} != 200 ({url=})"
+        assert resp.status == 200, f"{resp.status=} != 200 ({url=})"
 
 
 async def check_page_login_redirect(url, session):
     async with session.get(url) as resp:
         text = await resp.text()
-        assert "We are sorry, but an unexpected error occurred" not in text
-        assert "We are sorry, but this doesn't exist" not in text
+        assert "We are sorry, but an unexpected error occurred" not in text, f"{url=}"
+        assert "We are sorry, but this doesn't exist" not in text, f"{url=}"
         if not any(route in url for route in NON_AUTH_ROUTES):
-            assert "input type=submit value=Login" in text
-            assert resp.real_url.name == "login"
-        assert resp.status == 200
+            assert "input type=submit value=Login" in text, url
+            assert resp.real_url.name == "login", f"{resp.real_url.name=} != 200 ({url=})"
+        assert resp.status == 200, f"{resp.status=} != 200 ({url=})"
 
 def get_plugins_routes(web_interface_instance):
     all_rules = tuple(rule for rule in web_interface_instance.server_instance.url_map.iter_rules())

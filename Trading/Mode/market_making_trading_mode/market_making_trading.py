@@ -574,6 +574,11 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                             self.logger.warning(f"Skipped {self.symbol} orders update: {err}")
                         self._last_error_at = self.exchange_manager.exchange.get_exchange_current_time()
                         # config error: should not happen, in this case, return true to skip auto reschedule
+                        await self.sent_once_critical_notification(
+                            "Configuration issue",
+                            f"Impossible to start {self.symbol} market making "
+                            f"on {self.exchange_manager.exchange_name}: {err}"
+                        )
                         return True
         return False
 
@@ -812,6 +817,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     f"[trigger source: {trigger_source}]"
                 )
             else:
+                required_funds = []
                 # B.2: Orders can't be replaced: they are not following exchange requirements: skip them
                 for side in missing_all_orders_sides:
                     # filter out orders
@@ -822,14 +828,19 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     # remove filtered orders from ideal_distribution in case an action plan gets created
                     if side == trading_enums.TradeOrderSide.BUY:
                         ideal_distribution.bids.clear()
+                        required_funds.append(quote)
                     else:
                         ideal_distribution.asks.clear()
+                        required_funds.append(base)
                 skip_iteration = not created_orders and not cancelled_orders
-                self.logger.warning(
-                    f"{'Skipped iteration: ' if skip_iteration else ''}Impossible to create {self.symbol} "
-                    f"{[s.name for s in missing_all_orders_sides]} orders: "
-                    f"invalid orders config or missing available funds."
+                missing_funds = ' and '.join(required_funds)
+                error_details = (
+                    f"Impossible to create {self.symbol} {' and '.join([s.value for s in missing_all_orders_sides])} "
+                    f"orders: missing available funds to comply with {self.exchange_manager.exchange_name} "
+                    f"minimal order size rules. Additional {missing_funds} required."
                 )
+                await self.sent_once_critical_notification(f"More {missing_funds} required", error_details)
+                self.logger.warning(f"{'Skipped iteration: ' if skip_iteration else ''}{error_details}")
                 if skip_iteration:
                     # all the orders to create can't actually be created and there is nothing to replace: nothing to do
                     return True
