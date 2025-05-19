@@ -18,7 +18,7 @@ Note: The strategy does not create artificial volume by forcing market orders, i
 order book.
 
 ### Configuration
-- Bids and asks counts define how many orders should be maintained withing the book
+- Bids and asks counts define how many orders should be maintained within the book
 - Min spread is the distance (as a % of the current price) between the highest bid and lowest ask
 - Max spread is the distance (as a % of the current price) between the lowest bid and highest ask
 - Reference exchange is the exchange to get the current price of the traded pair from. It should be a very liquid exchange to avoid arbitrage opportunities.

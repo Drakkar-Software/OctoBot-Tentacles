@@ -250,11 +250,7 @@ function getValueChangedFromRef(newObject, refObject, allowUndefinedValues=true)
             else if (refObject[key] !== val){
                 if (typeof val === "number"){
                     changes = Number(refVal) !== val;
-                    if (changes){
-                        console.log(refObject[key], "!=", val, "key=", key)
-                    }
                 }else{
-                    console.log(refObject[key], "!=", val, "key=", key)
                     changes = true;
                 }
             }
