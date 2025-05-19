@@ -1321,6 +1321,23 @@ async def test_get_limit_quantity_from_risk(tools):
     assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
     assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
 
+    # all-in orders
+    # 1. sell
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.SELL_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+    # 2. buy
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.BUY_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
+
 
 async def test_get_market_quantity_from_risk(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
@@ -1364,6 +1381,23 @@ async def test_get_market_quantity_from_risk(tools):
     # decreasing position
     assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10.8")
     assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10.8")
+
+    # all-in orders
+    # 1. sell
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.SELL_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 2.125 without all-in)
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+    # 2. buy
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.BUY_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
 
 
 async def test_target_profit_mode(tools):
