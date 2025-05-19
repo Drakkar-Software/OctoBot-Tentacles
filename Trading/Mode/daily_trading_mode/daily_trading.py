@@ -318,9 +318,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     async def _get_limit_quantity_from_risk(self, ctx, eval_note, max_quantity, base, selling, increasing_position):
         order_side = trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
         # check all in orders
-        if increasing_position and (
-            (selling and self.SELL_WITH_MAXIMUM_SIZE_ORDERS) or (not selling and self.BUY_WITH_MAXIMUM_SIZE_ORDERS)
-        ):
+        if (selling and self.SELL_WITH_MAXIMUM_SIZE_ORDERS) or (not selling and self.BUY_WITH_MAXIMUM_SIZE_ORDERS):
             return max_quantity
         # check configured quantity
         max_amount_from_ratio = self._get_max_amount_from_max_ratio(
@@ -369,15 +367,18 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     and self.QUANTITY_MARKET_MAX_PERCENT
     """
 
-    async def _get_market_quantity_from_risk(self, ctx, eval_note, quantity, base, selling, increasing_position):
+    async def _get_market_quantity_from_risk(self, ctx, eval_note, max_quantity, base, selling, increasing_position):
+        # check all in orders
+        if (selling and self.SELL_WITH_MAXIMUM_SIZE_ORDERS) or (not selling and self.BUY_WITH_MAXIMUM_SIZE_ORDERS):
+            return max_quantity
         # check configured quantity
         side = self.TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE if self.USE_TARGET_PROFIT_MODE else (
             trading_enums.TradeOrderSide.SELL if selling else trading_enums.TradeOrderSide.BUY
         )
         max_amount_from_ratio = (
             self._get_max_amount_from_max_ratio(
-                self.MAX_CURRENCY_RATIO, quantity, base, self.QUANTITY_MARKET_MAX_PERCENT
-            ) if increasing_position else quantity * self.QUANTITY_MARKET_MAX_PERCENT
+                self.MAX_CURRENCY_RATIO, max_quantity, base, self.QUANTITY_MARKET_MAX_PERCENT
+            ) if increasing_position else max_quantity * self.QUANTITY_MARKET_MAX_PERCENT
         )
         if user_amount := trading_modes.get_user_selected_order_amount(self.trading_mode, side):
             user_input_amount = await script_keywords.get_amount_from_input_amount(
@@ -399,7 +400,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.QUANTITY_MARKET_MIN_PERCENT, self.QUANTITY_MARKET_MAX_PERCENT, factor
         )
         holding_ratio = 1 if not increasing_position else self._get_quantity_ratio(base)
-        return min(checked_factor * holding_ratio * quantity, max_amount_from_ratio)
+        return min(checked_factor * holding_ratio * max_quantity, max_amount_from_ratio)
 
     def _get_ratio(self, currency):
         try:
