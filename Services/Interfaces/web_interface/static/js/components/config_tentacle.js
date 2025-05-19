@@ -288,6 +288,7 @@ function initConfigEditor(showWaiter) {
         parsedConfigValue = msg["config"];
         savedConfig = parsedConfigValue
         parsedConfigSchema = inputs[0]["schema"];
+        parsedConfigSchema.id = "tentacleConfig"
         if(configEditor !== null){
             configEditor.destroy();
         }
