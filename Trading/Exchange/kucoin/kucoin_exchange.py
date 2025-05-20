@@ -80,6 +80,8 @@ class Kucoin(exchanges.RestExchange):
     # Set True when get_cancelled_order() can return outdated open orders
     CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
     DEFAULT_CONNECTOR_CLASS = KucoinConnector
+    # set True when even loading markets can make auth calls when creds are set
+    CAN_MAKE_AUTHENTICATED_REQUESTS_WHEN_LOADING_MARKETS = True
 
     # Set False when the leverage value is set via something else that a set_leverage api (from orders for example)
     UPDATE_LEVERAGE_FROM_API = False  # leverage is set via orders on kucoin
