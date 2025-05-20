@@ -195,6 +195,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     ACTIVE_ORDER_SWAP_TIMEOUT = "ACTIVE_ORDER_SWAP_TIMEOUT"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     ADDITIONAL_TAKE_PROFIT_PRICES_KEY = "ADDITIONAL_TAKE_PROFIT_PRICES"
+    ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY = "ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS"
     STOP_ONLY = "STOP_ONLY"
     TRAILING_PROFILE = "TRAILING_PROFILE"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
@@ -443,8 +444,13 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self, order_details: list[OrderDetails], total_quantity: decimal.Decimal, symbol_market
     ):
         prices = [order_detail.price for order_detail in order_details]
+        amount_ratio_per_order = [
+            order_detail.quantity
+            for order_detail in order_details
+            if order_detail.quantity is not None
+        ]
         quantities, prices = trading_personal_data.get_valid_split_orders(
-            total_quantity, prices, symbol_market
+            total_quantity, prices, symbol_market, amount_ratio_per_order=amount_ratio_per_order
         )
         return [
             OrderDetails(price, quantity)
@@ -597,6 +603,22 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 for price in (data.get(self.ADDITIONAL_TAKE_PROFIT_PRICES_KEY) or [])
             ]
+            additional_user_take_profit_volume_ratios = (
+                list(data.get(self.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY) or [])
+            )
+            if additional_user_take_profit_volume_ratios:
+                expected_volumes = 0
+                if (not user_take_profit_price.is_nan()) and additional_user_take_profit_prices:
+                    expected_volumes = len(additional_user_take_profit_prices) + 1
+                elif additional_user_take_profit_prices:
+                    expected_volumes = len(additional_user_take_profit_prices)
+                if expected_volumes and len(additional_user_take_profit_volume_ratios) != expected_volumes:
+                    raise ValueError(
+                        f"{self.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY} must have a size"
+                        f" of {expected_volumes}. "
+                        f"{len(data[self.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY])=} "
+                        f"{len(data[self.ADDITIONAL_TAKE_PROFIT_PRICES_KEY])=}"
+                    )
             user_stop_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 data.get(self.STOP_PRICE_KEY, decimal.Decimal(math.nan))
@@ -640,11 +662,21 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             stop_loss_order_details = take_profit_order_details = []
             if use_chained_take_profit_orders:
                 take_profit_order_details = [] if user_take_profit_price.is_nan() else [
-                    OrderDetails(user_take_profit_price, None)
+                    OrderDetails(
+                        user_take_profit_price,
+                        additional_user_take_profit_volume_ratios[0] if additional_user_take_profit_volume_ratios
+                        else None
+                    )
                 ]
+                used_first_volume = not user_take_profit_price.is_nan()
                 take_profit_order_details += [
-                    OrderDetails(price, None)
-                    for price in additional_user_take_profit_prices
+                    OrderDetails(
+                        price,
+                        additional_user_take_profit_volume_ratios[index + (1 if used_first_volume else 0)]
+                        if additional_user_take_profit_volume_ratios
+                        else None
+                    )
+                    for index, price in enumerate(additional_user_take_profit_prices)
                 ]
             if use_chained_stop_loss_orders:
                 stop_loss_order_details = [OrderDetails(user_stop_price, None)]

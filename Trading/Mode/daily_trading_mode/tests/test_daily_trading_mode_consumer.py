@@ -1123,17 +1123,53 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert take_profit_order.trailing_profile is None
         assert take_profit_order.is_active is True
 
-    # stop loss and 1 take profit and 5 additional (6 TP in total)
+    # only 2 additional with volume (2 in total)
+    volume_ratios = [decimal.Decimal("1"), decimal.Decimal("1.2")]
+    data = {
+        consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [decimal.Decimal("110000"), decimal.Decimal("120000")],
+        consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: volume_ratios,
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"), consumer.TRAILING_PROFILE: None
+    }
+    orders_with_tps = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
+    buy_order = orders_with_tps[0]
+    tp_prices = [decimal.Decimal("110000"), decimal.Decimal("120000")]
+    assert len(buy_order.chained_orders) == len(tp_prices)
+    for i, take_profit_order in enumerate(buy_order.chained_orders):
+        is_last = i == len(buy_order.chained_orders) - 1
+        assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+        assert take_profit_order.origin_quantity == (
+            decimal.Decimal("0.01")
+           - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
+        ) * volume_ratios[i] / sum(volume_ratios)
+        assert take_profit_order.origin_price == tp_prices[i]
+        assert take_profit_order.is_waiting_for_chained_trigger
+        assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+        assert not take_profit_order.is_open()
+        assert not take_profit_order.is_created()
+        assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
+        assert take_profit_order.is_active is True
+
+    # stop loss and 1 take profit and 5 additional with volume data (6 TP in total)
     exchange_manager.trader.enable_inactive_orders = True
     tp_prices = [
         decimal.Decimal("100012"),
         decimal.Decimal("110000"), decimal.Decimal("120000"), decimal.Decimal("130000"),
         decimal.Decimal("140000"), decimal.Decimal("150000")
     ]
+    tp_volumes = [
+        decimal.Decimal(str(val))
+        for val in (
+            1,
+            2, 2.5, 2,
+            3, 2
+        )
+    ]
     data = {
         consumer.STOP_PRICE_KEY: decimal.Decimal("123"),
         consumer.TAKE_PROFIT_PRICE_KEY: tp_prices[0],
         consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: tp_prices[1:],
+        consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: tp_volumes,  # inclue volume of 1st TP
         consumer.VOLUME_KEY: decimal.Decimal("0.01"),
     }
     orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state, data=data)
@@ -1156,7 +1192,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert take_profit_order.origin_quantity == (
             decimal.Decimal("0.01")
            - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
-        ) / decimal.Decimal(str(len(tp_prices)))
+        ) * tp_volumes[i] / sum(tp_volumes)
         assert take_profit_order.origin_price == tp_prices[i]
         assert take_profit_order.is_active is False
         assert take_profit_order.is_waiting_for_chained_trigger
