@@ -223,8 +223,9 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
         )
         return consumers + [order_consumer]
 
-    async def _order_notification_callback(self, exchange, exchange_id, cryptocurrency, symbol, order,
-                                           update_type, is_from_bot):
+    async def _order_notification_callback(
+        self, exchange, exchange_id, cryptocurrency, symbol, order, update_type, is_from_bot
+    ):
         if (
             order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] == trading_enums.OrderStatus.FILLED.value
             and order[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] in (
@@ -495,6 +496,18 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             self.symbol_trading_config[self.trading_mode.REFERENCE_EXCHANGE],
             self.symbol
         )
+        if len(self.exchange_manager.exchange_config.traded_symbols) > 1:
+            error = (
+                f"Multiple trading pair is not supported on {self.trading_mode.get_name()}. "
+                f"Please select only one trading pair in configuration."
+            )
+            asyncio.create_task(
+                self.sent_once_critical_notification(
+                    "Configuration issue",
+                    error
+                )
+            )
+            raise ValueError(error)
 
     async def start(self) -> None:
         await super().start()
@@ -573,12 +586,13 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                         else:
                             self.logger.warning(f"Skipped {self.symbol} orders update: {err}")
                         self._last_error_at = self.exchange_manager.exchange.get_exchange_current_time()
-                        # config error: should not happen, in this case, return true to skip auto reschedule
-                        await self.sent_once_critical_notification(
-                            "Configuration issue",
-                            f"Impossible to start {self.symbol} market making "
-                            f"on {self.exchange_manager.exchange_name}: {err}"
-                        )
+                        if "Missing volume" not in str(err):
+                            # config error: should not happen, in this case, return true to skip auto reschedule
+                            await self.sent_once_critical_notification(
+                                "Configuration issue",
+                                f"Impossible to start {self.symbol} market making "
+                                f"on {self.exchange_manager.exchange_name}: {err}"
+                            )
                         return True
         return False
 
@@ -772,13 +786,14 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             if sum(o.amount for o in created_orders) <= trading_constants.ZERO:
                 # no order can be created (not enough funds)
                 created_orders = []
+                await self._send_missing_funds_critical_notification(missing_all_orders_sides)
                 self.logger.info(
                     f"No order to create (order amounts is 0), leaving book as is [trigger source: {trigger_source}]"
                 )
             elif not self._can_create_all_order(created_orders, symbol_market):
                 # if orders can't be created (because too small for example), then recreate the whole book to
                 # create all orders
-                self.logger.error(
+                self.logger.warning(
                     f"Missing funds: few orders can't be created, resizing book instead [trigger source: {trigger_source}]"
                 )
                 can_just_replace_a_few_orders = False
@@ -817,7 +832,6 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     f"[trigger source: {trigger_source}]"
                 )
             else:
-                required_funds = []
                 # B.2: Orders can't be replaced: they are not following exchange requirements: skip them
                 for side in missing_all_orders_sides:
                     # filter out orders
@@ -828,18 +842,10 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     # remove filtered orders from ideal_distribution in case an action plan gets created
                     if side == trading_enums.TradeOrderSide.BUY:
                         ideal_distribution.bids.clear()
-                        required_funds.append(quote)
                     else:
                         ideal_distribution.asks.clear()
-                        required_funds.append(base)
                 skip_iteration = not created_orders and not cancelled_orders
-                missing_funds = ' and '.join(required_funds)
-                error_details = (
-                    f"Impossible to create {self.symbol} {' and '.join([s.value for s in missing_all_orders_sides])} "
-                    f"orders: missing available funds to comply with {self.exchange_manager.exchange_name} "
-                    f"minimal order size rules. Additional {missing_funds} required."
-                )
-                await self.sent_once_critical_notification(f"More {missing_funds} required", error_details)
+                error_details = await self._send_missing_funds_critical_notification(missing_all_orders_sides)
                 self.logger.warning(f"{'Skipped iteration: ' if skip_iteration else ''}{error_details}")
                 if skip_iteration:
                     # all the orders to create can't actually be created and there is nothing to replace: nothing to do
@@ -853,6 +859,25 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         # 4. push orders creation and cancel plan
         await self._schedule_order_actions(order_actions_plan, current_price, symbol_market)
         return True
+
+    async def _send_missing_funds_critical_notification(self, missing_all_orders_sides) -> str:
+        base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
+        required_funds = []
+        for side in missing_all_orders_sides:
+            if side == trading_enums.TradeOrderSide.BUY:
+                required_funds.append(quote)
+            else:
+                required_funds.append(base)
+        if required_funds:
+            missing_funds = ' and '.join(required_funds)
+            error_details = (
+                f"Impossible to create {self.symbol} {' and '.join([s.value for s in missing_all_orders_sides])} "
+                f"orders: missing available funds to comply with {self.exchange_manager.exchange_name} "
+                f"minimal order size rules. Additional {missing_funds} required."
+            )
+            await self.sent_once_critical_notification(f"More {missing_funds} required", error_details)
+            return error_details
+        return ""
 
     def _can_create_all_order(self, created_orders: list[order_book_distribution.BookOrderData], symbol_market):
         for order in created_orders:
@@ -1198,6 +1223,11 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             local_exchange_name, self.exchange_manager.id
         ):
             exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+            if exchange_manager.is_trading and exchange_manager is not self.exchange_manager:
+                await self.sent_once_critical_notification(
+                    "Configuration issue",
+                    f"Multiple simultaneous trading exchanges is not supported on {self.trading_mode.get_name()}"
+                )
             other_exchange_key = self.trading_mode.LOCAL_EXCHANGE_PRICE if (
                 self.trading_mode.LOCAL_EXCHANGE_PRICE == self.reference_price.exchange
                 and local_exchange_name == exchange_manager.exchange_name

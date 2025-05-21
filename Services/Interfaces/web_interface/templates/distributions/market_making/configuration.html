@@ -6,14 +6,16 @@
 
 {% macro save_block(display_interfaces_link) %}
 <div class="d-flex justify-content-between">
-    <div class="{{'' if display_interfaces_link else 'd-none d-md-flex px-5'}}">
-        <a href="{{url_for('interfaces')}}" class="{{'' if display_interfaces_link else 'd-none'}}">
+    {% if display_interfaces_link %}
+    <div>
+        <a href="{{url_for('interfaces')}}">
             <button type="button" class="btn btn-outline-primary btn-lg"
                     data-toggle="tooltip" title="Configure your OctoBot's web interface access and enable the Telegram bot.">
                 Web & Telegram configuration
             </button>
         </a>
     </div>
+    {% endif %}
     <div class="">
         <button type="button" class="btn btn-primary btn-lg"
                 data-role="save" data-update-url="{{url_for('save_market_making_config')}}">
@@ -58,9 +60,11 @@
             <div id="trading-mode-config-editor" data-trading-mode-name="{{trading_mode_name}}">
                 {{ m_tentacle_config_editor.tentacles_config_editor(trading_mode_name) }}
             </div>
+            <div class="mx-3">
+                {{ save_block(False) }}
+            </div>
         </div>
     </div>
-    {{ save_block(False) }}
     <div id="trading-simulation">
         <h2>Trading simulator configuration</h2>
         <div class="grid row">

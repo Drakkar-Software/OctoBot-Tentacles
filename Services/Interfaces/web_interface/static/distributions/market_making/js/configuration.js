@@ -215,19 +215,30 @@ $(document).ready(function() {
             }
             if (schema.id === "tentacleConfig" && path === "root") {
                 const referenceExchange = value.reference_exchange;
-                try {
-                    // in try catch in case getSelectableExchange is not yet available
-                    const listedExchanges = getSelectableExchange();
-                    if (listedExchanges.concat(["local"]).indexOf(referenceExchange) === -1){
-                        // Errors must be an object with `path`, `property`, and `message`
-                        errors.push({
-                            path: path,
-                            property: 'reference_exchange',
-                            message: `Reference exchange must be listed in exchange configurations or equal to "local". Listed exchanges are ${listedExchanges.join(', ')}.`
-                        });
+                if (referenceExchange !== undefined) {
+                    try {
+                        // in try catch in case getSelectableExchange is not yet available
+                        const listedExchanges = getSelectableExchange();
+                        if (listedExchanges.concat(["local"]).indexOf(referenceExchange) === -1){
+                            // Errors must be an object with `path`, `property`, and `message`
+                            errors.push({
+                                path: path,
+                                property: 'reference_exchange',
+                                message: `Reference exchange must be listed in exchange configurations or equal to "local". Listed exchanges are ${listedExchanges.join(', ')}.`
+                            });
+                        }
+                    } catch (err) {
+                        console.error(err)
                     }
-                } catch (err) {
-                    console.error(err)
+                }
+                const minSpread = value.min_spread;
+                const maxSpread = value.max_spread;
+                if(minSpread !== undefined && maxSpread !== undefined && minSpread >= maxSpread){
+                    errors.push({
+                        path: path,
+                        property: 'max_spread',
+                        message: `Max spread % must be larger than Min spread %.`
+                    });
                 }
             }
             return errors;
