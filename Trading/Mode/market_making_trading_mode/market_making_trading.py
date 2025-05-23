@@ -209,6 +209,10 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
     def get_is_symbol_wildcard(cls) -> bool:
         return False
 
+    @staticmethod
+    def is_backtestable():
+        return False
+
     @classmethod
     def is_ignoring_cancelled_orders_trades(cls) -> bool:
         return True
