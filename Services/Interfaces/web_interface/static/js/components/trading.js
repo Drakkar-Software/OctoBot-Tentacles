@@ -348,8 +348,11 @@ register_notification_callback(ordersNotificationCallback);
 await reloadDisplay(false);
 registerOnTabShownEvents();
 handle_rounded_numbers_display();
-if(registerGraphUpdateCallback !== undefined){
-    registerGraphUpdateCallback(refreshTables);
+try {
+    if(registerGraphUpdateCallback !== undefined){
+        registerGraphUpdateCallback(refreshTables);
+    }
+} catch (error){
+    // nothing to do, registerGraphUpdateCallback doesn't exist
 }
-
 });
