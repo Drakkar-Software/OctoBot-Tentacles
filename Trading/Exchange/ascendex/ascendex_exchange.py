@@ -24,6 +24,13 @@ import octobot_trading.exchanges as exchanges
 class AscendEx(exchanges.RestExchange):
     DESCRIPTION = ""
 
+    # text content of errors due to unhandled IP white list issues
+    EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
+        # ascendex {"code":200001,"message":"You have setup IP allowed list for this key. Your IP address () is not
+        # in the allowed list.","reason":"AUTHENTICATION_FAILED"}
+        ("ip allowed list", "not in the allowed list"),
+    ]
+
     BUY_STR = "Buy"
     SELL_STR = "Sell"
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
