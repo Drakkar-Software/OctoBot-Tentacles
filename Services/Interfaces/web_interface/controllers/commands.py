@@ -15,26 +15,11 @@
 #  License along with this library.
 import flask
 
-import octobot_commons.logging as bot_logging
-import octobot.constants as constants
-import octobot.disclaimer as disclaimer
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
-logger = bot_logging.get_logger("ServerInstance Controller")
-
 
 def register(blueprint):
-    @blueprint.route("/about")
-    @login.login_required_when_activated
-    def about():
-        return flask.render_template('about.html',
-                                     octobot_beta_program_form_url=constants.OCTOBOT_BETA_PROGRAM_FORM_URL,
-                                     beta_env_enabled_in_config=models.get_beta_env_enabled_in_config(),
-                                     metrics_enabled=models.get_metrics_enabled(),
-                                     disclaimer=disclaimer.DISCLAIMER)
-
-
     @blueprint.route('/commands/<cmd>', methods=['GET', 'POST'])
     @login.login_required_when_activated
     def commands(cmd=None):

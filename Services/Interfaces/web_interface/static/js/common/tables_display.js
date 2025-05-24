@@ -117,8 +117,9 @@ const displayPositionsTable = (elementId, positions, closePositionUrl, update) =
 }
 const displayOrdersTable = (elementId, orders, cancelOrderUrl, update) => {
     const table = $(document.getElementById(elementId));
+    const canCancelOrders = cancelOrderUrl !== undefined;
     const rows = orders.map((element) => {
-        return [
+        const row = [
             element.symbol,
             element.type,
             round_digits(element.price, MAX_PRICE_DIGITS),
@@ -128,8 +129,11 @@ const displayOrdersTable = (elementId, orders, cancelOrderUrl, update) => {
             {display: `${round_digits(element.cost, MAX_PRICE_DIGITS)} ${element.market}`, sort: element.cost},
             element.SoR,
             element.id,
-            element.id,
         ]
+        if (canCancelOrders){
+            row.push(element.id)
+        }
+        return row
     });
     let previousOrder = [[5, "desc"]];
     if(update){
@@ -137,30 +141,33 @@ const displayOrdersTable = (elementId, orders, cancelOrderUrl, update) => {
         previousOrder = previousDataTable.order();
         previousDataTable.destroy();
     }
+    const columns = [
+        { title: "Pair" },
+        { title: "Type" },
+        { title: "Price" },
+        { title: "Quantity" },
+        { title: "Exchange" },
+        { title: "Date", render: _displaySort },
+        { title: "Total", render: _displaySort },
+        { title: "#" },
+    ]
+    if (canCancelOrders) {
+        columns.push({
+            title: "Cancel",
+            render: (data, type) => {
+                if (type === 'display') {
+                   return `<button type="button" class="btn btn-sm btn-outline-danger waves-effect" 
+                                   action="cancel_order" order_desc="${ data }" 
+                                   update-url="${cancelOrderUrl}">
+                                   <i class="fas fa-ban"></i></button>`
+                }
+                return data;
+            },
+        });
+    }
     table.DataTable({
         data: rows,
-        columns: [
-            { title: "Pair" },
-            { title: "Type" },
-            { title: "Price" },
-            { title: "Quantity" },
-            { title: "Exchange" },
-            { title: "Date", render: _displaySort },
-            { title: "Total", render: _displaySort },
-            { title: "#" },
-            {
-                title: "Cancel",
-                render: (data, type) => {
-                    if (type === 'display') {
-                       return `<button type="button" class="btn btn-sm btn-outline-danger waves-effect" 
-                                       action="cancel_order" order_desc="${ data }" 
-                                       update-url="${cancelOrderUrl}">
-                                       <i class="fas fa-ban"></i></button>`
-                    }
-                    return data;
-                },
-            },
-        ],
+        columns: columns,
         paging: false,
         order: previousOrder,
     });

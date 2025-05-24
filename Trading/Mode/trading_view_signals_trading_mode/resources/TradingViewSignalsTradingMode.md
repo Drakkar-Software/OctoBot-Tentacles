@@ -63,8 +63,11 @@ orders price syntax</a>.
 - `STOP_PRICE` is the price of the stop order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the stop loss will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the stop loss will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
 orders price syntax</a>.
 - `TAKE_PROFIT_PRICE` is the price of the take profit order to create. Can also be a delta or % delta like `PRICE`. When increasing the position or buying in spot trading, the take profit will automatically be created once the initial order is filled. When decreasing the position (or selling in spot) using a LIMIT `ORDER_TYPE`, the take profit will be created instantly. *Orders crated this way are compatible with PNL history.* It follows the <a target="_blank" rel="noopener" href="https://www.octobot.cloud/en/guides/octobot-trading-modes/order-price-syntax?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=TradingViewSignalsTradingModeDocs">
-orders price syntax</a>.  
+orders price syntax</a>. Funds will be evenly split between take profits unless a `TAKE_PROFIT_VOLUME_RATIO` is set for each take profit.  
 Multiple take profit prices can be used from `TAKE_PROFIT_PRICE_1`, `TAKE_PROFIT_PRICE_2`, ...
+- `TAKE_PROFIT_VOLUME_RATIO` is the ratio of the entry order volume to include in this take profit. Used when multiple 
+take profits are set. Specify multiple values using `TAKE_PROFIT_VOLUME_RATIO_1`, `TAKE_PROFIT_VOLUME_RATIO_2`, .... When used, a `TAKE_PROFIT_VOLUME_RATIO` is required for each take profit.  
+Exemple: `TAKE_PROFIT_PRICE=1234;TAKE_PROFIT_PRICE_1=1456;TAKE_PROFIT_VOLUME_RATIO_1=1;TAKE_PROFIT_VOLUME_RATIO_2=2` will split 33% of entry amount in TP 1 and 67% in TP 2.
 - `REDUCE_ONLY` when true, only reduce the current position (avoid accidental short position opening when reducing a long position). **Only used in futures trading**. Default is false
 - `TAG` is an identifier to give to the orders to create.
 - `LEVERAGE` the leverage value to use when trading futures.

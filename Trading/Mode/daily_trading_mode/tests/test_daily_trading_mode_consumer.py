@@ -1088,6 +1088,7 @@ async def test_chained_multiple_take_profit_orders(tools):
             decimal.Decimal("0.01")
            - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
         ) / decimal.Decimal(str(len(tp_prices)))
+        assert take_profit_order.order_group is None
         assert take_profit_order.origin_price == tp_prices[i]
         assert take_profit_order.is_waiting_for_chained_trigger
         assert take_profit_order.associated_entry_ids == [buy_order.order_id]
@@ -1095,6 +1096,7 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert not take_profit_order.is_created()
         assert take_profit_order.update_with_triggering_order_fees == is_last
         assert take_profit_order.trailing_profile is None
+        assert take_profit_order.is_active is True
 
     # only 2 additional (2 in total)
     data = {
@@ -1119,17 +1121,55 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert not take_profit_order.is_created()
         assert take_profit_order.update_with_triggering_order_fees == is_last
         assert take_profit_order.trailing_profile is None
+        assert take_profit_order.is_active is True
 
-    # stop loss and 1 take profit and 5 additional (6 TP in total)
+    # only 2 additional with volume (2 in total)
+    volume_ratios = [decimal.Decimal("1"), decimal.Decimal("1.2")]
+    data = {
+        consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [decimal.Decimal("110000"), decimal.Decimal("120000")],
+        consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: volume_ratios,
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"), consumer.TRAILING_PROFILE: None
+    }
+    orders_with_tps = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
+    buy_order = orders_with_tps[0]
+    tp_prices = [decimal.Decimal("110000"), decimal.Decimal("120000")]
+    assert len(buy_order.chained_orders) == len(tp_prices)
+    for i, take_profit_order in enumerate(buy_order.chained_orders):
+        is_last = i == len(buy_order.chained_orders) - 1
+        assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
+        assert take_profit_order.origin_quantity == (
+            decimal.Decimal("0.01")
+           - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
+        ) * volume_ratios[i] / sum(volume_ratios)
+        assert take_profit_order.origin_price == tp_prices[i]
+        assert take_profit_order.is_waiting_for_chained_trigger
+        assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+        assert not take_profit_order.is_open()
+        assert not take_profit_order.is_created()
+        assert take_profit_order.update_with_triggering_order_fees == is_last
+        assert take_profit_order.trailing_profile is None
+        assert take_profit_order.is_active is True
+
+    # stop loss and 1 take profit and 5 additional with volume data (6 TP in total)
+    exchange_manager.trader.enable_inactive_orders = True
     tp_prices = [
         decimal.Decimal("100012"),
         decimal.Decimal("110000"), decimal.Decimal("120000"), decimal.Decimal("130000"),
         decimal.Decimal("140000"), decimal.Decimal("150000")
     ]
+    tp_volumes = [
+        decimal.Decimal(str(val))
+        for val in (
+            1,
+            2, 2.5, 2,
+            3, 2
+        )
+    ]
     data = {
         consumer.STOP_PRICE_KEY: decimal.Decimal("123"),
         consumer.TAKE_PROFIT_PRICE_KEY: tp_prices[0],
         consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: tp_prices[1:],
+        consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: tp_volumes,  # inclue volume of 1st TP
         consumer.VOLUME_KEY: decimal.Decimal("0.01"),
     }
     orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state, data=data)
@@ -1144,6 +1184,7 @@ async def test_chained_multiple_take_profit_orders(tools):
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.update_with_triggering_order_fees is True
     assert stop_order.trailing_profile is None
+    assert stop_order.is_active is True
     assert len(buy_order.chained_orders[1:]) == len(tp_prices)
     for i, take_profit_order in enumerate(buy_order.chained_orders[1:]):
         is_last = i == len(buy_order.chained_orders[1:]) - 1
@@ -1151,8 +1192,9 @@ async def test_chained_multiple_take_profit_orders(tools):
         assert take_profit_order.origin_quantity == (
             decimal.Decimal("0.01")
            - trading_personal_data.get_fees_for_currency(buy_order.fee, take_profit_order.quantity_currency)
-        ) / decimal.Decimal(str(len(tp_prices)))
+        ) * tp_volumes[i] / sum(tp_volumes)
         assert take_profit_order.origin_price == tp_prices[i]
+        assert take_profit_order.is_active is False
         assert take_profit_order.is_waiting_for_chained_trigger
         assert take_profit_order.associated_entry_ids == [buy_order.order_id]
         assert not take_profit_order.is_open()
@@ -1172,6 +1214,7 @@ async def test_chained_multiple_take_profit_with_filled_tp_trailing_stop_orders(
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
         decimal.Decimal(str(10 + 1000 / last_btc_price))
 
+    exchange_manager.trader.enable_inactive_orders = True
     state = trading_enums.EvaluatorStates.LONG.value
     # stop loss and 1 take profit and 5 additional (6 TP in total)
     tp_prices = [
@@ -1197,6 +1240,7 @@ async def test_chained_multiple_take_profit_with_filled_tp_trailing_stop_orders(
     assert stop_order.is_waiting_for_chained_trigger
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.update_with_triggering_order_fees is True
+    assert stop_order.is_active is True
     assert stop_order.trailing_profile == trading_personal_data.FilledTakeProfitTrailingProfile([
         trading_personal_data.TrailingPriceStep(float(trailing_price), float(trigger_price), True)
         for trailing_price, trigger_price in zip([buy_order.origin_price] + tp_prices[:-1], tp_prices)
@@ -1212,6 +1256,7 @@ async def test_chained_multiple_take_profit_with_filled_tp_trailing_stop_orders(
         assert take_profit_order.origin_price == tp_prices[i]
         assert take_profit_order.is_waiting_for_chained_trigger
         assert take_profit_order.associated_entry_ids == [buy_order.order_id]
+        assert take_profit_order.is_active is False
         assert not take_profit_order.is_open()
         assert not take_profit_order.is_created()
         assert isinstance(stop_order.order_group, trading_personal_data.TrailingOnFilledTPBalancedOrderGroup)
@@ -1222,6 +1267,7 @@ async def test_chained_multiple_take_profit_with_filled_tp_trailing_stop_orders(
 
 async def test_create_stop_loss_orders(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
+    exchange_manager.trader.enable_inactive_orders = True
 
     # with BTC/USDT
     exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
@@ -1245,6 +1291,7 @@ async def test_create_stop_loss_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.update_with_triggering_order_fees is False    # not chained order
     assert stop_order.tag is None
+    assert stop_order.is_active is True
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -1263,6 +1310,7 @@ async def test_create_stop_loss_orders(tools):
     assert stop_order.side is trading_enums.TradeOrderSide.BUY
     assert stop_order.is_waiting_for_chained_trigger is False
     assert stop_order.tag == "plop1"
+    assert stop_order.is_active is True
     assert stop_order.is_open()
 
 
@@ -1309,6 +1357,23 @@ async def test_get_limit_quantity_from_risk(tools):
     assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
     assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
 
+    # all-in orders
+    # 1. sell
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("1.9")
+    consumer.SELL_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+    # 2. buy
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("1.9")
+    consumer.BUY_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_limit_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
+
 
 async def test_get_market_quantity_from_risk(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
@@ -1353,6 +1418,23 @@ async def test_get_market_quantity_from_risk(tools):
     assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("10.8")
     assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("10.8")
 
+    # all-in orders
+    # 1. sell
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("2.125")
+    consumer.SELL_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 2.125 without all-in)
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", True, False) == decimal.Decimal("15")
+
+    # 2. buy
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("2.125")
+    consumer.BUY_WITH_MAXIMUM_SIZE_ORDERS = True
+    # increasing position (would be 1.9 without all-in)
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, True) == decimal.Decimal("15")
+    # decreasing position
+    assert await consumer._get_market_quantity_from_risk(ctx, 1, decimal.Decimal(15), "BTC", False, False) == decimal.Decimal("15")
+
 
 async def test_target_profit_mode(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
@@ -1386,6 +1468,7 @@ async def test_target_profit_mode(tools):
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
 
+    exchange_manager.trader.enable_inactive_orders = True
     # stop loss and take profit
     consumer.USE_STOP_ORDERS = True
     orders_with_tp = await consumer.create_new_orders(symbol, decimal.Decimal(str(0.4)), state)
@@ -1396,6 +1479,7 @@ async def test_target_profit_mode(tools):
     assert stop_order.side is trading_enums.TradeOrderSide.SELL
     assert stop_order.origin_quantity == buy_order.origin_quantity
     assert stop_order.reduce_only is False
+    assert stop_order.is_active is True
     assert stop_order.origin_price == trading_personal_data.decimal_adapt_price(
         symbol_market,
         buy_order.origin_price * (trading_constants.ONE - consumer.TARGET_PROFIT_STOP_LOSS)
@@ -1416,6 +1500,7 @@ async def test_target_profit_mode(tools):
     assert take_profit_order.associated_entry_ids == [buy_order.order_id]
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
+    assert take_profit_order.is_active is False
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
     assert take_profit_order.order_group is stop_order.order_group
 
@@ -1440,6 +1525,7 @@ async def test_target_profit_mode_futures_trading(future_tools):
         exchange_manager, symbol=symbol, timeout=1
     )
 
+    exchange_manager.trader.enable_inactive_orders = True
     # take profit and stop loss / long signal
     consumer.TARGET_PROFIT_TAKE_PROFIT = decimal.Decimal(str(10))
     consumer.TARGET_PROFIT_STOP_LOSS = decimal.Decimal(str(2.5))
@@ -1452,6 +1538,9 @@ async def test_target_profit_mode_futures_trading(future_tools):
     stop_loss_order = buy_order.chained_orders[0]
     assert isinstance(take_profit_order, trading_personal_data.SellLimitOrder)
     assert isinstance(stop_loss_order, trading_personal_data.StopLossOrder)
+    # both are active on futures
+    assert stop_loss_order.is_active is True
+    assert take_profit_order.is_active is True
     assert take_profit_order.side is trading_enums.TradeOrderSide.SELL
     assert take_profit_order.origin_quantity == buy_order.origin_quantity
     assert take_profit_order.origin_price == trading_personal_data.decimal_adapt_price(

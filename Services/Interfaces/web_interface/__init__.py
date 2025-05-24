@@ -20,6 +20,7 @@ import os.path
 
 import octobot_commons.logging as bot_logging
 import octobot_commons.timestamp_util as timestamp_util
+import octobot_services.enums as services_enums
 
 
 class Notifier:
@@ -56,6 +57,9 @@ MAX_NOTIFICATION_HISTORY_SIZE = 1000
 MAX_NOTIFICATION_AT_ONCE = 10
 notifications_history = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
 notifications = collections.deque(maxlen=MAX_NOTIFICATION_AT_ONCE)
+# Different from notifications_history: this list "should" never be cleared by more recent notifications.
+# maxsize is here just in case to avoid memory leaks
+critical_notifications = collections.deque(maxlen=MAX_NOTIFICATION_HISTORY_SIZE)
 
 TIME_AXIS_TITLE = "Time"
 
@@ -123,7 +127,7 @@ def send_order_update(dict_order, exchange_id, symbol):
     _send_notification(DASHBOARD_NOTIFICATION_KEY, exchange_id=exchange_id, order=dict_order, symbol=symbol)
 
 
-async def add_notification(level, title, message, sound=None):
+async def add_notification(level: services_enums.NotificationLevel, title, message, sound=None):
     notification = {
         "Level": level.value,
         "Title": title,
@@ -133,6 +137,8 @@ async def add_notification(level, title, message, sound=None):
     }
     notifications.append(notification)
     notifications_history.append(notification)
+    if level == services_enums.NotificationLevel.CRITICAL:
+        critical_notifications.append(notification)
     send_general_notifications()
 
 
@@ -142,6 +148,10 @@ def get_notifications() -> list:
 
 def get_notifications_history() -> list:
     return list(notifications_history)
+
+
+def get_critical_notifications() -> list:
+    return list(critical_notifications)
 
 
 def get_logs():

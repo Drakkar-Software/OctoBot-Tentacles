@@ -60,7 +60,7 @@
 
         {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
         <script>
-            !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+            !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2===o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0; n<o.length; n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
             posthog.init('{{PH_TRACKING_ID}}',{api_host:'https://eu.i.posthog.com', person_profiles: 'always'
                 })
         </script>
@@ -81,8 +81,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js" integrity="sha384-TGRlbFTmiVIUuSy+b/aj9mHaUTABC3gid02pJimnu14vfLMvOzODXgRmw03nf7vs" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha384-GP2+CwBlakZSDJUr+E4JvbxpM75i1i8+RKkieQxzuyDZLG+5105E1OfHIjzcXyWH" crossorigin="anonymous"></script>
         <script src="https://cdn.plot.ly/plotly-2.20.0.min.js" integrity="sha384-lqNbLAc8irUVsiXijo8d5LY0Ecc43bEe85kyAJgdi+CAvmBPO/L1SWp6EUxChKM/" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.9.1/dist/jsoneditor.min.js" integrity="sha384-dD6cprB8r+EJi9stkRzdAs5tfIzdCeXU+ztMGBgC3U2KIQBzSYTv7rqJQp1fJmMs" crossorigin="anonymous"></script>
-        <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js" integrity="sha384-nJy9D0UBD2LV93ED7IXSsdWfa9PumZvn70zRSR/oFw5Zq0x6gWwWdpLeGsbVATVg" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.15.2/dist/jsoneditor.min.js" integrity="sha384-S23hgqTTna4/wcF/J6BYSROaiWWUKzqmjPJ9Obp6aVkBmXG1YQ/MpoiTvnR5yC8h" crossorigin="anonymous"></script>        <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js" integrity="sha384-nJy9D0UBD2LV93ED7IXSsdWfa9PumZvn70zRSR/oFw5Zq0x6gWwWdpLeGsbVATVg" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js" integrity="sha384-SfMwgGnc3UiUUZF50PsPetXLqH2HSl/FmkMW/Ja3N2WaJ/fHLbCHPUsXzzrM6aet"  crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/intro.js@7.0.1/intro.min.js" integrity="sha384-Du1qtHnjTA8tiFynVHiYYcUtxaykXTAU+GJCsSDTkZLHC+yYQHSIBDMUbtefOu1M" crossorigin="anonymous"></script>
@@ -113,104 +112,13 @@
         {% set show_nab_bar = show_nab_bar|default(True) -%}
 
         {% if show_nab_bar %}
-            <nav class="navbar navbar-expand-lg sticky-top py-0 py-md-2" id="main-nav-bar">
-                <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
-                    <ul class="navbar-nav mr-auto" id="main-nav-left-part">
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'home' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-                        </li>
-                        <li id="main-nav-trading" class="nav-item mx-1 px-0 my-auto {% if 'trading' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('trading') }}">Trading</a>
-                        </li>
-                        <li id="main-nav-portfolio" class="nav-item mx-1 px-0 my-auto {% if 'portfolio' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('portfolio') }}">Portfolio</a>
-                        </li>
-                        <li id="main-nav-profile" class="nav-item mx-1 px-0 my-auto {% if 'profile' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
-                        </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'accounts' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('accounts') }}">Accounts</a>
-                        </li>
-                        {% if not has_open_source_package() %}
-                            <li class="nav-item mx-1 px-0 my-auto">
-                                <a class="nav-link" href="{{ url_for('extensions') }}"><i class="fa-solid fa-lock"></i> Strategy design</a>
-                            </li>
-                        {% endif %}
-                        {% for plugin_tab in get_plugin_tabs(TAB_START) %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="d-flex mx-auto order-0">
-                    <a class="navbar-brand mx-auto font-weight-bolder" href="{{ url_for('home') }}">
-                        {% if is_in_stating_community_env() %}
-                        <span class="badge badge-light">
-                            Beta
-                        </span>
-                        {% endif %}
-                        <img
-                            src="{{url_for('static', filename='img/octobot-logo-'+get_color_mode()+'.png')}}" alt="octobot-logo"
-                            class="navbar-logo"
-                        > OctoBot
-                        <i id="navbar-bot-status" class="ml-2 fa fa-check" data-toggle="tooltip" data-placement="bottom" title="OctoBot operational"></i>
-                    </a>
-                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                </div>
-                <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
-                    <ul class="navbar-nav ml-auto" id="main-nav-right-part">
-                        {% if (not is_login_required()) or (is_login_required() and is_authenticated()) %}
-                        <li class="nav-item mx-1 px-0 my-auto" id="main-nav-trading-type">
-                            <a class="nav-link" href="#" id="switchTradingState" aria-label="TradingSwitch">
-                                {{ m_trading_state.display_trading_state(is_real_trading(get_current_profile()), get_enabled_trader(get_current_profile())) }}
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% for plugin_tab in get_plugin_tabs(TAB_END) %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if plugin_tab.identifier == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for(plugin_tab.route) }}">{{ plugin_tab.display_name }}</a>
-                        </li>
-                        {% endfor %}
-                        {% if is_backtesting_enabled %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'backtesting' == active_page %} active{% endif %}"
-                            id="main-nav-backtesting">
-                            <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'community' == active_page %} active{% endif %}"
-                            id="main-nav-community">
-                            <a class="nav-link" href="{{ url_for('community') }}">Community</a>
-                        </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'help' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('octobot_help') }}">Help</a>
-                        </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'about' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('about') }}">About</a>
-                        </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'logs' == active_page %} active{% endif %}">
-                            <a class="nav-link" href="{{ url_for('logs') }}" aria-label="Logs"><i class="fa fa-bell" data-toggle="tooltip" data-placement="top" title="Event logs">
-                                <span id="errors-count-badge" class="badge badge-warning"></span>
-                            </i></a>
-                        </li>
-                        <li class="nav-item mx-1 px-0 my-auto {% if 'logs' == active_page %} active{% endif %}">
-                            <a id="theme-switch" class="nav-link" href="#" aria-label="Switch theme" data-update-url="{{url_for('api.display_config')}}">
-                                <i class="{{'fa fa-moon' if get_color_mode() == 'light' else 'fas fa-sun'}}" data-toggle="tooltip" data-placement="top"
-                                   title="Use {{'dark' if get_color_mode() == 'light' else 'light'}} theme">
-                            </i></a>
-                        </li>
 
+        {% if get_distribution() == 'market_making' %}
+            {% include "distributions/market_making/navbar.html" %}
+        {% else %}
+            {% include "distributions/default/navbar.html" %}
+        {% endif %}
 
-                        {% if is_advanced_interface_enabled %}
-                        <li class="nav-item my-auto">
-                            <a class="nav-link mx-1 px-0" href="{{ url_for('advanced.home') }}" aria-label="Advanced OctoBot"><i class="fa fa-cogs" data-toggle="tooltip" data-placement="top" title="Advanced OctoBot"></i></a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </nav>
         {% endif %}
 
         <div class="container-fluid">
@@ -268,7 +176,11 @@
         <div class="pb-5"></div>
         <!-- Artificial padding  -->
 
-        {% include "footer.html" %}
+        {% if get_distribution() == 'market_making' %}
+            {% include "distributions/market_making/footer.html" %}
+        {% else %}
+            {% include "distributions/default/footer.html" %}
+        {% endif %}
 
         <!-- Resources urls -->
         <span class="d-none" id="resources-urls"

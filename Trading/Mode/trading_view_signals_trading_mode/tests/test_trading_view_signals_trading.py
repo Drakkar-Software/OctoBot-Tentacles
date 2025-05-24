@@ -309,6 +309,7 @@ async def test_signal_callback(tools):
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+            consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: [],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
             consumer.TRAILING_PROFILE: None,
@@ -339,6 +340,7 @@ async def test_signal_callback(tools):
             consumer.STOP_ONLY: True,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+            consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: [],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: "stop_1_tag",
             consumer.EXCHANGE_ORDER_IDS: None,
@@ -376,6 +378,7 @@ async def test_signal_callback(tools):
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+            consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: [],
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
@@ -388,7 +391,7 @@ async def test_signal_callback(tools):
         })
         _set_state_mock.reset_mock()
 
-        # with trailing profile
+        # with trailing profile and TP volume
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",
@@ -399,6 +402,7 @@ async def test_signal_callback(tools):
             mode.ORDER_TYPE_SIGNAL: "LiMiT",
             mode.STOP_PRICE_KEY: "12",
             mode.TAKE_PROFIT_PRICE_KEY: "22222",
+            mode.TAKE_PROFIT_VOLUME_RATIO_KEY: "1",
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             mode.TRAILING_PROFILE: "fiLLED_take_profit",
             consumer.LEVERAGE: 22,
@@ -418,6 +422,7 @@ async def test_signal_callback(tools):
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
+            consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: [decimal.Decimal(1)],
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
@@ -451,6 +456,9 @@ async def test_signal_callback(tools):
             f"{mode.TAKE_PROFIT_PRICE_KEY}_0": "120.333333333333333d",   # price  + 120.333333333333333
             f"{mode.TAKE_PROFIT_PRICE_KEY}_1": "122.333333333333333d",   # price  + 122.333333333333333
             f"{mode.TAKE_PROFIT_PRICE_KEY}_2": "4444d",   # price  + 4444
+            f"{mode.TAKE_PROFIT_VOLUME_RATIO_KEY}_0": "1",
+            f"{mode.TAKE_PROFIT_VOLUME_RATIO_KEY}_1": "1.122",
+            f"{mode.TAKE_PROFIT_VOLUME_RATIO_KEY}_2": "0.2222",
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             consumer.LEVERAGE: 22,
             "PARAM_TAG_1": "ttt",
@@ -469,6 +477,9 @@ async def test_signal_callback(tools):
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("nan"), # only additional TP orders are provided
             consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [
                 decimal.Decimal("7129.52833333"), decimal.Decimal("7131.52833333"), decimal.Decimal('11453.19499999')
+            ],
+            consumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: [
+                decimal.Decimal("1"), decimal.Decimal("1.122"), decimal.Decimal("0.2222"),
             ],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,

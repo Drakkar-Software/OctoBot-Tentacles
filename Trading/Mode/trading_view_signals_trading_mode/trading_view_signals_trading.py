@@ -48,6 +48,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     LEVERAGE = "LEVERAGE"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
+    TAKE_PROFIT_VOLUME_RATIO_KEY = "TAKE_PROFIT_VOLUME_RATIO"
     ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     TRAILING_PROFILE = "TRAILING_PROFILE"
     PARAM_PREFIX_KEY = "PARAM_"
@@ -289,15 +290,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
             )
         target_price = 0 if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL else (
-            await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0))
-        stop_price = await self._parse_price(
-            ctx, parsed_data, TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan
+            await self._parse_element(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0, True))
+        stop_price = await self._parse_element(
+            ctx, parsed_data, TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan, True
         )
-        tp_price = await self._parse_price(
-            ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan
+        tp_price = await self._parse_element(
+            ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan, True
         )
-        additional_tp_prices = await self._parse_additional_prices(
-            ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan
+        additional_tp_volume_ratios = []
+        if first_volume := await self._parse_element(
+            ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_VOLUME_RATIO_KEY, 0, False
+        ):
+            additional_tp_volume_ratios.append(first_volume)
+        additional_tp_prices = await self._parse_additional_decimal_elements(
+            ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan, True
+        )
+        additional_tp_volume_ratios += await self._parse_additional_decimal_elements(
+            ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_VOLUME_RATIO_KEY}_", 0, False
         )
         allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
         reduce_only = parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False)
@@ -312,6 +321,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
             TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: additional_tp_prices,
+            TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY: additional_tp_volume_ratios,
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY: reduce_only,
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
@@ -324,20 +334,24 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         }
         return state, order_data
 
-    async def _parse_additional_prices(self, ctx, parsed_data, price_prefix, default):
-        prices = []
+    async def _parse_additional_decimal_elements(self, ctx, parsed_data, element_prefix, default, is_price):
+        values: list[decimal.Decimal] = []
         for key, value in parsed_data.items():
-            if key.startswith(price_prefix) and len(key.split(price_prefix)) == 2:
-                prices.append(await self._parse_price(ctx, parsed_data, key, default))
-        return prices
+            if key.startswith(element_prefix) and len(key.split(element_prefix)) == 2:
+                values.append(await self._parse_element(ctx, parsed_data, key, default, is_price))
+        return values
 
-    async def _parse_price(self, ctx, parsed_data, key, default):
-        target_price = decimal.Decimal(str(default))
-        if input_price_or_offset := parsed_data.get(key, 0):
-            target_price = await script_keywords.get_price_with_offset(
-                ctx, input_price_or_offset, use_delta_type_as_flat_value=True
-            )
-        return target_price
+    async def _parse_element(self, ctx, parsed_data, key, default, is_price)-> decimal.Decimal:
+        target_value = decimal.Decimal(str(default))
+        value = parsed_data.get(key, 0)
+        if is_price:
+            if input_price_or_offset := value:
+                target_value = await script_keywords.get_price_with_offset(
+                    ctx, input_price_or_offset, use_delta_type_as_flat_value=True
+                )
+        else:
+            target_value = decimal.Decimal(str(value))
+        return target_value
 
     async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation, reduce_only):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))

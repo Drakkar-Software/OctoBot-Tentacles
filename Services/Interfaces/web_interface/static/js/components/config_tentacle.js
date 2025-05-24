@@ -288,6 +288,7 @@ function initConfigEditor(showWaiter) {
         parsedConfigValue = msg["config"];
         savedConfig = parsedConfigValue
         parsedConfigSchema = inputs[0]["schema"];
+        parsedConfigSchema.id = "tentacleConfig"
         if(configEditor !== null){
             configEditor.destroy();
         }
@@ -303,7 +304,8 @@ function initConfigEditor(showWaiter) {
             prompt_before_delete: true,
             disable_array_reorder: true,
             disable_collapse: true,
-            disable_properties: true
+            disable_properties: true,
+            disable_edit_json: true,
         })) : null;
         settingsRoot.find("select[multiple=\"multiple\"]").select2({
             width: 'resolve', // need to override the changed default

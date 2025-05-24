@@ -422,10 +422,15 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 params.update(param_update)
                 order_couple.append(chained_order)
             if len(order_couple) > 1:
-                oco_group = self.exchange_manager.exchange_personal_data.orders_manager \
-                    .create_group(trading_personal_data.OneCancelsTheOtherOrderGroup)
+                oco_group = self.exchange_manager.exchange_personal_data.orders_manager.create_group(
+                    trading_personal_data.OneCancelsTheOtherOrderGroup,
+                    active_order_swap_strategy=trading_personal_data.StopFirstActiveOrderSwapStrategy()
+                )
                 for order in order_couple:
                     order.add_to_order_group(oco_group)
+                # in futures, inactive orders are not necessary
+                if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
+                    await oco_group.active_order_swap_strategy.apply_inactive_orders(order_couple)
         return await self.trading_mode.create_order(entry_order, params=params or None)
 
     def _is_max_asset_ratio_reached(self, symbol):

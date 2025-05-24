@@ -257,11 +257,13 @@ const updateTradesCount = (pnlHistory) => {
     $("#match-trades-count").text(pnlHistory.reduce((sum, element) => sum + element.tc, 0));
 }
 const reload_pnl = async (update) => {
-    const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
-    loadPnlFullChartHistory(pnlHistory, update);
-    loadPnlTableHistory(pnlHistory, update);
-    updateTradesCount(pnlHistory);
-    $("#pnl-waiter").hide();
+    if ($("#pnl_historyChart").length){
+        const pnlHistory = await fetchPnlHistory(getScale(), getSymbol());
+        loadPnlFullChartHistory(pnlHistory, update);
+        loadPnlTableHistory(pnlHistory, update);
+        updateTradesCount(pnlHistory);
+        $("#pnl-waiter").hide();
+    }
 }
 
 const resizePnlChart = () => {
@@ -274,10 +276,12 @@ const ordersNotificationCallback = (title, _) => {
     }
 }
 
-const debouncedReloadDisplay = debounce(
-    () => reloadDisplay(true),
-    500
-);
+function debouncedReloadDisplay(){
+    debounce(
+        () => reloadDisplay(true),
+        500
+    );
+}
 
 const reloadDisplay = async (update) => {
     if(!update){
@@ -304,6 +308,9 @@ const registerTableButtonsEvents = () => {
         handle_close_buttons();
     });
     $("#orders-table").on("draw.dt row-reordered", () => {
+        if($("#orders-table").data("cancel-url") === undefined){
+            return
+        }
         add_cancel_individual_orders_buttons();
         const cancelIcon = $("#cancel_all_icon");
         $("#cancel_order_progress_bar").hide();
@@ -319,6 +326,15 @@ const registerTableButtonsEvents = () => {
     });
 }
 
+const refreshTables = async () => {
+    if (!initializedTables){
+        await reloadDisplay(true);
+        initializedTables = true
+    }
+}
+
+let initializedTables = false
+
 selectFirstTab();
 registerFilterSelectors();
 registerTableButtonsEvents();
@@ -332,5 +348,11 @@ register_notification_callback(ordersNotificationCallback);
 await reloadDisplay(false);
 registerOnTabShownEvents();
 handle_rounded_numbers_display();
-
+try {
+    if(registerGraphUpdateCallback !== undefined){
+        registerGraphUpdateCallback(refreshTables);
+    }
+} catch (error){
+    // nothing to do, registerGraphUpdateCallback doesn't exist
+}
 });

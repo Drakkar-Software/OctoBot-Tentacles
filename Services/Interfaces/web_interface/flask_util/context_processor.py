@@ -38,6 +38,9 @@ def register_context_processor(web_interface_instance):
         def get_color_mode() -> str:
             return models.get_color_mode().value
 
+        def get_distribution() -> str:
+            return models.get_distribution().value
+
         def get_tentacle_config_file_content(tentacle_class):
             return models.get_tentacle_config(tentacle_class)
 
@@ -146,6 +149,7 @@ def register_context_processor(web_interface_instance):
             OCTOBOT_EXTENSION_PACKAGE_1_NAME=constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME,
             OCTOBOT_COMMUNITY_URL=identifiers_provider.IdentifiersProvider.COMMUNITY_URL,
             OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL=identifiers_provider.IdentifiersProvider.FRONTEND_PASSWORD_RECOVER_URL,
+            OCTOBOT_MARKET_MAKING_URL=constants.OCTOBOT_MARKET_MAKING_URL,
             CURRENT_BOT_VERSION=interfaces.AbstractInterface.project_version,
             LOCALE=constants.DEFAULT_LOCALE,
             IS_DEMO=constants.IS_DEMO,
@@ -163,6 +167,7 @@ def register_context_processor(web_interface_instance):
             TAB_START=web_enums.TabsLocation.START,
             TAB_END=web_enums.TabsLocation.END,
             get_color_mode=get_color_mode,
+            get_distribution=get_distribution,
             get_tentacle_config_file_content=get_tentacle_config_file_content,
             get_currency_id=get_currency_id,
             filter_currency_pairs=filter_currency_pairs,
@@ -184,4 +189,5 @@ def register_context_processor(web_interface_instance):
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
             has_open_source_package=models.has_open_source_package,
+            critical_notifications=web_interface.get_critical_notifications(),
         )
