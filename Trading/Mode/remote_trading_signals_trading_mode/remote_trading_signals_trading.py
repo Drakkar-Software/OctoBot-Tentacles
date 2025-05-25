@@ -280,7 +280,10 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             ]
             if position_percent is not None:
                 quantity_type, quantity = script_keywords.parse_quantity(position_percent)
-                if quantity_type is script_keywords.QuantityType.POSITION_PERCENT:
+                if quantity_type in (
+                    script_keywords.QuantityType.POSITION_PERCENT,
+                    script_keywords.QuantityType.POSITION_PERCENT_ALIAS
+                ):
                     open_position_size_val = \
                         self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position(
                             symbol,
