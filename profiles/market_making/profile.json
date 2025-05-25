@@ -2,7 +2,7 @@
     "config": {
         "crypto-currencies": {
             "Bitcoin": {
-                "enabled": false,
+                "enabled": true,
                 "pairs": [
                     "BTC/USDC"
                 ]
@@ -10,7 +10,7 @@
         },
         "exchanges": {
             "binance": {
-                "enabled": false,
+                "enabled": true,
                 "exchange-type": "spot"
             }
         },
