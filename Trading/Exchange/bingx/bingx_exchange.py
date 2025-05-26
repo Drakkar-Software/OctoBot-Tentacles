@@ -17,11 +17,22 @@ import typing
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.enums as trading_enums
 
 
+class BingxConnector(ccxt_connector.CCXTConnector):
+    PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
+
+    def _create_client(self):
+        super()._create_client()
+        # bingx v1 spotV1PublicGetMarketKline randomly errors when fetching candles: force V2
+        self.client.spotV1PublicGetMarketKline = self.client.spotV2PublicGetMarketKline
+
 class Bingx(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
+    DEFAULT_CONNECTOR_CLASS = BingxConnector    # TODO remove this when ccxt updates to spotV2PublicGetMarketKline
+
 
     # text content of errors due to orders not found errors
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
