@@ -56,8 +56,8 @@ import octobot_trading.personal_data as trading_personal_data
 # class OkxConnector(ccxt_connector.CCXTConnector):
 #     PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
 #
-#     def _create_client(self):
-#         super()._create_client()
+#     def _create_client(self, force_unauth=False):
+#         super()._create_client(force_unauth=force_unauth)
 #         # save client.privatePostTradeOrderAlgo ref to prevent concurrent _disabled_algo_order_creation issues
 #         self.set_saved_data(self.PRIVATE_POST_TRADE_ORDER_ALGO, self.client.privatePostTradeOrderAlgo)
 #
