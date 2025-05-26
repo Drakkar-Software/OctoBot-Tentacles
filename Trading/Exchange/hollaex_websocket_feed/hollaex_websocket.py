@@ -29,7 +29,7 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
         Feeds.CANDLE: Feeds.UNSUPPORTED.value,
     }
 
-    def _create_client(self):
+    def _create_client(self, force_unauth=False):
         if not self.additional_config:
             additional_connector_config = self.exchange_manager.exchange.get_additional_connector_config()
             try:
@@ -38,7 +38,7 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
                 self.additional_config = additional_connector_config
             except KeyError as err:
                 self.logger.error(f"Error when updating exchange url: {err}")
-        super()._create_client()
+        super()._create_client(force_unauth=force_unauth)
 
     def _update_urls(self, additional_connector_config):
         rest_url = additional_connector_config[ccxt_enums.ExchangeColumns.URLS.value][

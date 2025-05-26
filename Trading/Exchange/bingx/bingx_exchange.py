@@ -22,10 +22,8 @@ import octobot_trading.enums as trading_enums
 
 
 class BingxConnector(ccxt_connector.CCXTConnector):
-    PRIVATE_POST_TRADE_ORDER_ALGO = "privatePostTradeOrderAlgo"
-
-    def _create_client(self):
-        super()._create_client()
+    def _create_client(self, force_unauth=False):
+        super()._create_client(force_unauth=force_unauth)
         # bingx v1 spotV1PublicGetMarketKline randomly errors when fetching candles: force V2
         self.client.spotV1PublicGetMarketKline = self.client.spotV2PublicGetMarketKline
 
