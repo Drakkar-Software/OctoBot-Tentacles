@@ -156,7 +156,6 @@ def register_context_processor(web_interface_instance):
             IS_CLOUD=constants.IS_CLOUD_ENV,
             CAN_INSTALL_TENTACLES=constants.CAN_INSTALL_TENTACLES,
             IS_ALLOWING_TRACKING=models.get_metrics_enabled(),
-            TRACKING_ID=constants.TRACKING_ID,
             PH_TRACKING_ID=constants.PH_TRACKING_ID,
             USER_EMAIL=get_logged_in_email(),
             USER_SELECTED_BOT_ID=selected_bot_id,

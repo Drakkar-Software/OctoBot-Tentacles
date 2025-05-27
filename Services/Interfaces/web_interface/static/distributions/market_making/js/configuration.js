@@ -47,16 +47,18 @@ $(document).ready(function() {
             create_alert("success", "Configuration saved", resp);
             refreshExchangeSelector()
             lastSavedConfig = updatedConfig
+            configEditor.validate()
         } catch (error) {
             create_alert("error", "Impossible to save config", error)
         }
     }
 
     const updateSymbols = async (exchange) => {
+        const previouslySelectedSymbol = getSelectedPair();
         clearSymbolSelector();
         await fetchExchangeSymbols(exchange);
         const currencies = getAvailableCurrencies();
-        refreshSymbolSelector();
+        refreshSymbolSelector(previouslySelectedSymbol);
         refreshPortfolioEditor(currencies);
     }
 
@@ -64,11 +66,11 @@ $(document).ready(function() {
         $("#traded-symbol-selector").empty()
     }
 
-    const refreshSymbolSelector = () => {
+    const refreshSymbolSelector = (previouslySelectedSymbol) => {
         const symbolSelector = $("#traded-symbol-selector");
         let options = []
         const profilePair = symbolSelector.data("selected-pair");
-        const selectedValue = getSelectedPair() === null ? profilePair: getSelectedPair();
+        const selectedValue = previouslySelectedSymbol === null ? profilePair: previouslySelectedSymbol;
         options = options.concat(exchangeSymbols.sort().map((symbol) => {
             return new Option(symbol, symbol, false, symbol===selectedValue);
         }));
@@ -85,7 +87,9 @@ $(document).ready(function() {
             return new Option(exchange, exchange, false, exchange===selectedValue);
         });
         if(selectedValue !== null && exchanges.indexOf(selectedValue) === -1){
-            options.push(new Option(selectedValue, selectedValue, false, true));
+            // previously selected value is not available anymore: select 1st value by default
+            options[0].selected = true;
+            onSelectedExchange(options[0].value);
         }
         exchangeSelector.empty()
         exchangeSelector.append(...options);
@@ -227,6 +231,14 @@ $(document).ready(function() {
                                 message: `Reference exchange must be listed in exchange configurations or equal to "local". Listed exchanges are ${listedExchanges.join(', ')}.`
                             });
                         }
+                        if (referenceExchange === getSelectedExchange()){
+                            // "local" must be used to use the same exchange to trade and as reference price
+                            errors.push({
+                                path: path,
+                                property: 'reference_exchange',
+                                message: `Reference exchange must be set to "local" when equal to your selected exchange.`
+                            });
+                        }
                     } catch (err) {
                         console.error(err)
                     }
@@ -336,7 +348,6 @@ $(document).ready(function() {
         ) {
             return false;
         }
-        console.log("lastSavedConfig", lastSavedConfig)
         return getValueChangedFromRef(
             getConfigUpdate(), lastSavedConfig, true
         )

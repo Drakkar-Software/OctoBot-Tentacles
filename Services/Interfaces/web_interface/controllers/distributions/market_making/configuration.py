@@ -14,23 +14,16 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import flask
-import werkzeug
-import os
-from datetime import datetime
 
-import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
-import octobot_commons.enums as commons_enums
-import octobot_commons.authentication as authentication
 import octobot_services.constants as services_constants
+import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
-import octobot_backtesting.api as backtesting_api
 import octobot_trading.api as trading_api
-import octobot_services.interfaces.util as interfaces_util
 
 
 def register(blueprint):
@@ -157,6 +150,9 @@ def register(blueprint):
             success = True
         except Exception as e:
             err_message = f"Failed to save market making configuration: {e.__class__.__name__}: {e}"
+            commons_logging.get_logger("save_market_making_config").exception(
+                e, True, f"{err_message} ({e.__class__.__name__})"
+            )
         if success:
             return util.get_rest_reply(flask.jsonify(response))
         else:
