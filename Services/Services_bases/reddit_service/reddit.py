@@ -24,8 +24,6 @@ import octobot.constants as constants
 class RedditService(services.AbstractService):
     CLIENT_ID = "client-id"
     CLIENT_SECRET = "client-secret"
-    PASSWORD = "password"
-    USERNAME = "username"
 
     def __init__(self):
         super().__init__()
@@ -35,20 +33,16 @@ class RedditService(services.AbstractService):
         return {
             self.CLIENT_ID: "Your client ID.",
             self.CLIENT_SECRET: "Your client ID secret.",
-            self.PASSWORD: "Your Reddit password.",
-            self.USERNAME: "Your Reddit username."
         }
 
     def get_default_value(self):
         return {
             self.CLIENT_ID: "",
-            self.CLIENT_SECRET: "",
-            self.PASSWORD: "",
-            self.USERNAME: ""
+            self.CLIENT_SECRET: ""
         }
 
     def get_required_config(self):
-        return [self.CLIENT_ID, self.CLIENT_SECRET, self.PASSWORD, self.USERNAME]
+        return [self.CLIENT_ID, self.CLIENT_SECRET]
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -70,15 +64,7 @@ class RedditService(services.AbstractService):
                              self.config[services_constants.CONFIG_CATEGORY_SERVICES][
                                  services_constants.CONFIG_REDDIT][
                                  self.CLIENT_SECRET],
-                             password=
-                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                 services_constants.CONFIG_REDDIT][
-                                 self.PASSWORD],
                              user_agent='bot',
-                             username=
-                             self.config[services_constants.CONFIG_CATEGORY_SERVICES][
-                                 services_constants.CONFIG_REDDIT][
-                                 self.USERNAME],
                              **self.mocked_asyncpraw_ini()
                              )
 
@@ -105,8 +91,7 @@ class RedditService(services.AbstractService):
             self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT])
 
     def get_successful_startup_message(self):
-        return f"Successfully initialized using {self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_REDDIT][self.USERNAME]}" \
-               f" account.", True
+        return f"Successfully initialized.", True
 
     def mocked_asyncpraw_ini(self):
         # asyncpraw praw.ini file is sometimes not found in binary env, mock its values.
