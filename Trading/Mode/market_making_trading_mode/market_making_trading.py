@@ -31,6 +31,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.exchanges as trading_exchanges
 import tentacles.Trading.Mode.market_making_trading_mode.order_book_distribution as order_book_distribution
 import tentacles.Trading.Mode.market_making_trading_mode.reference_price as reference_price_import
 
@@ -504,6 +505,22 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             error = (
                 f"Multiple trading pair is not supported on {self.trading_mode.get_name()}. "
                 f"Please select only one trading pair in configuration."
+            )
+            asyncio.create_task(
+                self.sent_once_critical_notification(
+                    "Configuration issue",
+                    error
+                )
+            )
+            raise ValueError(error)
+        enabled_exchanges = trading_exchanges.get_enabled_exchanges(self.exchange_manager.config)
+        if (
+            self.reference_price.exchange != self.trading_mode.LOCAL_EXCHANGE_PRICE and
+            self.reference_price.exchange not in enabled_exchanges
+        ):
+            error = (
+                f"Reference exchange is missing from configuration. Please add {self.reference_price.exchange} to "
+                f"configured exchanges or use another reference exchange."
             )
             asyncio.create_task(
                 self.sent_once_critical_notification(
