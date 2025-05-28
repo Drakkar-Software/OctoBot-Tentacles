@@ -1164,10 +1164,7 @@ async def test_buy_coin(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     portfolio = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
-    with mock.patch.object(
-            mode,
-            "create_order", mock.AsyncMock(side_effect=lambda x: x)
-    ) as create_order_mock:
+    with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda x: x)) as create_order_mock:
         # coin already held
         portfolio["BTC"].available = decimal.Decimal(20)
         assert await consumer._buy_coin("BTC/USDT", decimal.Decimal(2)) == []
@@ -1209,14 +1206,15 @@ async def test_buy_coin(tools):
         create_order_mock.reset_mock()
 
         # adapt for fees
+        fee_usdt_cost = decimal.Decimal(10)
         with mock.patch.object(
                 consumer.exchange_manager.exchange, "get_trade_fee", mock.Mock(return_value={
-                    trading_enums.FeePropertyColumns.COST.value: "10",
+                    trading_enums.FeePropertyColumns.COST.value: str(fee_usdt_cost),
                     trading_enums.FeePropertyColumns.CURRENCY.value: "USDT",
                 })
         ) as get_trade_fee_mock:
             orders = await consumer._buy_coin("BTC/USDT", decimal.Decimal("0.5"))
-            get_trade_fee_mock.assert_called_once()
+            assert get_trade_fee_mock.call_count == 2
             assert len(orders) == 1
             create_order_mock.assert_called_once_with(orders[0])
             assert isinstance(orders[0], trading_personal_data.BuyMarketOrder)
@@ -1229,14 +1227,16 @@ async def test_buy_coin(tools):
             get_trade_fee_mock.reset_mock()
 
             orders = await consumer._buy_coin("BTC/USDT", decimal.Decimal(2))
-            get_trade_fee_mock.assert_called_once()
+            assert get_trade_fee_mock.call_count == 2
             assert len(orders) == 1
             create_order_mock.assert_called_once_with(orders[0])
             assert isinstance(orders[0], trading_personal_data.BuyMarketOrder)
             assert orders[0].symbol == "BTC/USDT"
             assert orders[0].origin_price == decimal.Decimal(1000)
-            assert orders[0].origin_quantity == decimal.Decimal("1.98")  # 2 - fees denominated in BTC
-            assert orders[0].total_cost == decimal.Decimal('1980')
+            btc_fees = fee_usdt_cost / orders[0].origin_price
+            # 2 - fees denominated in BTC
+            assert orders[0].origin_quantity == decimal.Decimal("2") - btc_fees * trading_constants.FEES_SAFETY_MARGIN
+            assert orders[0].total_cost == decimal.Decimal('1987.5000')
             create_order_mock.reset_mock()
 
 
@@ -1299,14 +1299,15 @@ async def test_buy_coin_using_limit_order(tools):
         is_market_open_for_order_type_mock.reset_mock()
 
         # adapt for fees
+        fee_usdt_cost = decimal.Decimal(10)
         with mock.patch.object(
                 consumer.exchange_manager.exchange, "get_trade_fee", mock.Mock(return_value={
-                    trading_enums.FeePropertyColumns.COST.value: "10",
+                    trading_enums.FeePropertyColumns.COST.value: str(fee_usdt_cost),
                     trading_enums.FeePropertyColumns.CURRENCY.value: "USDT",
                 })
         ) as get_trade_fee_mock:
             orders = await consumer._buy_coin("BTC/USDT", decimal.Decimal("0.5"))
-            get_trade_fee_mock.assert_called_once()
+            assert get_trade_fee_mock.call_count == 2
             assert len(orders) == 1
             is_market_open_for_order_type_mock.assert_called_once_with("BTC/USDT", trading_enums.TraderOrderType.BUY_MARKET)
             create_order_mock.assert_called_once_with(orders[0])
@@ -1321,15 +1322,22 @@ async def test_buy_coin_using_limit_order(tools):
             is_market_open_for_order_type_mock.reset_mock()
 
             orders = await consumer._buy_coin("BTC/USDT", decimal.Decimal(2))
-            get_trade_fee_mock.assert_called_once()
+            assert get_trade_fee_mock.call_count == 2
             assert len(orders) == 1
             is_market_open_for_order_type_mock.assert_called_once_with("BTC/USDT", trading_enums.TraderOrderType.BUY_MARKET)
             create_order_mock.assert_called_once_with(orders[0])
             assert isinstance(orders[0], trading_personal_data.BuyLimitOrder)
             assert orders[0].symbol == "BTC/USDT"
             assert orders[0].origin_price == decimal.Decimal(1005)
-            assert orders[0].origin_quantity == decimal.Decimal('1.97014925')  # 2 - fees denominated in BTC
-            assert decimal.Decimal('1979.999') < orders[0].total_cost < decimal.Decimal('1980')
+            # 2 - fees denominated in BTC
+            symbol_market = trader.exchange_manager.exchange.get_market_status(orders[0].symbol, with_fixer=False)
+            assert orders[0].origin_quantity == trading_personal_data.decimal_adapt_quantity(
+                symbol_market,
+                (
+                    decimal.Decimal("2000") - fee_usdt_cost * trading_constants.FEES_SAFETY_MARGIN
+                ) / orders[0].origin_price
+            )
+            assert decimal.Decimal('1985') < orders[0].total_cost < decimal.Decimal('1990')
             create_order_mock.reset_mock()
             is_market_open_for_order_type_mock.reset_mock()
 

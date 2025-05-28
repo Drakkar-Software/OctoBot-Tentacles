@@ -1236,9 +1236,7 @@ async def test_create_order():
 
         def _decimal_adapt_order_quantity_because_fees(
             exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
-            price: decimal.Decimal,
-            taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
-            quote_available_funds: decimal.Decimal
+            price: decimal.Decimal, side: trading_enums.TradeOrderSide
         ):
             return quantity
 
@@ -1258,10 +1256,7 @@ async def test_create_order():
             assert created_order.origin_quantity == quantity
             decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
                 exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
-                created_order.origin_quantity,
-                created_order.origin_price,
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
-                decimal.Decimal("0.1")
+                created_order.origin_quantity, created_order.origin_price, trading_enums.TradeOrderSide.SELL,
             )
             decimal_adapt_order_quantity_because_fees_mock.reset_mock()
 
@@ -1273,9 +1268,7 @@ async def test_create_order():
             created_order = await consumer.create_order(to_create_order, price, symbol_market)
             decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
                 exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
-                decimal.Decimal('10'), decimal.Decimal('100'),
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
-                decimal.Decimal("0.09")
+                decimal.Decimal('10'), decimal.Decimal('100'), trading_enums.TradeOrderSide.SELL
             )
             decimal_adapt_order_quantity_because_fees_mock.reset_mock()
             assert created_order == []
@@ -1312,10 +1305,7 @@ async def test_create_order():
             created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
             decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
                 exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
-                created_order.origin_quantity,
-                created_order.origin_price,
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-                decimal.Decimal("1000")
+                created_order.origin_quantity, created_order.origin_price, trading_enums.TradeOrderSide.BUY,
             )
             decimal_adapt_order_quantity_because_fees_mock.reset_mock()
             assert created_order.origin_quantity == quantity
@@ -1330,9 +1320,7 @@ async def test_create_order():
             created_orders = await consumer.create_order(to_create_order, price, symbol_market)
             decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
                 exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
-                decimal.Decimal('2'), decimal.Decimal('585'),
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-                decimal.Decimal("900")
+                decimal.Decimal('2'), decimal.Decimal('585'), trading_enums.TradeOrderSide.BUY
             )
             decimal_adapt_order_quantity_because_fees_mock.reset_mock()
             assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900

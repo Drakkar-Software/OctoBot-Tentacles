@@ -245,9 +245,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 price if self.USE_BUY_MARKET_ORDERS_VALUE else self.get_limit_price(price)
             )
             quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
-                self.exchange_manager, symbol, order_type, quantity,
-                limit_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-                trading_enums.TradeOrderSide.BUY, current_market_holding
+                self.exchange_manager, symbol, order_type, quantity, limit_price, trading_enums.TradeOrderSide.BUY
             )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,

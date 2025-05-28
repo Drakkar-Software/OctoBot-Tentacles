@@ -227,8 +227,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             return []
         quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
             self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_MARKET, ideal_quantity,
-            order_target_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-            trading_enums.TradeOrderSide.BUY, current_market_holding
+            order_target_price, trading_enums.TradeOrderSide.BUY
         )
         created_orders = []
         orders_should_have_been_created = False

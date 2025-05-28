@@ -377,9 +377,7 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
             quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                 self.exchange_manager, order_data.symbol,
                 trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT,
-                order_data.quantity,
-                order_data.price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-                order_data.side, ((base_available / order_data.price) if selling else quote_available)
+                order_data.quantity, order_data.price, order_data.side,
             )
             orders_quantity_and_price = trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                 quantity,

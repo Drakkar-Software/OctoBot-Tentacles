@@ -109,9 +109,7 @@ async def test_create_limit_bottom_order(tools):
 
     def _decimal_adapt_order_quantity_because_fees(
         exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
-        price: decimal.Decimal,
-        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
-        quote_available_funds: decimal.Decimal
+        price: decimal.Decimal, side: trading_enums.TradeOrderSide,
     ):
         return quantity
 
@@ -132,8 +130,7 @@ async def test_create_limit_bottom_order(tools):
             producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_LIMIT,
             order.origin_quantity,
             order.origin_price,
-            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-            decimal.Decimal('2000')
+            trading_enums.TradeOrderSide.BUY,
         ]
 
         assert isinstance(order, trading_personal_data.BuyLimitOrder)
@@ -166,9 +163,7 @@ async def test_create_market_bottom_order(tools):
 
     def _decimal_adapt_order_quantity_because_fees(
         exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
-        price: decimal.Decimal,
-        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
-        quote_available_funds: decimal.Decimal
+        price: decimal.Decimal, side: trading_enums.TradeOrderSide,
     ):
         return quantity
 
@@ -189,8 +184,7 @@ async def test_create_market_bottom_order(tools):
             producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_MARKET,
             trade.origin_quantity,
             trade.origin_price,
-            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-            decimal.Decimal('2000')
+            trading_enums.TradeOrderSide.BUY,
         ]
 
         assert trade.trade_type == trading_enums.TraderOrderType.BUY_MARKET
