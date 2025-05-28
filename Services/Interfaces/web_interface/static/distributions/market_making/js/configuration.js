@@ -287,22 +287,26 @@ $(document).ready(function() {
     }
 
     const validateConfig = () => {
+        [configEditor, tradingSimulatorEditor, simulatedPortfolioEditor, exchangesEditor].forEach((editor) => {
+            if (editor === undefined) {
+                throw "Editors are loading"
+            }
+            const errors = editor.validate();
+            if (errors.length) {
+                throw JSON.stringify(errors.map(
+                    err => `${err.path.replace('root.', '')}: ${err.message}`
+                ).join(", "))
+            }
+        });
         const exchange = getSelectedExchange()
         if(exchange === undefined || exchange === null || !exchange.length){
             throw "No selected exchange"
         }
         const pair = getSelectedPair()
         if(pair === undefined || pair === null || !pair.length){
-            throw "No selected trading pair"
+            // can happen, don't prevent saving
+            create_alert("error", "Action required", "Please select a trading pair to start your strategy");
         }
-        [configEditor, tradingSimulatorEditor, simulatedPortfolioEditor, exchangesEditor].forEach((editor) => {
-           const errors = editor.validate();
-           if (errors.length){
-               throw JSON.stringify(errors.map(
-                   err => `${err.path.replace('root.', '')}: ${err.message}`
-               ).join(", "))
-           }
-        });
     }
 
     const getConfigUpdate = () => {

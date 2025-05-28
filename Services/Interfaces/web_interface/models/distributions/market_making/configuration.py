@@ -36,7 +36,7 @@ _MM_SERVICES = [
 
 def save_market_making_configuration(
     enabled_exchange: str,
-    trading_pair: str,
+    trading_pair: typing.Optional[str],
     exchange_configurations: list[dict],
     trading_simulator_configuration: dict,
     simulated_portfolio_configuration: list[dict],
@@ -64,7 +64,7 @@ def get_market_making_services() -> dict:
 def _save_user_config(
     enabled_exchange: typing.Optional[str],
     reference_exchange: typing.Optional[str],
-    trading_pair: str,
+    trading_pair: typing.Optional[str],
     exchange_configurations: list[dict],
     trading_simulator_configuration: dict,
     simulated_portfolio_configuration: list[dict],
@@ -106,7 +106,7 @@ def _save_user_config(
             commons_constants.CONFIG_ENABLED_OPTION: True,
             commons_constants.CONFIG_CRYPTO_PAIRS: [trading_pair]
         }
-    }
+    } if trading_pair else {}
 
     # trader simulator
     simulated_enabled = trading_simulator_configuration[commons_constants.CONFIG_ENABLED_OPTION]
@@ -134,10 +134,11 @@ def _save_user_config(
 
     # trading
     updated_trading_config = copy.deepcopy(current_edited_config.config[commons_constants.CONFIG_TRADING])
-    # only update the reference market
-    updated_trading_config[commons_constants.CONFIG_TRADER_REFERENCE_MARKET] = (
-        symbol_utils.parse_symbol(trading_pair).quote
-    )
+    if trading_pair:
+        # only update the reference market
+        updated_trading_config[commons_constants.CONFIG_TRADER_REFERENCE_MARKET] = (
+            symbol_utils.parse_symbol(trading_pair).quote
+        )
 
     update = {
         commons_constants.CONFIG_CRYPTO_CURRENCIES: updated_currencies_config,
