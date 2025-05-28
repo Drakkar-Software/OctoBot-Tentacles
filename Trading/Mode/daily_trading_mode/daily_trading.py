@@ -814,8 +814,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                     self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT, quantity,
-                    limit_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-                    trading_enums.TradeOrderSide.BUY, current_market_holding
+                    limit_price, trading_enums.TradeOrderSide.BUY
                 )
                 for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -893,8 +892,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     if user_volume == 0 else user_volume
                 quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                     self.exchange_manager, symbol, trading_enums.TraderOrderType.BUY_MARKET, quantity,
-                    price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-                    trading_enums.TradeOrderSide.BUY, current_market_holding
+                    price, trading_enums.TradeOrderSide.BUY
                 )
                 for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,

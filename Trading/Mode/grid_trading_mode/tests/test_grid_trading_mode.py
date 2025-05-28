@@ -693,8 +693,7 @@ async def test_start_after_offline_full_sell_side_filled_orders_price_back():
                     producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.BUY_MARKET,
                     decimal.Decimal('0.25714721'),
                     decimal.Decimal('165'),
-                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-                    decimal.Decimal('1104.16879661120')
+                    trading_enums.TradeOrderSide.BUY,
                 )
         # restored orders (and create up to 50 orders as all orders can be created)
         assert producer.operational_depth > orders_count
@@ -790,8 +789,7 @@ async def test_start_after_offline_buy_side_10_filled():
                     producer.exchange_manager, producer.trading_mode.symbol, trading_enums.TraderOrderType.SELL_MARKET,
                     decimal.Decimal('0.00320847831'),
                     decimal.Decimal('71'),
-                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
-                    decimal.Decimal('9.33582078738')
+                    trading_enums.TradeOrderSide.SELL,
                 )
         # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
