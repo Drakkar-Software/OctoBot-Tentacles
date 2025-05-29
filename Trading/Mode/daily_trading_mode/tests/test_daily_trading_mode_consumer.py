@@ -195,9 +195,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
 
     def _decimal_adapt_order_quantity_because_fees(
         exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
-        price: decimal.Decimal,
-        taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
-        quote_available_funds: decimal.Decimal
+        price: decimal.Decimal, side: trading_enums.TradeOrderSide
     ):
         return quantity
 
@@ -255,8 +253,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
             exchange_manager, order.symbol, trading_enums.TraderOrderType.BUY_LIMIT,
             order.origin_quantity,
             order.origin_price,
-            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-            decimal.Decimal(2000)
+            trading_enums.TradeOrderSide.BUY,
         ]
         decimal_adapt_order_quantity_because_fees_mock.reset_mock()
         assert isinstance(order, trading_personal_data.BuyLimitOrder)
@@ -299,8 +296,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
             exchange_manager, order.symbol, trading_enums.TraderOrderType.BUY_MARKET,
             order.origin_quantity,
             order.origin_price,
-            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
-            decimal.Decimal('1126.7100532264623968')
+            trading_enums.TradeOrderSide.BUY,
         ]
         decimal_adapt_order_quantity_because_fees_mock.reset_mock()
         assert isinstance(order, trading_personal_data.BuyMarketOrder)

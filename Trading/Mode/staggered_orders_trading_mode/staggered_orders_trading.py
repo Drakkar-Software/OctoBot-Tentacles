@@ -435,9 +435,7 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
             quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                 self.exchange_manager, order_data.symbol,
                 trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT,
-                order_data.quantity,
-                order_data.price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-                order_data.side, ((base_available / order_data.price) if selling else quote_available)
+                order_data.quantity, order_data.price, order_data.side
             )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -1243,7 +1241,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         order_type = trading_enums.TraderOrderType.SELL_MARKET if to_create_order_quantity < trading_constants.ZERO \
             else trading_enums.TraderOrderType.BUY_MARKET
         target_amount = abs(to_create_order_quantity)
-        currency_available, market_available, market_quantity = \
+        currency_available, _, market_quantity = \
             trading_personal_data.get_portfolio_amounts(self.exchange_manager, self.symbol, current_price)
         limiting_amount = currency_available if order_type is trading_enums.TraderOrderType.SELL_MARKET \
             else market_quantity
@@ -1260,9 +1258,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         buying = order_type is trading_enums.TraderOrderType.BUY_MARKET
         fees_adapted_target_amount = trading_personal_data.decimal_adapt_order_quantity_because_fees(
             self.exchange_manager, self.symbol, order_type, target_amount,
-            current_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
-            trading_enums.TradeOrderSide.BUY if buying else trading_enums.TradeOrderSide.SELL,
-            market_available if buying else currency_available
+            current_price, trading_enums.TradeOrderSide.BUY if buying else trading_enums.TradeOrderSide.SELL,
         )
         if fees_adapted_target_amount != target_amount:
             self.logger.info(
@@ -1388,6 +1384,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             target_quote = usable_amount_in_quote / decimal.Decimal(2)
 
             amount = trading_constants.ZERO
+            to_sell = to_buy = None
             if available_base_amount < target_base:
                 # buy order
                 to_buy = parsed_symbol.base

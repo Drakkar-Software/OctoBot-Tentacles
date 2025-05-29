@@ -152,8 +152,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 initial_entry_order_type = trading_enums.TraderOrderType.SELL_MARKET \
                     if self.trading_mode.use_market_entry_orders else trading_enums.TraderOrderType.SELL_LIMIT
             adapted_entry_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
-                self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price,
-                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, initial_available_quote_funds
+                self.exchange_manager, symbol, initial_entry_order_type, quantity, initial_entry_price, side
             )
 
             # initial entry
@@ -179,8 +178,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         )
                         adapted_secondary_quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
                             self.exchange_manager, symbol, initial_entry_order_type, secondary_quantity,
-                            initial_entry_price,
-                            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, side, remaining_funds
+                            initial_entry_price, side
                         )
                         skip_other_orders = adapted_secondary_quantity != secondary_quantity
                         if skip_other_orders or remaining_funds < (
