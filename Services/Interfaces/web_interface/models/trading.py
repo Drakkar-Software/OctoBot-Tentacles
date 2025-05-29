@@ -184,23 +184,38 @@ def get_portfolio_historical_values(currency, time_frame=None, from_timestamp=No
     )
 
 
-def _get_pnl_history(exchange, quote, symbol, since):
-    if exchange:
-        return {
-            exchange: trading_api.get_completed_pnl_history(
-                dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
-                quote=quote,
-                symbol=symbol,
-                since=since
-            )
-        }
-    history = {}
-    for exchange_manager in configuration.get_live_trading_enabled_exchange_managers():
-        history[trading_api.get_exchange_name(exchange_manager)] = trading_api.get_completed_pnl_history(
+def _get_valid_pnl_history(exchange_manager, quote, symbol, since):
+    return [
+        pnl
+        for pnl in trading_api.get_completed_pnl_history(
             exchange_manager,
             quote=quote,
             symbol=symbol,
             since=since
+        )
+        if _is_valid_pnl(pnl)
+    ]
+
+
+def _is_valid_pnl(pnl):
+    try:
+        return pnl.get_entry_time() and pnl.get_close_time()
+    except trading_errors.IncompletePNLError:
+        return False
+
+
+def _get_pnl_history(exchange, quote, symbol, since):
+    if exchange:
+        return {
+            exchange: _get_valid_pnl_history(
+                dashboard.get_first_exchange_data(exchange, trading_exchange_only=True)[0],
+                quote, symbol, since
+            )
+        }
+    history = {}
+    for exchange_manager in configuration.get_live_trading_enabled_exchange_managers():
+        history[trading_api.get_exchange_name(exchange_manager)] = _get_valid_pnl_history(
+            exchange_manager, quote, symbol, since
         )
     return history
 
