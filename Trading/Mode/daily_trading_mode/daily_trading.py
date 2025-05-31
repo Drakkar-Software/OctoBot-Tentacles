@@ -50,7 +50,6 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        trading_modes.should_emit_trading_signals_user_input(self, inputs)
         self.UI.user_input(
             "target_profits_mode", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Target profits mode: Enable target profits mode. In this mode, only entry "
