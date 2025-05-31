@@ -1054,7 +1054,10 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     # orders with chained orders and no "triggered by" are "position opening"
                     and order.chained_orders and order.triggered_by is None
                 ):
-                    await self.trading_mode.cancel_order(order)
+                    try:
+                        await self.trading_mode.cancel_order(order)
+                    except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                        self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
 
     async def _send_alert_notification(self, symbol, new_state):
         try:
