@@ -19,13 +19,13 @@ import decimal
 import typing
 import ccxt
 
+import octobot_commons.constants as commons_constants
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
@@ -97,7 +97,10 @@ class Kucoin(exchanges.RestExchange):
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
 
-    SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
+    # set False when the exchange refuses to change margin type when an associated position is open
+    SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False
+    # set False when default edit_order can't be used and order should always be canceled and recreated instead
+    SUPPORTS_NATIVE_EDIT_ORDER = False
 
     # get_my_recent_trades only covers the last 24h on kucoin
     ALLOW_TRADES_FROM_CLOSED_ORDERS = True  # set True when get_my_recent_trades should use get_closed_orders
@@ -374,22 +377,40 @@ class Kucoin(exchanges.RestExchange):
             params = params or {}
             # on futures exchange expects, quantity in contracts: convert quantity into contracts
             quantity = quantity / self.get_contract_size(symbol)
-            try:
-                # "marginMode": "ISOLATED" // Added field for margin mode: ISOLATED, CROSS, default: ISOLATED
-                # from https://www.kucoin.com/docs/rest/futures-trading/orders/place-order
-                if (
-                    KucoinCCXTAdapter.KUCOIN_MARGIN_MODE not in params and
-                    self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position_margin_type(
-                        symbol
-                    ) is trading_enums.MarginType.CROSS
-                ):
-                    params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "CROSS"
-            except ValueError as err:
-                self.logger.error(f"Impossible to add {KucoinCCXTAdapter.KUCOIN_MARGIN_MODE} to order: {err}")
+            self._set_margin_mode_param_if_necessary(symbol, params)
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    async def edit_order(self, exchange_order_id: str, order_type: trading_enums.TraderOrderType, symbol: str,
+                         quantity: decimal.Decimal, price: decimal.Decimal,
+                         stop_price: decimal.Decimal = None, side: trading_enums.TradeOrderSide = None,
+                         current_price: decimal.Decimal = None,
+                         params: dict = None):
+        if self.exchange_manager.is_future:
+            params = params or {}
+            # on futures exchange expects, quantity in contracts: convert quantity into contracts
+            quantity = quantity / self.get_contract_size(symbol)
+            self._set_margin_mode_param_if_necessary(symbol, params)
+        return await super().edit_order(
+            exchange_order_id, order_type, symbol, quantity, price, stop_price=stop_price,
+            side=side, current_price=current_price, params=params
+        )
+
+    def _set_margin_mode_param_if_necessary(self, symbol, params):
+        try:
+            # "marginMode": "ISOLATED" // Added field for margin mode: ISOLATED, CROSS, default: ISOLATED
+            # from https://www.kucoin.com/docs/rest/futures-trading/orders/place-order
+            if (
+                KucoinCCXTAdapter.KUCOIN_MARGIN_MODE not in params and
+                self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position_margin_type(
+                    symbol
+                ) is trading_enums.MarginType.CROSS
+            ):
+                params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "CROSS"
+        except ValueError as err:
+            self.logger.error(f"Impossible to add {KucoinCCXTAdapter.KUCOIN_MARGIN_MODE} to order: {err}")
 
     @_kucoin_retrier
     async def cancel_order(
