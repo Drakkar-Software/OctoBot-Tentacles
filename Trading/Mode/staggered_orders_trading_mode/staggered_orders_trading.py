@@ -1053,7 +1053,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
     ):
         self.logger.info("Resetting orders")
-        await asyncio.gather(*(self.trading_mode.cancel_order(order) for order in sorted_orders))
+        await asyncio.gather(*(self._cancel_open_order(order) for order in sorted_orders))
         self._reset_available_funds()
         state = self.NEW
         buy_orders = self._create_orders(
@@ -1349,6 +1349,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
         return trades_with_missing_mirror_order_fills
 
+    async def _cancel_open_order(self, order):
+        if not (order.is_cancelled() or order.is_closed()):
+            try:
+                await self.trading_mode.cancel_order(order)
+                return True
+            except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+        return False
+
     async def _prepare_trailing(self, open_orders: list, current_price: decimal.Decimal):
         log_header = f"[{self.exchange_manager.exchange_name}] {self.symbol} @ {current_price} trailing process: "
         if current_price <= trading_constants.ZERO:
@@ -1360,8 +1369,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             cancelled_orders = []
             self.logger.info(f"{log_header}cancelling {len(open_orders)} open orders on {self.symbol}")
             for order in open_orders:
-                if not (order.is_cancelled() or order.is_closed()):
-                    await self.trading_mode.cancel_order(order)
+                if await self._cancel_open_order(order):
                     cancelled_orders.append(order)
         except Exception as err:
             self.logger.exception(err, True, f"Error in {log_header} cancel orders step: {err}")

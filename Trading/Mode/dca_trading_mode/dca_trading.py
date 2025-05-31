@@ -250,7 +250,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             )
             if can_create_entries:
                 for order in to_cancel_orders:
-                    await self.trading_mode.cancel_order(order)
+                    try:
+                        await self.trading_mode.cancel_order(order)
+                    except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                        self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
             else:
                 self.logger.info(
                     f"Skipping {self.exchange_manager.exchange_name} {symbol} entry order cancel as new "
