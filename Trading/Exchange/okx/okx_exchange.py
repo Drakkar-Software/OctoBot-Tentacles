@@ -255,11 +255,6 @@ class Okx(exchanges.RestExchange):
             params["tpOrdPx"] = -1  # execute as market order
         return params
 
-    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        params = params or {}
-        params[self.connector.adapter.OKX_STOP_LOSS_PRICE] = price  # make ccxt understand that it's a stop loss
-        return await self.connector.create_market_stop_loss_order(symbol, quantity, price, side, current_price, params=params)
-
     async def _get_all_typed_orders(self, method, symbol=None, since=None, limit=None, **kwargs) -> list:
         limit = self._fix_limit(limit)
         is_stop_order = kwargs.get("stop", False)
@@ -342,9 +337,6 @@ class Okx(exchanges.RestExchange):
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        if self.exchange_manager.is_future:
-            # on futures exchange expects, quantity in contracts: convert quantity into contracts
-            quantity = quantity / self.get_contract_size(symbol)
         if self._is_oco_order(params):
             raise trading_errors.NotSupported(
                 f"OCO bundled orders (orders including both a stop loss and take profit price) "

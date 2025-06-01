@@ -18,6 +18,7 @@ import typing
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.enums as trading_enums
 
 
@@ -125,17 +126,6 @@ class Bingx(exchanges.RestExchange):
             url
             and signature_identifier in url
         )
-
-    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        params = params or {}
-        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-        order = self.connector.adapter.adapt_order(
-            await self.connector.client.create_order(
-                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            ),
-            symbol=symbol, quantity=quantity
-        )
-        return order
 
 class BingxCCXTAdapter(exchanges.CCXTAdapter):
 
