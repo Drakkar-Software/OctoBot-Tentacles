@@ -98,6 +98,9 @@ class Binance(exchanges.RestExchange):
         ('Unknown order sent', )
     ]
 
+    # Name of the price param to give ccxt to edit a stop loss
+    STOP_LOSS_EDIT_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_LOSS.value
+
     BUY_STR = "BUY"
     SELL_STR = "SELL"
     INVERSE_TYPE = "inverse"
@@ -116,6 +119,17 @@ class Binance(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return BinanceCCXTAdapter
+
+    def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
+        # return False when default edit_order can't be used and order should always be canceled and recreated instead
+        is_stop = order_type in (
+            trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT
+        )
+        if self.exchange_manager.is_future:
+            # replace not supported in futures stop orders
+            return not is_stop
+        # waiting for update to ccxt 4.4.87
+        return not is_stop
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
@@ -207,18 +221,6 @@ class Binance(exchanges.RestExchange):
             params["reduceOnly"] = order.reduce_only
         return params
 
-    async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
-                           price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
-                           side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
-                           reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
-        if self.exchange_manager.is_future:
-            # on futures exchange expects, quantity in contracts: convert quantity into contracts
-            quantity = quantity / self.get_contract_size(symbol)
-        return await super().create_order(order_type, symbol, quantity,
-                                          price=price, stop_price=stop_price,
-                                          side=side, current_price=current_price,
-                                          reduce_only=reduce_only, params=params)
-
     async def _create_market_sell_order(
         self, symbol, quantity, price=None, reduce_only: bool = False, params=None
         ) -> dict:
@@ -232,17 +234,6 @@ class Binance(exchanges.RestExchange):
         """
         take profit / stop loss mode does not exist on binance futures
         """
-
-    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        params = params or {}
-        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-        order = self.connector.adapter.adapt_order(
-            await self.connector.client.create_order(
-                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            ),
-            symbol=symbol, quantity=quantity
-        )
-        return order
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []

@@ -16,6 +16,8 @@
 import typing
 import decimal
 import ccxt
+import copy
+import asyncio
 
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
@@ -100,6 +102,25 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         # only call _refresh_alias_symbols from here as markets just got reloaded,
         # no market can be missing unlike when using cached markets
         _refresh_alias_symbols(client)
+
+    async def _edit_order_by_cancel_and_create(
+        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType,
+        side: str, quantity: float, price: float, params: dict
+    ) -> dict:
+        if order_type == trading_enums.TraderOrderType.STOP_LOSS:
+            # can't use super()._edit_order_by_cancel_and_create when order is a stop loss as stop market orders
+            # are not supported
+            await self.client.cancel_order(exchange_order_id, symbol)
+            stop_price = price
+            price = float(
+                decimal.Decimal(str(price)) * self.exchange_manager.exchange.STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO
+            )
+            local_param = copy.deepcopy(params)
+            return await self.create_limit_stop_loss_order(symbol, quantity, price, stop_price, side, params=local_param)
+        # not a stop loss: proceed with the usual edit flow
+        return await super()._edit_order_by_cancel_and_create(
+            exchange_order_id, symbol, order_type, side, quantity, price, params
+        )
 
 
 class Coinbase(exchanges.RestExchange):
@@ -200,6 +221,13 @@ class Coinbase(exchanges.RestExchange):
         :return: a set of symbol of this exchange that are aliases to other symbols
         """
         return ALIASED_SYMBOLS
+
+    def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
+        # return False when default edit_order can't be used and order should always be canceled and recreated instead
+        # only working with regular limit orders
+        return order_type not in (
+            trading_enums.TraderOrderType.STOP_LOSS, trading_enums.TraderOrderType.STOP_LOSS_LIMIT
+        )
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
@@ -317,19 +345,6 @@ class Coinbase(exchanges.RestExchange):
         price = float(decimal.Decimal(str(price)) * self.STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO)
         # use limit stop loss with a "normally instantly" filled price
         return await self._create_limit_stop_loss_order(symbol, quantity, price, stop_price, side, params=params)
-
-    @_coinbase_retrier
-    async def _create_limit_stop_loss_order(self, symbol, quantity, price, stop_price, side, params=None) -> dict:
-        params = params or {}
-        if "stopLossPrice" not in params:
-            params["stopLossPrice"] = stop_price  # make ccxt understand that it's a stop loss
-        order = self.connector.adapter.adapt_order(
-            await self.connector.client.create_order(
-                symbol, trading_enums.TradeOrderType.LIMIT.value, side, quantity, price, params=params
-            ),
-            symbol=symbol, quantity=quantity
-        )
-        return order
 
     def _get_ohlcv_params(self, time_frame, input_limit, **kwargs):
         limit = input_limit

@@ -99,8 +99,6 @@ class Kucoin(exchanges.RestExchange):
 
     # set False when the exchange refuses to change margin type when an associated position is open
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False
-    # set False when default edit_order can't be used and order should always be canceled and recreated instead
-    SUPPORTS_NATIVE_EDIT_ORDER = False
 
     # get_my_recent_trades only covers the last 24h on kucoin
     ALLOW_TRADES_FROM_CLOSED_ORDERS = True  # set True when get_my_recent_trades should use get_closed_orders
@@ -188,6 +186,11 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
+
+    def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
+        # return False when default edit_order can't be used and order should always be canceled and recreated instead
+        # only working on HF orders
+        return False
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
@@ -317,17 +320,6 @@ class Kucoin(exchanges.RestExchange):
             params["closeOrder"] = order.close_position
         return params
 
-    async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        params = params or {}
-        params["stopLossPrice"] = price  # make ccxt understand that it's a stop loss
-        order = self.connector.adapter.adapt_order(
-            await self.connector.client.create_order(
-                symbol, trading_enums.TradeOrderType.MARKET.value, side, quantity, params=params
-            ),
-            symbol=symbol, quantity=quantity
-        )
-        return order
-
     async def _update_balance(self, balance, currency, **kwargs):
         balance.update(await super().get_balance(code=currency, **kwargs))
 
@@ -375,8 +367,6 @@ class Kucoin(exchanges.RestExchange):
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if self.exchange_manager.is_future:
             params = params or {}
-            # on futures exchange expects, quantity in contracts: convert quantity into contracts
-            quantity = quantity / self.get_contract_size(symbol)
             self._set_margin_mode_param_if_necessary(symbol, params)
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
@@ -390,8 +380,6 @@ class Kucoin(exchanges.RestExchange):
                          params: dict = None):
         if self.exchange_manager.is_future:
             params = params or {}
-            # on futures exchange expects, quantity in contracts: convert quantity into contracts
-            quantity = quantity / self.get_contract_size(symbol)
             self._set_margin_mode_param_if_necessary(symbol, params)
         return await super().edit_order(
             exchange_order_id, order_type, symbol, quantity, price, stop_price=stop_price,
