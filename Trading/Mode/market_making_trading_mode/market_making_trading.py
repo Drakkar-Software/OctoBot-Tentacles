@@ -348,10 +348,12 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
                 try:
                     await self.trading_mode.cancel_order(action.order)
                     cancelled_orders.append(action.order.order_id)
+                except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                    self.logger.warning(f"Skipped order cancel: {err}, order: {str(action.order)}")
                 except trading_errors.OrderCancelError as err:
                     self.logger.warning(
                         f"Error when cancelling order, considering order as closed. Error: {err}, "
-                        f"order: {action.order}"
+                        f"order: {str(action.order)}"
                     )
             else:
                 self.logger.info(

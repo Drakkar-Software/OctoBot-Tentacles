@@ -50,7 +50,6 @@ class DailyTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        trading_modes.should_emit_trading_signals_user_input(self, inputs)
         self.UI.user_input(
             "target_profits_mode", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="Target profits mode: Enable target profits mode. In this mode, only entry "
@@ -1055,7 +1054,10 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     # orders with chained orders and no "triggered by" are "position opening"
                     and order.chained_orders and order.triggered_by is None
                 ):
-                    await self.trading_mode.cancel_order(order)
+                    try:
+                        await self.trading_mode.cancel_order(order)
+                    except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                        self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
 
     async def _send_alert_notification(self, symbol, new_state):
         try:

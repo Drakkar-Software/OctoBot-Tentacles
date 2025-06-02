@@ -72,7 +72,6 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        trading_modes.should_emit_trading_signals_user_input(self, inputs)
         self.UI.user_input(
             "use_maximum_size_orders", commons_enums.UserInputTypes.BOOLEAN, False, inputs,
             title="All in trades: Trade with all available funds at each order.",

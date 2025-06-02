@@ -208,6 +208,7 @@ class Bybit(exchanges.RestExchange):
         return "above"
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
+        # todo make sure this still works
         params = params or {}
         params["triggerPrice"] = price
         if self.exchange_manager.is_future:

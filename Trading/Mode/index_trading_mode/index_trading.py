@@ -514,7 +514,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 f"Cancelling {len(symbol_open_orders)} open orders"
             )
             for order in symbol_open_orders:
-                await self.trading_mode.cancel_order(order)
+                try:
+                    await self.trading_mode.cancel_order(order)
+                except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                    self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
 
 
 class IndexTradingMode(trading_modes.AbstractTradingMode):

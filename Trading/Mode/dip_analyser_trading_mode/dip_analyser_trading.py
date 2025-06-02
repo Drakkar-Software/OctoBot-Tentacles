@@ -44,7 +44,6 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
         those are defined somewhere else.
         """
-        trading_modes.should_emit_trading_signals_user_input(self, inputs)
 
         trading_modes.user_select_order_amount(self, inputs, include_sell=False)
 
