@@ -115,6 +115,9 @@ async def test_parse_signal_data():
         """
         KEY=value
         EXCHANGE=1
+        
+        
+        
         PLOp=true
         """,
         errors
@@ -127,7 +130,7 @@ async def test_parse_signal_data():
 
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
-        "KEY=value\nEXCHANGE=1\nPLOp=false\n",
+        "KEY=value\nEXCHANGE=1\n\n\n\nPLOp=false\n",
         errors
     ) == {
         "KEY": "value",
@@ -162,7 +165,7 @@ async def test_parse_signal_data():
 
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
-        "KEY=value;EXCHANGE;PLOp=ABC;TAKE_PROFIT_PRICE=1;TAKE_PROFIT_PRICE_2=3",
+        "KEY=value;EXCHANGE;;;;;PLOp=ABC;TAKE_PROFIT_PRICE=1;;TAKE_PROFIT_PRICE_2=3",
         errors
     ) == {
         "KEY": "value",
