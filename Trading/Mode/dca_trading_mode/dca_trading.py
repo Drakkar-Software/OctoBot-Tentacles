@@ -333,23 +333,26 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
                 created_orders.append(created_order)
                 return True
-        buying = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT)
-        parsed_symbol = symbol_util.parse_symbol(symbol)
-        missing_currency = parsed_symbol.quote if buying else parsed_symbol.base
-        settlement_asset = parsed_symbol.settlement_asset if parsed_symbol.is_future() else parsed_symbol.quote
-        quantity_currency = trading_personal_data.get_order_quantity_currency(self.exchange_manager, symbol)
-        if parsed_symbol.is_spot():
-            cost = quantity * price
-        else:
-            cost = quantity
-        min_cost = trading_personal_data.get_minimal_order_cost(symbol_market, default_price=price)
-        min_amount = trading_personal_data.get_minimal_order_amount(symbol_market)
-        self.logger.info(
-            f"Please get more {missing_currency}: {symbol} {order_type.value} not created on "
-            f"{self.exchange_manager.exchange_name}: exchange order requirements are not met. "
-            f"Attempted order cost: {cost} {settlement_asset}, quantity: {quantity} {quantity_currency}, "
-            f"price: {price}, min cost: {min_cost} {settlement_asset}, min amount: {min_amount} {quantity_currency}"
-        )
+        try:
+            buying = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT)
+            parsed_symbol = symbol_util.parse_symbol(symbol)
+            missing_currency = parsed_symbol.quote if buying else parsed_symbol.base
+            settlement_asset = parsed_symbol.settlement_asset if parsed_symbol.is_future() else parsed_symbol.quote
+            quantity_currency = trading_personal_data.get_order_quantity_currency(self.exchange_manager, symbol)
+            if parsed_symbol.is_spot():
+                cost = quantity * price
+            else:
+                cost = quantity
+            min_cost = trading_personal_data.get_minimal_order_cost(symbol_market, default_price=float(price))
+            min_amount = trading_personal_data.get_minimal_order_amount(symbol_market)
+            self.logger.info(
+                f"Please get more {missing_currency}: {symbol} {order_type.value} not created on "
+                f"{self.exchange_manager.exchange_name}: exchange order requirements are not met. "
+                f"Attempted order cost: {cost} {settlement_asset}, quantity: {quantity} {quantity_currency}, "
+                f"price: {price}, min cost: {min_cost} {settlement_asset}, min amount: {min_amount} {quantity_currency}"
+            )
+        except Exception as err:
+            self.logger.exception(err, True, f"Error when creating error message {err}")
         return False
 
     async def _create_entry_with_chained_exit_orders(self, entry_order, entry_price, symbol_market):
