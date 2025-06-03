@@ -449,7 +449,6 @@ class Kucoin(exchanges.RestExchange):
         """
 
         # todo remove when supported by ccxt
-        @_kucoin_retrier
         async def fetch_position(client, symbol, params={}):
             market = client.market(symbol)
             market_id = market['id']
