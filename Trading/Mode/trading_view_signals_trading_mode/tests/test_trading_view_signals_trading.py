@@ -113,6 +113,8 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         """
+        
+        
         KEY=value
         EXCHANGE=1
         
@@ -180,7 +182,7 @@ async def test_parse_signal_data():
 
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
-        "KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI;LEVERAGE=3",
+        ";KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI;LEVERAGE=3",
         errors
     ) == {
         "KEY": "value",
