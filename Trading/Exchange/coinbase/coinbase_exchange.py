@@ -17,7 +17,6 @@ import typing
 import decimal
 import ccxt
 import copy
-import asyncio
 
 import octobot_trading.errors
 import octobot_trading.enums as trading_enums
