@@ -330,18 +330,23 @@ async def test_process_entries(tools):
     with mock.patch.object(producer, "submit_trading_evaluation", mock.AsyncMock()) as submit_trading_evaluation_mock, \
             mock.patch.object(producer, "cancel_symbol_open_orders",
                               mock.AsyncMock()) as cancel_symbol_open_orders_mock, \
-            mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock:
+            mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock, \
+            mock.patch.object(trader.exchange_manager.exchange_personal_data.positions_manager, "get_symbol_position",
+                              mock.AsyncMock()) as get_symbol_position_mock:
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.NEUTRAL)
         # neutral state: does not create orders
         submit_trading_evaluation_mock.assert_not_called()
         cancel_symbol_open_orders_mock.assert_not_called()
         _send_alert_notification_mock.assert_not_called()
+        # spot trading: get_symbol_position is not called by _process_pre_entry_actions
+        get_symbol_position_mock.assert_not_called()
 
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.SHORT)
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
         # short state: not yet supported
         submit_trading_evaluation_mock.assert_not_called()
         _send_alert_notification_mock.assert_not_called()
+        get_symbol_position_mock.assert_not_called()
 
         for state in (trading_enums.EvaluatorStates.LONG, trading_enums.EvaluatorStates.VERY_LONG):
             await producer._process_entries("crypto", "symbol", state)
@@ -353,6 +358,7 @@ async def test_process_entries(tools):
                 final_note=None,
                 state=state
             )
+            get_symbol_position_mock.assert_not_called()
             _send_alert_notification_mock.assert_called_once_with("symbol", state, "entry")
             _send_alert_notification_mock.reset_mock()
             submit_trading_evaluation_mock.reset_mock()
@@ -1110,6 +1116,44 @@ async def test_create_new_buy_orders_futures_trading(futures_tools):
         assert len(orders) == 4
         total_cost = sum(order.total_cost for order in orders)
         assert round(total_cost) == decimal.Decimal("56")
+
+
+async def test_create_set_leverage_on_futures_trading(futures_tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(futures_tools, _get_config(futures_tools, update))
+    mode.use_secondary_entry_orders = True
+    mode.secondary_entry_orders_count = 3
+    mode.secondary_entry_orders_amount = "8%t"
+    mode.use_market_entry_orders = False
+    mode.cancel_open_orders_at_each_entry = False
+    mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "8%t"
+    with mock.patch.object(mode, "set_leverage", mock.AsyncMock()) as set_leverage_mock, \
+        mock.patch.object(producer, "submit_trading_evaluation", mock.AsyncMock()) as submit_trading_evaluation:
+        await producer._process_entries("Bitcoin", "BTC", trading_enums.EvaluatorStates.SHORT)
+        # nothing happens on short
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_not_called()
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        # leverage config is not set
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_called_once()
+        submit_trading_evaluation.reset_mock()
+        # now updated leverage
+        mode.trading_config[trading_constants.CONFIG_LEVERAGE] = 4
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        set_leverage_mock.assert_called_once_with(
+            "BTC/USDT:USDT", trading_enums.PositionSide.BOTH, decimal.Decimal(4)
+        )
+        submit_trading_evaluation.assert_called_once()
+        set_leverage_mock.reset_mock()
+        submit_trading_evaluation.reset_mock()
+        # don't update leverage when position already has the right leverage
+        mode.trading_config[trading_constants.CONFIG_LEVERAGE] = 1
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_called_once()
+        set_leverage_mock.reset_mock()
+        submit_trading_evaluation.reset_mock()
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
