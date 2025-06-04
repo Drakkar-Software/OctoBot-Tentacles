@@ -550,7 +550,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             return self.trading_mode.are_initialization_orders_pending
         return False
 
-    async def trigger_dca(self, cryptocurrency, symbol, state):
+    async def trigger_dca(self, cryptocurrency: str, symbol: str, state: trading_enums.EvaluatorStates):
         if self.trading_mode.max_asset_holding_ratio < trading_constants.ONE:
             # if holding ratio should be checked, wait for price init to be able to compute this ratio
             await self._wait_for_symbol_prices_and_profitability_init(self._get_config_init_timeout())
@@ -565,13 +565,37 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             await self._process_entries(cryptocurrency, symbol, state)
             await self._process_exits(cryptocurrency, symbol, state)
 
-    async def _process_entries(self, cryptocurrency, symbol, state):
+    async def _process_pre_entry_actions(self, symbol: str, side=trading_enums.PositionSide.BOTH):
+        try:
+            # if position is idle, ensure leverage is set according to configuration
+            if (
+                self.exchange_manager.is_future and
+                self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position(
+                    symbol, side
+                ).is_idle()
+            ):
+                config_leverage = await script_keywords.user_select_leverage(
+                    script_keywords.get_base_context(self.trading_mode, symbol=symbol), def_val=0
+                )
+                if config_leverage:
+                    parsed_leverage = decimal.Decimal(str(config_leverage))
+                    current_leverage = self.exchange_manager.exchange.get_pair_future_contract(symbol).current_leverage
+                    if parsed_leverage != current_leverage:
+                        self.logger.info(f"Updating leverage of {symbol} from {current_leverage} to {parsed_leverage}")
+                        await self.trading_mode.set_leverage(symbol, side, parsed_leverage)
+        except Exception as err:
+            self.logger.exception(
+                err, True, f"Error when processing pre_state_update_actions: {err} ({symbol=} {side=})"
+            )
+
+    async def _process_entries(self, cryptocurrency: str, symbol: str, state: trading_enums.EvaluatorStates):
         entry_side = trading_enums.TradeOrderSide.BUY if state in (
             trading_enums.EvaluatorStates.LONG, trading_enums.EvaluatorStates.VERY_LONG
         ) else trading_enums.TradeOrderSide.SELL
         if entry_side is trading_enums.TradeOrderSide.SELL:
             self.logger.debug(f"{entry_side.value} entry side not supported for now. Ignored state: {state.value})")
             return
+        await self._process_pre_entry_actions(symbol)
         # call orders creation from consumers
         await self.submit_trading_evaluation(
             cryptocurrency=cryptocurrency,
@@ -583,7 +607,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         # send_notification
         await self._send_alert_notification(symbol, state, "entry")
 
-    async def _process_exits(self, cryptocurrency, symbol, state):
+    async def _process_exits(self, cryptocurrency: str, symbol: str, state: trading_enums.EvaluatorStates):
         # todo implement signal based exits
         pass
 
