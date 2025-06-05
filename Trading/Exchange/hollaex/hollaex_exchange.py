@@ -68,14 +68,27 @@ class hollaex(exchanges.RestExchange):
 
     def get_additional_connector_config(self):
         return {
-            ccxt_enums.ExchangeColumns.URLS.value: self._get_urls()
+            ccxt_enums.ExchangeColumns.URLS.value: self.get_patched_urls(self.tentacle_config[self.REST_KEY])
         }
 
-    def _get_urls(self):
+    @classmethod
+    def get_custom_url_config(cls, tentacle_config: dict, exchange_name: str) -> dict:
+        if details := cls.get_exchange_details(tentacle_config, exchange_name):
+            return {
+                ccxt_enums.ExchangeColumns.URLS.value: cls.get_patched_urls(details.api)
+            }
+        return {}
+
+    @classmethod
+    def get_exchange_details(cls, tentacle_config, exchange_name) -> typing.Optional[exchanges.ExchangeDetails]:
+        return None
+
+    @classmethod
+    def get_patched_urls(cls, api_url: str):
         urls = ccxt.hollaex().urls
         custom_urls = {
             ccxt_enums.ExchangeColumns.API.value: {
-                self.REST_KEY: self.tentacle_config[self.REST_KEY]
+                cls.REST_KEY: api_url
             }
         }
         urls.update(custom_urls)

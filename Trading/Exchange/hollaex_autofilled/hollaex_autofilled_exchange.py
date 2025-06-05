@@ -59,15 +59,7 @@ class HollaexAutofilled(hollaex):
         )
 
     def _apply_fetched_details(self, config, exchange_manager):
-        self._apply_config(
-            self._parse_autofilled_exchange_details(
-                self.tentacle_config,
-                _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[
-                    self._get_kit_url(self.tentacle_config, exchange_manager.exchange_name)
-                ],
-                exchange_manager.exchange_name
-            )
-        )
+        self._apply_config(self.get_exchange_details(self.tentacle_config, exchange_manager.exchange_name))
 
     @classmethod
     async def fetch_exchange_config(
@@ -163,6 +155,16 @@ class HollaexAutofilled(hollaex):
     @classmethod
     def _get_autofilled_config(cls, tentacle_config, exchange_name):
         return tentacle_config[cls.AUTO_FILLED_KEY][exchange_name]
+
+    @classmethod
+    def get_exchange_details(cls, tentacle_config, exchange_name) -> typing.Optional[exchanges.ExchangeDetails]:
+        return cls._parse_autofilled_exchange_details(
+            tentacle_config,
+            _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[
+                cls._get_kit_url(tentacle_config, exchange_name)
+            ],
+            exchange_name
+        )
 
     @classmethod
     def _parse_autofilled_exchange_details(cls, tentacle_config, kit_details, exchange_name):
