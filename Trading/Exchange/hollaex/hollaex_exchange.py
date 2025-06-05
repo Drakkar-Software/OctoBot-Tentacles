@@ -90,8 +90,9 @@ class hollaex(exchanges.RestExchange):
         return True
 
     def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
-        # unknown (05/06/2025)
-        return super().get_max_orders_count(symbol, order_type)
+        #  (05/06/2025)
+        # hollaex {"message":"Error 1010 - You are only allowed to have maximum 25 active orders per market."}
+        return 25
 
     async def get_account_id(self, **kwargs: dict) -> str:
         with self.connector.error_describer():
