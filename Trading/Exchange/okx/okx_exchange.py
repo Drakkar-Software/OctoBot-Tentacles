@@ -206,6 +206,10 @@ class Okx(exchanges.RestExchange):
             # should never happen as at least one account should be available
             return None
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # unknown (05/06/2025)
+        return super().get_max_orders_count(symbol, order_type)
+
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])
         if not sub_account_list:

@@ -89,6 +89,10 @@ class hollaex(exchanges.RestExchange):
     def is_configurable(cls):
         return True
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # unknown (05/06/2025)
+        return super().get_max_orders_count(symbol, order_type)
+
     async def get_account_id(self, **kwargs: dict) -> str:
         with self.connector.error_describer():
             user_info = await self.connector.client.private_get_user()

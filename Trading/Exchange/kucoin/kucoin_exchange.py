@@ -208,6 +208,13 @@ class Kucoin(exchanges.RestExchange):
             self._set_margin_mode_param_if_necessary(symbol, params, lower=True)
         return await super().set_symbol_leverage(symbol, leverage, **params)
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # from
+        #   https://www.kucoin.com/docs-new/rest/futures-trading/orders/add-order
+        #   https://www.kucoin.com/docs-new/rest/spot-trading/orders/add-order
+        # should be 100 to 200 but use 100 to be sure
+        return 100
+
     def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
         # return False when default edit_order can't be used and order should always be canceled and recreated instead
         # only working on HF orders
