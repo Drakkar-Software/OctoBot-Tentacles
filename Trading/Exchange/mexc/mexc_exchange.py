@@ -78,6 +78,10 @@ class MEXC(exchanges.RestExchange):
         # current impossible to get account UID (10/01/25)
         return constants.DEFAULT_ACCOUNT_ID
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # unknown (05/06/2025)
+        return super().get_max_orders_count(symbol, order_type)
+
     def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
         url_signature_identifiers = "signature="
         header_signature_identifiers = "Signature"

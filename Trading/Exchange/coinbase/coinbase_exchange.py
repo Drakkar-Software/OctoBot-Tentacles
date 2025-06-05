@@ -272,6 +272,10 @@ class Coinbase(exchanges.RestExchange):
             )
             return trading_constants.DEFAULT_ACCOUNT_ID
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # unknown (05/06/2025)
+        return super().get_max_orders_count(symbol, order_type)
+
     def _is_up_to_date_api_key(self) -> bool:
         return (
             self.connector.client.apiKey.find('organizations/') >= 0 or
