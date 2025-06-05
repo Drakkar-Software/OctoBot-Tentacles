@@ -330,9 +330,15 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity=order_quantity,
                 price=order_price
             )
-            if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
-                created_orders.append(created_order)
-                return True
+            created_at_least_one_order = False
+            try:
+                if created_order := await self._create_entry_with_chained_exit_orders(entry_order, price, symbol_market):
+                    created_orders.append(created_order)
+                    created_at_least_one_order = True
+                    return True
+            except trading_errors.MaxOpenOrderReachedForSymbolError as err:
+                self.logger.warning(f"Skipped entry order: too many orders are already in place: {err}")
+                return created_at_least_one_order
         try:
             buying = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT)
             parsed_symbol = symbol_util.parse_symbol(symbol)
@@ -388,11 +394,23 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         )
         can_bundle_exit_orders = len(exit_quantities) == 1
         reduce_only_chained_orders = self.exchange_manager.is_future
+        exit_orders = []
+        # 1. ensure entry order can be created
+        if entry_order.order_type not in (
+            trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.SELL_MARKET
+        ):
+            trading_personal_data.ensure_orders_limit(
+                self.exchange_manager, entry_order.symbol, [trading_enums.TraderOrderType.BUY_LIMIT]
+            )
         for i, exit_quantity in exit_quantities:
             is_last = i == len(exit_quantities)
             order_couple = []
             # stop loss
             if self.trading_mode.use_stop_loss:
+                # 1. ensure order can be created
+                exit_orders.append(trading_enums.TraderOrderType.STOP_LOSS)
+                trading_personal_data.ensure_orders_limit(self.exchange_manager, entry_order.symbol, exit_orders)
+                # 2. initialize order
                 stop_price = trading_personal_data.decimal_adapt_price(symbol_market, stop_price)
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, stop_price, trading_enums.TraderOrderType.STOP_LOSS, exit_side,
@@ -403,9 +421,17 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 )
                 params.update(param_update)
                 order_couple.append(chained_order)
-
             # take profit
             if self.trading_mode.use_take_profit_exit_orders:
+                # 1. ensure order can be created
+                take_profit_order_type = self.exchange_manager.trader.get_take_profit_order_type(
+                    entry_order,
+                    trading_enums.TraderOrderType.BUY_LIMIT
+                    if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
+                )
+                exit_orders.append(take_profit_order_type)
+                trading_personal_data.ensure_orders_limit(self.exchange_manager, entry_order.symbol, exit_orders)
+                # 2. initialize order
                 take_profit_multiplier = self.trading_mode.exit_limit_orders_price_multiplier \
                     if i == 1 else (
                         self.trading_mode.exit_limit_orders_price_multiplier +
@@ -416,11 +442,6 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     entry_price * (
                             trading_constants.ONE + (take_profit_multiplier * exit_multiplier_side_flag)
                     )
-                )
-                take_profit_order_type = self.exchange_manager.trader.get_take_profit_order_type(
-                    entry_order,
-                    trading_enums.TraderOrderType.BUY_LIMIT
-                    if exit_side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
                 )
                 param_update, chained_order = await self.register_chained_order(
                     entry_order, take_profit_price, take_profit_order_type, None,

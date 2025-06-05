@@ -40,6 +40,7 @@ import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes
+import octobot_trading.errors
 
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -596,6 +597,84 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert stop_losses[0].update_with_triggering_order_fees == take_profits[0].update_with_triggering_order_fees == False
 
 
+async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.stop_loss_price_multiplier = decimal.Decimal("0.12")
+    mode.exit_limit_orders_price_multiplier = decimal.Decimal("0.07")
+    mode.secondary_exit_orders_price_multiplier = decimal.Decimal("0.035")
+    mode.secondary_exit_orders_count = 0
+    symbol = mode.symbol
+    symbol_market = trader.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+    entry_price = decimal.Decimal("1222")
+    entry_order = trading_personal_data.create_order_instance(
+        trader=trader,
+        order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+        symbol=symbol,
+        current_price=entry_price,
+        quantity=decimal.Decimal("3"),
+        price=entry_price
+    )
+    with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda *args, **kwargs: args[0])) \
+            as create_order_mock, \
+        mock.patch.object(trader.exchange_manager.exchange, "get_max_orders_count", mock.Mock(return_value=1)) \
+            as get_max_orders_count_mock, \
+        mock.patch.object(
+            trader.exchange_manager.exchange_personal_data.orders_manager, "get_open_orders",
+            mock.Mock(return_value=[mock.Mock(order_type=trading_enums.TraderOrderType.BUY_LIMIT)])
+        ) as get_open_orders_mock:
+        # 1.A can't even create entry limit order
+        mode.use_stop_loss = False
+        mode.use_take_profit_exit_orders = False
+        with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 1 * 2   # entry: 1, stop: 0, tp: 0, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+        get_open_orders_mock.assert_called_once()
+
+        # 1.B can create entry market order
+        entry_order.order_type=trading_enums.TraderOrderType.BUY_MARKET
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        get_max_orders_count_mock.assert_not_called()   # not called for entry marker orders
+        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.reset_mock()
+        assert len(entry_order.chained_orders) == 0
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+        get_open_orders_mock.assert_called_once()
+
+        # restore order type
+        entry_order.order_type=trading_enums.TraderOrderType.BUY_LIMIT
+
+    with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda *args, **kwargs: args[0])) \
+            as create_order_mock, \
+        mock.patch.object(trader.exchange_manager.exchange, "get_max_orders_count", mock.Mock(return_value=1)) \
+            as get_max_orders_count_mock:
+        mode.use_stop_loss = True
+        mode.use_take_profit_exit_orders = True
+        # 2. chained stop loss & take profit
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 3 * 2   # entry: 1, stop: 1, tp: 1, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.reset_mock()
+        assert len(entry_order.chained_orders) == 2
+        stop_loss = entry_order.chained_orders[0]
+        take_profit = entry_order.chained_orders[1]
+        assert isinstance(stop_loss, trading_personal_data.StopLossOrder)
+        assert isinstance(take_profit, trading_personal_data.SellLimitOrder)
+
+        # 3. chained stop loss & take profit: impossible: cancel whole entry
+        mode.use_secondary_exit_orders = True
+        mode.secondary_exit_orders_count = 1
+        with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 4 * 2   # entry: 1, stop: 1, tp: 2, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+
+
 async def test_create_entry_order(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
@@ -607,6 +686,17 @@ async def test_create_entry_order(tools):
     current_price = decimal.Decimal("22222")
     with mock.patch.object(
             consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value=None)
+    ) as _create_entry_with_chained_exit_orders_mock:
+        created_orders = []
+        assert await consumer._create_entry_order(
+            order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+        ) is False
+        _create_entry_with_chained_exit_orders_mock.assert_called_once()
+        assert created_orders == []
+    with mock.patch.object(
+        consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(
+            side_effect=octobot_trading.errors.MaxOpenOrderReachedForSymbolError
+        )
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(

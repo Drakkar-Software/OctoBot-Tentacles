@@ -163,6 +163,9 @@ class Binance(exchanges.RestExchange):
             {"filterType": "MAX_NUM_ORDERS", "maxNumOrders": "200"}, 
             {"filterType": "MAX_NUM_ALGO_ORDERS", "maxNumAlgoOrders": "5"}
         ]
+        => usually:
+            - SPOT: MAX_NUM_ORDERS 200 MAX_NUM_ALGO_ORDERS 5
+            - FUTURES: MAX_NUM_ORDERS 200 MAX_NUM_ALGO_ORDERS 10
         """
         try:
             market_status = self.get_market_status(symbol, with_fixer=False)
