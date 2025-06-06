@@ -38,7 +38,7 @@ class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
                 self.additional_config = additional_connector_config
             except KeyError as err:
                 self.logger.error(f"Error when updating exchange url: {err}")
-        super()._create_client(force_unauth=force_unauth)
+        super()._create_client()
 
     def _update_urls(self, additional_connector_config):
         rest_url = additional_connector_config[ccxt_enums.ExchangeColumns.URLS.value][

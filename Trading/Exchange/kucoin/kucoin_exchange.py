@@ -83,9 +83,6 @@ class Kucoin(exchanges.RestExchange):
     # set True when even loading markets can make auth calls when creds are set
     CAN_MAKE_AUTHENTICATED_REQUESTS_WHEN_LOADING_MARKETS = True
 
-    # Set False when the leverage value is set via something else that a set_leverage api (from orders for example)
-    UPDATE_LEVERAGE_FROM_API = False  # leverage is set via orders on kucoin
-
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
@@ -186,6 +183,37 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
+
+    def supports_api_leverage_update(self, symbol: str) -> bool:
+        """
+        Override if necessary
+        :param symbol:
+        :return:
+        """
+        if super().supports_api_leverage_update(symbol):
+            # set leverage is only supported on cross positions
+            # https://www.kucoin.com/docs/rest/futures-trading/positions/modify-cross-margin-leverage
+            try:
+                return self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position_margin_type(
+                    symbol
+                ) is trading_enums.MarginType.CROSS
+            except ValueError as err:
+                self.logger.exception(f"Failed to get {symbol} position margin type: {err}")
+        return False
+
+    async def set_symbol_leverage(self, symbol: str, leverage: float, **kwargs):
+        params = kwargs or {}
+        if self.exchange_manager.is_future:
+            # add marginMode param as required by ccxt
+            self._set_margin_mode_param_if_necessary(symbol, params, lower=True)
+        return await super().set_symbol_leverage(symbol, leverage, **params)
+
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # from
+        #   https://www.kucoin.com/docs-new/rest/futures-trading/orders/add-order
+        #   https://www.kucoin.com/docs-new/rest/spot-trading/orders/add-order
+        # should be 100 to 200 but use 100 to be sure
+        return 100
 
     def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
         # return False when default edit_order can't be used and order should always be canceled and recreated instead
@@ -386,7 +414,7 @@ class Kucoin(exchanges.RestExchange):
             side=side, current_price=current_price, params=params
         )
 
-    def _set_margin_mode_param_if_necessary(self, symbol, params):
+    def _set_margin_mode_param_if_necessary(self, symbol, params, lower=False):
         try:
             # "marginMode": "ISOLATED" // Added field for margin mode: ISOLATED, CROSS, default: ISOLATED
             # from https://www.kucoin.com/docs/rest/futures-trading/orders/place-order
@@ -396,7 +424,7 @@ class Kucoin(exchanges.RestExchange):
                     symbol
                 ) is trading_enums.MarginType.CROSS
             ):
-                params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "CROSS"
+                params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "cross" if lower else "CROSS"
         except ValueError as err:
             self.logger.error(f"Impossible to add {KucoinCCXTAdapter.KUCOIN_MARGIN_MODE} to order: {err}")
 

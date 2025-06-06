@@ -384,8 +384,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             if leverage := data.get(TradingViewSignalsModeConsumer.LEVERAGE):
                 await self.trading_mode.set_leverage(context.symbol, None, decimal.Decimal(str(leverage)))
         except Exception as err:
-            import traceback
-            traceback.print_exc()
             self.logger.exception(
                 err, True, f"Error when processing pre_state_update_actions: {err} (data: {data})"
             )

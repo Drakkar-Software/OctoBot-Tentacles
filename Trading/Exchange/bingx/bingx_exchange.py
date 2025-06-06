@@ -114,6 +114,10 @@ class Bingx(exchanges.RestExchange):
             resp = await self.connector.client.accountV1PrivateGetUid()
             return resp["data"]["uid"]
 
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        # unknown (05/06/2025)
+        return super().get_max_orders_count(symbol, order_type)
+
     async def get_my_recent_trades(self, symbol=None, since=None, limit=None, **kwargs):
         # On SPOT Bingx, account recent trades is available under fetch_closed_orders
         if self.exchange_manager.is_future:

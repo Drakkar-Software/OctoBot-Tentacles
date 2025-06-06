@@ -40,6 +40,7 @@ import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes
+import octobot_trading.errors
 
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -330,18 +331,23 @@ async def test_process_entries(tools):
     with mock.patch.object(producer, "submit_trading_evaluation", mock.AsyncMock()) as submit_trading_evaluation_mock, \
             mock.patch.object(producer, "cancel_symbol_open_orders",
                               mock.AsyncMock()) as cancel_symbol_open_orders_mock, \
-            mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock:
+            mock.patch.object(producer, "_send_alert_notification", mock.AsyncMock()) as _send_alert_notification_mock, \
+            mock.patch.object(trader.exchange_manager.exchange_personal_data.positions_manager, "get_symbol_position",
+                              mock.AsyncMock()) as get_symbol_position_mock:
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.NEUTRAL)
         # neutral state: does not create orders
         submit_trading_evaluation_mock.assert_not_called()
         cancel_symbol_open_orders_mock.assert_not_called()
         _send_alert_notification_mock.assert_not_called()
+        # spot trading: get_symbol_position is not called by _process_pre_entry_actions
+        get_symbol_position_mock.assert_not_called()
 
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.SHORT)
         await producer._process_entries("crypto", "symbol", trading_enums.EvaluatorStates.VERY_SHORT)
         # short state: not yet supported
         submit_trading_evaluation_mock.assert_not_called()
         _send_alert_notification_mock.assert_not_called()
+        get_symbol_position_mock.assert_not_called()
 
         for state in (trading_enums.EvaluatorStates.LONG, trading_enums.EvaluatorStates.VERY_LONG):
             await producer._process_entries("crypto", "symbol", state)
@@ -353,6 +359,7 @@ async def test_process_entries(tools):
                 final_note=None,
                 state=state
             )
+            get_symbol_position_mock.assert_not_called()
             _send_alert_notification_mock.assert_called_once_with("symbol", state, "entry")
             _send_alert_notification_mock.reset_mock()
             submit_trading_evaluation_mock.reset_mock()
@@ -590,6 +597,84 @@ async def test_create_entry_with_chained_exit_orders(tools):
         assert stop_losses[0].update_with_triggering_order_fees == take_profits[0].update_with_triggering_order_fees == False
 
 
+async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.stop_loss_price_multiplier = decimal.Decimal("0.12")
+    mode.exit_limit_orders_price_multiplier = decimal.Decimal("0.07")
+    mode.secondary_exit_orders_price_multiplier = decimal.Decimal("0.035")
+    mode.secondary_exit_orders_count = 0
+    symbol = mode.symbol
+    symbol_market = trader.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+    entry_price = decimal.Decimal("1222")
+    entry_order = trading_personal_data.create_order_instance(
+        trader=trader,
+        order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+        symbol=symbol,
+        current_price=entry_price,
+        quantity=decimal.Decimal("3"),
+        price=entry_price
+    )
+    with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda *args, **kwargs: args[0])) \
+            as create_order_mock, \
+        mock.patch.object(trader.exchange_manager.exchange, "get_max_orders_count", mock.Mock(return_value=1)) \
+            as get_max_orders_count_mock, \
+        mock.patch.object(
+            trader.exchange_manager.exchange_personal_data.orders_manager, "get_open_orders",
+            mock.Mock(return_value=[mock.Mock(order_type=trading_enums.TraderOrderType.BUY_LIMIT)])
+        ) as get_open_orders_mock:
+        # 1.A can't even create entry limit order
+        mode.use_stop_loss = False
+        mode.use_take_profit_exit_orders = False
+        with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 1 * 2   # entry: 1, stop: 0, tp: 0, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+        get_open_orders_mock.assert_called_once()
+
+        # 1.B can create entry market order
+        entry_order.order_type=trading_enums.TraderOrderType.BUY_MARKET
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        get_max_orders_count_mock.assert_not_called()   # not called for entry marker orders
+        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.reset_mock()
+        assert len(entry_order.chained_orders) == 0
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+        get_open_orders_mock.assert_called_once()
+
+        # restore order type
+        entry_order.order_type=trading_enums.TraderOrderType.BUY_LIMIT
+
+    with mock.patch.object(mode, "create_order", mock.AsyncMock(side_effect=lambda *args, **kwargs: args[0])) \
+            as create_order_mock, \
+        mock.patch.object(trader.exchange_manager.exchange, "get_max_orders_count", mock.Mock(return_value=1)) \
+            as get_max_orders_count_mock:
+        mode.use_stop_loss = True
+        mode.use_take_profit_exit_orders = True
+        # 2. chained stop loss & take profit
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 3 * 2   # entry: 1, stop: 1, tp: 1, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.reset_mock()
+        assert len(entry_order.chained_orders) == 2
+        stop_loss = entry_order.chained_orders[0]
+        take_profit = entry_order.chained_orders[1]
+        assert isinstance(stop_loss, trading_personal_data.StopLossOrder)
+        assert isinstance(take_profit, trading_personal_data.SellLimitOrder)
+
+        # 3. chained stop loss & take profit: impossible: cancel whole entry
+        mode.use_secondary_exit_orders = True
+        mode.secondary_exit_orders_count = 1
+        with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert get_max_orders_count_mock.call_count == 4 * 2   # entry: 1, stop: 1, tp: 2, 2 calls for each
+        get_max_orders_count_mock.reset_mock()
+        create_order_mock.assert_not_called()
+
+
 async def test_create_entry_order(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
@@ -601,6 +686,17 @@ async def test_create_entry_order(tools):
     current_price = decimal.Decimal("22222")
     with mock.patch.object(
             consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value=None)
+    ) as _create_entry_with_chained_exit_orders_mock:
+        created_orders = []
+        assert await consumer._create_entry_order(
+            order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+        ) is False
+        _create_entry_with_chained_exit_orders_mock.assert_called_once()
+        assert created_orders == []
+    with mock.patch.object(
+        consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(
+            side_effect=octobot_trading.errors.MaxOpenOrderReachedForSymbolError
+        )
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
@@ -1110,6 +1206,44 @@ async def test_create_new_buy_orders_futures_trading(futures_tools):
         assert len(orders) == 4
         total_cost = sum(order.total_cost for order in orders)
         assert round(total_cost) == decimal.Decimal("56")
+
+
+async def test_create_set_leverage_on_futures_trading(futures_tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(futures_tools, _get_config(futures_tools, update))
+    mode.use_secondary_entry_orders = True
+    mode.secondary_entry_orders_count = 3
+    mode.secondary_entry_orders_amount = "8%t"
+    mode.use_market_entry_orders = False
+    mode.cancel_open_orders_at_each_entry = False
+    mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "8%t"
+    with mock.patch.object(mode, "set_leverage", mock.AsyncMock()) as set_leverage_mock, \
+        mock.patch.object(producer, "submit_trading_evaluation", mock.AsyncMock()) as submit_trading_evaluation:
+        await producer._process_entries("Bitcoin", "BTC", trading_enums.EvaluatorStates.SHORT)
+        # nothing happens on short
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_not_called()
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        # leverage config is not set
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_called_once()
+        submit_trading_evaluation.reset_mock()
+        # now updated leverage
+        mode.trading_config[trading_constants.CONFIG_LEVERAGE] = 4
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        set_leverage_mock.assert_called_once_with(
+            "BTC/USDT:USDT", trading_enums.PositionSide.BOTH, decimal.Decimal(4)
+        )
+        submit_trading_evaluation.assert_called_once()
+        set_leverage_mock.reset_mock()
+        submit_trading_evaluation.reset_mock()
+        # don't update leverage when position already has the right leverage
+        mode.trading_config[trading_constants.CONFIG_LEVERAGE] = 1
+        await producer._process_entries("Bitcoin", "BTC/USDT:USDT", trading_enums.EvaluatorStates.LONG)
+        set_leverage_mock.assert_not_called()
+        submit_trading_evaluation.assert_called_once()
+        set_leverage_mock.reset_mock()
+        submit_trading_evaluation.reset_mock()
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):

@@ -26,6 +26,7 @@ import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
+import octobot_trading.personal_data as personal_data
 
 
 class Binance(exchanges.RestExchange):
@@ -145,6 +146,44 @@ class Binance(exchanges.RestExchange):
         except (KeyError, IndexError):
             # should not happen
             raise
+
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        """
+        from:
+            https://developers.binance.com/docs/derivatives/usds-margined-futures/common-definition#max_num_orders
+            https://developers.binance.com/docs/binance-spot-api-docs/filters#max_num_orders
+        [
+            {"filterType": "PRICE_FILTER", "maxPrice": "1000000.00000000", "minPrice": "0.01000000", "tickSize": "0.01000000"}, 
+            {"filterType": "LOT_SIZE", "maxQty": "9000.00000000", "minQty": "0.00001000", "stepSize": "0.00001000"}, 
+            {"filterType": "ICEBERG_PARTS", "limit": "10"}, 
+            {"filterType": "MARKET_LOT_SIZE", "maxQty": "115.46151096", "minQty": "0.00000000", "stepSize": "0.00000000"}, 
+            {"filterType": "TRAILING_DELTA", "maxTrailingAboveDelta": "2000", "maxTrailingBelowDelta": "2000", "minTrailingAboveDelta": "10", "minTrailingBelowDelta": "10"}, 
+            {"askMultiplierDown": "0.2", "askMultiplierUp": "5", "avgPriceMins": "5", "bidMultiplierDown": "0.2", "bidMultiplierUp": "5", "filterType": "PERCENT_PRICE_BY_SIDE"}, 
+            {"applyMaxToMarket": False, "applyMinToMarket": True, "avgPriceMins": "5", "filterType": "NOTIONAL", "maxNotional": "9000000.00000000", "minNotional": "5.00000000"}, 
+            {"filterType": "MAX_NUM_ORDERS", "maxNumOrders": "200"}, 
+            {"filterType": "MAX_NUM_ALGO_ORDERS", "maxNumAlgoOrders": "5"}
+        ]
+        => usually:
+            - SPOT: MAX_NUM_ORDERS 200 MAX_NUM_ALGO_ORDERS 5
+            - FUTURES: MAX_NUM_ORDERS 200 MAX_NUM_ALGO_ORDERS 10
+        """
+        try:
+            market_status = self.get_market_status(symbol, with_fixer=False)
+            filters = market_status[ccxt_constants.CCXT_INFO]["filters"]
+            key = "MAX_NUM_ALGO_ORDERS" if personal_data.is_stop_order(order_type) else "MAX_NUM_ORDERS"
+            value_key = "maxNumAlgoOrders" if personal_data.is_stop_order(order_type) else "maxNumOrders"
+            fallback_value_key = "limit"    # sometimes, "limit" is the key
+            for filter_element in filters:
+                if filter_element.get("filterType") == key:
+                    key = value_key if value_key in filter_element else fallback_value_key
+                    return int(filter_element[key])
+            raise ValueError(f"{key} not found in filters: {filters}")
+        except Exception as err:
+            default_count = super().get_max_orders_count(symbol, order_type)
+            self.logger.exception(
+                err, True, f"Error when computing max orders count: {err}. Using default value: {default_count}"
+            )
+            return default_count
 
     def _infer_account_types(self, exchange_manager):
         account_types = []

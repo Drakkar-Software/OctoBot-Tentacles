@@ -33,6 +33,40 @@ class hollaex(exchanges.RestExchange):
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
+    # STOP_PRICE is used in ccxt/hollaex instead of default STOP_LOSS_PRICE
+    STOP_LOSS_CREATE_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_PRICE.value
+
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            # not supported or need custom mechanics with batch orders
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,    # broken for now (Request validation failed: Parameter (order) failed schema validation)
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
+
     DEFAULT_MAX_LIMIT = 500
     EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
         # '"message":"Access denied: Unauthorized Access. This key does not have the right permissions to access this endpoint"'
@@ -68,14 +102,27 @@ class hollaex(exchanges.RestExchange):
 
     def get_additional_connector_config(self):
         return {
-            ccxt_enums.ExchangeColumns.URLS.value: self._get_urls()
+            ccxt_enums.ExchangeColumns.URLS.value: self.get_patched_urls(self.tentacle_config[self.REST_KEY])
         }
 
-    def _get_urls(self):
+    @classmethod
+    def get_custom_url_config(cls, tentacle_config: dict, exchange_name: str) -> dict:
+        if details := cls.get_exchange_details(tentacle_config, exchange_name):
+            return {
+                ccxt_enums.ExchangeColumns.URLS.value: cls.get_patched_urls(details.api)
+            }
+        return {}
+
+    @classmethod
+    def get_exchange_details(cls, tentacle_config, exchange_name) -> typing.Optional[exchanges.ExchangeDetails]:
+        return None
+
+    @classmethod
+    def get_patched_urls(cls, api_url: str):
         urls = ccxt.hollaex().urls
         custom_urls = {
             ccxt_enums.ExchangeColumns.API.value: {
-                self.REST_KEY: self.tentacle_config[self.REST_KEY]
+                cls.REST_KEY: api_url
             }
         }
         urls.update(custom_urls)
@@ -88,6 +135,11 @@ class hollaex(exchanges.RestExchange):
     @classmethod
     def is_configurable(cls):
         return True
+
+    def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
+        #  (05/06/2025)
+        # hollaex {"message":"Error 1010 - You are only allowed to have maximum 25 active orders per market."}
+        return 25
 
     async def get_account_id(self, **kwargs: dict) -> str:
         with self.connector.error_describer():
