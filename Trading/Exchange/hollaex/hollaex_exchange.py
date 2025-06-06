@@ -17,6 +17,7 @@ import ccxt
 import typing
 
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
@@ -150,6 +151,12 @@ class hollaex(exchanges.RestExchange):
         # ohlcv without limit is not supported, replaced by a default max limit
         if limit is None:
             limit = self.DEFAULT_MAX_LIMIT
+        if "since" not in kwargs:
+            # temporary fix to prevent hollaex from fetching outdates candles
+            # remove once hollaex ccxt fetch_ohlcv stop hard coding defaultSpan = 2592000  # 30 days
+            tf_seconds = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
+            kwargs["since"] = (self.get_exchange_current_time() - tf_seconds * limit) \
+                * commons_constants.MSECONDS_TO_SECONDS
         return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     async def get_closed_orders(self, symbol: str = None, since: int = None,
