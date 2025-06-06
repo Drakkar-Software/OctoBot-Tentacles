@@ -33,6 +33,40 @@ class hollaex(exchanges.RestExchange):
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
+    # STOP_PRICE is used in ccxt/hollaex instead of default STOP_LOSS_PRICE
+    STOP_LOSS_CREATE_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_PRICE.value
+
+    # should be overridden locally to match exchange support
+    SUPPORTED_ELEMENTS = {
+        trading_enums.ExchangeTypes.FUTURE.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            # not supported or need custom mechanics with batch orders
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        },
+        trading_enums.ExchangeTypes.SPOT.value: {
+            # order that should be self-managed by OctoBot
+            trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
+                trading_enums.TraderOrderType.STOP_LOSS,    # broken for now (Request validation failed: Parameter (order) failed schema validation)
+                trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT,
+                trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
+                trading_enums.TraderOrderType.TRAILING_STOP,
+                trading_enums.TraderOrderType.TRAILING_STOP_LIMIT
+            ],
+            # order that can be bundled together to create them all in one request
+            trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
+        }
+    }
+
     DEFAULT_MAX_LIMIT = 500
     EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
         # '"message":"Access denied: Unauthorized Access. This key does not have the right permissions to access this endpoint"'
